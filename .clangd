@@ -1,0 +1,27 @@
+If:
+  PathMatch: *\.h, *.\.c, *.\.hpp, *.\.cpp
+
+CompileFlags:
+  Add: ["-Wextra",
+  "-Werror",
+  "-Wfloat-equal",
+  "-Wcast-align",
+  "-Wlogical-op",
+  "-Winline",
+  "-Wshadow",
+  "-Winit-self",
+  "-Wmissing-prototypes",
+  "-Wstrict-prototypes",
+  "-Wpointer-arith",
+  "-Wno-type-limits",
+  "-Wno-unused-local-typedefs",
+  "-mhard-float",
+  "-msingle-float",
+  "-Wunused-function",
+  "-Wdocumentation",
+  "-ferror-limit=0",
+  "-fshort-enums",
+  "-funsigned-char",
+  "-ffunction-sections",
+  "-fdata-sections",
+]
