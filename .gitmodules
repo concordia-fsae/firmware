@@ -4,3 +4,6 @@
 [submodule "testing/stm32_screen/lib/lib_FTDI_FT800"]
 	path = testing/stm32_screen/lib/lib_FTDI_FT800
 	url = https://github.com/concordia-fsae/lib_FTDI_FT800.git
+[submodule "components/steering_wheel/lib/lib_FTDI_FT81x"]
+	path = components/steering_wheel/lib/lib_FTDI_FT81x
+	url = https://github.com/concordia-fsae/lib_FTDI_FT81x.git
