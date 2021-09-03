@@ -20,6 +20,20 @@ uint32_t num_dl_static; /* amount of bytes in the static part of our display-lis
 
 void initStaticBackground(void)
 {
+    EVE_memWrite8(REG_PWM_DUTY, 0x30);	/* setup backlight, range is from 0 = off to 0x80 = max */
+    EVE_cmd_dl(CMD_DLSTART); // tells EVE to start a new display-list
+    EVE_cmd_dl(DL_CLEAR_RGB | WHITE); // sets the background color
+    EVE_cmd_dl(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
+    EVE_color_rgb(BLACK);
+    EVE_cmd_text(5, 15, 28, 0, "Hello there!");
+    EVE_cmd_dl(DL_DISPLAY); // put in the display list to mark its end
+    EVE_cmd_dl(CMD_SWAP); // tell EVE to use the new display list
+}
+
+#if 0
+void initStaticBackground(void)
+{
+    EVE_memWrite8(REG_PWM_DUTY, 0x30);	/* setup backlight, range is from 0 = off to 0x80 = max */
 	EVE_cmd_dl(CMD_DLSTART); /* Start the display list */
 
 	EVE_cmd_dl(TAG(0)); /* do not use the following objects for touch-detection */
@@ -53,10 +67,14 @@ void initStaticBackground(void)
 	EVE_cmd_text(125, EVE_VSIZE - 35, 26, 0, "us");
 	EVE_cmd_text(125, EVE_VSIZE - 20, 26, 0, "us");
 
+    EVE_cmd_dl_burst(DL_DISPLAY); /* instruct the graphics processor to show the list */
+    EVE_cmd_dl_burst(CMD_SWAP); /* make this list active */
+
 	while (EVE_busy());
 
-	num_dl_static = EVE_memRead16(REG_CMD_DL);
+	// num_dl_static = EVE_memRead16(REG_CMD_DL);
 
-	EVE_cmd_memcpy(MEM_DL_STATIC, EVE_RAM_DL, num_dl_static);
-	while (EVE_busy());
+	// EVE_cmd_memcpy(MEM_DL_STATIC, EVE_RAM_DL, num_dl_static);
+	// while (EVE_busy());
 }
+#endif
