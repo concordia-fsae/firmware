@@ -1,0 +1,16 @@
+#!/usr/bin/python3
+from SCons.Script import Import
+
+Import("env")
+
+# for now just run the platformio build
+# eventually build everything with scons
+env.pio_build(source="platformio.ini")
+
+# CPPPATH = []
+# CPPPATH.append('include')
+# CPPPATH.append('lib/lib_FTDI_FT81x/include')
+
+
+# env.Append(CPPPATH=CPPPATH)
+# env.Program(source=Glob("src/*.c"))
