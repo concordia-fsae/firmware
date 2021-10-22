@@ -94,7 +94,7 @@ int main(void)
 	pHeader.DLC=1; //give message size of 1 byte
 	pHeader.IDE=CAN_ID_STD; //set identifier to standard
 	pHeader.RTR=CAN_RTR_DATA; //set data type to remote transmission request?
-	pHeader.StdId=0x001; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
+	pHeader.StdId=0x101; //define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
 	HAL_CAN_Start(&hcan); //start CAN
   /* USER CODE END 2 */
 
@@ -110,7 +110,7 @@ int main(void)
 		  /* HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin); */
 	  }
 	  /* HAL_CAN_GetTxMailboxesFreeLevel() */
-	  HAL_Delay((uint32_t)1000);
+	  HAL_Delay((uint32_t)250);
   }
     /* USER CODE BEGIN 3 */
   /* USER CODE END 3 */
@@ -134,7 +134,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL8;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -145,7 +145,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV8;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
