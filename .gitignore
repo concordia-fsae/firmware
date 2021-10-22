@@ -1,5 +1,7 @@
 .vim/
 
+.sconsign.dblite
+
 # Created by https://www.toptal.com/developers/gitignore/api/vim,c,c++,python,visualstudiocode,platformio
 # Edit at https://www.toptal.com/developers/gitignore?templates=vim,c,c++,python,visualstudiocode,platformio
 
