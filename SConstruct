@@ -10,6 +10,7 @@ from SCons.Script import (
     GetOption,
     SConscript,
 )
+
 from os.path import dirname
 from yaml import load, Loader
 
@@ -18,14 +19,31 @@ env = Environment()
 # add option to choose target
 AddOption("--target", dest="target", type="string", action="store")
 # add option to not generate the compilation database
-AddOption("--nocompiledb", dest="compiledb", action="store_true")
+AddOption("--nocompiledb", dest="nocompiledb", action="store_true")
+# add option to make build verbose
+AddOption("--verbose", dest="verbose", action="store_true")
+# add option to log output to file
+AddOption("--savelog", dest="savelog", action="store_true")
+# add option for clean build
+AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
 
-def pio_build_cmd(source, **kwargs):
+def pio_build_cmd(source, **_):
     pio_dir = dirname(str(source[0]))
+    if GetOption("cleanbuild"):
+        Execute(f"cd {pio_dir} && pio run -t clean")
+
     cmd = f"cd {pio_dir} && pio run"
-    if not GetOption("compiledb"):
-        cmd += "  &&  pio run -t compiledb"
+
+    if GetOption("savelog"):
+        cmd += " -v | tee build.log"
+    elif GetOption("verbose"):
+        cmd += " -v"
+
     Execute(cmd)
+
+    if not GetOption("nocompiledb") and not GetOption("cleanbuild"):
+        Execute(f"cd {pio_dir} && pio run -t compiledb")
+
 
 pio_build = Builder(action=pio_build_cmd)
 env.Append(BUILDERS={"pio_build": pio_build})
