@@ -1,4 +1,3 @@
----
 Language: C
 Language: Cpp
 
@@ -7,19 +6,22 @@ Language: Cpp
 #                    argument2)
 AlignAfterOpenBracket: Align
 
-# Aligns the assignment operators                     
-AlignConsecutiveAssignments: 'true'
+# Aligns the assignment operators
+AlignConsecutiveAssignments: AcrossComments
 
 # Aligns the variable names
-AlignConsecutiveDeclarations: 'true'
+AlignConsecutiveDeclarations: AcrossComments
 
-# Aligns macros 
+# Aligns consecutive bitfields
+AlignConsecutiveBitFields: AcrossComments
+
+# Aligns macros
 #define SHORT_NAME       42
 #define LONGER_NAME      0x007f
 #define EVEN_LONGER_NAME (2)
 #define foo(x)           (x * x)
 #define bar(y, z)        (y + z)
-AlignConsecutiveMacros: 'true'
+AlignConsecutiveMacros: AcrossComments
 
 # Align "\" new-line characters as far left as possible
 # define A    \
@@ -42,22 +44,22 @@ AllowAllParametersOfDeclarationOnNextLine: 'false'
 
 # Allows braced statements to be on a single line
 # e.g. if (eval) { return true; }
-AllowShortBlocksOnASingleLine: 'true'
+AllowShortBlocksOnASingleLine: 'false'
 
 # only merge functions defined inside a class, including empty ones
 # Other options include "empty" where onyl empty functions are inline
-# "InlineOnly" which excludes empty functions and "All" which merges 
+# "InlineOnly" which excludes empty functions and "All" which merges
 # all functions fitting on a single line
 AllowShortFunctionsOnASingleLine: Inline
 
 # single line conditionals can be put on a single line
-# if (a) operation; 
+# if (a) operation;
 # vs.
 # if (a)
 #     operation;
 AllowShortIfStatementsOnASingleLine: 'false'
 
-# self-explanatory. 
+# self-explanatory.
 AllowShortCaseLabelsOnASingleLine: 'false'
 
 # self-explanatory. for(;;) operation;
@@ -69,15 +71,18 @@ AlwaysBreakBeforeMultilineStrings: 'false'
 # Forces the params and names following the template decl. to
 # break into multiline
 # e.g.
-# template <typename T> 
+# template <typename T>
 # T foo (int a, int b)
 AlwaysBreakTemplateDeclarations: 'false'
 
 # if false, a function call's arguments get their own lines
-#BinPackArguments: 'false'
+BinPackArguments: 'true'
 
 # if false, a function declaration's args get their own lines
-#BinPackParameters: 'false'
+BinPackParameters: 'true'
+
+# self explanatory
+BitFieldColonSpacing: After
 
 # forces the operator to be the end of line and the second monomial
 # term to a new line
@@ -87,10 +92,10 @@ AlwaysBreakTemplateDeclarations: 'false'
 BreakBeforeBinaryOperators: None
 
 # forces each operand to a new line
-BreakBeforeTernaryOperators: 'false'
+BreakBeforeTernaryOperators: 'true'
 
 BreakBeforeBraces: Custom
-BraceWrapping: 
+BraceWrapping:
 {
   AfterCaseLabel: 'true'
   AfterClass: 'true'
@@ -109,6 +114,12 @@ BraceWrapping:
   SplitEmptyRecord: 'false'
   SplitEmptyNamespace: 'false'
 }
+
+# true:
+# const char* x = "veryVeryVeryVeryVeryVe"
+#                 "ryVeryVeryVeryVeryVery"
+#                 "VeryLongString";
+BreakStringLiterals: 'true'
 
 #ExperimentalAutoDetectBinPacking: true
 
@@ -140,6 +151,9 @@ ContinuationIndentWidth: '4'
 # - indentation with the continuation indentation, not with block indent
 Cpp11BracedListStyle: 'false'
 
+# how to sort include blocks
+IncludeBlocks: Preserve
+
 # "case" keywords are indented from the "switch"
 IndentCaseLabels: 'true'
 
@@ -152,14 +166,26 @@ IndentWidth: '4'
 #   stupidlyLongFunctionDeclaration();
 IndentWrappedFunctionNames: 'true'
 
+# preprocessor block indenting
+IndentPPDirectives: AfterHash
+
+# self-explanatory, apparently can't be used with bin packing
+# InsertTrailingCommas: Wrapped
+
 # empty line at start of new scope is kept
 KeepEmptyLinesAtTheStartOfBlocks: 'false'
+
+# how many empty lines to leave
+MaxEmptyLinesToKeep: '2'
 
 # Changed this. Made it C specific. Should also be right aligned.
 # "Left"   : Leave the pointer character in a variable declaration to the left (e.g. int* a)
 # "Right"  : Align pointer to right (e.g. int *a)
 # "Middle" : Align pointer between type and var name (e.g. int * a)
 PointerAlignment: Left
+
+# how much to indent subsequent preprocessor blocks by
+PPIndentWidth: '1'
 
 # if "None", no namespaces are indented
 # if "Inner", only inner namespaces are indented
@@ -172,7 +198,7 @@ ReflowComments: 'true'
 # lists of the include headers in alphabetical order
 SortIncludes: 'true'
 
-# TODO: Enable me when clang-format has been updated to understand me 
+# TODO: Enable me when clang-format has been updated to understand me
 #SortUsingDeclarations: 'false'
 
 # inserts a space between casts and the variables they're targeting
@@ -216,4 +242,6 @@ TabWidth: '4'
 # self-explanatory
 UseTab: Never
 
-IndentPPDirectives: 'AfterHash'
+# macros which have sensitive whitespace and should be left alone
+WhitespaceSensitiveMacros: ['set_value', 'set_scale', 'set_raw']
+

@@ -26,6 +26,8 @@ AddOption("--verbose", dest="verbose", action="store_true")
 AddOption("--savelog", dest="savelog", action="store_true")
 # add option for clean build
 AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
+# add option for platformio commandline args
+AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
 
 def pio_build_cmd(source, **_):
     pio_dir = dirname(str(source[0]))
@@ -39,11 +41,20 @@ def pio_build_cmd(source, **_):
     elif GetOption("verbose"):
         cmd += " -v"
 
+    cmd += get_pio_args()
+
     Execute(cmd)
 
+    # TODO: we shouldn't try to compiledb if the build above fails
     if not GetOption("nocompiledb") and not GetOption("cleanbuild"):
         Execute(f"cd {pio_dir} && pio run -t compiledb")
 
+def get_pio_args():
+    pio_args = GetOption("pio_args")
+    if pio_args:
+        return pio_args.split(",")
+    else:
+        return ""
 
 pio_build = Builder(action=pio_build_cmd)
 env.Append(BUILDERS={"pio_build": pio_build})
