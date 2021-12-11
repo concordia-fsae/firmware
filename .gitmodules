@@ -7,3 +7,9 @@
 [submodule "components/steering_wheel/lib/lib_FTDI_FT81x"]
 	path = components/steering_wheel/lib/lib_FTDI_FT81x
 	url = https://github.com/concordia-fsae/lib_FTDI_FT81x.git
+[submodule "FreeRTOS"]
+	path = components/steering_wheel/RTOS/FreeRTOS
+	url = git@github.com:ARM-software/CMSIS-FreeRTOS.git
+[submodule "CMSIS"]
+	path = components/steering_wheel/RTOS/CMSIS
+	url = git@github.com:ARM-software/CMSIS_5.git
