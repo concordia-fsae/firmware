@@ -1,0 +1,253 @@
+/*
+ * FreeRTOSResources.h
+ * Various resources for FreeRTOS
+ */
+
+//***************************************************************************//
+//                             I N C L U D E S                               //
+//***************************************************************************//
+// FreeRTOS includes
+#include "FreeRTOS.h"
+#include "cmsis_os.h"
+#include "task.h"
+#include "timers.h"
+
+// Codebase includes
+#include "FreeRTOS_types.h"
+
+
+//***************************************************************************//
+//                              D E F I N E S                                //
+//***************************************************************************//
+// which bit in the event group corresponds to each task
+#define PERIODIC_TASK_1kHz  (1U) << (0U)
+#define PERIODIC_TASK_100Hz (1U) << (1U)
+#define PERIODIC_TASK_10Hz  (1U) << (2U)
+#define PERIODIC_TASK_1Hz   (1U) << (3U)
+
+//***************************************************************************//
+//                             T Y P E D E F S                               //
+//***************************************************************************//
+typedef StaticTimer_t osStaticTimerDef_t;
+
+
+//***************************************************************************//
+//                               M A C R O S                                 //
+//***************************************************************************//
+#define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
+
+
+//***************************************************************************//
+//                         P R I V A T E  V A R S                            //
+//***************************************************************************//
+
+// periodic event group. each bit in the group signifies that the
+// respective periodic task is ready to run
+EventGroupHandle_t PeriodicEvent;
+
+// timer which will run all of the periodic tasks
+osTimerId_t rtos_tick_timer;
+
+// task handle and stack definitions
+static StaticTask_t Task1kHz;
+static StackType_t  task1kHzStack[configMINIMAL_STACK_SIZE];
+static StaticTask_t Task100Hz;
+static StackType_t  task100HzStack[configMINIMAL_STACK_SIZE];
+static StaticTask_t Task10Hz;
+static StackType_t  task10HzStack[configMINIMAL_STACK_SIZE];
+static StaticTask_t Task1Hz;
+static StackType_t  task1HzStack[configMINIMAL_STACK_SIZE];
+
+// module periodic tasks, defined in Module.h
+extern void Module_1kHz_TSK(void);
+extern void Module_100Hz_TSK(void);
+extern void Module_10Hz_TSK(void);
+extern void Module_1Hz_TSK(void);
+
+// task definitions
+RTOS_taskDesc_t ModuleTasks[] = {
+    {
+        .function   = *Module_1kHz_TSK,
+        .parameters = NULL,
+        .attr       = {
+                  .name       = "Task 1kHz",
+                  .cb_mem     = &Task1kHz,
+                  .cb_size    = sizeof(Task1kHz),
+                  .stack_mem  = &task1kHzStack,
+                  .stack_size = sizeof(task1kHzStack),
+                  .priority   = (osPriority_t)osPriorityHigh3,
+        },
+        .event = {
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_1kHz,
+        },
+        .periodMs = pdMS_TO_TICKS(1U),
+    },
+    {
+        .function   = *Module_100Hz_TSK,
+        .parameters = NULL,
+        .attr       = {
+                  .name       = "Task 100Hz",
+                  .cb_mem     = &Task100Hz,
+                  .cb_size    = sizeof(Task100Hz),
+                  .stack_mem  = &task100HzStack,
+                  .stack_size = sizeof(task100HzStack),
+                  .priority   = (osPriority_t)osPriorityHigh2,
+        },
+        .event = {
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_100Hz,
+        },
+        .periodMs = pdMS_TO_TICKS(10U),
+    },
+    {
+        .function   = *Module_10Hz_TSK,
+        .parameters = NULL,
+        .attr       = {
+                  .name       = "Task 10Hz",
+                  .cb_mem     = &Task10Hz,
+                  .cb_size    = sizeof(Task10Hz),
+                  .stack_mem  = &task10HzStack,
+                  .stack_size = sizeof(task10HzStack),
+                  .priority   = (osPriority_t)osPriorityHigh1,
+        },
+        .event = {
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_10Hz,
+        },
+        .periodMs = pdMS_TO_TICKS(100U),
+    },
+    {
+        .function   = *Module_1Hz_TSK,
+        .parameters = NULL,
+        .attr       = {
+                  .name       = "Task 1Hz",
+                  .cb_mem     = &Task1Hz,
+                  .cb_size    = sizeof(Task1Hz),
+                  .stack_mem  = &task1HzStack,
+                  .stack_size = sizeof(task1HzStack),
+                  .priority   = (osPriority_t)osPriorityHigh,
+        },
+        .event = {
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_1Hz,
+        },
+        .periodMs = pdMS_TO_TICKS(1000U),
+    },
+};
+
+
+//***************************************************************************//
+//          P R I V A T E  F U N C T I O N  P R O T O T Y P E S              //
+//***************************************************************************//
+
+void vApplicationIdleHook(void);
+
+
+//***************************************************************************//
+//                     P R I V A T E  F U N C T I O N S                      //
+//***************************************************************************//
+
+static void rtosTickTimer(void* xTimer)
+{
+    if (xTimer == rtos_tick_timer)
+    {
+        for (uint16_t i = 0U; i < NUM_TASKS; i++)
+        {
+            RTOS_taskDesc_t* const task = &ModuleTasks[i];
+
+            if (task->periodMs == 0U)
+            {
+                // aperiodic task
+                continue;
+            }
+
+            // check if it is time to execute the task
+            if (++task->timeSinceLastTickMs == task->periodMs)
+            {
+                task->timeSinceLastTickMs = 0U;
+                // if it is, set the event bit for this task in the event group
+                xEventGroupSetBits(*task->event.group, task->event.bit);
+            }
+        }
+    }
+}
+
+/*
+ * Task Function
+ * This function is called by FreeRTOS for each task. Each task will then,
+ * in turn, check to see if it is time to execute based on its period and
+ * time since last execution. If it's time to execute, this function will call
+ * the function pointer associated with the task
+ */
+static void taskFxn(void* parameters)
+{
+    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters; // convert the parameter back into a task description
+
+    void (*const function)(void)    = task->function;    // get the function that will be called for this task
+    EventGroupHandle_t* event_group = task->event.group; // get the shared event group
+    EventBits_t         event_bit   = task->event.bit;   // get the event bit for this task
+
+    // if the processor has a floating point unit, uncomment the following line
+    // portTASK_USES_FLOATING_POINT();
+
+    for (;;)
+    {
+        // check if the event bit for this task has been set. If it has, call the function
+        // for this task. If not, non-blocking wait.
+        xEventGroupWaitBits(*event_group, event_bit, pdTRUE, pdFALSE, portMAX_DELAY);
+
+        (*function)();
+    }
+}
+
+void vApplicationIdleHook(void)
+{
+    /* vApplicationIdleHook() will only be called if configUSE_IDLE_HOOK is set
+    to 1 in FreeRTOSConfig.h. It will be called on each iteration of the idle
+    task. It is essential that code added to this hook function never attempts
+    to block in any way (for example, call xQueueReceive() with a block time
+    specified, or call vTaskDelay()). If the application makes use of the
+    vTaskDelete() API function (as this demo application does) then it is also
+    important that vApplicationIdleHook() is permitted to return to its calling
+    function, because it is the responsibility of the idle task to clean up
+    memory allocated by the kernel to any task that has since been deleted. */
+}
+
+//***************************************************************************//
+//                      P U B L I C  F U N C T I O N S                       //
+//***************************************************************************//
+
+void RTOS_createResources(void)
+{
+    /*
+     * Create tasks
+     */
+    for (uint16_t i = 0U; i < NUM_TASKS; i++)
+    {
+        RTOS_taskDesc_t* const task = &ModuleTasks[i];
+
+        task->handle = osThreadNew(&taskFxn, task, &task->attr);
+    }
+
+    /*
+     * Create timers
+     */
+    static StaticTimer_t       rtosTickTimerState;
+    static const osTimerAttr_t rtosTickTimer_attr = {
+        .name    = "Timer 1kHz",
+        .cb_mem  = &rtosTickTimerState,
+        .cb_size = sizeof(rtosTickTimerState),
+    };
+    rtos_tick_timer = osTimerNew(rtosTickTimer, osTimerPeriodic, (void*)&rtosTickTimerState, &rtosTickTimer_attr);
+
+    /*
+     * Create event groups
+     */
+    static StaticEventGroup_t PeriodicTickEventGroup;
+    PeriodicEvent = xEventGroupCreateStatic(&PeriodicTickEventGroup);
+
+    osTimerStart(&rtosTickTimerState, pdMS_TO_TICKS(1U));
+}
+
+/* Private application code --------------------------------------------------*/

@@ -44,7 +44,7 @@ AllowAllParametersOfDeclarationOnNextLine: 'false'
 
 # Allows braced statements to be on a single line
 # e.g. if (eval) { return true; }
-AllowShortBlocksOnASingleLine: 'false'
+AllowShortBlocksOnASingleLine: 'true'
 
 # only merge functions defined inside a class, including empty ones
 # Other options include "empty" where onyl empty functions are inline
@@ -63,7 +63,7 @@ AllowShortIfStatementsOnASingleLine: 'false'
 AllowShortCaseLabelsOnASingleLine: 'false'
 
 # self-explanatory. for(;;) operation;
-AllowShortLoopsOnASingleLine: 'false'
+AllowShortLoopsOnASingleLine: 'true'
 
 # break long strings into multiple lines and then align the strings
 AlwaysBreakBeforeMultilineStrings: 'false'
@@ -219,7 +219,7 @@ SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: 'false'
 
 # number of spaces before c-style comments "//"
-SpacesBeforeTrailingComments: '1'
+SpacesBeforeTrailingComments: '4'
 
 # spaces inserted after < and before > in template argument lists
 SpacesInAngles: 'false'

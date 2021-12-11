@@ -28,6 +28,8 @@ AddOption("--savelog", dest="savelog", action="store_true")
 AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
 # add option for platformio commandline args
 AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
+# add option to upload the compiled firmware
+AddOption("--upload", dest="upload", action="store_true")
 
 def pio_build_cmd(source, **_):
     pio_dir = dirname(str(source[0]))
@@ -35,6 +37,9 @@ def pio_build_cmd(source, **_):
         Execute(f"cd {pio_dir} && pio run -t clean")
 
     cmd = f"cd {pio_dir} && pio run"
+
+    if GetOption("upload"):
+        cmd += " -t upload"
 
     if GetOption("savelog"):
         cmd += " -v | tee build.log"
