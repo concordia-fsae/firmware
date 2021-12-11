@@ -1,0 +1,3 @@
+description: "Steering Wheel node"
+onBuses:
+  - "veh"

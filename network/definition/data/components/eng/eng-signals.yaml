@@ -1,0 +1,21 @@
+signals:
+  rpm:
+    unit: "RPM"
+    cycleTimeMs: 10
+    description: "Engine RPM"
+    nativeRepresentation:
+      range:
+        min: 0
+        max: 15000
+      resolution: 1
+    continuous: true
+
+  gear:
+    cycleTimeMs: 100
+    description: "Current Gear"
+    discreteValues: "ENG_gear"
+
+  state:
+    cycleTimeMs: 10
+    description: "Engine Run State"
+    discreteValues: "ENG_state"
