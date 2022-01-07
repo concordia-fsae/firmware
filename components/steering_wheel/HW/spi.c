@@ -20,34 +20,53 @@
 /* Includes ------------------------------------------------------------------*/
 #include "spi.h"
 
-SPI_HandleTypeDef hspi1;
+// SPI_HandleTypeDef hspi1;
+LL_SPI_InitTypeDef hspi1;
+
+static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx);
+static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx);
 
 /* SPI1 init function */
 void MX_SPI1_Init(void)
 {
-    hspi1.Instance               = SPI1;
-    hspi1.Init.Mode              = SPI_MODE_MASTER;
-    hspi1.Init.Direction         = SPI_DIRECTION_2LINES;
-    hspi1.Init.DataSize          = SPI_DATASIZE_8BIT;
-    hspi1.Init.CLKPolarity       = SPI_POLARITY_LOW;
-    hspi1.Init.CLKPhase          = SPI_PHASE_1EDGE;
-    hspi1.Init.NSS               = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
-    hspi1.Init.FirstBit          = SPI_FIRSTBIT_MSB;
-    hspi1.Init.TIMode            = SPI_TIMODE_DISABLE;
-    hspi1.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
-    hspi1.Init.CRCPolynomial     = 10;
-    if (HAL_SPI_Init(&hspi1) != HAL_OK)
+    // hspi1.Instance               = SPI1;
+    // hspi1.Init.Mode              = SPI_MODE_MASTER;
+    // hspi1.Init.Direction         = SPI_DIRECTION_2LINES;
+    // hspi1.Init.DataSize          = SPI_DATASIZE_8BIT;
+    // hspi1.Init.CLKPolarity       = SPI_POLARITY_LOW;
+    // hspi1.Init.CLKPhase          = SPI_PHASE_1EDGE;
+    // hspi1.Init.NSS               = SPI_NSS_SOFT;
+    // hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+    // hspi1.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+    // hspi1.Init.TIMode            = SPI_TIMODE_DISABLE;
+    // hspi1.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
+    // hspi1.Init.CRCPolynomial     = 10;
+    hspi1.Mode = LL_SPI_MODE_MASTER;
+    hspi1.TransferDirection = LL_SPI_FULL_DUPLEX;
+    hspi1.DataWidth = LL_SPI_DATAWIDTH_8BIT;
+    hspi1.ClockPolarity = LL_SPI_POLARITY_LOW;
+    hspi1.ClockPhase = LL_SPI_PHASE_1EDGE;
+    hspi1.NSS = LL_SPI_NSS_SOFT;
+    hspi1.BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV8;
+    hspi1.BitOrder =  LL_SPI_MSB_FIRST;
+    hspi1.CRCCalculation = LL_SPI_CRCCALCULATION_DISABLE;
+    hspi1.CRCPoly = 0x00;
+
+    LL_SPI_GPIOInit(SPI1);
+
+    if (LL_SPI_Init(SPI1, &hspi1) != SUCCESS)
     {
         Error_Handler();
     }
-    __HAL_SPI_ENABLE(&hspi1);
+    // __HAL_SPI_ENABLE(&hspi1);
+    LL_SPI_Enable(SPI1);
 }
 
-void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
+// void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
+static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-    if (spiHandle->Instance == SPI1)
+    if (SPIx == SPI1)
     {
         /* SPI1 clock enable */
         __HAL_RCC_SPI1_CLK_ENABLE();
@@ -68,17 +87,18 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-        // __HAL_AFIO_REMAP_SPI1_ENABLE();
+        // __HAL_AFIO_REMAP_SPI1_ENABLE(); // use other pins for SPI1
         HAL_GPIO_WritePin(SPI1_NSS_GPIO_Port, SPI1_NSS_Pin, GPIO_PIN_SET);
     }
 }
 
-void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
+// void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
+static inline void LL_SPI_GPIODeInit(SPI_TypeDef *SPIx)
 {
-    if (spiHandle->Instance == SPI1)
+    if (SPIx == SPI1)
     {
         /* Peripheral clock disable */
-        __HAL_RCC_SPI1_CLK_DISABLE();
+        LL_SPI_Disable(SPI1);
 
         /**SPI1 GPIO Configuration
           PA5     ------> SPI1_SCK

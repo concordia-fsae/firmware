@@ -6,10 +6,22 @@
 #pragma once
 
 #include "stm32f1xx.h"
+#include "stm32f1xx_hal_conf.h"
 #include "errorHandler.h"
 #include "floatTypes.h"
 
 // Defines
+
+// system altering defines
+#define USE_FULL_LL_DRIVER
+
+// Interrupt priorities, lower number is higher priority
+// tick interrupt is highest priority
+
+#define DMA_IRQ_PRIO TICK_INT_PRIORITY// + 1U
+#define CAN_IRQ_PRIO TICK_INT_PRIORITY// + 2U
+
+// pin aliases
 #define LED_Pin                  GPIO_PIN_13
 #define LED_GPIO_Port            GPIOC
 

@@ -49,7 +49,6 @@ void MX_CAN_Init(void)
   hcan.Init.AutoRetransmission = DISABLE;
   hcan.Init.ReceiveFifoLocked = DISABLE;
   hcan.Init.TransmitFifoPriority = DISABLE;
-  hcan.TxMailbox0CompleteCallback = NULL;    // CAN Tx Mailbox 0 complete callback
   if (HAL_CAN_Init(&hcan) != HAL_OK)
   {
     Error_Handler();

@@ -1,7 +1,8 @@
 
 
-#include "ModuleDesc.h"
+#include "Display/Common.h"
 #include "HW_can.h"
+#include "ModuleDesc.h"
 
 
 extern CAN_HandleTypeDef hcan;
@@ -11,7 +12,6 @@ uint32_t                 TxMailbox;
 
 static void CanTests_init(void)
 {
-    // initialize structs
     HAL_CAN_Start(&hcan);    // start CAN
 }
 
@@ -26,7 +26,7 @@ static void CanTests10Hz_PRD(void)
     uint8_t a[8] = { 100, 0, 0, 0, 0, 0, 0, 0 };
     if (HAL_OK == HAL_CAN_AddTxMessage(&hcan, &pHeader, a, &TxMailbox))
     {
-        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        toggleInfoDotState(INFO_DOT_CAN_TX);
     }
 }
 

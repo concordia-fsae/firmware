@@ -13,3 +13,6 @@
 [submodule "CMSIS"]
 	path = components/steering_wheel/RTOS/CMSIS
 	url = git@github.com:ARM-software/CMSIS_5.git
+[submodule "embedded/libs/printf"]
+	path = embedded/libs/printf
+	url = git@github.com:mpaland/printf.git

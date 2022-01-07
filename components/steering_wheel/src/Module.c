@@ -9,9 +9,13 @@
 #include "Module.h"
 #include "Utility.h"
 
+#include "systemConfig.h"
+
 
 static const ModuleDesc_S* modules[] = {
+    &IO_desc,
     &Screen_desc,
+    &CanTests_desc,
 };
 
 
@@ -34,6 +38,12 @@ void Module_init(void)
  */
 void Module_1kHz_TSK(void)
 {
+    // static uint8_t tim = 0;
+    // if (++tim == 100U)
+    // {
+    //     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    //     tim = 0;
+    // }
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic1kHz_CLK != NULL)

@@ -1,0 +1,46 @@
+mcu: STM32F103
+drivers:
+  hal: # required
+  adc:
+  adc_ex:
+  can:
+  # cec:
+  cortex: # required
+  # crc:
+  # dac:
+  # dac_ex:
+  dma: # required
+  # eth:
+  # exti:
+  flash: # required
+  # flash_ex: # required
+  gpio:
+  # gpio_ex:
+  # hcd:
+  # i2c:
+  # i2s:
+  # irda:
+  # iwdg:
+  # mmc:
+  # nand:
+  # nor:
+  # pccard:
+  # pcd:
+  # pcd_ex:
+  pwr: # required
+  rcc: # required
+  rcc_ex: # required
+  # rtc:
+  # rtc_ex:
+  # sd:
+  # smartcard:
+  spi:
+    use_ll: true
+  # sram:
+  tim:
+  tim_ex: # required with tim
+  # uart:
+  # usart:
+  # wwdg:
+  # usb:
+  # utils:

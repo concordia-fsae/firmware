@@ -25,7 +25,18 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "systemConfig.h"
 
+
 extern CAN_HandleTypeDef hcan;
+
+
+// which CAN interrupts we want to enable
+#define CAN_ENABLED_INTERRUPTS (CAN_IER_TMEIE | CAN_IER_FMPIE0 | \
+                                CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
+                                CAN_IER_FFIE1 | CAN_IER_FOVIE0 | \
+                                CAN_IER_FOVIE1 | CAN_IER_WKUIE | \
+                                CAN_IER_SLKIE | CAN_IER_EWGIE | \
+                                CAN_IER_EPVIE | CAN_IER_BOFIE | \
+                                CAN_IER_LECIE | CAN_IER_ERRIE)
 
 void MX_CAN_Init(void);
 

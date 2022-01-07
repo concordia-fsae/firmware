@@ -8,13 +8,13 @@
 //***************************************************************************//
 // FreeRTOS includes
 #include "FreeRTOS.h"
-#include "cmsis_os.h"
 #include "task.h"
 #include "timers.h"
 
 // Codebase includes
 #include "FreeRTOS_types.h"
 
+#include "systemConfig.h"
 
 //***************************************************************************//
 //                              D E F I N E S                                //
@@ -28,13 +28,11 @@
 //***************************************************************************//
 //                             T Y P E D E F S                               //
 //***************************************************************************//
-typedef StaticTimer_t osStaticTimerDef_t;
-
 
 //***************************************************************************//
 //                               M A C R O S                                 //
 //***************************************************************************//
-#define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
+#define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t))    // number of tasks in this module
 
 
 //***************************************************************************//
@@ -46,7 +44,7 @@ typedef StaticTimer_t osStaticTimerDef_t;
 EventGroupHandle_t PeriodicEvent;
 
 // timer which will run all of the periodic tasks
-osTimerId_t rtos_tick_timer;
+TimerHandle_t rtos_tick_timer;
 
 // task handle and stack definitions
 static StaticTask_t Task1kHz;
@@ -67,70 +65,58 @@ extern void Module_1Hz_TSK(void);
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
     {
-        .function   = *Module_1kHz_TSK,
-        .parameters = NULL,
-        .attr       = {
-                  .name       = "Task 1kHz",
-                  .cb_mem     = &Task1kHz,
-                  .cb_size    = sizeof(Task1kHz),
-                  .stack_mem  = &task1kHzStack,
-                  .stack_size = sizeof(task1kHzStack),
-                  .priority   = (osPriority_t)osPriorityHigh3,
-        },
-        .event = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_1kHz,
+        .function    = &Module_1kHz_TSK,
+        .name        = "Task 1kHz",
+        .priority    = 4U,
+        .parameters  = NULL,
+        .stack       = task1kHzStack,
+        .stackSize   = sizeof(task1kHzStack) / sizeof(StackType_t),
+        .stateBuffer = &Task1kHz,
+        .event       = {
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_1kHz,
         },
         .periodMs = pdMS_TO_TICKS(1U),
     },
     {
-        .function   = *Module_100Hz_TSK,
-        .parameters = NULL,
-        .attr       = {
-                  .name       = "Task 100Hz",
-                  .cb_mem     = &Task100Hz,
-                  .cb_size    = sizeof(Task100Hz),
-                  .stack_mem  = &task100HzStack,
-                  .stack_size = sizeof(task100HzStack),
-                  .priority   = (osPriority_t)osPriorityHigh2,
-        },
-        .event = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_100Hz,
+        .function    = &Module_100Hz_TSK,
+        .name        = "Task 100Hz",
+        .priority    = 3U,
+        .parameters  = NULL,
+        .stack       = task100HzStack,
+        .stackSize   = sizeof(task100HzStack) / sizeof(StackType_t),
+        .stateBuffer = &Task100Hz,
+        .event       = {
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_100Hz,
         },
         .periodMs = pdMS_TO_TICKS(10U),
     },
     {
-        .function   = *Module_10Hz_TSK,
-        .parameters = NULL,
-        .attr       = {
-                  .name       = "Task 10Hz",
-                  .cb_mem     = &Task10Hz,
-                  .cb_size    = sizeof(Task10Hz),
-                  .stack_mem  = &task10HzStack,
-                  .stack_size = sizeof(task10HzStack),
-                  .priority   = (osPriority_t)osPriorityHigh1,
-        },
-        .event = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_10Hz,
+        .function    = &Module_10Hz_TSK,
+        .name        = "Task 10Hz",
+        .priority    = 2U,
+        .stack       = task10HzStack,
+        .stackSize   = sizeof(task10HzStack) / sizeof(StackType_t),
+        .stateBuffer = &Task10Hz,
+        .parameters  = NULL,
+        .event       = {
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_10Hz,
         },
         .periodMs = pdMS_TO_TICKS(100U),
     },
     {
-        .function   = *Module_1Hz_TSK,
-        .parameters = NULL,
-        .attr       = {
-                  .name       = "Task 1Hz",
-                  .cb_mem     = &Task1Hz,
-                  .cb_size    = sizeof(Task1Hz),
-                  .stack_mem  = &task1HzStack,
-                  .stack_size = sizeof(task1HzStack),
-                  .priority   = (osPriority_t)osPriorityHigh,
-        },
-        .event = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_1Hz,
+        .function    = &Module_1Hz_TSK,
+        .name        = "Task 1Hz",
+        .priority    = 1U,
+        .stack       = task1HzStack,
+        .stackSize   = sizeof(task1HzStack) / sizeof(StackType_t),
+        .stateBuffer = &Task1Hz,
+        .parameters  = NULL,
+        .event       = {
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_1Hz,
         },
         .periodMs = pdMS_TO_TICKS(1000U),
     },
@@ -148,7 +134,7 @@ void vApplicationIdleHook(void);
 //                     P R I V A T E  F U N C T I O N S                      //
 //***************************************************************************//
 
-static void rtosTickTimer(void* xTimer)
+static void rtosTickTimer(TimerHandle_t xTimer)
 {
     if (xTimer == rtos_tick_timer)
     {
@@ -182,11 +168,11 @@ static void rtosTickTimer(void* xTimer)
  */
 static void taskFxn(void* parameters)
 {
-    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters; // convert the parameter back into a task description
+    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;    // convert the parameter back into a task description
 
-    void (*const function)(void)    = task->function;    // get the function that will be called for this task
-    EventGroupHandle_t* event_group = task->event.group; // get the shared event group
-    EventBits_t         event_bit   = task->event.bit;   // get the event bit for this task
+    void (*const function)(void)    = task->function;       // get the function that will be called for this task
+    EventGroupHandle_t* event_group = task->event.group;    // get the shared event group
+    EventBits_t         event_bit   = task->event.bit;      // get the event bit for this task
 
     // if the processor has a floating point unit, uncomment the following line
     // portTASK_USES_FLOATING_POINT();
@@ -227,27 +213,71 @@ void RTOS_createResources(void)
     {
         RTOS_taskDesc_t* const task = &ModuleTasks[i];
 
-        task->handle = osThreadNew(&taskFxn, task, &task->attr);
+        task->handle = xTaskCreateStatic(&taskFxn,
+                                         task->name,
+                                         task->stackSize,
+                                         task,
+                                         task->priority,
+                                         task->stack,
+                                         task->stateBuffer);
     }
 
     /*
      * Create timers
      */
-    static StaticTimer_t       rtosTickTimerState;
-    static const osTimerAttr_t rtosTickTimer_attr = {
-        .name    = "Timer 1kHz",
-        .cb_mem  = &rtosTickTimerState,
-        .cb_size = sizeof(rtosTickTimerState),
-    };
-    rtos_tick_timer = osTimerNew(rtosTickTimer, osTimerPeriodic, (void*)&rtosTickTimerState, &rtosTickTimer_attr);
+    static StaticTimer_t rtosTickTimerState;
+    rtos_tick_timer = xTimerCreateStatic("Timer 1kHz",
+                                         pdMS_TO_TICKS(1),
+                                         pdTRUE,
+                                         NULL,
+                                         &rtosTickTimer,
+                                         &rtosTickTimerState);
+
+    // start the timer (it will only start once the scheduler starts)
+    (void)xTimerStart(rtos_tick_timer, 0U);
 
     /*
      * Create event groups
      */
     static StaticEventGroup_t PeriodicTickEventGroup;
     PeriodicEvent = xEventGroupCreateStatic(&PeriodicTickEventGroup);
+}
 
-    osTimerStart(&rtosTickTimerState, pdMS_TO_TICKS(1U));
+
+//***************************************************************************//
+//                              O S  H O O K S                               //
+//***************************************************************************//
+extern void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
+                                          StackType_t**  ppxIdleTaskStackBuffer,
+                                          uint32_t*      pusIdleTaskStackSize);
+
+void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
+                                   StackType_t**  ppxIdleTaskStackBuffer,
+                                   uint32_t*      pusIdleTaskStackSize)
+{
+    static StaticTask_t idleTask;
+    static StackType_t  idleTaskStack[configIDLE_TASK_STACK_DEPTH];
+
+    *ppxIdleTaskTCBBuffer   = &idleTask;
+    *ppxIdleTaskStackBuffer = idleTaskStack;
+    *pusIdleTaskStackSize   = sizeof(idleTaskStack) / sizeof(StackType_t);
+}
+
+extern void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
+                                           StackType_t**  ppxTimerTaskStackBuffer,
+                                           uint32_t*      pusTimerTaskStackSize);
+
+
+void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
+                                    StackType_t**  ppxTimerTaskStackBuffer,
+                                    uint32_t*      pusTimerTaskStackSize)
+{
+    static StaticTask_t timerTask;
+    static StackType_t  timerTaskStack[configTIMER_TASK_STACK_DEPTH];
+
+    *ppxTimerTaskTCBBuffer   = &timerTask;
+    *ppxTimerTaskStackBuffer = timerTaskStack;
+    *pusTimerTaskStackSize   = sizeof(timerTaskStack) / sizeof(StackType_t);
 }
 
 /* Private application code --------------------------------------------------*/

@@ -5,17 +5,17 @@
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
-#include "cmsis_os.h"
 #include "task.h"
 
 // System includes
 #include "stdbool.h"
 
 // Other Includes
+#include "HW_can.h"
 #include "Module.h"
 #include "adc.h"
-#include "HW_can.h"
 #include "clock.h"
+#include "dma.h"
 #include "gpio.h"
 #include "spi.h"
 
@@ -34,8 +34,8 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_CAN_Init();
+    MX_DMA_Init();
     MX_ADC1_Init();
-    MX_ADC2_Init();
     MX_SPI1_Init();
 
     // create the tasks, timers, etc.
@@ -45,10 +45,9 @@ int main(void)
     Module_init();
 
     // init and start the scheduler
-    osKernelInitialize();
-    osKernelStart();
+    vTaskStartScheduler();
 
-    while (true) {}
+    return 0;
 }
 
 /**
@@ -58,5 +57,5 @@ int main(void)
 void Error_Handler(void)
 {
     __disable_irq();
-    while (1) { }
+    while (1) {}
 }

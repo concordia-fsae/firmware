@@ -17,8 +17,8 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
+#include "stm32f1xx.h"
 /* Private includes ----------------------------------------------------------*/
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -28,7 +28,9 @@
 /* Private user code ---------------------------------------------------------*/
 
 /* External variables --------------------------------------------------------*/
+extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim4;
+extern CAN_HandleTypeDef hcan;
 
 /******************************************************************************/
 /*           Cortex-M3 Processor Interruption and Exception Handlers          */
@@ -46,7 +48,8 @@ void NMI_Handler(void)
  */
 void HardFault_Handler(void)
 {
-    while (1) {}
+    volatile uint8_t c = 0;
+    while (c == 0) {}
 }
 
 /**
@@ -86,11 +89,40 @@ void DebugMon_Handler(void) {}
 /******************************************************************************/
 
 /**
+ * @brief This function handles DMA1 channel1 global interrupt.
+ */
+void DMA1_Channel1_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_adc1);
+}
+
+/**
  * @brief This function handles TIM4 global interrupt.
  */
 void TIM4_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&htim4);
+}
+
+// CAN interrupts
+void CAN1_SCE_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
+
+void CAN1_TX_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
+
+void CAN1_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
+
+void CAN1_RX1_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

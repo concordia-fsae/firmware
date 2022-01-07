@@ -1,16 +1,212 @@
 #!/usr/bin/python3
-from SCons.Script import Import
+from os.path import basename, join, splitext
 
-Import("env")
+from SCons.Script import *
+
+Import("*")
 
 # for now just run the platformio build
 # eventually build everything with scons
-env.pio_build(source="platformio.ini")
+# env.pio_build(source="platformio.ini")
 
-# CPPPATH = []
-# CPPPATH.append('include')
-# CPPPATH.append('lib/lib_FTDI_FT81x/include')
+RTOS_DIR = Dir("RTOS")
+FREERTOS_DIR = Dir("RTOS/FreeRTOS/")
+PROJECT_SOURCE_DIR = Dir("src")
+PLATFORMS_DIR = Dir("#/embedded/platforms/")
+DRIVERS_DIR = PLATFORMS_DIR.Dir("framework-stm32cubef1/Drivers/")
+LIBS_DIR = Dir("#/embedded/libs/")
+
+BUILD_DIR = Dir("build")
+FREERTOS_BUILD_DIR = BUILD_DIR.Dir("FreeRTOS")
 
 
-# env.Append(CPPPATH=CPPPATH)
-# env.Program(source=Glob("src/*.c"))
+OPENOCD_INTERFACE = "stlink"
+OPENOCD_BOARD = "stm32f103c8"
+
+env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd"])
+env.Tool("compilation_db")
+
+env["REPO_ROOT_DIR"] = Dir("#")
+
+rtos_env = Environment(tools=["arm-none-eabi"])
+
+common_flags = [
+    "-mthumb",
+    "-mcpu=cortex-m3",
+]
+
+debug_flags = [
+    "-ggdb2",
+    "-g2",
+    "-Og",
+]
+
+release_flags = [
+    "-O2",
+]
+
+link_flags = [
+    "-Wl,--gc-sections,--relax,--print-memory-usage",
+    f"-Wl,-Map={BUILD_DIR.File('steering_wheel.map').path}",
+    # "-Wl,--print-gc-sections",
+    "--specs=nano.specs",
+    "--specs=nosys.specs",
+]
+
+as_flags = ["-xassembler-with-cpp"]
+
+c_flags = [
+    "-std=c11",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    "-nostdlib",
+    "-msoft-float",
+    "-DSTM32F1",
+    "-DSTM32F103xB",
+    "-DUSE_HAL_DRIVER",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wfloat-equal",
+    "-Wcast-align",
+    "-Wlogical-op",
+    "-Winline",
+    "-Wshadow",
+    "-Winit-self",
+    "-Wmissing-prototypes",
+    "-Wunused-function",
+    "-Wpointer-arith",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+]
+
+free_rtos_flags = [
+    "-Wno-missing-prototypes",
+    "-Wno-cast-align",
+]
+
+if GetOption("release"):
+    common_flags += release_flags
+else:
+    common_flags += debug_flags
+
+
+env["LINKFLAGS"] = [link_flags + common_flags]
+
+RTOS_INCLUDE_DIRS = [
+    RTOS_DIR,
+    FREERTOS_DIR.Dir("Source/include/"),
+    FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
+    FREERTOS_DIR.Dir("CMSIS/RTOS2/FreeRTOS/Include/"),
+    FREERTOS_DIR.Dir("CMSIS/RTOS2/FreeRTOS/Include1/"),
+    RTOS_DIR.Dir("CMSIS/CMSIS/Core/Include/"),
+    RTOS_DIR.Dir("CMSIS/CMSIS/Core_A/Include/"),
+    RTOS_DIR.Dir("CMSIS/CMSIS/RTOS2/Include/"),
+    RTOS_DIR.Dir("CMSIS/Device/ARM/ARMCM3/Include/"),
+]
+
+DRIVERS_INCLUDE_DIRS = [
+    DRIVERS_DIR.Dir("CMSIS/Device/ST/STM32F1xx/Include/"),
+    DRIVERS_DIR.Dir("CMSIS/DSP/Include"),
+    DRIVERS_DIR.Dir("CMSIS/Include"),
+    DRIVERS_DIR.Dir("CMSIS/Device/ST/STM32F1xx/Include"),
+    DRIVERS_DIR.Dir("STM32F1xx_HAL_Driver/Inc"),
+    PLATFORMS_DIR.Dir(
+        "ststm32@14.2.0/builder/embedded/platforms/framework-stm32cubef1/Drivers/CMSIS/Device/ST/STM32F1xx/Include"
+    ),
+    LIBS_DIR.Dir("printf"),
+]
+
+PROJECT_INCLUDE_DIRS = [
+    "include/",
+    "lib/lib_FTDI_FT81x/include",
+    "HW/include/",
+]
+
+paths = RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + PROJECT_INCLUDE_DIRS
+
+env.Append(
+    ASFLAGS=as_flags,
+    CPPPATH=paths,
+    CCFLAGS=common_flags + c_flags,
+    LINKSCRIPT=PLATFORMS_DIR.File(
+        "tool-ldscripts-ststm32/stm32f1/STM32F103C8_DEFAULT.ld"
+    ),
+)
+
+rtos_env.Append(
+    CPPPATH=paths,
+    CCFLAGS=common_flags + c_flags + free_rtos_flags,
+)
+
+objs = []
+
+# Set specifics c files
+project_source_files = list(Glob("src/*.c")) + list(Glob("lib/**/**/*.c"))
+project_source_files += list(Glob("HW/*.c"))
+
+rtos_source_files = [
+    RTOS_DIR.File("FreeRTOSResources.c"),
+    FREERTOS_DIR.File("Source/croutine.c"),
+    FREERTOS_DIR.File("Source/event_groups.c"),
+    FREERTOS_DIR.File("Source/list.c"),
+    FREERTOS_DIR.File("Source/queue.c"),
+    # FREERTOS_DIR.File("Source/stream_buffer.c"),
+    FREERTOS_DIR.File("Source/tasks.c"),
+    FREERTOS_DIR.File("Source/timers.c"),
+    FREERTOS_DIR.File("Source/portable/MemMang/heap_3.c"),
+    FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
+]
+
+embedded_source_files = {
+    DRIVERS_DIR.File(
+        "CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c"
+    ): None,
+    DRIVERS_DIR.File(
+        "CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc/startup_stm32f103xb.S"
+    ): None,
+    LIBS_DIR.File("printf/printf.c"): ["-Wno-float-equal", "-DPRINTF_INCLUDE_CONFIG_H"],
+}
+
+
+embedded_source_files.update(env.ChipConfig(config_file="mcuDrivers.yaml"))
+
+# with open("env_dump.txt", "w") as file:
+#     env_dumped = env.Dump()
+#     for key in env_dumped:
+#         file.write(key)
+
+
+def get_filename_no_ext(path) -> str:
+    return splitext(path)[0]
+
+
+for src_file, extra_flags in embedded_source_files.items():
+    object = BUILD_DIR.File("embedded/" + get_filename_no_ext(src_file.name) + ".obj")
+    flags = env["CCFLAGS"] + extra_flags
+    env.Object(target=object, source=src_file, CCFLAGS=env["CCFLAGS"] + extra_flags)
+    objs.append(object)
+
+for src_file in rtos_source_files:
+    object = FREERTOS_BUILD_DIR.File(get_filename_no_ext(src_file.name) + ".obj")
+    rtos_env.Object(target=object, source=src_file)
+    objs.append(object)
+
+for src_file in project_source_files:
+    object = BUILD_DIR.File("src/" + get_filename_no_ext(src_file.name) + ".obj")
+    env.Object(target=object, source=src_file)
+    objs.append(object)
+
+
+built = lambda: env.Program("build/steering_wheel", objs)
+env.Alias("build", built())
+env.Default("build")
+
+env.Alias("cdb", env.CompilationDatabase())
+env.Alias("upload", env.flash(source="build/steering_wheel.bin"))
+env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
+
+env.Alias("openocd-gdb", env.launch_gdb("build/steering_wheel.elf", f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'", '-ex "monitor reset"'))
+env.Alias("gdb", env.launch_gdb("build/steering_wheel.elf", '-ex "target extended-remote localhost:3333"', '-ex "monitor reset"'))
