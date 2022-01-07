@@ -9,6 +9,9 @@
 //                             I N C L U D E S                               //
 //***************************************************************************//
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "EVE.h"
 
 
@@ -16,19 +19,8 @@
 //                              D E F I N E S                                //
 //***************************************************************************//
 
-/* some pre-definded colors */
-#define RED    0xff0000UL
-#define ORANGE 0xffa500UL
-#define GREEN  0x00ff00UL
-#define BLUE   0x0000ffUL
-#define BLUE_1 0x5dade2L
-#define YELLOW 0xffff00UL
-#define PINK   0xff00ffUL
-#define PURPLE 0x800080UL
-#define WHITE  0xffffffUL
-#define BLACK  0x000000UL
-
 #define LAYOUT_Y1 66
+
 
 //***************************************************************************//
 //                             T Y P E D E F S                               //
@@ -44,11 +36,19 @@ typedef enum
     SCR_STATE_COUNT,
 } ScrState_E;
 
+typedef enum
+{
+    SCR_PAGE_MAIN = 0,
+    SCR_PAGE_LAUNCH_CONTROL,
+    SCR_PAGE_DIAG,
+    SCR_PAGE_COUNT,
+} ScrPages_E;
+
 typedef struct
 {
     EVE_InitStatus_E initStatus;
-    uint8_t      brightness;
-    ScrState_E   state;
+    uint8_t          brightness;
+    ScrState_E       state;
 } SCR_S;
 
 //***************************************************************************//

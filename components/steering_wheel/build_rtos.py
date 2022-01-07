@@ -27,11 +27,11 @@ freertos_lib_src_files = [
     join("Source", "timers.c"),
     join("Source", "portable", "MemMang", "heap_4.c"),
     join("Source", "portable", "GCC", "ARM_CM3", "port.c"),
-    join("CMSIS", "RTOS2", "FreeRTOS", "Source", "cmsis_os1.c"),
-    join("CMSIS", "RTOS2", "FreeRTOS", "Source", "cmsis_os2.c"),
-    join("CMSIS", "RTOS2", "FreeRTOS", "Source", "freertos_evr.c"),
-    join("CMSIS", "RTOS2", "FreeRTOS", "Source", "handlers.c"),
-    join("CMSIS", "RTOS2", "FreeRTOS", "Source", "os_systick.c"),
+    # join("CMSIS", "RTOS2", "FreeRTOS", "Source", "cmsis_os1.c"),
+    # join("CMSIS", "RTOS2", "FreeRTOS", "Source", "cmsis_os2.c"),
+    # join("CMSIS", "RTOS2", "FreeRTOS", "Source", "freertos_evr.c"),
+    # join("CMSIS", "RTOS2", "FreeRTOS", "Source", "handlers.c"),
+    # join("CMSIS", "RTOS2", "FreeRTOS", "Source", "os_systick.c"),
 ]
 
 freertos_proj_src_files = [
@@ -60,4 +60,4 @@ for src in freertos_proj_src_files:
 
 env.Append(CPPPATH=[rtos_build_path, join(rtos_build_path, "FreeRTOS")])
 
-print("RTOS build script executed")
+print("RTOS compilation completed")

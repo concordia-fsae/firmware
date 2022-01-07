@@ -12,12 +12,18 @@
 #include "Screen.h"
 
 // System includes
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 // other includes
-#include "Displays/Displays.h"
 #include "ModuleDesc.h"
 #include "Types.h"
+
+// display includes
+#include "Display/Common.h"
+#include "Display/CommonDisplay.h"
+#include "Display/MainDisplay.h"
 
 
 //***************************************************************************//
@@ -26,6 +32,7 @@
 
 #define BRIGHTNESS_MAX 0x78
 #define MAX_RETRIES    3
+
 
 //***************************************************************************//
 //                             T Y P E D E F S                               //
@@ -37,7 +44,10 @@ typedef struct
     uint8_t  currentBrightness;
     uint8_t  retryCount;
     uint16_t errorCount;
+
+    ScrPages_E page;
 } scr_S;
+
 
 //***************************************************************************//
 //                               M A C R O S                                 //
@@ -47,10 +57,11 @@ typedef struct
 //          P R I V A T E  F U N C T I O N  P R O T O T Y P E S              //
 //***************************************************************************//
 
-ScrState_E process_unavailable(void);
-ScrState_E process_running(void);
-ScrState_E process_error(void);
-ScrState_E process_retry(void);
+static ScrState_E process_unavailable(void);
+static ScrState_E process_running(void);
+static ScrState_E process_error(void);
+static ScrState_E process_retry(void);
+
 
 //***************************************************************************//
 //                         P R I V A T E  V A R S                            //
@@ -58,12 +69,18 @@ ScrState_E process_retry(void);
 
 static scr_S scr;
 
-ScrState_E (*stateFunctions[SCR_STATE_COUNT])(void) = {
+static ScrState_E (*stateFunctions[SCR_STATE_COUNT])(void) = {
     [SCR_STATE_UNAVAILABLE] = &process_unavailable,
     [SCR_STATE_RUNNING]     = &process_running,
     [SCR_STATE_RETRY]       = &process_retry,
     [SCR_STATE_INIT_ERROR]  = &process_error,
     [SCR_STATE_ERROR]       = &process_error,
+};
+
+static void (*pageFunctions[SCR_PAGE_COUNT])(void) = {
+    [SCR_PAGE_MAIN]           = &main_display,
+    [SCR_PAGE_LAUNCH_CONTROL] = NULL,
+    [SCR_PAGE_DIAG]           = NULL,
 };
 
 
@@ -75,11 +92,25 @@ extern SCR_S SCR;
 
 
 //***************************************************************************//
+//                       P U B L I C  F U N C T I O N S                      //
+//***************************************************************************//
+
+void toggleInfoDotState(dispCommonInfoDots_E infoDot)
+{
+    if (infoDot < INFO_DOT_COUNT)
+    {
+        dispCommonInfoDots[infoDot].dot.state = (dispCommonInfoDots[infoDot].dot.state == DUAL_STATE_ON)
+                                                    ? DUAL_STATE_OFF
+                                                    : DUAL_STATE_ON;
+    }
+}
+
+
+//***************************************************************************//
 //                     P R I V A T E  F U N C T I O N S                      //
 //***************************************************************************//
 
-
-ScrState_E process_running(void)
+static ScrState_E process_running(void)
 {
     static uint16_t timer;
 
@@ -89,13 +120,18 @@ ScrState_E process_running(void)
 
         display_start();     // start the display generation
         common_display();    // common display elements shared on all screens
-        display_end();       // end the display generation and tell the screen to show it
+        // display the current page
+        if (pageFunctions[scr.page] != NULL)
+        {
+            pageFunctions[scr.page]();
+        }
+        display_end();    // end the display generation and tell the screen to show it
     }
 
     return SCR_STATE_RUNNING;
 }
 
-ScrState_E process_unavailable(void)
+static ScrState_E process_unavailable(void)
 {
     EVE_InitStatus_E initStatus;
     ScrState_E       nextState;
@@ -115,6 +151,7 @@ ScrState_E process_unavailable(void)
     // if global init status is NONE while local is SUCCESS, we just started up
     if ((SCR.initStatus == EVE_INIT_NONE) && (initStatus == EVE_INIT_SUCCESS))
     {
+        SCR.initStatus = EVE_INIT_SUCCESS;
         SCR.brightness = 0x60;    // default value for brightness until a request comes in from elsewhere to change it
         EVE_memWrite8(REG_PWM_DUTY, SCR.brightness);
         nextState = SCR_STATE_RUNNING;
@@ -135,7 +172,7 @@ ScrState_E process_unavailable(void)
     return nextState;
 }
 
-ScrState_E process_error(void)
+static ScrState_E process_error(void)
 {
     ScrState_E nextState;
     scr.errorCount++;
@@ -153,7 +190,7 @@ ScrState_E process_error(void)
     return nextState;
 }
 
-ScrState_E process_retry(void)
+static ScrState_E process_retry(void)
 {
     ScrState_E nextState;
     while (scr.retryCount < MAX_RETRIES)
@@ -227,7 +264,7 @@ static void updateBrightness_10Hz()
         && (SCR.brightness >= 0x00)                  //
         && (SCR.brightness <= BRIGHTNESS_MAX))
     {
-        EVE_memWrite8(REG_PWM_DUTY, SCR.brightness); /* setup backlight, range is from 0 = off to 0x80 = max */
+        EVE_memWrite8(REG_PWM_DUTY, SCR.brightness);    // setup backlight, range is from 0 = off to 0x80 = max
         scr.currentBrightness = SCR.brightness;
     }
 }
@@ -247,6 +284,8 @@ static void Screen10Hz_PRD(void)
     {
         updateBrightness_10Hz();
     }
+
+    toggleInfoDotState(INFO_DOT_RUN_STATUS);
 }
 
 

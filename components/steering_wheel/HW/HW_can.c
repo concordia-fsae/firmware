@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "HW_can.h"
+#include "IO.h"
 
 CAN_HandleTypeDef hcan;
 
@@ -37,6 +38,14 @@ void MX_CAN_Init(void)
     hcan.Init.AutoRetransmission    = DISABLE;
     hcan.Init.ReceiveFifoLocked     = DISABLE;
     hcan.Init.TransmitFifoPriority  = DISABLE;
+
+    if (HAL_CAN_Init(&hcan) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
+
     hcan.TxMailbox0CompleteCallback = CAN_TxComplete_MB0_SWI;        // CAN Tx Mailbox 0 complete callback
     hcan.TxMailbox1CompleteCallback = CAN_TxComplete_MB1_SWI;        // CAN Tx Mailbox 1 complete callback
     hcan.TxMailbox2CompleteCallback = CAN_TxComplete_MB2_SWI;        // CAN Tx Mailbox 2 complete callback
@@ -50,11 +59,6 @@ void MX_CAN_Init(void)
     hcan.SleepCallback              = NULL;                          // CAN Sleep callback
     hcan.WakeUpFromRxMsgCallback    = NULL;                          // CAN Wake Up from Rx msg callback
     hcan.ErrorCallback              = CAN_ErrorUnknown_SWI;          // CAN Error callback
-
-    if (HAL_CAN_Init(&hcan) != HAL_OK)
-    {
-        Error_Handler();
-    }
 }
 
 /*
@@ -63,6 +67,7 @@ void MX_CAN_Init(void)
  */
 void CAN_TxComplete_SWI(uint8_t mailbox)
 {
+    IO.test++;
     UNUSED(mailbox);
 }
 
@@ -142,7 +147,6 @@ void CAN_ErrorFIFOFull_SWI(CAN_HandleTypeDef *canHandle)
 
 void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
     if (canHandle->Instance == CAN1)
     {
         /* CAN1 clock enable */
@@ -153,6 +157,8 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         PA11     ------> CAN_RX
         PA12     ------> CAN_TX
         */
+        GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+
         GPIO_InitStruct.Pin  = GPIO_PIN_11;
         GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -162,6 +168,18 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+        HAL_NVIC_SetPriority(CAN1_SCE_IRQn, 0, 0U);
+        HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
+
+        HAL_NVIC_SetPriority(CAN1_TX_IRQn, 0, 0U);
+        HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
+
+        HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 0, 0U);
+        HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+
+        HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 0, 0U);
+        HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
     }
 }
 
@@ -177,6 +195,11 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
         PA12     ------> CAN_TX
         */
         HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
+
+        HAL_NVIC_DisableIRQ(CAN1_SCE_IRQn);
+        HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);
+        HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
+        HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
     }
 }
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

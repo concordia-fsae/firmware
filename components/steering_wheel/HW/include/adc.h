@@ -26,10 +26,10 @@ extern "C" {
 #include "systemConfig.h"
 
 extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
+extern DMA_HandleTypeDef hdma_adc1;
 
 void MX_ADC1_Init(void);
-void MX_ADC2_Init(void);
+HAL_StatusTypeDef HAL_ADC_Calibrate(ADC_HandleTypeDef *hadc);
 
 #ifdef __cplusplus
 }

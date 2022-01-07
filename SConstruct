@@ -28,8 +28,9 @@ AddOption("--savelog", dest="savelog", action="store_true")
 AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
 # add option for platformio commandline args
 AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
-# add option to upload the compiled firmware
-AddOption("--upload", dest="upload", action="store_true")
+# add option to build without debug info
+AddOption("--release", dest="release", action="store_true")
+
 
 def pio_build_cmd(source, **_):
     pio_dir = dirname(str(source[0]))
