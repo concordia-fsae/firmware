@@ -22,9 +22,9 @@
 #include "Utility.h"
 
 // HW includes
-#include "adc.h"
-#include "dma.h"
-#include "gpio.h"
+#include "HW_adc.h"
+#include "HW_dma.h"
+#include "HW_gpio.h"
 
 
 //***************************************************************************//

@@ -1,8 +1,8 @@
 /**
   ******************************************************************************
-  * @file    spi.h
+  * @file    adc.h
   * @brief   This file contains all the function prototypes for
-  *          the spi.c file
+  *          the adc.c file
   ******************************************************************************
   * @attention
   *
@@ -23,13 +23,13 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "systemConfig.h"
-#include "stm32f1xx_ll_spi.h"
+#include "SystemConfig.h"
 
-// extern SPI_HandleTypeDef hspi1;
-extern LL_SPI_InitTypeDef hspi1;
+extern ADC_HandleTypeDef hadc1;
+extern DMA_HandleTypeDef hdma_adc1;
 
-void MX_SPI1_Init(void);
+void MX_ADC1_Init(void);
+HAL_StatusTypeDef HAL_ADC_Calibrate(ADC_HandleTypeDef *hadc);
 
 #ifdef __cplusplus
 }

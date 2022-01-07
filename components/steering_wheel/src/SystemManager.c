@@ -13,11 +13,11 @@
 // Other Includes
 #include "HW_can.h"
 #include "Module.h"
-#include "adc.h"
-#include "clock.h"
-#include "dma.h"
-#include "gpio.h"
-#include "spi.h"
+#include "HW_adc.h"
+#include "HW_clock.h"
+#include "HW_dma.h"
+#include "HW_gpio.h"
+#include "HW_spi.h"
 
 // externs
 extern void RTOS_createResources(void);

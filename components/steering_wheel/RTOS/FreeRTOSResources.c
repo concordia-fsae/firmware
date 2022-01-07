@@ -14,7 +14,7 @@
 // Codebase includes
 #include "FreeRTOS_types.h"
 
-#include "systemConfig.h"
+#include "SystemConfig.h"
 
 //***************************************************************************//
 //                              D E F I N E S                                //

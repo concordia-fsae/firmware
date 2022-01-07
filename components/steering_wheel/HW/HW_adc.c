@@ -21,7 +21,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "adc.h"
+#include "HW_adc.h"
 
 
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U

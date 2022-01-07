@@ -18,7 +18,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "spi.h"
+#include "HW_spi.h"
 
 // SPI_HandleTypeDef hspi1;
 LL_SPI_InitTypeDef hspi1;
