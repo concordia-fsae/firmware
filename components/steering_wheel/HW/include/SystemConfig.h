@@ -6,9 +6,8 @@
 #pragma once
 
 #include "stm32f1xx.h"
-#include "stm32f1xx_hal_conf.h"
-#include "errorHandler.h"
-#include "floatTypes.h"
+#include "ErrorHandler.h"
+#include "FloatTypes.h"
 
 // Defines
 

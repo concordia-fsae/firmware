@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "stm32f1xx_hal_rcc.h"
-#include "errorHandler.h"
+#include "stm32f1xx_hal.h"
+#include "ErrorHandler.h"
 
 // function prototypes
 void SystemClock_Config(void);

@@ -9,7 +9,7 @@
 #include "Module.h"
 #include "Utility.h"
 
-#include "systemConfig.h"
+#include "SystemConfig.h"
 
 
 static const ModuleDesc_S* modules[] = {

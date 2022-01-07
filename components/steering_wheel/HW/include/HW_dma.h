@@ -1,8 +1,8 @@
 /**
  ******************************************************************************
- * @file    dma.c
- * @brief   This file provides code for the configuration
- *          of all the requested memory to memory DMA transfers.
+ * @file    dma.h
+ * @brief   This file contains all the function prototypes for
+ *          the dma.c file
  ******************************************************************************
  * @attention
  *
@@ -17,25 +17,25 @@
  ******************************************************************************
  */
 
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __DMA_H__
+# define __DMA_H__
+
+# ifdef __cplusplus
+extern "C" {
+# endif
+
 /* Includes ------------------------------------------------------------------*/
-#include "dma.h"
+# include "SystemConfig.h"
 
-/*----------------------------------------------------------------------------*/
-/* Configure DMA                                                              */
-/*----------------------------------------------------------------------------*/
+/* DMA memory to memory transfer handles -------------------------------------*/
 
-/**
- * Enable DMA controller clock
- */
-void MX_DMA_Init(void)
-{
-    /* DMA controller clock enable */
-    __HAL_RCC_DMA1_CLK_ENABLE();
+void MX_DMA_Init(void);
 
-    /* DMA interrupt init */
-    /* DMA1_Channel1_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIO, 0U);
-    HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
+# ifdef __cplusplus
 }
+# endif
+
+#endif /* __DMA_H__ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

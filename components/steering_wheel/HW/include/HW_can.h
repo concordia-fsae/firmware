@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "systemConfig.h"
+#include "SystemConfig.h"
 
 
 extern CAN_HandleTypeDef hcan;

@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "systemConfig.h"
+#include "SystemConfig.h"
 
 void MX_GPIO_Init(void);
 
