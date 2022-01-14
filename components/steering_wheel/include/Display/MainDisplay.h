@@ -1,10 +1,14 @@
-/*
+/**
  * Display/MainDisplay.h
  * This file contains the code to display the main display
  * on the screen
  */
 
 #pragma once
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 // Screen includes
 #include "Colors.h"
@@ -21,13 +25,21 @@
 #include "printf.h"
 
 
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
+/**
+ * main_display
+ *
+ */
 static void main_display(void)
 {
     // these will become CANRX macros eventually
     static uint8_t  currGear = 0;
     static uint16_t currRPM  = 0;
 
-    static bool fontsLoaded = false;
+    static bool     fontsLoaded = false;
 
     if (!fontsLoaded)
     {
@@ -36,6 +48,7 @@ static void main_display(void)
     }
 
     char gear[7][2] = { "?", "N", "1", "2", "3", "4", "5" };
+
     EVE_cmd_text_burst(240U, (272U / 2U) + -50U, 10U, EVE_OPT_CENTER, gear[currGear]);
     currGear = (currGear == 6U) ? 0U : currGear + 1U;
 

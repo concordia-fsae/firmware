@@ -1,29 +1,29 @@
 /**
- ******************************************************************************
- * @file    can.c
- * @brief   This file provides code for the configuration
- *          of the CAN instances.
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
+ * HW_can.c
+ * Hardware CAN controller implementation
  */
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
-/* Includes ------------------------------------------------------------------*/
 #include "HW_can.h"
 #include "IO.h"
 
+/******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
 CAN_HandleTypeDef hcan;
 
-/* CAN init function */
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+/**
+ * MX_CAN_Init
+ * initialize the CAN peripheral
+ */
 void MX_CAN_Init(void)
 {
     hcan.Instance                  = CAN1;
@@ -44,7 +44,10 @@ void MX_CAN_Init(void)
         Error_Handler();
     }
 
+    // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
+
+    // link interrupt callback handlers
 
     hcan.TxMailbox0CompleteCallback = CAN_TxComplete_MB0_SWI;        // CAN Tx Mailbox 0 complete callback
     hcan.TxMailbox1CompleteCallback = CAN_TxComplete_MB1_SWI;        // CAN Tx Mailbox 1 complete callback
@@ -61,9 +64,11 @@ void MX_CAN_Init(void)
     hcan.ErrorCallback              = CAN_ErrorUnknown_SWI;          // CAN Error callback
 }
 
-/*
+/**
+ * CAN_TxComplete_SWI
  * This SWI is called whenever a CAN mailbox is free. It should then push a
  * messge from the queue for that mailbox into the mailbox
+ * @param mailbox CAN mailbox which has finished transmission
  */
 void CAN_TxComplete_SWI(uint8_t mailbox)
 {
@@ -72,9 +77,11 @@ void CAN_TxComplete_SWI(uint8_t mailbox)
 }
 
 
-/*
+/**
+ * CAN_RxMsgPending_SWI
  * This SWI is called whenever a CAN message is received. It should then call
  * the relevant Rx function
+ * @param mailboxId CAN mailbox which has a message pending
  */
 void CAN_RxMsgPending_SWI(uint8_t mailboxId)
 {
@@ -82,9 +89,11 @@ void CAN_RxMsgPending_SWI(uint8_t mailboxId)
 }
 
 
-/*
+/**
+ * CAN_Error_SWI
  * This SWI is called whenever there is a CAN error. It should eventually do
  * something, though not sure what yet
+ * @param errorId which error has occurred
  */
 void CAN_Error_SWI(uint16_t errorId)
 {
@@ -92,6 +101,10 @@ void CAN_Error_SWI(uint16_t errorId)
 }
 
 
+/**
+ * CAN_TxComplete_MB0_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_TxComplete_MB0_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
@@ -99,6 +112,10 @@ void CAN_TxComplete_MB0_SWI(CAN_HandleTypeDef* canHandle)
 }
 
 
+/**
+ * CAN_TxComplete_MB1_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_TxComplete_MB1_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
@@ -106,6 +123,10 @@ void CAN_TxComplete_MB1_SWI(CAN_HandleTypeDef* canHandle)
 }
 
 
+/**
+ * CAN_TxComplete_MB2_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_TxComplete_MB2_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
@@ -113,6 +134,10 @@ void CAN_TxComplete_MB2_SWI(CAN_HandleTypeDef* canHandle)
 }
 
 
+/**
+ * CAN_RxMsgPending_FIFO0_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_RxMsgPending_FIFO0_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
@@ -120,6 +145,10 @@ void CAN_RxMsgPending_FIFO0_SWI(CAN_HandleTypeDef* canHandle)
 }
 
 
+/**
+ * CAN_RxMsgPending_FIFO1_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_RxMsgPending_FIFO1_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
@@ -127,36 +156,52 @@ void CAN_RxMsgPending_FIFO1_SWI(CAN_HandleTypeDef* canHandle)
 }
 
 
+/**
+ * CAN_ErrorUnknown_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_ErrorUnknown_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
 }
 
 
+/**
+ * CAN_TxError_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_TxError_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
 }
 
 
+/**
+ * CAN_ErrorFIFOFull_SWI
+ * @param canHandle which CAN handle to operate on
+ */
 void CAN_ErrorFIFOFull_SWI(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
 }
 
 
+/**
+ * HAL_CAN_MspInit
+ * @param canHandle which CAN handle to operate on
+ */
 void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
 {
     if (canHandle->Instance == CAN1)
     {
-        /* CAN1 clock enable */
+        // CAN1 clock enable
         __HAL_RCC_CAN1_CLK_ENABLE();
 
         __HAL_RCC_GPIOA_CLK_ENABLE();
         /**CAN GPIO Configuration
-        PA11     ------> CAN_RX
-        PA12     ------> CAN_TX
-        */
+         * PA11     ------> CAN_RX
+         * PA12     ------> CAN_TX
+         */
         GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
         GPIO_InitStruct.Pin  = GPIO_PIN_11;
@@ -183,17 +228,21 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     }
 }
 
+/**
+ * HAL_CAN_MspDeInit
+ * @param canHandle which CAN handle to operate on
+ */
 void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 {
     if (canHandle->Instance == CAN1)
     {
-        /* Peripheral clock disable */
+        // Peripheral clock disable
         __HAL_RCC_CAN1_CLK_DISABLE();
 
         /**CAN GPIO Configuration
-        PA11     ------> CAN_RX
-        PA12     ------> CAN_TX
-        */
+         * PA11     ------> CAN_RX
+         * PA12     ------> CAN_TX
+         */
         HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
 
         HAL_NVIC_DisableIRQ(CAN1_SCE_IRQn);
@@ -203,6 +252,12 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     }
 }
 
+/**
+ * CAN_sendMsg
+ * @param canHandle which CAN handle to operate on
+ * @param msg message data
+ * @return exit code
+ */
 HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_t msg)
 {
     HAL_CAN_StateTypeDef state = canHandle->State;
@@ -213,17 +268,20 @@ HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_t msg)
     {
         // check that the specified mailbox is free
         bool mailboxFree = false;
-        switch(msg.mailbox)
+        switch (msg.mailbox)
         {
             case CAN_MAILBOX_0:
                 mailboxFree = (tsr & CAN_TSR_TME0) != 0U;
                 break;
+
             case CAN_MAILBOX_1:
                 mailboxFree = (tsr & CAN_TSR_TME1) != 0U;
                 break;
+
             case CAN_MAILBOX_2:
                 mailboxFree = (tsr & CAN_TSR_TME2) != 0U;
                 break;
+
             case CAN_MAILBOX_COUNT:
             default:
                 break;
@@ -231,7 +289,6 @@ HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_t msg)
 
         if (mailboxFree)
         {
-
             // set CAN ID
             canHandle->Instance->sTxMailBox[msg.mailbox].TIR = ((msg.id << CAN_TI0R_STID_Pos) | msg.RTR);
             // set message length
@@ -243,21 +300,21 @@ HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_t msg)
             // TODO: test whether WRITE_REG compiles down to a different instruction than
             // just directly setting the register
             // WRITE_REG(hcan->Instance->sTxMailBox[msg.mailbox].TDHR,
-            //           ((uint32_t)aData[7] << CAN_TDH0R_DATA7_Pos) |
-            //               ((uint32_t)aData[6] << CAN_TDH0R_DATA6_Pos) |
-            //               ((uint32_t)aData[5] << CAN_TDH0R_DATA5_Pos) |
-            //               ((uint32_t)aData[4] << CAN_TDH0R_DATA4_Pos));
+            // ((uint32_t)aData[7] << CAN_TDH0R_DATA7_Pos) |
+            // ((uint32_t)aData[6] << CAN_TDH0R_DATA6_Pos) |
+            // ((uint32_t)aData[5] << CAN_TDH0R_DATA5_Pos) |
+            // ((uint32_t)aData[4] << CAN_TDH0R_DATA4_Pos));
             // WRITE_REG(hcan->Instance->sTxMailBox[msg.mailbox].TDLR,
-            //           ((uint32_t)aData[3] << CAN_TDL0R_DATA3_Pos) |
-            //               ((uint32_t)aData[2] << CAN_TDL0R_DATA2_Pos) |
-            //               ((uint32_t)aData[1] << CAN_TDL0R_DATA1_Pos) |
-            //               ((uint32_t)aData[0] << CAN_TDL0R_DATA0_Pos));
+            // ((uint32_t)aData[3] << CAN_TDL0R_DATA3_Pos) |
+            // ((uint32_t)aData[2] << CAN_TDL0R_DATA2_Pos) |
+            // ((uint32_t)aData[1] << CAN_TDL0R_DATA1_Pos) |
+            // ((uint32_t)aData[0] << CAN_TDL0R_DATA0_Pos));
 
 
             // request message transmission
             SET_BIT(canHandle->Instance->sTxMailBox[msg.mailbox].TIR, CAN_TI0R_TXRQ);
 
-            /* Return function status */
+            // Return function status
             return HAL_OK;
         }
         else
@@ -276,4 +333,3 @@ HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_t msg)
         return HAL_ERROR;
     }
 }
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

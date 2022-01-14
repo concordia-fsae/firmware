@@ -1,19 +1,29 @@
-/*
- * clock.h
- * Setup the system clock
+/**
+ * HW_clock.h
+ * Header file for the Clock hardware implementation
  */
 
 #pragma once
 
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 #include "stm32f1xx_hal.h"
 #include "ErrorHandler.h"
 
-// function prototypes
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
 void SystemClock_Config(void);
 
-// public functions
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
-/*
+/**
  * @brief System Clock Configuration
  * @retval None
  */
@@ -23,9 +33,9 @@ void SystemClock_Config(void)
     RCC_ClkInitTypeDef       RCC_ClkInitStruct = { 0 };
     RCC_PeriphCLKInitTypeDef PeriphClkInit     = { 0 };
 
-    /** Initializes the RCC Oscillators according to the specified parameters
-     * in the RCC_OscInitTypeDef structure.
-     */
+    // Initializes the RCC Oscillators according to the specified parameters
+    // in the RCC_OscInitTypeDef structure.
+
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.HSEState       = RCC_HSE_ON;
     RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
@@ -37,8 +47,8 @@ void SystemClock_Config(void)
     {
         Error_Handler();
     }
-    /** Initializes the CPU, AHB and APB buses clocks
-    */
+    // Initializes the CPU, AHB and APB buses clocks
+
     RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
                                   RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
@@ -73,7 +83,3 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
         HAL_IncTick();
     }
 }
-
-
-
-

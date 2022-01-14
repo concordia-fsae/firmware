@@ -1,41 +1,28 @@
 /**
- ******************************************************************************
- * @file    dma.h
- * @brief   This file contains all the function prototypes for
- *          the dma.c file
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
+ * HW_dma.h
+ * Header file for the DMA hardware implementation
  */
 
-/* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __DMA_H__
-# define __DMA_H__
+#pragma once
 
-# ifdef __cplusplus
+#ifdef __cplusplus
 extern "C" {
-# endif
+#endif
 
-/* Includes ------------------------------------------------------------------*/
-# include "SystemConfig.h"
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
-/* DMA memory to memory transfer handles -------------------------------------*/
+#include "SystemConfig.h"
+
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
 
 void MX_DMA_Init(void);
 
-# ifdef __cplusplus
+
+#ifdef __cplusplus
 }
-# endif
-
-#endif /* __DMA_H__ */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+#endif

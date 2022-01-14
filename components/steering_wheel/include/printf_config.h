@@ -1,9 +1,13 @@
-/*
+/**
  * printf_config.h
  * Config file for the lightweight printf library in /platforms/libs/printf
  */
 
 #pragma once
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
 #define PRINTF_DEFAULT_FLOAT_PRECISION 2
 

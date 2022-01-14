@@ -1,9 +1,13 @@
-/*
+/**
  * ModuleDesc.h
  * This file contains the definition of the Module Description
  */
 
 #pragma once
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
 
 /*
  * Module Descriptor
@@ -16,6 +20,11 @@ typedef struct
     void (*periodic10Hz_CLK)(void);  // Pointer to module 10Hz periodic function
     void (*periodic1Hz_CLK)(void);   // Pointer to module 1Hz periodic function
 } ModuleDesc_S;
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
 
 /*
  * Modules

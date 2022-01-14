@@ -1,9 +1,13 @@
-/*
+/**
  * Display/Colors.h
  * Some pre-defined colors for use with the screen
  */
 
 #pragma once
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
 #define RED    0xff0000UL
 #define ORANGE 0xffa500UL

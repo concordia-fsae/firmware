@@ -1,12 +1,12 @@
-/*
+/**
  * IO.c
  * The IO module controls interactions with the chip IO
  */
 
 
-//***************************************************************************//
-//                             I N C L U D E S                               //
-//***************************************************************************//
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 // Module header
 #include "IO.h"
@@ -27,24 +27,24 @@
 #include "HW_gpio.h"
 
 
-//***************************************************************************//
-//                              D E F I N E S                                //
-//***************************************************************************//
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
-#define ADC_BUF_LEN           264U       // number of samples to fill with DMA,
+#define VREF                     3.3F    // [V] ADC reference voltage
+#define ADC_BUF_LEN              264U    // number of samples to fill with DMA,
                                          // processed when half full and again when completely full
-#define ADC_MAX_VAL           4095U      // Max integer value of ADC reading (2^12 for this chip)
-#define SENSE_RESISTOR_OHMS   0.05F      // [Ohms] sense resistor resistance, for measuring current consumption
-#define TEMP_CHIP_V_PER_DEG_C 0.0043F    // [V/degC] slope of built-in temp sensor
-#define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
+#define ADC_MAX_VAL              4095U   // Max integer value of ADC reading (2^12 for this chip)
+#define SENSE_RESISTOR_OHMS      0.05F   // [Ohms] sense resistor resistance, for measuring current consumption
+#define TEMP_CHIP_V_PER_DEG_C    0.0043F // [V/degC] slope of built-in temp sensor
+#define TEMP_CHIP_V_AT_25_C      1.43F   // [V] voltage at 25 degC
 
-#define TEMP_CHIP_FROM_V(v) (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
+#define TEMP_CHIP_FROM_V(v)      (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
 
-static const float32_t VREF = 3.3F;
 
-//***************************************************************************//
-//                             T Y P E D E F S                               //
-//***************************************************************************//
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
 
 typedef enum
 {
@@ -88,7 +88,7 @@ typedef struct
     uint32_t       adcBuffer[ADC_BUF_LEN];
     simpleFilter_S adcData[ADC_CHANNEL_COUNT];
 
-    uint32_t instCurrentRaw;
+    uint32_t       instCurrentRaw;
     struct
     {
         uint32_t board;
@@ -102,37 +102,32 @@ typedef struct
         float32_t left;
         float32_t right;
     } paddlesRaw;
-#endif
-
+#endif // if FTR_HALL_EFFECT_PADDLES
 } io_S;
 
 
-//***************************************************************************//
-//                               M A C R O S                                 //
-//***************************************************************************//
-
-//***************************************************************************//
-//          P R I V A T E  F U N C T I O N  P R O T O T Y P E S              //
-//***************************************************************************//
-
-//***************************************************************************//
-//                         P R I V A T E  V A R S                            //
-//***************************************************************************//
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 static io_S io;
 
 
-//***************************************************************************//
-//                           P U B L I C  V A R S                            //
-//***************************************************************************//
+/******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
 
 IO_S IO;
 
 
-//***************************************************************************//
-//                     P R I V A T E  F U N C T I O N S                      //
-//***************************************************************************//
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
+/**
+ * unpackAdcBuffer
+ * @param half upper or lower half of the buffer
+ */
 static void unpackAdcBuffer(bufferHalf_E half)
 {
     uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : ADC_BUF_LEN / 2U;
@@ -147,6 +142,10 @@ static void unpackAdcBuffer(bufferHalf_E half)
 }
 
 
+/**
+ * IO_init
+ *
+ */
 static void IO_init(void)
 {
     // initialize structs
@@ -155,15 +154,19 @@ static void IO_init(void)
 }
 
 
+/**
+ * IO1kHz_PRD
+ *
+ */
 static void IO1kHz_PRD(void)
 {
     if (io.adcState == ADC_STATE_RUNNING)
     {
         for (uint8_t i = 0U; i < ADC_CHANNEL_COUNT; i++)
         {
-            io.adcData[i].value = ((float32_t)io.adcData[i].raw) / io.adcData[i].count;
-            io.adcData[i].raw   = 0;
-            io.adcData[i].count = 0;
+            io.adcData[i].value  = ((float32_t)io.adcData[i].raw) / io.adcData[i].count;
+            io.adcData[i].raw    = 0;
+            io.adcData[i].count  = 0;
             io.adcData[i].value *= VREF / ADC_MAX_VAL;
         }
 
@@ -217,9 +220,9 @@ const ModuleDesc_S IO_desc = {
 };
 
 
-//***************************************************************************//
-//                       P U B L I C  F U N C T I O N S                      //
-//***************************************************************************//
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
 // Called when first half of buffer is filled
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
