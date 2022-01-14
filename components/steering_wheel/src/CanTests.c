@@ -1,13 +1,28 @@
 
 
+#include "CAN/CanTypes.h"
 #include "Display/Common.h"
 #include "HW_can.h"
 #include "ModuleDesc.h"
 
 
 extern CAN_HandleTypeDef hcan;
-CAN_TxHeaderTypeDef      pHeader;
-uint32_t                 TxMailbox;
+
+#define CAN_1kHz_MSG_COUNT  1
+#define CAN_100Hz_MSG_COUNT 1
+#define CAN_10Hz_MSG_COUNT  1
+#define CAN_1Hz_MSG_COUNT   1
+
+typedef struct
+{
+    CAN_TxMessage_t msgs_1kHz[CAN_1kHz_MSG_COUNT];
+    CAN_TxMessage_t msgs_100Hz[CAN_100Hz_MSG_COUNT];
+    CAN_TxMessage_t msgs_10Hz[CAN_10Hz_MSG_COUNT];
+    CAN_TxMessage_t msgs_1z[CAN_1Hz_MSG_COUNT];
+} CAN_Messages_S;
+
+
+static CAN_Messages_S CAN_Messages;
 
 
 static void CanTests_init(void)
@@ -18,13 +33,7 @@ static void CanTests_init(void)
 
 static void CanTests10Hz_PRD(void)
 {
-    pHeader.DLC   = 1;               // give message size of 1 byte
-    pHeader.IDE   = CAN_ID_STD;      // set identifier to standard
-    pHeader.RTR   = CAN_RTR_DATA;    // set data type to remote transmission request?
-    pHeader.StdId = 0x101;           // define a standard identifier, used for message identification by filters (switch this for the other microcontroller)
-
-    uint8_t a[8] = { 100, 0, 0, 0, 0, 0, 0, 0 };
-    if (HAL_OK == HAL_CAN_AddTxMessage(&hcan, &pHeader, a, &TxMailbox))
+    if (HAL_OK == CAN_sendMsg(&hcan, msg))
     {
         toggleInfoDotState(INFO_DOT_CAN_TX);
     }

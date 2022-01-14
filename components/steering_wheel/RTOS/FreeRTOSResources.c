@@ -16,6 +16,8 @@
 
 #include "SystemConfig.h"
 
+#include <stdlib.h>
+
 //***************************************************************************//
 //                              D E F I N E S                                //
 //***************************************************************************//
@@ -34,6 +36,8 @@
 //***************************************************************************//
 #define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t))    // number of tasks in this module
 
+
+// uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute__((used, section(".heap")));
 
 //***************************************************************************//
 //                         P R I V A T E  V A R S                            //
