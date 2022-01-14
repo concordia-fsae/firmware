@@ -1,32 +1,28 @@
 /**
-  ******************************************************************************
-  * @file    adc.h
-  * @brief   This file contains all the function prototypes for
-  *          the adc.c file
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+ * HW_adc.h
+ * Header file for the ADC hardware implementation
+ */
 #pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 #include "SystemConfig.h"
 
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
 extern ADC_HandleTypeDef hadc1;
 extern DMA_HandleTypeDef hdma_adc1;
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
 
 void MX_ADC1_Init(void);
 HAL_StatusTypeDef HAL_ADC_Calibrate(ADC_HandleTypeDef *hadc);
@@ -34,5 +30,3 @@ HAL_StatusTypeDef HAL_ADC_Calibrate(ADC_HandleTypeDef *hadc);
 #ifdef __cplusplus
 }
 #endif
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

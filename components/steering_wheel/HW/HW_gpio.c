@@ -1,78 +1,60 @@
 /**
- ******************************************************************************
- * @file    gpio.c
- * @brief   This file provides code for the configuration
- *          of all used GPIO pins.
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
+ * HW_gpio.c
+ * Hardware GPIO implementation
  */
 
-/* Includes ------------------------------------------------------------------*/
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 #include "HW_gpio.h"
 
 
-/*----------------------------------------------------------------------------*/
-/* Configure GPIO                                                             */
-/*----------------------------------------------------------------------------*/
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
-/** Configure pins as
- * Analog
- * Input
- * Output
- * EVENT_OUT
- * EXTI
+/**
+ * MX_GPIO_Init
+ * Configure pins as Analog, Input, Output, EVENT_OUT, or EXTI
  */
 void MX_GPIO_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
-    /* GPIO Ports Clock Enable */
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
+    // Enable GPIO clocks
     __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    /*Configure GPIO pin Output Level */
+    // Configure LED pin Output Level
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
-    /*Configure GPIO pin Output Level */
+    // Configure SPI_NSS pin Output Level
     HAL_GPIO_WritePin(SPI1_NSS_GPIO_Port, SPI1_NSS_Pin, GPIO_PIN_SET);
 
-    /*Configure GPIO pin : PtPin */
+    // Configure LED pin
     GPIO_InitStruct.Pin   = LED_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-    /*Configure GPIO pin : PtPin */
+    // Configure SPI_NSS pin
     GPIO_InitStruct.Pin   = SPI1_NSS_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(SPI1_NSS_GPIO_Port, &GPIO_InitStruct);
 
-    /*Configure GPIO pins : PBPin PBPin PBPin PBPin
-                           PBPin PBPin PBPin PBPin
-                           PBPin PBPin PBPin PBPin */
-    GPIO_InitStruct.Pin = SL_DATA_Pin | FT_PDN_Pin |                                  //
-                          BTN_MIDDLE_Pin | BTN_TOP_LEFT_Pin | BTN__TOP_RIGHT_Pin |    //
-                          ROT_ENC_1_A_Pin | ROT_ENC_1_B_Pin |                         //
-                          ROT_ENC_2_A_Pin | ROT_ENC_2_B_Pin |                         //
-                          SW1_Pin | SW2_Pin | SW3_Pin | SW4_Pin;
+    // Configure GPIOB input pins
+    GPIO_InitStruct.Pin = SL_DATA_Pin | FT_PDN_Pin |
+                          BTN_MIDDLE_Pin | BTN_TOP_LEFT_Pin | BTN_TOP_RIGHT_Pin |
+                          ROT_ENC_1_A_Pin | ROT_ENC_1_B_Pin |
+                          ROT_ENC_2_A_Pin | ROT_ENC_2_B_Pin |
+                          SW1_Pin | SW2_Pin | SW4_Pin | SW5_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 }
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

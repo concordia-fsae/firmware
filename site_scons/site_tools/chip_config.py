@@ -90,12 +90,10 @@ def _configure_chip(env, config_file):
                 "extra_flags"
             ]
 
-    chip_source_files_full_path = {}
+    chip_source_files_full_path = []
 
     for file in chip_source_files:
-        chip_source_files_full_path[
-            REPO_ROOT_DIR.File(global_chip_config["basePath"] + file)
-        ] = chip_source_files[file]
+        chip_source_files_full_path.append((REPO_ROOT_DIR.File(global_chip_config["basePath"] + file), chip_source_files[file]))
 
     return chip_source_files_full_path
 

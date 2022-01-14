@@ -1,46 +1,39 @@
 /**
- ******************************************************************************
- * @file    stm32f1xx_it.c
- * @brief   Interrupt Service Routines.
- ******************************************************************************
- * @attention
- *
- * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
- * All rights reserved.</center></h2>
- *
- * This software component is licensed by ST under BSD 3-Clause license,
- * the "License"; You may not use this file except in compliance with the
- * License. You may obtain a copy of the License at:
- *                        opensource.org/licenses/BSD-3-Clause
- *
- ******************************************************************************
+ * HW_intc.c
+ * Hardware Interrupt Controller Implementation
+ * Cortex-M3 Processor Interruption and Exception Handlers
  */
 
-/* Includes ------------------------------------------------------------------*/
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 #include "stm32f1xx.h"
 #include "HW_intc.h"
-/* Private includes ----------------------------------------------------------*/
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
-/* Private function prototypes -----------------------------------------------*/
-/* Private user code ---------------------------------------------------------*/
 
-/* External variables --------------------------------------------------------*/
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
 extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim4;
 extern CAN_HandleTypeDef hcan;
 
-/******************************************************************************/
-/*           Cortex-M3 Processor Interruption and Exception Handlers          */
-/******************************************************************************/
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
 /**
  * @brief This function handles Non maskable interrupt.
  */
 void NMI_Handler(void)
 {
-    while (1) {}
+    while (1)
+    {
+    }
 }
 
 /**
@@ -49,7 +42,10 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
     volatile uint8_t c = 0;
-    while (c == 0) {}
+
+    while (c == 0)
+    {
+    }
 }
 
 /**
@@ -57,7 +53,9 @@ void HardFault_Handler(void)
  */
 void MemManage_Handler(void)
 {
-    while (1) {}
+    while (1)
+    {
+    }
 }
 
 /**
@@ -65,7 +63,9 @@ void MemManage_Handler(void)
  */
 void BusFault_Handler(void)
 {
-    while (1) {}
+    while (1)
+    {
+    }
 }
 
 /**
@@ -73,20 +73,19 @@ void BusFault_Handler(void)
  */
 void UsageFault_Handler(void)
 {
-    while (1) {}
+    while (1)
+    {
+    }
 }
 
 /**
  * @brief This function handles Debug monitor.
  */
-void DebugMon_Handler(void) {}
+void DebugMon_Handler(void)
+{
+}
 
-/******************************************************************************/
-/* STM32F1xx Peripheral Interrupt Handlers                                    */
-/* Add here the Interrupt Handlers for the used peripherals.                  */
-/* For the available peripheral interrupt handler names,                      */
-/* please refer to the startup file (startup_stm32f1xx.s).                    */
-/******************************************************************************/
+// Peripheral Interrupt Handlers
 
 /**
  * @brief This function handles DMA1 channel1 global interrupt.
@@ -110,19 +109,29 @@ void CAN1_SCE_IRQHandler(void)
     HAL_CAN_IRQHandler(&hcan);
 }
 
+/**
+ * CAN1_TX_IRQHandler
+ *
+ */
 void CAN1_TX_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan);
 }
 
+/**
+ * CAN1_RX0_IRQHandler
+ *
+ */
 void CAN1_RX0_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan);
 }
 
+/**
+ * CAN1_RX1_IRQHandler
+ *
+ */
 void CAN1_RX1_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan);
 }
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

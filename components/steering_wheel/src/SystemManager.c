@@ -1,7 +1,11 @@
-/*
+/**
  * SystemManager for the Steering Wheel
  * starts the system
  */
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
@@ -19,19 +23,32 @@
 #include "HW_gpio.h"
 #include "HW_spi.h"
 
-// externs
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
 extern void RTOS_createResources(void);
 
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+/**
+ * main
+ * @return TODO
+ */
 int main(void)
 {
     // setup the system
     // Reset all peripherals, Initializes the Flash interface and the Systick.
     HAL_Init();
 
-    /* Configure the system clock */
+    // Configure the system clock
     SystemClock_Config();
 
-    /* Initialize all configured peripherals */
+    // Initialize all configured peripherals
+    // order is important here, don't change without checking
     MX_GPIO_Init();
     MX_CAN_Init();
     MX_DMA_Init();
@@ -57,5 +74,7 @@ int main(void)
 void Error_Handler(void)
 {
     __disable_irq();
-    while (1) {}
+    while (1)
+    {
+    }
 }

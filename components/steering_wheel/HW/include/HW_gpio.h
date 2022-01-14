@@ -1,29 +1,24 @@
 /**
-  ******************************************************************************
-  * @file    gpio.h
-  * @brief   This file contains all the function prototypes for
-  *          the gpio.c file
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+ * HW_gpio.h
+ * Header file for the GPIO hardware configuration
+ */
+
 #pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Includes ------------------------------------------------------------------*/
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 #include "SystemConfig.h"
+
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
 
 void MX_GPIO_Init(void);
 
@@ -31,5 +26,3 @@ void MX_GPIO_Init(void);
 #ifdef __cplusplus
 }
 #endif
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

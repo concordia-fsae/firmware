@@ -1,12 +1,12 @@
-/*
+/**
  * Screen.c
  * This file defines the Screen Module, which drives the display on the steering wheel.
  */
 
 
-//***************************************************************************//
-//                             I N C L U D E S                               //
-//***************************************************************************//
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 // Module header
 #include "Screen.h"
@@ -26,36 +26,32 @@
 #include "Display/MainDisplay.h"
 
 
-//***************************************************************************//
-//                              D E F I N E S                                //
-//***************************************************************************//
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
-#define BRIGHTNESS_MAX 0x78
-#define MAX_RETRIES    3
+#define BRIGHTNESS_MAX    0x78
+#define MAX_RETRIES       3
 
 
-//***************************************************************************//
-//                             T Y P E D E F S                               //
-//***************************************************************************//
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
 
 typedef struct
 {
-    uint16_t chipId;
-    uint8_t  currentBrightness;
-    uint8_t  retryCount;
-    uint16_t errorCount;
+    uint16_t   chipId;
+    uint8_t    currentBrightness;
+    uint8_t    retryCount;
+    uint16_t   errorCount;
 
     ScrPages_E page;
 } scr_S;
 
 
-//***************************************************************************//
-//                               M A C R O S                                 //
-//***************************************************************************//
-
-//***************************************************************************//
-//          P R I V A T E  F U N C T I O N  P R O T O T Y P E S              //
-//***************************************************************************//
+/******************************************************************************
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
 
 static ScrState_E process_unavailable(void);
 static ScrState_E process_running(void);
@@ -63,11 +59,12 @@ static ScrState_E process_error(void);
 static ScrState_E process_retry(void);
 
 
-//***************************************************************************//
-//                         P R I V A T E  V A R S                            //
-//***************************************************************************//
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 static scr_S scr;
+
 
 static ScrState_E (*stateFunctions[SCR_STATE_COUNT])(void) = {
     [SCR_STATE_UNAVAILABLE] = &process_unavailable,
@@ -77,6 +74,7 @@ static ScrState_E (*stateFunctions[SCR_STATE_COUNT])(void) = {
     [SCR_STATE_ERROR]       = &process_error,
 };
 
+
 static void (*pageFunctions[SCR_PAGE_COUNT])(void) = {
     [SCR_PAGE_MAIN]           = &main_display,
     [SCR_PAGE_LAUNCH_CONTROL] = NULL,
@@ -84,16 +82,16 @@ static void (*pageFunctions[SCR_PAGE_COUNT])(void) = {
 };
 
 
-//***************************************************************************//
-//                           P U B L I C  V A R S                            //
-//***************************************************************************//
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
 
 extern SCR_S SCR;
 
 
-//***************************************************************************//
-//                       P U B L I C  F U N C T I O N S                      //
-//***************************************************************************//
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
 void toggleInfoDotState(dispCommonInfoDots_E infoDot)
 {
@@ -106,10 +104,14 @@ void toggleInfoDotState(dispCommonInfoDots_E infoDot)
 }
 
 
-//***************************************************************************//
-//                     P R I V A T E  F U N C T I O N S                      //
-//***************************************************************************//
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
 
+/**
+ * process_running
+ * @return TODO
+ */
 static ScrState_E process_running(void)
 {
     static uint16_t timer;
@@ -131,10 +133,15 @@ static ScrState_E process_running(void)
     return SCR_STATE_RUNNING;
 }
 
+/**
+ * process_unavailable
+ * @return TODO
+ */
 static ScrState_E process_unavailable(void)
 {
     EVE_InitStatus_E initStatus;
     ScrState_E       nextState;
+
     // if init is NONE, we're booting up
     if (SCR.initStatus == EVE_INIT_NONE)
     {
@@ -172,9 +179,14 @@ static ScrState_E process_unavailable(void)
     return nextState;
 }
 
+/**
+ * process_error
+ * @return TODO
+ */
 static ScrState_E process_error(void)
 {
     ScrState_E nextState;
+
     scr.errorCount++;
 
     if ((scr.retryCount < MAX_RETRIES) && (SCR.state != SCR_STATE_INIT_ERROR))
@@ -190,9 +202,14 @@ static ScrState_E process_error(void)
     return nextState;
 }
 
+/**
+ * process_retry
+ * @return TODO
+ */
 static ScrState_E process_retry(void)
 {
     ScrState_E nextState;
+
     while (scr.retryCount < MAX_RETRIES)
     {
         if (EVE_init(&scr.chipId) == EVE_INIT_SUCCESS)
@@ -215,49 +232,53 @@ static ScrState_E process_retry(void)
 
 // void initStaticBackground(void)
 // {
-//     EVE_memWrite8(REG_PWM_DUTY, 0x30); /* setup backlight, range is from 0 = off to 0x80 = max */
-//     EVE_cmd_dl(CMD_DLSTART);           /* Start the display list */
+// EVE_memWrite8(REG_PWM_DUTY, 0x30); /* setup backlight, range is from 0 = off to 0x80 = max */
+// EVE_cmd_dl(CMD_DLSTART);           /* Start the display list */
 
-//     EVE_cmd_dl(TAG(0)); /* do not use the following objects for touch-detection */
+// EVE_cmd_dl(TAG(0)); /* do not use the following objects for touch-detection */
 
-//     EVE_cmd_bgcolor(0x00c0c0c0); /* light grey */
+// EVE_cmd_bgcolor(0x00c0c0c0); /* light grey */
 
-//     // EVE_cmd_dl(VERTEX_FORMAT(0)); /* reduce precision for VERTEX2F to 1 pixel instead of 1/16 pixel default */
+//// EVE_cmd_dl(VERTEX_FORMAT(0)); /* reduce precision for VERTEX2F to 1 pixel instead of 1/16 pixel default */
 
-//     // /* draw a rectangle on top */
-//     // EVE_cmd_dl(DL_BEGIN | EVE_RECTS);
-//     // EVE_cmd_dl(LINE_WIDTH(1 * 16)); /* size is in 1/16 pixel */
+//// /* draw a rectangle on top */
+//// EVE_cmd_dl(DL_BEGIN | EVE_RECTS);
+//// EVE_cmd_dl(LINE_WIDTH(1 * 16)); /* size is in 1/16 pixel */
 
-//     // EVE_cmd_dl(DL_COLOR_RGB | BLUE_1);
-//     // EVE_cmd_dl(VERTEX2F(0, 0));
-//     // EVE_cmd_dl(VERTEX2F(EVE_HSIZE, LAYOUT_Y1 - 2));
-//     // EVE_cmd_dl(DL_END);
+//// EVE_cmd_dl(DL_COLOR_RGB | BLUE_1);
+//// EVE_cmd_dl(VERTEX2F(0, 0));
+//// EVE_cmd_dl(VERTEX2F(EVE_HSIZE, LAYOUT_Y1 - 2));
+//// EVE_cmd_dl(DL_END);
 
-//     // /* draw a black line to separate things */
-//     // EVE_cmd_dl(DL_COLOR_RGB | BLACK);
-//     // EVE_cmd_dl(DL_BEGIN | EVE_LINES);
-//     // EVE_cmd_dl(VERTEX2F(0, LAYOUT_Y1 - 2));
-//     // EVE_cmd_dl(VERTEX2F(EVE_HSIZE, LAYOUT_Y1 - 2));
-//     // EVE_cmd_dl(DL_END);
+//// /* draw a black line to separate things */
+//// EVE_cmd_dl(DL_COLOR_RGB | BLACK);
+//// EVE_cmd_dl(DL_BEGIN | EVE_LINES);
+//// EVE_cmd_dl(VERTEX2F(0, LAYOUT_Y1 - 2));
+//// EVE_cmd_dl(VERTEX2F(EVE_HSIZE, LAYOUT_Y1 - 2));
+//// EVE_cmd_dl(DL_END);
 
-//     EVE_cmd_text(EVE_HSIZE / 2, 15, 29, EVE_OPT_CENTERX, "EVE Demo");
+// EVE_cmd_text(EVE_HSIZE / 2, 15, 29, EVE_OPT_CENTERX, "EVE Demo");
 
-//     // EVE_cmd_text(10, EVE_VSIZE - 50, 26, 0, "DL-size:");
-//     // EVE_cmd_text(10, EVE_VSIZE - 35, 26, 0, "Time1:");
-//     // EVE_cmd_text(10, EVE_VSIZE - 20, 26, 0, "Time2:");
+//// EVE_cmd_text(10, EVE_VSIZE - 50, 26, 0, "DL-size:");
+//// EVE_cmd_text(10, EVE_VSIZE - 35, 26, 0, "Time1:");
+//// EVE_cmd_text(10, EVE_VSIZE - 20, 26, 0, "Time2:");
 
-//     // EVE_cmd_text(125, EVE_VSIZE - 35, 26, 0, "us");
-//     // EVE_cmd_text(125, EVE_VSIZE - 20, 26, 0, "us");
+//// EVE_cmd_text(125, EVE_VSIZE - 35, 26, 0, "us");
+//// EVE_cmd_text(125, EVE_VSIZE - 20, 26, 0, "us");
 
-//     EVE_cmd_dl(DL_DISPLAY); /* instruct the graphics processor to show the list */
-//     EVE_cmd_dl(CMD_SWAP);   /* make this list active */
+// EVE_cmd_dl(DL_DISPLAY); /* instruct the graphics processor to show the list */
+// EVE_cmd_dl(CMD_SWAP);   /* make this list active */
 
-//     while (EVE_busy())
-//         ;
+// while (EVE_busy())
+// ;
 // }
 //
 //
 
+/**
+ * updateBrightness_10Hz
+ *
+ */
 static void updateBrightness_10Hz()
 {
     if ((SCR.brightness != scr.currentBrightness)    //
@@ -270,6 +291,10 @@ static void updateBrightness_10Hz()
 }
 
 
+/**
+ * Screen_init
+ *
+ */
 static void Screen_init(void)
 {
     // initialize structs
@@ -278,6 +303,10 @@ static void Screen_init(void)
 }
 
 
+/**
+ * Screen10Hz_PRD
+ *
+ */
 static void Screen10Hz_PRD(void)
 {
     if (SCR.initStatus == EVE_INIT_SUCCESS)
@@ -289,6 +318,10 @@ static void Screen10Hz_PRD(void)
 }
 
 
+/**
+ * Screen100Hz_PRD
+ *
+ */
 static void Screen100Hz_PRD(void)
 {
     SCR.state = stateFunctions[SCR.state]();

@@ -1,16 +1,24 @@
-/*
+/**
  * Module.c
+ * Define all the modules in this project
  */
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 #include "stddef.h"
 #include "stdint.h"
 
-// includes
 #include "Module.h"
 #include "Utility.h"
 
 #include "SystemConfig.h"
 
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 static const ModuleDesc_S* modules[] = {
     &IO_desc,
@@ -18,6 +26,10 @@ static const ModuleDesc_S* modules[] = {
     &CanTests_desc,
 };
 
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
 /*
  * Call the init function for each module

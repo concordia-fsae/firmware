@@ -1,4 +1,11 @@
+/**
+ * CanTests.c
+ * Test file for CAN stuff
+ */
 
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 #include "CAN/CanTypes.h"
 #include "Display/Common.h"
@@ -6,12 +13,26 @@
 #include "ModuleDesc.h"
 
 
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define CAN_1kHz_MSG_COUNT     1U
+#define CAN_100Hz_MSG_COUNT    1U
+#define CAN_10Hz_MSG_COUNT     1U
+#define CAN_1Hz_MSG_COUNT      1U
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
 extern CAN_HandleTypeDef hcan;
 
-#define CAN_1kHz_MSG_COUNT  1
-#define CAN_100Hz_MSG_COUNT 1
-#define CAN_10Hz_MSG_COUNT  1
-#define CAN_1Hz_MSG_COUNT   1
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
 
 typedef struct
 {
@@ -22,24 +43,40 @@ typedef struct
 } CAN_Messages_S;
 
 
-static CAN_Messages_S CAN_Messages;
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+/* static CAN_Messages_S CAN_Messages; */
 
 
+/**
+ * CanTests_init
+ *
+ */
 static void CanTests_init(void)
 {
     HAL_CAN_Start(&hcan);    // start CAN
 }
 
 
+/**
+ * CanTests10Hz_PRD
+ *
+ */
 static void CanTests10Hz_PRD(void)
 {
-    if (HAL_OK == CAN_sendMsg(&hcan, msg))
-    {
-        toggleInfoDotState(INFO_DOT_CAN_TX);
-    }
+    /* if (HAL_OK == CAN_sendMsg(&hcan, msg)) */
+    /* { */
+    /*     toggleInfoDotState(INFO_DOT_CAN_TX); */
+    /* } */
 }
 
 
+/**
+ * CanTests100Hz_PRD
+ *
+ */
 static void CanTests100Hz_PRD(void)
 {
 }
