@@ -61,6 +61,7 @@ c_flags = [
     "-fdata-sections",
     "-fshort-enums",
     "-funsigned-char",
+    "-fstack-usage",
     "-nostdlib",
     "-msoft-float",
     "-DSTM32F1",
@@ -131,17 +132,13 @@ env.Append(
     ASFLAGS=as_flags,
     CPPPATH=paths,
     CCFLAGS=common_flags + c_flags,
-    LINKSCRIPT=PLATFORMS_DIR.File(
-        "tool-ldscripts-ststm32/stm32f1/STM32F103C8_DEFAULT.ld"
-    ),
+    LINKSCRIPT=File("HW/STM32F103C8.ld")
 )
 
 rtos_env.Append(
     CPPPATH=paths,
     CCFLAGS=common_flags + c_flags + free_rtos_flags,
 )
-
-objs = []
 
 # Set specifics c files
 project_source_files = list(Glob("src/*.c")) + list(Glob("lib/**/**/*.c"))
@@ -156,7 +153,7 @@ rtos_source_files = [
     # FREERTOS_DIR.File("Source/stream_buffer.c"),
     FREERTOS_DIR.File("Source/tasks.c"),
     FREERTOS_DIR.File("Source/timers.c"),
-    FREERTOS_DIR.File("Source/portable/MemMang/heap_3.c"),
+    # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
     FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
 ]
 
@@ -182,6 +179,7 @@ embedded_source_files.update(env.ChipConfig(config_file="mcuDrivers.yaml"))
 def get_filename_no_ext(path) -> str:
     return splitext(path)[0]
 
+objs = []
 
 for src_file, extra_flags in embedded_source_files.items():
     object = BUILD_DIR.File("embedded/" + get_filename_no_ext(src_file.name) + ".obj")
@@ -202,6 +200,7 @@ for src_file in project_source_files:
 
 built = lambda: env.Program("build/steering_wheel", objs)
 env.Alias("build", built())
+env.Depends(built(), env["LINKSCRIPT"])
 env.Default("build")
 
 env.Alias("cdb", env.CompilationDatabase())

@@ -15,7 +15,8 @@ def _program(target, source, env, for_signature):
 
 def _bin_emitter(target, source, env):
     bin_file = "build/" + splitext(target[0].name)[0] + ".bin"
-    target.append(bin_file)
+    map_file = "build/" + splitext(target[0].name)[0] + ".map"
+    target.append([bin_file, map_file])
     return target, source
 
 
