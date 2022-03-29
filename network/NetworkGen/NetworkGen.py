@@ -1,5 +1,6 @@
 from pathlib import Path
 from pprint import pprint
+from os import makedirs
 from yaml import load, Loader
 from mako.template import Template
 
@@ -12,6 +13,7 @@ NETWORK_DIR = REPO_ROOT_DIR.joinpath("network/definition")
 BUS_DEF_DIR = NETWORK_DIR.joinpath("buses")
 NODE_DEF_DIR = NETWORK_DIR.joinpath("data/components")
 NODE_DIRS = [dir for dir in NODE_DEF_DIR.iterdir() if dir.is_dir()]
+OUTPUT_DIR = REPO_ROOT_DIR.joinpath("generated/dbc")
 
 ACCEPTED_YAML_FILES = ["message.yaml", "rx.yaml", "signals.yaml"]
 
@@ -41,9 +43,7 @@ def generate_discrete_values() -> None:
 
 
 def generate_can_buses() -> None:
-    """
-    Generate CAN buses based on yaml files
-    """
+    """Generate CAN buses based on yaml files"""
     for bus_file_path in can_buses:
         with open(bus_file_path, "r") as bus_file:
             can_bus_def = load(bus_file, Loader)
@@ -184,11 +184,13 @@ def process_receivers(bus: CanBus, node: CanNode):
 
 
 def generate_dbcs(bus: CanBus):
-    print(
-        Template(filename="dbc_template/template.dbc.mako").render(
-            bus=bus, messages=bus.messages.values()
-        )
+    dbc = Template(filename="dbc_template/template.dbc.mako").render(
+        bus=bus, messages=bus.messages.values()
     )
+    makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(OUTPUT_DIR.joinpath(f"{bus.name}.dbc"), "w") as dbc_handle:
+        dbc_handle.write(dbc)
+    print(dbc)
 
 
 def main():

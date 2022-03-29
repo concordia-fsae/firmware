@@ -3,6 +3,16 @@ from yaml import load, Loader
 from SCons.Script import *
 
 
+def generate_defines(chip_config):
+    defines = []
+    for key,val in chip_config["defines"].items():
+        if not val is None:
+            defines.append(f"-D{key}={val}")
+        else:
+            defines.append(f"-D{key}")
+
+    return defines
+
 def _configure_chip(env, config_file):
     REPO_ROOT_DIR = env["REPO_ROOT_DIR"]
     KNOWN_CHIPS_FILE = REPO_ROOT_DIR.File("site_scons/chips.yaml")
@@ -93,9 +103,17 @@ def _configure_chip(env, config_file):
     chip_source_files_full_path = []
 
     for file in chip_source_files:
-        chip_source_files_full_path.append((REPO_ROOT_DIR.File(global_chip_config["basePath"] + file), chip_source_files[file]))
+        chip_source_files_full_path.append(
+            (
+                REPO_ROOT_DIR.File(global_chip_config["basePath"] + file),
+                chip_source_files[file],
+            )
+        )
 
-    return chip_source_files_full_path
+    ret = {"sources": chip_source_files_full_path}
+    if "defines" in global_chip_config:
+        ret["defines"] = generate_defines(global_chip_config)
+    return ret
 
 
 def generate(env):

@@ -3,45 +3,46 @@
  * Various resources for FreeRTOS
  */
 
-//***************************************************************************//
-//                             I N C L U D E S                               //
-//***************************************************************************//
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 // FreeRTOS includes
 #include "FreeRTOS.h"
+#include "FreeRTOS_SWI.h"
 #include "task.h"
 #include "timers.h"
 
 // Codebase includes
 #include "FreeRTOS_types.h"
 
+#include "CAN/CAN.h"
 #include "SystemConfig.h"
+#include "Utility.h"
 
 #include <stdlib.h>
 
-//***************************************************************************//
-//                              D E F I N E S                                //
-//***************************************************************************//
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
 // which bit in the event group corresponds to each task
-#define PERIODIC_TASK_1kHz  (1U) << (0U)
-#define PERIODIC_TASK_100Hz (1U) << (1U)
-#define PERIODIC_TASK_10Hz  (1U) << (2U)
-#define PERIODIC_TASK_1Hz   (1U) << (3U)
-
-//***************************************************************************//
-//                             T Y P E D E F S                               //
-//***************************************************************************//
-
-//***************************************************************************//
-//                               M A C R O S                                 //
-//***************************************************************************//
-#define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t))    // number of tasks in this module
+#define PERIODIC_TASK_1kHz     (1U) << (0U)
+#define PERIODIC_TASK_100Hz    (1U) << (1U)
+#define PERIODIC_TASK_10Hz     (1U) << (2U)
+#define PERIODIC_TASK_1Hz      (1U) << (3U)
 
 
-// uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute__((used, section(".heap")));
+/******************************************************************************
+ *                               M A C R O S
+ ******************************************************************************/
 
-//***************************************************************************//
-//                         P R I V A T E  V A R S                            //
-//***************************************************************************//
+#define NUM_TASKS    (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
+
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 // periodic event group. each bit in the group signifies that the
 // respective periodic task is ready to run
@@ -66,6 +67,9 @@ extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
 
+// SWIs
+RTOS_swiHandle_T *CAN_BUS_A_10ms_swi;
+
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
     {
@@ -77,8 +81,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stackSize   = sizeof(task1kHzStack) / sizeof(StackType_t),
         .stateBuffer = &Task1kHz,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_1kHz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_1kHz,
         },
         .periodMs = pdMS_TO_TICKS(1U),
     },
@@ -91,8 +95,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stackSize   = sizeof(task100HzStack) / sizeof(StackType_t),
         .stateBuffer = &Task100Hz,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_100Hz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_100Hz,
         },
         .periodMs = pdMS_TO_TICKS(10U),
     },
@@ -105,8 +109,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stateBuffer = &Task10Hz,
         .parameters  = NULL,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_10Hz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_10Hz,
         },
         .periodMs = pdMS_TO_TICKS(100U),
     },
@@ -119,24 +123,24 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stateBuffer = &Task1Hz,
         .parameters  = NULL,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_1Hz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_1Hz,
         },
         .periodMs = pdMS_TO_TICKS(1000U),
     },
 };
 
 
-//***************************************************************************//
-//          P R I V A T E  F U N C T I O N  P R O T O T Y P E S              //
-//***************************************************************************//
+/******************************************************************************
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
 
 void vApplicationIdleHook(void);
 
 
-//***************************************************************************//
-//                     P R I V A T E  F U N C T I O N S                      //
-//***************************************************************************//
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
 
 static void rtosTickTimer(TimerHandle_t xTimer)
 {
@@ -172,9 +176,9 @@ static void rtosTickTimer(TimerHandle_t xTimer)
  */
 static void taskFxn(void* parameters)
 {
-    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;    // convert the parameter back into a task description
+    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;   // convert the parameter back into a task description
 
-    void (*const function)(void)    = task->function;       // get the function that will be called for this task
+    void(*const function)(void) = task->function;           // get the function that will be called for this task
     EventGroupHandle_t* event_group = task->event.group;    // get the shared event group
     EventBits_t         event_bit   = task->event.bit;      // get the event bit for this task
 
@@ -191,25 +195,39 @@ static void taskFxn(void* parameters)
     }
 }
 
+/**
+ * vApplicationIdleHook
+ * @brief function that runs when the scheduler is idle
+ */
 void vApplicationIdleHook(void)
 {
     /* vApplicationIdleHook() will only be called if configUSE_IDLE_HOOK is set
-    to 1 in FreeRTOSConfig.h. It will be called on each iteration of the idle
-    task. It is essential that code added to this hook function never attempts
-    to block in any way (for example, call xQueueReceive() with a block time
-    specified, or call vTaskDelay()). If the application makes use of the
-    vTaskDelete() API function (as this demo application does) then it is also
-    important that vApplicationIdleHook() is permitted to return to its calling
-    function, because it is the responsibility of the idle task to clean up
-    memory allocated by the kernel to any task that has since been deleted. */
+     * to 1 in FreeRTOSConfig.h. It will be called on each iteration of the idle
+     * task. It is essential that code added to this hook function never attempts
+     * to block in any way (for example, call xQueueReceive() with a block time
+     * specified, or call vTaskDelay()). If the application makes use of the
+     * vTaskDelete() API function (as this demo application does) then it is also
+     * important that vApplicationIdleHook() is permitted to return to its calling
+     * function, because it is the responsibility of the idle task to clean up
+     * memory allocated by the kernel to any task that has since been deleted. */
 }
 
-//***************************************************************************//
-//                      P U B L I C  F U N C T I O N S                       //
-//***************************************************************************//
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
+/**
+ * RTOS_createResources
+ * @brief create resources that are required by FreeRTOS
+ *        namely, all of the tasks, timers, and SWIs
+ */
 void RTOS_createResources(void)
 {
+    /*
+     * create SWI handles
+     */
+    CAN_BUS_A_10ms_swi = SWI_create(RTOS_SWI_PRI_1, &CAN_BUS_A_10ms_SWI);
+
     /*
      * Create tasks
      */
@@ -230,6 +248,9 @@ void RTOS_createResources(void)
      * Create timers
      */
     static StaticTimer_t rtosTickTimerState;
+
+    // 1kHz timer drives all tasks
+    // TODO: should this be faster and/or interrupt (i.e. hardware timer) driven?
     rtos_tick_timer = xTimerCreateStatic("Timer 1kHz",
                                          pdMS_TO_TICKS(1),
                                          pdTRUE,
@@ -244,17 +265,25 @@ void RTOS_createResources(void)
      * Create event groups
      */
     static StaticEventGroup_t PeriodicTickEventGroup;
+
     PeriodicEvent = xEventGroupCreateStatic(&PeriodicTickEventGroup);
 }
 
 
-//***************************************************************************//
-//                              O S  H O O K S                               //
-//***************************************************************************//
+/******************************************************************************
+ *                              O S  H O O K S
+ ******************************************************************************/
 extern void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
                                           StackType_t**  ppxIdleTaskStackBuffer,
                                           uint32_t*      pusIdleTaskStackSize);
 
+/**
+ * vApplicationGetIdleTaskMemory
+ * @brief allocate memory for the idle task
+ * @param ppxIdleTaskTCBBuffer TODO
+ * @param ppxIdleTaskStackBuffer TODO
+ * @param pusIdleTaskStackSize TODO
+ */
 void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
                                    StackType_t**  ppxIdleTaskStackBuffer,
                                    uint32_t*      pusIdleTaskStackSize)
@@ -272,6 +301,13 @@ extern void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
                                            uint32_t*      pusTimerTaskStackSize);
 
 
+/**
+ * vApplicationGetTimerTaskMemory
+ * @brief allocate memory for the timer task
+ * @param ppxTimerTaskTCBBuffer TODO
+ * @param ppxTimerTaskStackBuffer TODO
+ * @param pusTimerTaskStackSize TODO
+ */
 void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
                                     StackType_t**  ppxTimerTaskStackBuffer,
                                     uint32_t*      pusTimerTaskStackSize)
@@ -284,4 +320,59 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
     *pusTimerTaskStackSize   = sizeof(timerTaskStack) / sizeof(StackType_t);
 }
 
-/* Private application code --------------------------------------------------*/
+
+/**
+ * RTOS_getSwiTaskmemory
+ * @brief allocate memory for the SWI tasks
+ * @param swiPriority priority of the SWI task this is being called for
+ * @param ppxSwiTaskTCBBuffer pointer to resultant task memory for this SWI priority
+ * @param ppxSwiTaskStackBuffer pointer to the resultant stack for this SWI priority
+ * @param pusSwiTaskStackSize pointer to the stack size var for this SWI priority
+ */
+void RTOS_getSwiTaskmemory(RTOS_swiPri_E swiPriority,
+                           StaticTask_t **ppxSwiTaskTCBBuffer,
+                           StackType_t **ppxSwiTaskStackBuffer,
+                           uint32_t *pusSwiTaskStackSize)
+{
+    switch (swiPriority)
+    {
+        case RTOS_SWI_PRI_0:
+        {
+            // create task memory and stack
+            static StaticTask_t swiPri0Task;
+            static StackType_t  swiPri0TaskStack[configMINIMAL_STACK_SIZE] __attribute__((aligned(portBYTE_ALIGNMENT)));
+            // link to relevant pointers
+            *ppxSwiTaskTCBBuffer   = &swiPri0Task;
+            *ppxSwiTaskStackBuffer = swiPri0TaskStack;
+            *pusSwiTaskStackSize   = COUNTOF(swiPri0TaskStack);
+            break;
+        }
+
+        case RTOS_SWI_PRI_1:
+        {
+            static StaticTask_t swiPri1Task;
+            static StackType_t  swiPri1TaskStack[configMINIMAL_STACK_SIZE] __attribute__((aligned(portBYTE_ALIGNMENT)));
+            *ppxSwiTaskTCBBuffer   = &swiPri1Task;
+            *ppxSwiTaskStackBuffer = swiPri1TaskStack;
+            *pusSwiTaskStackSize   = COUNTOF(swiPri1TaskStack);
+            break;
+        }
+
+        case RTOS_SWI_PRI_2:
+        {
+            static StaticTask_t swiPri2Task;
+            static StackType_t  swiPri2TaskStack[configMINIMAL_STACK_SIZE] __attribute__((aligned(portBYTE_ALIGNMENT)));
+            *ppxSwiTaskTCBBuffer   = &swiPri2Task;
+            *ppxSwiTaskStackBuffer = swiPri2TaskStack;
+            *pusSwiTaskStackSize   = COUNTOF(swiPri2TaskStack);
+            break;
+        }
+
+        default:
+            // should never get here
+            *ppxSwiTaskTCBBuffer   = NULL;
+            *ppxSwiTaskStackBuffer = NULL;
+            *pusSwiTaskStackSize   = 0UL;
+            break;
+    }
+}

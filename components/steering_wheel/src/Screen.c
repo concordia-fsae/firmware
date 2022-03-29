@@ -48,6 +48,8 @@ typedef struct
     ScrPages_E page;
 } scr_S;
 
+typedef ScrState_E (*stateFn_t)(void);
+
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -60,13 +62,20 @@ static ScrState_E process_retry(void);
 
 
 /******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
+SCR_S SCR;
+
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
 static scr_S scr;
 
 
-static ScrState_E (*stateFunctions[SCR_STATE_COUNT])(void) = {
+static stateFn_t stateFunctions [SCR_STATE_COUNT] = {
     [SCR_STATE_UNAVAILABLE] = &process_unavailable,
     [SCR_STATE_RUNNING]     = &process_running,
     [SCR_STATE_RETRY]       = &process_retry,
@@ -86,9 +95,6 @@ static void (*pageFunctions[SCR_PAGE_COUNT])(void) = {
  *                              E X T E R N S
  ******************************************************************************/
 
-extern SCR_S SCR;
-
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -100,6 +106,33 @@ void toggleInfoDotState(dispCommonInfoDots_E infoDot)
         dispCommonInfoDots[infoDot].dot.state = (dispCommonInfoDots[infoDot].dot.state == DUAL_STATE_ON)
                                                     ? DUAL_STATE_OFF
                                                     : DUAL_STATE_ON;
+    }
+}
+
+
+void setInfoDot(dispCommonInfoDots_E infoDot)
+{
+    if (infoDot < INFO_DOT_COUNT)
+    {
+        dispCommonInfoDots[infoDot].dot.state = DUAL_STATE_ON;
+    }
+}
+
+
+void clearInfoDot(dispCommonInfoDots_E infoDot)
+{
+    if (infoDot < INFO_DOT_COUNT)
+    {
+        dispCommonInfoDots[infoDot].dot.state = DUAL_STATE_OFF;
+    }
+}
+
+
+void assignInfoDot(dispCommonInfoDots_E infoDot, bool cond)
+{
+    if (infoDot < INFO_DOT_COUNT)
+    {
+        dispCommonInfoDots[infoDot].dot.state = cond ? DUAL_STATE_OFF : DUAL_STATE_ON;
     }
 }
 

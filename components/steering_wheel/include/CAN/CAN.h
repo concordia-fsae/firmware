@@ -1,22 +1,22 @@
 /**
- * Display/Common.h
- * Contains common display function prototypes to be included elsewhere
+ * CAN.h
+ * Header file for CAN implementation
  */
 
 #pragma once
+
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "DisplayTypes.h"
+#include "FreeRTOS_SWI.h"
 
 
 /******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ *                              E X T E R N S
  ******************************************************************************/
 
-void toggleInfoDotState(dispCommonInfoDots_E infoDot);
-void setInfoDot(dispCommonInfoDots_E infoDot);
-void clearInfoDot(dispCommonInfoDots_E infoDot);
-void assignInfoDot(dispCommonInfoDots_E infoDot, bool cond);
+extern RTOS_swiHandle_T *CAN_BUS_A_10ms_swi;
+
+extern void CAN_BUS_A_10ms_SWI(void);

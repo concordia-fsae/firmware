@@ -7,9 +7,13 @@ Import("*")
 
 RTOS_DIR = Dir("RTOS")
 PROJECT_SOURCE_DIR = Dir("src")
+PROJECT_HW_DIR= Dir("HW")
+PROJECT_LIB_DIR = Dir("lib")
 MCU_DIR = Dir("#/embedded/platforms/stm32")
-DRIVERS_DIR = Dir("#/embedded/platforms/framework-stm32cubef1/Drivers/")
-LIBS_DIR = Dir("#/embedded/libs/")
+DRIVERS_DIR = Dir("#/embedded/platforms/framework-stm32cubef1/Drivers")
+LIBS_DIR = Dir("#/embedded/libs")
+FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
+CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
 
 BUILD_DIR = Dir("build")
 
@@ -81,6 +85,10 @@ free_rtos_flags = [
     "-Wno-cast-align",
 ]
 
+chip_config = env.ChipConfig(config_file="HW/mcuConfig.yaml")
+if "defines" in chip_config:
+    c_flags.append(chip_config["defines"])
+
 if GetOption("release"):
     common_flags += release_flags
 else:
@@ -90,10 +98,10 @@ else:
 env["LINKFLAGS"] = [link_flags + common_flags]
 
 RTOS_INCLUDE_DIRS = [
-    RTOS_DIR,
-    RTOS_DIR.Dir("FreeRTOS/Source/include/"),
-    RTOS_DIR.Dir("FreeRTOS/Source/portable/GCC/ARM_CM3/"),
-    RTOS_DIR.Dir("CMSIS/CMSIS/Core/Include/"),
+    RTOS_DIR.Dir("include"),
+    FREERTOS_DIR.Dir("Source/include/"),
+    FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
+    CMSIS_DIR.Dir("CMSIS/Core/Include/"),
     # RTOS_DIR.Dir("FreeRTOS/CMSIS/RTOS2/FreeRTOS/Include/"),
     # RTOS_DIR.Dir("FreeRTOS/CMSIS/RTOS2/FreeRTOS/Include1/"),
     # RTOS_DIR.Dir("CMSIS/CMSIS/Core_A/Include/"),
@@ -118,8 +126,9 @@ LIBS_INCLUDE_DIRS = [
 
 PROJECT_INCLUDE_DIRS = [
     "include/",
-    "lib/lib_FTDI_FT81x/include",
     "HW/include/",
+    "generated/",
+    "lib/lib_FTDI_FT81x/include",
 ]
 
 paths = (
@@ -139,20 +148,45 @@ rtos_env.Append(
 )
 
 # List of component C files
-project_source_files = list(Glob("src/*.c")) + list(Glob("lib/**/**/*.c"))
-project_source_files += list(Glob("HW/*.c"))
+
+project_source_files = [
+    PROJECT_SOURCE_DIR.File("SystemManager.c"),
+    PROJECT_SOURCE_DIR.File("Module.c"),
+    PROJECT_SOURCE_DIR.File("CAN/CANIO-tx.c"),
+    PROJECT_SOURCE_DIR.File("IO.c"),
+    PROJECT_SOURCE_DIR.File("Screen.c"),
+]
+
+project_hw_files = [
+    PROJECT_HW_DIR.File("HW_adc.c"),
+    PROJECT_HW_DIR.File("HW_can.c"),
+    PROJECT_HW_DIR.File("HW_dma.c"),
+    PROJECT_HW_DIR.File("HW_gpio.c"),
+    PROJECT_HW_DIR.File("HW_intc.c"),
+    PROJECT_HW_DIR.File("HW_msp.c"),
+    PROJECT_HW_DIR.File("HW_spi.c"),
+    PROJECT_HW_DIR.File("HW_timebase.c"),
+]
+
+ftdi_lib_files = [
+    PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_commands.c"),
+    PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_target.c"),
+]
+
+project_source_files += project_hw_files + ftdi_lib_files
 
 rtos_source_files = [
     RTOS_DIR.File("FreeRTOSResources.c"),
-    RTOS_DIR.File("FreeRTOS/Source/croutine.c"),
-    RTOS_DIR.File("FreeRTOS/Source/event_groups.c"),
-    RTOS_DIR.File("FreeRTOS/Source/list.c"),
-    RTOS_DIR.File("FreeRTOS/Source/queue.c"),
-    RTOS_DIR.File("FreeRTOS/Source/tasks.c"),
-    RTOS_DIR.File("FreeRTOS/Source/timers.c"),
-    RTOS_DIR.File("FreeRTOS/Source/portable/GCC/ARM_CM3/port.c"),
-    # RTOS_DIR.File("FreeRTOS/Source/stream_buffer.c"),
-    # RTOS_DIR.File("FreeRTOS/Source/portable/MemMang/heap_4.c"),
+    RTOS_DIR.File("FreeRTOS_SWI.c"),
+    FREERTOS_DIR.File("Source/croutine.c"),
+    FREERTOS_DIR.File("Source/event_groups.c"),
+    FREERTOS_DIR.File("Source/list.c"),
+    FREERTOS_DIR.File("Source/queue.c"),
+    FREERTOS_DIR.File("Source/tasks.c"),
+    FREERTOS_DIR.File("Source/timers.c"),
+    FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
+    # FREERTOS_DIR.File("Source/stream_buffer.c"),
+    # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
 ]
 
 platform_source_files = [
@@ -165,7 +199,7 @@ platform_source_files = [
 ]
 
 # add driver source files
-platform_source_files.extend(env.ChipConfig(config_file="HW/mcuConfig.yaml"))
+platform_source_files.extend(chip_config["sources"])
 
 # with open("env_dump.txt", "w") as file:
 #     env_dumped = env.Dump()

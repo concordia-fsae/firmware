@@ -1,34 +1,34 @@
 VERSION ""
 
-NS_ : 
-	NS_DESC_
-	CM_
+NS_ :
+    BA_
 	BA_DEF_
-	BA_
-	VAL_
-	CAT_DEF_
-	CAT_
-	FILTER
 	BA_DEF_DEF_
-	EV_DATA_
-	ENVVAR_DATA_
-	SGTYPE_
-	SGTYPE_VAL_
-	BA_DEF_SGTYPE_
-	BA_SGTYPE_
-	SIG_TYPE_REF_
-	VAL_TABLE_
-	SIG_GROUP_
-	SIG_VALTYPE_
-	SIGTYPE_VALTYPE_
-	BO_TX_BU_
-	BA_DEF_REL_
-	BA_REL_
 	BA_DEF_DEF_REL_
-	BU_SG_REL_
-	BU_EV_REL_
-	BU_BO_REL_
-	SG_MUL_VAL_
+	BA_DEF_REL_
+    BA_DEF_SGTYPE_
+    BA_REL_
+    BA_SGTYPE_
+    BO_TX_BU_
+    BU_BO_REL_
+    BU_EV_REL_
+    BU_SG_REL_
+    CAT_
+    CAT_DEF_
+    CM_
+    ENVVAR_DATA_
+    EV_DATA_
+    FILTER
+	NS_DESC_
+    SGTYPE_
+    SGTYPE_VAL_
+    SG_MUL_VAL_
+    SIGTYPE_VALTYPE_
+    SIG_GROUP_
+    SIG_TYPE_REF_
+    SIG_VALTYPE_
+    VAL_
+    VAL_TABLE_
 
 BS_: ${bus.baudrate}
 
@@ -38,6 +38,8 @@ BU_: ${" ".join([node.upper() for node in bus.nodes])}\
   for message in messages:
     make_message(message)
 %>
+
+CM_ "${bus.description}";
 <%
   for name, node in bus.nodes.items():
     make_comment(name.upper(), node, "BU_")
@@ -74,10 +76,10 @@ BO_ ${message.id} ${message.name}: ${message.length_bytes} ${message.node_name}\
 
 
 <%def name="make_signal(signal)">
-  SG_ ${signal.name} : \
+ SG_ ${signal.name} : \
 ${signal.start_bit}|${signal.native_representation.bit_width}@${signal.native_representation.endianness.value}${signal.native_representation.signedness.value} \
 (${signal.scale},${signal.offset}) [${signal.native_representation.range.min}|${signal.native_representation.range.max}] \
-"${signal.unit.value}" ${",".join([sig.name.upper() for sig in signal.receivers])}\
+"${signal.unit.value}" ${",".join([sig.name.upper() for sig in signal.receivers]) if signal.receivers else "Vector__XXX"}\
 </%def>
 
 <%def name="make_comment(name, item, item_text)">

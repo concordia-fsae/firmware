@@ -1,7 +1,7 @@
 from os.path import splitext
 from SCons.Script import *
 
-TOOL_PATH = Dir("#/embedded/platforms/toolchain-gccarmnoneeabi/bin/")
+TOOL_PATH = Dir("#/embedded/toolchains/gcc-arm-none-eabi/bin/")
 
 
 def _program(target, source, env, for_signature):

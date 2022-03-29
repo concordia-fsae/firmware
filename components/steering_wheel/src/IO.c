@@ -14,17 +14,17 @@
 // System includes
 #include <string.h>
 
+// HW includes
+#include "HW_adc.h"
+#include "HW_dma.h"
+#include "HW_gpio.h"
+//
 // other includes
 #include "Display/Common.h"
 #include "FeatureDefs.h"
 #include "ModuleDesc.h"
 #include "Types.h"
 #include "Utility.h"
-
-// HW includes
-#include "HW_adc.h"
-#include "HW_dma.h"
-#include "HW_gpio.h"
 
 
 /******************************************************************************
