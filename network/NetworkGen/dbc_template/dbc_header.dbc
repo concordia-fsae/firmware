@@ -1,6 +1,6 @@
 VERSION ""
 
-NS_ : 
+NS_ :
 	NS_DESC_
 	CM_
 	BA_DEF_

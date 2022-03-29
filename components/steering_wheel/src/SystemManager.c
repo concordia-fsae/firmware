@@ -10,6 +10,7 @@
 // FreeRTOS includes
 #include "FreeRTOS.h"
 #include "task.h"
+#include "FreeRTOS_SWI.h"
 
 // System includes
 #include "stdbool.h"
@@ -49,13 +50,15 @@ int main(void)
 
     // Initialize all configured peripherals
     // order is important here, don't change without checking
+    // TODO: change all of these from MX to HW (wtf does MX mean?)
     MX_GPIO_Init();
-    MX_CAN_Init();
+    HW_CAN_Init();
     MX_DMA_Init();
     MX_ADC1_Init();
     MX_SPI1_Init();
 
     // create the tasks, timers, etc.
+    RTOS_SWI_Init();
     RTOS_createResources();
 
     // run the module init

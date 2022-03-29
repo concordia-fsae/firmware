@@ -4,8 +4,6 @@ from SCons.Script import Import
 
 Import("env")
 
-# for now just run the platformio build
-# eventually build everything with scons
 def network_build_cmd(source, **_):
     network_dir = dirname(str(source[0]))
     cmd = f"cd {network_dir} && source ../env/bin/activate && python NetworkGen.py"

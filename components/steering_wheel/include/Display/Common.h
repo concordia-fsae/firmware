@@ -17,3 +17,6 @@
  ******************************************************************************/
 
 void toggleInfoDotState(dispCommonInfoDots_E infoDot);
+void setInfoDot(dispCommonInfoDots_E infoDot);
+void clearInfoDot(dispCommonInfoDots_E infoDot);
+void assignInfoDot(dispCommonInfoDots_E infoDot, bool cond);

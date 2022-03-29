@@ -148,4 +148,7 @@ standard names. */
 
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
 
+#define RTOS_EVENT_ALL   0x00FFFFFF
+#define RTOS_EVENT_COUNT 24U
+
 #endif /* FREERTOS_CONFIG_H */

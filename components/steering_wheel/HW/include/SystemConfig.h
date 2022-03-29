@@ -10,8 +10,11 @@
  ******************************************************************************/
 
 #include "stm32f1xx.h"
+
 #include "ErrorHandler.h"
 #include "FloatTypes.h"
+#include "FreeRTOSConfig.h"
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -22,9 +25,8 @@
 
 // Interrupt priorities, lower number is higher priority
 // tick interrupt is highest priority
-
-#define DMA_IRQ_PRIO    TICK_INT_PRIORITY // + 1U
-#define CAN_IRQ_PRIO    TICK_INT_PRIORITY // + 2U
+#define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
+#define CAN_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 6U
 
 // pin aliases
 

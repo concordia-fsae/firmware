@@ -11,9 +11,10 @@
 #include "stdint.h"
 
 #include "Module.h"
-#include "Utility.h"
 
 #include "SystemConfig.h"
+
+#include "Utility.h"
 
 
 /******************************************************************************
@@ -23,7 +24,7 @@
 static const ModuleDesc_S* modules[] = {
     &IO_desc,
     &Screen_desc,
-    &CanTests_desc,
+    &CANIO_tx,
 };
 
 

@@ -6,15 +6,19 @@
 //***************************************************************************//
 //                             I N C L U D E S                               //
 //***************************************************************************//
+
 // FreeRTOS includes
 #include "FreeRTOS.h"
+#include "FreeRTOS_SWI.h"
 #include "task.h"
 #include "timers.h"
 
 // Codebase includes
 #include "FreeRTOS_types.h"
 
+#include "CAN/CAN.h"
 #include "SystemConfig.h"
+#include "Utility.h"
 
 #include <stdlib.h>
 
@@ -65,6 +69,9 @@ extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
+
+// SWIs
+RTOS_swiHandle_T *CAN_BUS_A_10ms_swi;
 
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
@@ -210,6 +217,9 @@ void vApplicationIdleHook(void)
 
 void RTOS_createResources(void)
 {
+
+    CAN_BUS_A_10ms_swi = RTOS_swiCreate(RTOS_SWI_PRI_1, &CAN_BUS_A_10ms_SWI);
+
     /*
      * Create tasks
      */
@@ -282,6 +292,49 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
     *ppxTimerTaskTCBBuffer   = &timerTask;
     *ppxTimerTaskStackBuffer = timerTaskStack;
     *pusTimerTaskStackSize   = sizeof(timerTaskStack) / sizeof(StackType_t);
+}
+
+
+void RTOS_getSwiTaskmemory(RTOS_swiPri_E swiPriority,
+                           StaticTask_t **ppxSwiTaskTCBBuffer,
+                           StackType_t **ppxSwiTaskStackBuffer,
+                           uint32_t *pusSwiTaskStackSize)
+{
+    switch(swiPriority)
+    {
+        case RTOS_SWI_PRI_0:
+            {
+                static StaticTask_t swiPrio0Task;
+                static StackType_t swiPrio0TaskStack[configMINIMAL_STACK_SIZE] __attribute__((aligned(portBYTE_ALIGNMENT)));
+                *ppxSwiTaskTCBBuffer = &swiPrio0Task;
+                *ppxSwiTaskStackBuffer = swiPrio0TaskStack;
+                *pusSwiTaskStackSize = COUNTOF(swiPrio0TaskStack);
+                break;
+            }
+        case RTOS_SWI_PRI_1:
+            {
+                static StaticTask_t swiPrio1Task;
+                static StackType_t swiPrio1TaskStack[configMINIMAL_STACK_SIZE] __attribute__((aligned(portBYTE_ALIGNMENT)));
+                *ppxSwiTaskTCBBuffer = &swiPrio1Task;
+                *ppxSwiTaskStackBuffer = swiPrio1TaskStack;
+                *pusSwiTaskStackSize = COUNTOF(swiPrio1TaskStack);
+                break;
+            }
+        case RTOS_SWI_PRI_2:
+            {
+                static StaticTask_t swiPrio2Task;
+                static StackType_t swiPrio2TaskStack[configMINIMAL_STACK_SIZE] __attribute__((aligned(portBYTE_ALIGNMENT)));
+                *ppxSwiTaskTCBBuffer = &swiPrio2Task;
+                *ppxSwiTaskStackBuffer = swiPrio2TaskStack;
+                *pusSwiTaskStackSize = COUNTOF(swiPrio2TaskStack);
+                break;
+            }
+        default:
+            *ppxSwiTaskTCBBuffer = NULL;
+            *ppxSwiTaskStackBuffer = NULL;
+            *pusSwiTaskStackSize = 0UL;
+            break;
+    }
 }
 
 /* Private application code --------------------------------------------------*/

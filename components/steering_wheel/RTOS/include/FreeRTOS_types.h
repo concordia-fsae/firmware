@@ -2,6 +2,8 @@
  * FreeRTOS_types.h
  */
 
+#pragma once
+
 // system includes
 #include "stdbool.h"
 
@@ -20,11 +22,11 @@ typedef struct
     const UBaseType_t   priority;
     StaticTask_t* const stateBuffer;
     TaskHandle_t        handle;
+    const uint32_t      periodMs;
+    uint32_t            timeSinceLastTickMs;
     struct
     {
         EventGroupHandle_t* const group;
         const EventBits_t         bit;
     } event;
-    const uint32_t periodMs;
-    uint32_t       timeSinceLastTickMs;
 } RTOS_taskDesc_t;
