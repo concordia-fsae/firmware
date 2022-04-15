@@ -74,9 +74,11 @@ typedef struct
     CAN_TxMailbox_E          mailbox;
 } CAN_TxMessage_t;
 
+typedef bool (*packFn)(CAN_data_T *messsage, const int counter);
+
 typedef struct
 {
-    bool (*pack) (CAN_data_T *message, const int counter);
+    packFn   pack;
     uint16_t id;
     uint8_t  len;
 } packTable_S;

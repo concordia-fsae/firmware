@@ -23,8 +23,8 @@
 
 static const ModuleDesc_S* modules[] = {
     &IO_desc,
-    &Screen_desc,
     &CANIO_tx,
+    &Screen_desc,
 };
 
 

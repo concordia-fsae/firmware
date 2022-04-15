@@ -185,16 +185,16 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
     {
         case CAN_TX_PRIO_1KHZ:
             // not yet implemented
-            // RTOS_swiInvokeFromISR(CAN_BUS_A_1ms_swi);
+            // SWI_invokeFromISR(CAN_BUS_A_1ms_swi);
             break;
 
         case CAN_TX_PRIO_100HZ:
-            RTOS_swiInvokeFromISR(CAN_BUS_A_10ms_swi);
+            SWI_invokeFromISR(CAN_BUS_A_10ms_swi);
             break;
 
         case CAN_TX_PRIO_10HZ:
             // not yet implemented
-            // RTOS_swiInvokeFromISR(CAN_BUS_A_100ms_swi);
+            // SWI_invokeFromISR(CAN_BUS_A_100ms_swi);
             break;
 
         default:

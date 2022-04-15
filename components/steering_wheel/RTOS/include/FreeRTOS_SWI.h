@@ -16,8 +16,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define RTOS_SWI_PRI_OFFSET     12U
-#define RTOS_SWI_MAX_PER_PRI    RTOS_EVENT_COUNT
+#define RTOS_SWI_PRI_OFFSET     12U              // SWI priority offset from other interrupts
+#define RTOS_SWI_MAX_PER_PRI    RTOS_EVENT_COUNT // number of SWIs allowed per priority level
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -31,13 +31,14 @@ typedef enum
     RTOS_SWI_PRI_COUNT,
 } RTOS_swiPri_E;
 
+// function pointer type
 typedef void (*RTOS_swiFn_t)(void);
 
 typedef struct
 {
-    RTOS_swiFn_t handler;
-    uint32_t     priority : 3;
-    uint32_t     event    : 24;
+    RTOS_swiFn_t handler;                     // function to be called when SWI runs
+    uint32_t     priority : 2;                // priority of this SWI
+    uint32_t     event    : RTOS_EVENT_COUNT; // bitmask for the event bit for this SWI
 } RTOS_swiHandle_T;
 
 
@@ -47,11 +48,12 @@ typedef struct
 
 void RTOS_SWI_Init(void);
 
-RTOS_swiHandle_T* RTOS_swiCreate(RTOS_swiPri_E priority, RTOS_swiFn_t handler);
-void RTOS_swiInvoke(RTOS_swiHandle_T* handle);
-bool RTOS_swiInvokeFromISR(RTOS_swiHandle_T* handle);
-void RTOS_swiDisable(void);
-void RTOS_swiEnable(void);
+RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler);
+
+void SWI_invoke(RTOS_swiHandle_T* handle);
+bool SWI_invokeFromISR(RTOS_swiHandle_T* handle);
+void SWI_disable(void);
+void SWI_enable(void);
 
 
 void RTOS_getSwiTaskmemory(RTOS_swiPri_E swiPriority,

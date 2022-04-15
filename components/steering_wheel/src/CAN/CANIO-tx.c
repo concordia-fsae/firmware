@@ -150,7 +150,7 @@ static void CANIO_tx_100Hz_PRD(void)
 
     // transmit 100Hz messages
     canio_tx.txBusA10msIdx = 0U;
-    RTOS_swiInvoke(CAN_BUS_A_10ms_swi);
+    SWI_invoke(CAN_BUS_A_10ms_swi);
 }
 
 /**
