@@ -1,15 +1,18 @@
-name: STM32F103
-basePath: "embedded/platforms/framework-stm32cubef1/Drivers/STM32F1xx_HAL_Driver/Src/"
+name: stm32f103
 defines:
   NUM_CAN_BUSES: 1U
+extraSources:
+  - "f103/startup_stm32f103xb.S"
+  - "f103/system_stm32f1xx.c"
+defaultLinkerFile: "f103/STM32F103C8.ld"
 drivers:
   hal:
     required: true
     path: "stm32f1xx_hal.c"
-    ll_available: true
-    ll_path: "stm32f1xx_ll_adc.c"
   adc:
     path: "stm32f1xx_hal_adc.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_adc.c"
   adc_ex:
     path: "stm32f1xx_hal_adc_ex.c"
   can:

@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from os.path import basename, join, splitext
+from os.path import splitext
 
 from SCons.Script import *
 
@@ -9,8 +9,6 @@ RTOS_DIR = Dir("RTOS")
 PROJECT_SOURCE_DIR = Dir("src")
 PROJECT_HW_DIR= Dir("HW")
 PROJECT_LIB_DIR = Dir("lib")
-MCU_DIR = Dir("#/embedded/platforms/stm32")
-DRIVERS_DIR = Dir("#/embedded/platforms/framework-stm32cubef1/Drivers")
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
@@ -102,22 +100,11 @@ RTOS_INCLUDE_DIRS = [
     FREERTOS_DIR.Dir("Source/include/"),
     FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
     CMSIS_DIR.Dir("CMSIS/Core/Include/"),
-    # RTOS_DIR.Dir("FreeRTOS/CMSIS/RTOS2/FreeRTOS/Include/"),
-    # RTOS_DIR.Dir("FreeRTOS/CMSIS/RTOS2/FreeRTOS/Include1/"),
-    # RTOS_DIR.Dir("CMSIS/CMSIS/Core_A/Include/"),
-    # RTOS_DIR.Dir("CMSIS/CMSIS/RTOS2/Include/"),
-    # RTOS_DIR.Dir("CMSIS/Device/ARM/ARMCM3/Include/"),
 ]
 
 DRIVERS_INCLUDE_DIRS = [
-    DRIVERS_DIR.Dir("CMSIS/Device/ST/STM32F1xx/Include"),
-    DRIVERS_DIR.Dir("STM32F1xx_HAL_Driver/Inc"),
-    # DRIVERS_DIR.Dir("CMSIS/Device/ST/STM32F1xx/Include/"),
-    # DRIVERS_DIR.Dir("CMSIS/DSP/Include"),
-    # DRIVERS_DIR.Dir("CMSIS/Include"),
-    # PLATFORMS_DIR.Dir(
-    #     "ststm32@14.2.0/builder/embedded/platforms/framework-stm32cubef1/Drivers/CMSIS/Device/ST/STM32F1xx/Include"
-    # ),
+    chip_config["cmsis_includes"],
+    chip_config["hal_includes"],
 ]
 
 LIBS_INCLUDE_DIRS = [
@@ -139,7 +126,7 @@ env.Append(
     ASFLAGS=as_flags,
     CPPPATH=paths,
     CCFLAGS=common_flags + c_flags,
-    LINKSCRIPT=MCU_DIR.File("STM32F103C8.ld"),
+    LINKSCRIPT=chip_config["linker_file"],
 )
 
 rtos_env.Append(
@@ -190,8 +177,6 @@ rtos_source_files = [
 ]
 
 platform_source_files = [
-    (MCU_DIR.File("system_stm32f1xx.c"), []),
-    (MCU_DIR.File("startup_stm32f103xb.S"), []),
     (
         LIBS_DIR.File("printf/printf.c"),
         ["-Wno-float-equal", "-DPRINTF_INCLUDE_CONFIG_H"],
