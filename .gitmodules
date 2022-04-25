@@ -16,3 +16,9 @@
 [submodule "embedded/libs/printf"]
 	path = embedded/libs/printf
 	url = git@github.com:mpaland/printf.git
+[submodule "embedded/platforms/stm32/f1/cmsis"]
+	path = embedded/platforms/stm32/f1/cmsis
+	url = git@github.com:STMicroelectronics/cmsis_device_f1.git
+[submodule "embedded/platforms/stm32/f1/hal"]
+	path = embedded/platforms/stm32/f1/hal
+	url = git@github.com:STMicroelectronics/stm32f1xx_hal_driver.git
