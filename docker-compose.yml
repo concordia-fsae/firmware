@@ -1,0 +1,14 @@
+services:
+  buildroot:
+    image: ghcr.io/concordia-fsae/containers/ubuntu-jammy-2022.04.21
+    container_name: buildroot
+    hostname: builder
+    volumes: # mount pts
+      - .:/firmware
+    user: builduser
+    tty: true # open terminal for interacting
+    stdin_open: true
+    privileged: true
+    devices:
+      # map host's usb buses to container's buses for st-link programmer
+      - "/dev/bus/usb/:/dev/bus/usb/"

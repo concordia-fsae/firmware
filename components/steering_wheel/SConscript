@@ -255,5 +255,6 @@ env.Alias(
         "build/steering_wheel.elf",
         '-ex "target extended-remote localhost:3333"',
         '-ex "monitor reset"',
+        '-ex load', # fixed an issue found when debugging IO global struct for aggregated Digital and Analog IO
     ),
 )
