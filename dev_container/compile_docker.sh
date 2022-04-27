@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# TODO: add installation and starting of docker daemon if necessary
+IMAGE_NAME="scons_image"
+CONTAINER_NAME="scons_container"
 
-IMAGE_NAME="image_scons"
-CONTAINER_NAME="container_scons"
+# local directories 
+C_CODE=$(cd ../ && pwd)
+WORKDIR=/usr/project/
 
-C_CODE=/Users/garyfodi/Desktop/PROJECTS/SAE/DAQ/firmware/
-WORKDIR=/usr/project
-
-
+# wrapper variables 
 COMPONENT=""
 
+# TODO: find dockerfile --> will fail if Dockerfile not in directory script is executed from 
 # build base ubuntu image  
 docker build -t ${IMAGE_NAME} .
 
@@ -18,7 +18,10 @@ docker build -t ${IMAGE_NAME} .
 docker run -t -d -v ${C_CODE}:${WORKDIR} --name ${CONTAINER_NAME} ${IMAGE_NAME}
 
 # install requirements 
-docker exec ${CONTAINER_NAME} pip3 install -r /usr/project/requirements.txt
+docker exec ${CONTAINER_NAME} pip3 install -r ${WORKDIR}/requirements.txt
+
+# rename and move compiler files to appropriate dir 
+docker exec ${CONTAINER_NAME} mv /gcc-arm-11.2-2022.02-x86_64-arm-none-eabi/ /usr/project/embedded/platforms/toolchain-gccarmnoneeabi/
 
 # open containers shell
 docker exec -it ${CONTAINER_NAME} bash

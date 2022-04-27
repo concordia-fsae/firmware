@@ -1,0 +1,19 @@
+** the script will set up the env for compiling - no need to run twice ** 
+** to test new changes, simply enter container shell and execute scons - the files will update automatically due to mounitng feature ** 
+** this also means that, once built, the build dir will be on your local machine as well. Delete if you want to re-build from scratch **
+
+Local changes 
+- Clone repo 
+- Configure ssh connection 
+	- IN <repo_dir>.git/config 
+		- UNDER Remote origin 
+			- url = git@github.com:concordia-fsae/firmware.git
+- Pull in submodules
+	- git submodule --update --init recursive 
+- Install and start docker (OS-specific)
+- Execute compile script from dev_container dir
+	- ./compile_docker.sh
+		- change perms if necessary: chmod +x compile_docker.sh
+in container
+-	scons --target=<component> 
+
