@@ -1,0 +1,5 @@
+CompileFlags:
+  Add: ["-Wdocumentation",
+  "-ferror-limit=0",
+  "-isystem../../embedded/platforms/toolchain-gccarmnoneeabi/arm-none-eabi/include/",
+]

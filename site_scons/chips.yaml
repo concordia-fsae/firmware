@@ -1,0 +1,18 @@
+translation:
+  stm32f103:
+    line: stm32
+    family: f1
+    chip: stm32f103
+
+line:
+  stm32:
+    basePath: "embedded/platforms/stm32/"
+    families:
+      f1:
+        cmsis: "f1/cmsis/Include/"
+        hal:
+          src: "f1/hal/Src/"
+          include: "f1/hal/Inc/"
+        chips:
+          stm32f103: "f1/stm32f103.yaml"
+        standardFilesDir: "f103"

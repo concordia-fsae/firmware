@@ -1,0 +1,138 @@
+name: stm32f103
+defines:
+  NUM_CAN_BUSES: 1U
+extraSources:
+  - "f103/startup_stm32f103xb.S"
+  - "f103/system_stm32f1xx.c"
+defaultLinkerFile: "f103/STM32F103C8.ld"
+drivers:
+  hal:
+    required: true
+    path: "stm32f1xx_hal.c"
+  adc:
+    path: "stm32f1xx_hal_adc.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_adc.c"
+  adc_ex:
+    path: "stm32f1xx_hal_adc_ex.c"
+  can:
+    path: "stm32f1xx_hal_can.c"
+  cec:
+    path: "stm32f1xx_hal_cec.c"
+  cortex:
+    required: true
+    path: "stm32f1xx_hal_cortex.c"
+  crc:
+    path: "stm32f1xx_hal_crc.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_crc.c"
+  dac:
+    path: "stm32f1xx_hal_dac.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_dac.c"
+  dac_ex:
+    path: "stm32f1xx_hal_dac_ex.c"
+  dma:
+    path: "stm32f1xx_hal_dma.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_dma.c"
+  eth:
+    path: "stm32f1xx_hal_eth.c"
+  exti:
+    path: "stm32f1xx_hal_exti.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_exti.c"
+  flash:
+    path: "stm32f1xx_hal_flash.c"
+  flash_ex:
+    path: "stm32f1xx_hal_flash_ex.c"
+  fsmc:
+    ll_available: true
+    ll_only: true
+    ll_path: "stm32f1xx_ll_fsmc.c"
+  gpio:
+    path: "stm32f1xx_hal_gpio.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_gpio.c"
+  gpio_ex:
+    path: "stm32f1xx_hal_gpio_ex.c"
+  hcd:
+    path: "stm32f1xx_hal_hcd.c"
+  i2c:
+    path: "stm32f1xx_hal_i2c.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_i2c.c"
+  i2s:
+    path: "stm32f1xx_hal_i2s.c"
+  irda:
+    path: "stm32f1xx_hal_irda.c"
+  iwdg:
+    path: "stm32f1xx_hal_iwdg.c"
+  mmc:
+    path: "stm32f1xx_hal_mmc.c"
+  nand:
+    path: "stm32f1xx_hal_nand.c"
+  nor:
+    path: "stm32f1xx_hal_nor.c"
+  pccard:
+    path: "stm32f1xx_hal_pccard.c"
+  pcd:
+    path: "stm32f1xx_hal_pcd.c"
+  pcd_ex:
+    path: "stm32f1xx_hal_pcd_ex.c"
+  pwr:
+    path: "stm32f1xx_hal_pwr.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_pwr.c"
+  rcc:
+    path: "stm32f1xx_hal_rcc.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_rcc.c"
+  rcc_ex:
+    required: true
+    path: "stm32f1xx_hal_rcc_ex.c"
+  rtc:
+    path: "stm32f1xx_hal_rtc.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_rtc.c"
+  rtc_ex:
+    path: "stm32f1xx_hal_rtc_ex.c"
+  sd:
+    path: "stm32f1xx_hal_sd.c"
+  sdmmc:
+    ll_available: true
+    ll_only: true
+    ll_path: "stm32f1xx_ll_sdmmc.c"
+  smartcard:
+    path: "stm32f1xx_hal_smartcard.c"
+  spi:
+    path: "stm32f1xx_hal_spi.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_spi.c"
+    ll_extra_flags:
+      - "-DUSE_FULL_LL_DRIVER"
+  sram:
+    path: "stm32f1xx_hal_sram.c"
+  tim:
+    path: "stm32f1xx_hal_tim.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_tim.c"
+  tim_ex:
+    # required with tim
+    path: "stm32f1xx_hal_tim_ex.c"
+  uart:
+    path: "stm32f1xx_hal_uart.c"
+  usart:
+    path: "stm32f1xx_hal_usart.c"
+    ll_available: true
+    ll_path: "stm32f1xx_ll_usart"
+  usb:
+    ll_available: true
+    ll_only: true
+    ll_path: "stm32f1xx_ll_usb.c"
+  utils:
+    ll_available: true
+    ll_only: true
+    ll_path: "stm32f1xx_ll_utils.c"
+  wwdg:
+    path: "stm32f1xx_hal_wwdg.c"

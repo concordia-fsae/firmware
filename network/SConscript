@@ -1,0 +1,16 @@
+#!/usr/bin/python
+from os.path import dirname
+from SCons.Script import Import
+
+Import("env")
+
+def network_build_cmd(source, **_):
+    network_dir = dirname(str(source[0]))
+    cmd = f"cd {network_dir} && source ../env/bin/activate && python NetworkGen.py"
+
+    Execute(cmd)
+
+network_build = Builder(action=network_build_cmd)
+env.Append(BUILDERS={"network_build": network_build})
+
+env.network_build(source="NetworkGen/NetworkGen.py")

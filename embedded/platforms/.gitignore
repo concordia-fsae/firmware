@@ -1,0 +1,8 @@
+framework-stm32cubef1/
+ststm32*
+tool-dfuutil
+tool-ldscripts-ststm32
+tool-openocd
+tool-scons
+tool-stm32duino
+toolchain-gccarmnoneeabi
