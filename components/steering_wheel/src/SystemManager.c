@@ -24,6 +24,9 @@
 #include "HW_gpio.h"
 #include "HW_spi.h"
 
+#include "NVM.h"
+#include "Utility.h"
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -34,6 +37,11 @@ extern void RTOS_createResources(void);
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+uint8_t test1 VAR_IN_SECTION("NVMRAM");
+uint16_t test2 VAR_IN_SECTION("NVMRAM");
+uint32_t test3 VAR_IN_SECTION("NVMRAM");
+uint64_t test4 VAR_IN_SECTION("NVMRAM");
 
 /**
  * main
@@ -63,6 +71,22 @@ int main(void)
 
     // run the module init
     Module_init();
+
+    //nvm_init();
+    HAL_StatusTypeDef status;
+    status = nvm_clear_page(0);
+    nvm_read_page(0);
+    test1 = 1;
+    test2 = 2;
+    test3 = 3;
+    test4 = 4;
+    status = nvm_write_page(0);
+    test1 = 0;
+    test2 = 0;
+    test3 = 0;
+    test4 = 0;
+    nvm_read_page(0);
+    status += 1;
 
     // init and start the scheduler
     vTaskStartScheduler();

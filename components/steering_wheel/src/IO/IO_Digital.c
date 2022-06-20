@@ -17,7 +17,6 @@
 
 // Other includes
 #include "ModuleDesc.h"
-#include "Utility.h"
 #include "SystemConfig.h"
 
 
