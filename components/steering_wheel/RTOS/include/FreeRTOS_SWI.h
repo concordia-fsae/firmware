@@ -56,7 +56,7 @@ void SWI_disable(void);
 void SWI_enable(void);
 
 
-void RTOS_getSwiTaskmemory(RTOS_swiPri_E swiPriority,
+void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
                            StaticTask_t **ppxSwiTaskTCBBuffer,
                            StackType_t **ppxSwiTaskStackBuffer,
                            uint32_t *pusSwiTaskStackSize);
