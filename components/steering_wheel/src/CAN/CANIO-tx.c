@@ -49,14 +49,14 @@
 typedef struct
 {
     uint8_t txBusA10msIdx;
-} canio_tx_S;
+} cantx_S;
 
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static canio_tx_S canio_tx;
+static cantx_S cantx;
 
 
 /******************************************************************************
@@ -72,9 +72,6 @@ static canio_tx_S canio_tx;
 #define set_button0Status(m, b, n, s)    set_value(m, b, n, s, 0U);
 #define set_button1Status(m, b, n, s)    set_value(m, b, n, s, 1U);
 
-/******************************************************************************
- *                     P R I V A T E  F U N C T I O N S
- ******************************************************************************/
 
 // TODO: the following file should be auto-generated
 // NOTE: must be included after signal packing functions are defined
@@ -112,19 +109,22 @@ static const packTable_S* packNextMessage(const packTable_S *packTable,
     return NULL;
 }
 
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
 /**
- * CAN_BUS_A_10ms_SWI
+ * CANTX_BUS_A_10ms_SWI
  * send BUS_A messages
  */
-void CAN_BUS_A_10ms_SWI(void)
+void CANTX_BUS_A_10ms_SWI(void)
 {
     // TODO: add overrun detection here
 
     static uint8_t    counter = 0U;
     CAN_data_T        message;
 
-    const packTable_S *entry = packNextBusMessage(BUS_A, 10ms, &canio_tx.txBusA10msIdx, &message, &counter);
+    const packTable_S *entry = packNextBusMessage(BUS_A, 10ms, &cantx.txBusA10msIdx, &message, &counter);
 
     if (entry != NULL)
     {
@@ -133,6 +133,12 @@ void CAN_BUS_A_10ms_SWI(void)
     }
 }
 
+
+
+
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
 
 /**
  * CANIO_tx_100Hz_PRD
@@ -149,8 +155,8 @@ static void CANIO_tx_100Hz_PRD(void)
     }
 
     // transmit 100Hz messages
-    canio_tx.txBusA10msIdx = 0U;
-    SWI_invoke(CAN_BUS_A_10ms_swi);
+    cantx.txBusA10msIdx = 0U;
+    SWI_invoke(CANTX_BUS_A_10ms_swi);
 }
 
 /**
@@ -168,7 +174,7 @@ static void CANIO_tx_10Hz_PRD(void)
  */
 static void CANIO_tx_init(void)
 {
-    memset(&canio_tx, 0x00, sizeof(canio_tx));
+    memset(&cantx, 0x00, sizeof(cantx));
     CAN_Start();    // start CAN
 }
 
