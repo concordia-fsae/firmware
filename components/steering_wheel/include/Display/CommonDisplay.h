@@ -18,7 +18,7 @@
 #include "EVE_commands.h"
 
 // other includes
-#include "IO.h"
+#include "IO/IO_Analog.h"
 #include "Types.h"
 #include "Utility.h"
 #include "printf.h"
@@ -87,7 +87,7 @@ static void common_display(void)
 
 
     char tempMCU[10] = { 0U };
-    snprintf(tempMCU, 10, "% 2.*f", 2, IO.temp.mcu);
+    snprintf(tempMCU, 10, "% 2.*f", 2, IO_ANALOG.temp.mcu);
     EVE_cmd_text_burst(240U, 20U, 21U, EVE_OPT_CENTER, tempMCU);
 
 

@@ -140,7 +140,8 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("SystemManager.c"),
     PROJECT_SOURCE_DIR.File("Module.c"),
     PROJECT_SOURCE_DIR.File("CAN/CANIO-tx.c"),
-    PROJECT_SOURCE_DIR.File("IO.c"),
+    PROJECT_SOURCE_DIR.File("IO/IO_Analog.c"),
+    PROJECT_SOURCE_DIR.File("IO/IO_Digital.c"),
     PROJECT_SOURCE_DIR.File("Screen.c"),
 ]
 

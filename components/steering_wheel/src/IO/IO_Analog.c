@@ -1,6 +1,6 @@
 /**
- * IO.c
- * The IO module controls interactions with the chip IO
+ * IO_Analog.c
+ * The Analog IO module controls interactions with the chip analog IO
  */
 
 
@@ -9,7 +9,7 @@
  ******************************************************************************/
 
 // Module header
-#include "IO.h"
+#include "IO/IO_Analog.h"
 
 // System includes
 #include <string.h>
@@ -103,21 +103,21 @@ typedef struct
         float32_t right;
     } paddlesRaw;
 #endif // if FTR_HALL_EFFECT_PADDLES
-} io_S;
+} io_analog_S;
 
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static io_S io;
+static io_analog_S io_analog;
 
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-IO_S IO;
+IO_Analog_S IO_ANALOG;
 
 
 /******************************************************************************
@@ -136,8 +136,8 @@ static void unpackAdcBuffer(bufferHalf_E half)
     for (uint16_t i = startIndex; i < endIndex; i++)
     {
         uint8_t channelIndex = i % ADC_CHANNEL_COUNT;
-        io.adcData[channelIndex].raw += io.adcBuffer[i];
-        io.adcData[channelIndex].count++;
+        io_analog.adcData[channelIndex].raw += io_analog.adcBuffer[i];
+        io_analog.adcData[channelIndex].count++;
     }
 }
 
@@ -146,40 +146,40 @@ static void unpackAdcBuffer(bufferHalf_E half)
  * IO_init
  *
  */
-static void IO_init(void)
+static void IO_Analog_init(void)
 {
     // initialize structs
-    memset(&io, 0x00, sizeof(io));
-    memset(&IO, 0x00, sizeof(IO));
+    memset(&io_analog, 0x00, sizeof(io_analog));
+    memset(&IO_ANALOG, 0x00, sizeof(IO_ANALOG));
 }
 
 
 /**
- * IO1kHz_PRD
+ * IO_ANALOG_1kHz_PRD
  *
  */
-static void IO1kHz_PRD(void)
+static void IO_Analog_1kHz_PRD(void)
 {
-    if (io.adcState == ADC_STATE_RUNNING)
+    if (io_analog.adcState == ADC_STATE_RUNNING)
     {
         for (uint8_t i = 0U; i < ADC_CHANNEL_COUNT; i++)
         {
-            io.adcData[i].value  = ((float32_t)io.adcData[i].raw) / io.adcData[i].count;
-            io.adcData[i].raw    = 0;
-            io.adcData[i].count  = 0;
-            io.adcData[i].value *= VREF / ADC_MAX_VAL;
+            io_analog.adcData[i].value  = ((float32_t)io_analog.adcData[i].raw) / io_analog.adcData[i].count;
+            io_analog.adcData[i].raw    = 0;
+            io_analog.adcData[i].count  = 0;
+            io_analog.adcData[i].value *= VREF / ADC_MAX_VAL;
         }
 
         // this doesn't work on board rev 1 because I designed it wrong
-        IO.instCurrent = io.adcData[ADC_CHANNEL_CURRENT_SENSE].value / SENSE_RESISTOR_OHMS;
+        IO_ANALOG.instCurrent = io_analog.adcData[ADC_CHANNEL_CURRENT_SENSE].value / SENSE_RESISTOR_OHMS;
 
-        IO.temp.board = io.adcData[ADC_CHANNEL_TEMP_BOARD].value;
-        IO.temp.gpu   = io.adcData[ADC_CHANNEL_TEMP_GPU].value;
-        IO.temp.mcu   = TEMP_CHIP_FROM_V(io.adcData[ADC_CHANNEL_TEMP_MCU].value);
+        IO_ANALOG.temp.board = io_analog.adcData[ADC_CHANNEL_TEMP_BOARD].value;
+        IO_ANALOG.temp.gpu   = io_analog.adcData[ADC_CHANNEL_TEMP_GPU].value;
+        IO_ANALOG.temp.mcu   = TEMP_CHIP_FROM_V(io_analog.adcData[ADC_CHANNEL_TEMP_MCU].value);
 
 #if FTR_HALL_EFFECT_PADDLES
-        io.paddlesRaw.left  = io.adcData[ADC_CHANNEL_PADDLE_LEFT].value;
-        io.paddlesRaw.right = io.adcData[ADC_CHANNEL_PADDLE_RIGHT].value;
+        io_analog.paddlesRaw.left  = io_analog.adcData[ADC_CHANNEL_PADDLE_LEFT].value;
+        io_analog.paddlesRaw.right = io_analog.adcData[ADC_CHANNEL_PADDLE_RIGHT].value;
 #endif
 
         static uint8_t tim = 0;
@@ -191,17 +191,17 @@ static void IO1kHz_PRD(void)
     }
     else
     {
-        if (io.adcState == ADC_STATE_INIT)
+        if (io_analog.adcState == ADC_STATE_INIT)
         {
-            io.adcState = ADC_STATE_CALIBRATION;
+            io_analog.adcState = ADC_STATE_CALIBRATION;
             if (HAL_ADCEx_Calibration_Start(&hadc1) == HAL_OK)
             {
-                HAL_ADC_Start_DMA(&hadc1, (uint32_t*)io.adcBuffer, ADC_BUF_LEN);
-                io.adcState = ADC_STATE_RUNNING;
+                HAL_ADC_Start_DMA(&hadc1, (uint32_t*)io_analog.adcBuffer, ADC_BUF_LEN);
+                io_analog.adcState = ADC_STATE_RUNNING;
             }
             else
             {
-                io.adcState = ADC_STATE_CALIBRATION_FAILED;
+                io_analog.adcState = ADC_STATE_CALIBRATION_FAILED;
             }
         }
         else
@@ -214,9 +214,9 @@ static void IO1kHz_PRD(void)
 
 
 // module description
-const ModuleDesc_S IO_desc = {
-    .moduleInit       = &IO_init,
-    .periodic1kHz_CLK = &IO1kHz_PRD,
+const ModuleDesc_S IO_Analog_desc = {
+    .moduleInit       = &IO_Analog_init,
+    .periodic1kHz_CLK = &IO_Analog_1kHz_PRD,
 };
 
 
