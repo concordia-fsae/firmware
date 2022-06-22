@@ -3,6 +3,7 @@ from pprint import pprint
 from os import makedirs
 from yaml import load, Loader
 from mako.template import Template
+from mako.lookup import TemplateLookup
 
 
 from classes.Can import CanBus, CanNode, CanSignal, CanMessage, discrete_values
@@ -184,7 +185,9 @@ def process_receivers(bus: CanBus, node: CanNode):
 
 
 def generate_dbcs(bus: CanBus):
-    dbc = Template(filename="dbc_template/template.dbc.mako").render(
+    lookup = TemplateLookup(directories=["dbc_template"])
+    dbc_template = lookup.get_template("template.dbc.mako")
+    dbc = dbc_template.render(
         bus=bus, messages=bus.messages.values()
     )
     makedirs(OUTPUT_DIR, exist_ok=True)
