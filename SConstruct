@@ -30,6 +30,8 @@ AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
 AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
 # add option to build without debug info
 AddOption("--release", dest="release", action="store_true")
+# add option to halt openocd/gdb on startup
+AddOption("--halt", dest="halt", action="store_true")
 
 
 def pio_build_cmd(source, **_):

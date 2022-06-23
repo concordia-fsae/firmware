@@ -241,12 +241,30 @@ env.Alias("cdb", env.CompilationDatabase())
 env.Alias("upload", env.flash(source="build/steering_wheel.bin"))
 env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
 
+# give support for halting on gdb/openocd start
+mon_reset_cmd = '-ex "monitor reset'
+if GetOption("halt"):
+    mon_reset_cmd += 'halt"'
+else:
+    mon_reset_cmd += '"'
+
+env.Alias(
+    "flash-debug",
+    [env.flash_dbg(source="build/steering_wheel.bin"),
+    env.launch_gdb(
+        "build/steering_wheel.elf",
+        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
+        '-ex "monitor reset halt"',
+        '-ex load',
+    ),]
+)
 env.Alias(
     "openocd-gdb",
     env.launch_gdb(
         "build/steering_wheel.elf",
         f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
-        '-ex "monitor reset"',
+        mon_reset_cmd,
+        '-ex load',
     ),
 )
 env.Alias(
@@ -254,6 +272,7 @@ env.Alias(
     env.launch_gdb(
         "build/steering_wheel.elf",
         '-ex "target extended-remote localhost:3333"',
-        '-ex "monitor reset"',
+        mon_reset_cmd,
+        '-ex load',
     ),
 )
