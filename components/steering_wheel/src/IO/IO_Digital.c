@@ -22,18 +22,18 @@
 
 
 /******************************************************************************
- *                           P U B L I C  V A R S
+ *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-IO_Digital_S IO_DIGITAL = {
-    .inputs[SW1] = { .gpiox = SW1_GPIO_Port, .pin = SW1_Pin },
-    .inputs[SW2] = { .gpiox = SW2_GPIO_Port, .pin = SW2_Pin },
-    .inputs[SW4] = { .gpiox = SW4_GPIO_Port, .pin = SW4_Pin },
-    .inputs[SW5] = { .gpiox = SW5_GPIO_Port, .pin = SW5_Pin },
-    .inputs[BTN_TOP_LEFT] = { .gpiox = BTN_TOP_LEFT_GPIO_Port, .pin = BTN_TOP_LEFT_Pin },
-    .inputs[BTN_MIDDLE] = { .gpiox = BTN_MIDDLE_GPIO_Port, .pin = BTN_MIDDLE_Pin },
-    .inputs[BTN_TOP_RIGHT] = { .gpiox = BTN_TOP_RIGHT_GPIO_Port, .pin = BTN_TOP_RIGHT_Pin }
-}; /**< Must Initialize amount of IO_Digital_Input_S equal to NUM_INPUTS */
+const IO_Digital_Input_S inputs[NUM_INPUTS] = {
+    [SW1] = { .port = SW1_GPIO_Port, .pin = SW1_Pin },
+    [SW2] = { .port = SW2_GPIO_Port, .pin = SW2_Pin },
+    [SW4] = { .port = SW4_GPIO_Port, .pin = SW4_Pin },
+    [SW5] = { .port = SW5_GPIO_Port, .pin = SW5_Pin },
+    [BTN_TOP_LEFT] = { .port = BTN_TOP_LEFT_GPIO_Port, .pin = BTN_TOP_LEFT_Pin },
+    [BTN_MIDDLE] = { .port = BTN_MIDDLE_GPIO_Port, .pin = BTN_MIDDLE_Pin },
+    [BTN_TOP_RIGHT] = { .port = BTN_TOP_RIGHT_GPIO_Port, .pin = BTN_TOP_RIGHT_Pin }
+}; 
 
 
 /******************************************************************************
@@ -45,7 +45,7 @@ IO_Digital_S IO_DIGITAL = {
  */
 static void IO_Digital_init(void)
 {
-    memset(&IO_DIGITAL.inputState, 0x00, sizeof(IO_Digital_S) - sizeof(IO_Digital_Input_S)*NUM_INPUTS);
+    memset(&IO_DIGITAL, 0x00, sizeof(IO_Digital_S));
 }
 
 /**
@@ -56,7 +56,7 @@ static void IO_Digital_10Hz_PRD(void)
     /**< Because of pull-up, signal is active low */
     for (digitalInput_E i = (digitalInput_E) 0U; i < NUM_INPUTS; i++)
     {
-        if (HAL_GPIO_ReadPin(IO_DIGITAL.inputs[i].gpiox, IO_DIGITAL.inputs[i].pin) == GPIO_PIN_RESET)
+        if (HAL_GPIO_ReadPin(inputs[i].port, inputs[i].pin) == GPIO_PIN_RESET)
         {
             IO_DIGITAL.inputState |= 0x01 << (unsigned int) i;
         }

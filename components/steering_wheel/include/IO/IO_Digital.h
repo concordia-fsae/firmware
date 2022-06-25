@@ -12,10 +12,7 @@
  ******************************************************************************/
 
 #include "Types.h"
-#include "stm32f103xb.h" /**< Needed for GPIO_TypeDef */
-
-// System Includes
-#include <assert.h>
+#include "HW_gpio.h" /**< Needed for GPIO_TypeDef */
 
 
 /******************************************************************************
@@ -34,13 +31,13 @@ typedef enum
     NUM_INPUTS
 } digitalInput_E;
 
-typedef uint8_t IO_Digital_Flag_t; /**< Current Implementation can handle upto 64 inputs */
-static_assert(NUM_INPUTS <= (sizeof(IO_Digital_Flag_t) * 8), 
+typedef uint8_t IO_Digital_Flag_t; /**< Current Implementation can handle upto 8 inputs */
+_Static_assert(NUM_INPUTS <= (sizeof(IO_Digital_Flag_t) * 8), 
     "Size of DigitalInput_E must be less than or equal to the width of IO_Digital_Flag_t");
 
 typedef struct
 {
-    GPIO_TypeDef* gpiox;
+    GPIO_TypeDef* port;
     uint16_t      pin;
 } IO_Digital_Input_S;
 
