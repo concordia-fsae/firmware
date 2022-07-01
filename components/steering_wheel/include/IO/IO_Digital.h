@@ -11,8 +11,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "Types.h"
 #include "HW_gpio.h" /**< Needed for GPIO_TypeDef */
+#include "Types.h"
 
 
 /******************************************************************************
@@ -32,19 +32,12 @@ typedef enum
 } digitalInput_E;
 
 typedef uint8_t IO_Digital_Flag_t; /**< Current Implementation can handle upto 8 inputs */
-_Static_assert(NUM_INPUTS <= (sizeof(IO_Digital_Flag_t) * 8), 
-    "Size of DigitalInput_E must be less than or equal to the width of IO_Digital_Flag_t");
+_Static_assert(NUM_INPUTS <= (sizeof(IO_Digital_Flag_t) * 8),
+               "Size of DigitalInput_E must be less than or equal to the width of IO_Digital_Flag_t");
 
 typedef struct
 {
-    GPIO_TypeDef* port;
-    uint16_t      pin;
-} IO_Digital_Input_S;
-
-typedef struct
-{
-    const IO_Digital_Input_S inputs[NUM_INPUTS];
-    IO_Digital_Flag_t        inputState;
+    IO_Digital_Flag_t inputState;
 } IO_Digital_S;
 
 

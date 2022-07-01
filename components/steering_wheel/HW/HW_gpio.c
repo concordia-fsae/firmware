@@ -58,3 +58,26 @@ void MX_GPIO_Init(void)
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 }
+
+/**
+ * @brief Reads the input pin state
+ * @param[in] input Input pin
+ * @return HW pin state
+ */
+HW_GPIO_PinState_E HW_GPIO_ReadPin(const HW_GPIO_Input_S *input)
+{
+    GPIO_PinState bitstatus;
+
+    /* Check the parameters */
+    assert_param(IS_GPIO_PIN(input->pin));
+
+    if ((input->port->IDR & input->pin) != (uint32_t)GPIO_PIN_RESET)
+    {
+        bitstatus = GPIO_PIN_SET;
+    }
+    else
+    {
+        bitstatus = GPIO_PIN_RESET;
+    }
+    return (HW_GPIO_PinState_E)bitstatus;
+}
