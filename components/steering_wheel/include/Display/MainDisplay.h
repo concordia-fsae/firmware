@@ -18,7 +18,7 @@
 #include "EVE_commands.h"
 
 // other includes
-#include "IO.h"
+#include "IO/IO_Analog.h"
 #include "Screen.h"
 #include "Types.h"
 #include "Utility.h"

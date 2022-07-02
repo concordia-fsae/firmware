@@ -31,6 +31,7 @@
 // pin aliases
 
 // input pins
+// Analog Signals
 #define CURR_SENSE_Pin          GPIO_PIN_0
 #define CURR_SENSE_GPIO_Port    GPIOA
 
@@ -49,7 +50,7 @@
 #define PADDLE_RIGHT_GPIO_Port    GPIOB
 
 
-
+// Digital Signals
 #define ROT_ENC_1_A_Pin          GPIO_PIN_11
 #define ROT_ENC_1_A_GPIO_Port    GPIOB
 #define ROT_ENC_1_B_Pin          GPIO_PIN_12

@@ -22,7 +22,8 @@
  ******************************************************************************/
 
 static const ModuleDesc_S* modules[] = {
-    &IO_desc,
+    &IO_Analog_desc,
+    &IO_Digital_desc,
     &CANIO_tx,
     &Screen_desc,
 };

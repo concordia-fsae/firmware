@@ -13,6 +13,7 @@ Local changes
 - Execute compile script from dev_container dir
 	- ./buildroot.sh
 		- change perms if necessary: chmod +x buildroot.sh
+
 in container
 -	scons --target=<component> 
 
