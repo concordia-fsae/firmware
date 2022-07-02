@@ -1,0 +1,14 @@
+mcu: STM32F103
+linker:
+  useDefault: true
+drivers:
+  hal: # required
+  cortex: # required
+  dma:
+  flash:
+  gpio:
+  rcc_ex: # required
+  rcc:
+  tim:
+  tim_ex: # required with tim
+

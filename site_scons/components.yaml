@@ -2,3 +2,8 @@ stw:
   path: components/steering_wheel/
 network:
   path: network/
+
+ars:
+  path: components/aero_sensors/
+network:
+  path: network/
