@@ -36,10 +36,6 @@ int main(void)
     HW_GPIO_Init();
     HW_ADC1_Init();
 
-    HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, 1);
-    volatile uint32_t res = HAL_ADC_GetValue(&hadc1);
-    res = res <<1;
     return 0;
 }
 
