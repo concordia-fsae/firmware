@@ -2,6 +2,7 @@ mcu: STM32F103
 linker:
   useDefault: true
 drivers:
+  adc:
   hal: # required
   cortex: # required
   dma:

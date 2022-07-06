@@ -14,7 +14,7 @@
 
 #include "HW_clock.h"
 #include "HW_gpio.h"
-
+#include "HW_adc.h"
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -34,7 +34,12 @@ int main(void)
 
     /**< Initialize the hardware/firmware */
     HW_GPIO_Init();
+    HW_ADC1_Init();
 
+    HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, 1);
+    volatile uint32_t res = HAL_ADC_GetValue(&hadc1);
+    res = res <<1;
     return 0;
 }
 
