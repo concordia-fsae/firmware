@@ -13,6 +13,7 @@
 #include "HW_can.h"
 
 #include "FreeRTOS_SWI.h"
+#include "IO.h"
 #include "MessagePack.h"
 #include "ModuleDesc.h"
 #include "Screen.h"
@@ -64,13 +65,13 @@ static cantx_S cantx;
  ******************************************************************************/
 
 // signal packing functions
-
-#define set_switch0Status(m, b, n, s)    set_value(m, b, n, s, 0U);
-#define set_switch1Status(m, b, n, s)    set_value(m, b, n, s, 1U);
-#define set_switch3Status(m, b, n, s)    set_value(m, b, n, s, 1U);
-#define set_switch4Status(m, b, n, s)    set_value(m, b, n, s, 0U);
-#define set_button0Status(m, b, n, s)    set_value(m, b, n, s, 0U);
-#define set_button1Status(m, b, n, s)    set_value(m, b, n, s, 1U);
+// FIXME: Update variables here to reference actual GPIO struct
+#define set_switch0Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch0);
+#define set_switch1Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch1);
+#define set_switch3Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch3);
+#define set_switch4Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch4);
+#define set_button0Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.btn0);
+#define set_button1Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.btn1);
 
 
 // TODO: the following file should be auto-generated

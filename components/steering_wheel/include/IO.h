@@ -27,7 +27,16 @@ typedef struct
         float32_t mcu;
     } temp;
 
-    uint32_t test;
+    // tmp for testing
+    volatile struct
+    {
+        bool switch0: 1;
+        bool switch1: 1;
+        bool switch3: 1;
+        bool switch4: 1;
+        bool btn0: 1;
+        bool btn1: 1;
+    } dig;
 
 } IO_S;
 

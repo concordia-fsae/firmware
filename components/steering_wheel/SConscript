@@ -109,6 +109,7 @@ DRIVERS_INCLUDE_DIRS = [
 
 LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("printf"),
+    LIBS_DIR.Dir("atomic"),
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -238,7 +239,7 @@ env.Depends(built(), env["LINKSCRIPT"])
 env.Default("build")
 
 # setup additional targets
-env.Alias("cdb", env.CompilationDatabase())
+env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
 env.Alias("upload", env.flash(source="build/steering_wheel.bin"))
 env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
 
