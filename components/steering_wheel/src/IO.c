@@ -20,7 +20,6 @@
 #include "HW_gpio.h"
 //
 // other includes
-#include "Display/Common.h"
 #include "FeatureDefs.h"
 #include "ModuleDesc.h"
 #include "Types.h"
@@ -185,7 +184,7 @@ static void IO1kHz_PRD(void)
         static uint8_t tim = 0;
         if (++tim == 100U)
         {
-            toggleInfoDotState(INFO_DOT_ADC_CONV);
+            IO.heartbeat = !IO.heartbeat;
             tim = 0;
         }
     }

@@ -12,8 +12,6 @@
 #include "Screen.h"
 
 // System includes
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
 // other includes
@@ -21,7 +19,6 @@
 #include "Types.h"
 
 // display includes
-#include "Display/Common.h"
 #include "Display/CommonDisplay.h"
 #include "Display/MainDisplay.h"
 
@@ -89,53 +86,6 @@ static void (*pageFunctions[SCR_PAGE_COUNT])(void) = {
     [SCR_PAGE_LAUNCH_CONTROL] = NULL,
     [SCR_PAGE_DIAG]           = NULL,
 };
-
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-/******************************************************************************
- *                       P U B L I C  F U N C T I O N S
- ******************************************************************************/
-
-void toggleInfoDotState(dispCommonInfoDots_E infoDot)
-{
-    if (infoDot < INFO_DOT_COUNT)
-    {
-        dispCommonInfoDots[infoDot].dot.state = (dispCommonInfoDots[infoDot].dot.state == DUAL_STATE_ON)
-                                                    ? DUAL_STATE_OFF
-                                                    : DUAL_STATE_ON;
-    }
-}
-
-
-void setInfoDot(dispCommonInfoDots_E infoDot)
-{
-    if (infoDot < INFO_DOT_COUNT)
-    {
-        dispCommonInfoDots[infoDot].dot.state = DUAL_STATE_ON;
-    }
-}
-
-
-void clearInfoDot(dispCommonInfoDots_E infoDot)
-{
-    if (infoDot < INFO_DOT_COUNT)
-    {
-        dispCommonInfoDots[infoDot].dot.state = DUAL_STATE_OFF;
-    }
-}
-
-
-void assignInfoDot(dispCommonInfoDots_E infoDot, bool cond)
-{
-    if (infoDot < INFO_DOT_COUNT)
-    {
-        dispCommonInfoDots[infoDot].dot.state = cond ? DUAL_STATE_OFF : DUAL_STATE_ON;
-    }
-}
-
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -263,50 +213,6 @@ static ScrState_E process_retry(void)
     return nextState;
 }
 
-// void initStaticBackground(void)
-// {
-// EVE_memWrite8(REG_PWM_DUTY, 0x30); /* setup backlight, range is from 0 = off to 0x80 = max */
-// EVE_cmd_dl(CMD_DLSTART);           /* Start the display list */
-
-// EVE_cmd_dl(TAG(0)); /* do not use the following objects for touch-detection */
-
-// EVE_cmd_bgcolor(0x00c0c0c0); /* light grey */
-
-//// EVE_cmd_dl(VERTEX_FORMAT(0)); /* reduce precision for VERTEX2F to 1 pixel instead of 1/16 pixel default */
-
-//// /* draw a rectangle on top */
-//// EVE_cmd_dl(DL_BEGIN | EVE_RECTS);
-//// EVE_cmd_dl(LINE_WIDTH(1 * 16)); /* size is in 1/16 pixel */
-
-//// EVE_cmd_dl(DL_COLOR_RGB | BLUE_1);
-//// EVE_cmd_dl(VERTEX2F(0, 0));
-//// EVE_cmd_dl(VERTEX2F(EVE_HSIZE, LAYOUT_Y1 - 2));
-//// EVE_cmd_dl(DL_END);
-
-//// /* draw a black line to separate things */
-//// EVE_cmd_dl(DL_COLOR_RGB | BLACK);
-//// EVE_cmd_dl(DL_BEGIN | EVE_LINES);
-//// EVE_cmd_dl(VERTEX2F(0, LAYOUT_Y1 - 2));
-//// EVE_cmd_dl(VERTEX2F(EVE_HSIZE, LAYOUT_Y1 - 2));
-//// EVE_cmd_dl(DL_END);
-
-// EVE_cmd_text(EVE_HSIZE / 2, 15, 29, EVE_OPT_CENTERX, "EVE Demo");
-
-//// EVE_cmd_text(10, EVE_VSIZE - 50, 26, 0, "DL-size:");
-//// EVE_cmd_text(10, EVE_VSIZE - 35, 26, 0, "Time1:");
-//// EVE_cmd_text(10, EVE_VSIZE - 20, 26, 0, "Time2:");
-
-//// EVE_cmd_text(125, EVE_VSIZE - 35, 26, 0, "us");
-//// EVE_cmd_text(125, EVE_VSIZE - 20, 26, 0, "us");
-
-// EVE_cmd_dl(DL_DISPLAY); /* instruct the graphics processor to show the list */
-// EVE_cmd_dl(CMD_SWAP);   /* make this list active */
-
-// while (EVE_busy())
-// ;
-// }
-//
-//
 
 /**
  * updateBrightness_10Hz
@@ -347,7 +253,7 @@ static void Screen10Hz_PRD(void)
         updateBrightness_10Hz();
     }
 
-    toggleInfoDotState(INFO_DOT_RUN_STATUS);
+    SCR.heartbeat = !SCR.heartbeat;
 }
 
 
@@ -367,3 +273,4 @@ const ModuleDesc_S Screen_desc = {
     .periodic10Hz_CLK  = &Screen10Hz_PRD,
     .periodic100Hz_CLK = &Screen100Hz_PRD,
 };
+

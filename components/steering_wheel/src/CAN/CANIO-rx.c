@@ -15,16 +15,11 @@
 #include "FreeRTOS_SWI.h"
 #include "ModuleDesc.h"
 #include "Utility.h"
-
-// included for debug
-#include "Screen.h"
+#include "string.h"
 
 // generated files
 #include "VEH_sigTx.h"
 
-#include "Display/Common.h"
-
-#include "string.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -33,6 +28,8 @@
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
+
+extern CAN_HandleTypeDef hcan;
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -61,7 +58,7 @@ static canrx_S canrx;
  */
 void CANRX_BUS_A_SWI(void)
 {
-    /* setInfoDot(INFO_DOT_CAN_RX); */
+    // setInfoDot(INFO_DOT_CAN_RX);
     for (CAN_RxFifo_E rxFifo = CAN_RX_FIFO_0; rxFifo < CAN_RX_FIFO_COUNT; rxFifo++)
     {
         if (!FLAG_get(canrx.fifoNotify, rxFifo))
@@ -71,15 +68,15 @@ void CANRX_BUS_A_SWI(void)
 
         FLAG_clear(canrx.fifoNotify, rxFifo);
 
-        while(CAN_getRxFifoEmptyBus0(rxFifo) == false)
+        while (CAN_getRxFifoEmptyBus0(rxFifo) == false)
         {
-            /* toggleInfoDotState(INFO_DOT_CAN_RX); */
-            CAN_RxMessage_T msg = { 0U };
-            bool rxSuccess = CAN_getRxMessageBus0(rxFifo, &msg);
+            // toggleInfoDotState(INFO_DOT_CAN_RX);
+            CAN_RxMessage_T msg       = { 0U };
+            bool            rxSuccess = CAN_getRxMessageBus0(rxFifo, &msg);
 
             if (rxSuccess)
             {
-                toggleInfoDotState(INFO_DOT_CAN_RX);
+                // toggleInfoDotState(INFO_DOT_CAN_RX);
             }
             else
             {
@@ -87,11 +84,10 @@ void CANRX_BUS_A_SWI(void)
             }
         }
 
-        extern CAN_HandleTypeDef hcan;
+        // FIXME: notification should be reactivated in the hardware layer
         uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
         HAL_CAN_ActivateNotification(&hcan, it);
     }
-
 }
 
 /**
@@ -124,19 +120,7 @@ static void CANIO_rx_1kHz_PRD(void)
  */
 static void CANIO_rx_100Hz_PRD(void)
 {
-    /* if(CAN_getRxFifoEmptyBus0(0U) != false) */
-    /* { */
-    /*     /1* CAN_RxMessage_T msg = { 0U }; *1/ */
-    /*     /1* bool rxSuccess = CAN_getRxMessageBus0(0U, &msg); *1/ */
-    /*     FLAG_set(canrx.test, 0U); */
-    /* } */
-
-    /* if(CAN_getRxFifoEmptyBus0(1U) != false) */
-    /* { */
-    /*     /1* CAN_RxMessage_T msg = { 1U }; *1/ */
-    /*     /1* bool rxSuccess = CAN_getRxMessageBus0(1U, &msg); *1/ */
-    /*     FLAG_set(canrx.test, 1U); */
-    /* } */
+    // TODO Implement this
 }
 
 

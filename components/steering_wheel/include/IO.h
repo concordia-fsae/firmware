@@ -30,19 +30,20 @@ typedef struct
     // tmp for testing
     volatile struct
     {
-        bool switch0: 1;
-        bool switch1: 1;
-        bool switch3: 1;
-        bool switch4: 1;
-        bool btn0: 1;
-        bool btn1: 1;
-    } dig;
+        bool switch0 : 1;
+        bool switch1 : 1;
+        bool switch3 : 1;
+        bool switch4 : 1;
+        bool btn0    : 1;
+        bool btn1    : 1;
+    }    dig;
 
+    bool heartbeat;
 } IO_S;
 
 
-//***************************************************************************//
-//                           P U B L I C  V A R S                            //
-//***************************************************************************//
-//
+/******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
 extern IO_S IO;

@@ -13,15 +13,15 @@
 #include "HW_can.h"
 
 #include "FreeRTOS_SWI.h"
-#include "IO.h"
 #include "MessagePack.h"
 #include "ModuleDesc.h"
 #include "Screen.h"
 #include "VEH_sigTx.h"
 
-#include "Display/Common.h"
-
 #include "string.h"
+
+// imports for data access
+#include "IO.h"
 
 
 /******************************************************************************
@@ -110,6 +110,7 @@ static const packTable_S* packNextMessage(const packTable_S *packTable,
     return NULL;
 }
 
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -135,8 +136,6 @@ void CANTX_BUS_A_10ms_SWI(void)
 }
 
 
-
-
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
@@ -147,14 +146,6 @@ void CANTX_BUS_A_10ms_SWI(void)
  */
 static void CANIO_tx_100Hz_PRD(void)
 {
-    static uint8_t tim = 0;
-
-    if (tim++ == 9U)
-    {
-        tim = 0;
-        toggleInfoDotState(INFO_DOT_CAN_TX);
-    }
-
     // transmit 100Hz messages
     cantx.txBusA10msIdx = 0U;
     SWI_invoke(CANTX_BUS_A_10ms_swi);
