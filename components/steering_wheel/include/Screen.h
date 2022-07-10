@@ -49,6 +49,7 @@ typedef struct
     EVE_InitStatus_E initStatus;
     uint8_t          brightness;
     ScrState_E       state;
+    bool             heartbeat;
 } SCR_S;
 
 //***************************************************************************//

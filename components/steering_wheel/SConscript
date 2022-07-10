@@ -144,6 +144,8 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("CAN/CANIO-rx.c"),
     PROJECT_SOURCE_DIR.File("IO.c"),
     PROJECT_SOURCE_DIR.File("Screen.c"),
+    PROJECT_SOURCE_DIR.File("Display/Pills.c"),
+    PROJECT_SOURCE_DIR.File("Display/Dots.c"),
 ]
 
 project_hw_files = [
