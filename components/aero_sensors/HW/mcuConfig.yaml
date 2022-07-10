@@ -12,4 +12,5 @@ drivers:
   rcc:
   tim:
   tim_ex: # required with tim
+  i2c:
 

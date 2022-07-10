@@ -151,6 +151,7 @@ project_hw_files = [
         #PROJECT_HW_DIR.File("HW_msp.c"),
         #PROJECT_HW_DIR.File("HW_spi.c"),
         PROJECT_HW_DIR.File("HW_timebase.c"),
+        PROJECT_HW_DIR.File("HW_i2c.c"),
 ]
 
 ftdi_lib_files = [
