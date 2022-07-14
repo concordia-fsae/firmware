@@ -1,0 +1,68 @@
+/**
+ * @file HW_spi.c
+ * @brief  Source code of SPI hardware/firmware
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @version 0.1
+ * @date 2022-07-13
+ */
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
+#include "HW_spi.h"
+
+/******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
+SPI_TypeDef* spi2;
+
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+void HW_SPI_Init(void)
+{
+    LL_SPI_InitTypeDef SPI_Init        = { 0 };
+    GPIO_InitTypeDef   GPIO_InitStruct = { 0 };
+
+    spi2                       = SPI2;
+    SPI_Init.Mode              = LL_SPI_MODE_MASTER;
+    SPI_Init.TransferDirection = LL_SPI_FULL_DUPLEX;
+    SPI_Init.DataWidth         = LL_SPI_DATAWIDTH_8BIT;
+    SPI_Init.ClockPolarity     = LL_SPI_POLARITY_LOW;
+    SPI_Init.ClockPhase        = LL_SPI_PHASE_1EDGE;
+    SPI_Init.NSS               = LL_SPI_NSS_SOFT;
+    SPI_Init.BaudRate          = LL_SPI_BAUDRATEPRESCALER_DIV8;
+    SPI_Init.BitOrder          = LL_SPI_MSB_FIRST;
+    SPI_Init.CRCCalculation    = LL_SPI_CRCCALCULATION_DISABLE;
+    SPI_Init.CRCPoly           = 0x00;
+
+    /**< Enable Clock */
+    __HAL_RCC_SPI2_CLK_ENABLE();
+
+    /**
+     * SPI2 GPIO Configuration
+     * PB13 --> SPI2_SCK
+     * PB14 --> SPI2_MISO
+     * PB15 --> SPI_MOSI
+     */
+
+    GPIO_InitStruct.Pin   = SD_SCK2_Pin | SD_MOSI2_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin  = SD_MISO2_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+
+    if (LL_SPI_Init(spi2, &SPI_Init) != SUCCESS)
+    {
+        Error_Handler();
+    }
+}

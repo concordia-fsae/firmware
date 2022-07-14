@@ -34,6 +34,15 @@
 #define I2C1_SDA_Port GPIOB
 #define I2C1_SDA_Pin GPIO_PIN_7
 
+#define SD_NSS2_Port GPIOB
+#define SD_NSS2_Pin GPIO_PIN_12
+#define SD_SCK2_Port GPIOB
+#define SD_SCK2_Pin GPIO_PIN_13
+#define SD_MISO2_Port GPIOB
+#define SD_MISO2_Pin GPIO_PIN_14
+#define SD_MOSI2_Port GPIOB
+#define SD_MOSI2_Pin GPIO_PIN_15
+
 // Input pins
 // Analog Signals
 
@@ -67,13 +76,4 @@
 #define CAN_TX_Pin GPIO_PIN9
 #define CAN_RX_Port GPIOB
 #define CAN_RX_Pin GPIO_PIN_8
-
-#define SD_NSS2_Port GPIOB
-#define SD_NSS2_Pin GPIO_PIN_12
-#define SD_SCK2_Port GPIOB
-#define SD_SCK2_Pin GPIO_PIN_13
-#define SD_MISO2_Port GPIOB
-#define SD_MISO2_Pin GPIO_PIN_14
-#define SD_MOSI2_Port GPIOB
-#define SD_MOSI2_Pin GPIO_PIN_15
 

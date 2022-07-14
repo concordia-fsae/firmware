@@ -30,7 +30,7 @@ DMA_HandleTypeDef hdma_adc1;
 /**
  * @brief  Initializes the ADC1
  */
-void HW_ADC1_Init()
+void HW_ADC_Init()
 {
     ADC_ChannelConfTypeDef adcConf = { 0 };
 

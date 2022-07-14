@@ -35,7 +35,7 @@ DMA_HandleTypeDef hdma_i2c2_tx;
 /**
  * @brief  Initializes the I2C1 bus
  */
-void HW_I2C1_Init(void)
+void HW_I2C_Init(void)
 {
     /**< Initialize peripherals */
     i2c1.Instance            = I2C1;

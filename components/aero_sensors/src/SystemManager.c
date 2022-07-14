@@ -16,6 +16,7 @@
 #include "HW_gpio.h"
 #include "HW_adc.h"
 #include "HW_i2c.h"
+#include "HW_spi.h"
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -35,8 +36,9 @@ int main(void)
 
     /**< Initialize the hardware/firmware */
     HW_GPIO_Init();
-    HW_ADC1_Init();
-    HW_I2C1_Init();
+    HW_ADC_Init();
+    HW_I2C_Init();
+    HW_SPI_Init();
 
     return 0;
 }

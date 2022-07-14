@@ -13,4 +13,6 @@ drivers:
   tim:
   tim_ex: # required with tim
   i2c:
+  spi:
+    use_ll: true
 
