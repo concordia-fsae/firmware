@@ -152,7 +152,7 @@ project_source_files = [
 project_hw_files = [
         PROJECT_HW_DIR.File("HW_adc.c"),
         #PROJECT_HW_DIR.File("HW_can.c"),
-        #PROJECT_HW_DIR.File("HW_dma.c"),
+        PROJECT_HW_DIR.File("HW_dma.c"),
         PROJECT_HW_DIR.File("HW_gpio.c"),
         #PROJECT_HW_DIR.File("HW_intc.c"),
         #PROJECT_HW_DIR.File("HW_msp.c"),

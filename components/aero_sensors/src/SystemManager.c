@@ -14,6 +14,7 @@
 
 #include "HW_clock.h"
 #include "HW_gpio.h"
+#include "HW_dma.h"
 #include "HW_adc.h"
 #include "HW_i2c.h"
 #include "HW_spi.h"
@@ -36,6 +37,7 @@ int main(void)
 
     /**< Initialize the hardware/firmware */
     HW_GPIO_Init();
+    HW_DMA_Init();
     HW_ADC_Init();
     HW_I2C_Init();
     HW_SPI_Init();
