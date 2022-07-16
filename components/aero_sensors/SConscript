@@ -8,12 +8,14 @@ from SCons.Script import *
 Import("*")
 
 RTOS_DIR = Dir("RTOS")
+FS_DIR = Dir("FS")
 PROJECT_SOURCE_DIR = Dir("src")
 PROJECT_HW_DIR= Dir("HW")
 PROJECT_LIB_DIR = Dir("lib")
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
+FATFS_DIR = LIBS_DIR.Dir("FatFS/src")
 
 BUILD_DIR = Dir("build")
 
@@ -104,13 +106,18 @@ RTOS_INCLUDE_DIRS = [
         CMSIS_DIR.Dir("CMSIS/Core/Include/"),
 ]
 
+FS_INCLUDE_DIRS = [
+    FATFS_DIR,
+    FS_DIR.Dir("include"),
+    CMSIS_DIR.Dir("CMSIS/RTOS/RTX/INC/"),
+]
+
 DRIVERS_INCLUDE_DIRS = [
     chip_config["cmsis_includes"],
     chip_config["hal_includes"],
 ]
 
 LIBS_INCLUDE_DIRS = [
-    LIBS_DIR.Dir("printf"),
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -121,7 +128,7 @@ PROJECT_INCLUDE_DIRS = [
 ]
 
 paths = (
-    RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + PROJECT_INCLUDE_DIRS + LIBS_INCLUDE_DIRS
+    FS_INCLUDE_DIRS + RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + PROJECT_INCLUDE_DIRS + LIBS_INCLUDE_DIRS
 )
 
 env.Append(
@@ -154,12 +161,7 @@ project_hw_files = [
         PROJECT_HW_DIR.File("HW_i2c.c"),
 ]
 
-ftdi_lib_files = [
-        #PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_commands.c"),
-        #PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_target.c"),
-]
-
-project_source_files += project_hw_files + ftdi_lib_files
+project_source_files += project_hw_files
 
 rtos_source_files = [
         #RTOS_DIR.File("FreeRTOSResources.c"),
@@ -180,6 +182,9 @@ platform_source_files = [
         #     LIBS_DIR.File("printf/printf.c"),
         #     ["-Wno-float-equal", "-DPRINTF_INCLUDE_CONFIG_H"],
         # ),
+    (FATFS_DIR.File("diskio.c"), ["",""]),
+    (FATFS_DIR.File("ff.c"), ["",""]),
+    (FATFS_DIR.File("ff_gen_drv.c"), ["-Wno-unused-parameter",""]),
 ]
 
 # add driver source files
