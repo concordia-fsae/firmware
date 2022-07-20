@@ -32,6 +32,7 @@ env["REPO_ROOT_DIR"] = Dir("#")
 common_flags = [
     "-mthumb",
     "-mcpu=cortex-m3",
+    #"-march=armv7-m"
 ]
 
 debug_flags = [
@@ -55,6 +56,7 @@ link_flags = [
 as_flags = ["-xassembler-with-cpp"]
 
 c_flags = [
+    #"-march=armv7-m",
     "-std=c11",
     "-ffunction-sections",
     "-fdata-sections",
@@ -107,9 +109,10 @@ RTOS_INCLUDE_DIRS = [
 ]
 
 FS_INCLUDE_DIRS = [
-    FATFS_DIR,
     FS_DIR.Dir("include"),
-    CMSIS_DIR.Dir("CMSIS/RTOS/RTX/INC/"),
+    FATFS_DIR, # Necessary so that integer.h comes from FS/include
+    LIBS_DIR.Dir("FreeRTOS/CMSIS/RTOS2/FreeRTOS/Include1/"),
+    CMSIS_DIR.Dir("CMSIS/RTOS2/Include/"),
 ]
 
 DRIVERS_INCLUDE_DIRS = [
@@ -182,6 +185,7 @@ platform_source_files = [
         #     LIBS_DIR.File("printf/printf.c"),
         #     ["-Wno-float-equal", "-DPRINTF_INCLUDE_CONFIG_H"],
         # ),
+    (FS_DIR.File("fatfs.c"), ["",""]),
     (FATFS_DIR.File("diskio.c"), ["",""]),
     (FATFS_DIR.File("ff.c"), ["",""]),
     (FATFS_DIR.File("ff_gen_drv.c"), ["-Wno-unused-parameter",""]),

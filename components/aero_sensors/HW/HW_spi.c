@@ -11,12 +11,14 @@
  ******************************************************************************/
 
 #include "HW_spi.h"
+#include "stm32f1xx_ll_spi.h"
+
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-SPI_TypeDef* spi2;
+SPI_TypeDef *spi2;
 
 
 /******************************************************************************
@@ -65,4 +67,33 @@ void HW_SPI_Init(void)
     {
         Error_Handler();
     }
+}
+
+inline void HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data)
+{
+    while (!LL_SPI_IsActiveFlag_TXE(hspi));
+    LL_SPI_TransmitData8(hspi, data);
+    while(!LL_SPI_IsActiveFlag_TXE(hspi));
+    while(!LL_SPI_IsActiveFlag_RXNE(hspi));
+    LL_SPI_ReceiveData8(hspi); /**< Dummy read to clear RXNE and prevent OVR */
+}
+
+inline void HW_SPI_Transmit16(SPI_TypeDef *hspi, uint16_t data)
+{
+    HW_SPI_Transmit8(hspi, data);
+    HW_SPI_Transmit8(hspi, data >> 8);
+}
+
+inline void HW_SPI_Transmit32(SPI_TypeDef *hspi, uint32_t data)
+{
+    HW_SPI_Transmit16(hspi, data);
+    HW_SPI_Transmit16(hspi, data >> 16);
+}
+
+inline uint8_t HW_SPI_TransmitReceive8(SPI_TypeDef *hspi, uint8_t data)
+{
+    HW_SPI_Transmit8(hspi, data);
+    while(!LL_SPI_IsActiveFlag_TXE(hspi));
+    while(!LL_SPI_IsActiveFlag_RXNE(hspi));
+    return LL_SPI_ReceiveData8(hspi);
 }

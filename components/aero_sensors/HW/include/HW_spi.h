@@ -13,7 +13,8 @@
  ******************************************************************************/
 
 #include "SystemConfig.h"
-#include "stm32f1xx_ll_spi.h"
+#include <stdint.h>
+
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -23,7 +24,11 @@ extern SPI_TypeDef *spi2;
 
 
 /******************************************************************************
- *                       P U B L I C  F U N C T I O N S
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
 void HW_SPI_Init(void);
+void HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data);
+void HW_SPI_Transmit16(SPI_TypeDef *hspi, uint16_t data);
+void HW_SPI_Transmit32(SPI_TypeDef *hspi, uint32_t data);
+uint8_t HW_SPI_TransmitReceive8(SPI_TypeDef *hspi, uint8_t data);

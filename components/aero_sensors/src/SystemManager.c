@@ -18,6 +18,7 @@
 #include "HW_adc.h"
 #include "HW_i2c.h"
 #include "HW_spi.h"
+#include "fatfs.h"
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -41,6 +42,7 @@ int main(void)
     HW_ADC_Init();
     HW_I2C_Init();
     HW_SPI_Init();
+    FatFS_Init();
 
     return 0;
 }
