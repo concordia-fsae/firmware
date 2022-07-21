@@ -4,6 +4,17 @@
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
  * @date 2022-07-16
+ *
+ * @note
+ * Portions copyright (C) 2014, ChaN, all rights reserved.
+ * Portions copyright (C) 2017, kiwih, all rights reserved.
+ *
+ * This software is a free software and there is NO WARRANTY.
+ * No restriction on use. You can use, modify and redistribute it for
+ * personal, non-profit or commercial products UNDER YOUR RESPONSIBILITY.
+ * Redistributions of source code must retain the above copyright notice.
+ *
+ ******************************************************************************
  */
 
 /******************************************************************************
@@ -15,9 +26,6 @@
 #include "integer.h"
 
 #include "HW_spi.h"
-#include <stdint.h>
-#include <wchar.h>
-//#include <stdint.h>
 
 
 /******************************************************************************
@@ -26,6 +34,8 @@
 
 #define SD_SPI_INTERFACE ((SPI_TypeDef*)SPI2) /**< SD Interface on SPI2 */
 #define SD_INIT_TIMEOUT  1000
+#define SD_WAIT_TIMEOUT  500
+#define SD_RCVR_TIMEOUT  200
 
 #define FCLK_SLOW()                                                            \
  {                                                                             \
@@ -73,9 +83,12 @@
 /**
  * Start of Internal Functions
  */
+static uint8_t wait_ready(uint32_t wait);
 static uint8_t card_select(void);
 static void    card_deselect(void);
-static uint8_t xchg_sd(uint8_t data);
+static uint8_t xchg_sd(BYTE data);
+static void    rcvr_spi_multi(BYTE* buff, UINT btr);
+static void    xmit_spi_multi(const BYTE* buff, UINT btx);
 static void    start_timer(uint32_t wait);
 static uint8_t timer_status(void);
 static BYTE    send_cmd(BYTE cmd, DWORD arg);
@@ -90,11 +103,11 @@ static BYTE    rcvr_datablock(BYTE* buff, uint32_t btr);
  */
 #include "assert.h"
 static_assert(sizeof(DWORD) == 4 && sizeof(SHORT) == 2 && sizeof(BYTE) == 1, "WRONG FatFS TYPE SIZE");
-static_assert(sizeof(UINT) == 4, "WRONG FatFS UINT TYPE SIZE");
-DSTATUS sd_init(uint8_t drv);
-DSTATUS sd_status(uint8_t drv);
-DRESULT sd_read(uint8_t byte, uint8_t* buff, DWORD sector, UINT count);
-DRESULT sd_write(uint8_t drv, const uint8_t* buff, uint32_t sector, UINT count);
+static_assert(sizeof(UINT) == 4 || sizeof(UINT) == 2, "WRONG FatFS UINT TYPE SIZE");
+DSTATUS sd_init(BYTE drv);
+DSTATUS sd_status(BYTE drv);
+DRESULT sd_read(BYTE byte, BYTE* buff, DWORD sector, UINT count);
+DRESULT sd_write(BYTE drv, const BYTE* buff, DWORD sector, UINT count);
 /**
  * End FatFS Generic Interface
  */
@@ -139,12 +152,34 @@ void FatFS_Init(void)
  */
 
 /**
+ * @brief  Wait until SD is ready
+ * FIXME: Currently in blocking mode
+ *
+ * @param wait Time to wait
+ *
+ * @retval   Result (1: Success, 0: Timeout)
+ */
+static uint8_t wait_ready(uint32_t wait)
+{
+    BYTE res;
+
+    uint32_t timStart = HAL_GetTick();
+
+    do {
+        res = xchg_sd(0xff);
+    } while (res != 0xff && (timStart - HAL_GetTick() < wait));
+
+    return (res == 0xff) ? 1 : 0;
+}
+
+/**
  * @brief  Select the CS of the SD
  *
  * @retval   1: OK, 0: Timout
  */
 static inline uint8_t card_select(void)
 {
+    /**< Current implementation has no CS and no other SPI peripheral */
     return 1;
 }
 /**
@@ -162,9 +197,37 @@ static inline void card_deselect(void)
  *
  * @retval   8 bits received from SD
  */
-static inline uint8_t xchg_sd(uint8_t data)
+static inline uint8_t xchg_sd(BYTE data)
 {
     return HW_SPI_TransmitReceive8(SD_SPI_INTERFACE, data);
+}
+
+/**
+ * @brief Receive multiple bytes from spi
+ *
+ * @param buff Buffer to write to
+ * @param btr Number of bytes to receive
+ */
+static void rcvr_spi_multi(BYTE* buff, UINT btr)
+{
+    for (UINT i = 0; i < btr; i++)
+    {
+        buff[i] = xchg_sd(0xff);
+    }
+}
+
+/**
+ * @brief  Transmit multiple bytes over spi
+ *
+ * @param buff Source buffer
+ * @param btx Number of bytes to send
+ */
+static void xmit_spi_multi(const BYTE* buff, UINT btx)
+{
+    for (UINT i = 0; i < btx; i++)
+    {
+        xchg_sd(buff[i]);
+    }
 }
 
 /**
@@ -252,11 +315,27 @@ static BYTE xmit_datablock(const BYTE* buff, BYTE token)
 {
     BYTE resp;
 
-    // if
+    if (!wait_ready(SD_WAIT_TIMEOUT))
+        return 0; /**< Wait for ready */
+
+    xchg_sd(token); /**< Send token */
+
+    if (token != 0xfd) /**< Send data if token isnt StopTrans */
+    {
+        xmit_spi_multi(buff, 512); /**< Send sector */
+        xchg_sd(0xff);
+        xchg_sd(0xff); /**< Dummy CRC */
+
+        resp = xchg_sd(0xff); /**< Receive data response */
+        if ((resp & 0x1f) != 0x05)
+            return 0;
+    }
+    return 1;
 }
 
 /**
  * @brief Receive a block of data from the SD card
+ * FIXME: Currently in blocking mode
  *
  * @param buff Buffer to write too
  * @param btr Size in bytes
@@ -265,6 +344,19 @@ static BYTE xmit_datablock(const BYTE* buff, BYTE token)
  */
 static BYTE rcvr_datablock(BYTE* buff, uint32_t btr)
 {
+    BYTE token;
+
+    start_timer(SD_RCVR_TIMEOUT);
+
+    do {
+        token = xchg_sd(0xff);
+    } while ((token == 0xff) && timer_status());
+
+    rcvr_spi_multi(buff, btr);
+    xchg_sd(0xff);
+    xchg_sd(0xff); /**< Dummy CRC */
+
+    return 1;
 }
 
 /**
@@ -277,6 +369,7 @@ static BYTE rcvr_datablock(BYTE* buff, uint32_t btr)
 
 /**
  * @brief  Initializes SD
+ * FIXME: Currently in blocking mode
  *
  * @param drv Drive number
  *

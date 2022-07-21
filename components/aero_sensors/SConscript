@@ -32,7 +32,6 @@ env["REPO_ROOT_DIR"] = Dir("#")
 common_flags = [
     "-mthumb",
     "-mcpu=cortex-m3",
-    #"-march=armv7-m"
 ]
 
 debug_flags = [
@@ -56,7 +55,6 @@ link_flags = [
 as_flags = ["-xassembler-with-cpp"]
 
 c_flags = [
-    #"-march=armv7-m",
     "-std=c11",
     "-ffunction-sections",
     "-fdata-sections",
