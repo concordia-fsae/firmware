@@ -1,9 +1,9 @@
 /**
- * @file HW_spi.h
- * @brief  Header file for SPI firmware/hardware
+ * @file HW_MPRL.h
+ * @brief  Header file of MPRLS0300YG00001B driver
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
- * @date 2022-07-13
+ * @date 2022-07-21
  */
 
 #pragma once
@@ -12,22 +12,21 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "SystemConfig.h"
+#include "HW_i2c.h"
 
 
 /******************************************************************************
- *                           P U B L I C  V A R S
+ *                              D E F I N E S
  ******************************************************************************/
 
-extern SPI_TypeDef *spi2;
-
+#define MPRL_BUS1_COUNT 8
+#define MPRL_BUS2_COUNT 8
+#define MPRL_BUS_TIMEOUT 5
 
 /******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_SPI_Init(void);
-void HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data);
-void HW_SPI_Transmit16(SPI_TypeDef *hspi, uint16_t data);
-void HW_SPI_Transmit32(SPI_TypeDef *hspi, uint32_t data);
-uint8_t HW_SPI_TransmitReceive8(SPI_TypeDef *hspi, uint8_t data);
+void MPRL_StartConversion(void);
+uint8_t MPRL_ReadStatus(I2C_BUS_E bus);
+uint32_t MPRL_ReadData(I2C_BUS_E bus);

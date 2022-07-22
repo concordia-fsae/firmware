@@ -1,9 +1,9 @@
 /**
- * @file HW_spi.h
- * @brief  Header file for SPI firmware/hardware
+ * @file HW_MAX7356.h
+ * @brief  Header file for MAX7356EUG+ driver
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
- * @date 2022-07-13
+ * @date 2022-07-21
  */
 
 #pragma once
@@ -12,22 +12,21 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "SystemConfig.h"
+#include <stdint.h>
 
 
 /******************************************************************************
- *                           P U B L I C  V A R S
+ *                              D E F I N E S
  ******************************************************************************/
 
-extern SPI_TypeDef *spi2;
+#define MAX_GATE(x)     0x01 << x
+#define MAX_ALL_GATES   0xff
+#define MAX_BUS_TIMEOUT 5
 
 
 /******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_SPI_Init(void);
-void HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data);
-void HW_SPI_Transmit16(SPI_TypeDef *hspi, uint16_t data);
-void HW_SPI_Transmit32(SPI_TypeDef *hspi, uint32_t data);
-uint8_t HW_SPI_TransmitReceive8(SPI_TypeDef *hspi, uint8_t data);
+void     MAX_SetGates(uint8_t command);
+uint16_t MAX_ReadGates(void);

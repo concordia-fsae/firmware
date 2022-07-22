@@ -39,8 +39,9 @@ __Long Term__
     -1x8 I2C multiplexer
     -Incremental r/w of internal registers in enhance mode
     -Single r/w of first register in basic mode
-    -I2C Address: 01110,A2,A1,A0b << 1
+    -I2C Address: 01110,A2,A1,A0b << 1 **IMPLEMENTATION USES 0x70 << 1 FOR BOTH**
     -Configurable address lines upto 8 different addresses
+4. Can Transceiver TJA1050
 
 #### Hardware Implementation
 

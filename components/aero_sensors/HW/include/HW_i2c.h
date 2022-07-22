@@ -27,6 +27,13 @@ typedef struct
     uint16_t         addr;
 } HW_I2C_Device_S;
 
+typedef enum
+{
+   I2C_Bus1 = 0x00,
+   I2C_Bus2,
+   I2C_Bus_Count,
+} I2C_BUS_E;
+
 
 /******************************************************************************
  *                           P U B L I C  V A R S
