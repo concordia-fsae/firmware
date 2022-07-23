@@ -48,7 +48,7 @@ void Module_Init(void)
  */
 void Module_1kHz_TSK(void)
 {
-#if defined (ARSDEBUG) /**< Defined in SystemConfig.h */
+#if defined (ARS_RTOS_BLINK) /**< Defined in SystemConfig.h */
     static uint8_t tim = 0;
     if (++tim == 100U)
     {

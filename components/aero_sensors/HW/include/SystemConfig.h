@@ -25,7 +25,7 @@
 
 // System altering defines
 #define USE_FULL_LL_DRIVER
-#define ARSDEBUG
+#define ARS_RTOS_BLINK
 
 // Interrupt priorities, tick interrupt is highest (lowest numerical value)
 #define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U

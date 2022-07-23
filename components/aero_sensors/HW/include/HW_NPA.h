@@ -21,6 +21,7 @@
 
 #define NPA_BUS_TIMEOUT 5
 
+#define NPA_USE_TEMPERATURE 2 /**< Defines usage of NPA temperature readings (2: 12bit; 1: 8bit, 0: None) */
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -30,19 +31,12 @@ typedef struct
 {
     uint8_t status;
     uint16_t pressure;
+#if NPA_USE_TEMPERATURE == 1
+    uint8_t temperature;
+#elif NPA_USE_TEMPERATURE == 2
+    uint16_t temperature;
+#endif
 } NPA_Response_S;
-
-typedef struct
-{
-    NPA_Response_S response;
-    uint8_t temp;
-} NPA_Full_Response8_S;
-
-typedef struct
-{
-    NPA_Response_S response;
-    uint16_t temp;
-} NPA_Full_Response16_S;
 
 
 /******************************************************************************
@@ -50,5 +44,3 @@ typedef struct
  ******************************************************************************/
 
 NPA_Response_S NPA_Read(void);
-NPA_Full_Response8_S NPA_ReadTemp8(void);
-NPA_Full_Response16_S NPA_ReadTemp16(void);
