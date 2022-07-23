@@ -24,6 +24,7 @@
 
 // System altering defines
 #define USE_FULL_LL_DRIVER
+#define ARSDEBUG
 
 // Interrupt priorities, tick interrupt is highest (lowest numerical value)
 

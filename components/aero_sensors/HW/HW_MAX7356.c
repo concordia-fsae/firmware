@@ -18,7 +18,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-HW_I2C_Device_S devices[I2C_Bus_Count] = {
+static HW_I2C_Device_S devices[I2C_Bus_Count] = {
     [I2C_Bus1] = {
         .handle = &i2c1,
         .addr   = 0x70 << 1,

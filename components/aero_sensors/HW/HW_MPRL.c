@@ -30,7 +30,7 @@ typedef struct
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-MPRL_Dev_S devices[I2C_Bus_Count] = {
+static MPRL_Dev_S devices[I2C_Bus_Count] = {
     [I2C_Bus1] = {
         .dev = {
             .handle = &i2c1,

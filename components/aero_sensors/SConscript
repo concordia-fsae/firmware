@@ -148,6 +148,7 @@ rtos_env.Append(
 
 project_source_files = [
     PROJECT_SOURCE_DIR.File("SystemManager.c"),
+    PROJECT_SOURCE_DIR.File("Module.c"),
 ]
 
 project_hw_files = [
@@ -165,20 +166,25 @@ project_hw_files = [
         PROJECT_HW_DIR.File("HW_NPA.c"),
 ]
 
+ftdi_lib_files = [
+        #PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_commands.c"),
+        #PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_target.c"),
+]
+
 project_source_files += project_hw_files
 
 rtos_source_files = [
-        #RTOS_DIR.File("FreeRTOSResources.c"),
-        #RTOS_DIR.File("FreeRTOS_SWI.c"),
-        #FREERTOS_DIR.File("Source/croutine.c"),
-        #FREERTOS_DIR.File("Source/event_groups.c"),
-        #FREERTOS_DIR.File("Source/list.c"),
-        #FREERTOS_DIR.File("Source/queue.c"),
-        #FREERTOS_DIR.File("Source/tasks.c"),
-        #FREERTOS_DIR.File("Source/timers.c"),
-        #FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
-        ## FREERTOS_DIR.File("Source/stream_buffer.c"),
-        ## FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
+        RTOS_DIR.File("FreeRTOSResources.c"),
+        RTOS_DIR.File("FreeRTOS_SWI.c"),
+        FREERTOS_DIR.File("Source/croutine.c"),
+        FREERTOS_DIR.File("Source/event_groups.c"),
+        FREERTOS_DIR.File("Source/list.c"),
+        FREERTOS_DIR.File("Source/queue.c"),
+        FREERTOS_DIR.File("Source/tasks.c"),
+        FREERTOS_DIR.File("Source/timers.c"),
+        FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
+        # FREERTOS_DIR.File("Source/stream_buffer.c"),
+        # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
 ]
 
 platform_source_files = [

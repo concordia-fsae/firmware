@@ -20,6 +20,19 @@
 #include "HW_spi.h"
 #include "fatfs.h"
 
+#include "Module.h"
+
+//#include "FreeRTOS.h"
+//#include "FreeRTOS_SWI.h"
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern void RTOS_createResources(void);
+
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -36,13 +49,26 @@ int main(void)
 
     SystemClock_Config(); /**< Configure system clock */
 
-    /**< Initialize the hardware/firmware */
+    /**< Initialize the hardware/firmware and system level resources */
     HW_GPIO_Init();
     HW_DMA_Init();
     HW_ADC_Init();
     HW_I2C_Init();
     HW_SPI_Init();
     FatFS_Init();
+
+    /**< Create tasks, timers, swi */
+    //RTOS_SWI_Init();
+    //RTOS_createResources();
+
+    /**< Initialize modules */
+    Module_Init();
+
+
+    /**< Initialize and start the RTOS scheduler */
+    //vTaskStartScheduler();
+
+    /**< Should never reach here */
 
     return 0;
 }
