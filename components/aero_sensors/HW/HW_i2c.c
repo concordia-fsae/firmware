@@ -64,9 +64,12 @@ void HW_I2C_Init(void)
  */
 void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 {
+    // FIXME: DMA Initialization
+    return;
     /**< Activate clocks */
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_I2C1_CLK_ENABLE();
+    __HAL_RCC_I2C2_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
 
     if (hi2c->Instance == I2C1)
@@ -74,7 +77,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         /**
          * I2C1 Rx DMA configured on DMA Channel 2
          */
-        hdma_i2c1_rx.Instance                 = DMA1_Channel2;
+        hdma_i2c1_rx.Instance                 = DMA1_Channel7;
         hdma_i2c1_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
         hdma_i2c1_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
         hdma_i2c1_rx.Init.MemInc              = DMA_MINC_ENABLE;
@@ -92,7 +95,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         /**
          * I2C1 Tx DMA configured on DMA Channel 3
          */
-        hdma_i2c1_tx.Instance                 = DMA1_Channel3;
+        hdma_i2c1_tx.Instance                 = DMA1_Channel6;
         hdma_i2c1_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
         hdma_i2c1_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
         hdma_i2c1_tx.Init.MemInc              = DMA_MINC_ENABLE;
@@ -112,7 +115,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         /**
          * I2C1 Rx DMA configured on DMA Channel 2
          */
-        hdma_i2c1_rx.Instance                 = DMA1_Channel3;
+        hdma_i2c1_rx.Instance                 = DMA1_Channel5;
         hdma_i2c1_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
         hdma_i2c1_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
         hdma_i2c1_rx.Init.MemInc              = DMA_MINC_ENABLE;
@@ -130,7 +133,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
         /**
          * I2C1 Tx DMA configured on DMA Channel 3
          */
-        hdma_i2c1_tx.Instance                 = DMA1_Channel5;
+        hdma_i2c1_tx.Instance                 = DMA1_Channel4;
         hdma_i2c1_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
         hdma_i2c1_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
         hdma_i2c1_tx.Init.MemInc              = DMA_MINC_ENABLE;

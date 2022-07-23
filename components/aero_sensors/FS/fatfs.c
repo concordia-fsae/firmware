@@ -129,6 +129,8 @@ static uint8_t CardType;
 uint32_t sdTimerTickStart;
 uint32_t sdTimerTickDelay;
 
+char path[4];
+
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -139,7 +141,7 @@ uint32_t sdTimerTickDelay;
  */
 void FatFS_Init(void)
 {
-    FATFS_LinkDriver(&disk_driver, "/");
+    FATFS_LinkDriver(&disk_driver, (char*) &path);
 }
 
 

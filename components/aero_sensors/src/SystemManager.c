@@ -22,8 +22,8 @@
 
 #include "Module.h"
 
-//#include "FreeRTOS.h"
-//#include "FreeRTOS_SWI.h"
+#include "FreeRTOS.h"
+#include "FreeRTOS_SWI.h"
 
 
 /******************************************************************************
@@ -58,15 +58,15 @@ int main(void)
     FatFS_Init();
 
     /**< Create tasks, timers, swi */
-    //RTOS_SWI_Init();
-    //RTOS_createResources();
+    RTOS_SWI_Init();
+    RTOS_createResources();
 
     /**< Initialize modules */
     Module_Init();
 
 
     /**< Initialize and start the RTOS scheduler */
-    //vTaskStartScheduler();
+    vTaskStartScheduler();
 
     /**< Should never reach here */
 

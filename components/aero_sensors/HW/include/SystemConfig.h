@@ -16,6 +16,7 @@
 #include "stm32f1xx.h"
 
 #include "ErrorHandler.h"
+#include "FreeRTOSConfig.h"
 
 
 /******************************************************************************
@@ -27,6 +28,7 @@
 #define ARSDEBUG
 
 // Interrupt priorities, tick interrupt is highest (lowest numerical value)
+#define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
 
 // Pin aliases
 
