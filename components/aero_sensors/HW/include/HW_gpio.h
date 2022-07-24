@@ -21,28 +21,9 @@
 
 typedef enum {
     HW_PIN_RESET = GPIO_PIN_RESET,
-    HW_PIN_SET = GPIO_PIN_RESET,
+    HW_PIN_SET = GPIO_PIN_SET,
 } HW_GPIO_PinState_E;
 
-
-/******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
-
-// TODO: Verify
-#define ATOMIC_GPIO_PIN_SET(gpiox, gpio_pin) ((GPIO_TypeDef *) gpiox)->BSRR = gpio_pin 
-#define ATOMIC_GPIO_PIN_RESET(gpiox, gpio_pin) ((GPIO_TypeDef *) gpiox)->BSRR = gpio_pin << 0x10 
-
-#define setBitAtomic(bit)      ((bit) = 1)
-#define clearBitAtomic(bit)    ((bit) = false)
-#define assignBitAtomic(bit, condition) \
-    do {                                \
-        if (condition) {                \
-            (bit) = true;               \
-        } else {                        \
-            (bit) = false;              \
-        }                               \
-    } while (zero())
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
