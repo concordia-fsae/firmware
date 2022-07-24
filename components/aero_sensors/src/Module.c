@@ -21,7 +21,7 @@
  ******************************************************************************/
 
 static const ModuleDesc_S* modules[] = {
-    //&IO_Analog_desc,
+    &Sensors_desc,
 };
 
 

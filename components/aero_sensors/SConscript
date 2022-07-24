@@ -149,6 +149,8 @@ rtos_env.Append(
 project_source_files = [
     PROJECT_SOURCE_DIR.File("SystemManager.c"),
     PROJECT_SOURCE_DIR.File("Module.c"),
+    PROJECT_SOURCE_DIR.File("Sensors.c"),
+    PROJECT_SOURCE_DIR.File("Files.c"),
 ]
 
 project_hw_files = [
@@ -164,6 +166,7 @@ project_hw_files = [
         PROJECT_HW_DIR.File("HW_MPRL.c"),
         PROJECT_HW_DIR.File("HW_MAX7356.c"),
         PROJECT_HW_DIR.File("HW_NPA.c"),
+        PROJECT_HW_DIR.File("HW_clock.c"),
 ]
 
 ftdi_lib_files = [

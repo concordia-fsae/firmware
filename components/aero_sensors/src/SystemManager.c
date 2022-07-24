@@ -20,10 +20,9 @@
 #include "HW_spi.h"
 #include "fatfs.h"
 
-#include "Module.h"
-
 #include "FreeRTOS.h"
 #include "FreeRTOS_SWI.h"
+#include "Module.h"
 
 
 /******************************************************************************

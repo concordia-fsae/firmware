@@ -61,3 +61,4 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x) { uint16_t c = 0U; whil
         }                               \
     } while (zero())
 
+#define MAX(x, y) ((x > y) ? x : y)

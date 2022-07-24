@@ -21,6 +21,7 @@
 
 #define MPRL_BUS1_COUNT 8
 #define MPRL_BUS2_COUNT 8
+#define MPRL_TOTAL_COUNT MPRL_BUS1_COUNT + MPRL_BUS2_COUNT
 #define MPRL_BUS_TIMEOUT 5
 
 /******************************************************************************

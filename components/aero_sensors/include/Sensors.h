@@ -1,9 +1,9 @@
 /**
- * @file HW_clock.h
- * @brief  Header for Aero Sensor clock firmware
+ * @file Sensors.h
+ * @brief  Header file for the ARS sensors
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
- * @date 2022-07-02
+ * @date 2022-07-23
  */
 
 #pragma once
@@ -12,14 +12,19 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stm32f1xx_hal.h"
-#include "ErrorHandler.h"
+#include "HW_NPA.h"
+#include "HW_MPRL.h"
+#include "HW_MAX7356.h"
+#include "ModuleDesc.h"
 
 
 /******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
-void SystemClock_Config(void);
-void HW_Delay(uint32_t delay);
-
+typedef struct 
+{
+    uint32_t timestamp;
+    NPA_Response_S npa;
+    uint32_t pressure[MPRL_TOTAL_COUNT];
+} Sensors_S;
