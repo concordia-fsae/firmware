@@ -22,4 +22,5 @@
 
 void SystemClock_Config(void);
 void HW_Delay(uint32_t delay);
+uint32_t HW_GetTick(void);
 

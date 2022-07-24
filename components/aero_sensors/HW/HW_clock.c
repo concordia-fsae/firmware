@@ -85,7 +85,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 }
 
 
+/**
+ * @brief  Delay the code execution in blocking mode
+ *
+ * @param delay Time (ms)
+ */
 void HW_Delay(uint32_t delay)
 {
     HAL_Delay(delay);
+}
+
+/**
+ * @brief  Get the current tick counter
+ *
+ * @retval   Current tick count (ms)
+ */
+uint32_t HW_GetTick(void)
+{
+    return HAL_GetTick();
 }

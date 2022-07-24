@@ -58,7 +58,7 @@ void Sensors_Init(void)
 void Sensors_Read(void)
 {
     MPRL_StartConversion();
-    data.timestamp = HAL_GetTick();
+    data.timestamp = HW_GetTick();
     data.npa = NPA_Read();
     
     HW_Delay(5);
