@@ -38,6 +38,10 @@
 #define I2C1_SCL_Pin GPIO_PIN_6
 #define I2C1_SDA_Port GPIOB
 #define I2C1_SDA_Pin GPIO_PIN_7
+#define I2C2_SCL_Port GPIOB
+#define I2C2_SCL_Pin GPIO_PIN_10
+#define I2C2_SDA_Port GPIOB
+#define I2C2_SDA_Pin GPIO_PIN_11
 
 #define SD_NSS2_Port GPIOB
 #define SD_NSS2_Pin GPIO_PIN_12
@@ -70,11 +74,6 @@
 
 #define LED_GPIO_Port GPIOC
 #define LED_Pin GPIO_PIN_13
-
-#define AMUX_S0_Port GPIOA
-#define AMUX_S0_Pin GPIO_PIN_8
-#define AMUX_S1_Port GPIOA
-#define AMUX_S1_Pin GPIO_PIN_9
 
 // TODO: Class each pin to respective category/type and use
 #define CAN_TX_Port GPIOB

@@ -61,7 +61,7 @@ void Sensors_Read(void)
     data.timestamp = HAL_GetTick();
     data.npa = NPA_Read();
     
-    while (HAL_GetTick() - data.timestamp <= 5);
+    HW_Delay(5);
 
     uint8_t index = 0;
 

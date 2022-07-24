@@ -50,5 +50,11 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(I2C1_SCL_Port, &GPIO_InitStruct);
-    // TODO: Setup MUX selection outputs
+    
+    /**< Initialize I2C2 */
+    GPIO_InitStruct.Pin = I2C2_SCL_Pin | I2C2_SDA_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(I2C2_SCL_Port, &GPIO_InitStruct);
 }
