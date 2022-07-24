@@ -63,7 +63,6 @@ int main(void)
     /**< Initialize modules */
     Module_Init();
 
-
     /**< Initialize and start the RTOS scheduler */
     vTaskStartScheduler();
 
