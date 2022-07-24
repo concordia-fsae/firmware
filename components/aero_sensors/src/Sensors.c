@@ -57,6 +57,10 @@ void Sensors_Init(void)
  */
 void Sensors_Read(void)
 {
+    FS_State_E file_state = Files_GetState();
+
+    if (file_state != FS_READY) return;
+
     MPRL_StartConversion();
     data.timestamp = HW_GetTick();
     data.npa = NPA_Read();
@@ -74,7 +78,7 @@ void Sensors_Read(void)
     }
     MAX_SetGates(MAX_ALL_GATES);
 
-    Files_write(&data, sizeof(data));
+    Files_Write(&data, sizeof(data));
 }
 
 /******************************************************************************

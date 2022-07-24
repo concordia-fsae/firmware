@@ -33,15 +33,26 @@ void HW_GPIO_Init(void)
     __HAL_RCC_GPIOD_CLK_ENABLE();
     __HAL_RCC_AFIO_CLK_ENABLE();
 
-    // Turn LED off
+    // Turn Board LED off
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
-    // Configure LED pin
+    // Configure Board LED pin
     GPIO_InitStruct.Pin   = LED_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
+    // Turn Status LED off
+    HAL_GPIO_WritePin(LED_R_Port, LED_R_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_G_Port, LED_G_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_B_Port, LED_B_Pin, GPIO_PIN_RESET);
+    // Configure Status LED pin
+    GPIO_InitStruct.Pin   = LED_R_Pin | LED_G_Pin | LED_B_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+    
     /**< Initialize I2C1 */
     AFIO->MAPR |= 0 << AFIO_MAPR_I2C1_REMAP_Pos; /**< No remap */
 
@@ -58,3 +69,43 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(I2C2_SCL_Port, &GPIO_InitStruct);
 }
+
+/**
+ * @brief Reads the input pin state
+ * @param[in] input Input pin
+ * @return HW pin state
+ */
+HW_GPIO_PinState_E HW_GPIO_ReadPin(const HW_GPIO_S *input)
+{
+    GPIO_PinState bitstatus;
+
+    /* Check the parameters */
+    assert_param(IS_GPIO_PIN(input->pin));
+
+    if ((input->port->IDR & input->pin) != (uint32_t)GPIO_PIN_RESET)
+    {
+        bitstatus = GPIO_PIN_SET;
+    }
+    else
+    {
+        bitstatus = GPIO_PIN_RESET;
+    }
+    return (HW_GPIO_PinState_E)bitstatus;
+}
+
+void HW_GPIO_WritePin(const HW_GPIO_S *output, HW_GPIO_PinState_E PinState)
+{
+  /* Check the parameters */
+  assert_param(IS_GPIO_PIN(output->pin));
+  assert_param(IS_GPIO_PIN_ACTION(PinState));
+
+  if (PinState != HW_PIN_RESET)
+  {
+    output->port->BSRR = output->pin;
+  }
+  else
+  {
+    output->port->BSRR = (uint32_t)output->pin << 16u;
+  }
+}
+

@@ -151,6 +151,7 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("Module.c"),
     PROJECT_SOURCE_DIR.File("Sensors.c"),
     PROJECT_SOURCE_DIR.File("Files.c"),
+    PROJECT_SOURCE_DIR.File("IO.c"),
 ]
 
 project_hw_files = [

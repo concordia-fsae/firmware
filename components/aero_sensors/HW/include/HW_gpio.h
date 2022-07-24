@@ -24,9 +24,20 @@ typedef enum {
     HW_PIN_SET = GPIO_PIN_SET,
 } HW_GPIO_PinState_E;
 
+typedef GPIO_TypeDef HW_GPIO_TypeDef;
+
+typedef struct
+{
+    HW_GPIO_TypeDef* port;
+    uint16_t         pin;
+} HW_GPIO_S;
+
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
 void HW_GPIO_Init(void);
+HW_GPIO_PinState_E HW_GPIO_ReadPin(const HW_GPIO_S *input);
+void HW_GPIO_WritePin(const HW_GPIO_S *output, HW_GPIO_PinState_E PinState);
+

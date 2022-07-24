@@ -33,4 +33,5 @@ typedef struct
  * Modules
  */
 extern const ModuleDesc_S Sensors_desc;
+extern const ModuleDesc_S IO_desc;
 

@@ -21,9 +21,10 @@
 
 typedef enum
 {
-    FS_READY = 0x00,
+    FS_PAUSE = 0x00,
     FS_BUSY,
     FS_CHANGING_FILE,
+    FS_READY,
 } FS_State_E;
 
 
@@ -33,4 +34,7 @@ typedef enum
 
 void Files_Init(void);
 void Files_Write(const void* buff, uint32_t count);
-void Files_Next(void);
+void Files_NextState(void);
+void Files_Start(void);
+void Files_CloseOpen(void);
+FS_State_E Files_GetState(void);

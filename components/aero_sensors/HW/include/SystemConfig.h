@@ -55,22 +55,20 @@
 // Input pins
 // Analog Signals
 
-#define AMUX_1_Port GPIOA
-#define AMUX_1_Pin GPIO_PIN_0
-#define AMUX_2_Port GPIOA
-#define AMUX_2_Pin GPIO_PIN_1
-#define AMUX_3_Port GPIOA
-#define AMUX_3_Pin GPIO_PIN_2
-#define AMUX_4_Port GPIOA
-#define AMUX_4_Pin GPIO_PIN_3
-
 // Digital Signals
-
+#define BUTTON_Port GPIOA
+#define BUTTON_Pin GPIO_PIN_7
 
 // Output pins
 // Analog Signals
 
 // Digital Signals
+#define LED_R_Port GPIOA
+#define LED_R_Pin GPIO_PIN_4
+#define LED_G_Port GPIOA
+#define LED_G_Pin GPIO_PIN_5
+#define LED_B_Port GPIOA
+#define LED_B_Pin GPIO_PIN_6
 
 #define LED_GPIO_Port GPIOC
 #define LED_Pin GPIO_PIN_13
