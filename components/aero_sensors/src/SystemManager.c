@@ -63,6 +63,17 @@ int main(void)
     /**< Initialize modules */
     Module_Init();
 
+    HAL_Delay(5);
+
+    HW_I2C_Device_S  tmp = {
+        .handle = &i2c2,
+        .addr = 0x11<<1,
+    };
+
+    uint8_t tmp1 = 0x02;
+
+    HW_I2C_Master_Write(&tmp, &tmp1, 1, 500);
+
     /**< Initialize and start the RTOS scheduler */
     vTaskStartScheduler();
 

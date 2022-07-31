@@ -7,7 +7,7 @@
 ###### Sensors
 
 1. 16x Gauge Pressure Sensors
-    -MPRLS0300YG00001B
+    -MPRLS0025PA00001B
     -I2C: Address 0x18 << 1
     -Command: 0xaa, 0x00, 0x00 (Start Conversion)
     -Reply:
