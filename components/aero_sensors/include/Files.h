@@ -25,6 +25,7 @@ typedef enum
     FS_BUSY,
     FS_CHANGING_FILE,
     FS_READY,
+    FS_ERROR,
 } FS_State_E;
 
 
@@ -36,5 +37,5 @@ void Files_Init(void);
 void Files_Write(const void* buff, uint32_t count);
 void Files_NextState(void);
 void Files_Start(void);
-void Files_CloseOpen(void);
+void Files_openNext(void);
 FS_State_E Files_GetState(void);

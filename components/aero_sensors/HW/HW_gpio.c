@@ -54,8 +54,6 @@ void HW_GPIO_Init(void)
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
     
     /**< Initialize I2C1 */
-    AFIO->MAPR |= 0 << AFIO_MAPR_I2C1_REMAP_Pos; /**< No remap */
-
     GPIO_InitStruct.Pin = I2C1_SCL_Pin | I2C1_SDA_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
@@ -77,20 +75,17 @@ void HW_GPIO_Init(void)
  */
 HW_GPIO_PinState_E HW_GPIO_ReadPin(const HW_GPIO_S *input)
 {
-    GPIO_PinState bitstatus;
-
     /* Check the parameters */
     assert_param(IS_GPIO_PIN(input->pin));
 
     if ((input->port->IDR & input->pin) != (uint32_t)GPIO_PIN_RESET)
     {
-        bitstatus = GPIO_PIN_SET;
+        return HW_PIN_SET;
     }
     else
     {
-        bitstatus = GPIO_PIN_RESET;
+        return HW_PIN_RESET;
     }
-    return (HW_GPIO_PinState_E)bitstatus;
 }
 
 void HW_GPIO_WritePin(const HW_GPIO_S *output, HW_GPIO_PinState_E PinState)

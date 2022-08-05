@@ -26,8 +26,8 @@
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void Sensors_Init(void);
-void Sensors_Read(void);
+static void Sensors_Init(void);
+static void Sensors_Read_100Hz(void);
 
 
 /******************************************************************************
@@ -43,7 +43,7 @@ Sensors_S data = { 0 };
 /**
  * @brief  Blocks the system for 5ms for external initialization and opens all I2C mux's for read entry
  */
-void Sensors_Init(void)
+static void Sensors_Init(void)
 {
     HW_Delay(5);
     MAX_SetGates(MAX_ALL_GATES);
@@ -55,7 +55,7 @@ void Sensors_Init(void)
  *
  * @note Assumes entry with all mux's open
  */
-void Sensors_Read(void)
+static void Sensors_Read_100Hz(void)
 {
     FS_State_E file_state = Files_GetState();
 
@@ -87,5 +87,5 @@ void Sensors_Read(void)
 
 const ModuleDesc_S Sensors_desc = {
     .moduleInit        = &Sensors_Init,
-    .periodic100Hz_CLK = &Sensors_Read,
+    .periodic100Hz_CLK = &Sensors_Read_100Hz,
 };

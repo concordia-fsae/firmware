@@ -19,9 +19,19 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define NPA_BUS_TIMEOUT 5
-
+/**
+ * @brief  Implementation variables
+ */
+#define NPA_BUS_TIMEOUT 5 /**< ms */
 #define NPA_USE_TEMPERATURE 2 /**< Defines usage of NPA temperature readings (2: 12bit; 1: 8bit, 0: None) */
+
+/**
+ * @brief  Variable meaning
+ */
+#define DONT_RECORD_TEMPURATURE 0
+#define RECORD 8BIT_TEMPERATURE 1
+#define RECORD_12BIT_TEMPERATURE 2
+
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -31,9 +41,9 @@ typedef struct
 {
     uint8_t status;
     uint16_t pressure;
-#if NPA_USE_TEMPERATURE == 1
+#if NPA_USE_TEMPERATURE == RECORD_8BIT_TEMPERATURE
     uint8_t temperature;
-#elif NPA_USE_TEMPERATURE == 2
+#elif NPA_USE_TEMPERATURE == RECORD_12BIT_TEMPERATURE
     uint16_t temperature;
 #endif
 } NPA_Response_S;

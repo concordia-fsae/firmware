@@ -40,6 +40,7 @@ void HW_I2C_Init(void)
     /**< Initialize peripherals */
     i2c1.Instance            = I2C1;
     i2c1.Init.ClockSpeed     = 100000U; /**< Clocked at 100kHz */
+    i2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
     i2c1.Init.OwnAddress1    = 0x08;    /**< Translates to 0x10*/
     i2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     if (HAL_I2C_Init(&i2c1) == HAL_ERROR)
@@ -49,7 +50,7 @@ void HW_I2C_Init(void)
     
     i2c2.Instance            = I2C2;
     i2c2.Init.ClockSpeed     = 100000U; /**< Clocked at 100kHz */
-    i2c2.Init.OwnAddress1    = 0x09;    /**< Translates to 0x11*/
+    i2c2.Init.OwnAddress1    = 0x09;    /**< Translates to 0x12*/
     i2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     if (HAL_I2C_Init(&i2c2) == HAL_ERROR)
     {

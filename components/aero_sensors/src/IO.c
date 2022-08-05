@@ -20,9 +20,9 @@
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void LED_SetColor(FS_State_E state);
-void IO_Init(void);
-void IO_Read(void);
+static void LED_SetColor(FS_State_E state);
+static void IO_Init(void);
+static void IO_Read(void);
 
 
 /******************************************************************************
@@ -58,7 +58,7 @@ const HW_GPIO_S outputs[] = {
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-void LED_SetColor(FS_State_E state)
+static void LED_SetColor(FS_State_E state)
 {
     if (state == FS_BUSY)
     {
@@ -80,7 +80,7 @@ void LED_SetColor(FS_State_E state)
     }
 }
 
-void IO_Read(void)
+static void IO_Read(void)
 {
     static uint8_t input_flag = 0;
 

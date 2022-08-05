@@ -50,7 +50,7 @@ void Files_Init(void)
  */
 void Files_Write(const void* buff, uint32_t count)
 {
-    UINT bw;
+    UINT bw; /**< bytes written */
 
     if (state == FS_BUSY)
         Error_Handler(); /**< Indicates timing error */
@@ -73,8 +73,9 @@ void Files_NextState(void)
             break;
         case FS_READY:
             state = FS_PAUSE;
-            Files_CloseOpen();
+            Files_openNext();
         default:
+            state = FS_ERROR;
             break;
     }
 }
@@ -90,9 +91,9 @@ void Files_Start(void)
 /**
  * @brief  Closes the current file and opens the next
  */
-void Files_CloseOpen(void)
+void Files_openNext(void)
 {
-    if (state == FS_BUSY)
+    if (state == FS_BUSY || state == FS_CHANGING_FILE)
         Error_Handler(); /**< Indicates timing error */
 
     state = FS_CHANGING_FILE;

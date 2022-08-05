@@ -32,20 +32,20 @@ NPA_Response_S NPA_Read(void)
     NPA_Response_S resp;
     uint32_t tmp;
     
-#if NPA_USE_TEMPERATURE == 0
+#if NPA_USE_TEMPERATURE == DONT_RECORD_TEMPURATURE
     HW_I2C_Master_Read(&device, (uint8_t*) &tmp, 2, NPA_BUS_TIMEOUT);
-#elif NPA_USE_TEMPERATURE == 1
+#elif NPA_USE_TEMPERATURE == RECORD_8BIT_TEMPERATURE
     HW_I2C_Master_Read(&device, (uint8_t*) &tmp, 3, NPA_BUS_TIMEOUT);
-#elif NPA_USE_TEMPERATURE == 2
+#elif NPA_USE_TEMPERATURE == RECORD_12BIT_TEMPERATURE
     HW_I2C_Master_Read(&device, (uint8_t*) &tmp, 4, NPA_BUS_TIMEOUT);
 #endif
 
     resp.status = (tmp & 0xc0000000) >> 30;
     resp.pressure = (tmp & 0x3fff0000) >> 16;
 
-#if NPA_USE_TEMPERATURE == 1
+#if NPA_USE_TEMPERATURE == RECORD_8BIT_TEMPERATURE
     resp.temperature = (tmp & 0x0000ff00) >> 8;
-#elif NPA_USE_TEMPERATURE == 2
+#elif NPA_USE_TEMPERATURE == RECORD_12BIT_TEMPERATURE
     resp.temperature = (tmp & 0x0000ffe0) >> 5;
 #endif
     

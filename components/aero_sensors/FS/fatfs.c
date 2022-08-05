@@ -37,14 +37,8 @@
 #define SD_WAIT_TIMEOUT  500
 #define SD_RCVR_TIMEOUT  200
 
-#define FCLK_SLOW()                                                            \
- {                                                                             \
-  MODIFY_REG(spi2->CR1, SPI_BAUDRATEPRESCALER_256, SPI_BAUDRATEPRESCALER_128); \
- } /* Set SCLK = slow, 250 KBits/s*/
-#define FCLK_FAST()                                                          \
- {                                                                           \
-  MODIFY_REG(spi2->CR1, SPI_BAUDRATEPRESCALER_256, SPI_BAUDRATEPRESCALER_8); \
- } /* Set SCLK = fast, 4 MBits/s */
+#define FCLK_SLOW() { MODIFY_REG(spi2->CR1, SPI_BAUDRATEPRESCALER_256, SPI_BAUDRATEPRESCALER_128); } /* Set SCLK = slow, 250 KBits/s*/
+#define FCLK_FAST() { MODIFY_REG(spi2->CR1, SPI_BAUDRATEPRESCALER_256, SPI_BAUDRATEPRESCALER_8); } /* Set SCLK = fast, 4 MBits/s */
 
 /* MMC/SD command */
 #define CMD0   (0)         /* GO_IDLE_STATE */
