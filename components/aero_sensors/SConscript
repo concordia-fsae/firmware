@@ -23,7 +23,7 @@ OPENOCD_INTERFACE = "stlink"
 OPENOCD_BOARD = "stm32f103c8"
 
 
-env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd"])
+env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd", "ars_decoder"])
 rtos_env = Environment(tools=["arm-none-eabi"])
 
 env.Tool("compilation_db")
@@ -259,6 +259,7 @@ env.Default("build")
 env.Alias("cdb", env.CompilationDatabase())
 env.Alias("upload", env.flash(source="build/aero_sensors.bin"))
 env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
+env.Alias("decode", env.decode())
 
 env.Alias(
     "openocd-gdb",
