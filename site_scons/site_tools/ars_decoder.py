@@ -7,6 +7,9 @@ import os
 scons = importlib.find_loader('SCons.Script')
 scons_found = scons is not None
 
+if scons_found:
+    from SCons.Script import *
+
 bin_folder = '/bin'
 decodedraw_folder = '/decoded_raw'
 decoded_folder = '/decoded'
@@ -45,6 +48,9 @@ def decode_folder(dir):
     return
 
 def _decode(env = None):
+    if not "decode" in COMMAND_LINE_TARGETS:
+        return
+
     subfolders = []
     folder_path = ""
     folders_to_decode = []
@@ -72,12 +78,18 @@ def _decode(env = None):
     for f in folders_to_decode:
         decode_folder(f)
 
+    
+
 if not scons_found:
     _decode()
 
 def generate(env):
     if scons_found:
         env.AddMethod(_decode, "decode")
+    #env["BUILDERS"]["decode"] = SCons.Builder.Builder(
+    #   action = _decode 
+    #)
+    return
 
 def exists():
     return True
