@@ -243,7 +243,6 @@ env.Alias("upload", env.flash(source="build/steering_wheel.bin"))
 env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
 
 env.Alias(
-ode' (/firmware/decode).  Stop.
     "openocd-gdb",
     env.launch_gdb(
         "build/steering_wheel.elf",

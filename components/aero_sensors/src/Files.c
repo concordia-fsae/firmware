@@ -21,7 +21,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-char curr_file[] = "A_run.bin";
+char curr_file[] = "A.bin";
 
 FATFS      fs    = { 0 };
 FIL        file  = { 0 };
@@ -33,11 +33,29 @@ FS_State_E state = 0;
  ******************************************************************************/
 
 /**
- * @brief  Mount and open the first file
+ * @brief  Mount the drive, write config file, and open first file
+ *
+ * @param heading heading of csv
+ * @param structure python struct_fmt https://docs.python.org/3/library/struct.html 
  */
-void Files_Init(void)
+void Files_Init(char* heading, char* structure)
 {
+    uint16_t heading_cnt = 0;
+    uint16_t structure_cnt = 0;
+
     f_mount(&fs, "/", 1);
+    f_open(&file, "config.txt", FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
+    
+    for (char* i = heading; *i != 0x00; i++)
+        heading_cnt++;
+    for (char* i = structure; *i != 0x00; i++)
+        structure_cnt++;
+
+    Files_Write(heading, heading_cnt);
+    Files_Write(structure, structure_cnt);
+
+    f_close(&file);
+
     f_open(&file, (char*)&curr_file, FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
     state = FS_PAUSE;
 }
@@ -74,8 +92,11 @@ void Files_NextState(void)
         case FS_READY:
             state = FS_PAUSE;
             Files_openNext();
-        default:
+            break;
+        case FS_BUSY:
             state = FS_ERROR;
+            break;
+        default:
             break;
     }
 }

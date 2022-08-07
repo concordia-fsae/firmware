@@ -33,7 +33,7 @@ typedef enum
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void Files_Init(void);
+void Files_Init(char* heading, char* structure);
 void Files_Write(const void* buff, uint32_t count);
 void Files_NextState(void);
 void Files_Start(void);
