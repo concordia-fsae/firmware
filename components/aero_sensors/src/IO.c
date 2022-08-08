@@ -21,7 +21,7 @@
  ******************************************************************************/
 
 static void LED_SetColor(FS_State_E state);
-static void IO_Init(void);
+//static void IO_Init(void);
 static void IO_Read(void);
 
 
@@ -60,7 +60,7 @@ const HW_GPIO_S outputs[] = {
 
 static void LED_SetColor(FS_State_E state)
 {
-    if (state == FS_BUSY)
+    if (state == FS_ERROR)
     {
         led[RED_LED]   = 255;
         led[GREEN_LED] = 0;

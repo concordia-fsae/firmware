@@ -97,11 +97,16 @@ uint8_t MPRL_ReadStatus(I2C_BUS_E bus)
  *
  * @retval   Value returned by sensor
  */
-uint32_t MPRL_ReadData(I2C_BUS_E bus)
+MPRL_Response_S MPRL_ReadData(I2C_BUS_E bus)
 {
-    uint32_t data;
+    uint32_t tmp;
 
-    HW_I2C_Master_Read(&devices[bus].dev, (uint8_t*) &data, 3, MPRL_BUS_TIMEOUT);
+    MPRL_Response_S resp;
 
-    return data >> 8;
+    HW_I2C_Master_Read(&devices[bus].dev, (uint8_t*) &tmp, 4, MPRL_BUS_TIMEOUT);
+
+    resp.status = tmp >> 24;
+    resp.data = tmp & 0xffffff;
+
+    return resp;
 }
