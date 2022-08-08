@@ -1,6 +1,6 @@
 /**
  * @file HW_NPA.h
- * @brief  Header file of NPA-700B-030D driver
+ * @brief  Header file of NPA-730B-030D driver
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
  * @date 2022-07-22

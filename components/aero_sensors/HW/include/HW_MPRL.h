@@ -1,6 +1,6 @@
 /**
  * @file HW_MPRL.h
- * @brief  Header file of MPRLS0300YG00001B driver
+ * @brief  Header file of MPRLS0025PA00001A driver
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
  * @date 2022-07-21
