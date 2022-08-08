@@ -104,8 +104,8 @@ def decode_folder(dir):
     else:
         test_batch_name = input("What is the batch name? (Hint: use the date and time of the first run... ie: 13-02-2022-1455)")
 
-    #os.mkdir(decodedraw_dir)
-    #os.mkdir(decoded_dir)
+    os.mkdir(decodedraw_dir)
+    os.mkdir(decoded_dir)
 
     for f in logs:
         decode_file(bin_dir + f, decodedraw_dir + test_batch_name + f[0] + '.csv', decoded_dir + test_batch_name + f[0] + '.csv', file_header, structure_fmt)
@@ -128,7 +128,7 @@ def _decode(env = None):
     
     for f in subfolders:
         if os.path.isdir(f + bin_folder):
-            #if not os.path.isdir(f + decodedraw_folder) and not os.path.isdir(f + decoded_folder):
+            if not os.path.isdir(f + decodedraw_folder) and not os.path.isdir(f + decoded_folder):
                 if len(os.listdir(f + bin_folder)) != 0 and "config.txt" in os.listdir(f + bin_folder) :
                     folders_to_decode.append(f)
 
