@@ -50,8 +50,8 @@ static void Sensors_Init(void)
     memset(&data, 0x00, sizeof(Sensors_S));
     HW_Delay(5);
     MAX_SetGates(MAX_ALL_GATES);
-    Files_Init("'timestamp', 'diff_status', 'diff_press', 'temp', 'press_16'\n", 
-                ">IcHH16H\n");
+    Files_Init("timestamp, diff_press, temp, top_8, bot_8\n", 
+                ">IHH16I\n"); /**< any array must be XXX_N where N is number and C is character */
 }
 
 /**
@@ -62,7 +62,7 @@ static void Sensors_Init(void)
 static void Sensors_Read_100Hz(void)
 {
     uint8_t start_time;
-
+        
     FS_State_E file_state = Files_GetState();
 
     if (file_state != FS_READY) return;
@@ -72,19 +72,22 @@ static void Sensors_Read_100Hz(void)
 
     if (data.timestamp != 0x00) Files_Write(&data, sizeof(data));
 
-    data.npa = NPA_Read();
-    
-    while ((HW_GetTick() - start_time) < 5);
-
     data.timestamp = start_time;
-    uint8_t index = 0;
+
+    NPA_Response_S npa = NPA_Read();
+    data.diff_pressure = npa.pressure;
+#if NPA_USE_TEMPERATURE != DONT_RECORD_TEMPURATURE
+    data.temperature = npa.temperature;
+#endif
+
+    while ((HW_GetTick() - start_time) < 5);
 
     for (int i = 0; i < MAX(MPRL_BUS1_COUNT, MPRL_BUS2_COUNT); i++) {
         MAX_SetGates(MAX_GATE(i));
         if (i < MPRL_BUS1_COUNT)
-            data.pressure[index++] = MPRL_ReadData(I2C_Bus1);
+            data.pressure[MPRL_TOP_OFFSET + i] = MPRL_ReadData(I2C_Bus1).data;
         if (i < MPRL_BUS2_COUNT)
-            data.pressure[index++] = MPRL_ReadData(I2C_Bus2);
+            data.pressure[MPRL_BOT_OFFSET + i] = MPRL_ReadData(I2C_Bus2).data;
     }
     MAX_SetGates(MAX_ALL_GATES);
 }

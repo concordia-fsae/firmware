@@ -63,10 +63,10 @@ int main(void)
     /**< Initialize modules */
     Module_Init();
 
-    HAL_Delay(5);
+    HAL_Delay(50);
 
     HW_I2C_Device_S  tmp = {
-        .handle = &i2c2,
+        .handle = &i2c1,
         .addr = 0x11<<1,
     };
 

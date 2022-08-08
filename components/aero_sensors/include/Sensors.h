@@ -25,6 +25,11 @@
 typedef struct 
 {
     uint32_t timestamp;
-    NPA_Response_S npa;
+    uint16_t diff_pressure;
+#if NPA_USE_TEMPERATURE == RECORD_8BIT_TEMPERATURE
+    uint8_t temperature;
+#elif NPA_USE_TEMPERATURE == RECORD_12BIT_TEMPERATURE
+    uint16_t temperature;
+#endif
     uint32_t pressure[MPRL_TOTAL_COUNT];
 } Sensors_S;
