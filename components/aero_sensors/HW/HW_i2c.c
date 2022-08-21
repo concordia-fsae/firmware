@@ -43,6 +43,10 @@ void HW_I2C_Init(void)
     i2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
     i2c1.Init.OwnAddress1    = 0x08;    /**< Translates to 0x10*/
     i2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    i2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    i2c1.Init.OwnAddress2 = 0;
+    i2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    i2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
     if (HAL_I2C_Init(&i2c1) == HAL_ERROR)
     {
         Error_Handler();
@@ -52,6 +56,10 @@ void HW_I2C_Init(void)
     i2c2.Init.ClockSpeed     = 100000U; /**< Clocked at 100kHz */
     i2c2.Init.OwnAddress1    = 0x09;    /**< Translates to 0x12*/
     i2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    i2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    i2c1.Init.OwnAddress2 = 0;
+    i2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    i2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
     if (HAL_I2C_Init(&i2c2) == HAL_ERROR)
     {
         Error_Handler();
@@ -67,86 +75,108 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 {
     /**< Activate clocks */
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_I2C1_CLK_ENABLE();
-    __HAL_RCC_I2C2_CLK_ENABLE();
-    __HAL_RCC_DMA1_CLK_ENABLE();
 
     if (hi2c->Instance == I2C1)
     {
-        /**
-         * I2C1 Rx DMA configured on DMA Channel 2
-         */
-        hdma_i2c1_rx.Instance                 = DMA1_Channel7;
-        hdma_i2c1_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
-        hdma_i2c1_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
-        hdma_i2c1_rx.Init.MemInc              = DMA_MINC_ENABLE;
-        hdma_i2c1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-        hdma_i2c1_rx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-        hdma_i2c1_rx.Init.Mode                = DMA_NORMAL;
-        hdma_i2c1_rx.Init.Priority            = DMA_PRIORITY_MEDIUM;
-        if (HAL_DMA_Init(&hdma_i2c1_rx) != HAL_OK)
-        {
-            Error_Handler();
-        }
+        __HAL_RCC_I2C1_CLK_ENABLE();
 
-        __HAL_LINKDMA(hi2c, hdmarx, hdma_i2c1_rx);
+        GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
-        /**
-         * I2C1 Tx DMA configured on DMA Channel 3
-         */
-        hdma_i2c1_tx.Instance                 = DMA1_Channel6;
-        hdma_i2c1_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
-        hdma_i2c1_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
-        hdma_i2c1_tx.Init.MemInc              = DMA_MINC_ENABLE;
-        hdma_i2c1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-        hdma_i2c1_tx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-        hdma_i2c1_tx.Init.Mode                = DMA_NORMAL;
-        hdma_i2c1_tx.Init.Priority            = DMA_PRIORITY_MEDIUM;
-        if (HAL_DMA_Init(&hdma_i2c1_tx) != HAL_OK)
-        {
-            Error_Handler();
-        }
+        /**< Initialize I2C1 */
+        GPIO_InitStruct.Pin = I2C1_SCL_Pin | I2C1_SDA_Pin;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        HAL_GPIO_Init(I2C1_SCL_Port, &GPIO_InitStruct);
 
-        __HAL_LINKDMA(hi2c, hdmatx, hdma_i2c1_tx);
-
+        __HAL_RCC_DMA1_CLK_ENABLE();
+  
+//        /**
+//         * I2C1 Rx DMA configured on DMA Channel 2
+//         */
+//        hdma_i2c1_rx.Instance                 = DMA1_Channel7;
+//        hdma_i2c1_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
+//        hdma_i2c1_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
+//        hdma_i2c1_rx.Init.MemInc              = DMA_MINC_ENABLE;
+//        hdma_i2c1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+//        hdma_i2c1_rx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+//        hdma_i2c1_rx.Init.Mode                = DMA_NORMAL;
+//        hdma_i2c1_rx.Init.Priority            = DMA_PRIORITY_MEDIUM;
+//        if (HAL_DMA_Init(&hdma_i2c1_rx) != HAL_OK)
+//        {
+//            Error_Handler();
+//        }
+//
+//        __HAL_LINKDMA(hi2c, hdmarx, hdma_i2c1_rx);
+//
+//        /**
+//         * I2C1 Tx DMA configured on DMA Channel 3
+//         */
+//        hdma_i2c1_tx.Instance                 = DMA1_Channel6;
+//        hdma_i2c1_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
+//        hdma_i2c1_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
+//        hdma_i2c1_tx.Init.MemInc              = DMA_MINC_ENABLE;
+//        hdma_i2c1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+//        hdma_i2c1_tx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+//        hdma_i2c1_tx.Init.Mode                = DMA_NORMAL;
+//        hdma_i2c1_tx.Init.Priority            = DMA_PRIORITY_MEDIUM;
+//        if (HAL_DMA_Init(&hdma_i2c1_tx) != HAL_OK)
+//        {
+//            Error_Handler();
+//        }
+//
+//        __HAL_LINKDMA(hi2c, hdmatx, hdma_i2c1_tx);
+//
     } else if (hi2c->Instance == I2C2)
     {
-        /**
-         * I2C1 Rx DMA configured on DMA Channel 2
-         */
-        hdma_i2c2_rx.Instance                 = DMA1_Channel5;
-        hdma_i2c2_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
-        hdma_i2c2_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
-        hdma_i2c2_rx.Init.MemInc              = DMA_MINC_ENABLE;
-        hdma_i2c2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-        hdma_i2c2_rx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-        hdma_i2c2_rx.Init.Mode                = DMA_NORMAL;
-        hdma_i2c2_rx.Init.Priority            = DMA_PRIORITY_MEDIUM;
-        if (HAL_DMA_Init(&hdma_i2c2_rx) != HAL_OK)
-        {
-            Error_Handler();
-        }
+        __HAL_RCC_I2C2_CLK_ENABLE();
 
-        __HAL_LINKDMA(hi2c, hdmarx, hdma_i2c2_rx);
-
-        /**
-         * I2C1 Tx DMA configured on DMA Channel 3
-         */
-        hdma_i2c2_tx.Instance                 = DMA1_Channel4;
-        hdma_i2c2_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
-        hdma_i2c2_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
-        hdma_i2c2_tx.Init.MemInc              = DMA_MINC_ENABLE;
-        hdma_i2c2_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-        hdma_i2c2_tx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
-        hdma_i2c2_tx.Init.Mode                = DMA_NORMAL;
-        hdma_i2c2_tx.Init.Priority            = DMA_PRIORITY_MEDIUM;
-        if (HAL_DMA_Init(&hdma_i2c2_tx) != HAL_OK)
-        {
-            Error_Handler();
-        }
-
-        __HAL_LINKDMA(hi2c, hdmatx, hdma_i2c2_tx);
-
+        GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    
+        /**< Initialize I2C2 */
+        GPIO_InitStruct.Pin = I2C2_SCL_Pin | I2C2_SDA_Pin;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        HAL_GPIO_Init(I2C2_SCL_Port, &GPIO_InitStruct);
+        
+        __HAL_RCC_DMA1_CLK_ENABLE();
+        
+//        /**
+//         * I2C1 Rx DMA configured on DMA Channel 2
+//         */
+//        hdma_i2c2_rx.Instance                 = DMA1_Channel5;
+//        hdma_i2c2_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
+//        hdma_i2c2_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
+//        hdma_i2c2_rx.Init.MemInc              = DMA_MINC_ENABLE;
+//        hdma_i2c2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+//        hdma_i2c2_rx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+//        hdma_i2c2_rx.Init.Mode                = DMA_NORMAL;
+//        hdma_i2c2_rx.Init.Priority            = DMA_PRIORITY_MEDIUM;
+//        if (HAL_DMA_Init(&hdma_i2c2_rx) != HAL_OK)
+//        {
+//            Error_Handler();
+//        }
+//
+//        __HAL_LINKDMA(hi2c, hdmarx, hdma_i2c2_rx);
+//
+//        /**
+//         * I2C1 Tx DMA configured on DMA Channel 3
+//         */
+//        hdma_i2c2_tx.Instance                 = DMA1_Channel4;
+//        hdma_i2c2_tx.Init.Direction           = DMA_MEMORY_TO_PERIPH;
+//        hdma_i2c2_tx.Init.PeriphInc           = DMA_PINC_DISABLE;
+//        hdma_i2c2_tx.Init.MemInc              = DMA_MINC_ENABLE;
+//        hdma_i2c2_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+//        hdma_i2c2_tx.Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+//        hdma_i2c2_tx.Init.Mode                = DMA_NORMAL;
+//        hdma_i2c2_tx.Init.Priority            = DMA_PRIORITY_MEDIUM;
+//        if (HAL_DMA_Init(&hdma_i2c2_tx) != HAL_OK)
+//        {
+//            Error_Handler();
+//        }
+//
+//        __HAL_LINKDMA(hi2c, hdmatx, hdma_i2c2_tx);
+//
+//
     }
 }
 

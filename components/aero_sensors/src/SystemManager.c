@@ -66,8 +66,8 @@ int main(void)
     HAL_Delay(50);
 
     HW_I2C_Device_S  tmp = {
-        .handle = &i2c1,
-        .addr = 0x11<<1,
+        .handle = &i2c2,
+        .addr = 0x12<<1,
     };
 
     uint8_t tmp1 = 0x02;
