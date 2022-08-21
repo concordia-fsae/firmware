@@ -26,6 +26,8 @@
 // System altering defines
 #define USE_FULL_LL_DRIVER
 //#define ARS_RTOS_BLINK
+//#define I2C1_TEST
+//#define I2C2_TEST
 
 // Interrupt priorities, tick interrupt is highest (lowest numerical value)
 #define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
