@@ -10,5 +10,6 @@
     - Component Folder and File Hierarchy `./docs/components/COMPONENTS.md`
     - Documenting the code `./docs/env/DOCUMENTING.md` 
 - Documentation relating to each component is found in `./docs/components/`
-
+    TODO: Write document
+    - Steering Wheel details `./docs/components/STW.md`
 

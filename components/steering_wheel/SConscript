@@ -229,6 +229,10 @@ objs.extend(compile_objects(env, project_source_files))
 
 ## done compiling
 
+doc = GetOption("doc")
+if doc:
+    Execute(f"doxygen doxygen_stw.conf")
+
 # setup default target which links all object files, builds the program,
 # and generates a HEX file
 built = lambda: env.Program("build/steering_wheel", objs)
