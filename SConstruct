@@ -30,7 +30,8 @@ AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
 AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
 # add option to build without debug info
 AddOption("--release", dest="release", action="store_true")
-
+# add option to document the code
+AddOption("--doc", dest="doc", action="store_true")
 
 def pio_build_cmd(source, **_):
     pio_dir = dirname(str(source[0]))
@@ -67,12 +68,17 @@ env.Append(BUILDERS={"pio_build": pio_build})
 
 Export("env")
 
+
 with open("site_scons/components.yaml") as components_file:
     components = load(components_file, Loader=Loader)
 
 target = GetOption("target")
 if not target:
-    print("No targets specified!")
+    doc = GetOption("doc")
+    if doc:
+        Execute(f"doxygen site_scons/site_tools/doxygen.conf")
+    else:
+        print("No targets specified!")
 else:
     targets_arr = target.split(",")
     targets = [
