@@ -68,7 +68,6 @@ env.Append(BUILDERS={"pio_build": pio_build})
 
 Export("env")
 
-
 with open("site_scons/components.yaml") as components_file:
     components = load(components_file, Loader=Loader)
 
