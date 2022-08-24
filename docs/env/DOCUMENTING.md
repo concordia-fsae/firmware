@@ -13,3 +13,4 @@
     - Configuration file is located at `./site_scons/site_tools/doxygen.conf`
     - Execute `scons --doc` from inside the container to build the documentation
     - The documentation, once created, is located in `./docs/env/tools/`
+- Inside of each documentation directory (such as `./docs/env/docs-tools/html/` and `./docs/components/docs-stw/html/`), open the `index.html` file to access the documentation
