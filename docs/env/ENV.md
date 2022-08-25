@@ -37,9 +37,29 @@
     - The standard GDB commands apply. To reset or halt the MCU through the SWD connection, execute:
         - `monitor reset`, `monitor reset halt`
 
+## Sections
+
+1. SCons Tools
+    - Located in `./site_scons/site_tools/`
+    - Custom python scripts added to the SCons build environment
+2. Embedded Systems
+    1. Toolchains
+        - Downloaded from ARM Developper
+        - Located in `./embedded/toolchains`
+    2. USB Loader/Debugger
+        - Located in `./embedded/openocd`
+        - Interfaces and stores configurations of different chips/boards
+    3. Platforms
+        - Supported hardware platforms
+        - Located in `./embedded/platforms/`
+4. SCons related scripts
+    - `./SConstruct`
+    - `./components/$DESIGNATOR/Sconscript`
+
 ## Notes
 
 - The script will set up the env for compiling - no need to run twice
 - Due to the mounting feature of the docker container, anytime the container is open the changes applied to the files will automatically and immediately be accessible to the SCons tool
     - This also means that, once built, the build dir will be on your local machine as well. Run scons --clean in container if you want to re-build from scratch
+- If doing loading/debugging of physical hardware, the ST-LINK or other interface must be plugged in by USB before starting the container. Docker containers do not support dynamic loading of USB peripherals
 
