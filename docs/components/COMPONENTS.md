@@ -6,6 +6,7 @@
 
 1. Source Code
     - The source code is located in `./components/$COMPONENT_DESIGNATOR/` for each component and is completely owned and controlled by FSAE Concordia
+    - Hardware sources to be included `./components/$DESIGNATOR/HW/mcuConfig.yaml`
     - The source code, while it varies between component, has these mandatory and typical areas:
         1. **Mandatory** `./components/$COMPONENT_DESIGNATOR/build/`
             - Contains all object files, binary files, etc...
@@ -36,3 +37,4 @@
     - The chip configuration is stored in YAML files in `./site_scons/chips.yaml` and `./site_scons/components.yaml`
     - `./site_scons/chips.yaml` contains the configuration of the chip source files and headers to be included by the build system 
     - `./site_scons/components.yaml` contains the different components and their sources for the build system
+
