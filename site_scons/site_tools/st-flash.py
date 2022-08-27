@@ -1,3 +1,11 @@
+##
+# @file st-flash.py
+# @brief  Adds ST-Flash support to Scons
+# @author Ricky Lopez
+# @version 0.1
+# @date 2022-08-27
+
+
 from SCons.Script import *
 
 
@@ -6,6 +14,12 @@ from SCons.Script import *
 #     return env.flash_chip(bin_file)
 
 
+##
+# @brief  Generates SCons support for ST-Flash
+#
+# @param env Environment to be worked on
+#
+# @retval   None
 def generate(env):
     # env.AddMethod(_flash_chip, "flash")
 
@@ -16,5 +30,9 @@ def generate(env):
     )
 
 
+##
+# @brief  Shows module exists
+#
+# @retval   True
 def exists():
     return True
