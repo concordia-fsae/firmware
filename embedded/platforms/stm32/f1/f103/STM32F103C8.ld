@@ -7,24 +7,26 @@
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = ORIGIN(RAM) + LENGTH(RAM);    /* bottom of stack (grows down) */
+_estack = ORIGIN(RAM) + LENGTH(RAM) + LENGTH(NVMRAM);    /* bottom of stack (grows down) */
 
 __STACK_SIZE = 0x400;
 __HEAP_SIZE = 0x200;
 
-__RAM_SIZE = 20K;
 __NVM_SIZE = 1K;
+__RAM_SIZE = 20K - __NVM_SIZE;
 __FLASH_SIZE = 64K - __NVM_SIZE;
 
-__RAM_ORIGIN = 0x20000000;
-__FLASH_ORIGIN = 0x8000000;
-__NVM_ORIGIN = __FLASH_ORIGIN + __FLASH_SIZE;
+__RAM_ORIGIN =   0x20000000;
+__FLASH_ORIGIN = 0x08000000;
+__NVMRAM_ORIGIN = __RAM_ORIGIN + __RAM_SIZE;
+__NVM_ORIGIN = __FLASH_ORIGIN + __FLASH_SIZE; /* Should therefore be 0x08000000 + 0xFC00 */
 
 
 /* Memory definition */
 MEMORY
 {
     RAM      (rwx)    : ORIGIN = __RAM_ORIGIN,       LENGTH = __RAM_SIZE
+    NVMRAM   (rwx)    : ORIGIN = __NVMRAM_ORIGIN,    LENGTH = __NVM_SIZE
     FLASH    (rx)     : ORIGIN = __FLASH_ORIGIN,     LENGTH = __FLASH_SIZE
     NVM      (r)      : ORIGIN = __NVM_ORIGIN,       LENGTH = __NVM_SIZE
 }
@@ -79,10 +81,17 @@ SECTIONS
     _etext = .;        /* address of end of text section */
   } > FLASH
 
+  NVMRAM :
+  {
+    *(NVMRAM)
+  } > NVMRAM AT> NVM
+
   .ARM.extab :
   {
     *(.ARM.extab* .gnu.linkonce.armextab.*)
   } > FLASH
+
+
 
   .ARM.exidx :
   {
@@ -137,7 +146,7 @@ SECTIONS
     PROVIDE(end = .);
   } > RAM
 
-  .stack (ORIGIN(RAM) + LENGTH(RAM) - __STACK_SIZE) (COPY) :
+  .stack (ORIGIN(RAM) + LENGTH(RAM) + LENGTH(NVMRAM) - __STACK_SIZE) (COPY) :
   {
     . = ALIGN(8);
     __StackLimit = .;

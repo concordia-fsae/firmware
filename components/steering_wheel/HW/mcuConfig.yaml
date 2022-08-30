@@ -9,6 +9,7 @@ drivers:
   cortex: # required
   dma:
   flash:
+  flash_ex: # required for nvm
   gpio:
   pwr:
   rcc:

@@ -14,6 +14,11 @@ def generate(env):
             "st-flash write $SOURCE 0x08000000"
         )
     )
+    env['BUILDERS']['flash_dbg'] = SCons.Builder.Builder(
+        action = SCons.Action.Action(
+            "st-flash --hot-plug write $SOURCE 0x08000000"
+        )
+    )
 
 
 def exists():

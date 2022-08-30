@@ -143,6 +143,7 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("IO/IO_Analog.c"),
     PROJECT_SOURCE_DIR.File("IO/IO_Digital.c"),
     PROJECT_SOURCE_DIR.File("Screen.c"),
+    PROJECT_SOURCE_DIR.File("NVM.c"),
 ]
 
 project_hw_files = [
@@ -258,4 +259,14 @@ env.Alias(
         '-ex "monitor reset"',
         '-ex load', # fixed an issue found when debugging IO global struct for aggregated Digital and Analog IO
     ),
+)
+env.Alias(
+    "flash-debug",
+    [env.flash_dbg(source="build/steering_wheel.bin"),
+    env.launch_gdb(
+        "build/steering_wheel.elf",
+        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
+        '-ex "monitor reset halt"',
+        '-ex load',
+    ),]
 )
