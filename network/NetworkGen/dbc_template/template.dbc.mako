@@ -35,4 +35,3 @@ CM_ "${bus.description}";
     if not signal.discrete_values is None:
       make_signal_type(signal)
 %>
-

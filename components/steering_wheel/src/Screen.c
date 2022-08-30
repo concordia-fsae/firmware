@@ -21,6 +21,8 @@
 // display includes
 #include "Display/CommonDisplay.h"
 #include "Display/MainDisplay.h"
+#include "Display/DiagDisplay.h"
+#include "Display/LaunchDisplay.h"
 
 
 /******************************************************************************
@@ -69,10 +71,10 @@ SCR_S SCR;
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static scr_S scr;
+static scr_S     scr;
 
 
-static stateFn_t stateFunctions [SCR_STATE_COUNT] = {
+static stateFn_t stateFunctions[SCR_STATE_COUNT] = {
     [SCR_STATE_UNAVAILABLE] = &process_unavailable,
     [SCR_STATE_RUNNING]     = &process_running,
     [SCR_STATE_RETRY]       = &process_retry,
@@ -81,10 +83,10 @@ static stateFn_t stateFunctions [SCR_STATE_COUNT] = {
 };
 
 
-static void (*pageFunctions[SCR_PAGE_COUNT])(void) = {
+static void      (*pageFunctions[SCR_PAGE_COUNT])(void) = {
     [SCR_PAGE_MAIN]           = &main_display,
-    [SCR_PAGE_LAUNCH_CONTROL] = NULL,
-    [SCR_PAGE_DIAG]           = NULL,
+    [SCR_PAGE_LAUNCH_CONTROL] = &launch_display,
+    [SCR_PAGE_DIAG]           = &diag_display,
 };
 
 /******************************************************************************
@@ -144,7 +146,7 @@ static ScrState_E process_unavailable(void)
         SCR.initStatus = EVE_INIT_SUCCESS;
         SCR.brightness = 0x60;    // default value for brightness until a request comes in from elsewhere to change it
         EVE_memWrite8(REG_PWM_DUTY, SCR.brightness);
-        nextState = SCR_STATE_RUNNING;
+        nextState      = SCR_STATE_RUNNING;
     }
     // startup failed
     else if ((initStatus != EVE_INIT_SUCCESS) && (initStatus != EVE_INIT_NONE))
@@ -220,8 +222,8 @@ static ScrState_E process_retry(void)
  */
 static void updateBrightness_10Hz()
 {
-    if ((SCR.brightness != scr.currentBrightness)    //
-        && (SCR.brightness >= 0x00)                  //
+    if ((SCR.brightness != scr.currentBrightness)
+        && (SCR.brightness >= 0x00)
         && (SCR.brightness <= BRIGHTNESS_MAX))
     {
         EVE_memWrite8(REG_PWM_DUTY, SCR.brightness);    // setup backlight, range is from 0 = off to 0x80 = max
@@ -264,6 +266,19 @@ static void Screen10Hz_PRD(void)
 static void Screen100Hz_PRD(void)
 {
     SCR.state = stateFunctions[SCR.state]();
+
+    if (IO.dig.switch0)
+    {
+        scr.page = SCR_PAGE_LAUNCH_CONTROL;
+    }
+    else if (IO.dig.switch1)
+    {
+        scr.page = SCR_PAGE_DIAG;
+    }
+    else
+    {
+        scr.page = SCR_PAGE_MAIN;
+    }
 }
 
 

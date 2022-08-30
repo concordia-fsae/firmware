@@ -82,6 +82,7 @@ DECL_infoDotUpdaterGeneric(INFO_DOT_ADC_CONV);
 DECL_infoTextUpdater(INFO_TEXT_TIRE_CIRC)
 {
     const char *str = (state == true) ? "WET" : "DRY";
+
     strncpy(dot->status.text, str, 10);
 }
 
@@ -90,15 +91,15 @@ DECL_infoTextUpdater(INFO_TEXT_TIRE_CIRC)
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static InfoDot_S commonInfoDots[INFO_DOT_COUNT] =
+static InfoDot_S  commonInfoDots[INFO_DOT_COUNT] =
 {
-    DECL_infoDot(INFO_DOT_DRS,                 "DRS",  20U,  35U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_LAUNCH_CTRL_STATE,   "LC",  445U,  35U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_LAUNCH_CTRL_PAGE,    "LC",  150U, 255U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_AUTOSHIFT_STATE,     "AS",  210U, 255U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_TRACTION_CTRL_STATE, "TC",  270U, 255U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_RUN_STATUS,          "RUN", 160U,  35U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_ADC_CONV,            "ADC", 200U,  35U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_DRS,                 "DRS",   20U,  35U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_LAUNCH_CTRL_STATE,   "LC",   460U,  35U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_LAUNCH_CTRL_PAGE,    "LC",   150U, 255U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_AUTOSHIFT_STATE,     "AS",   210U, 255U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_TRACTION_CTRL_STATE, "DIAG", 270U, 255U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_RUN_STATUS,          "RUN",  160U,  35U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_ADC_CONV,            "ADC",  200U,  35U, 160U, INFO_REL_POS_ABOVE),
     // DECL_infoDot(INFO_DOT_CAN_TX,              "TX",  240U,  35U, 160U, INFO_REL_POS_ABOVE),
     // DECL_infoDot(INFO_DOT_CAN_RX,              "RX",  280U,  35U, 160U, INFO_REL_POS_ABOVE),
 };
