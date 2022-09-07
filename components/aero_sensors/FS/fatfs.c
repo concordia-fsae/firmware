@@ -1,5 +1,4 @@
 /**
- * @file fatfs.h
  * @brief  Source code for the FatFS interface
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
@@ -33,7 +32,7 @@
  ******************************************************************************/
 
 #define SD_SPI_INTERFACE ((SPI_TypeDef*)SPI2) /**< SD Interface on SPI2 */
-#define SD_INIT_TIMEOUT  1000
+#define SD_INIT_TIMEOUT  100
 #define SD_WAIT_TIMEOUT  500
 #define SD_RCVR_TIMEOUT  200
 
@@ -125,7 +124,7 @@ uint32_t sdTimerTickDelay;
 
 char path[4];
 
-uint8_t semaphore;
+uint8_t semaphore = 0;
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -241,7 +240,7 @@ static void start_timer(uint32_t wait)
 /**
  * @brief  Returns the status of the timer
  *
- * @retval   0: Valid, 1: Invalid
+ * @retval   1: Valid, 0: Invalid
  */
 static uint8_t timer_status(void)
 {
@@ -256,6 +255,8 @@ static uint8_t timer_status(void)
  *
  * @retval   R1 resp (bit7==1:Failed)
  */
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 static BYTE send_cmd(BYTE cmd, DWORD arg)
 {
     BYTE n, res;
@@ -275,12 +276,13 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
             return 0xff;
     }
 
+
     /**< Send command packet */
     xchg_sd(0x40 | cmd); /**< Start + Command */
-    xchg_sd((BYTE)arg >> 24);
-    xchg_sd((BYTE)arg >> 16);
-    xchg_sd((BYTE)arg >> 8);
-    xchg_sd((BYTE)arg);
+    xchg_sd((BYTE) (arg >> 24));
+    xchg_sd((BYTE) (arg >> 16));
+    xchg_sd((BYTE) (arg >> 8)); 
+    xchg_sd((BYTE) arg) ;
 
     n = 0x01; /**< Dummy CRC + Stop */
     if (cmd == CMD0)
@@ -299,6 +301,7 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
 
     return res;
 }
+#pragma GCC pop_options
 
 /**
  * @brief Transmit a block of data to the SD card
@@ -376,7 +379,7 @@ DSTATUS sd_init(BYTE drv)
 {
     uint8_t n, type, ocr[4], cmd;
 
-    if (!drv)
+    if (drv)
         return STA_NOINIT; /**< Support only drive 0 */
 
     FCLK_SLOW();
@@ -387,6 +390,7 @@ DSTATUS sd_init(BYTE drv)
     if (send_cmd(CMD0, 0) == 1) /**< Set card to idle state */
     {
         start_timer(SD_INIT_TIMEOUT);
+        // FIXME: CMD8 returns COM CRC ERROR
         if (send_cmd(CMD8, 0x1aa) == 1) /**< Is card SDv2? */
         {
             for (n = 0; n < 4; n++) ocr[n] = xchg_sd(0xff); /**< Get 32 bit R7 response */
@@ -413,10 +417,11 @@ DSTATUS sd_init(BYTE drv)
                 type = CT_MMC;
                 cmd  = CMD1; /** MMCv3 and CMD1 */
             }
-            while (timer_status() && send_cmd(cmd, 0))
-                ;                                             /**< Wait for end of initialization */
+            while (timer_status() && send_cmd(cmd, 0)); /**< Wait for end of initialization */
             if (!timer_status() || send_cmd(CMD16, 512) != 0) /**< Set blocksize = 512 */
+            {
                 type = 0;
+            }
         }
     }
 
@@ -565,12 +570,7 @@ int ff_cre_syncobj(              /* 1:Function succeeded, 0:Could not create the
     UNUSED(vol);
     UNUSED(sobj);
     
-    if (!semaphore)
-    {
-        semaphore = ~0x00;
-        return 1;
-    }
-    return 0;
+    return 1;
 }
 
 
