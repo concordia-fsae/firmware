@@ -289,3 +289,27 @@ void HW_I2C_Mem_Write_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t Me
 {
     HAL_I2C_Mem_Write_DMA(dev->handle, dev->addr, MemAddress, MemAddSize, pData, Size); 
 }
+
+#if defined(I2C2_TEST) || defined(I2C1_TEST)
+void HW_I2C_Test()
+{
+#if defined(I2C1_TEST)
+    HAL_Delay(50);
+    HW_I2C_Device_S  tmp = {
+        .handle = &i2c1,
+        .addr = 0x11<<1,
+    };
+    uint8_t tmp1 = 0x01;
+    HW_I2C_Master_Write(&tmp, &tmp1, 1, 500);
+#endif /**< I2C1_TEST */
+#if defined(I2C2_TEST)
+    HAL_Delay(50);
+    HW_I2C_Device_S  tmp = {
+        .handle = &i2c2,
+        .addr = 0x12<<1,
+    };
+    uint8_t tmp2 = 0x02;
+    HW_I2C_Master_Write(&tmp, &tmp2, 1, 500);
+#endif /**< I2C2_TEST */
+}
+#endif /**< I2C2_TEST || I2C1_TEST */

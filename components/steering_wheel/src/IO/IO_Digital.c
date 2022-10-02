@@ -35,6 +35,8 @@ const HW_GPIO_Input_S inputs[NUM_INPUTS] = {
     [BTN_TOP_RIGHT] = { .port = BTN_TOP_RIGHT_GPIO_Port, .pin = BTN_TOP_RIGHT_Pin }
 };
 
+IO_Digital_S IO_DIGITAL;
+
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
