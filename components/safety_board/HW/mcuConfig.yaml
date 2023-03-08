@@ -3,6 +3,7 @@ linker:
   useDefault: true
 drivers:
   hal: # required
+  can:
   cortex: # required
   dma:
   flash:

@@ -13,6 +13,11 @@
 #include "ErrorHandler.h"
 #include "SystemConfig.h"
 
+#include "HW_clock.h"
+#include "HW_gpio.h"
+#include "HW_can.h"
+
+#include "SYS_Vehicle.h"
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -26,6 +31,18 @@
 int main(void)
 {
     HAL_Init();
+    
+    SystemClock_Config();
+
+    SYS_SAFETY_Init();
+    HW_GPIO_Init();
+    HW_CAN_Init();
+
+    /**< Systenm stays in a hold state until any of the GPIO, CAN, or time based Interrupts
+     * The system is completely reactive and fully interrupt driven
+     */
+
+    while(1);
 
     return 0;
 }

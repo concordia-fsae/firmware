@@ -21,6 +21,35 @@
  *                              D E F I N E S
  ******************************************************************************/
 
+/** BMS Status 1
+ * Little endian
+ * First byte: Flags - 0: BMS is ready
+ * Second, Third byte: 2 bytes - DCL (Discharge current limit) 10x A
+ * Fourth, fifth byte: 2 bytes - CCL (Charge current limit) 10x A
+ * Sixth byte: 1 byte - Max Temp - 10x deg C
+ * */
+#define BMS_STATUS1_ID 0x0030
+#define BMS_FLAG_BYTE 0x00
+#define BMS_ISREADY_BIT  0x00
+#define BMS_ISCHARGE_BIT 0x01
+#define BMS_BATT_VOLTAGE_MSB 0x01
+#define BMS_BATT_VOLTAGE_LSB 0x02
+
+#define MOTOR_CONTROLLER_BASE_ID 0x01
+#define MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID MOTOR_CONTROLLER_BASE_ID + 0x10
+#define MC_DC_BUS_VOLTAGE_LSB 6
+#define MC_DC_BUS_VOLTAGE_MSB 7
+
+#define SAFETY_BOARD_STATUS_ID 0x40
+
+#define MOTOR_CONTROLLER_TIMEOUT 100
+#define BMS_TIMEOUT 100
+
+
+
+#define EXTI_IRQ_PRIO TICK_INT_PRIORITY + 0x01
+#define CAN_IRQ_PRIO  EXTI_IRQ_PRIO + 0x01
+#define CYCLE_IRQ_PRIO CAN_IRQ_PRIO + 0x01
 /**
  * Pin Description
  * B12 -> BMS Status [out] ** Digital
@@ -30,32 +59,35 @@
  * A9  -> M LS [in] ** PWM in
  * B8, B9 -> CAN [in/out]
  * A2  -> AIR+ CNTL [out] ** Digital
- * A3  -> Prchg CNTL [out]
+ * A3  -> Prchg CNTL [out] ** Digital
  */
 
-#define BMS_STATUS_Pin GPIO_PIN_12
+#define BMS_STATUS_Pin  GPIO_PIN_12
 #define BMS_STATUS_Port GPIOB
 
-#define IMD_STATUS_Pin GPIO_PIN_13
+#define IMD_STATUS_Pin  GPIO_PIN_13
 #define IMD_STATUS_Port GPIOB
 
-#define TSMS_CHG_Pin GPIO_PIN_14
+#define TSMS_CHG_Pin  GPIO_PIN_14
 #define TSMS_CHG_Port GPIOB
 
-#define OK_HS_Pin GPIO_PIN_8
+#define OK_HS_Pin  GPIO_PIN_8
 #define OK_HS_Port GPIOA
 
-#define M_LS_Pin GPIO_PIN_9
+#define M_LS_Pin  GPIO_PIN_9
 #define M_LS_Port GPIOA
 
-#define CANR_Pin GPIO_PIN_8
+#define CANR_Pin  GPIO_PIN_8
 #define CANR_Port GPIOB
 
-#define CANT_Pin GPIO_PIN_9
+#define CANT_Pin  GPIO_PIN_9
 #define CANT_Port GPIOB
 
-#define AIR_Pin GPIO_PIN_2
+#define AIR_Pin  GPIO_PIN_2
 #define AIR_Port GPIOA
 
-#define PCHG_Pin GPIO_PIN_3
+#define PCHG_Pin  GPIO_PIN_3
 #define PCHG_Port GPIOA
+
+#define LED_Pin       GPIO_PIN_13
+#define LED_GPIO_Port GPIOC
