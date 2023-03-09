@@ -80,6 +80,11 @@ void HW_GPIO_Init(void)
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
+/**
+ * @brief  Software Interrupt to cycle state
+ *
+ * @param GPIO_Pin
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (GPIO_Pin == TSMS_CHG_Pin)
@@ -110,3 +115,5 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         SYS_SAFETY_CycleState();
     }
 }
+
+

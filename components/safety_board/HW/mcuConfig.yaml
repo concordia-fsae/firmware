@@ -6,6 +6,7 @@ drivers:
   can:
   cortex: # required
   dma:
+  exti:
   flash:
   gpio:
   rcc:
