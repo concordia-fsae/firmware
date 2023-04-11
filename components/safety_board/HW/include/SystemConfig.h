@@ -21,31 +21,24 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-/** BMS Status 1
- * Little endian
- * First byte: Flags - 0: BMS is ready
- * Second, Third byte: 2 bytes - DCL (Discharge current limit) 10x A
- * Fourth, fifth byte: 2 bytes - CCL (Charge current limit) 10x A
- * Sixth byte: 1 byte - Max Temp - 10x deg C
- * */
-#define BMS_STATUS1_ID 0x0030
+#define BMS_STATUS_ID 0x0037
 #define BMS_FLAG_BYTE 0x00
-#define BMS_ISREADY_BIT  0x00
-#define BMS_ISCHARGE_BIT 0x01
+#define BMS_ISREADY_BIT  0x02
+#define BMS_ISCHARGE_BIT 0x03
+#define BMS_ISERROR_BIT 0x07
+#define BMS_VOLTAGE_ID 0x32
 #define BMS_BATT_VOLTAGE_MSB 0x01
-#define BMS_BATT_VOLTAGE_LSB 0x02
+#define BMS_BATT_VOLTAGE_LSB 0x00
 
 #define MOTOR_CONTROLLER_BASE_ID 0x01
 #define MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID MOTOR_CONTROLLER_BASE_ID + 0x10
-#define MC_DC_BUS_VOLTAGE_LSB 6
 #define MC_DC_BUS_VOLTAGE_MSB 7
+#define MC_DC_BUS_VOLTAGE_LSB 6
 
 #define SAFETY_BOARD_STATUS_ID 0x40
 
 #define MOTOR_CONTROLLER_TIMEOUT 100
 #define BMS_TIMEOUT 100
-
-
 
 #define EXTI_IRQ_PRIO TICK_INT_PRIORITY + 0x01
 #define CAN_IRQ_PRIO  EXTI_IRQ_PRIO + 0x01

@@ -29,7 +29,7 @@ common_flags = [
 debug_flags = [
     "-ggdb2",
     "-g2",
-    "-Og",
+    "-O0",
 ]
 
 release_flags = [
@@ -127,6 +127,7 @@ project_hw_files = [
     PROJECT_HW_DIR.File("HW_intc.c"),
     PROJECT_HW_DIR.File("HW_msp.c"),
 #    PROJECT_HW_DIR.File("HW_spi.c"),
+    PROJECT_HW_DIR.File("HW_tim.c"),
     PROJECT_HW_DIR.File("HW_timebase.c"),
 ]
 

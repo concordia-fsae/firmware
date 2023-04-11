@@ -39,7 +39,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 
     // Configure the TIM4 IRQ priority
     HAL_NVIC_SetPriority(TIM4_IRQn, TickPriority, 0);
-
+  
     // Enable the TIM4 global Interrupt
     HAL_NVIC_EnableIRQ(TIM4_IRQn);
 

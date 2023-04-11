@@ -11,6 +11,7 @@
 
 #include "stm32f1xx.h"
 #include "HW_intc.h"
+#include "SystemConfig.h"
 
 
 /******************************************************************************
@@ -19,6 +20,7 @@
 
 extern TIM_HandleTypeDef htim4;
 extern CAN_HandleTypeDef hcan;
+extern TIM_HandleTypeDef htim;
 
 
 /******************************************************************************
@@ -88,14 +90,34 @@ void DebugMon_Handler(void)
 
 void EXTI0_IRQHandler(void)
 {
-
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
 }
 
-/**
- * @brief This function handles DMA1 channel1 global interrupt.
- */
-void DMA1_Channel1_IRQHandler(void)
+void EXTI9_5_IRQHandler(void)
 {
+    HAL_GPIO_EXTI_IRQHandler(OK_HS_Pin);
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(TSMS_CHG_Pin);
+}
+
+void TIM1_UP_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim);
+}
+void TIM1_BRK_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim);
+}
+void TIM1_TRG_COM_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim);
+}
+void TIM1_CC_IRQHandler(void)
+{
+  HAL_TIM_IRQHandler(&htim);
 }
 
 /**

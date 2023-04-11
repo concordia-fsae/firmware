@@ -16,6 +16,7 @@
 #include <stdint.h>
 
 #include "HW_can.h"
+#include "HW_gpio.h"
 
 
 /******************************************************************************
@@ -28,6 +29,8 @@ static int16_t          ts_voltage        = 0;    // Stored at 0.1 V increments
 static int16_t          batt_voltage      = 0;    // Stored at 0.1 V increments
 static uint32_t         last_ts_message   = 0;
 static uint32_t         last_batt_message = 0;
+static uint8_t          imd_duty_cycle = 0;
+static uint8_t          imd_freq = 0;
 
 
 /******************************************************************************
@@ -59,8 +62,10 @@ void SYS_SAFETY_Init(void)
     }
     else
     {
-        SYS_SAFETY_SetStatus(IMD_STATUS, OFF);
+        SYS_SAFETY_SetStatus(TSMS_STATUS, OFF);
     }
+
+    SYS_SAFETY_SetStatus(BMS_STATUS, ON);
 }
 
 void SYS_CONTACTORS_OpenAll(void)
@@ -111,8 +116,8 @@ void SYS_SAFETY_SetStatus(STATUS_INDEX_E status, STATUS_E state)
     }
     else
     {
-        status_flags &= ~(0x01 << status);
         SYS_CONTACTORS_OpenAll();
+        status_flags &= ~(0x01 << status);
 
         vehicle_state = VEHICLE_FAULT;
 
@@ -143,6 +148,7 @@ void SYS_SAFETY_SetBatteryVoltage(int16_t v)
 {
     batt_voltage      = v;
     last_batt_message = HAL_GetTick();
+    SYS_SAFETY_SetStatus(BMS_STATUS, ON);
 }
 
 void SYS_SAFETY_SetBusVoltage(int16_t v)
@@ -150,6 +156,12 @@ void SYS_SAFETY_SetBusVoltage(int16_t v)
     ts_voltage      = v;
     last_ts_message = HAL_GetTick();
     SYS_SAFETY_SetStatus(TS_STATUS, ON);
+}
+
+void SYS_SAFETY_SetIsolation(uint8_t duty, uint8_t freq)
+{
+    imd_duty_cycle = duty;
+    imd_freq = freq;    
 }
 
 void SYS_SAFETY_CycleState(void)
@@ -172,17 +184,28 @@ void SYS_SAFETY_CycleState(void)
         SYS_CONTACTORS_Switch(PRECHARGE_CONTACTOR, OFF);
     }
 
+    extern CAN_HandleTypeDef hcan;
+
+    if (HAL_CAN_GetError(&hcan))
+    {
+        HAL_CAN_ResetError(&hcan);
+        HAL_NVIC_SystemReset();
+    }
+
     CAN_data_T data;
 
     data.u8[0] = status_flags;
     data.u8[1] = vehicle_state;
-    data.u8[2] = (batt_voltage & 0xff00) >> 8;
-    data.u8[3] = batt_voltage & 0xff;
-    data.u8[4] = (ts_voltage & 0xff00) >> 8;
-    data.u8[5] = ts_voltage & 0xff;
+    data.u8[2] = batt_voltage & 0xff;
+    data.u8[3] = (batt_voltage & 0xff00) >> 8;
+    data.u8[4] = ts_voltage & 0xff;
+    data.u8[5] = (ts_voltage & 0xff00) >> 8;
+    data.u8[6] = imd_duty_cycle;
+    data.u8[7] = imd_freq;
 
-
-    CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, data, SAFETY_BOARD_STATUS_ID, 6);
+    //extern CAN_HandleTypeDef hcan;
+    //HAL_CAN_ResetError(&hcan);
+    CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, data, SAFETY_BOARD_STATUS_ID, 8);
 }
 
 /******************************************************************************
@@ -191,18 +214,26 @@ void SYS_SAFETY_CycleState(void)
 
 bool SYS_Validate(void)
 {
-    if (last_ts_message > (HAL_GetTick() - MOTOR_CONTROLLER_TIMEOUT) && last_batt_message > (HAL_GetTick() - BMS_TIMEOUT))
+    if (HW_GPIO_ValidateInputs() == ((0x01 << TSMS_STATUS) | (0x01 << IMD_STATUS)))
     {
-        return true;
+        if (last_ts_message > (HAL_GetTick() - MOTOR_CONTROLLER_TIMEOUT) && last_batt_message > (HAL_GetTick() - BMS_TIMEOUT))
+        {
+            return true;
+        }
     }
 
     if (last_ts_message < (HAL_GetTick() - MOTOR_CONTROLLER_TIMEOUT))
     {
-        SYS_SAFETY_SetStatus(MOTOR_CONTROLLER_TIMEOUT, OFF);
+        SYS_SAFETY_SetStatus(TS_STATUS, OFF);
+        ts_voltage = 0;
     }
-    else if (last_batt_message < (HAL_GetTick() - BMS_TIMEOUT))
+    
+    if (last_batt_message < (HAL_GetTick() - BMS_TIMEOUT))
     {
         SYS_SAFETY_SetStatus(BMS_STATUS, OFF);
+        SYS_SAFETY_SetStatus(BMS_CHARGE_STATUS, OFF);
+        SYS_SAFETY_SetStatus(BMS_DISCHARGE_STATUS, OFF);
+        batt_voltage = 0;
     }
 
     return false;

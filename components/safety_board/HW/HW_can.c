@@ -15,6 +15,7 @@
 #include "CAN/CAN_types.h"
 #include "include/ErrorHandler.h"
 #include "SystemConfig.h"
+#include "string.h"
 
 #include "SYS_Vehicle.h"
 
@@ -67,7 +68,7 @@ void HW_CAN_Init(void)
     hcan.Init.TimeTriggeredMode    = DISABLE;
     hcan.Init.AutoBusOff           = DISABLE;
     hcan.Init.AutoWakeUp           = DISABLE;
-    hcan.Init.AutoRetransmission   = DISABLE;
+    hcan.Init.AutoRetransmission   = ENABLE;
     hcan.Init.ReceiveFifoLocked    = DISABLE;
     hcan.Init.TransmitFifoPriority = DISABLE;
 
@@ -77,12 +78,12 @@ void HW_CAN_Init(void)
     }
 
     CAN_FilterTypeDef filter = { 0 };
-    
+  
     filter.FilterIdHigh = MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID;
-    filter.FilterIdHigh = BMS_STATUS1_ID;
+    filter.FilterIdHigh = BMS_STATUS_ID;
     filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
     filter.FilterBank = 0;
-    filter.FilterMode = CAN_FILTERMODE_IDLIST;
+    filter.FilterMode = CAN_FILTERMODE_IDMASK;
     filter.FilterScale = CAN_FILTERSCALE_16BIT;
     filter.FilterActivation = CAN_FILTER_ENABLE;
     
@@ -91,6 +92,20 @@ void HW_CAN_Init(void)
         Error_Handler();
     }
 
+    memset(&filter, 0, sizeof(CAN_FilterTypeDef));
+  
+    filter.FilterIdHigh = BMS_VOLTAGE_ID;;
+    filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+    filter.FilterBank = 0;
+    filter.FilterMode = CAN_FILTERMODE_IDMASK;
+    filter.FilterScale = CAN_FILTERSCALE_16BIT;
+    filter.FilterActivation = CAN_FILTER_ENABLE;
+    
+    if (HAL_CAN_ConfigFilter(&hcan, &filter) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 }
@@ -122,7 +137,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
+        
+        __HAL_AFIO_REMAP_CAN1_2();
+        
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN_IRQ_PRIO, 0U);
@@ -245,12 +262,13 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
  */
 bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len)
 {
-    CAN_TxMessage_t msg;
+    CAN_TxMessage_t msg = { 0 };
 
     msg.id          = id;
     msg.data        = data;
     msg.mailbox     = (CAN_TxMailbox_E)priority;
     msg.lengthBytes = len;
+    msg.RTR         = CAN_REMOTE_TRANSMISSION_REQUEST_DATA;
 
     return CAN_sendMsg(&hcan, msg) == HAL_OK;
 }
@@ -286,7 +304,7 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
     {
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, &data[0]);
 
-        if (header.StdId == BMS_STATUS1_ID)
+        if (header.StdId == BMS_STATUS_ID)
         {
             if (data[BMS_FLAG_BYTE] & (0x01 << BMS_ISCHARGE_BIT))
             {
@@ -299,13 +317,24 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
 
             if (data[BMS_FLAG_BYTE] & (0x01 << BMS_ISREADY_BIT))
             {
-                SYS_SAFETY_SetStatus(BMS_STATUS, ON);
+                SYS_SAFETY_SetStatus(BMS_DISCHARGE_STATUS, ON);
             }
             else
             {
-                SYS_SAFETY_SetStatus(BMS_STATUS, OFF);
+                SYS_SAFETY_SetStatus(BMS_DISCHARGE_STATUS, OFF);
             }
 
+            if (data[BMS_FLAG_BYTE] & (0x01 << BMS_ISERROR_BIT))
+            {
+                SYS_SAFETY_SetStatus(BMS_ERROR_STATUS, ON);
+            }
+            else
+            {
+                SYS_SAFETY_SetStatus(BMS_ERROR_STATUS, OFF);
+            }
+        }
+        else if (header.StdId == BMS_VOLTAGE_ID)
+        {            
             SYS_SAFETY_SetBatteryVoltage(((int16_t) data[BMS_BATT_VOLTAGE_MSB] << 8) | (int16_t) data[BMS_BATT_VOLTAGE_LSB]);
         }
         else if (header.StdId == MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID)

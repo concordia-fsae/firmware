@@ -15,6 +15,7 @@
 #include "stm32f1xx_hal.h"
 #include "ErrorHandler.h"
 
+#include "SystemConfig.h"
 #include "SYS_Vehicle.h"
 
 /******************************************************************************
@@ -92,7 +93,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
         count = (count + 1) % 10;
 
         HAL_IncTick();
-        if (count == 0) __HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_0); // Triggers lowest priority cycle state
+        if (count == 0) 
+        {
+            __HAL_GPIO_EXTI_GENERATE_SWIT(GPIO_PIN_0);
+        }
     }
 }
 

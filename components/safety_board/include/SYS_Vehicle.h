@@ -27,7 +27,9 @@ typedef enum
 {
   IMD_STATUS = 0x00,
   BMS_STATUS,
+  BMS_DISCHARGE_STATUS,
   BMS_CHARGE_STATUS,
+  BMS_ERROR_STATUS,
   TSMS_STATUS,
   TS_STATUS,
   STATUS_COUNT,
@@ -68,3 +70,5 @@ void SYS_CONTACTORS_Switch(CONTACTORS_E contactor, STATUS_E state);
 void SYS_SAFETY_SetBatteryVoltage(int16_t v);
 void SYS_SAFETY_SetBusVoltage(int16_t v);
 void SYS_SAFETY_CycleState(void);
+void SYS_SAFETY_SetIsolation(uint8_t duty, uint8_t freq);
+

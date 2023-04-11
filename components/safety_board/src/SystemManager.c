@@ -16,6 +16,7 @@
 #include "HW_clock.h"
 #include "HW_gpio.h"
 #include "HW_can.h"
+#include "HW_tim.h"
 
 #include "SYS_Vehicle.h"
 
@@ -34,9 +35,12 @@ int main(void)
     
     SystemClock_Config();
 
-    SYS_SAFETY_Init();
     HW_GPIO_Init();
+    HW_TIM_Init();
+    HW_TIM_Start();
     HW_CAN_Init();
+    HW_CAN_Start();
+    SYS_SAFETY_Init();
 
     /**< Systenm stays in a hold state until any of the GPIO, CAN, or time based Interrupts
      * The system is completely reactive and fully interrupt driven
@@ -52,8 +56,9 @@ int main(void)
  */
 void Error_Handler(void)
 {
+    uint8_t c = 1;
     __disable_irq();
-    while (1)
+    while (c)
     {
     }
 }

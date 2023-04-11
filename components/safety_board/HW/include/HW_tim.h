@@ -1,9 +1,9 @@
 /**
- * @file HW_gpio.h
- * @brief  Header file for the firmware GPIO
+ * @file HW_tim.h
+ * @brief Header file for the TIM peripheral 
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
- * @date 2023-01-15
+ * @date 2023-03-10
  */
 
 #pragma once
@@ -19,7 +19,5 @@
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_GPIO_Init(void);
-void HW_CONTACTORS_CloseAll(void);
-uint8_t HW_GPIO_ValidateInputs(void);
-
+void HW_TIM_Init(void);
+void HW_TIM_Start(void);
