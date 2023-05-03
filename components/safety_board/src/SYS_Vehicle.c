@@ -64,8 +64,6 @@ void SYS_SAFETY_Init(void)
     {
         SYS_SAFETY_SetStatus(TSMS_STATUS, OFF);
     }
-
-    SYS_SAFETY_SetStatus(BMS_STATUS, ON);
 }
 
 void SYS_CONTACTORS_OpenAll(void)
@@ -92,26 +90,6 @@ void SYS_SAFETY_SetStatus(STATUS_INDEX_E status, STATUS_E state)
         else if (status == BMS_STATUS)
         {
             HAL_GPIO_WritePin(BMS_STATUS_Port, BMS_STATUS_Pin, GPIO_PIN_SET);
-        }
-
-        if ((status_flags & (0x01 << IMD_STATUS)) && ((status_flags & (0x01 << BMS_STATUS)) || status_flags & (0x01 << BMS_CHARGE_STATUS)))
-        {
-            vehicle_state = VEHICLE_READY;
-        }
-
-        if (vehicle_state == VEHICLE_READY && status_flags & (0x01 << TSMS_STATUS))
-        {
-            if (status_flags & (1 << BMS_CHARGE_STATUS))
-            {
-                // TODO: Complete charger heartbeat validation
-                SYS_CONTACTORS_Switch(MAIN_CONTACTOR, ON);
-                vehicle_state = CONTACTOR_MAIN_CLOSED;
-            }
-            else if (SYS_Validate())
-            {
-                SYS_CONTACTORS_Switch(PRECHARGE_CONTACTOR, ON);
-                vehicle_state = CONTACTOR_PRECHARGE_CLOSED;
-            }
         }
     }
     else
@@ -166,15 +144,32 @@ void SYS_SAFETY_SetIsolation(uint8_t duty, uint8_t freq)
 
 void SYS_SAFETY_CycleState(void)
 {
+    //bool valid = SYS_Validate();
     SYS_Validate();
 
-    if (vehicle_state == CONTACTOR_PRECHARGE_CLOSED)
+    if ((status_flags & (0x01 << IMD_STATUS)) && (status_flags & (0x01 << BMS_STATUS)) && (vehicle_state == VEHICLE_FAULT))
     {
-        if (ts_voltage > (batt_voltage * 0.9))
+            vehicle_state = VEHICLE_READY;
+    } 
+    
+    if ((vehicle_state == VEHICLE_READY) && (((uint16_t) status_flags & (0x01 << TSMS_STATUS)) != 0))
+    {
+        SYS_CONTACTORS_Switch(PRECHARGE_CONTACTOR, ON);
+        vehicle_state = CONTACTOR_PRECHARGE_CLOSED;
+    } 
+    else if (vehicle_state == CONTACTOR_PRECHARGE_CLOSED)
+    {
+        if (ts_voltage > ((batt_voltage * 95) / 100))
         {
             vehicle_state = CONTACTOR_PRECHARGE_MAIN_CLOSED;
-
             SYS_CONTACTORS_Switch(MAIN_CONTACTOR, ON);
+        }
+        else if ((status_flags & (0x01 << BMS_CHARGE_STATUS)) && !(status_flags & 0x01 << BMS_DISCHARGE_STATUS))
+        {
+            // TODO: Complete charger heartbeat validation
+            SYS_CONTACTORS_Switch(MAIN_CONTACTOR, ON);
+            SYS_CONTACTORS_Switch(PRECHARGE_CONTACTOR, OFF);
+            vehicle_state = CONTACTOR_MAIN_CLOSED;
         }
     }
     else if (vehicle_state == CONTACTOR_PRECHARGE_MAIN_CLOSED)
@@ -214,7 +209,7 @@ void SYS_SAFETY_CycleState(void)
 
 bool SYS_Validate(void)
 {
-    if (HW_GPIO_ValidateInputs() == ((0x01 << TSMS_STATUS) | (0x01 << IMD_STATUS)))
+    if ((HW_GPIO_ValidateInputs() & (0x01 << TSMS_STATUS)) && (HW_GPIO_ValidateInputs() & (0x01 << IMD_STATUS)))
     {
         if (last_ts_message > (HAL_GetTick() - MOTOR_CONTROLLER_TIMEOUT) && last_batt_message > (HAL_GetTick() - BMS_TIMEOUT))
         {

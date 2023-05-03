@@ -21,7 +21,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BMS_STATUS_ID 0x0037
+#define BMS_STATUS_ID 0x037
 #define BMS_FLAG_BYTE 0x00
 #define BMS_ISREADY_BIT  0x02
 #define BMS_ISCHARGE_BIT 0x03
@@ -37,8 +37,8 @@
 
 #define SAFETY_BOARD_STATUS_ID 0x40
 
-#define MOTOR_CONTROLLER_TIMEOUT 100
-#define BMS_TIMEOUT 100
+#define MOTOR_CONTROLLER_TIMEOUT 150
+#define BMS_TIMEOUT 150
 
 #define EXTI_IRQ_PRIO TICK_INT_PRIORITY + 0x01
 #define CAN_IRQ_PRIO  EXTI_IRQ_PRIO + 0x01

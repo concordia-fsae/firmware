@@ -62,12 +62,12 @@ void HW_GPIO_Init(void)
     /**< Configure Status and Control signals */
     GPIO_InitStruct.Pin  = (BMS_STATUS_Pin | IMD_STATUS_Pin);
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     GPIO_InitStruct.Pin  = (AIR_Pin | PCHG_Pin);
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /**< Configure EXTI0 pin to be interrupt */
@@ -92,11 +92,6 @@ void HW_GPIO_Init(void)
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    if (GPIO_Pin == 0x00)
-    {
-        return;
-    }
-
     if (GPIO_Pin == TSMS_CHG_Pin)
     {
         if (HAL_GPIO_ReadPin(TSMS_CHG_Port, TSMS_CHG_Pin) == GPIO_PIN_RESET)
@@ -130,22 +125,14 @@ uint8_t HW_GPIO_ValidateInputs(void)
 {
     uint8_t ret = 0;
 
-    if (HAL_GPIO_ReadPin(OK_HS_Port, OK_HS_Pin))
+    if (HAL_GPIO_ReadPin(OK_HS_Port, OK_HS_Pin) == GPIO_PIN_SET)
     {
         ret |= 0x01 << IMD_STATUS;
     }
-    else
-    {
-        SYS_SAFETY_SetStatus(IMD_STATUS, OFF);
-    }
     
-    if (HAL_GPIO_ReadPin(TSMS_CHG_Port, TSMS_CHG_Pin))
+    if (HAL_GPIO_ReadPin(TSMS_CHG_Port, TSMS_CHG_Pin) == GPIO_PIN_SET)
     {
         ret |= 0x01 << TSMS_STATUS;
-    }
-    else 
-    {
-        SYS_SAFETY_SetStatus(TSMS_STATUS, OFF);
     }
     
     return ret;
