@@ -79,6 +79,20 @@ bool SYS_SAFETY_GetStatus(STATUS_INDEX_E status)
 
 void SYS_SAFETY_SetStatus(STATUS_INDEX_E status, STATUS_E state)
 {
+    if (status == BMS_ERROR_STATUS) {
+        if (state == ON) 
+        {
+            SYS_CONTACTORS_OpenAll();
+            status_flags |= 0x01 << status; 
+        } 
+        else 
+        {
+           status_flags &= ~(0x01 << status);
+        }
+        
+        return;
+    }
+    
     if (state == ON)
     {
         status_flags |= 0x01 << status;
@@ -144,7 +158,6 @@ void SYS_SAFETY_SetIsolation(uint8_t duty, uint8_t freq)
 
 void SYS_SAFETY_CycleState(void)
 {
-    //bool valid = SYS_Validate();
     SYS_Validate();
 
     if ((status_flags & (0x01 << IMD_STATUS)) && (status_flags & (0x01 << BMS_STATUS)) && (vehicle_state == VEHICLE_FAULT))
@@ -168,23 +181,16 @@ void SYS_SAFETY_CycleState(void)
         {
             // TODO: Complete charger heartbeat validation
             SYS_CONTACTORS_Switch(MAIN_CONTACTOR, ON);
-            SYS_CONTACTORS_Switch(PRECHARGE_CONTACTOR, OFF);
             vehicle_state = CONTACTOR_MAIN_CLOSED;
         }
     }
     else if (vehicle_state == CONTACTOR_PRECHARGE_MAIN_CLOSED)
     {
-        vehicle_state = CONTACTOR_MAIN_CLOSED;
-
-        SYS_CONTACTORS_Switch(PRECHARGE_CONTACTOR, OFF);
-    }
-
-    extern CAN_HandleTypeDef hcan;
-
-    if (HAL_CAN_GetError(&hcan))
-    {
-        HAL_CAN_ResetError(&hcan);
-        HAL_NVIC_SystemReset();
+        if (ts_voltage > ((batt_voltage * 98) / 100))
+        {
+            SYS_CONTACTORS_Switch(MAIN_CONTACTOR, ON);
+            vehicle_state = CONTACTOR_MAIN_CLOSED;
+        }
     }
 
     CAN_data_T data;
@@ -197,10 +203,24 @@ void SYS_SAFETY_CycleState(void)
     data.u8[5] = (ts_voltage & 0xff00) >> 8;
     data.u8[6] = imd_duty_cycle;
     data.u8[7] = imd_freq;
+    
+    extern CAN_HandleTypeDef hcan;
+    static uint8_t rst_counter = 0;
 
-    //extern CAN_HandleTypeDef hcan;
-    //HAL_CAN_ResetError(&hcan);
-    CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, data, SAFETY_BOARD_STATUS_ID, 8);
+    if (!CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, data, SAFETY_BOARD_STATUS_ID, 8)
+        && rst_counter++ == 100)
+    {
+        HAL_NVIC_SystemReset();
+    }
+    else if (HAL_CAN_GetError(&hcan))
+    {
+        HAL_CAN_ResetError(&hcan);
+    }
+    else 
+    {
+        rst_counter = 0;
+    }
+
 }
 
 /******************************************************************************

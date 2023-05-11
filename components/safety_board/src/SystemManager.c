@@ -37,11 +37,11 @@ int main(void)
 
     HW_GPIO_Init();
     HW_TIM_Init();
-    HW_TIM_Start();
     HW_CAN_Init();
-    HW_CAN_Start();
     SYS_SAFETY_Init();
-
+    
+    HW_TIM_Start();
+    HW_CAN_Start();
     /**< Systenm stays in a hold state until any of the GPIO, CAN, or time based Interrupts
      * The system is completely reactive and fully interrupt driven
      */
@@ -58,6 +58,9 @@ void Error_Handler(void)
 {
     uint8_t c = 1;
     __disable_irq();
+
+    HAL_NVIC_SystemReset(); 
+
     while (c)
     {
     }
