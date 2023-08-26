@@ -27,6 +27,12 @@ def close(ser):
 def setup(ser, baud):
     ser.write("V\r\n".encode())
     receive(ser)
+    if baud == 500:
+        ser.write("S6\r\n".encode())
+        
+        while receive(ser) != "\x06":
+            None
+
     if baud == 1000:
         ser.write("S7\r\n".encode())
 

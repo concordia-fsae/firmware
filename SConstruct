@@ -14,7 +14,7 @@ from SCons.Script import (
 from os.path import dirname
 from yaml import load, Loader
 
-import mc_flash
+import mc_flash, bms
 
 env = Environment()
 
@@ -37,6 +37,9 @@ AddOption("--release", dest="release", action="store_true")
 program = GetOption("prog")
 if program == "mc_flash":
     mc_flash.main()
+    exit()
+elif program == "bms":
+    bms.main()
     exit()
 
 
