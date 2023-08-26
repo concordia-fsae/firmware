@@ -7,20 +7,21 @@ def connect():
     device_signature = '0403:6001' 
     candidates = list(list_ports.grep(device_signature))
 
-    print(candidates[0].device)
-
     ser = serial.Serial(candidates[0].device, 921600, timeout=100000)
     ser.flushInput()
     ser.flushOutput()
+
+    close(ser)
 
     return ser
 
 
 def close(ser):
     ser.write("C\r\n".encode())
+    resp = receive(ser)
 
-    while receive(ser) != "\x06":
-        None
+    while resp != "\x06" and resp != "\x07":
+        resp = receive(ser)
 
 
 def setup(ser, baud):
@@ -28,11 +29,15 @@ def setup(ser, baud):
     receive(ser)
     if baud == 1000:
         ser.write("S7\r\n".encode())
-        
+
         while receive(ser) != "\x06":
             None
 
     ser.write("A1\r\n".encode())
+
+    while receive(ser) != "\x06":
+        None
+
     ser.write("O\r\n".encode())
 
     while receive(ser) != "\x06":
@@ -56,7 +61,7 @@ def send_message(ser, id, length, data, extended=False):
     message += "\r\n"
 
     ser.write(message.encode())
-    
+
     print("Sending message: " + message)
 
 

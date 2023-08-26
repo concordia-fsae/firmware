@@ -14,8 +14,11 @@ from SCons.Script import (
 from os.path import dirname
 from yaml import load, Loader
 
+import mc_flash
+
 env = Environment()
 
+AddOption("--prog", dest="prog", type="string", action="store")
 # add option to choose target
 AddOption("--target", dest="target", type="string", action="store")
 # add option to not generate the compilation database
@@ -30,6 +33,11 @@ AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
 AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
 # add option to build without debug info
 AddOption("--release", dest="release", action="store_true")
+
+program = GetOption("prog")
+if program == "mc_flash":
+    mc_flash.main()
+    exit()
 
 
 def pio_build_cmd(source, **_):
