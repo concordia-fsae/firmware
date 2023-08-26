@@ -8,3 +8,4 @@ regex==2021.10.21
 SCons==4.2.0
 tomli==1.2.1
 typing-extensions==3.10.0.2
+pyusb
