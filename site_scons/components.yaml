@@ -1,4 +1,6 @@
-stw:
-  path: components/steering_wheel/
+heartbeat:
+  path: components/heartbeat/
 network:
   path: network/
+stw:
+  path: components/steering_wheel/
