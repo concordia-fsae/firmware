@@ -18,7 +18,7 @@ def main():
             if usr_in == 1:
                 done = True
             elif usr_in == 2:
-                candapter_driver.send_message(can, 618, 8, "40000000000000")
+                candapter_driver.send_message(can, 618, 7, "40000000000000")
                 print("Brusa charging started!\n")
 
         candapter_driver.close(can)

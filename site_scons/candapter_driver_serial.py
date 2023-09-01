@@ -7,6 +7,9 @@ def connect():
     device_signature = '0403:6001' 
     candidates = list(list_ports.grep(device_signature))
 
+    if len(candidates) == 0:
+        return None
+
     ser = serial.Serial(candidates[0].device, 921600, timeout=100000)
     ser.flushInput()
     ser.flushOutput()
@@ -61,11 +64,11 @@ def send_message(ser, id, length, data, extended=False):
         msg_ID = "t"
 
     message = msg_ID
-    message += id
+    message += str(id)
     message += str(length)
     message += data
     message += "\r\n"
-
+    print(message)
     ser.write(message.encode())
 
     print("Sending message: " + message)

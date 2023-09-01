@@ -43,7 +43,7 @@ def set_eeprom(can, id, address, data):
         # print(response[:4])
         response = candapter_driver.receive(can)
 
-    print(response)
+    print("Response: " + response)
 
     if response[10] == str(1):
         print("EEPROM write success! Power cycle the car for it to be in effect.")
