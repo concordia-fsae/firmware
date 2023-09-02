@@ -1,9 +1,27 @@
+##
+# @file arm-none-eabi.py
+# @brief  Adds support for ARM Toolchain
+# @author Ricky Lopez
+# @version 0.1
+# @date 2022-08-27
+
 from os.path import splitext
 from SCons.Script import *
 
-TOOL_PATH = Dir("/opt/toolchains/gcc-arm-none-eabi/bin/")
+TOOL_PATH = Dir("/opt/toolchains/gcc-arm-none-eabi/bin/") # @brief Absolute path of binaries when inside container
 
 
+##
+# @brief  Compiles the targets with signature
+#
+# @note Not to be called directly
+#
+# @param target Target output file
+# @param source Sources to be used
+# @param env Environment to be worked on
+# @param for_signature Signature given to Target
+#
+# @retval   Returns the SCons action
 def _program(target, source, env, for_signature):
     return SCons.Action.Action(
         [
@@ -13,6 +31,16 @@ def _program(target, source, env, for_signature):
     )
 
 
+##
+# @brief Appends the Binary and Map file to the target and returns with source
+#
+# @note Not to be called directly
+
+# @param target Target to work on
+# @param source Source to work from
+# @param env Environment being worked on
+#
+# @retval   [target, source]
 def _bin_emitter(target, source, env):
     bin_file = "build/" + splitext(target[0].name)[0] + ".bin"
     map_file = "build/" + splitext(target[0].name)[0] + ".map"
@@ -20,6 +48,16 @@ def _bin_emitter(target, source, env):
     return target, source
 
 
+##
+# @brief Adds ARM GDB support 
+#
+# @note Not to be called directly
+#
+# @param env Environment to work on
+# @param elf_file ELF file
+# @param args args to be passed to GDB
+#
+# @retval   Return execution of SCons GDB
 def _gdb(env, elf_file, *args):
     args = " ".join(args)
     fn = "phony.file" + str(len(args))
@@ -27,6 +65,12 @@ def _gdb(env, elf_file, *args):
     return env.gdb(source=elf_file, target=fn, args=args)
 
 
+##
+# @brief  Generates the SCons tools in the environment
+#
+# @param env Environment to be worked on
+#
+# @retval   None
 def generate(env):
     SCons.Tool.Tool("cc")(env)
     SCons.Tool.Tool("ar")(env)
@@ -63,5 +107,11 @@ def generate(env):
     env.AddMethod(_gdb, "launch_gdb")
 
 
+##
+# @brief  Shows this module exists
+#
+# @note Included for forward compatibility
+#
+# @retval True 
 def exists():
     return True
