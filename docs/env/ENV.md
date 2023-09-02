@@ -25,7 +25,7 @@
 1. Building the program
     - Execute the SCons program from inside the env
         - `scons --target=$COMPONENT_DESIGNATOR build`
-        - ex: To build the stw, execute `scons --target=stw build`
+        - ex: To build the stw, execute `scons --target=stw build`. Build is the default action for a target and therefore does not need to be specified
 2. Uploading the program (Optional)
     - The SCons build environment has an optional upload command that flashes the device and holds
     - To flash and verify, execute `scons --target=$COMPONENT_DESIGNATOR upload` from the env
@@ -34,6 +34,7 @@
     - Debugging in the env is done through GDB and OpenOCD
     - To start the OpenOCD server and connect to the remote host in GDB, execute:
         - `scons --target=$COMPONENT_DESIGNATOR openocd-gdb` from the env
+        - You can chain multiple commands together. For example: 'scons --target=stw upload openocd-gdb' will build, upload, and start the debugger
     - The standard GDB commands apply. To reset or halt the MCU through the SWD connection, execute:
         - `monitor reset`, `monitor reset halt`
 
