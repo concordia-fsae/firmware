@@ -1,3 +1,10 @@
+##
+# @file chip_config.py
+# @brief  Adds chip configuration support into SCons
+# @author Ricky Lopez
+# @version 0.1
+# @date 2022-08-27
+
 from yaml import load, Loader
 
 from SCons.Script import *
@@ -5,6 +12,12 @@ from SCons.Script import *
 from os.path import join
 
 
+##
+# @brief  Generates additional defines to be included from configuration file
+#
+# @param chip_config Configuration file
+#
+# @retval   Additional defines to be added
 def generate_defines(chip_config):
     defines = []
     for key, val in chip_config["defines"].items():
@@ -16,6 +29,15 @@ def generate_defines(chip_config):
     return defines
 
 
+##
+# @brief  Configures chip for the build system
+#
+# @note Not to be called directly
+#
+# @param env Environment to be worked on
+# @param config_file Chip configuration to be used
+#
+# @retval   Dictionary of lists with different configurations to be appeneded to build system
 def _configure_chip(env, config_file):
     REPO_ROOT_DIR = env["REPO_ROOT_DIR"]
     KNOWN_CHIPS_FILE = REPO_ROOT_DIR.File("site_scons/chips.yaml")
@@ -149,9 +171,19 @@ def _configure_chip(env, config_file):
     return ret
 
 
+##
+# @brief  Generate configuration support for SCons
+#
+# @param env Environment to be worked on
+#
+# @retval   None
 def generate(env):
     env.AddMethod(_configure_chip, "ChipConfig")
 
 
+##
+# @brief Shows module exists 
+#
+# @retval   True
 def exists():
     return True
