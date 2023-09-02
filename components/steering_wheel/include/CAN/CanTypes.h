@@ -72,7 +72,21 @@ typedef struct
     uint8_t                  lengthBytes;
     CAN_data_T               data;
     CAN_TxMailbox_E          mailbox;
-} CAN_TxMessage_t;
+} CAN_TxMessage_T;
+
+typedef struct
+{
+    uint16_t                 id;
+
+    CAN_IdentifierLen_E      IDE;
+    CAN_RemoteTransmission_E RTR;
+
+    uint8_t                  lengthBytes;
+    CAN_data_T               data;
+
+    uint16_t                 timestamp;
+    uint8_t                  filterMatchIndex;
+} CAN_RxMessage_T;
 
 typedef bool (*packFn)(CAN_data_T *messsage, const int counter);
 

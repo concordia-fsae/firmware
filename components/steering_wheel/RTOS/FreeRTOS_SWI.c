@@ -110,13 +110,13 @@ void RTOS_SWI_Init(void)
     for (uint32_t pri = 0UL; pri < (uint32_t)RTOS_SWI_PRI_COUNT; pri++)
     {
         // create event group for this priority
-        rtos.swiEvents[pri] = xEventGroupCreateStatic(&eventGroups[0]);
+        rtos.swiEvents[pri] = xEventGroupCreateStatic(&eventGroups[pri]);
 
         StaticTask_t* swiTask;
         StackType_t * swiTaskStack;
         uint32_t      swiTaskStackSize;
         // allocate memory for this task
-        RTOS_getSwiTaskmemory((RTOS_swiPri_E)pri, &swiTask, &swiTaskStack, &swiTaskStackSize);
+        RTOS_getSwiTaskMemory((RTOS_swiPri_E)pri, &swiTask, &swiTaskStack, &swiTaskStackSize);
 
         // create the task
         rtos.swiTasks[pri].handle = xTaskCreateStatic(&swiTaskFxn,               // handler function

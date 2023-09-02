@@ -34,6 +34,10 @@ void HW_CAN_Init(void);
 
 bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len);
 
+bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx);
+uint8_t CAN_getRxFifoFillLevelBus0(CAN_RxFifo_E rxFifo);
+bool CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo);
+
 #ifdef __cplusplus
 }
 #endif

@@ -18,9 +18,10 @@
 #include "Screen.h"
 #include "VEH_sigTx.h"
 
-#include "Display/Common.h"
-
 #include "string.h"
+
+// imports for data access
+#include "IO.h"
 
 
 /******************************************************************************
@@ -49,14 +50,14 @@
 typedef struct
 {
     uint8_t txBusA10msIdx;
-} canio_tx_S;
+} cantx_S;
 
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static canio_tx_S canio_tx;
+static cantx_S cantx;
 
 
 /******************************************************************************
@@ -64,17 +65,14 @@ static canio_tx_S canio_tx;
  ******************************************************************************/
 
 // signal packing functions
+// FIXME: Update variables here to reference actual GPIO struct
+#define set_switch0Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch0);
+#define set_switch1Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch1);
+#define set_switch3Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch3);
+#define set_switch4Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch4);
+#define set_button0Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.btn0);
+#define set_button1Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.btn1);
 
-#define set_switch0Status(m, b, n, s)    set_value(m, b, n, s, 0U);
-#define set_switch1Status(m, b, n, s)    set_value(m, b, n, s, 1U);
-#define set_switch3Status(m, b, n, s)    set_value(m, b, n, s, 1U);
-#define set_switch4Status(m, b, n, s)    set_value(m, b, n, s, 0U);
-#define set_button0Status(m, b, n, s)    set_value(m, b, n, s, 0U);
-#define set_button1Status(m, b, n, s)    set_value(m, b, n, s, 1U);
-
-/******************************************************************************
- *                     P R I V A T E  F U N C T I O N S
- ******************************************************************************/
 
 // TODO: the following file should be auto-generated
 // NOTE: must be included after signal packing functions are defined
@@ -113,18 +111,22 @@ static const packTable_S* packNextMessage(const packTable_S *packTable,
 }
 
 
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
 /**
- * CAN_BUS_A_10ms_SWI
+ * CANTX_BUS_A_10ms_SWI
  * send BUS_A messages
  */
-void CAN_BUS_A_10ms_SWI(void)
+void CANTX_BUS_A_10ms_SWI(void)
 {
     // TODO: add overrun detection here
 
     static uint8_t    counter = 0U;
     CAN_data_T        message;
 
-    const packTable_S *entry = packNextBusMessage(BUS_A, 10ms, &canio_tx.txBusA10msIdx, &message, &counter);
+    const packTable_S *entry = packNextBusMessage(BUS_A, 10ms, &cantx.txBusA10msIdx, &message, &counter);
 
     if (entry != NULL)
     {
@@ -134,23 +136,19 @@ void CAN_BUS_A_10ms_SWI(void)
 }
 
 
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
 /**
  * CANIO_tx_100Hz_PRD
  * module 100Hz periodic function
  */
 static void CANIO_tx_100Hz_PRD(void)
 {
-    static uint8_t tim = 0;
-
-    if (tim++ == 9U)
-    {
-        tim = 0;
-        toggleInfoDotState(INFO_DOT_CAN_TX);
-    }
-
     // transmit 100Hz messages
-    canio_tx.txBusA10msIdx = 0U;
-    SWI_invoke(CAN_BUS_A_10ms_swi);
+    cantx.txBusA10msIdx = 0U;
+    SWI_invoke(CANTX_BUS_A_10ms_swi);
 }
 
 /**
@@ -168,7 +166,7 @@ static void CANIO_tx_10Hz_PRD(void)
  */
 static void CANIO_tx_init(void)
 {
-    memset(&canio_tx, 0x00, sizeof(canio_tx));
+    memset(&cantx, 0x00, sizeof(cantx));
     CAN_Start();    // start CAN
 }
 

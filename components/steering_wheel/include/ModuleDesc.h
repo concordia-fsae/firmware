@@ -31,4 +31,5 @@ typedef struct
  */
 extern const ModuleDesc_S IO_desc;
 extern const ModuleDesc_S Screen_desc;
+extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;

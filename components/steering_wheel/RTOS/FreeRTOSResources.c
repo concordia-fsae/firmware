@@ -68,7 +68,8 @@ extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
 
 // SWIs
-RTOS_swiHandle_T *CAN_BUS_A_10ms_swi;
+RTOS_swiHandle_T *CANRX_BUS_A_swi;
+RTOS_swiHandle_T *CANTX_BUS_A_10ms_swi;
 
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
@@ -226,7 +227,8 @@ void RTOS_createResources(void)
     /*
      * create SWI handles
      */
-    CAN_BUS_A_10ms_swi = SWI_create(RTOS_SWI_PRI_1, &CAN_BUS_A_10ms_SWI);
+    CANRX_BUS_A_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_BUS_A_SWI);
+    CANTX_BUS_A_10ms_swi = SWI_create(RTOS_SWI_PRI_1, &CANTX_BUS_A_10ms_SWI);
 
     /*
      * Create tasks
@@ -322,14 +324,14 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
 
 
 /**
- * RTOS_getSwiTaskmemory
+ * RTOS_getSwiTaskMemory
  * @brief allocate memory for the SWI tasks
  * @param swiPriority priority of the SWI task this is being called for
  * @param ppxSwiTaskTCBBuffer pointer to resultant task memory for this SWI priority
  * @param ppxSwiTaskStackBuffer pointer to the resultant stack for this SWI priority
  * @param pusSwiTaskStackSize pointer to the stack size var for this SWI priority
  */
-void RTOS_getSwiTaskmemory(RTOS_swiPri_E swiPriority,
+void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
                            StaticTask_t **ppxSwiTaskTCBBuffer,
                            StackType_t **ppxSwiTaskStackBuffer,
                            uint32_t *pusSwiTaskStackSize)

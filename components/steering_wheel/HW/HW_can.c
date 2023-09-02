@@ -11,17 +11,27 @@
 #include "CAN/CAN.h"
 #include "CAN/CanTypes.h"
 
-
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 // which CAN interrupts we want to enable
 // stm32f1xx_hal_can.h from ST drivers for description of each one
+// Description of interrupts:
+// CAN_IER_TMEIE  Transmit Mailbox Empty
+// CAN_IER_FMPIEx FIFO x Message Pending (RX FIFO)
+// CAN_IER_FFIEx  FIFO x Full
+// CAN_IER_FOVIEx FIFO x Overrun
+// CAN_IER_WKUIE  Wakeup Interrupt
+// CAN_IER_SLKIE  Sleep Interrupt
+// CAN_IER_EWGIE  Error Warning Interrupt
+// CAN_IER_EPVIE  Error Passive Interrupt
+// CAN_IER_BOFIE  Bus Off Interrupt
+// CAN_IER_LECIE  Last Error Code Interrupt
+// CAN_IER_ERRIE  Error Interrupt
 #define CAN_ENABLED_INTERRUPTS    (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
-                                   CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_WKUIE | \
-                                   CAN_IER_SLKIE | CAN_IER_EWGIE | CAN_IER_EPVIE | CAN_IER_BOFIE |   \
-                                   CAN_IER_LECIE | CAN_IER_ERRIE)
+                                   CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
+                                   CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
 
 
 /******************************************************************************
@@ -61,7 +71,7 @@ void HW_CAN_Init(void)
     hcan.Init.TimeTriggeredMode    = DISABLE;
     hcan.Init.AutoBusOff           = DISABLE;
     hcan.Init.AutoWakeUp           = DISABLE;
-    hcan.Init.AutoRetransmission   = DISABLE;
+    hcan.Init.AutoRetransmission   = ENABLE;
     hcan.Init.ReceiveFifoLocked    = DISABLE;
     hcan.Init.TransmitFifoPriority = DISABLE;
 
@@ -72,6 +82,19 @@ void HW_CAN_Init(void)
 
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
+
+    CAN_FilterTypeDef filt = { 0U };
+    filt.FilterBank = 0;
+    filt.FilterMode = CAN_FILTERMODE_IDLIST;
+    filt.FilterScale = CAN_FILTERSCALE_16BIT;
+    // All filters are shifted left 5 bits
+    filt.FilterIdHigh = 0x2460;          // 0x123
+    filt.FilterIdLow = 0x2480;           // 0x124
+    filt.FilterMaskIdHigh = 0x24A0;      // 0x125
+    filt.FilterMaskIdLow = 0x24C0;       // 0x126
+    filt.FilterFIFOAssignment = 0;
+    filt.FilterActivation = ENABLE;
+    HAL_CAN_ConfigFilter(&hcan, &filt);
 }
 
 
@@ -95,7 +118,7 @@ static bool CAN_checkMbFree(CAN_HandleTypeDef *canHandle, CAN_TxMailbox_E mailbo
  * @param msg message data
  * @return exit code
  */
-static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_t msg)
+static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_T msg)
 {
     HAL_CAN_StateTypeDef state = canHandle->State;
 
@@ -159,7 +182,7 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
  */
 bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len)
 {
-    CAN_TxMessage_t msg;
+    CAN_TxMessage_T msg;
 
     msg.id          = id;
     msg.data        = data;
@@ -167,6 +190,168 @@ bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id,
     msg.lengthBytes = len;
 
     return CAN_sendMsg(&hcan, msg) == HAL_OK;
+}
+
+
+/**
+ * CAN_getRxMessageBus0
+ * @brief  Get an CAN frame from the Rx FIFO zone into the message RAM.
+ * @param  rxFifo Fifo number of the received message to be read.
+ *         This parameter can be a value of @arg CAN_receive_FIFO_number.
+ * @param  rx pointer to a CAN_RxMessage_T where the message will be stored
+ * @retval HAL status
+ */
+bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx)
+{
+    if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
+    {
+        // Update error code
+        hcan.ErrorCode |= HAL_CAN_ERROR_NOT_INITIALIZED;
+
+        return false;
+    }
+
+    switch (rxFifo)
+    {
+        case CAN_RX_FIFO0:
+            // Check that the Rx FIFO 0 is not empty
+            if ((hcan.Instance->RF0R & CAN_RF0R_FMP0) == 0U)
+            {
+                // Update error code
+                hcan.ErrorCode |= HAL_CAN_ERROR_PARAM;
+
+                return false;
+            }
+            break;
+
+        case CAN_RX_FIFO1:
+            // Check that the Rx FIFO 1 is not empty
+            if ((hcan.Instance->RF1R & CAN_RF1R_FMP1) == 0U)
+            {
+                // Update error code
+                hcan.ErrorCode |= HAL_CAN_ERROR_PARAM;
+
+                return false;
+            }
+            break;
+
+        default:
+            // should never reach this state
+            return false;
+            break;
+    }
+
+    // Get the header
+    rx->IDE = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
+    rx->RTR = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
+
+    rx->id = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
+    rx->lengthBytes = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
+
+    rx->timestamp = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
+    rx->filterMatchIndex = (CAN_RDT0R_FMI & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_FMI_Pos;
+
+    // Get the data
+    rx->data.u64 = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
+    // aData[0] = (uint8_t)((CAN_RDL0R_DATA0 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA0_Pos);
+    // aData[1] = (uint8_t)((CAN_RDL0R_DATA1 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA1_Pos);
+    // aData[2] = (uint8_t)((CAN_RDL0R_DATA2 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA2_Pos);
+    // aData[3] = (uint8_t)((CAN_RDL0R_DATA3 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA3_Pos);
+    // aData[4] = (uint8_t)((CAN_RDH0R_DATA4 & hcan.Instance->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDH0R_DATA4_Pos);
+    // aData[5] = (uint8_t)((CAN_RDH0R_DATA5 & hcan.Instance->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDH0R_DATA5_Pos);
+    // aData[6] = (uint8_t)((CAN_RDH0R_DATA6 & hcan.Instance->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDH0R_DATA6_Pos);
+    // aData[7] = (uint8_t)((CAN_RDH0R_DATA7 & hcan.Instance->sFIFOMailBox[RxFifo].RDHR) >> CAN_RDH0R_DATA7_Pos);
+
+    // Release the FIFO
+    switch (rxFifo)
+    {
+        case CAN_RX_FIFO0:
+            SET_BIT(hcan.Instance->RF0R, CAN_RF0R_RFOM0);
+            /* HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE0); */
+            break;
+
+        case CAN_RX_FIFO1:
+            SET_BIT(hcan.Instance->RF1R, CAN_RF1R_RFOM1);
+            /* HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE1); */
+            break;
+
+        default:
+            // should never get here
+            break;
+    }
+
+    // Return function status
+    return true;
+}
+
+
+/**
+ * CAN_getRxFifoFillLevelBus0
+ * @brief  Return Bus0 Rx FIFO fill level.
+ * @param  rxFifo Rx FIFO.
+ *         This parameter can be a value of @arg CAN_receive_FIFO_number.
+ * @retval Number of messages available in Rx FIFO.
+ */
+uint8_t CAN_getRxFifoFillLevelBus0(CAN_RxFifo_E rxFifo)
+{
+    if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
+    {
+        // CAN peripheral is not ready
+        return 0U;
+    }
+
+    uint8_t fillLevel = 0U;
+    switch (rxFifo)
+    {
+        case CAN_RX_FIFO_0:
+            fillLevel = hcan.Instance->RF0R & CAN_RF0R_FMP0;
+            break;
+
+        case CAN_RX_FIFO_1:
+            fillLevel = hcan.Instance->RF0R & CAN_RF1R_FMP1;
+            break;
+
+        default:
+            // should never get here
+            break;
+    }
+
+    return fillLevel;
+}
+
+
+/**
+ * CAN_getRxFifoEmpty
+ * @brief  Return whether the RX FIFO is empty
+ * @param  rxFifo Rx FIFO.
+ *         This parameter can be a value of @arg CAN_receive_FIFO_number.
+ * @retval Number of messages available in Rx FIFO.
+ */
+bool CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo)
+{
+    if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
+    {
+        // CAN peripheral is not ready
+        return true;
+    }
+
+    bool empty;
+    switch (rxFifo)
+    {
+        case CAN_RX_FIFO_0:
+            empty = (hcan.Instance->RF0R & CAN_RF0R_FMP0) == 0UL;
+            break;
+
+        case CAN_RX_FIFO_1:
+            empty = (hcan.Instance->RF1R & CAN_RF1R_FMP1) == 0UL;
+            break;
+
+        default:
+            // should never get here
+            empty = true;
+            break;
+    }
+    return empty;
 }
 
 
@@ -185,16 +370,16 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
     {
         case CAN_TX_PRIO_1KHZ:
             // not yet implemented
-            // SWI_invokeFromISR(CAN_BUS_A_1ms_swi);
+            // SWI_invokeFromISR(CANTX_BUS_A_1ms_swi);
             break;
 
         case CAN_TX_PRIO_100HZ:
-            SWI_invokeFromISR(CAN_BUS_A_10ms_swi);
+            SWI_invokeFromISR(CANTX_BUS_A_10ms_swi);
             break;
 
         case CAN_TX_PRIO_10HZ:
             // not yet implemented
-            // SWI_invokeFromISR(CAN_BUS_A_100ms_swi);
+            // SWI_invokeFromISR(CANTX_BUS_A_100ms_swi);
             break;
 
         default:
@@ -213,7 +398,8 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
 static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
     UNUSED(canHandle);
-    UNUSED(fifoId);
+    CANRX_BUS_A_notify(fifoId);
+    SWI_invokeFromISR(CANRX_BUS_A_swi);
 }
 
 
@@ -296,6 +482,7 @@ void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 {
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE0);
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 }
 
@@ -306,6 +493,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 {
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE1);
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 }
 
@@ -317,6 +505,8 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
+    /* HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1); */
+    CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 }
 
 
@@ -327,6 +517,8 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
+    /* HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1); */
+    CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 }
 
 /**
@@ -369,10 +561,10 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-        HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_IRQ_PRIO, 0U);
-        HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN_IRQ_PRIO, 0U);
-        HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN_IRQ_PRIO, 0U);
-        HAL_NVIC_SetPriority(CAN1_RX1_IRQn, CAN_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN_TX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN_RX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN1_RX1_IRQn, CAN_RX_IRQ_PRIO, 0U);
 
         HAL_NVIC_EnableIRQ(CAN1_SCE_IRQn);
         HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);

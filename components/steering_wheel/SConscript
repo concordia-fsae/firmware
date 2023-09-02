@@ -109,6 +109,7 @@ DRIVERS_INCLUDE_DIRS = [
 
 LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("printf"),
+    LIBS_DIR.Dir("atomic"),
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -140,8 +141,11 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("SystemManager.c"),
     PROJECT_SOURCE_DIR.File("Module.c"),
     PROJECT_SOURCE_DIR.File("CAN/CANIO-tx.c"),
+    PROJECT_SOURCE_DIR.File("CAN/CANIO-rx.c"),
     PROJECT_SOURCE_DIR.File("IO.c"),
     PROJECT_SOURCE_DIR.File("Screen.c"),
+    PROJECT_SOURCE_DIR.File("Display/Pills.c"),
+    PROJECT_SOURCE_DIR.File("Display/Dots.c"),
 ]
 
 project_hw_files = [
@@ -237,7 +241,7 @@ env.Depends(built(), env["LINKSCRIPT"])
 env.Default("build")
 
 # setup additional targets
-env.Alias("cdb", env.CompilationDatabase())
+env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
 env.Alias("upload", env.flash(source="build/steering_wheel.bin"))
 env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
 

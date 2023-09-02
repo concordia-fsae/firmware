@@ -36,5 +36,5 @@ static bool pack_VEH_STW_switchStatus_10ms(CAN_data_T *message, const int counte
 }
 
 static const packTable_S BUS_A_packTable_10ms [] = {
-    { &pack_VEH_STW_switchStatus_10ms, 0x123, 1U },
+    { &pack_VEH_STW_switchStatus_10ms, 0x600, 1U },
 };
