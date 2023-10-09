@@ -1,0 +1,153 @@
+#!/usr/bin/python
+
+import SCons
+
+from os.path import splitext
+
+Import("*")
+
+PROJECT_DIR = Dir(".")
+PROJECT_SOURCE_DIR = Dir("src")
+# LIBS_DIR = Dir("#/embedded/libs")
+
+BUILD_DIR = Dir("build")
+ARTIFACT_NAME = "bootloader"
+
+OPENOCD_INTERFACE = "stlink"
+OPENOCD_BOARD = "stm32f103c8"
+
+env = Environment(tools=["arm-none-eabi", "st-flash", "openocd", "compilation_db"])
+
+env["REPO_ROOT_DIR"] = Dir("#")
+
+common_flags = [
+    "-mthumb",
+    "-mcpu=cortex-m3",
+    "-Os",  # optimize for size
+    # "-O0",
+]
+
+release_flags = []
+
+debug_flags = ["-g"]
+
+link_flags = [
+    "-Wl,--gc-sections",
+    "-Wl,--relax",
+    "-Wl,--print-memory-usage",
+    f"-Wl,-Map={BUILD_DIR.File(ARTIFACT_NAME + '.map').path}",
+    # "-Wl,--print-gc-sections",
+    # "--specs=nano.specs",
+    # "--specs=nosys.specs",
+]
+
+as_flags = [
+    # tell the assembler to run the c preprocessor on assembly files
+    "-xassembler-with-cpp",
+    # "-Wa,-adhlns=$(BUILDDIR)/$(subst $(suffix $<),.lst,$<)"
+]
+
+c_flags = [
+    "-std=c11",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    "-fstack-usage",
+    # https://stackoverflow.com/questions/26300819/why-gcc-compiled-c-program-needs-eh-frame-section%20
+    "-fno-asynchronous-unwind-tables",
+    "-nostdlib",
+    "-msoft-float",
+    # "-DSTM32F1",
+    # "-DSTM32F103xB",
+    # "-DUSE_HAL_DRIVER",
+    "-Wall",
+    "-Wcast-align",
+    "-Werror",
+    "-Wextra",
+    "-Wfloat-equal",
+    "-Wimplicit",
+    "-Winit-self",
+    "-Winline",
+    "-Wlogical-op",
+    "-Wmissing-prototypes",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+    "-Wpointer-arith",
+    "-Wredundant-decls",
+    "-Wreturn-type",
+    "-Wshadow",
+    "-Wunused",
+]
+
+inc_paths = [
+    "include/",
+    "include/HW",
+]
+
+src_files = [
+    PROJECT_DIR.File("src/main.c"),
+    PROJECT_DIR.File("src/CAN.c"),
+    PROJECT_DIR.File("src/HW/HW.c"),
+    PROJECT_DIR.File("src/HW/HW_CAN.c"),
+    PROJECT_DIR.File("src/HW/HW_CLK.c"),
+    PROJECT_DIR.File("src/HW/HW_CRC.c"),
+    PROJECT_DIR.File("src/HW/HW_FLASH.c"),
+    PROJECT_DIR.File("src/HW/HW_GPIO.c"),
+    PROJECT_DIR.File("src/HW/HW_NVIC.c"),
+    PROJECT_DIR.File("src/HW/HW_SYS.c"),
+    PROJECT_DIR.File("src/HW/HW_TIM.c"),
+    PROJECT_DIR.File("src/c_only_startup.S"),
+    PROJECT_DIR.File("src/cortexm3_macro.S"),
+]
+
+env.Append(
+    ASFLAGS=as_flags,
+    CPPPATH=inc_paths,
+    CCFLAGS=common_flags + c_flags + (release_flags if GetOption("release") else debug_flags),
+    LINKSCRIPT=File("STM32F103C8.ld"),
+    LINKFLAGS=link_flags
+    + common_flags
+    + (release_flags if GetOption("release") else debug_flags),
+)
+
+
+objs = []
+for src_file in src_files:
+    obj = BUILD_DIR.File(splitext(src_file)[0] + ".obj")
+    tar = [obj]
+    if "-fstack-usage" in c_flags:
+        tar.append(BUILD_DIR.File(splitext(src_file)[0] + ".su"))
+    env.Object(target=tar, source=src_file)
+    objs.append(obj)
+
+elf = env.Program(BUILD_DIR.File(ARTIFACT_NAME + ".elf"), objs)
+env.Depends(elf, env["LINKSCRIPT"])
+
+binary = env.Bin(source=BUILD_DIR.File(ARTIFACT_NAME + ".elf"))
+
+env.Default(binary)
+
+
+# asms target generates disassembled binaries
+def generate_asms():
+    asms = []
+    for obj in objs:
+        asms.append(env.Asm(source=obj))
+    asms.append(env.Asm(source=BUILD_DIR.File(ARTIFACT_NAME + ".elf")))
+    return asms
+
+env.Alias("asms", generate_asms())
+
+
+env.Alias("compiledb", env.CompilationDatabase())
+
+env.Alias("upload", env.flash(source=BUILD_DIR.File(ARTIFACT_NAME + ".bin")))
+env.Alias(
+    "openocd-gdb",
+    env.launch_gdb(
+        BUILD_DIR.File(ARTIFACT_NAME + ".elf"),
+        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
+        '-ex "monitor reset"',
+    ),
+)

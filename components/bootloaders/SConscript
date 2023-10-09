@@ -1,0 +1,2 @@
+#!/bin/bash
+SConscript("STM/stm32f103/SConscript")

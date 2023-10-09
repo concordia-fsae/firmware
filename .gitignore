@@ -1,3 +1,4 @@
+.git/
 .vim/
 .sconsign.dblite
 compile_commands.json

@@ -1,3 +1,5 @@
+bl:
+  path: components/bootloaders/
 heartbeat:
   path: components/heartbeat/
 network:
