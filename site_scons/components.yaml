@@ -2,3 +2,8 @@ stw:
   path: components/steering_wheel/
 network:
   path: network/
+
+sfb:
+  path: components/safety_board/
+network:
+  path: network/
