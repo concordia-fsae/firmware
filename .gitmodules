@@ -22,3 +22,6 @@
 [submodule "embedded/platforms/stm32/f1/hal"]
 	path = embedded/platforms/stm32/f1/hal
 	url = git@github.com:STMicroelectronics/stm32f1xx_hal_driver.git
+[submodule "embedded/libs/isotp"]
+	path = embedded/libs/isotp
+	url = git@github.com:lishen2/isotp-c.git

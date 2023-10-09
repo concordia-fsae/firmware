@@ -13,17 +13,19 @@ __STACK_SIZE = 0x400;
 __HEAP_SIZE = 0x200;
 
 __RAM_SIZE = 20K;
-__FLASH_SIZE = 8K;
+__FLASH_SIZE = 64K;
+__BOOT_FLASH_SIZE = 8K;
 
 __RAM_ORIGIN = 0x20000000;     /* don't change */
 __FLASH_ORIGIN = 0x8000000;    /* don't change */
+__FLASH_END = __FLASH_ORIGIN + __FLASH_SIZE;
 
 
 /* Memory definition */
 MEMORY
 {
     RAM      (rwx)    : ORIGIN = __RAM_ORIGIN,       LENGTH = __RAM_SIZE
-    FLASH    (rx)     : ORIGIN = __FLASH_ORIGIN,     LENGTH = __FLASH_SIZE
+    FLASH    (rx)     : ORIGIN = __FLASH_ORIGIN,     LENGTH = __BOOT_FLASH_SIZE
 }
 
 SECTIONS

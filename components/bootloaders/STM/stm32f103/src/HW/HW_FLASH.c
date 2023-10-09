@@ -22,13 +22,15 @@ static uint32_t getPageSize(void)
 {
     uint16_t *flashSize = (uint16_t *)(FLASH_SIZE_REG);
 
+    // chips with more than 128 pages of flash have pages of size 2k
+    // otherwise, pages are of size 1k
     if ((*flashSize & 0xFFFF) > 128U)
     {
-        return 0x800;
+        return 2048U;
     }
     else
     {
-        return 0x400;
+        return 1024U;
     }
 }
 
@@ -69,9 +71,12 @@ void FLASH_unlock(void)
  */
 bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
 {
+    FLASH_unlock();
     // FIXME: this can be checked once in a module-level init
     // instead of every time
     const uint16_t pageSize = getPageSize();
+
+    bool ret = true;
 
     // set the page erase bit
     SET_REG(FLASH_CR, GET_REG(FLASH_CR) | FLASH_CR_PER);
@@ -91,12 +96,11 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
 
         // verify page has been erased
         // verify 64 bits at a time
-        for (uint32_t *flashWord = (uint32_t*)startPageAddr; *flashWord < (pages * pageSize); *flashWord += 8)
+        for (uint32_t flashWord = startPageAddr; flashWord < (startPageAddr + (pages * pageSize)); flashWord += 4)
         {
-            // todo: confirm the erased pages are all Fs
             if ((*(volatile uint32_t *)flashWord) != 0xFFFFFFFFULL)
             {
-                return false;
+                ret = false;
             }
         }
     }
@@ -104,7 +108,32 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
     // clear the page erase bit
     SET_REG(FLASH_CR, GET_REG(FLASH_CR) & ~FLASH_CR_PER);
 
-    return true;
+    while (FLASH_BUSY())
+    {}
+
+    FLASH_lock();
+    return ret;
+}
+
+
+/*
+ * FLASH_eraseApp
+ * @brief erase the application's flash
+ */
+bool FLASH_eraseApp(void)
+{
+    // defined in the linker script
+    extern const uint8_t __FLASH_END[];
+    volatile const uint32_t appFlashPages = ((const uint32_t)__FLASH_END - APP_FLASH_START) / getPageSize();
+
+    bool result = false;
+
+    if (appFlashPages > 0U)
+    {
+        result = FLASH_erasePages(APP_FLASH_START, appFlashPages);
+    }
+
+    return result;
 }
 
 
