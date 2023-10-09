@@ -15,7 +15,15 @@
 #include "HW_CRC.h"
 #include "HW_pinmux.h"
 #include "Types.h"
+#include "UDS.h"
 #include "Utilities.h"
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern uint8_t __FLASH_END[];
 
 
 /******************************************************************************
@@ -43,26 +51,68 @@ void bootApp(uint32_t appAddr)
     // tell the chip where the app's vector table is
     SET_REG(SCB_VTOR, (volatile uint32_t)appAddr);
 
-    asm volatile("msr msp, %0"::"g"(*(volatile uint32_t *)appAddr));
+    asm volatile ("msr msp, %0" : : "g" (*(volatile uint32_t *)appAddr));
 
     appResetHandler();    // call the app's reset handler (effectively, actually boot the app)
 }
 
 
-static bool checkAppCrc(appDesc_S *appDesc)
+/*
+ * checkAppDescValid
+ * @brief check if the app descriptor at the start of the app's flash
+ *        contains valid records
+ */
+static bool checkAppDescValid(appDesc_S *appDesc)
 {
-    const uint16_t appLength = ((appDesc->appEnd - appDesc->appStart) / 4U);
-    const uint32_t calculatedAppCrc = CRC_mpeg2Calculate((uint32_t*)appDesc->appStart, appLength);
+    // TODO: clean this up
+    uint8_t valid = 0b111;
+
+    if (appDesc->appStart < APP_FLASH_START)
+    {
+        valid &= 0b110;
+    }
+
+    if (appDesc->appEnd >= (uint32_t)__FLASH_END)
+    {
+        valid &= 0b101;
+    }
+
+    if ((appDesc->appCrcLocation & 0x0FF00000) != 0x08000000)
+    {
+        valid &= 0b011;
+    }
 
     CAN_TxMessage_S msg = {
-        .id = 0x402,
-        .lengthBytes = 8U,
-        .mailbox = 2U,
-        .data.u32 = {
+        .id          = 0x400,
+        .lengthBytes =    1U,
+        .mailbox     =    2U,
+        .data.u32    = {
+            [0] = valid,
+        },
+    };
+    CAN_sendMsg(msg);
+
+    return(valid == 0b111);
+}
+
+
+static bool checkAppCrc(appDesc_S *appDesc)
+{
+    const uint16_t appLength        = ((appDesc->appEnd - appDesc->appStart) / 4U);
+    const uint32_t calculatedAppCrc = CRC_mpeg2Calculate((uint32_t*)appDesc->appStart, appLength);
+
+
+    // send result on CAN
+    CAN_TxMessage_S msg = {
+        .id          = 0x402,
+        .lengthBytes =    8U,
+        .mailbox     =    2U,
+        .data.u32    = {
             [0] = *(uint32_t*)appDesc->appCrcLocation,
             [1] = calculatedAppCrc,
         }
     };
+
     CAN_sendMsg(msg);
 
     return calculatedAppCrc == *(uint32_t*)appDesc->appCrcLocation;
@@ -85,6 +135,7 @@ void SYS_init(void)
     GPIO_init(pinmux, COUNTOF(pinmux));
     CRC_init();
     CAN_init();
+    UDS_init();
 }
 
 
@@ -183,8 +234,12 @@ resetType_E SYS_getResetType(void)
  */
 bool SYS_checkAppValid(appDesc_S *appDesc)
 {
-    bool appCrcValid = checkAppCrc(appDesc);
+    if (!checkAppDescValid(appDesc))
+    {
+        return false;
+    }
 
+    bool     appCrcValid = checkAppCrc(appDesc);
     uint32_t appStackPtr = *(volatile uint32_t *)(appDesc->appStart);
 
     // check that app stack pointer points somewhere in sram

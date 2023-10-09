@@ -9,6 +9,8 @@
 
 #include "CAN.h"
 #include "HW.h"
+#include "uds.h"
+#include "UDS.h"
 #include "Utilities.h"
 
 #include <string.h>    // memset
@@ -36,6 +38,14 @@ static void periodic_1kHz(void)
     msg.data.u64    = 0x8000000000000001ULL;
     msg.mailbox     = 0U;
     CAN_sendMsg(msg);
+
+    if (CAN.rxMsg.id == UDS_REQUEST_ID)
+    {
+        udsSrv_processMessage(CAN.rxMsg.data.u8, CAN.rxMsg.lengthBytes);
+        memset(&CAN.rxMsg, 0x00, sizeof(CAN.rxMsg));
+    }
+
+    UDS_periodic_1kHz();
 }
 
 
@@ -188,71 +198,14 @@ int main(void)
             {
                 timerMs = 1U;
             }
+
+            // try to boot if UDS is not inhibiting it
+            if (!UDS_shouldInhibitBoot())
+            {
+                tryBoot();
+            }
         }
-    }
 
-    bool preventAppBoot = false;
-    bool dontWait       = false;
-
-    switch (SYS_getResetType())
-    {
-        case 0x01:
-            preventAppBoot = true;
-            GPIO_strobePin(LED_PORT, LED_PIN, STARTUP_BLINKS, BLINK_FAST, LED_ON_STATE);
-            break;
-
-        case 0x02:
-            dontWait = true;
-            break;
-
-        case 0x00:
-        default:
-#ifdef FASTBOOT
-            dontWait = true;
-#else
-            GPIO_strobePin(LED_PORT, LED_PIN, STARTUP_BLINKS, BLINK_FAST, LED_ON_STATE);
-#endif
-
-            if (!SYS_checkAppValid())
-            {
-                preventAppBoot = true;
-            }
-            else if (readButtonState())
-            {
-                preventAppBoot = true;
-#ifdef FASTBOOT
-                dontWait       = false;
-#endif
-            }
-            break;
-    }
-
-    if (!dontWait)
-    {
-        uint8_t delayCount = 0;
-
-        while ((delayCount < BOOTLOADER_WAIT) || preventAppBoot)
-        {
-            GPIO_strobePin(LED_PORT, LED_PIN, 1, BLINK_SLOW, LED_ON_STATE);
-#if 0
-            if (dfuUploadStarted())
-            {
-                dfuFinishUpload();    // systemHardReset from DFU once done
-            }
-#endif
-            delayCount++;
-        }
-    }
-
-    if (SYS_checkAppValid())
-    {
-        SYS_bootApp();
-    }
-    else
-    {
-        // Nothing to execute in either Flash or RAM
-        GPIO_strobePin(LED_PORT, LED_PIN, 5, BLINK_SLOW, LED_ON_STATE);
-        SYS_resetHard();
     }
 
     return 0;

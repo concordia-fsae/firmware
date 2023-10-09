@@ -51,6 +51,7 @@ void               FLASH_unlock(void);
 
 bool               FLASH_erasePages(uint32_t pageAddr, uint16_t pages);
 static inline bool FLASH_erasePage(uint32_t pageAddr)            { return FLASH_erasePages(pageAddr, 1U); }
+bool               FLASH_eraseApp(void);
 
 bool               FLASH_writeWords(uint32_t addr, uint32_t *data, uint16_t dataLen);
 static inline bool FLASH_writeWord(uint32_t addr, uint32_t data) { return FLASH_writeWords(addr, &data, 1U); };
