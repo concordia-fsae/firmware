@@ -1,32 +1,35 @@
 ##
 # @file dox.py
-# @brief  SCons python tool for Doxygen integration
+# @brief Adds support for doxygen 
 # @author Joshua Lafleur (josh.lafleur@outlook.com)
-# @version 0.1
-# @date 2022-08-27
+# @date 2023-11-07
 
 from SCons.Script import *
 
+def _get_doxygen_cmd(config_file):
+    env["doxyconf"] = config_file
+    return f"doxygen $config_file"
 
-##
-# @brief  Generates the helper actions in SCons
-#
-# @param env SCons environment to work on
-#
-# @retval   None
+
 def generate(env):
-    # @brief Adds the bash command as a builder to the environment
-    env['BUILDERS']['dox'] = SCons.Builder.Builder(
-        action = f"doxygen -g $SOURCE"
+    '''
+    Generates the SCons tools in the environment
+    @param Environment variable to be modified
+    @retval None
+    '''
+
+    env.AddMethod(_get_doxygen_cmd, "doxygen")
+    env["DOXYGEN"] = "/bin/doxygen"
+
+    env["BUILDERS"]["doxygen"] = SCons.Builder.Builder(
+        #action="$DOXYGEN $SOURCE $args",
+        action="echo 'Building documentation...'"
     )
 
-
-##
-# @brief  Shows that this module exists
-#
-# @note     Included for forward compatibility
-#
-# @retval   True
 def exists():
+    '''
+    SCons function showing module exists
+    @note Included for forward compatibility
+    @retval True
+    '''
     return True
-
