@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from os.path import splitext
+import glob
 
 from SCons.Script import *
 
@@ -19,7 +20,7 @@ OPENOCD_INTERFACE = "stlink"
 OPENOCD_BOARD = "stm32f103c8"
 
 
-env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd"])
+env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd", "doxygen"])
 rtos_env = Environment(tools=["arm-none-eabi"])
 
 env.Tool("compilation_db")
@@ -240,9 +241,11 @@ env.Alias("build", built())
 env.Depends(built(), env["LINKSCRIPT"])
 env.Default("build")
 
-print(env.Dump())
-env.Alias("doc", env.doxygen("doxygen_stw.conf"))
-env.Depends("doc", built())
+env["DOXYGENDIR"] = Dir("#/docs/components/docs-stw/")
+env["DOXYGENCONF"] = File("doxygen_stw.conf")
+env.Alias("doc", env.doxygen("$DOXYGENCONF"))
+doxygen_files = list(glob.glob(str(env["DOXYGENDIR"]), recursive=True))
+env.Clean("build", doxygen_files)
 
 # setup additional targets
 env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
