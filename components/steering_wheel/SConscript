@@ -243,9 +243,9 @@ env.Default("build")
 
 env["DOXYGENDIR"] = Dir("#/docs/components/docs-stw/")
 env["DOXYGENCONF"] = File("doxygen_stw.conf")
-env.Alias("doc", env.doxygen("$DOXYGENCONF"))
-doxygen_files = list(glob.glob(str(env["DOXYGENDIR"]), recursive=True))
-env.Clean("build", doxygen_files)
+env.Alias("doc", env.Doxygen("$DOXYGENCONF"))
+#doxygen_files = list(glob.glob(str(env["DOXYGENDIR"]), recursive=True))
+#env.Clean("build", doxygen_files)
 
 # setup additional targets
 env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
