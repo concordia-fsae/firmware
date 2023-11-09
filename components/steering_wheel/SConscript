@@ -232,20 +232,19 @@ objs.extend(compile_objects(rtos_env, rtos_source_files, override_dir="FreeRTOS/
 # compile project source files
 objs.extend(compile_objects(env, project_source_files))
 
+# link objects into hex
+env.Program("build/steering_wheel", objs)
 ## done compiling
 
-# setup default target which links all object files, builds the program,
-# and generates a HEX file
-built = lambda: env.Program("build/steering_wheel", objs)
-env.Alias("build", built())
-env.Depends(built(), env["LINKSCRIPT"])
-env.Default("build")
+# setup hex file as default target
+env.Default("build/steering_wheel.bin")
+# make sure we recompile for changes in the linker
+env.Depends("build/steering_wheel.bin", env["LINKSCRIPT"])
 
-env["DOXYGENDIR"] = Dir("#/docs/components/docs-stw/")
-env["DOXYGENCONF"] = File("doxygen_stw.conf")
-env.Alias("doc", env.Doxygen("$DOXYGENCONF"))
-#doxygen_files = list(glob.glob(str(env["DOXYGENDIR"]), recursive=True))
-#env.Clean("build", doxygen_files)
+# build doxygen files for this component
+env.Alias("docs", env.Doxygen("doxygen_stw.conf"))
+env.Depends("docs", project_source_files)
+env.Clean("docs", Dir("docs"))
 
 # setup additional targets
 env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
