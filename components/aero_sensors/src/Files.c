@@ -45,19 +45,21 @@ void Files_Init(char* heading, char* structure)
 
     f_mount(&fs, "/", 1);
     f_open(&file, "config.txt", FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
-    
+
     for (char* i = heading; *i != 0x00; i++)
         heading_cnt++;
     for (char* i = structure; *i != 0x00; i++)
         structure_cnt++;
 
+    state = FS_READY; //Could be bug seeing as State needs to be ready by default
     Files_Write(heading, heading_cnt);
     Files_Write(structure, structure_cnt);
 
     f_close(&file);
 
-    f_open(&file, (char*)&curr_file, FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
-    state = FS_PAUSE;
+   f_open(&file, (char*)&curr_file, FA_OPEN_ALWAYS | FA_READ | FA_WRITE);
+   state = FS_PAUSE;
+  // f_mount(0, "", 0); Need to unmount device at end of program
 }
 
 /**

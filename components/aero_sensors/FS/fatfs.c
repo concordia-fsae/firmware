@@ -33,7 +33,7 @@
  ******************************************************************************/
 
 #define SD_SPI_INTERFACE ((SPI_TypeDef*)SPI2) /**< SD Interface on SPI2 */
-#define SD_INIT_TIMEOUT  1000
+#define SD_INIT_TIMEOUT  100
 #define SD_WAIT_TIMEOUT  500
 #define SD_RCVR_TIMEOUT  200
 
@@ -102,6 +102,7 @@ DSTATUS sd_init(BYTE drv);
 DSTATUS sd_status(BYTE drv);
 DRESULT sd_read(BYTE byte, BYTE* buff, DWORD sector, UINT count);
 DRESULT sd_write(BYTE drv, const BYTE* buff, DWORD sector, UINT count);
+DRESULT sd_ioctl(BYTE drv,BYTE cmd,void *buff);
 /**
  * End FatFS Generic Interface
  */
@@ -115,6 +116,7 @@ static const Diskio_drvTypeDef disk_driver = {
     .disk_status     = &sd_status,
     .disk_read       = &sd_read,
     .disk_write      = &sd_write,
+    .disk_ioctl      = &sd_ioctl,
 };
 
 static uint8_t CardStatus;
@@ -125,7 +127,7 @@ uint32_t sdTimerTickDelay;
 
 char path[4];
 
-uint8_t semaphore;
+uint8_t semaphore = 0;
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -164,27 +166,31 @@ static uint8_t wait_ready(uint32_t wait)
 
     do {
         res = xchg_sd(0xff);
-    } while (res != 0xff && (timStart - HAL_GetTick() < wait));
+    } while (res != 0xff && (HAL_GetTick() - timStart < wait));
 
     return (res == 0xff) ? 1 : 0;
 }
 
 /**
- * @brief  Select the CS of the SD
+ * @brief  Probe the sd card and wait for response
  *
  * @retval   1: OK, 0: Timout
  */
 static inline uint8_t card_select(void)
 {
-    /**< Current implementation has no CS and no other SPI peripheral */
-    return 1;
+	xchg_sd(0xFF);	/** Dummy clock (force DO enabled) */
+	if (wait_ready(500)) return 1;	/** Wait for card ready */
+
+	card_deselect();
+	return 0;	/** Timeout */
 }
 /**
- * @brief  Deslect SD CS
+ * @brief  Give time for sd card before delecting it
  */
 static inline void card_deselect(void)
 {
     /**< Current implementation has no CS and no other SPI peripheral */
+	xchg_sd(0xFF);	/** Dummy clock (force DO hi-z for multiple slave SPI) */
 }
 
 /**
@@ -241,7 +247,7 @@ static void start_timer(uint32_t wait)
 /**
  * @brief  Returns the status of the timer
  *
- * @retval   0: Valid, 1: Invalid
+ * @retval   1: Valid, 0: Invalid
  */
 static uint8_t timer_status(void)
 {
@@ -268,7 +274,7 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
             return res;
     }
 
-    if (cmd != CMD12) /**< Select card and wait for ready */
+    if (cmd != CMD12 && cmd != CMD0) /**< Select card and wait for ready */
     {
         card_deselect();
         if (!card_select())
@@ -277,9 +283,9 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
 
     /**< Send command packet */
     xchg_sd(0x40 | cmd); /**< Start + Command */
-    xchg_sd((BYTE)arg >> 24);
-    xchg_sd((BYTE)arg >> 16);
-    xchg_sd((BYTE)arg >> 8);
+    xchg_sd((BYTE)(arg >> 24));
+    xchg_sd((BYTE)(arg >> 16));
+    xchg_sd((BYTE)(arg >> 8)); 
     xchg_sd((BYTE)arg);
 
     n = 0x01; /**< Dummy CRC + Stop */
@@ -297,6 +303,7 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
         res = xchg_sd(0xff);
     } while ((res & 0x80) && --n);
 
+     /**< Current implementation has no CS and no other SPI peripheral */
     return res;
 }
 
@@ -376,7 +383,7 @@ DSTATUS sd_init(BYTE drv)
 {
     uint8_t n, type, ocr[4], cmd;
 
-    if (!drv)
+    if (drv)
         return STA_NOINIT; /**< Support only drive 0 */
 
     FCLK_SLOW();
@@ -387,7 +394,7 @@ DSTATUS sd_init(BYTE drv)
     if (send_cmd(CMD0, 0) == 1) /**< Set card to idle state */
     {
         start_timer(SD_INIT_TIMEOUT);
-        if (send_cmd(CMD8, 0x1aa) == 1) /**< Is card SDv2? */
+        if (send_cmd(CMD8, 0x1AA) == 1) /**< Is card SDv2? */
         {
             for (n = 0; n < 4; n++) ocr[n] = xchg_sd(0xff); /**< Get 32 bit R7 response */
             if (ocr[2] == 0x01 && ocr[3] == 0xaa)           /**< Does the card support 2.7-3.7v? */
@@ -413,10 +420,11 @@ DSTATUS sd_init(BYTE drv)
                 type = CT_MMC;
                 cmd  = CMD1; /** MMCv3 and CMD1 */
             }
-            while (timer_status() && send_cmd(cmd, 0))
-                ;                                             /**< Wait for end of initialization */
+            while (timer_status() && send_cmd(cmd, 0)); /**< Wait for end of initialization */
             if (!timer_status() || send_cmd(CMD16, 512) != 0) /**< Set blocksize = 512 */
+            {
                 type = 0;
+            }
         }
     }
 
@@ -523,7 +531,7 @@ DRESULT sd_write(BYTE drv, const BYTE* buff, DWORD sector, UINT count)
             && xmit_datablock(buff, 0xFE))
         {
             count = 0;
-        }
+        }  
     }
     else
     { /* Multiple sector write */
@@ -545,6 +553,96 @@ DRESULT sd_write(BYTE drv, const BYTE* buff, DWORD sector, UINT count)
     return count ? RES_ERROR : RES_OK; /* Return result */
 }
 
+
+/**
+ * @brief  Control device specific features + miscellaneous functions other than Read/Write
+ * @param drv Drive number
+ * @param cmd Control command code
+ * @param buff Buffer to write from
+ * @retval   Result of SD ioctl
+ */
+#if _USE_IOCTL
+inline DRESULT sd_ioctl (
+	BYTE drv,		/* Physical drive number (0) */
+	BYTE cmd,		/* Control command code */
+	void *buff		/* Pointer to the conrtol data */
+)
+{
+	DRESULT res;
+	BYTE n, csd[16];
+	DWORD *dp, st, ed, csize;
+
+
+	if (drv) return RES_PARERR;	/* Check parameter */
+
+
+	res = RES_ERROR;
+
+	switch (cmd) {
+	case CTRL_SYNC :		/* Wait for end of internal write process of the drive */
+		if (card_select()) res = RES_OK;
+		break;
+
+	case GET_SECTOR_COUNT :	            /* Get drive capacity in unit of sector (DWORD) */
+		if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
+			if ((csd[0] >> 6) == 1) {	/* SDC ver 2.00 */
+				csize = csd[9] + ((WORD)csd[8] << 8) + ((DWORD)(csd[7] & 63) << 16) + 1;
+				*(DWORD*)buff = csize << 10;
+			} else {					/* SDC ver 1.XX or MMC ver 3 */
+				n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+				csize = (csd[8] >> 6) + ((WORD)csd[7] << 2) + ((WORD)(csd[6] & 3) << 10) + 1;
+				*(DWORD*)buff = csize << (n - 9);
+			}
+			res = RES_OK;
+		}
+		break;
+
+	case GET_BLOCK_SIZE :	                /* Get erase block size in unit of sector (DWORD) */
+		if (CardType & CT_SD2) {	        /* SDC ver 2.00 */
+			if (send_cmd(ACMD13, 0) == 0) {	/* Read SD status */
+				xchg_sd(0xFF);
+				if (rcvr_datablock(csd, 16)) {				    /* Read partial block */
+					for (n = 64 - 16; n; n--) xchg_sd(0xFF);	/* Purge trailing data */
+					*(DWORD*)buff = 16UL << (csd[10] >> 4);
+					res = RES_OK;
+				}
+			}
+		} else {					        /* SDC ver 1.XX or MMC */
+			if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {	/* Read CSD */
+				if (CardType & CT_SD1) {	/* SDC ver 1.XX */
+					*(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
+				} else {					/* MMC */
+					*(DWORD*)buff = ((WORD)((csd[10] & 124) >> 2) + 1) * (((csd[11] & 3) << 3) + ((csd[11] & 224) >> 5) + 1);
+				}
+				res = RES_OK;
+			}
+		}
+		break;
+
+	case CTRL_TRIM :	                                /* Erase a block of sectors (used when _USE_ERASE == 1) */
+		if (!(CardType & CT_SDC)) break;				/* Check if the card is SDC */
+		if (sd_ioctl(drv, MMC_GET_CSD, csd)) break;	    /* Get CSD */
+		if (!(csd[0] >> 6) && !(csd[10] & 0x40)) break;	/* Check if sector erase can be applied to the card */
+		dp = buff; st = dp[0]; ed = dp[1];				/* Load sector block */
+		if (!(CardType & CT_BLOCK)) {
+			st *= 512; ed *= 512;
+		}
+		if (send_cmd(CMD32, st) == 0 && send_cmd(CMD33, ed) == 0 && send_cmd(CMD38, 0) == 0 && wait_ready(30000)) {	/* Erase sector block */
+			res = RES_OK;	/* FatFs does not check result of this command */
+		}
+		break;
+
+	default:
+		res = RES_PARERR;
+	}
+
+	card_deselect();
+
+	return res;
+}
+#endif
+
+
 /**
  * End of FatFS Generic Interface
  */
@@ -565,12 +663,7 @@ int ff_cre_syncobj(              /* 1:Function succeeded, 0:Could not create the
     UNUSED(vol);
     UNUSED(sobj);
     
-    if (!semaphore)
-    {
-        semaphore = ~0x00;
-        return 1;
-    }
-    return 0;
+    return 1;
 }
 
 

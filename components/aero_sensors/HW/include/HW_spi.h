@@ -27,7 +27,7 @@ extern SPI_TypeDef *spi2;
  ******************************************************************************/
 
 void HW_SPI_Init(void);
-void HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data);
+uint8_t HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data);
 void HW_SPI_Transmit16(SPI_TypeDef *hspi, uint16_t data);
 void HW_SPI_Transmit32(SPI_TypeDef *hspi, uint32_t data);
 uint8_t HW_SPI_TransmitReceive8(SPI_TypeDef *hspi, uint8_t data);
