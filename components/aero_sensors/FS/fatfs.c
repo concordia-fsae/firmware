@@ -1,4 +1,5 @@
 /**
+ * @file fatfs.h
  * @brief  Source code for the FatFS interface
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
  * @version 0.1
@@ -165,7 +166,7 @@ static uint8_t wait_ready(uint32_t wait)
 
     do {
         res = xchg_sd(0xff);
-    } while (res != 0xff && (HAL_GetTick() - timStart < wait)); //this was wrong
+    } while (res != 0xff && (HAL_GetTick() - timStart < wait));
 
     return (res == 0xff) ? 1 : 0;
 }
@@ -177,18 +178,19 @@ static uint8_t wait_ready(uint32_t wait)
  */
 static inline uint8_t card_select(void)
 {
-	xchg_sd(0xFF);	/* Dummy clock (force DO enabled) */
-	if (wait_ready(500)) return 1;	/* Wait for card ready */
+	xchg_sd(0xFF);	/** Dummy clock (force DO enabled) */
+	if (wait_ready(500)) return 1;	/** Wait for card ready */
 
 	card_deselect();
-	return 0;	/* Timeout */
+	return 0;	/** Timeout */
 }
 /**
  * @brief  Give time for sd card before delecting it
  */
 static inline void card_deselect(void)
 {
-	xchg_sd(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
+    /**< Current implementation has no CS and no other SPI peripheral */
+	xchg_sd(0xFF);	/** Dummy clock (force DO hi-z for multiple slave SPI) */
 }
 
 /**
@@ -260,8 +262,6 @@ static uint8_t timer_status(void)
  *
  * @retval   R1 resp (bit7==1:Failed)
  */
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 static BYTE send_cmd(BYTE cmd, DWORD arg)
 {
     BYTE n, res;
@@ -274,20 +274,19 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
             return res;
     }
 
-    if (cmd != CMD12 && cmd != CMD0) /**< Select card and wait for ready */ //CMD0 doesn't need a probe as it is done in sd_init
+    if (cmd != CMD12 && cmd != CMD0) /**< Select card and wait for ready */
     {
         card_deselect();
         if (!card_select())
             return 0xff;
     }
 
-
     /**< Send command packet */
     xchg_sd(0x40 | cmd); /**< Start + Command */
-    xchg_sd((BYTE) (arg >> 24));
-    xchg_sd((BYTE) (arg >> 16));
-    xchg_sd((BYTE) (arg >> 8)); 
-    xchg_sd((BYTE) arg) ;
+    xchg_sd((BYTE)(arg >> 24));
+    xchg_sd((BYTE)(arg >> 16));
+    xchg_sd((BYTE)(arg >> 8)); 
+    xchg_sd((BYTE)arg);
 
     n = 0x01; /**< Dummy CRC + Stop */
     if (cmd == CMD0)
@@ -304,9 +303,9 @@ static BYTE send_cmd(BYTE cmd, DWORD arg)
         res = xchg_sd(0xff);
     } while ((res & 0x80) && --n);
 
+     /**< Current implementation has no CS and no other SPI peripheral */
     return res;
 }
-#pragma GCC pop_options
 
 /**
  * @brief Transmit a block of data to the SD card
@@ -395,15 +394,14 @@ DSTATUS sd_init(BYTE drv)
     if (send_cmd(CMD0, 0) == 1) /**< Set card to idle state */
     {
         start_timer(SD_INIT_TIMEOUT);
-        // FIXME: CMD8 returns COM CRC ERROR
         if (send_cmd(CMD8, 0x1AA) == 1) /**< Is card SDv2? */
         {
             for (n = 0; n < 4; n++) ocr[n] = xchg_sd(0xff); /**< Get 32 bit R7 response */
             if (ocr[2] == 0x01 && ocr[3] == 0xaa)           /**< Does the card support 2.7-3.7v? */
             {
-                while (timer_status() && send_cmd(ACMD41, 0x00)) //TODO check arg for ACMD41
+                while (timer_status() && send_cmd(ACMD41, 0x01 << 30))
                     ;                                          /**< Wait for end of initialization with ACMD41 */
-                if (timer_status() && send_cmd(CMD58, 0) == 0) /**< Check CCS bit in OCR */ //TODO Check Response / ocr output
+                if (timer_status() && send_cmd(CMD58, 0) == 0) /**< Check CCS bit in OCR */
                 {
                     for (n = 0; n < 4; n++) ocr[n] = xchg_sd(0xff);
                     type = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2; /**< Card ID SDv2 */
@@ -528,13 +526,12 @@ DRESULT sd_write(BYTE drv, const BYTE* buff, DWORD sector, UINT count)
         sector *= 512; /* LBA ==> BA conversion (byte addressing cards) */
 
     if (count == 1)
-    {                                   /* Single sector write */
+    {                                      /* Single sector write */
         if ((send_cmd(CMD24, sector) == 0) /* WRITE_BLOCK */
             && xmit_datablock(buff, 0xFE))
         {
             count = 0;
-        }
-        
+        }  
     }
     else
     { /* Multiple sector write */
@@ -559,11 +556,9 @@ DRESULT sd_write(BYTE drv, const BYTE* buff, DWORD sector, UINT count)
 
 /**
  * @brief  Control device specific features + miscellaneous functions other than Read/Write
- *
  * @param drv Drive number
  * @param cmd Control command code
  * @param buff Buffer to write from
- *
  * @retval   Result of SD ioctl
  */
 #if _USE_IOCTL
@@ -578,7 +573,7 @@ inline DRESULT sd_ioctl (
 	DWORD *dp, st, ed, csize;
 
 
-	if (drv) return RES_PARERR;					/* Check parameter */
+	if (drv) return RES_PARERR;	/* Check parameter */
 
 
 	res = RES_ERROR;
@@ -588,7 +583,7 @@ inline DRESULT sd_ioctl (
 		if (card_select()) res = RES_OK;
 		break;
 
-	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (DWORD) */
+	case GET_SECTOR_COUNT :	            /* Get drive capacity in unit of sector (DWORD) */
 		if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
 			if ((csd[0] >> 6) == 1) {	/* SDC ver 2.00 */
 				csize = csd[9] + ((WORD)csd[8] << 8) + ((DWORD)(csd[7] & 63) << 16) + 1;
@@ -602,17 +597,17 @@ inline DRESULT sd_ioctl (
 		}
 		break;
 
-	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (DWORD) */
-		if (CardType & CT_SD2) {	/* SDC ver 2.00 */
+	case GET_BLOCK_SIZE :	                /* Get erase block size in unit of sector (DWORD) */
+		if (CardType & CT_SD2) {	        /* SDC ver 2.00 */
 			if (send_cmd(ACMD13, 0) == 0) {	/* Read SD status */
 				xchg_sd(0xFF);
-				if (rcvr_datablock(csd, 16)) {				/* Read partial block */
+				if (rcvr_datablock(csd, 16)) {				    /* Read partial block */
 					for (n = 64 - 16; n; n--) xchg_sd(0xFF);	/* Purge trailing data */
 					*(DWORD*)buff = 16UL << (csd[10] >> 4);
 					res = RES_OK;
 				}
 			}
-		} else {					/* SDC ver 1.XX or MMC */
+		} else {					        /* SDC ver 1.XX or MMC */
 			if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {	/* Read CSD */
 				if (CardType & CT_SD1) {	/* SDC ver 1.XX */
 					*(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
@@ -624,9 +619,9 @@ inline DRESULT sd_ioctl (
 		}
 		break;
 
-	case CTRL_TRIM :	/* Erase a block of sectors (used when _USE_ERASE == 1) */
+	case CTRL_TRIM :	                                /* Erase a block of sectors (used when _USE_ERASE == 1) */
 		if (!(CardType & CT_SDC)) break;				/* Check if the card is SDC */
-		if (sd_ioctl(drv, MMC_GET_CSD, csd)) break;	/* Get CSD */
+		if (sd_ioctl(drv, MMC_GET_CSD, csd)) break;	    /* Get CSD */
 		if (!(csd[0] >> 6) && !(csd[10] & 0x40)) break;	/* Check if sector erase can be applied to the card */
 		dp = buff; st = dp[0]; ed = dp[1];				/* Load sector block */
 		if (!(CardType & CT_BLOCK)) {
