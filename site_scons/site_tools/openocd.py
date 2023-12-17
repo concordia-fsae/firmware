@@ -28,7 +28,7 @@ def _get_openocd_cmd(env, interface, board):
         env["interface"] = interface
         env["board"] = board
         ret = (
-            f'openocd -s {OPENOCD_DIR.path} -f $interface -f $board -c "gdb_port pipe"'
+            f'/opt/openocd/bin/openocd -s {OPENOCD_DIR.path} -f $interface -f $board -c "gdb_port pipe"'
         )
     else:
         print("Interface or Board file does not exist")
