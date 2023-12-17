@@ -1,0 +1,277 @@
+#!/usr/bin/python3
+from os.path import splitext
+import glob
+
+from SCons.Script import *
+
+Import("*")
+
+RTOS_DIR = Dir("RTOS")
+PROJECT_SOURCE_DIR = Dir("src")
+PROJECT_HW_DIR= Dir("HW")
+PROJECT_LIB_DIR = Dir("lib")
+LIBS_DIR = Dir("#/embedded/libs")
+FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
+CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
+PROJECT_CELLS_DIR = Dir("cells")
+PROJECT_THERMS_DIR = Dir("thermistors")
+
+BUILD_DIR = Dir("build")
+
+OPENOCD_INTERFACE = "stlink"
+OPENOCD_BOARD = "stm32f103c8"
+
+
+env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd"]) # "doxygen"])
+rtos_env = Environment(tools=["arm-none-eabi"])
+
+env.Tool("compilation_db")
+env["REPO_ROOT_DIR"] = Dir("#")
+
+common_flags = [
+    "-mthumb",
+    "-mcpu=cortex-m3",
+]
+
+debug_flags = [
+    "-ggdb2",
+    "-g2",
+    "-Og",
+]
+
+release_flags = [
+    "-O2",
+]
+
+link_flags = [
+    "-Wl,--gc-sections,--relax,--print-memory-usage",
+    f"-Wl,-Map={BUILD_DIR.File('bms_worker.map').path}",
+    # "-Wl,--print-gc-sections",
+    "--specs=nano.specs",
+    "--specs=nosys.specs",
+]
+
+as_flags = ["-xassembler-with-cpp"]
+
+c_flags = [
+    "-std=c11",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    "-fstack-usage",
+    "-nostdlib",
+    "-msoft-float",
+    "-DSTM32F1",
+    "-DSTM32F103xB",
+    "-DUSE_HAL_DRIVER",
+    "-DBMSW_BOARD_VA3",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wfloat-equal",
+    "-Wcast-align",
+    "-Wlogical-op",
+    "-Winline",
+    "-Wshadow",
+    "-Winit-self",
+    "-Wmissing-prototypes",
+    "-Wunused-function",
+    "-Wpointer-arith",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+]
+
+free_rtos_flags = [
+    "-Wno-missing-prototypes",
+    "-Wno-cast-align",
+]
+
+chip_config = env.ChipConfig(config_file="HW/mcuConfig.yaml")
+if "defines" in chip_config:
+    c_flags.append(chip_config["defines"])
+
+if GetOption("release"):
+    common_flags += release_flags
+else:
+    common_flags += debug_flags
+
+
+env["LINKFLAGS"] = [link_flags + common_flags]
+
+RTOS_INCLUDE_DIRS = [
+    RTOS_DIR.Dir("include"),
+    FREERTOS_DIR.Dir("Source/include/"),
+    FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
+    CMSIS_DIR.Dir("CMSIS/Core/Include/"),
+]
+
+DRIVERS_INCLUDE_DIRS = [
+    chip_config["cmsis_includes"],
+    chip_config["hal_includes"],
+]
+
+LIBS_INCLUDE_DIRS = [
+    LIBS_DIR.Dir("printf"),
+    LIBS_DIR.Dir("atomic"),
+]
+
+PROJECT_INCLUDE_DIRS = [
+    "include/",
+    "HW/include/",
+    "generated/",
+    "cells/",
+    "thermistors/",
+]
+
+paths = (
+    RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + PROJECT_INCLUDE_DIRS + LIBS_INCLUDE_DIRS
+)
+
+env.Append(
+    ASFLAGS=as_flags,
+    CPPPATH=paths,
+    CCFLAGS=common_flags + c_flags,
+    LINKSCRIPT=chip_config["linker_file"],
+)
+
+rtos_env.Append(
+    CPPPATH=paths,
+    CCFLAGS=common_flags + c_flags + free_rtos_flags,
+)
+
+# List of component C files
+
+project_source_files = [
+    PROJECT_SOURCE_DIR.File("SystemManager.c"),
+    PROJECT_SOURCE_DIR.File("Module.c"),
+    PROJECT_SOURCE_DIR.File("CAN/CANIO-tx.c"),
+    PROJECT_SOURCE_DIR.File("CAN/CANIO-rx.c"),
+    PROJECT_SOURCE_DIR.File("IO.c"),
+    PROJECT_SOURCE_DIR.File("Cooling.c"),
+    PROJECT_SOURCE_DIR.File("Environment.c"),
+    PROJECT_SOURCE_DIR.File("BatteryMonitoring.c"),
+    PROJECT_SOURCE_DIR.File("Sys.c"),
+    PROJECT_CELLS_DIR.File("P42A.c"),
+    PROJECT_THERMS_DIR.File("NCP21XV103J03RA.c"),
+]
+
+project_hw_files = [
+    PROJECT_HW_DIR.File("HW.c"),
+    PROJECT_HW_DIR.File("HW_adc.c"),
+    PROJECT_HW_DIR.File("HW_can.c"),
+    PROJECT_HW_DIR.File("HW_dma.c"),
+    PROJECT_HW_DIR.File("HW_gpio.c"),
+    PROJECT_HW_DIR.File("HW_i2c.c"),
+    PROJECT_HW_DIR.File("HW_intc.c"),
+    PROJECT_HW_DIR.File("HW_msp.c"),
+    PROJECT_HW_DIR.File("HW_spi.c"),
+    PROJECT_HW_DIR.File("HW_tim.c"),
+    PROJECT_HW_DIR.File("HW_Fans.c"),
+    PROJECT_HW_DIR.File("HW_HS4011.c"),
+    PROJECT_HW_DIR.File("HW_MAX14921.c"),
+    PROJECT_HW_DIR.File("HW_LTC2983.c"),
+    PROJECT_HW_DIR.File("HW_SHT40.c"),
+    PROJECT_HW_DIR.File("HW_NX3L4051PW.c"),
+]
+
+project_source_files += project_hw_files
+
+rtos_source_files = [
+    RTOS_DIR.File("FreeRTOSResources.c"),
+    RTOS_DIR.File("FreeRTOS_SWI.c"),
+    FREERTOS_DIR.File("Source/croutine.c"),
+    FREERTOS_DIR.File("Source/event_groups.c"),
+    FREERTOS_DIR.File("Source/list.c"),
+    FREERTOS_DIR.File("Source/queue.c"),
+    FREERTOS_DIR.File("Source/tasks.c"),
+    FREERTOS_DIR.File("Source/timers.c"),
+    FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
+    # FREERTOS_DIR.File("Source/stream_buffer.c"),
+    # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
+]
+
+platform_source_files = [
+#    (
+#        LIBS_DIR.File("printf/printf.c"),
+#        ["-Wno-float-equal", "-DPRINTF_INCLUDE_CONFIG_H"],
+#    ),
+]
+
+# add driver source files
+platform_source_files.extend(chip_config["sources"])
+
+# with open("env_dump.txt", "w") as file:
+#     env_dumped = env.Dump()
+#     for key in env_dumped:
+#         file.write(key)
+
+
+def create_output_file_path(file, new_ext, override_dir=None) -> str:
+    if not override_dir:
+        path = "/".join(file.path.split("/")[2:-1]) + "/"
+    else:
+        path = override_dir
+    fn = splitext(file.name)[0] + new_ext
+    return BUILD_DIR.File(path + fn)
+
+
+def compile_objects(env, files, extra_flags=[], override_dir=None):
+    objs = []
+    for i, src_file in enumerate(files):
+        object = create_output_file_path(src_file, ".obj", override_dir)
+        tar = [object]
+        if "-fstack-usage" in c_flags:
+            tar.append(create_output_file_path(src_file, '.su', override_dir))
+        flags = extra_flags[i] if extra_flags else []
+        env.Object(target=tar, source=src_file, CCFLAGS=env["CCFLAGS"]+flags)
+        objs.append(object)
+    return objs
+
+
+## actually compile stuff
+
+objs = []  # store objects here
+
+# compile platform files
+objs.extend(compile_objects(env, *list(zip(*platform_source_files)), override_dir="embedded/"))
+
+# compile rtos source files
+objs.extend(compile_objects(rtos_env, rtos_source_files, override_dir="FreeRTOS/"))
+
+# compile project source files
+objs.extend(compile_objects(env, project_source_files))
+
+elf = env.Program("build/bms_worker", objs)
+env.Depends(elf, env["LINKSCRIPT"])
+
+binary = env.Bin(source="build/bms_worker.elf")
+env.Default(binary)## link objects into hex
+
+# build doxygen files for this component
+#env.Alias("docs", env.Doxygen("doxygen_stw.conf"))
+#env.Depends("docs", project_source_files)
+#env.Clean("docs", Dir("docs"))
+
+# setup additional targets
+env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
+env.Alias("upload", env.flash(source="build/bms_worker.bin"))
+env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
+
+env.Alias(
+    "openocd-gdb",
+    env.launch_gdb(
+        "build/bms_worker.elf",
+        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
+        '-ex "monitor reset"',
+    ),
+)
+env.Alias(
+    "gdb",
+    env.launch_gdb(
+        "build/bms_worker.elf",
+        '-ex "target extended-remote localhost:3333"',
+        '-ex "monitor reset"',
+        '-ex load', # fixed an issue found when debugging IO global struct for aggregated Digital and Analog IO
+    ),
+)
