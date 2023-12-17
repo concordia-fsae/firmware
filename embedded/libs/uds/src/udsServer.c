@@ -112,7 +112,7 @@ static void manageSession(udsSessionType_E requestedSession)
  * handleTesterPresent
  * @brief handle a received tester present request and respond if necessary
  */
-static inline void handleTesterPresent(udsRequestDesc_S req)
+static inline void handleTesterPresent(udsRequestDesc_S *req)
 {
     // reset tester present timer whenever tp is received
     udsSrv.testerPresentTimerMs = 0U;
@@ -131,24 +131,24 @@ static inline void handleTesterPresent(udsRequestDesc_S req)
  * handleDiagnosticSessionControl
  * @brief handle a received diagnostic session control request
  */
-static inline void handleDiagnosticSessionControl(udsRequestDesc_S req)
+static inline void handleDiagnosticSessionControl(udsRequestDesc_S *req)
 {
-    if (req.payloadLengthBytes > 0U)
+    if (req->payloadLengthBytes > 0U)
     {
-        manageSession(req.payload[0]);
+        manageSession(req->payload[0]);
     }
 }
 
 
-static inline void handleEcuReset(udsRequestDesc_S req)
+static inline void handleEcuReset(udsRequestDesc_S *req)
 {
 #if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
     udsNegativeResponse_E resp      = UDS_NRC_GENERAL_REJECT;
     udsResetType_E        resetType = (udsResetType_E)0U;
 
-    if (req.payloadLengthBytes > 0U)
+    if (req->payloadLengthBytes > 0U)
     {
-        resetType = (udsResetType_E)req.payload[0];
+        resetType = (udsResetType_E)req->payload[0];
         resp      = uds_cb_ecuReset(resetType);
     }
 
@@ -166,26 +166,26 @@ static inline void handleEcuReset(udsRequestDesc_S req)
 }
 
 
-static inline void handleRoutineControl(udsRequestDesc_S req)
+static inline void handleRoutineControl(udsRequestDesc_S *req)
 {
 #if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
     udsRoutineControlType_E routineControlType = UDS_ROUTINE_CONTROL_NONE;
     uint8_t                 payloadLen         = 0U;
     uint8_t                 payloadStartIdx    = 0U;
 
-    if (req.payloadLengthBytes > 0U)
+    if (req->payloadLengthBytes > 0U)
     {
-        routineControlType = req.payload[0U];
-        if (req.payloadLengthBytes > 1U)
+        routineControlType = req->payload[0U];
+        if (req->payloadLengthBytes > 1U)
         {
-            payloadLen      = req.payloadLengthBytes - 1U;
+            payloadLen      = req->payloadLengthBytes - 1U;
             payloadStartIdx = 1U;
         }
     }
 
     udsNegativeResponse_E resp = uds_cb_routineControl(
         routineControlType,
-        &req.payload[payloadStartIdx],
+        &req->payload[payloadStartIdx],
         payloadLen
         );
 
@@ -197,7 +197,7 @@ static inline void handleRoutineControl(udsRequestDesc_S req)
     {
         // FIXME: this is bad code but I'm doing it anyway because I'm lazy and it'll _probably_ be fine
         // buffer overflow on read here is not a big deal
-        uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, routineControlType, &req.payload[1U], req.payloadLengthBytes + 1U);
+        uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, routineControlType, &req->payload[1U], req->payloadLengthBytes + 1U);
     }
 #else // if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
     uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SERVICE_NOT_SUPPORTED);
@@ -205,13 +205,43 @@ static inline void handleRoutineControl(udsRequestDesc_S req)
 }
 
 
+static inline void handleDownloadStart(udsRequestDesc_S *req)
+{
+#if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD)
+    uds_cb_transferStart(UDS_TRANSFER_TYPE_DOWNLOAD, req->payload, req->payloadLengthBytes);
+#else
+    uds_sendNegativeResponse(UDS_SID_DOWNLOAD_START, UDS_NRC_SERVICE_NOT_SUPPORTED);
+#endif
+}
+
+
+static inline void handleTransfer(udsRequestDesc_S *req)
+{
+#if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD) || defined(UDS_SERVICE_SUPPORTED_UPLOAD)
+    uds_cb_transferPayload(req->payload, req->payloadLengthBytes);
+#else
+    uds_sendNegativeResponse(UDS_SID_TRANSFER, UDS_NRC_SERVICE_NOT_SUPPORTED);
+#endif
+}
+
+
+static inline void handleTransferStop(udsRequestDesc_S *req)
+{
+#if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD) || defined(UDS_SERVICE_SUPPORTED_UPLOAD)
+    uds_cb_transferStop(req->payload, req->payloadLengthBytes);
+#else
+    uds_sendNegativeResponse(UDS_SID_TRANSFER_STOP, UDS_NRC_SERVICE_NOT_SUPPORTED);
+#endif
+}
+
+
 /*
  * udsSrv_handleReceive
  * @brief handles received completed uds message
  */
-static udsResult_E udsSrv_handleReceive(udsRequestDesc_S req)
+static udsResult_E udsSrv_handleReceive(udsRequestDesc_S *req)
 {
-    switch (req.id)
+    switch (req->id)
     {
         case UDS_SID_TESTER_PRESENT:
             handleTesterPresent(req);
@@ -239,8 +269,15 @@ static udsResult_E udsSrv_handleReceive(udsRequestDesc_S req)
 
         // services required for downloads
         case UDS_SID_DOWNLOAD_START:
+            handleDownloadStart(req);
+            break;
+
         case UDS_SID_TRANSFER:
+            handleTransfer(req);
+            break;
+
         case UDS_SID_TRANSFER_STOP:
+            handleTransferStop(req);
             break;
 
         // harder to implement, or just not needed yet
@@ -260,10 +297,12 @@ static udsResult_E udsSrv_handleReceive(udsRequestDesc_S req)
         case UDS_SID_UPLOAD_START:
         case UDS_SID_FILE_TRANSFER:
             // not handled yet
+            uds_sendNegativeResponse(req->id, UDS_NRC_SERVICE_NOT_SUPPORTED);
             break;
 
         default:
             // unrecognized reqest, do nothing
+            uds_sendNegativeResponse(req->id, UDS_NRC_GENERAL_REJECT);
             break;
     }
     return UDS_RESULT_SUCCESS;
@@ -359,13 +398,14 @@ udsResult_E udsSrv_periodic(void)
     uint8_t receiveStatus = isotp_receive(&udsSrv.isoTpLink, payload, ISOTP_RX_BUF_SIZE, &parsedLen);
     if (receiveStatus == ISOTP_RET_OK)
     {
+        __attribute__((__aligned__(4U)))
         udsRequestDesc_S req =
         {
             .id                 = payload[0U],
             .payloadLengthBytes = parsedLen - 1U,
             .payload            = &payload[1U],
         };
-        ret = udsSrv_handleReceive(req);
+        ret = udsSrv_handleReceive(&req);
     }
 
     manageSession(0U);
@@ -397,9 +437,9 @@ uint32_t udsSrv_timeSinceLastTp(void)
  * uds_checkResponseRequired()
  * @bried check if the given request requires a response
  */
-bool uds_checkResponseRequired(udsRequestDesc_S req)
+bool uds_checkResponseRequired(udsRequestDesc_S *req)
 {
-    return (req.payloadLengthBytes == 0U) || !(req.payload[0] & UDS_RESPONSE_NOT_REQUIRED);
+    return (req->payloadLengthBytes == 0U) || !(req->payload[0] & UDS_RESPONSE_NOT_REQUIRED);
 }
 
 

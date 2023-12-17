@@ -39,4 +39,11 @@
 
 
 // blocking delay
-#define BLOCKING_DELAY(cycles)    for (uint16_t i = 0U; i < cycles; i++) {asm volatile ("nop");}
+#define BLOCKING_DELAY(cycles)    for (uint16_t i = 0U; i < cycles; i++) { asm volatile ("nop"); }
+
+
+// pragma macros
+#define PRAGMA(x)         _Pragma(#x)
+#define DIAG_PUSH()       PRAGMA(GCC diagnostic push)
+#define DIAG_POP()        PRAGMA(GCC diagnostic pop)
+#define DIAG_IGNORE(x)    PRAGMA(GCC diagnostic ignored #x)

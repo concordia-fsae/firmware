@@ -14,3 +14,4 @@
 // supported UDS services
 #define UDS_SERVICE_SUPPORTED_ECU_RESET          true
 #define UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL    true
+#define UDS_SERVICE_SUPPORTED_DOWNLOAD           true

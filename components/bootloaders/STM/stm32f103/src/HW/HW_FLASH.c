@@ -138,8 +138,8 @@ bool FLASH_eraseApp(void)
 
 
 /*
- * FLASH_writeWord
- * @brief write the given word of data to the given address in flash
+ * FLASH_writeWords
+ * @brief write the given words of data starting at the given address in flash
  * @param addr uint32_t the address of the first word to write
  * @param data uint32_t* the words to write
  * @param dataLen uint16_t the number of words to write

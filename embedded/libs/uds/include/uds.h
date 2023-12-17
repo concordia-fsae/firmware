@@ -116,6 +116,14 @@ typedef enum
 
 typedef enum
 {
+    UDS_TRANSFER_TYPE_NONE = 0x00,
+    UDS_TRANSFER_TYPE_DOWNLOAD,
+    UDS_TRANSFER_TYPE_UPLOAD,
+} udsTransferType_E;
+
+
+typedef enum
+{
     UDS_NRC_NONE                               = 0x00,
     UDS_NRC_GENERAL_REJECT                     = 0x10,
     UDS_NRC_SERVICE_NOT_SUPPORTED              = 0x11,
@@ -179,6 +187,17 @@ typedef struct
 } udsRequestDesc_S;
 
 
+typedef struct
+{
+    uint8_t  compressionType:4U;
+    uint8_t  encryptionType :4U;
+    uint8_t  sizeLen        :4U;
+    uint8_t  addrLen        :4U;
+    uint32_t size;
+    uint32_t addr;
+} udsDownloadDesc_S;
+
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -195,7 +214,7 @@ uint32_t         udsSrv_timeSinceLastTp(void);
 // general functions
 udsResult_E uds_sendNegativeResponse(udsServiceId_E sid, udsNegativeResponse_E nrc);
 udsResult_E uds_sendPositiveResponse(udsServiceId_E sid, uint8_t subFunction, uint8_t *payload, uint8_t payloadLengthBytes);
-bool        uds_checkResponseRequired(udsRequestDesc_S req);
+bool        uds_checkResponseRequired(udsRequestDesc_S *req);
 
 
 /******************************************************************************
@@ -213,10 +232,35 @@ udsNegativeResponse_E uds_cb_sessionChangeAllowed(udsSessionType_E currentSessio
 
 /*
  * uds_cb_ecuReset
- * @brief performans a reset of the component
+ * @brief performs a reset of the component
  * @param resetType udsResetType_E the type of reset to perform
  */
 udsNegativeResponse_E uds_cb_ecuReset(udsResetType_E resetType);
 
 
+/*
+ * uds_cb_routineControl
+ * @brief callback after a uds routine control request
+ */
 udsNegativeResponse_E uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes);
+
+
+/*
+ * uds_cb_transferStart
+ * @brief callback after a uds transfer start request
+ */
+udsNegativeResponse_E uds_cb_transferStart(udsTransferType_E transferType, uint8_t *payload, uint8_t payloadLengthBytes);
+
+
+/*
+ * uds_cb_transferStop
+ * @brief callback after a uds transfer stop request
+ */
+udsNegativeResponse_E uds_cb_transferStop(uint8_t *payload, uint8_t payloadLengthBytes);
+
+
+/*
+ * uds_cb_transfer
+ * @brief callback after a uds transfer payload request
+ */
+udsNegativeResponse_E uds_cb_transferPayload(uint8_t *payload, uint8_t payloadLengthBytes);

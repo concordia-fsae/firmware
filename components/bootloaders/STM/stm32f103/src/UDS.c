@@ -20,17 +20,27 @@
 
 #include <string.h>
 
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+extern uint8_t __FLASH_END[];
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
 {
-    uint16_t appBootTimer;    // [ms] countdown timer until app will boot,
-                              // unless inhibited by UDS
+    uint16_t          appBootTimer;     // [ms] countdown timer until app will boot, unless inhibited by UDS
+
+    udsDownloadDesc_S downloadDesc;     // descriptor of the current download, if one is in progress
+    uint16_t          downloadCounter;  // sequence counter for the current download
+    uint32_t          downloadAddrCurr; // current address for writing the downloaded payload
     struct
     {
         bool udsTimoutExpired:1;
+        bool downloadStarted :1;
     } bit;
 } uds_S;
 
@@ -65,6 +75,13 @@ static void checkTimeoutExpired_1kHz(void)
 }
 
 
+/*
+ * routine_0xf00f
+ * @brief called when UDS routine 0xf00f is requested. Erases the app
+ * @param routineControlType whether to start, stop, or get results of routine
+ * @param payload payload data array
+ * @param payloadLengthBytes payload data array length
+ */
 static bool routine_0xf00f(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
 {
     UNUSED(payloadLengthBytes);
@@ -72,13 +89,15 @@ static bool routine_0xf00f(udsRoutineControlType_E routineControlType, uint8_t *
 
     bool result;
 
-    switch(routineControlType)
+    switch (routineControlType)
     {
         case UDS_ROUTINE_CONTROL_START:
             result = FLASH_eraseApp();
             break;
+
         case UDS_ROUTINE_CONTROL_GET_RESULT:
             break;
+
         case UDS_ROUTINE_CONTROL_STOP:
         case UDS_ROUTINE_CONTROL_NONE:
         default:
@@ -180,10 +199,145 @@ udsNegativeResponse_E uds_cb_routineControl(udsRoutineControlType_E routineContr
         case 0xf00f:
             routine_0xf00f(routineControlType, payload, payloadLengthBytes);
             break;
+
         default:
             break;
     }
 
+
+    return UDS_NRC_NONE;
+}
+
+
+/*
+ * uds_cb_transferStart
+ * @brief starts a UDS transfer
+ * @param transferType download or upload
+ * @param payload payload data array
+ * @param payloadLengthBytes payload data array length
+ */
+udsNegativeResponse_E uds_cb_transferStart(udsTransferType_E transferType, uint8_t* payload, uint8_t payloadLengthBytes)
+{
+    // only support downloads for now
+    if (transferType == UDS_TRANSFER_TYPE_UPLOAD)
+    {
+        return UDS_NRC_SERVICE_NOT_SUPPORTED;
+    }
+
+    // if download is already in progress, reject new one
+    if (uds.bit.downloadStarted)
+    {
+        return UDS_NRC_CONDITIONS_NOT_CORRECT;
+    }
+
+    // ensure payload is the right length for the data we expect to see in it
+    // TODO: define why this is 10
+    // should be obvious from looking at the definition of udsDownloaDesc_S, though
+    if (payloadLengthBytes == 10U)
+    {
+        return UDS_NRC_INVALID_LEN_FORMAT;
+    }
+
+    udsDownloadDesc_S downloadDesc;
+    memcpy(&downloadDesc, payload, 10U);
+
+    // we expect address and download size to be uint32
+    if ((downloadDesc.addrLen != 32U) || (downloadDesc.sizeLen != 32U))
+    {
+        return UDS_NRC_INVALID_LEN_FORMAT;
+    }
+
+    // ensure download address is actually in the app's flash region
+    if ((downloadDesc.addr < APP_FLASH_START) || (downloadDesc.addr > (uint32_t)__FLASH_END))
+    {
+        return UDS_NRC_REQUEST_OUT_OF_RANGE;
+    }
+
+    // ensure requested download size doesn't exceed app's flash
+    if ((APP_FLASH_START + downloadDesc.size) >= (uint32_t)__FLASH_END)
+    {
+        return UDS_NRC_REQUEST_OUT_OF_RANGE;
+    }
+
+    // if we made it to this point, all the parameters were acceptable, so allow the download to start
+    uds.downloadDesc        = downloadDesc;
+    uds.downloadAddrCurr    = downloadDesc.addr;
+    uds.bit.downloadStarted = true;
+
+    // respond with the length of the size parameter, and the size parameter itself
+    uint8_t resp[2] = { (1U << 4U), 64U };
+    uds_sendPositiveResponse(UDS_SID_DOWNLOAD_START, 0x00, resp, 2U);
+
+    return UDS_NRC_NONE;
+}
+
+
+/*
+ * uds_cb_transferStop
+ * @brief stops a UDS transfer
+ * @param payload payload data array
+ * @param payloadLengthBytes payload data array length
+ */
+udsNegativeResponse_E uds_cb_transferStop(uint8_t* payload, uint8_t payloadLengthBytes)
+{
+    UNUSED(payload);
+    UNUSED(payloadLengthBytes);
+
+    if (uds.bit.downloadStarted)
+    {
+        // reset the current download
+        uds.bit.downloadStarted = false;
+        uds.downloadCounter     = 0U;
+        uds.downloadAddrCurr    = 0U;
+        memset(&uds.downloadDesc, 0x00, 10U);
+
+        uds_sendPositiveResponse(UDS_SID_TRANSFER_STOP, 0x00, NULL, 0U);
+        return UDS_NRC_NONE;
+    }
+
+    return UDS_NRC_GENERAL_REJECT;
+}
+
+/*
+ * uds_cb_transferPayload
+ * @brief receives a block of the transfer payload
+ * @param payload payload data array
+ * @param payloadLengthBytes payload data array length
+ */
+udsNegativeResponse_E uds_cb_transferPayload(uint8_t* payload, uint8_t payloadLengthBytes)
+{
+    if (payloadLengthBytes < 2U)
+    {
+        return UDS_NRC_INVALID_LEN_FORMAT;
+    }
+
+    // first byte of payload is the block sequence counter
+    uint8_t counter = payload[0U];
+    if (counter != (uds.downloadCounter + 1U))
+    {
+        return UDS_NRC_BLOCK_SEQ_COUNTER_ERROR;
+    }
+
+    uds.downloadCounter++;
+
+    // temporary
+    if (payloadLengthBytes != 65U)
+    {
+        return UDS_NRC_SUBNET_NO_RESPONSE;
+    }
+
+    uint8_t lengthWords = (payloadLengthBytes - 1U) / 4U;
+
+DIAG_PUSH()
+DIAG_IGNORE(-Wcast-align)
+    bool result = FLASH_writeWords(uds.downloadAddrCurr, (uint32_t*)payload, lengthWords);
+DIAG_POP()
+
+    if (!result)
+    {
+        return UDS_NRC_PROGRAMMING_FAILED;
+    }
+    uds.downloadAddrCurr += lengthWords;
 
     return UDS_NRC_NONE;
 }
