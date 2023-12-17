@@ -41,31 +41,31 @@ extern void RTOS_createResources(void);
  */
 int main(void)
 {
-    // setup the system
-    // Reset all peripherals, Initializes the Flash interface and the Systick.
-    HAL_Init();
+   // setup the system
+   // Reset all peripherals, Initializes the Flash interface and the Systick.
+   HAL_Init();
 
-    // Configure the system clock
-    SystemClock_Config();
+   // Configure the system clock
+   SystemClock_Config();
 
-    // Initialize all configured peripherals
-    // order is important here, don't change without checking
-    // TODO: change all of these from MX to HW (wtf does MX mean?)
-    MX_GPIO_Init();
-    HW_CAN_Init();
-    MX_DMA_Init();
-    MX_ADC1_Init();
-    MX_SPI1_Init();
+   // // Initialize all configured peripherals
+   // // order is important here, don't change without checking
+   // // TODO: change all of these from MX to HW (wtf does MX mean?)
+   // MX_GPIO_Init();
+   // HW_CAN_Init();
+   // MX_DMA_Init();
+   // MX_ADC1_Init();
+   // MX_SPI1_Init();
 
-    // create the tasks, timers, etc.
-    RTOS_SWI_Init();
-    RTOS_createResources();
+   // // create the tasks, timers, etc.
+   // RTOS_SWI_Init();
+   // RTOS_createResources();
 
-    // run the module init
-    Module_init();
+   // // run the module init
+   // Module_init();
 
-    // init and start the scheduler
-    vTaskStartScheduler();
+   // // init and start the scheduler
+   // vTaskStartScheduler();
 
     return 0;
 }
