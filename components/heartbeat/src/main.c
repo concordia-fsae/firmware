@@ -30,8 +30,13 @@ const appDesc_S appDesc = {
 __attribute__((section(".testData")))
 const uint32_t testData = 0xFFFFFFFF;
 
+// make the binary bigger to exercise UDS app downloads
+__attribute__((__used__))
+volatile const uint32_t garbageData[1024] = { 0xFF };
+
 int main()
 {
+    if (garbageData[0] == 0xFF) {}
     setupCLK();
     setupLEDAndButton();
 

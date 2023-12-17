@@ -13,17 +13,11 @@
 #include "CAN.h"
 #include "HW.h"
 #include "HW_CRC.h"
+#include "HW_FLASH.h"
 #include "HW_pinmux.h"
 #include "Types.h"
 #include "UDS.h"
 #include "Utilities.h"
-
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-extern uint8_t __FLASH_END[];
 
 
 /******************************************************************************
@@ -72,7 +66,7 @@ static bool checkAppDescValid(appDesc_S *appDesc)
         valid &= 0b110;
     }
 
-    if (appDesc->appEnd >= (uint32_t)__FLASH_END)
+    if (appDesc->appEnd >= APP_FLASH_END)
     {
         valid &= 0b101;
     }
@@ -86,7 +80,7 @@ static bool checkAppDescValid(appDesc_S *appDesc)
         .id          = 0x400,
         .lengthBytes =    1U,
         .mailbox     =    2U,
-        .data.u32    = {
+        .data.u8     = {
             [0] = valid,
         },
     };
@@ -100,6 +94,7 @@ static bool checkAppCrc(appDesc_S *appDesc)
 {
     const uint16_t appLength        = ((appDesc->appEnd - appDesc->appStart) / 4U);
     const uint32_t calculatedAppCrc = CRC_mpeg2Calculate((uint32_t*)appDesc->appStart, appLength);
+    const uint32_t appDescCrc       = *(uint32_t*)appDesc->appCrcLocation;
 
 
     // send result on CAN
@@ -108,14 +103,18 @@ static bool checkAppCrc(appDesc_S *appDesc)
         .lengthBytes =    8U,
         .mailbox     =    2U,
         .data.u32    = {
-            [0] = *(uint32_t*)appDesc->appCrcLocation,
+            [0] = appDescCrc,
             [1] = calculatedAppCrc,
         }
     };
 
     CAN_sendMsg(msg);
 
-    return calculatedAppCrc == *(uint32_t*)appDesc->appCrcLocation;
+    return (appDescCrc != 0xFFFFFFFF)
+           && (appDescCrc != 0x00000000)
+           && (calculatedAppCrc != 0xFFFFFFFF)
+           && (calculatedAppCrc != 0x00000000)
+           && (calculatedAppCrc == appDescCrc);
 }
 
 
@@ -133,6 +132,7 @@ void SYS_init(void)
     CLK_init();
     TIM_init();
     GPIO_init(pinmux, COUNTOF(pinmux));
+    FLASH_init();
     CRC_init();
     CAN_init();
     UDS_init();

@@ -39,12 +39,6 @@ static void periodic_1kHz(void)
     msg.mailbox     = 0U;
     CAN_sendMsg(msg);
 
-    if (CAN.rxMsg.id == UDS_REQUEST_ID)
-    {
-        udsSrv_processMessage(CAN.rxMsg.data.u8, CAN.rxMsg.lengthBytes);
-        memset(&CAN.rxMsg, 0x00, sizeof(CAN.rxMsg));
-    }
-
     UDS_periodic_1kHz();
 }
 
@@ -204,6 +198,14 @@ int main(void)
             {
                 tryBoot();
             }
+        }
+
+        // handle continuing the flash erase here for now since there's no rtos
+        // normally we'd want there to be a dedicated task for flash and eeprom tasks like this
+        FLASH_eraseState_S eraseState = FLASH_getEraseState();
+        if (eraseState.started && !eraseState.completed)
+        {
+            FLASH_eraseAppContinue();
         }
 
     }

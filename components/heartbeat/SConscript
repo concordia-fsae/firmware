@@ -137,7 +137,7 @@ def calc_binary_crc(target, source, env):
     # crc initial value, per mpeg2 crc spec
     app_crc = 0xFFFFFFFF
     for word in struct.iter_unpack("<L", app_bytes):
-        app_crc = crc32.mpeg_2(word[0].to_bytes(4), app_crc)
+        app_crc = crc32.mpeg_2(word[0].to_bytes(length=4, byteorder="big"), app_crc)
 
     app_crc_packed = struct.pack("<L", app_crc)
 
@@ -150,6 +150,7 @@ def calc_binary_crc(target, source, env):
         fd_crc.write(app_header)
         fd_crc.write(app_bytes)
         fd_crc.write(app_crc_packed)
+        # fd_crc.write(0x00.to_bytes(4, byteorder="big"))
 
     return None
 
