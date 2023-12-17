@@ -23,6 +23,7 @@
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_spi.h"
+#include "HW_tim.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -43,23 +44,25 @@ int main(void)
 {
    // setup the system
    // Reset all peripherals, Initializes the Flash interface and the Systick.
-    // Enable GPIO clocks
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-
-    // Configure LED pin Output Level
-    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
    HAL_Init();
 
    // Configure the system clock
    SystemClock_Config();
 
+   HW_GPIO_Init();
+   HW_TIM1_Init();
+
+   HW_TIM1_setDuty(20);
+
+   
+   while(1)
+   {
+        HAL_Delay(1000);
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+   }
    // // Initialize all configured peripherals
    // // order is important here, don't change without checking
    // // TODO: change all of these from MX to HW (wtf does MX mean?)
-   // MX_GPIO_Init();
    // HW_CAN_Init();
    // MX_DMA_Init();
    // MX_ADC1_Init();

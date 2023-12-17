@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "HW_gpio.h"
+#include "include/SystemConfig.h"
 
 
 /******************************************************************************
@@ -18,7 +19,7 @@
  * MX_GPIO_Init
  * Configure pins as Analog, Input, Output, EVENT_OUT, or EXTI
  */
-void MX_GPIO_Init(void)
+void HW_GPIO_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
@@ -41,6 +42,7 @@ void MX_GPIO_Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
+    
 //    // Configure SPI_NSS pin
 //    GPIO_InitStruct.Pin   = SPI1_NSS_Pin;
 //    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;

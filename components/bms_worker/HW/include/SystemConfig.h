@@ -32,11 +32,18 @@
 // pin aliases
 
 // input pins
-#define SW5_Pin          GPIO_PIN_9
-#define SW5_GPIO_Port    GPIOB
+#define A0_Pin          GPIO_PIN_0
+#define A0_GPIO_Port    GPIOB
 
+#define A1_Pin          GPIO_PIN_7
+#define A1_GPIO_Port    GPIOA
+
+#define A2_Pin          GPIO_PIN_6
+#define A2_GPIO_Port    GPIOA
 
 // output pins
 #define LED_Pin               GPIO_PIN_13
 #define LED_GPIO_Port         GPIOC
 
+#define FAN_Pin               GPIO_PIN_8
+#define FAN_GPIO_Port         GPIOA

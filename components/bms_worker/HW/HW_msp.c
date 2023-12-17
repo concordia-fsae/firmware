@@ -21,5 +21,5 @@ void HAL_MspInit(void)
     HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
 
     // Enable SWD, disable JTAG
-    __HAL_AFIO_REMAP_SWJ_NOJTAG();
+    //__HAL_AFIO_REMAP_SWJ_NOJTAG();
 }
