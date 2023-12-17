@@ -43,6 +43,14 @@ int main(void)
 {
    // setup the system
    // Reset all peripherals, Initializes the Flash interface and the Systick.
+    // Enable GPIO clocks
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+
+    // Configure LED pin Output Level
+    HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
    HAL_Init();
 
    // Configure the system clock
