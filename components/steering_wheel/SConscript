@@ -31,8 +31,8 @@ common_flags = [
 ]
 
 debug_flags = [
-    "-ggdb2",
-    "-g2",
+    "-ggdb3",
+    "-g3",
     "-Og",
 ]
 
@@ -235,10 +235,11 @@ objs.extend(compile_objects(env, project_source_files))
 
 # setup default target which links all object files, builds the program,
 # and generates a HEX file
-built = lambda: env.Program("build/steering_wheel", objs)
-env.Alias("build", built())
-env.Depends(built(), env["LINKSCRIPT"])
-env.Default("build")
+elf = env.Program("build/steering_wheel", objs)
+env.Depends(elf, env["LINKSCRIPT"])
+
+binary = env.Bin(source="build/steering_wheel.elf")
+env.Default(binary)
 
 # setup additional targets
 env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))

@@ -124,7 +124,7 @@ static ScrState_E process_running(void)
  */
 static ScrState_E process_unavailable(void)
 {
-    EVE_InitStatus_E initStatus;
+    EVE_InitStatus_E initStatus = EVE_INIT_NONE;
     ScrState_E       nextState;
 
     // if init is NONE, we're booting up
@@ -134,11 +134,11 @@ static ScrState_E process_unavailable(void)
         initStatus = EVE_init(&scr.chipId);
     }
     // if init is not NONE then we're in an error state
-    else
-    {
-        initStatus = EVE_INIT_NONE;
-        scr.chipId = 0U;
-    }
+    // else
+    // {
+    //     initStatus = EVE_INIT_NONE;
+    //     scr.chipId = 0U;
+    // }
 
     // if global init status is NONE while local is SUCCESS, we just started up
     if ((SCR.initStatus == EVE_INIT_NONE) && (initStatus == EVE_INIT_SUCCESS))
@@ -151,6 +151,7 @@ static ScrState_E process_unavailable(void)
     // startup failed
     else if ((initStatus != EVE_INIT_SUCCESS) && (initStatus != EVE_INIT_NONE))
     {
+        SCR.initStatus = initStatus;
         nextState = SCR_STATE_INIT_ERROR;
     }
     else
@@ -204,6 +205,7 @@ static ScrState_E process_retry(void)
             scr.retryCount = 0;
             break;
         }
+        scr.retryCount++;
     }
 
     // if retries fail to get the screen working,
