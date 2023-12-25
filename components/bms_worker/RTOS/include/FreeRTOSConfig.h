@@ -57,7 +57,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_IDLE_HOOK                        (0)
 #define configUSE_TICK_HOOK                        (0)
 #define configCPU_CLOCK_HZ                         (SystemCoreClock)
-#define configTICK_RATE_HZ                         ((TickType_t)1000)
+#define configTICK_RATE_HZ                         ((TickType_t)10000)
 #define configMAX_PRIORITIES                       (16)
 #define configMAX_TASK_NAME_LEN                    (16)
 #define configUSE_TRACE_FACILITY                   (0)
@@ -128,6 +128,9 @@ extern uint32_t SystemCoreClock;
 /* !!!! configMAX_SYSCALL_INTERRUPT_PRIORITY must not be set to zero !!!!
  * See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY    (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
+
+/**< Define conversion from us to ticks */
+#define pdUS_TO_TICKS( xTimeInUs )    ( ( TickType_t ) ( ( ( TickType_t ) ( xTimeInUs ) * ( TickType_t ) configTICK_RATE_HZ ) / ( TickType_t ) 1000000U ) )
 
 /* Normal assert() semantics without relying on the provision of an assert.h
  * header file. */

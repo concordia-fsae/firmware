@@ -13,10 +13,7 @@
 #include "HW_can.h"
 
 #include "FreeRTOS_SWI.h"
-#include "MessagePack.h"
 #include "ModuleDesc.h"
-#include "Screen.h"
-#include "VEH_sigTx.h"
 
 #include "string.h"
 
@@ -27,16 +24,6 @@
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
-
-#define packTableName(bus, name)                            SNAKE3(bus, packTable, name)
-#define packTableLength(bus, name)                          SNAKE4(bus, packTable, name, length)
-#define packNextBusMessage(bus, name, idx, msg, counter)    packNextMessage(packTableName(bus, name), packTableLength(bus, name), idx, msg, counter)
-
-
-#define set_raw(msg, bus, node, signal, val)                 SNAKE4(setRaw, bus, node, signal)(msg, val)
-#define set_value(msg, bus, node, signal, val)               SNAKE4(set, bus, node, signal)(msg, val)
-#define set_scale(msg, bus, node, signal, val, base, off)    SNAKE4(set, bus, node, sig)(msg, val, base, off)
-#define unsent_signal(m)                                     UNUSED(m)
 
 
 /******************************************************************************
@@ -64,52 +51,6 @@ static cantx_S cantx;
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-// signal packing functions
-// FIXME: Update variables here to reference actual GPIO struct
-#define set_switch0Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch0);
-#define set_switch1Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch1);
-#define set_switch3Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch3);
-#define set_switch4Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.switch4);
-#define set_button0Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.btn0);
-#define set_button1Status(m, b, n, s)    set_value(m, b, n, s, IO.dig.btn1);
-
-
-// TODO: the following file should be auto-generated
-// NOTE: must be included after signal packing functions are defined
-#include "MessagePack.c"
-
-/**
- * packNextMessage
- * @param packTable packTable to send message from
- * @param packTableLength length of packTable
- * @param index current index
- * @param message message reference
- * @param nextCounter counter value for message
- * @return current packTable entry
- */
-static const packTable_S* packNextMessage(const packTable_S *packTable,
-                                          const uint8_t packTableLength,
-                                          uint8_t *index,
-                                          CAN_data_T *message,
-                                          uint8_t *nextCounter)
-{
-    while (*index < packTableLength)
-    {
-        const packTable_S *entry  = &packTable[(*index)++];
-        uint16_t          counter = *nextCounter;
-        if (*index == packTableLength)
-        {
-            (*nextCounter)++;
-        }
-        message->u64 = 0ULL;
-        if ((*entry->pack)(message, counter))
-        {
-            return entry;
-        }
-    }
-    return NULL;
-}
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -123,10 +64,10 @@ void CANTX_BUS_A_10ms_SWI(void)
 {
     // TODO: add overrun detection here
 
-    static uint8_t    counter = 0U;
+    // static uint8_t    counter = 0U;
     CAN_data_T        message;
 
-    const packTable_S *entry = packNextBusMessage(BUS_A, 10ms, &cantx.txBusA10msIdx, &message, &counter);
+    const packTable_S *entry = 0x00;
 
     if (entry != NULL)
     {

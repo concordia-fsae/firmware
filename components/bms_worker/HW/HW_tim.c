@@ -14,12 +14,12 @@
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
-TIM_HandleTypeDef htim1;
-
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
+
+TIM_HandleTypeDef htim1;
 
 
 /******************************************************************************
@@ -36,7 +36,7 @@ TIM_HandleTypeDef htim1;
  * @param  TickPriority Tick interrupt priority.
  * @return exit status
  */
-HAL_StatusTypeDef HW_TIM1_Init()
+HAL_StatusTypeDef HW_TIM_Init()
 {
     RCC_ClkInitTypeDef clkconfig;
     uint32_t           uwTimclock = 0;
@@ -131,14 +131,6 @@ HAL_StatusTypeDef HW_TIM1_Init()
 
 void HW_TIM1_setDuty(uint8_t percentage)
 {
-    if (percentage > 100)
-        percentage = 100;
-    else if (percentage <= 10 && percentage > 0)
-        percentage = 10;
-    else if (percentage < 25 && percentage > 10)
-        percentage = 10 + (uint16_t) percentage * 5/25;
-    else percentage -= 5;
-
     htim1.Instance->CCR1 = (uint16_t) (((uint32_t) percentage * htim1.Init.Period)/100);
 }
 

@@ -27,17 +27,18 @@
  ******************************************************************************/
 
 // which bit in the event group corresponds to each task
-#define PERIODIC_TASK_1kHz     (1U) << (0U)
-#define PERIODIC_TASK_100Hz    (1U) << (1U)
-#define PERIODIC_TASK_10Hz     (1U) << (2U)
-#define PERIODIC_TASK_1Hz      (1U) << (3U)
+#define PERIODIC_TASK_10kHz (1U) << (0U)
+#define PERIODIC_TASK_1kHz  (1U) << (1U)
+#define PERIODIC_TASK_100Hz (1U) << (2U)
+#define PERIODIC_TASK_10Hz  (1U) << (3U)
+#define PERIODIC_TASK_1Hz   (1U) << (4U)
 
 
 /******************************************************************************
  *                               M A C R O S
  ******************************************************************************/
 
-#define NUM_TASKS    (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
+#define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t))    // number of tasks in this module
 
 
 /******************************************************************************
@@ -52,6 +53,8 @@ EventGroupHandle_t PeriodicEvent;
 TimerHandle_t rtos_tick_timer;
 
 // task handle and stack definitions
+static StaticTask_t Task10kHz;
+static StackType_t  task10kHzStack[configMINIMAL_STACK_SIZE];
 static StaticTask_t Task1kHz;
 static StackType_t  task1kHzStack[configMINIMAL_STACK_SIZE];
 static StaticTask_t Task100Hz;
@@ -62,17 +65,32 @@ static StaticTask_t Task1Hz;
 static StackType_t  task1HzStack[configMINIMAL_STACK_SIZE];
 
 // module periodic tasks, defined in Module.h
+extern void Module_10kHz_TSK(void);
 extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
 
 // SWIs
-RTOS_swiHandle_T *CANRX_BUS_A_swi;
-RTOS_swiHandle_T *CANTX_BUS_A_10ms_swi;
+RTOS_swiHandle_T* CANRX_BUS_A_swi;
+RTOS_swiHandle_T* CANTX_BUS_A_10ms_swi;
 
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
+    {
+        .function    = &Module_10kHz_TSK,
+        .name        = "Task 10kHz",
+        .priority    = 5U,
+        .parameters  = NULL,
+        .stack       = task10kHzStack,
+        .stackSize   = sizeof(task10kHzStack) / sizeof(StackType_t),
+        .stateBuffer = &Task10kHz,
+        .event       = {
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_10kHz,
+        },
+        .periodMs = pdUS_TO_TICKS(100U),
+    },
     {
         .function    = &Module_1kHz_TSK,
         .name        = "Task 1kHz",
@@ -82,8 +100,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stackSize   = sizeof(task1kHzStack) / sizeof(StackType_t),
         .stateBuffer = &Task1kHz,
         .event       = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_1kHz,
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_1kHz,
         },
         .periodMs = pdMS_TO_TICKS(1U),
     },
@@ -96,8 +114,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stackSize   = sizeof(task100HzStack) / sizeof(StackType_t),
         .stateBuffer = &Task100Hz,
         .event       = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_100Hz,
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_100Hz,
         },
         .periodMs = pdMS_TO_TICKS(10U),
     },
@@ -110,8 +128,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stateBuffer = &Task10Hz,
         .parameters  = NULL,
         .event       = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_10Hz,
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_10Hz,
         },
         .periodMs = pdMS_TO_TICKS(100U),
     },
@@ -124,8 +142,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stateBuffer = &Task1Hz,
         .parameters  = NULL,
         .event       = {
-            .group = &PeriodicEvent,
-            .bit   = PERIODIC_TASK_1Hz,
+                  .group = &PeriodicEvent,
+                  .bit   = PERIODIC_TASK_1Hz,
         },
         .periodMs = pdMS_TO_TICKS(1000U),
     },
@@ -177,9 +195,9 @@ static void rtosTickTimer(TimerHandle_t xTimer)
  */
 static void taskFxn(void* parameters)
 {
-    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;   // convert the parameter back into a task description
+    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;    // convert the parameter back into a task description
 
-    void(*const function)(void) = task->function;           // get the function that will be called for this task
+    void (*const function)(void)    = task->function;       // get the function that will be called for this task
     EventGroupHandle_t* event_group = task->event.group;    // get the shared event group
     EventBits_t         event_bit   = task->event.bit;      // get the event bit for this task
 
@@ -227,7 +245,7 @@ void RTOS_createResources(void)
     /*
      * create SWI handles
      */
-    CANRX_BUS_A_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_BUS_A_SWI);
+    CANRX_BUS_A_swi      = SWI_create(RTOS_SWI_PRI_0, &CANRX_BUS_A_SWI);
     CANTX_BUS_A_10ms_swi = SWI_create(RTOS_SWI_PRI_1, &CANTX_BUS_A_10ms_SWI);
 
     /*
@@ -253,8 +271,8 @@ void RTOS_createResources(void)
 
     // 1kHz timer drives all tasks
     // TODO: should this be faster and/or interrupt (i.e. hardware timer) driven?
-    rtos_tick_timer = xTimerCreateStatic("Timer 1kHz",
-                                         pdMS_TO_TICKS(1),
+    rtos_tick_timer = xTimerCreateStatic("Timer 10kHz",
+                                         pdUS_TO_TICKS(100),
                                          pdTRUE,
                                          NULL,
                                          &rtosTickTimer,
@@ -331,10 +349,10 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
  * @param ppxSwiTaskStackBuffer pointer to the resultant stack for this SWI priority
  * @param pusSwiTaskStackSize pointer to the stack size var for this SWI priority
  */
-void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
-                           StaticTask_t **ppxSwiTaskTCBBuffer,
-                           StackType_t **ppxSwiTaskStackBuffer,
-                           uint32_t *pusSwiTaskStackSize)
+void RTOS_getSwiTaskMemory(RTOS_swiPri_E  swiPriority,
+                           StaticTask_t** ppxSwiTaskTCBBuffer,
+                           StackType_t**  ppxSwiTaskStackBuffer,
+                           uint32_t*      pusSwiTaskStackSize)
 {
     switch (swiPriority)
     {
