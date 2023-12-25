@@ -22,10 +22,9 @@
  ******************************************************************************/
 
 static const ModuleDesc_S* modules[] = {
-    &IO_desc,
-    &CANIO_rx,
-    &CANIO_tx,
-    &Screen_desc,
+//    &IO_desc,
+//    &CANIO_rx,
+//    &CANIO_tx,
 };
 
 
@@ -50,14 +49,35 @@ void Module_init(void)
 /*
  * Call the 1kHz periodic function for each module
  */
-void Module_1kHz_TSK(void)
+void Module_10kHz_TSK(void)
 {
     // static uint8_t tim = 0;
-    // if (++tim == 100U)
+    // if (++tim == 1000U)
     // {
     //     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
     //     tim = 0;
     // }
+    for (uint8_t i = 0U; i < COUNTOF(modules); i++)
+    {
+        if (modules[i]->periodic10kHz_CLK != NULL)
+        {
+            (*modules[i]->periodic10kHz_CLK)();
+        }
+    }
+}
+
+/*
+ * Call the 1kHz periodic function for each module
+ */
+void Module_1kHz_TSK(void)
+{
+    static uint16_t tim = 0;
+    if (++tim == 1000U)
+    {
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        tim = 0;
+    }
+    
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic1kHz_CLK != NULL)

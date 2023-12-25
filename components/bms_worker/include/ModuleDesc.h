@@ -15,6 +15,7 @@
 typedef struct
 {
     void (*moduleInit)(void);        // Pointer to module init function
+    void (*periodic10kHz_CLK)(void);  // Pointer to module 10kHz periodic function
     void (*periodic1kHz_CLK)(void);  // Pointer to module 1kHz periodic function
     void (*periodic100Hz_CLK)(void); // Pointer to module 100Hz periodic function
     void (*periodic10Hz_CLK)(void);  // Pointer to module 10Hz periodic function
@@ -30,6 +31,5 @@ typedef struct
  * Modules
  */
 extern const ModuleDesc_S IO_desc;
-extern const ModuleDesc_S Screen_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;

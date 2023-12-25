@@ -58,11 +58,11 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     htim4.Instance = TIM4;
 
     // Initialize TIMx peripheral as follow:
-    // Period = [(TIM4CLK/1000) - 1]. to have a (1/1000) s time base.
+    // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.
     // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
     // ClockDivision = 0
     // Counter direction = Up
-    htim4.Init.Period        = (1000000U / 1000U) - 1U;
+    htim4.Init.Period        = (1000000U / 10000) - 1U;
     htim4.Init.Prescaler     = uwPrescalerValue;
     htim4.Init.ClockDivision = 0;
     htim4.Init.CounterMode   = TIM_COUNTERMODE_UP;

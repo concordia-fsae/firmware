@@ -31,5 +31,5 @@
  * @param  TickPriority Tick interrupt priority.
  * @return exit status
  */
-HAL_StatusTypeDef HW_TIM1_Init(void);
+HAL_StatusTypeDef HW_TIM_Init(void);
 void HW_TIM1_setDuty(uint8_t);

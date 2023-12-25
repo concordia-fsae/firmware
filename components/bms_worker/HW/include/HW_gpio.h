@@ -12,6 +12,15 @@
 #include "SystemConfig.h"
 
 
+typedef GPIO_TypeDef HW_GPIO_TypeDef;
+typedef uint16_t HW_GPIO_Pin;
+
+typedef struct {
+    HW_GPIO_TypeDef *port;
+    HW_GPIO_Pin pin;
+} HW_GPIO_S;
+
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/

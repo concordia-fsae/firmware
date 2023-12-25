@@ -17,9 +17,6 @@
 #include "Utility.h"
 #include "string.h"
 
-// generated files
-#include "VEH_sigTx.h"
-
 
 /******************************************************************************
  *                              D E F I N E S
