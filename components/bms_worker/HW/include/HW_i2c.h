@@ -14,6 +14,8 @@
 
 #include "SystemConfig.h"
 
+#include "stdbool.h"
+
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -49,11 +51,11 @@ extern DMA_HandleTypeDef hdma_i2c2_tx;
  ******************************************************************************/
 
 void HW_I2C_Init(void);
-void HW_I2C_Master_Write(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size, uint32_t Timeout);
-void HW_I2C_Master_Read(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size, uint32_t Timeout);
-void HW_I2C_Mem_Read(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size, uint32_t Timeout);
-void HW_I2C_Mem_Write(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size, uint32_t Timeout);
-void HW_I2C_Master_Write_DMA(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size);
-void HW_I2C_Master_Read_DMA(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size);
-void HW_I2C_Mem_Read_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
-void HW_I2C_Mem_Write_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
+bool HW_I2C_Master_Write(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size, uint32_t Timeout);
+bool HW_I2C_Master_Read(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size, uint32_t Timeout);
+bool HW_I2C_Mem_Read(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size, uint32_t Timeout);
+bool HW_I2C_Mem_Write(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size, uint32_t Timeout);
+bool HW_I2C_Master_Write_DMA(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size);
+bool HW_I2C_Master_Read_DMA(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size);
+bool HW_I2C_Mem_Read_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
+bool HW_I2C_Mem_Write_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size);

@@ -54,8 +54,8 @@ void HW_SPI_Init(void)
     hspi1.ClockPolarity     = LL_SPI_POLARITY_LOW;
     hspi1.ClockPhase        = LL_SPI_PHASE_1EDGE;
     hspi1.NSS               = LL_SPI_NSS_SOFT;
-    hspi1.BaudRate          = LL_SPI_BAUDRATEPRESCALER_DIV64;
-    hspi1.BitOrder          = LL_SPI_LSB_FIRST;
+    hspi1.BaudRate          = LL_SPI_BAUDRATEPRESCALER_DIV128;
+    hspi1.BitOrder          = LL_SPI_MSB_FIRST;
     hspi1.CRCCalculation    = LL_SPI_CRCCALCULATION_DISABLE;
     hspi1.CRCPoly           = 0x00;
 
@@ -89,7 +89,7 @@ static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
         
         GPIO_InitStruct.Pin   = SPI1_MOSI_Pin;
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull  = GPIO_PULLUP;
+        GPIO_InitStruct.Pull  = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
 
@@ -98,9 +98,10 @@ static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
 
-        //__HAL_AFIO_REMAP_SPI1_ENABLE();
         LL_GPIO_AF_EnableRemap_SPI1();
-        
+       
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+
         GPIO_InitStruct.Pin  = SPI1_MAX_NCS_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;

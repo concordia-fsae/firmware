@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 /**< System Includes */
+# include "HW_i2c.h"
 # include "stdbool.h"
 # include "stdint.h"
 
@@ -43,9 +44,18 @@ typedef struct
 typedef struct
 {
     bool     measuring;
-    int16_t  temp;
-    uint16_t rh;
+    uint32_t raw;
+    int16_t  temp; /**< Stored in 0.1 deg C */
+    uint16_t rh; /**< Stored in 0.01% RH */
 } HS4011_Data_S;
+
+typedef struct
+{
+    HW_I2C_Device_S* dev;
+    uint32_t         serial_number;
+    HS4011_Config_S  config;
+    HS4011_Data_S    data;
+} HS4011_S;
 
 
 /******************************************************************************
@@ -64,9 +74,9 @@ typedef struct
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-bool          HS4011_Init(void);
-bool          HS4011_StartConversion(void);
-HS4011_Data_S HS4011_GetData(void);
+bool HS4011_Init(void);
+bool HS4011_StartConversion(void);
+bool HS4011_GetData(void);
 
 
 /******************************************************************************

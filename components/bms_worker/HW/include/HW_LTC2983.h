@@ -1,8 +1,8 @@
 /**
- * @file HW_MAX14921.h
- * @brief  Header file for MAX14921 Cell Measurement/Balancing IC
+ * @file HW_LTC2983.h
+ * @brief  Header file for LTC2983 Thermistor Sensor
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-23
+ * @date 2023-12-26
  */
 
 #pragma once
@@ -11,6 +11,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "HW_gpio.h"
 #include "HW_spi.h"
 #include "stdbool.h"
 #include "stdint.h"
@@ -29,79 +30,61 @@
  ******************************************************************************/
 
 typedef enum {
-    PN_14920 = 0b00,
-    PN_14921 = 0b10,
-    PN_ERROR = 0b11,
-} MAX_ProductID_E;
+    THERMOCOUPLE = 0x00,
+    DIODE,
+    RTD,
+    THERMISTOR,
+    DIRECTADC_SGL,
+} LTC_MeasurementType_E;
 
 typedef enum {
-    PARASITIC_ERROR_CALIBRATION = 0x00,
-    AMPLIFIER_SELF_CALIBRATION,
-    TEMPERATURE_UNBUFFERED,
-    PACK_VOLTAGE,
-    TEMPERATURE_BUFFERED,
-    CELL_VOLTAGE,
-} MAX_AnalogOutput_E;
-
-typedef enum {
-    CELL1 = 0x00,
-    CELL2,
-    CELL3,
-    CELL4,
-    CELL5,
-    CELL6,
-    CELL7,
-    CELL8,
-    CELL9,
-    CELL10,
-    CELL11,
-    CELL12,
-    CELL13,
-    CELL14,
-    CELL15,
-    CELL16,
-} MAX_SelectedCell_E;
-
-typedef enum {
-    T1 = 0x01,
-    T2,
-    T3,
-} MAX_SelectedTemp_E;
-
-typedef union {
-    MAX_SelectedCell_E cell;
-    MAX_SelectedTemp_E temp;
-} MAX_SelectedOutput_U;
+    CH1 = 0x00,
+    CH2,
+    CH3,
+    CH4,
+    CH5,
+    CH6,
+    CH7,
+    CH8,
+    CH9,
+    CH10,
+    CH11,
+    CH12,
+    CH13,
+    CH14,
+    CH15,
+    CH16,
+    CH17,
+    CH18,
+    CH19,
+    CH20,
+    CHANNEL_COUNT,
+} LTC_Channels_E;
 
 typedef struct {
-    MAX_AnalogOutput_E state;
-    MAX_SelectedOutput_U output;
-} MAX_Output_S;
+    LTC_MeasurementType_E msmnt_type[CHANNEL_COUNT];
+    uint32_t multiple_conversion_flags;
+
+} LTC_Config_S;
 
 typedef struct {
-    bool low_power_mode;
-    bool diagnostic_enabled;
-    bool sampling;
-    uint32_t sampling_start_100us;
-    uint16_t balancing;
-    MAX_Output_S output;
-} MAX14921_Config_S;
-
-typedef struct {
-    uint16_t cell_undervoltage;
-    MAX_ProductID_E ic_id;
-    uint8_t die_version;
-    bool va_undervoltage;
-    bool vp_undervoltage;
-    bool ready;
-    bool thermal_shutdown;
-} MAX14921_Response_S;
+    bool hard_fault;
+    bool soft_above;
+    bool soft_below;
+    bool valid;
+    int32_t result;
+    uint32_t raw;
+} LTC2983_ADCResult_S;
 
 typedef struct {
     HW_SPI_Device_S *dev;
-    MAX14921_Config_S config;
-    MAX14921_Response_S state;
-} MAX14921_S;
+    HW_GPIO_S *interrupt;
+    HW_GPIO_S *nrst;
+    LTC_Config_S config;
+    bool measuring;
+    LTC2983_ADCResult_S raw_results[CHANNEL_COUNT];
+    int16_t temps[CHANNEL_COUNT]; /**< Scale of 0.1 deg C */
+} LTC2983_S;
 
 
 /******************************************************************************
@@ -116,5 +99,6 @@ typedef struct {
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool MAX_Init(void);
-bool MAX_ReadWriteToChip(MAX14921_S*);
+bool LTC_Init(void);
+bool LTC_StartMeasurement(void);
+bool LTC_GetMeasurement(void);
