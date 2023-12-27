@@ -10,9 +10,11 @@
  ******************************************************************************/
 
 #include "HW_MAX14921.h"
+
 #include "HW_spi.h"
 #include "SystemConfig.h"
 
+#include "Utility.h"
 #include "string.h"
 
 /******************************************************************************
@@ -37,23 +39,23 @@
  ******************************************************************************/
 
 HW_SPI_Device_S MAX14921 = {
-    .handle = SPI1,
+    .handle  = SPI1,
     .ncs_pin = {
-        .pin = SPI1_MAX_NCS_Pin,
+        .pin  = SPI1_MAX_NCS_Pin,
         .port = SPI1_MAX_NCS_Port,
     }
-}; 
+};
 
-static MAX14921_S max_chip; 
+static MAX14921_S max_chip;
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void MAX_TranslateConfig(MAX14921_S*, uint8_t*);
+void MAX_TranslateConfig(MAX14921_Config_S*, uint8_t*);
+void MAX_DecodeResponse(MAX14921_Response_S*, uint8_t*);
 
-
-  /******************************************************************************
+/******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
@@ -61,131 +63,114 @@ bool MAX_Init()
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
-    max_chip.dev = &MAX14921;
-    max_chip.config.low_power_mode = false;
-    max_chip.config.diagnostic_enabled = false;
-    max_chip.config.sampling = false;
+    max_chip.dev                         = &MAX14921;
+    max_chip.config.low_power_mode       = false;
+    max_chip.config.diagnostic_enabled   = false;
+    max_chip.config.sampling             = false;
     max_chip.config.sampling_start_100us = 0x00;
-    max_chip.config.balancing = 0x00;
-    max_chip.config.output.state = AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell = CELL1;
+    max_chip.config.balancing            = 0x00;
+    max_chip.config.output.state         = AMPLIFIER_SELF_CALIBRATION;
+    max_chip.config.output.output.cell   = CELL1;
 
-    uint8_t wdata[3] = {0x00};
-    uint8_t rdata[3] = {0x00};
+    MAX_ReadWriteToChip(&max_chip);
 
-    MAX_TranslateConfig(&max_chip, (uint8_t*) &wdata);
+    if (max_chip.state.ic_id == PN_ERROR)
+        return false;
 
-    HW_SPI_Lock(max_chip.dev);
+    return true;
+}
+
+bool MAX_ReadWriteToChip(MAX14921_S* chip)
+{
+    if (!HW_SPI_Lock(chip->dev))
+        return false;
+
+    uint8_t wdata[3] = { 0x00 };
+    uint8_t rdata[3] = { 0x00 };
+
+    MAX_TranslateConfig(&chip->config, (uint8_t*)&wdata);
 
     for (uint8_t i = 0; i < 3; i++)
     {
-        HW_SPI_TransmitReceive8(max_chip.dev, wdata[i], &rdata[i]);
+        /**< Bits must be reversed because SPI bus transmits MSB first whereas MAX takes LSB first */
+        wdata[i] = reverse_byte(wdata[i]);
+        HW_SPI_TransmitReceive8(chip->dev, wdata[i], &rdata[i]);
+        rdata[i] = reverse_byte(rdata[i]);
     }
 
-    HW_SPI_Release(max_chip.dev);
+    MAX_DecodeResponse(&chip->state, (uint8_t*)&rdata);
+
+    HW_SPI_Release(chip->dev);
+
     return true;
 }
+
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-void MAX_TranslateConfig(MAX14921_S *config, uint8_t *data)
+void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
 {
-    data[0] = (uint8_t) config->config.balancing;
-    data[1] = (uint8_t) (config->config.balancing >> 8);
+    data[0] = (uint8_t)config->balancing;
+    data[1] = (uint8_t)(config->balancing >> 8);
 
-    if (config->config.output.state == CELL_VOLTAGE)
+    if (config->output.state == CELL_VOLTAGE)
     {
         data[2] = 0x01;
-        switch(config->config.output.output.cell)
-        {
-            case CELL1:
-              data[2] |= CELL1 << 1;
-              break;
-            case CELL2:
-              data[2] |= CELL2 << 1;
-              break;
-            case CELL3:
-              data[2] |= CELL3 << 1;
-              break;
-            case CELL4:
-              data[2] |= CELL4 << 1;
-              break;
-            case CELL5:
-              data[2] |= CELL5 << 1;
-              break;
-            case CELL6:
-              data[2] |= CELL6 << 1;
-              break;
-            case CELL7:
-              data[2] |= CELL7 << 1;
-              break;
-            case CELL8:
-              data[2] |= CELL8 << 1;
-              break;
-            case CELL9:
-              data[2] |= CELL9 << 1;
-              break;
-            case CELL10:
-              data[2] |= CELL10 << 1;
-              break;
-            case CELL11:
-              data[2] |= CELL11 << 1;
-              break;
-            case CELL12:
-              data[2] |= CELL12 << 1;
-              break;
-            case CELL13:
-              data[2] |= CELL13 << 1;
-              break;
-            case CELL14:
-              data[2] |= CELL14 << 1;
-              break;
-            case CELL15:
-              data[2] |= CELL15 << 1;
-              break;
-            case CELL16:
-              data[2] |= CELL16 << 1;
-              break;
-            default:
-              /**< Should never reach here */
-              break;
-        }
+        data[2] = (uint8_t)config->output.output.cell << 1;
     }
-    else {
+    else
+    {
         data[2] = 0x00;
 
-        switch(config->config.output.state)
+        switch (config->output.state)
         {
-          case(PARASITIC_ERROR_CALIBRATION):
-              data[2] |= 0b0000 << 1;
-              break;
-          case(AMPLIFIER_SELF_CALIBRATION):
-              data[2] |= 0b0001 << 1;
-              break;
-          case(TEMPERATURE_UNBUFFERED):
-              data[2] |= 0b1000 << 1;
-              break;
-          case(PACK_VOLTAGE):
-              data[2] |= 0b1100 << 1;
-              break;
-          case(TEMPERATURE_BUFFERED):
-              data[2] |= 0b1100 << 1;
-              break;
-          default:
-              /**< Should never reach here */
-              break;
+            case (PARASITIC_ERROR_CALIBRATION):
+                data[2] |= 0b0000 << 1;
+                break;
+            case (AMPLIFIER_SELF_CALIBRATION):
+                data[2] |= 0b0001 << 1;
+                break;
+            case (TEMPERATURE_UNBUFFERED):
+                data[2] |= 0b1000 << 1;
+                break;
+            case (PACK_VOLTAGE):
+                data[2] |= 0b1100 << 1;
+                break;
+            case (TEMPERATURE_BUFFERED):
+                data[2] |= 0b1100 << 1;
+                break;
+            default:
+                /**< Should never reach here */
+                break;
         }
 
-        if (config->config.output.state == TEMPERATURE_BUFFERED ||
-            config->config.output.state == TEMPERATURE_UNBUFFERED)
+        if (config->output.state == TEMPERATURE_BUFFERED ||
+            config->output.state == TEMPERATURE_UNBUFFERED)
         {
-            data[2] |= config->config.output.output.temp << 1;
+            data[2] |= config->output.output.temp << 1;
         }
     }
-        
-    data[2] |= (config->config.sampling) ? 0 : 1 << 5;
-    data[2] |= (config->config.diagnostic_enabled) ? 1 << 6 : 0;
-    data[2] |= (config->config.low_power_mode) ? 1 << 7 : 0;
+
+    data[2] |= (config->sampling) ? 0 : 1 << 5;
+    data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
+    data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
+}
+
+void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data)
+{
+    chip->cell_undervoltage = data[1] << 8 | data[0];
+    if ((data[2] & 0x03) == 0x3) 
+    {
+        chip->ic_id = PN_ERROR;
+    }
+    else {
+        chip->ic_id = ((data[2] & 0x03) == 0x01) ? PN_14920 : PN_14921;
+    }
+    chip->die_version = (data[2] & 0x0c) >> 2;
+    chip->va_undervoltage = (data[2] & 0x10) ? true : false;
+    chip->vp_undervoltage = (data[2] & 0x20) ? true : false;
+    chip->ready = (data[2] & 0x40) ? false : true;
+    chip->thermal_shutdown = (data[2] & 0x80) ? true : false;
 }

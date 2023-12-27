@@ -57,8 +57,13 @@
 #define A2_GPIO_Port GPIOA
 
 #define ADC_CHANNEL_CELL_MEASUREMENT ADC_CHANNEL_0
-#define CELL_VOLTAGE_Pin GPIO_PIN_0
-#define CELL_VOLTAGE_Port GPIOA
+#define CELL_VOLTAGE_Pin             GPIO_PIN_0
+#define CELL_VOLTAGE_Port            GPIOA
+
+#define LTC_INTERRUPT_Pin  GPIO_PIN_15
+#define LTC_INTERRUPT_Port GPIOB
+#define LTC_NRST_Pin       GPIO_PIN_14
+#define LTC_NRST_Port      GPIOB
 
 // output pins
 #define LED_Pin       GPIO_PIN_13

@@ -29,18 +29,28 @@ void HW_GPIO_Init(void)
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOD_CLK_ENABLE();
 
-    // Configure LED pin Output Level
+    // Configure LED 
     HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
-    // Configure SPI_NSS pin Output Level
-//    HAL_GPIO_WritePin(SPI1_NSS_GPIO_Port, SPI1_NSS_Pin, GPIO_PIN_SET);
-
-    // Configure LED pin
     GPIO_InitStruct.Pin   = LED_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+    
+    /**< Configure LTC in default state */
+    HAL_GPIO_WritePin(LTC_NRST_Port, LTC_NRST_Pin, GPIO_PIN_RESET);
+
+    GPIO_InitStruct.Pin   = LTC_NRST_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(LTC_NRST_Port, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin   = LTC_INTERRUPT_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    HAL_GPIO_Init(LTC_INTERRUPT_Port, &GPIO_InitStruct);
 
 //    // Configure GPIOB input pins
 //    GPIO_InitStruct.Pin = SL_DATA_Pin | FT_PDN_Pin |

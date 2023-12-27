@@ -160,6 +160,7 @@ project_hw_files = [
     PROJECT_HW_DIR.File("HW_Fans.c"),
     PROJECT_HW_DIR.File("HW_HS4011.c"),
     PROJECT_HW_DIR.File("HW_MAX14921.c"),
+    PROJECT_HW_DIR.File("HW_LTC2983.c"),
 ]
 
 project_source_files += project_hw_files

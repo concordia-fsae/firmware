@@ -29,6 +29,7 @@
 #include "HW_Fans.h"
 #include "HW_HS4011.h"
 #include "HW_MAX14921.h"
+#include "HW_LTC2983.h"
 
 /**< Program Includes */
 #include "Module.h"
@@ -86,6 +87,7 @@ int main(void)
     HS4011_Init();
 #endif /**< BMSW_BOARD_VA1 */
     MAX_Init();
+    LTC_Init();
 
      // Initialize all configured peripherals
      // order is important here, don't change without checking
