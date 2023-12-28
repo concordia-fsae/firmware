@@ -21,15 +21,3 @@ typedef struct
     void (*periodic10Hz_CLK)(void);  // Pointer to module 10Hz periodic function
     void (*periodic1Hz_CLK)(void);   // Pointer to module 1Hz periodic function
 } ModuleDesc_S;
-
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-/*
- * Modules
- */
-extern const ModuleDesc_S IO_desc;
-extern const ModuleDesc_S CANIO_rx;
-extern const ModuleDesc_S CANIO_tx;

@@ -17,28 +17,20 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
+typedef enum
+{
+    BUFFER_HALF_LOWER = 0U,
+    BUFFER_HALF_UPPER,
+} bufferHalf_E;
+
 typedef struct
 {
-    float32_t instCurrent;
     struct
     {
-        float32_t board;
-        float32_t gpu;
         float32_t mcu;
     } temp;
 
-    // tmp for testing
-    volatile struct
-    {
-        bool switch0 : 1;
-        bool switch1 : 1;
-        bool switch3 : 1;
-        bool switch4 : 1;
-        bool btn0    : 1;
-        bool btn1    : 1;
-    }    dig;
-
-    bool heartbeat;
+    uint8_t addr;
 } IO_S;
 
 
@@ -46,4 +38,8 @@ typedef struct
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-extern IO_S IO;
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+void IO_UnpackAdcBuffer(bufferHalf_E);

@@ -1,6 +1,8 @@
 /**
- * IO.c
- * The IO module controls interactions with the chip IO
+ * @file IO.c
+ * @brief  Source code for IO Module
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @date 2023-12-28
  */
 
 
@@ -8,18 +10,18 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// Module header
+/**< Module Header */
 #include "IO.h"
 
-// System includes
+/**< System Includes*/
 #include <string.h>
 
-// HW includes
+/**< HW Includes */
 #include "HW_adc.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
-//
-// other includes
+
+/**< Other Includes */
 #include "FeatureDefs.h"
 #include "ModuleDesc.h"
 #include "Types.h"
@@ -30,11 +32,13 @@
  *                              D E F I N E S
  ******************************************************************************/
 
+#if defined(BMSW_BOARD_VA1)
 #define VREF                     3.3F    // [V] ADC reference voltage
-#define ADC_BUF_LEN              264U    // number of samples to fill with DMA,
+#endif /**< BMSW_BOARD_VA1 */
+
+#define ADC_BUF_LEN              64U    // number of samples to fill with DMA,
                                          // processed when half full and again when completely full
 #define ADC_MAX_VAL              4095U   // Max integer value of ADC reading (2^12 for this chip)
-#define SENSE_RESISTOR_OHMS      0.05F   // [Ohms] sense resistor resistance, for measuring current consumption
 #define TEMP_CHIP_V_PER_DEG_C    0.0043F // [V/degC] slope of built-in temp sensor
 #define TEMP_CHIP_V_AT_25_C      1.43F   // [V] voltage at 25 degC
 
@@ -56,23 +60,12 @@ typedef enum
 
 typedef enum
 {
-    ADC_CHANNEL_CURRENT_SENSE = 0U,
-    ADC_CHANNEL_TEMP_BOARD,
-    ADC_CHANNEL_TEMP_GPU,
-    ADC_CHANNEL_PADDLE_LEFT,
-    ADC_CHANNEL_PADDLE_RIGHT,
     ADC_CHANNEL_TEMP_MCU,
     ADC_CHANNEL_COUNT,
 } AdcChannels_E;
 // _Static_assert(ADC_CHANNEL_COUNT == hadc1.Init.NbrOfConversion);
 _Static_assert(ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
-
-typedef enum
-{
-    BUFFER_HALF_LOWER = 0U,
-    BUFFER_HALF_UPPER,
-} bufferHalf_E;
 
 typedef struct
 {
@@ -86,22 +79,10 @@ typedef struct
     adcState_E     adcState;
     uint32_t       adcBuffer[ADC_BUF_LEN];
     simpleFilter_S adcData[ADC_CHANNEL_COUNT];
-
-    uint32_t       instCurrentRaw;
     struct
     {
-        uint32_t board;
-        uint32_t gpu;
         uint32_t mcu;
     } tempRaw;
-
-#if FTR_HALL_EFFECT_PADDLES
-    struct
-    {
-        float32_t left;
-        float32_t right;
-    } paddlesRaw;
-#endif // if FTR_HALL_EFFECT_PADDLES
 } io_S;
 
 
@@ -111,11 +92,29 @@ typedef struct
 
 static io_S io;
 
+/**< GPIO descriptors */
+HW_GPIO_S A0 = {
+    .port = A0_GPIO_Port,
+    .pin = A0_Pin,
+};
+
+HW_GPIO_S A1 = {
+    .port = A1_GPIO_Port,
+    .pin = A1_Pin,
+};
+
+HW_GPIO_S A2 = {
+    .port = A2_GPIO_Port,
+    .pin = A2_Pin,
+};
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
+/**
+ * @brief  Stores the public IO struct
+ */
 IO_S IO;
 
 
@@ -124,38 +123,17 @@ IO_S IO;
  ******************************************************************************/
 
 /**
- * unpackAdcBuffer
- * @param half upper or lower half of the buffer
- */
-static void unpackAdcBuffer(bufferHalf_E half)
-{
-    uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : ADC_BUF_LEN / 2U;
-    uint16_t endIndex   = startIndex + (ADC_BUF_LEN / 2U);
-
-    for (uint16_t i = startIndex; i < endIndex; i++)
-    {
-        uint8_t channelIndex = i % ADC_CHANNEL_COUNT;
-        io.adcData[channelIndex].raw += io.adcBuffer[i];
-        io.adcData[channelIndex].count++;
-    }
-}
-
-
-/**
- * IO_init
- *
+ * @brief  IO Module Init function
  */
 static void IO_init(void)
 {
-    // initialize structs
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
 }
 
 
 /**
- * IO1kHz_PRD
- *
+ * @brief  1kHz IO periodic function
  */
 static void IO1kHz_PRD(void)
 {
@@ -169,33 +147,20 @@ static void IO1kHz_PRD(void)
             io.adcData[i].value *= VREF / ADC_MAX_VAL;
         }
 
-        // this doesn't work on board rev 1 because I designed it wrong
-        IO.instCurrent = io.adcData[ADC_CHANNEL_CURRENT_SENSE].value / SENSE_RESISTOR_OHMS;
-
-        IO.temp.board = io.adcData[ADC_CHANNEL_TEMP_BOARD].value;
-        IO.temp.gpu   = io.adcData[ADC_CHANNEL_TEMP_GPU].value;
         IO.temp.mcu   = TEMP_CHIP_FROM_V(io.adcData[ADC_CHANNEL_TEMP_MCU].value);
-
-#if FTR_HALL_EFFECT_PADDLES
-        io.paddlesRaw.left  = io.adcData[ADC_CHANNEL_PADDLE_LEFT].value;
-        io.paddlesRaw.right = io.adcData[ADC_CHANNEL_PADDLE_RIGHT].value;
-#endif
-
-        static uint8_t tim = 0;
-        if (++tim == 100U)
-        {
-            IO.heartbeat = !IO.heartbeat;
-            tim = 0;
-        }
     }
     else
     {
         if (io.adcState == ADC_STATE_INIT)
         {
+            IO.addr |= ((HW_GPIO_ReadPin(&A0)) ? 0x01 : 0x00) << 0;
+            IO.addr |= ((HW_GPIO_ReadPin(&A1)) ? 0x01 : 0x00) << 1;
+            IO.addr |= ((HW_GPIO_ReadPin(&A2)) ? 0x01 : 0x00) << 2;
+            
             io.adcState = ADC_STATE_CALIBRATION;
-            if (HAL_ADCEx_Calibration_Start(&hadc1) == HAL_OK)
+            if (HW_ADC_Calibrate(&hadc1))
             {
-                HAL_ADC_Start_DMA(&hadc1, (uint32_t*)io.adcBuffer, ADC_BUF_LEN);
+                HW_ADC_Start_DMA(&hadc1, (uint32_t*)&io.adcBuffer, ADC_BUF_LEN);
                 io.adcState = ADC_STATE_RUNNING;
             }
             else
@@ -212,7 +177,9 @@ static void IO1kHz_PRD(void)
 }
 
 
-// module description
+/**
+ * @brief  IO Module descriptor
+ */
 const ModuleDesc_S IO_desc = {
     .moduleInit       = &IO_init,
     .periodic1kHz_CLK = &IO1kHz_PRD,
@@ -223,16 +190,19 @@ const ModuleDesc_S IO_desc = {
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-// Called when first half of buffer is filled
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
+/**
+ * @brief Unpack's the IO ADC Buffer
+ * @param half upper or lower half of the buffer
+ */
+void IO_UnpackAdcBuffer(bufferHalf_E half)
 {
-    UNUSED(hadc);
-    unpackAdcBuffer(BUFFER_HALF_LOWER);
-}
+    uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : ADC_BUF_LEN / 2U;
+    uint16_t endIndex   = startIndex + (ADC_BUF_LEN / 2U);
 
-// Called when buffer is completely filled
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    UNUSED(hadc);
-    unpackAdcBuffer(BUFFER_HALF_UPPER);
+    for (uint16_t i = startIndex; i < endIndex; i++)
+    {
+        uint8_t channelIndex = i % ADC_CHANNEL_COUNT;
+        io.adcData[channelIndex].raw += io.adcBuffer[i];
+        io.adcData[channelIndex].count++;
+    }
 }

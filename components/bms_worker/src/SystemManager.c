@@ -1,6 +1,8 @@
 /**
- * SystemManager for the Steering Wheel
- * starts the system
+ * @file SystemManager.c
+ * @brief Runs the Embedded System. Contains main called by the startup assembly.
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @date 2023-12-28
  */
 
 /******************************************************************************
@@ -31,7 +33,7 @@
 #include "HW_MAX14921.h"
 #include "HW_LTC2983.h"
 
-/**< Program Includes */
+/**< Other Includes */
 #include "Module.h"
 #include "Utility.h"
 
@@ -50,24 +52,20 @@ extern void RTOS_createResources(void);
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool SYS_Verify(void);
-
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
 /**
  * main
- * @return TODO
+ * @return 0: Error
  */
 int main(void)
 {
-    // setup the system
-    // Reset all peripherals, Initializes the Flash interface and the Systick.
+    /**< Setup HAL Reset all peripherals. Initializes the Flash interface and the Systick. */
     HAL_Init();
-
-    // Configure the system clock
+    
+    /**< Configure system clocks */
     SystemClock_Config();
 
     /**< Initiate Firmware */
@@ -80,43 +78,17 @@ int main(void)
     HW_ADC_Init();
     HW_SPI_Init();
 
-// TODO: Move to Modules Init
-    /**< System Inits */
-    FANS_Init();
-#if defined (BMSW_BOARD_VA1)
-    HS4011_Init();
-#endif /**< BMSW_BOARD_VA1 */
-    MAX_Init();
-    LTC_Init();
-
-     // Initialize all configured peripherals
-     // order is important here, don't change without checking
-     // TODO: change all of these from MX to HW (wtf does MX mean?)
-
-     // create the tasks, timers, etc.
+    /**< Create RTOS Tasks, Timers, etc... */
     RTOS_SWI_Init();
     RTOS_createResources();
 
-    // run the module init
-    Module_init();
-
-    /**< System Checks */
-    SYS_Verify();
-    
-    // init and start the scheduler
+    /**< Initialize Modules */
+    Module_Init();
+   
+    /**< Start RTOS task scheduler. Should never return */
     vTaskStartScheduler();
 
     return 0;
-}
-
-bool SYS_Verify()
-{
-    /**< TODO: Replace with Cooling Init Verify */
-    // if (FANS_Verify() == false) Error_Handler();
-    
-    //Error_Handler();
-
-    return true; 
 }
 
 /**
@@ -127,17 +99,18 @@ void Error_Handler(void)
 {
     __disable_irq();
     
+    /**< Configure LED if not already done */
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
     
     __HAL_RCC_GPIOC_CLK_ENABLE();
-    
-    // Configure LED pin
+   
     GPIO_InitStruct.Pin   = LED_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
-    
+   
+    /**< Fast Toggle LED */
     while (1)
     {
         uint32_t cnt = 6400000;

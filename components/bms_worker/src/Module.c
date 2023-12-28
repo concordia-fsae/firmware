@@ -1,19 +1,23 @@
 /**
- * Module.c
- * Define all the modules in this project
+ * @file Module.c
+ * @brief  Source code for Module Manager
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @date 2023-12-28
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
+/**< Module Header */
+#include "Module.h"
+
+/**< System Includes*/
 #include "stddef.h"
 #include "stdint.h"
 
-#include "Module.h"
-
+/**< Other Includes */
 #include "SystemConfig.h"
-
 #include "Utility.h"
 
 
@@ -21,8 +25,15 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
+/**
+ * @brief  Modules run by the Module Manager. Order will apply to execution.
+ */
 static const ModuleDesc_S* modules[] = {
-//    &IO_desc,
+    &BMS_desc,
+    &Environment_desc,
+    &Cooling_desc,
+    &IO_desc,
+    &Sys_desc,
 //    &CANIO_rx,
 //    &CANIO_tx,
 };
@@ -32,11 +43,12 @@ static const ModuleDesc_S* modules[] = {
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-/*
- * Call the init function for each module
+/**
+ * @brief  Module Init function
  */
-void Module_init(void)
+void Module_Init(void)
 {
+    /**< Run each of the modules Init function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->moduleInit != NULL)
@@ -46,17 +58,12 @@ void Module_init(void)
     }
 }
 
-/*
- * Call the 1kHz periodic function for each module
+/**
+ * @brief  10kHz periodic function
  */
 void Module_10kHz_TSK(void)
 {
-    // static uint8_t tim = 0;
-    // if (++tim == 1000U)
-    // {
-    //     HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-    //     tim = 0;
-    // }
+    /**< Run each of the modules 10kHz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic10kHz_CLK != NULL)
@@ -66,18 +73,12 @@ void Module_10kHz_TSK(void)
     }
 }
 
-/*
- * Call the 1kHz periodic function for each module
+/**
+ * @brief  1kHz periodic function
  */
 void Module_1kHz_TSK(void)
 {
-    static uint16_t tim = 0;
-    if (++tim == 1000U)
-    {
-        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-        tim = 0;
-    }
-    
+    /**< Run each of the modules 1kHz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic1kHz_CLK != NULL)
@@ -87,11 +88,12 @@ void Module_1kHz_TSK(void)
     }
 }
 
-/*
- * Call the 100Hz periodic function for each module
+/**
+ * @brief  100Hz periodic function
  */
 void Module_100Hz_TSK(void)
 {
+    /**< Run each of the modules 100Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic100Hz_CLK != NULL)
@@ -101,11 +103,12 @@ void Module_100Hz_TSK(void)
     }
 }
 
-/*
- * Call the 10Hz periodic function for each module
+/**
+ * @brief  10Hz periodic function
  */
 void Module_10Hz_TSK(void)
 {
+    /**< Run each of the modules 10Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic10Hz_CLK != NULL)
@@ -115,11 +118,12 @@ void Module_10Hz_TSK(void)
     }
 }
 
-/*
- * Call the 1Hz periodic function for each module
+/**
+ * @brief  1Hz periodic function
  */
 void Module_1Hz_TSK(void)
 {
+    /**< Run each of the modules 1Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
         if (modules[i]->periodic1Hz_CLK != NULL)
