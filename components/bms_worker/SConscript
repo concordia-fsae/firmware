@@ -144,6 +144,10 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("CAN/CANIO-tx.c"),
     PROJECT_SOURCE_DIR.File("CAN/CANIO-rx.c"),
     PROJECT_SOURCE_DIR.File("IO.c"),
+    PROJECT_SOURCE_DIR.File("Cooling.c"),
+    PROJECT_SOURCE_DIR.File("Environment.c"),
+    PROJECT_SOURCE_DIR.File("BatteryMonitoring.c"),
+    PROJECT_SOURCE_DIR.File("Sys.c"),
 ]
 
 project_hw_files = [

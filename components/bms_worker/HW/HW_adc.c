@@ -13,6 +13,8 @@
 
 #include "HW_adc.h"
 
+#include "IO.h"
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -168,4 +170,44 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
  
          HAL_DMA_DeInit(adcHandle->DMA_Handle);
      }
+}
+
+// Called when first half of buffer is filled
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    if (hadc->Instance == ADC1)
+    {
+        IO_UnpackAdcBuffer(BUFFER_HALF_LOWER);
+    }
+    else if (hadc->Instance == ADC2)
+    {
+        
+    }
+}
+
+// Called when buffer is completely filled
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+    if (hadc->Instance == ADC1)
+    {
+        IO_UnpackAdcBuffer(BUFFER_HALF_UPPER);
+    }
+    else if (hadc->Instance == ADC2)
+    {
+        
+    }
+}
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+bool HW_ADC_Calibrate(ADC_HandleTypeDef *hadc)
+{
+    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK;
+}
+
+bool HW_ADC_Start_DMA(ADC_HandleTypeDef *hadc, uint32_t *data, uint32_t size)
+{
+    return HAL_ADC_Start_DMA(hadc, data, size) == HAL_OK;
 }

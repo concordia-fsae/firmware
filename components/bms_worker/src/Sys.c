@@ -1,39 +1,30 @@
 /**
- * @file HW_HS4011.c
- * @brief  Source file for HS4011 Relative Humidty/Temperature Sensor
+ * @file Sys.c
+ * @brief  Source code for System Manager
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @version
- * @date 2023-12-19
+ * @date 2023-12-27
  */
-
-#if defined(BMSW_BOARD_VA1)
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_HS4011.h"
+/**< Module Header */
+#include "Sys.h"
 
-#include "HW_i2c.h"
+/**< HW Includes */
+#include "SystemConfig.h"
 
-#include "Utility.h"
-#include "include/ErrorHandler.h"
-#include <stdint.h>
+/**< Other Includes */
+#include "Module.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define READ_SENSOR_ID   0xD7
-#define NOHOLD_RH_T_MEAS 0xF5
-
-
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
-
-extern HW_I2C_Handle_T i2c2;
-
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -47,81 +38,99 @@ extern HW_I2C_Handle_T i2c2;
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-/******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
+/**
+ * @brief  System Manager Public declaration
+ */
+Sys_S SYS;
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-HW_I2C_Device_S HS4011 = {
-    .addr   = 0x54,
-    .handle = &i2c2,
+/**
+ * @brief  LED GPIO descriptor
+ */
+HW_GPIO_S led = {
+    .port = LED_GPIO_Port,
+    .pin  = LED_Pin,
 };
 
-HS4011_S hs_chip = {
-    .dev = &HS4011,
-};
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-bool HS4011_Init()
+/**
+ * @brief  Initializes OS' System Manager
+ */
+static void Sys_Init()
 {
-    uint8_t wdat    = READ_SENSOR_ID;
-    uint8_t rdat[4] = { 0 };
+    SYS.state = SYS_INIT;
 
-    if (!HW_I2C_Master_Write(hs_chip.dev, &wdat, 1, 1000))
+    SYS.state = SYS_RUNNING;
+}
+
+/**
+ * @brief  100Hz System Manager task
+ */
+static void Sys100Hz_PRD()
+{
+    /**< Evaluate state of all systems */
+}
+
+/**
+ * @brief  10 Hz System Manager task
+ */
+static void Sys10Hz_PRD()
+{
+    /**< 10Hz only toggles the LED in an error state */
+    switch (SYS.state)
     {
-        // Error_Handler();
+      case SYS_RUNNING:
+        break;
+      case SYS_INIT:
+        break;
+      case SYS_ERROR:
+        HW_GPIO_TogglePin(&led);
+        break;
     }
+}
 
-    if (!HW_I2C_Master_Read(hs_chip.dev, (uint8_t*)&rdat, 4, 1000))
+/**
+ * @brief  1 Hz System Manager task
+ */
+static void Sys1Hz_PRD()
+{
+    /**< 1Hz only toggles the LED in the running state */
+    switch (SYS.state)
     {
-        // Error_Handler();
+      case SYS_RUNNING:
+        HW_GPIO_TogglePin(&led);
+        break;
+      case SYS_INIT:
+        break;
+      case SYS_ERROR:
+        break;
     }
-
-    hs_chip.serial_number = (uint32_t)*reverse_bytes((uint8_t*)&rdat, 4);
-
-    return true;
 }
 
-bool HS4011_StartConversion()
-{
-    uint8_t wdata = NOHOLD_RH_T_MEAS;
-
-    hs_chip.data.measuring = true;
-
-    return HW_I2C_Master_Write(hs_chip.dev, &wdata, 1, 100);
-}
-
-bool HS4011_GetData()
-{
-    uint8_t rdata[5] = { 0 };
-
-    if (!HW_I2C_Master_Read(hs_chip.dev, (uint8_t*)&rdata, 5, 100))
-        return false;
-
-    hs_chip.data.measuring = false;
-
-    reverse_bytes((uint8_t*)&rdata[0], 2);
-    reverse_bytes((uint8_t*)&rdata[2], 2);
-
-    hs_chip.data.rh   = (uint16_t)(((((uint32_t)rdata[1] << 8) | ((uint32_t)rdata[0])) * 10000) / 16383);
-    hs_chip.data.temp = (int16_t)(((((int32_t)rdata[3] << 8) | ((int32_t)rdata[2])) * 1650) / 16383) - 400;
-    
-    return true;
-}
+/**
+ * @brief  System Manager Module descriptor
+ */
+const ModuleDesc_S Sys_desc = {
+    .moduleInit        = &Sys_Init,
+    .periodic100Hz_CLK = &Sys100Hz_PRD,
+    .periodic10Hz_CLK  = &Sys10Hz_PRD,
+    .periodic1Hz_CLK   = &Sys1Hz_PRD,
+};
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
-
-#endif /**< BMSW_BOARD_VA1 */

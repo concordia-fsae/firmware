@@ -10,7 +10,12 @@
  ******************************************************************************/
 
 #include "SystemConfig.h"
+#include "stdbool.h"
 
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
 
 typedef GPIO_TypeDef HW_GPIO_TypeDef;
 typedef uint16_t HW_GPIO_Pin;
@@ -26,4 +31,7 @@ typedef struct {
  ******************************************************************************/
 
 void HW_GPIO_Init(void);
+bool HW_GPIO_ReadPin(HW_GPIO_S*);
+void HW_GPIO_WritePin(HW_GPIO_S*, bool);
+void HW_GPIO_TogglePin(HW_GPIO_S*);
 

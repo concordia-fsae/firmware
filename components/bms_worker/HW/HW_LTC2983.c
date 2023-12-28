@@ -72,7 +72,7 @@ HW_GPIO_S LTC2983_NRST = {
     .port = LTC_NRST_Port,
 };
 
-static LTC2983_S ltc_chip = { 0 };
+LTC2983_S ltc_chip = { 0 };
 
 
 /******************************************************************************
@@ -95,9 +95,8 @@ bool LTC_Init()
     ltc_chip.interrupt = &LTC2983_INT;
     ltc_chip.nrst      = &LTC2983_NRST;
 
-    HAL_GPIO_WritePin(ltc_chip.nrst->port, ltc_chip.nrst->pin, GPIO_PIN_SET);
-    while (HAL_GPIO_ReadPin(ltc_chip.interrupt->port,
-                            ltc_chip.interrupt->pin) != GPIO_PIN_SET)
+    HW_GPIO_WritePin(ltc_chip.nrst, true);
+    while (!HW_GPIO_ReadPin(ltc_chip.interrupt))
         ;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
@@ -138,7 +137,6 @@ bool LTC_GetMeasurement(void)
         ltc_chip.raw_results[i].soft_below = (ltc_chip.raw_results[i].raw & 0x01 << 26) ? true : false;
         ltc_chip.raw_results[i].valid = (ltc_chip.raw_results[i].raw & 0x01 << 24) ? true : false;
         ltc_chip.raw_results[i].result = (ltc_chip.raw_results[i].raw & 0xffffff) << 8;
-
     }
 
     return true;
