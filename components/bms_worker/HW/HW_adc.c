@@ -7,12 +7,15 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+/**< FreeRTOS Includes */
 #include "FreeRTOS.h"
-#include "include/SystemConfig.h"
 #include "task.h"
 
+/**< Firmware Includes */
 #include "HW_adc.h"
 
+/**< Other Includes */
+#include "SystemConfig.h"
 #include "IO.h"
 
 

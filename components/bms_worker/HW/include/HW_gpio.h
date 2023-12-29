@@ -31,6 +31,7 @@ typedef struct {
  ******************************************************************************/
 
 void HW_GPIO_Init(void);
+void HW_GPIO_DeInit(void);
 bool HW_GPIO_ReadPin(HW_GPIO_S*);
 void HW_GPIO_WritePin(HW_GPIO_S*, bool);
 void HW_GPIO_TogglePin(HW_GPIO_S*);

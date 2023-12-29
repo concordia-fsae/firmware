@@ -13,7 +13,7 @@
 #include "BatteryMonitoring.h"
 
 /**< Driver Includes */
-#include "HW_MAX14921.h"
+#include "HW.h"
 
 /**< Other Includes */
 #include "Module.h"
@@ -25,6 +25,9 @@
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
+
+extern MAX14921_S max_chip;
+
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -60,17 +63,63 @@ BMS_S BMS;
  ******************************************************************************/
 
 /**
+ * @brief  Unpack's the BMS ADC's DMA buffer
+ *
+ * @param bufferHalf_E Upper or lower half of buffer
+ */
+void BMS_UnpackADCBuffer(bufferHalf_E half)
+{
+    uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : BMS_ADC_BUF_LEN / 2U;
+    uint16_t endIndex   = startIndex + (BMS_ADC_BUF_LEN / 2U);
+
+    for (uint16_t i = startIndex; i < endIndex; i++)
+    {
+        uint8_t channelIndex = i % ADC_CHANNEL_COUNT;
+        BMS.data.cell_voltages[channelIndex].raw += BMS.data.adc_buffer[i];
+        BMS.data.cell_voltages[channelIndex].count++;
+    }
+
+    if (half == BUFFER_HALF_LOWER) return;
+
+    for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
+    {
+        BMS.data.cell_voltages[i].value = (float32_t) BMS.data.cell_voltages[i].raw / BMS.data.cell_voltages[i].count;
+        BMS.cell_voltages[max_chip.config.output.output.cell++] = BMS.data.cell_voltages[i].value * 1000;
+        BMS.data.sampling_started = false;
+    }
+
+    if (max_chip.config.output.output.cell == CELL_COUNT)
+    {
+        max_chip.config.output.output.cell = CELL1;
+
+        if (BMS.state == BMS_MEASURING)
+        {
+            BMS.state = BMS_WAITING;
+        }
+        else {
+            BMS.state = BMS_BALANCING;
+        }
+    }
+}
+
+/**
  * @brief  BMS Module init function
  */
 static void BMS_Init()
 {
     BMS.state = BMS_INIT;
 
+    if (!HW_ADC_Calibrate(&hadc1))
+    {
+        BMS.state = BMS_ERROR;
+    }
+
     if (!MAX_Init())
     {
         BMS.state = BMS_ERROR;
     }
-    else {
+    
+    if (BMS.state != BMS_ERROR){
         BMS.state = BMS_WAITING;
     }
 }
@@ -80,6 +129,21 @@ static void BMS_Init()
  */
 static void BMS10kHz_PRD()
 {
+    if (BMS.state == BMS_SAMPLING)
+    {
+        if (BMS.data.sampling_started == false)
+        {
+            max_chip.config.sampling = true;
+
+            MAX_ReadWriteToChip();
+        }
+        else {
+            max_chip.config.sampling = false;
+            max_chip.config.output.output.cell = CELL1;
+
+            HW_ADC_Start_DMA(&hadc1, (uint32_t*)&BMS.data.adc_buffer, BMS_ADC_BUF_LEN);
+        }
+    }
 }
 
 /**
@@ -94,6 +158,14 @@ static void BMS10Hz_PRD()
  */
 static void BMS1Hz_PRD()
 {
+    static uint8_t cnt = 0;
+
+    if (cnt++ == 10)
+    {
+        cnt = 0;
+
+        BMS.state = BMS_DIAGNOSTIC;
+    }
 }
 
 /**

@@ -1,31 +1,26 @@
 /**
- * @file BatteryMonitoring.h
- * @brief  Header file for Battery Monitoring Application
+ * @file HW.c
+ * @brief  Source code for generic firmware functions
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-27
+ * @date 2023-12-28
  */
-
-#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
+/**< Header file */
+#include "HW.h"
+
 /**< System Includes */
-#include "stdint.h"
 #include "stdbool.h"
 
 /**< Firmware Includes */
-#include "HW_adc.h"
-
-/**< Driver Includes */
-#include "HW_MAX14921.h"
+#include "stm32f1xx.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
-
-#define BMS_ADC_BUF_LEN 100
 
 /******************************************************************************
  *                              E X T E R N S
@@ -34,45 +29,6 @@
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum {
-    BMS_INIT = 0x00,
-    BMS_WAITING,
-    BMS_MEASURING,
-    BMS_SAMPLING,
-    BMS_SAMPLING_MEASUREMENT,
-    BMS_DIAGNOSTIC,
-    BMS_DIAGNOSTIC_MEASUREMENT,
-    BMS_BALANCING,
-    BMS_BALANCING_MEASUREMENT,
-    BMS_ERROR,
-} BMS_State_E;
-
-typedef enum
-{
-    ADC_CELL_MEASUREMENT = 0x00,
-    ADC_CHANNEL_COUNT,
-} AdcChannels_E;
-
-typedef struct {
-    bool sampling_started;
-    uint32_t adc_buffer[BMS_ADC_BUF_LEN];
-    simpleFilter_S cell_voltages[ADC_CHANNEL_COUNT];
-} BMS_Data_S;
-
-typedef struct {
-    BMS_State_E state;
-    uint16_t balancing_cells;
-    uint16_t cell_faults;
-    uint16_t cell_voltages[ADC_CHANNEL_COUNT];
-    uint16_t max_voltage;
-    uint16_t min_voltage;
-    uint16_t avg_voltage;
-    uint16_t min_capacity;
-    uint16_t max_capacity;
-    uint16_t avg_capacity;
-    BMS_Data_S data;
-} BMS_S;
 
 /******************************************************************************
  *                               M A C R O S
@@ -90,4 +46,28 @@ typedef struct {
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void BMS_UnpackADCBuffer(bufferHalf_E);
+/**
+ * @brief  Initializes the generic low-level firmware
+ *
+ * @retval Always true 
+ */
+bool HW_Init() 
+{
+    HAL_Init();
+    return true;
+}
+
+/**
+ * @brief  Get the number of ticks since clock start
+ *
+ * @retval Number of ticks
+ */
+uint32_t HW_GetTick()
+{
+    return HAL_GetTick();
+}
+
+
+/******************************************************************************
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/

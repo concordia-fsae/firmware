@@ -34,6 +34,13 @@
  ******************************************************************************/
 
 /******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
+MAX14921_S max_chip;
+
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
@@ -45,7 +52,6 @@ HW_SPI_Device_S MAX14921 = {
     }
 };
 
-static MAX14921_S max_chip;
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -71,7 +77,7 @@ bool MAX_Init()
     max_chip.config.output.state         = AMPLIFIER_SELF_CALIBRATION;
     max_chip.config.output.output.cell   = CELL1;
 
-    MAX_ReadWriteToChip(&max_chip);
+    MAX_ReadWriteToChip();
 
     if (max_chip.state.ic_id == PN_ERROR)
         return false;
@@ -79,27 +85,27 @@ bool MAX_Init()
     return true;
 }
 
-bool MAX_ReadWriteToChip(MAX14921_S* chip)
+bool MAX_ReadWriteToChip()
 {
-    if (!HW_SPI_Lock(chip->dev))
+    if (!HW_SPI_Lock(max_chip.dev))
         return false;
 
     uint8_t wdata[3] = { 0x00 };
     uint8_t rdata[3] = { 0x00 };
 
-    MAX_TranslateConfig(&chip->config, (uint8_t*)&wdata);
+    MAX_TranslateConfig(&max_chip.config, (uint8_t*)&wdata);
 
     for (uint8_t i = 0; i < 3; i++)
     {
         /**< Bits must be reversed because SPI bus transmits MSB first whereas MAX takes LSB first */
         wdata[i] = reverse_byte(wdata[i]);
-        HW_SPI_TransmitReceive8(chip->dev, wdata[i], &rdata[i]);
+        HW_SPI_TransmitReceive8(max_chip.dev, wdata[i], &rdata[i]);
         rdata[i] = reverse_byte(rdata[i]);
     }
 
-    MAX_DecodeResponse(&chip->state, (uint8_t*)&rdata);
+    MAX_DecodeResponse(&max_chip.state, (uint8_t*)&rdata);
 
-    HW_SPI_Release(chip->dev);
+    HW_SPI_Release(max_chip.dev);
 
     return true;
 }
@@ -117,7 +123,7 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
     if (config->output.state == CELL_VOLTAGE)
     {
         data[2] = 0x01;
-        data[2] = (uint8_t)config->output.output.cell << 1;
+        data[2] |= (uint8_t)config->output.output.cell << 1;
     }
     else
     {

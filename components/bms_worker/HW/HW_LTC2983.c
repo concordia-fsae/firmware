@@ -96,8 +96,12 @@ bool LTC_Init()
     ltc_chip.nrst      = &LTC2983_NRST;
 
     HW_GPIO_WritePin(ltc_chip.nrst, true);
-    while (!HW_GPIO_ReadPin(ltc_chip.interrupt))
-        ;
+    
+    //uint8_t response = 0;
+
+    //do {
+    //    LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response); 
+    //} while (response != 0x40);
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
@@ -119,16 +123,16 @@ bool LTC_StartMeasurement(void)
 
 bool LTC_GetMeasurement(void)
 {
-    uint8_t response = 0x00;
-    if (LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response))
-        return false;
+    //uint8_t response = 0x00;
+    //if (!LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response))
+    //    return false;
 
-    if (response != 0x40)
-        return false;
+    //if (response != 0x40)
+    //    return false;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
-        if (!LTC_ReadCMD(&ltc_chip, TEMP_RESULT_BASE_REG, 4,
+        if (!LTC_ReadCMD(&ltc_chip, TEMP_RESULT_BASE_REG + 4 * i, 4,
                          (uint8_t*)&ltc_chip.raw_results[i].raw))
             return false;
 

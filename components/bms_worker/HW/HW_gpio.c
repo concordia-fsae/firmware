@@ -69,6 +69,11 @@ void HW_GPIO_Init(void)
     HAL_GPIO_Init(A2_GPIO_Port, &GPIO_InitStruct);
 }
 
+void HW_GPIO_DeInit()
+{
+    HAL_GPIO_DeInit(A2_GPIO_Port, A2_Pin);
+}
+
 bool HW_GPIO_ReadPin(HW_GPIO_S* dev)
 {
     return HAL_GPIO_ReadPin(dev->port, dev->pin) == GPIO_PIN_SET;

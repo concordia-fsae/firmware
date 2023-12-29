@@ -151,6 +151,7 @@ project_source_files = [
 ]
 
 project_hw_files = [
+    PROJECT_HW_DIR.File("HW.c"),
     PROJECT_HW_DIR.File("HW_adc.c"),
     PROJECT_HW_DIR.File("HW_can.c"),
     PROJECT_HW_DIR.File("HW_dma.c"),

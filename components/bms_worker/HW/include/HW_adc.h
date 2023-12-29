@@ -23,6 +23,24 @@ extern DMA_HandleTypeDef hdma_adc2;
 
 
 /******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef enum
+{
+    BUFFER_HALF_LOWER = 0U,
+    BUFFER_HALF_UPPER,
+} bufferHalf_E;
+
+typedef struct
+{
+    uint32_t  raw;
+    float32_t value;
+    uint16_t  count;
+} simpleFilter_S;
+
+
+/******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 

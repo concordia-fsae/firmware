@@ -16,7 +16,7 @@
 /**< System Includes*/
 #include <string.h>
 
-/**< HW Includes */
+/**< Firmware Includes */
 #include "HW_adc.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
@@ -36,7 +36,7 @@
 #define VREF                     3.3F    // [V] ADC reference voltage
 #endif /**< BMSW_BOARD_VA1 */
 
-#define ADC_BUF_LEN              64U    // number of samples to fill with DMA,
+#define ADC_BUF_LEN              264U    // number of samples to fill with DMA,
                                          // processed when half full and again when completely full
 #define ADC_MAX_VAL              4095U   // Max integer value of ADC reading (2^12 for this chip)
 #define TEMP_CHIP_V_PER_DEG_C    0.0043F // [V/degC] slope of built-in temp sensor
@@ -66,13 +66,6 @@ typedef enum
 // _Static_assert(ADC_CHANNEL_COUNT == hadc1.Init.NbrOfConversion);
 _Static_assert(ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
-
-typedef struct
-{
-    uint32_t  raw;
-    float32_t value;
-    uint16_t  count;
-} simpleFilter_S;
 
 typedef struct
 {
@@ -129,8 +122,12 @@ static void IO_init(void)
 {
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
+    
+    IO.addr |= ((HW_GPIO_ReadPin(&A0)) ? 0x01 : 0x00) << 0;
+    IO.addr |= ((HW_GPIO_ReadPin(&A1)) ? 0x01 : 0x00) << 1;
+    IO.addr |= ((HW_GPIO_ReadPin(&A2)) ? 0x01 : 0x00) << 2;
+            
 }
-
 
 /**
  * @brief  1kHz IO periodic function
@@ -153,10 +150,6 @@ static void IO1kHz_PRD(void)
     {
         if (io.adcState == ADC_STATE_INIT)
         {
-            IO.addr |= ((HW_GPIO_ReadPin(&A0)) ? 0x01 : 0x00) << 0;
-            IO.addr |= ((HW_GPIO_ReadPin(&A1)) ? 0x01 : 0x00) << 1;
-            IO.addr |= ((HW_GPIO_ReadPin(&A2)) ? 0x01 : 0x00) << 2;
-            
             io.adcState = ADC_STATE_CALIBRATION;
             if (HW_ADC_Calibrate(&hadc1))
             {
@@ -184,11 +177,6 @@ const ModuleDesc_S IO_desc = {
     .moduleInit       = &IO_init,
     .periodic1kHz_CLK = &IO1kHz_PRD,
 };
-
-
-/******************************************************************************
- *                       P U B L I C  F U N C T I O N S
- ******************************************************************************/
 
 /**
  * @brief Unpack's the IO ADC Buffer

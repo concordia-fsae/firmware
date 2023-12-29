@@ -39,7 +39,8 @@ extern IO_S IO;
 
 typedef enum
 {
-    MEASURING = 0x00,
+    INIT = 0x00,
+    MEASURING,
     DONE
 } Sensor_State_E;
 
