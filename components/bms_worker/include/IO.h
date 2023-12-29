@@ -1,6 +1,8 @@
 /**
- * IO.h
- * IO Module Header
+ * @file IO.h
+ * @brief  Header file for IO Module
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @date 2023-12-28
  */
 
 #pragma once
@@ -9,6 +11,10 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+/**< Firmware includes */
+#include "HW_adc.h"
+
+/**< Other Includes */
 #include "FloatTypes.h"
 #include "Types.h"
 
@@ -16,12 +22,6 @@
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    BUFFER_HALF_LOWER = 0U,
-    BUFFER_HALF_UPPER,
-} bufferHalf_E;
 
 typedef struct
 {

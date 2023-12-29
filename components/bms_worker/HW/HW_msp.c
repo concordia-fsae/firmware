@@ -1,17 +1,24 @@
 /**
- * HW_msp.c
- * Initialize global MSP
+ * @file HW_msp.c
+ * @brief  Source code for generic Msp firmware calls
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @date 2023-12-28
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stm32f1xx.h"
+/**< Other Includes */
 #include "SystemConfig.h"
+
+
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
 /**
- * HAL_MspInit
- * Initializes the Global MSP.
+ * @brief  Overrides weak HAL Link for our implementation
  */
 void HAL_MspInit(void)
 {
@@ -21,5 +28,5 @@ void HAL_MspInit(void)
     HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
 
     // Enable SWD, disable JTAG
-    __HAL_AFIO_REMAP_SWJ_NOJTAG(); //NJTRST();
+    __HAL_AFIO_REMAP_SWJ_NOJTAG();
 }

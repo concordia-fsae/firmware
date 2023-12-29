@@ -60,6 +60,7 @@ typedef enum {
     CELL14,
     CELL15,
     CELL16,
+    CELL_COUNT,
 } MAX_SelectedCell_E;
 
 typedef enum {
@@ -117,4 +118,4 @@ typedef struct {
  ******************************************************************************/
 
 bool MAX_Init(void);
-bool MAX_ReadWriteToChip(MAX14921_S*);
+bool MAX_ReadWriteToChip(void);

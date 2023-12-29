@@ -195,22 +195,22 @@ bool HW_SPI_Transmit8(HW_SPI_Device_S *dev, uint8_t data)
 
 bool HW_SPI_Transmit16(HW_SPI_Device_S *dev, uint16_t data)
 {
-    if (!HW_SPI_Transmit8(dev, data))
+    if (!HW_SPI_Transmit8(dev, data >> 8))
     {
         return false;
     }
-    HW_SPI_Transmit8(dev, data >> 8);
+    HW_SPI_Transmit8(dev, data);
     
     return true;
 }
 
 bool HW_SPI_Transmit32(HW_SPI_Device_S *dev, uint32_t data)
 {
-    if (!HW_SPI_Transmit16(dev, data))
+    if (!HW_SPI_Transmit16(dev, data >> 16))
     {
         return false;
     }
-    HW_SPI_Transmit16(dev, data >> 16);
+    HW_SPI_Transmit16(dev, data);
 
     return true;
 }

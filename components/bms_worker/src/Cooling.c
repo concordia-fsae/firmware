@@ -97,8 +97,6 @@ static void Cooling1Hz_PRD(void)
             {
                 COOLING.percentage = 0;
             }
-
-#include "Cooling.h"
             else if (ENV.values.cells.max_temp > 550)
             {
                 COOLING.state = COOLING_FULL;

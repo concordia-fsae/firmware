@@ -18,6 +18,7 @@
 #include "stdbool.h"
 
 /**< Firmware Includes */
+#include "HW.h"
 #include "HW_adc.h"
 #include "HW_can.h"
 #include "HW_clock.h"
@@ -63,10 +64,10 @@ extern void RTOS_createResources(void);
 int main(void)
 {
     /**< Setup HAL Reset all peripherals. Initializes the Flash interface and the Systick. */
-    HAL_Init();
+    HW_Init();
     
     /**< Configure system clocks */
-    SystemClock_Config();
+    HW_SystemClock_Config();
 
     /**< Initiate Firmware */
     /**< Order is important, don't change without checking */
@@ -78,15 +79,27 @@ int main(void)
     HW_ADC_Init();
     HW_SPI_Init();
 
-    /**< Create RTOS Tasks, Timers, etc... */
-    RTOS_SWI_Init();
-    RTOS_createResources();
 
-    /**< Initialize Modules */
-    Module_Init();
+    extern MAX14921_S max_chip;
+    MAX_Init();
+    max_chip.config.sampling = true;
+    max_chip.config.output.state = CELL_VOLTAGE;
+    max_chip.config.output.output.cell = CELL1;
+    MAX_ReadWriteToChip();
+    MAX_ReadWriteToChip();
+
+    LTC_Init();
+    LTC_StartMeasurement();
+    LTC_GetMeasurement();
+    ///**< Create RTOS Tasks, Timers, etc... */
+    //RTOS_SWI_Init();
+    //RTOS_createResources();
+
+    ///**< Initialize Modules */
+    //Module_Init();
    
-    /**< Start RTOS task scheduler. Should never return */
-    vTaskStartScheduler();
+    ///**< Start RTOS task scheduler. Should never return */
+    //vTaskStartScheduler();
 
     return 0;
 }
