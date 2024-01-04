@@ -9,7 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
+#include "HW.h"
+
 #include "SystemConfig.h"
 #include "stdbool.h"
 
@@ -45,7 +46,8 @@ extern DMA_HandleTypeDef hdma_adc1;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void     HW_ADC_init(void);
-bool     HW_ADC_calibrate(ADC_HandleTypeDef* hadc);
-bool     HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
+HW_StatusTypeDef_E HW_ADC_init(void);
+HW_StatusTypeDef_E HW_ADC_deInit(void);
+bool HW_ADC_calibrate(ADC_HandleTypeDef *hadc);
+bool HW_ADC_startDMA(ADC_HandleTypeDef*, uint32_t*, uint32_t); 
 uint16_t HW_ADC_getVFromCount(uint16_t cnt);

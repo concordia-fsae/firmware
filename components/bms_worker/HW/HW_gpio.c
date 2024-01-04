@@ -19,9 +19,13 @@
  ******************************************************************************/
 
 /**
- * @brief  Initialization of GPIO pins.
+ * @brief Initializes GPIO peripheral
+ *
+ * @note Configure pins as Analog, Input, Output, EVENT_OUT, or EXTI
+ *
+ * @retval HW_OK
  */
-void HW_GPIO_init(void)
+HW_StatusTypeDef_E HW_GPIO_init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
@@ -95,14 +99,29 @@ void HW_GPIO_init(void)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(NX3_NEN_Port, &GPIO_InitStruct);
 #endif
+
+    return HW_OK;
 }
 
 /**
- * @brief  Deinitializes GPIO.
+ * @brief Deinitializes GPIO peripheral
+ *
+ * @retval HW_OK
  */
-void HW_GPIO_deInit(void)
+
+HW_StatusTypeDef_E HW_GPIO_deInit(void)
 {
+#if defined(BMSW_BOARD_VA1)
     HAL_GPIO_DeInit(A2_GPIO_Port, A2_Pin);
+    HAL_GPIO_DeInit(A1_GPIO_Port, A1_Pin);
+    HAL_GPIO_DeInit(A0_GPIO_Port, A0_Pin);
+    HAL_GPIO_DeInit(LTC_INTERRUPT_Port, &GPIO_InitStruct);
+    HAL_GPIO_DeInit(LTC_NRST_Port, &GPIO_InitStruct);
+    HAL_GPIO_DeInit(LED_GPIO_Port, &GPIO_InitStruct);
+#elif defined(BMSW_BOARD_VA3)
+  
+#endif
+    return HW_OK;
 }
 
 /**

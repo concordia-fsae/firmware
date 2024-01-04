@@ -9,7 +9,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
+#include "HW.h"
 #include "SystemConfig.h"
 #include "stdbool.h"
 
@@ -33,8 +33,9 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_GPIO_init(void);
-void HW_GPIO_deInit(void);
-bool HW_GPIO_readPin(HW_GPIO_S* dev);
-void HW_GPIO_writePin(HW_GPIO_S* dev, bool state);
-void HW_GPIO_togglePin(HW_GPIO_S* dev);
+HW_StatusTypeDef_E HW_GPIO_init(void);
+HW_StatusTypeDef_E HW_GPIO_deInit(void);
+bool HW_GPIO_readPin(HW_GPIO_S*);
+void HW_GPIO_writePin(HW_GPIO_S*, bool);
+void HW_GPIO_togglePin(HW_GPIO_S*);
+

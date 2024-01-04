@@ -10,6 +10,8 @@
  ******************************************************************************/
 
 // System Includes
+#include "HW.h"
+
 #include "SystemConfig.h"
 #include "stdbool.h"
 
@@ -36,7 +38,8 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_SPI_init(void);
+HW_StatusTypeDef_E HW_SPI_init(void);
+HW_StatusTypeDef_E HW_SPI_deInit(void);
 bool HW_SPI_lock(HW_SPI_Device_S* dev);
 bool HW_SPI_release(HW_SPI_Device_S* dev);
 

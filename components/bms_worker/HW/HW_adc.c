@@ -58,9 +58,11 @@ void HW_ADC_unpackBuffer(bufferHalf_E half);
  ******************************************************************************/
 
 /**
- * @brief  Init function for ADC firmware
+ * @brief Initializes ADC peripheral
+ *
+ * @retval HW_OK
  */
-void HW_ADC_init(void)
+HW_StatusTypeDef_E HW_ADC_init(void)
 {
     ADC_MultiModeTypeDef   multimode = { 0 };
     ADC_ChannelConfTypeDef sConfig   = { 0 };
@@ -156,7 +158,20 @@ void HW_ADC_init(void)
         Error_Handler();
     }
 
-    HAL_ADC_Start(&hadc2);
+    return HW_OK;
+}
+
+
+/**
+ * @brief Deinitializes ADC peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_ADC_deInit()
+{
+    HAL_ADC_DeInit(&hadc2);
+
+    return HW_OK;
 }
 
 /**
