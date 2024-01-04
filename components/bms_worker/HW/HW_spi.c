@@ -68,6 +68,13 @@ void HW_SPI_Init(void)
     LL_SPI_Enable(SPI1);
 }
 
+void HW_SPI_DeInit(void)
+{
+
+    LL_SPI_GPIODeInit(SPI1);
+
+}
+
 /**
  * LL_SPI_GPIOInit
  * @param SPIx SPI handle to operate on
@@ -131,9 +138,14 @@ static inline void LL_SPI_GPIODeInit(SPI_TypeDef *SPIx)
         // Peripheral clock disable
         LL_SPI_Disable(SPI1);
 
+	HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
+	HAL_GPIO_DeInit(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin);
+	
+	LL_GPIO_AF_DisableRemap_SPI1();
+
         HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin |SPI1_MOSI_Pin);
-        HAL_GPIO_DeInit(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin);
-        HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
+
+	LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_SPI1);
     }
 }
 

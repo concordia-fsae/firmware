@@ -55,6 +55,11 @@ void CAN_Start(void)
     HAL_CAN_Start(&hcan);    // start CAN
 }
 
+void CAN_Stop(void)
+{
+    HAL_CAN_Stop(&hcan);
+}
+
 
 /**
  * HW_CAN_Init
@@ -97,6 +102,12 @@ void HW_CAN_Init(void)
     HAL_CAN_ConfigFilter(&hcan, &filt);
 }
 
+void HW_CAN_DeInit(void)
+{
+
+    HAL_CAN_DeInit(&hcan);
+
+}
 
 /**
  * CAN_checkMbFree

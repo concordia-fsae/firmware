@@ -57,6 +57,11 @@ bool HW_Init()
     return true;
 }
 
+void HW_DeInit()
+{
+    HAL_DeInit();
+}
+
 /**
  * @brief  Get the number of ticks since clock start
  *

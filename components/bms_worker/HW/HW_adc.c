@@ -92,6 +92,11 @@ void HW_ADC_Init(void)
     }
 }
 
+void HW_ADC_DeInit()
+{
+    HAL_ADC_DeInit(&hadc2);
+}
+
 /**
  * HAL_ADC_MspInit
  * @param adcHandle adc handle to operate on

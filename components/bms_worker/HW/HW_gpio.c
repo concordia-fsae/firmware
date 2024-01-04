@@ -72,6 +72,11 @@ void HW_GPIO_Init(void)
 void HW_GPIO_DeInit()
 {
     HAL_GPIO_DeInit(A2_GPIO_Port, A2_Pin);
+    HAL_GPIO_DeInit(A1_GPIO_Port, A1_Pin);
+    HAL_GPIO_DeInit(A0_GPIO_Port, A0_Pin);
+    HAL_GPIO_DeInit(LTC_INTERRUPT_Port, &GPIO_InitStruct);
+    HAL_GPIO_DeInit(LTC_NRST_Port, &GPIO_InitStruct);
+    HAL_GPIO_DeInit(LED_GPIO_Port, &GPIO_InitStruct);
 }
 
 bool HW_GPIO_ReadPin(HW_GPIO_S* dev)

@@ -129,6 +129,12 @@ HAL_StatusTypeDef HW_TIM_Init()
     return HAL_OK;
 }
 
+void HW_TIM_DeInit()
+{
+    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    __HAL_RCC_TIM1_CLK_DISABLE();
+}
+
 void HW_TIM1_setDuty(uint8_t percentage)
 {
     htim1.Instance->CCR1 = (uint16_t) (((uint32_t) percentage * htim1.Init.Period)/100);

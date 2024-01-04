@@ -48,6 +48,12 @@ void HW_I2C_Init(void)
     }
 }
 
+void HW_I2C_Init(void)
+{
+	HAL_I2C_DeInit(&i2c2);
+}
+
+
 /**
  * @brief  Msp call back for I2C initialization
  *
