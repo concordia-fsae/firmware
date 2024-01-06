@@ -15,10 +15,11 @@
  ******************************************************************************/
 
 /**
- * MX_DMA_Init
- * Enable DMA clock and interrupt
+ * @brief Initializes DMA peripheral
+ *
+ * @retval HW_OK
  */
-void HW_DMA_Init(void)
+HW_StatusTypeDef_E HW_DMA_Init(void)
 {
     // DMA controller clock enable
     __HAL_RCC_DMA1_CLK_ENABLE();
@@ -29,13 +30,22 @@ void HW_DMA_Init(void)
     HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
     HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, DMA_IRQ_PRIO, 0U);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+
+    return HW_OK;
 }
 
-void HW_DMA_DeInit(void)
+/**
+ * @brief Deinitializes DMA peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_DMA_DeInit(void)
 {
 
     HAL_NVIC_DisableIRQ(DMA1_Channel2_IRQn);
     HAL_NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 
     __HAL_RCC_DMA1_CLK_DISABLE();
+
+    return HW_OK;
 }

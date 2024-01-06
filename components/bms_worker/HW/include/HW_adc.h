@@ -8,6 +8,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "HW.h"
+
 #include "SystemConfig.h"
 
 #include "stdbool.h"
@@ -44,6 +46,7 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_ADC_Init(void);
+HW_StatusTypeDef_E HW_ADC_Init(void);
+HW_StatusTypeDef_E HW_ADC_DeInit(void);
 bool HW_ADC_Calibrate(ADC_HandleTypeDef *hadc);
 bool HW_ADC_Start_DMA(ADC_HandleTypeDef*, uint32_t*, uint32_t); 

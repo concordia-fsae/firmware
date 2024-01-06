@@ -31,8 +31,10 @@ DMA_HandleTypeDef hdma_i2c2_tx;
 
 /**
  * @brief  Initializes the I2C1 bus
+ *
+ * @retval HW_OK
  */
-void HW_I2C_Init(void)
+HW_StatusTypeDef_E HW_I2C_Init(void)
 {
     i2c2.Instance            = I2C2;
     i2c2.Init.ClockSpeed     = 100000U; /**< Clocked at 100kHz */
@@ -46,11 +48,20 @@ void HW_I2C_Init(void)
     {
         Error_Handler();
     }
+
+    return HW_OK;
 }
 
-void HW_I2C_Init(void)
+/**
+ * @brief  Deinitializes the I2C bus
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_I2C_DeInit(void)
 {
 	HAL_I2C_DeInit(&i2c2);
+
+	return HW_OK;
 }
 
 

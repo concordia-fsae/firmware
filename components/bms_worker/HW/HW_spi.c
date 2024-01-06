@@ -40,10 +40,11 @@ bool HW_SPI_Verify(HW_SPI_Device_S*);
  ******************************************************************************/
 
 /**
- * MX_SPI1_Init
- * Initialize the SPI peripheral
+ * @brief Initializes the SPI peripheral
+ *
+ * @retval HW_OK
  */
-void HW_SPI_Init(void)
+HW_StatusTypeDef_E HW_SPI_Init(void)
 {
     // initialize SPI pins
     LL_SPI_GPIOInit(SPI1);
@@ -66,13 +67,20 @@ void HW_SPI_Init(void)
 
     // enable SPI
     LL_SPI_Enable(SPI1);
+
+    return HW_OK;
 }
 
-void HW_SPI_DeInit(void)
+/**
+ * @brief Deinitializes the SPI peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_SPI_DeInit(void)
 {
-
     LL_SPI_GPIODeInit(SPI1);
 
+    return HW_OK;
 }
 
 /**

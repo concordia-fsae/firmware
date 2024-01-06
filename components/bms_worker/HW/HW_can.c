@@ -47,25 +47,37 @@ CAN_HandleTypeDef hcan;
 
 
 /**
- * CAN_Start
- * Start the CAN module(s)
+ * @brief Starts the CAN module(s)
+ *
+ * @retval HW_OK
  */
-void CAN_Start(void)
+HW_StatusTypeDef_E CAN_Start(void)
 {
     HAL_CAN_Start(&hcan);    // start CAN
-}
 
-void CAN_Stop(void)
-{
-    HAL_CAN_Stop(&hcan);
+    return HW_OK;
 }
 
 
 /**
- * HW_CAN_Init
- * initialize the CAN peripheral
+ * @brief Stops the CAN module(s)
+ *
+ * @retval HW_OK
  */
-void HW_CAN_Init(void)
+HW_StatusTypeDef_E CAN_Stop(void)
+{
+    HAL_CAN_Stop(&hcan);
+
+    return HW_OK;
+}
+
+
+/**
+ * @brief Initializes the CAN peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_CAN_Init(void)
 {
     hcan.Instance                  = CAN1;
     hcan.Init.Prescaler            = 4;
@@ -100,13 +112,22 @@ void HW_CAN_Init(void)
     filt.FilterFIFOAssignment = 0;
     filt.FilterActivation = ENABLE;
     HAL_CAN_ConfigFilter(&hcan, &filt);
+
+    return HW_OK;
 }
 
-void HW_CAN_DeInit(void)
-{
 
+/**
+ * @brief Deinitializes the CAN peripheral
+ *
+ * @retval HW_OK
+ */
+ HW_StatusTypeDef_E HW_CAN_DeInit(void)
+{
+    HAL_CAN_DeactivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
     HAL_CAN_DeInit(&hcan);
 
+    return HW_OK;
 }
 
 /**

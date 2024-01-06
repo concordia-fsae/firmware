@@ -41,9 +41,11 @@ DMA_HandleTypeDef hdma_adc2;
  ******************************************************************************/
 
 /**
- * MX_ADC1_Init
+ * @brief Initializes ADC peripheral
+ *
+ * @retval HW_OK
  */
-void HW_ADC_Init(void)
+HW_StatusTypeDef_E HW_ADC_Init(void)
 {
     ADC_ChannelConfTypeDef sConfig = { 0 };
 
@@ -90,11 +92,21 @@ void HW_ADC_Init(void)
     {
         Error_Handler();
     }
+
+    return HW_OK;
 }
 
-void HW_ADC_DeInit()
+
+/**
+ * @brief Deinitializes ADC peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_ADC_DeInit()
 {
     HAL_ADC_DeInit(&hadc2);
+
+    return HW_OK;
 }
 
 /**

@@ -13,6 +13,8 @@ extern "C" {
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "HW.h"
+
 #include "SystemConfig.h"
 
 #include "CAN/CanTypes.h"
@@ -29,8 +31,11 @@ extern "C" {
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void CAN_Start(void);
-void HW_CAN_Init(void);
+HW_StatusTypeDef_E CAN_Start(void);
+HW_StatusTypeDef_E CAN_Stop(void);
+
+HW_StatusTypeDef_E HW_CAN_Init(void);
+HW_StatusTypeDef_E HW_CAN_DeInit(void);
 
 bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len);
 

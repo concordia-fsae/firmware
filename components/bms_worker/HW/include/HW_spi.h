@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include "HW.h"
+
 #include "SystemConfig.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_ll_spi.h"
@@ -19,7 +21,8 @@ typedef struct {
     HW_GPIO_S ncs_pin;
 } HW_SPI_Device_S;
 
-void HW_SPI_Init(void);
+HW_StatusTypeDef_E HW_SPI_Init(void);
+HW_StatusTypeDef_E HW_SPI_DeInit(void);
 bool HW_SPI_Lock(HW_SPI_Device_S*);
 bool HW_SPI_Release(HW_SPI_Device_S*);
 

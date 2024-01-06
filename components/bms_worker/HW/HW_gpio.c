@@ -16,10 +16,13 @@
  ******************************************************************************/
 
 /**
- * MX_GPIO_Init
- * Configure pins as Analog, Input, Output, EVENT_OUT, or EXTI
+ * @brief Initializes GPIO peripheral
+ *
+ * @note Configure pins as Analog, Input, Output, EVENT_OUT, or EXTI
+ *
+ * @retval HW_OK
  */
-void HW_GPIO_Init(void)
+HW_StatusTypeDef_E HW_GPIO_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
@@ -67,9 +70,17 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
     HAL_GPIO_Init(A2_GPIO_Port, &GPIO_InitStruct);
+
+    return HW_OK;
 }
 
-void HW_GPIO_DeInit()
+/**
+ * @brief Deinitializes GPIO peripheral
+ *
+ * @retval HW_OK
+ */
+
+HW_StatusTypeDef_E HW_GPIO_DeInit(void)
 {
     HAL_GPIO_DeInit(A2_GPIO_Port, A2_Pin);
     HAL_GPIO_DeInit(A1_GPIO_Port, A1_Pin);
@@ -77,6 +88,8 @@ void HW_GPIO_DeInit()
     HAL_GPIO_DeInit(LTC_INTERRUPT_Port, &GPIO_InitStruct);
     HAL_GPIO_DeInit(LTC_NRST_Port, &GPIO_InitStruct);
     HAL_GPIO_DeInit(LED_GPIO_Port, &GPIO_InitStruct);
+
+    return HW_OK;
 }
 
 bool HW_GPIO_ReadPin(HW_GPIO_S* dev)

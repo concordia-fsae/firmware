@@ -27,16 +27,11 @@ TIM_HandleTypeDef htim1;
  ******************************************************************************/
 
 /**
- * HAL_InitTick
- * This function configures the TIM4 as a time base source.
- * The time source is configured  to have 1ms time base with a dedicated
- * Tick interrupt priority.
- * @note   This function is called  automatically at the beginning of program after
- *         reset by HAL_Init() or at any time when clock is configured, by HAL_RCC_ClockConfig().
- * @param  TickPriority Tick interrupt priority.
- * @return exit status
+ * @brief Initializes TIM peripheral
+ *
+ * @retval HW_OK
  */
-HAL_StatusTypeDef HW_TIM_Init()
+HW_StatusTypeDef_E HW_TIM_Init(void)
 {
     RCC_ClkInitTypeDef clkconfig;
     uint32_t           uwTimclock = 0;
@@ -126,13 +121,20 @@ HAL_StatusTypeDef HW_TIM_Init()
     
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
     
-    return HAL_OK;
+    return HW_OK;
 }
 
-void HW_TIM_DeInit()
+/**
+ * @brief Deinitializes TIM peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_TIM_DeInit(void)
 {
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
     __HAL_RCC_TIM1_CLK_DISABLE();
+
+    return HW_OK;
 }
 
 void HW_TIM1_setDuty(uint8_t percentage)
