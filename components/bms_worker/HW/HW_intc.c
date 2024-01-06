@@ -19,6 +19,7 @@
 
 extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim2;
 extern CAN_HandleTypeDef hcan;
 
 
@@ -101,6 +102,11 @@ void DMA1_Channel1_IRQHandler(void)
 void TIM4_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&htim4);
+}
+
+void TIM2_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&htim2);
 }
 
 // // CAN interrupts

@@ -13,6 +13,8 @@
 
 #include "ModuleDesc.h"
 
+#include "stdint.h"
+
 
 /******************************************************************************
  *                              E X T E R N S
@@ -34,3 +36,31 @@ extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
+
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef enum {
+    MODULE_1Hz_TASK = 0x00,
+    MODULE_10Hz_TASK,
+    MODULE_100Hz_TASK,
+    MODULE_1kHz_TASK,
+    MODULE_10kHz_TASK,
+    MODULE_IDLE_TASK,
+    MODULE_TASK_CNT
+} Module_TaskSpeeds_E;
+
+typedef struct {
+    uint64_t total_runtime;
+    uint32_t timeslice_runtime;
+    uint8_t total_percentage;
+    uint8_t timeslice_percentage;
+} Module_TaskStats_S;
+
+/******************************************************************************
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+void Module_ApplicationIdleHook(void);

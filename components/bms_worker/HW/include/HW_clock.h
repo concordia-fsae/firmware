@@ -10,6 +10,8 @@
  ******************************************************************************/
 
 #include "stm32f1xx_hal.h"
+
+#include "HW_tim.h"
 #include "ErrorHandler.h"
 
 
@@ -81,5 +83,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
     if (htim->Instance == TIM4)
     {
         HAL_IncTick();
+    }
+    else if (htim->Instance == TIM2)
+    {
+        HW_TIM_IncBaseTick();
     }
 }

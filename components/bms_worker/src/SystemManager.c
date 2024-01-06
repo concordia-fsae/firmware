@@ -79,27 +79,15 @@ int main(void)
     HW_ADC_Init();
     HW_SPI_Init();
 
+    /**< Crate RTOS Tasks, Timers, etc... */
+    RTOS_SWI_Init();
+    RTOS_createResources();
 
-    extern MAX14921_S max_chip;
-    MAX_Init();
-    max_chip.config.sampling = true;
-    max_chip.config.output.state = CELL_VOLTAGE;
-    max_chip.config.output.output.cell = CELL1;
-    MAX_ReadWriteToChip();
-    MAX_ReadWriteToChip();
-
-    LTC_Init();
-    LTC_StartMeasurement();
-    LTC_GetMeasurement();
-    ///**< Create RTOS Tasks, Timers, etc... */
-    //RTOS_SWI_Init();
-    //RTOS_createResources();
-
-    ///**< Initialize Modules */
-    //Module_Init();
+    /**< Initialize Modules */
+    Module_Init();
    
-    ///**< Start RTOS task scheduler. Should never return */
-    //vTaskStartScheduler();
+    /**< Start RTOS task scheduler. Should never return */
+    vTaskStartScheduler();
 
     return 0;
 }

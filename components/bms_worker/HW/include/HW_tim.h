@@ -33,3 +33,6 @@
  */
 HAL_StatusTypeDef HW_TIM_Init(void);
 void HW_TIM1_setDuty(uint8_t);
+void HW_TIM_ConfigureRunTimeStatsTimer(void);
+void HW_TIM_IncBaseTick(void);
+uint64_t HW_TIM_GetBaseTick(void);

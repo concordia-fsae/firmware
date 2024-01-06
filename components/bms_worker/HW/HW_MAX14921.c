@@ -68,6 +68,16 @@ bool MAX_Init()
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
+    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+
+    GPIO_InitStruct.Pin   = MAX_SAMPLE_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(MAX_SAMPLE_GPIO_Port, &GPIO_InitStruct);
+    
+    HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, GPIO_PIN_SET);
+   
     max_chip.dev                         = &MAX14921;
     max_chip.config.low_power_mode       = false;
     max_chip.config.diagnostic_enabled   = false;
@@ -158,24 +168,26 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
         }
     }
 
-    data[2] |= (config->sampling) ? 0 : 1 << 5;
-    data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
-    data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
+    /**< Device always SAMPL IO controlled */ //data[2] |= (config->sampling) ? 0 : 1 << 5;
+    HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, (config->sampling) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    if (config->sampling) data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
+    // data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
 }
 
 void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data)
 {
-    chip->cell_undervoltage = data[1] << 8 | data[0];
-    if ((data[2] & 0x03) == 0x3) 
+    chip->cell_undervoltage = (uint16_t)data[1] << 8 | data[0];
+    if ((data[2] & 0x03) == 0x3)
     {
         chip->ic_id = PN_ERROR;
     }
-    else {
+    else
+    {
         chip->ic_id = ((data[2] & 0x03) == 0x01) ? PN_14920 : PN_14921;
     }
-    chip->die_version = (data[2] & 0x0c) >> 2;
-    chip->va_undervoltage = (data[2] & 0x10) ? true : false;
-    chip->vp_undervoltage = (data[2] & 0x20) ? true : false;
-    chip->ready = (data[2] & 0x40) ? false : true;
+    chip->die_version      = (data[2] & 0x0c) >> 2;
+    chip->va_undervoltage  = (data[2] & 0x10) ? true : false;
+    chip->vp_undervoltage  = (data[2] & 0x20) ? true : false;
+    chip->ready            = (data[2] & 0x40) ? false : true;
     chip->thermal_shutdown = (data[2] & 0x80) ? true : false;
 }

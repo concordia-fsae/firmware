@@ -122,6 +122,71 @@ static void BMS_Init()
     if (BMS.state != BMS_ERROR){
         BMS.state = BMS_WAITING;
     }
+//    MAX_Init();
+//
+//    max_chip.config.sampling = true;
+//    max_chip.config.output.state = PACK_VOLTAGE;
+//    max_chip.config.output.output.cell = CELL1;
+//    max_chip.config.diagnostic_enabled = true;
+//    MAX_ReadWriteToChip();
+//    HAL_Delay(10000);
+//    max_chip.config.sampling = false;
+//    max_chip.config.output.state = PACK_VOLTAGE;
+//    max_chip.config.output.output.cell = CELL1;
+//    max_chip.config.diagnostic_enabled = true;
+//    MAX_ReadWriteToChip();
+//
+//    while (1)
+//    {
+//        max_chip.config.output.state = PACK_VOLTAGE;
+//        max_chip.config.output.output.cell = CELL1;
+//        max_chip.config.sampling = true;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(1000);
+//        max_chip.config.sampling = false;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(5);
+//        max_chip.config.output.state = CELL_VOLTAGE;
+//        max_chip.config.output.output.cell = CELL1;
+//        max_chip.config.sampling = false;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(5);
+//        max_chip.config.output.state = CELL_VOLTAGE;
+//        max_chip.config.output.output.cell = CELL2;
+//        max_chip.config.sampling = false;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(5);
+//        max_chip.config.output.state = CELL_VOLTAGE;
+//        max_chip.config.output.output.cell = CELL3;
+//        max_chip.config.sampling = false;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(5);
+//        max_chip.config.output.state = CELL_VOLTAGE;
+//        max_chip.config.output.output.cell = CELL4;
+//        max_chip.config.sampling = false;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(5);
+//        max_chip.config.output.state = PACK_VOLTAGE;
+//        max_chip.config.output.output.cell = CELL1;
+//        max_chip.config.sampling = false;
+//        max_chip.config.diagnostic_enabled = false;
+//        MAX_ReadWriteToChip();
+//        MAX_ReadWriteToChip();
+//        HAL_Delay(5);
+//    }
+
 }
 
 /**
@@ -129,21 +194,21 @@ static void BMS_Init()
  */
 static void BMS10kHz_PRD()
 {
-    if (BMS.state == BMS_SAMPLING)
-    {
-        if (BMS.data.sampling_started == false)
-        {
-            max_chip.config.sampling = true;
-
-            MAX_ReadWriteToChip();
-        }
-        else {
-            max_chip.config.sampling = false;
-            max_chip.config.output.output.cell = CELL1;
-
-            HW_ADC_Start_DMA(&hadc1, (uint32_t*)&BMS.data.adc_buffer, BMS_ADC_BUF_LEN);
-        }
-    }
+//    if (BMS.state == BMS_SAMPLING)
+//    {
+//        if (BMS.data.sampling_started == false)
+//        {
+//            max_chip.config.sampling = true;
+//
+//            //MAX_ReadWriteToChip();
+//        }
+//        else {
+//            max_chip.config.sampling = false;
+//            max_chip.config.output.output.cell = CELL1;
+//
+//            HW_ADC_Start_DMA(&hadc1, (uint32_t*)&BMS.data.adc_buffer, BMS_ADC_BUF_LEN);
+//        }
+//    }
 }
 
 /**

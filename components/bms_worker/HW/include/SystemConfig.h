@@ -25,9 +25,10 @@
 
 // Interrupt priorities, lower number is higher priority
 // tick interrupt is highest priority
-#define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
-#define CAN_RX_IRQ_PRIO configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 6U
-#define CAN_TX_IRQ_PRIO configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 8U
+#define FAST_TICK_IRQ_PRIO TICK_INT_PRIORITY //configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 2U
+#define DMA_IRQ_PRIO       configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
+#define CAN_RX_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 6U
+#define CAN_TX_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 8U
 
 // pin aliases
 
@@ -71,3 +72,6 @@
 
 #define FAN_Pin       GPIO_PIN_8
 #define FAN_GPIO_Port GPIOA
+
+#define MAX_SAMPLE_Pin       GPIO_PIN_10
+#define MAX_SAMPLE_GPIO_Port GPIOA

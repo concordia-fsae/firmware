@@ -70,6 +70,7 @@ extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
+extern void Module_ApplicationIdleHook(void);
 
 // SWIs
 RTOS_swiHandle_T* CANRX_BUS_A_swi;
@@ -77,6 +78,7 @@ RTOS_swiHandle_T* CANTX_BUS_A_10ms_swi;
 
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
+/**< 10kHz is too fast of a frequency with 50kHz TIM2 */
     {
         .function    = &Module_10kHz_TSK,
         .name        = "Task 10kHz",
@@ -155,6 +157,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
  ******************************************************************************/
 
 void vApplicationIdleHook(void);
+void vApplicationTickHook(void);
 
 
 /******************************************************************************
@@ -229,6 +232,11 @@ void vApplicationIdleHook(void)
      * important that vApplicationIdleHook() is permitted to return to its calling
      * function, because it is the responsibility of the idle task to clean up
      * memory allocated by the kernel to any task that has since been deleted. */
+   Module_ApplicationIdleHook();
+}
+
+void vApplicationTickHook(void)
+{
 }
 
 /******************************************************************************
