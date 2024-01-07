@@ -9,14 +9,16 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stm32f1xx.h"
 #include "HW_intc.h"
+#include "stm32f1xx.h"
 
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim2;
@@ -96,6 +98,11 @@ void DMA1_Channel1_IRQHandler(void)
     HAL_DMA_IRQHandler(&hdma_adc1);
 }
 
+void ADC1_2_IRQHandler(void)
+{
+    HAL_ADC_IRQHandler(&hadc1);
+    HAL_ADC_IRQHandler(&hadc2);
+}
 /**
  * @brief This function handles TIM4 global interrupt.
  */
@@ -114,7 +121,7 @@ void TIM2_IRQHandler(void)
 // {
 //     HAL_CAN_IRQHandler(&hcan);
 // }
-// 
+//
 // /**
 //  * CAN1_TX_IRQHandler
 //  *
@@ -123,7 +130,7 @@ void TIM2_IRQHandler(void)
 // {
 //     HAL_CAN_IRQHandler(&hcan);
 // }
-// 
+//
 // /**
 //  * CAN1_RX0_IRQHandler
 //  *
@@ -132,7 +139,7 @@ void TIM2_IRQHandler(void)
 // {
 //     HAL_CAN_IRQHandler(&hcan);
 // }
-// 
+//
 // /**
 //  * CAN1_RX1_IRQHandler
 //  *

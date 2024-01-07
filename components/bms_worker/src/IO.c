@@ -33,16 +33,14 @@
  ******************************************************************************/
 
 #if defined(BMSW_BOARD_VA1)
-#define VREF                     3.3F    // [V] ADC reference voltage
-#endif /**< BMSW_BOARD_VA1 */
+# define VREF 3.3F    // [V] ADC reference voltage
+#endif                /**< BMSW_BOARD_VA1 */
 
-#define ADC_BUF_LEN              264U    // number of samples to fill with DMA,
-                                         // processed when half full and again when completely full
-#define ADC_MAX_VAL              4095U   // Max integer value of ADC reading (2^12 for this chip)
-#define TEMP_CHIP_V_PER_DEG_C    0.0043F // [V/degC] slope of built-in temp sensor
-#define TEMP_CHIP_V_AT_25_C      1.43F   // [V] voltage at 25 degC
+#define ADC_MAX_VAL           4095U      // Max integer value of ADC reading (2^12 for this chip)
+#define TEMP_CHIP_V_PER_DEG_C 0.0043F    // [V/degC] slope of built-in temp sensor
+#define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
 
-#define TEMP_CHIP_FROM_V(v)      (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
+#define TEMP_CHIP_FROM_V(v) (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
 
 
 /******************************************************************************
@@ -54,6 +52,8 @@ typedef enum
     ADC_STATE_INIT = 0,
     ADC_STATE_CALIBRATION,
     ADC_STATE_RUNNING,
+    ADC_STATE_MEASURING,
+    ADC_STATE_MEASURED,
     ADC_STATE_CALIBRATION_FAILED,
     ADC_STATE_COUNT,
 } adcState_E;
@@ -64,13 +64,13 @@ typedef enum
     ADC_CHANNEL_COUNT,
 } AdcChannels_E;
 // _Static_assert(ADC_CHANNEL_COUNT == hadc1.Init.NbrOfConversion);
-_Static_assert(ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
-_Static_assert((ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
+_Static_assert(IO_ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
+_Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
 
 typedef struct
 {
     adcState_E     adcState;
-    uint32_t       adcBuffer[ADC_BUF_LEN];
+    uint32_t       adcBuffer[IO_ADC_BUF_LEN];
     simpleFilter_S adcData[ADC_CHANNEL_COUNT];
     struct
     {
@@ -88,17 +88,17 @@ static io_S io;
 /**< GPIO descriptors */
 HW_GPIO_S A0 = {
     .port = A0_GPIO_Port,
-    .pin = A0_Pin,
+    .pin  = A0_Pin,
 };
 
 HW_GPIO_S A1 = {
     .port = A1_GPIO_Port,
-    .pin = A1_Pin,
+    .pin  = A1_Pin,
 };
 
 HW_GPIO_S A2 = {
     .port = A2_GPIO_Port,
-    .pin = A2_Pin,
+    .pin  = A2_Pin,
 };
 
 /******************************************************************************
@@ -122,11 +122,10 @@ static void IO_init(void)
 {
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
-    
+
     IO.addr |= ((HW_GPIO_ReadPin(&A0)) ? 0x01 : 0x00) << 0;
     IO.addr |= ((HW_GPIO_ReadPin(&A1)) ? 0x01 : 0x00) << 1;
     IO.addr |= ((HW_GPIO_ReadPin(&A2)) ? 0x01 : 0x00) << 2;
-            
 }
 
 /**
@@ -138,13 +137,19 @@ static void IO1kHz_PRD(void)
     {
         for (uint8_t i = 0U; i < ADC_CHANNEL_COUNT; i++)
         {
-            io.adcData[i].value  = ((float32_t)io.adcData[i].raw) / io.adcData[i].count;
-            io.adcData[i].raw    = 0;
-            io.adcData[i].count  = 0;
+            io.adcData[i].value = ((float32_t)io.adcData[i].raw) / io.adcData[i].count;
+            io.adcData[i].raw   = 0;
+            io.adcData[i].count = 0;
             io.adcData[i].value *= VREF / ADC_MAX_VAL;
         }
 
-        IO.temp.mcu   = TEMP_CHIP_FROM_V(io.adcData[ADC_CHANNEL_TEMP_MCU].value);
+        IO.temp.mcu = TEMP_CHIP_FROM_V(io.adcData[ADC_CHANNEL_TEMP_MCU].value);
+
+        if (HW_ADC_Request_DMA(ADC_REQUEST_IO, (uint32_t*)&io.adcBuffer)) io.adcState = ADC_STATE_MEASURING;
+    }
+    else if (io.adcState == ADC_STATE_MEASURED)
+    {
+        io.adcState = ADC_STATE_RUNNING;
     }
     else
     {
@@ -153,8 +158,9 @@ static void IO1kHz_PRD(void)
             io.adcState = ADC_STATE_CALIBRATION;
             if (HW_ADC_Calibrate(&hadc1))
             {
-                HW_ADC_Start_DMA(&hadc1, (uint32_t*)&io.adcBuffer, ADC_BUF_LEN);
-                io.adcState = ADC_STATE_RUNNING;
+                // HW_ADC_Start_DMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
+                HW_ADC_Request_DMA(ADC_REQUEST_IO, (uint32_t*)&io.adcBuffer);
+                io.adcState = ADC_STATE_MEASURING;
             }
             else
             {
@@ -184,8 +190,8 @@ const ModuleDesc_S IO_desc = {
  */
 void IO_UnpackAdcBuffer(bufferHalf_E half)
 {
-    uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : ADC_BUF_LEN / 2U;
-    uint16_t endIndex   = startIndex + (ADC_BUF_LEN / 2U);
+    uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : IO_ADC_BUF_LEN / 2U;
+    uint16_t endIndex   = startIndex + (IO_ADC_BUF_LEN / 2U);
 
     for (uint16_t i = startIndex; i < endIndex; i++)
     {
@@ -193,4 +199,6 @@ void IO_UnpackAdcBuffer(bufferHalf_E half)
         io.adcData[channelIndex].raw += io.adcBuffer[i];
         io.adcData[channelIndex].count++;
     }
+
+    if (half == BUFFER_HALF_UPPER) io.adcState = ADC_STATE_MEASURED;
 }

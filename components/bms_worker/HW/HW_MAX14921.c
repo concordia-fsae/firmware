@@ -11,11 +11,13 @@
 
 #include "HW_MAX14921.h"
 
+#include "HW.h"
 #include "HW_spi.h"
 #include "SystemConfig.h"
 
 #include "Utility.h"
 #include "string.h"
+#include <stdint.h>
 
 /******************************************************************************
  *                              D E F I N E S
@@ -76,19 +78,19 @@ bool MAX_Init()
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(MAX_SAMPLE_GPIO_Port, &GPIO_InitStruct);
     
-    HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, GPIO_PIN_RESET);
    
     max_chip.dev                         = &MAX14921;
     max_chip.config.low_power_mode       = false;
     max_chip.config.diagnostic_enabled   = false;
     max_chip.config.sampling             = false;
-    max_chip.config.sampling_start_100us = 0x00;
+    max_chip.config.sampling_start_100us = UINT32_MAX;
     max_chip.config.balancing            = 0x00;
     max_chip.config.output.state         = AMPLIFIER_SELF_CALIBRATION;
     max_chip.config.output.output.cell   = CELL1;
 
     MAX_ReadWriteToChip();
-
+    
     if (max_chip.state.ic_id == PN_ERROR)
         return false;
 

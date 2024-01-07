@@ -67,6 +67,16 @@ uint32_t HW_GetTick()
     return HAL_GetTick();
 }
 
+/**
+ * @brief  Delay the execution in blocking mode for amount of ticks
+ *
+ * @param delay Number of ticks to delay in blocking mode
+ */
+void HW_Delay(uint32_t delay)
+{
+    HAL_Delay(delay);
+}
+
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S

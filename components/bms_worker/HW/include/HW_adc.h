@@ -19,12 +19,17 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
-extern DMA_HandleTypeDef hdma_adc2;
 
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
+
+typedef enum {
+    ADC_REQUEST_IO,
+    ADC_REQUEST_BMS,
+    ADC_REQUEST_CNT,
+} ADC_Request_E; 
 
 typedef enum
 {
@@ -46,4 +51,5 @@ typedef struct
 
 void HW_ADC_Init(void);
 bool HW_ADC_Calibrate(ADC_HandleTypeDef *hadc);
-bool HW_ADC_Start_DMA(ADC_HandleTypeDef*, uint32_t*, uint32_t); 
+bool HW_ADC_Start_DMA(ADC_HandleTypeDef*, uint32_t*, uint32_t);
+bool HW_ADC_Request_DMA(ADC_Request_E, uint32_t*);

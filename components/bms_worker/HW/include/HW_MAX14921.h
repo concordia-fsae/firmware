@@ -96,6 +96,7 @@ typedef struct {
     bool vp_undervoltage;
     bool ready;
     bool thermal_shutdown;
+    uint8_t connected_cells;
 } MAX14921_Response_S;
 
 typedef struct {

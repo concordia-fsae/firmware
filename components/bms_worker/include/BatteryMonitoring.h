@@ -25,7 +25,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BMS_ADC_BUF_LEN 100
+#define BMS_ADC_BUF_LEN 264
 
 /******************************************************************************
  *                              E X T E R N S
@@ -38,13 +38,9 @@
 typedef enum {
     BMS_INIT = 0x00,
     BMS_WAITING,
-    BMS_MEASURING,
     BMS_SAMPLING,
-    BMS_SAMPLING_MEASUREMENT,
     BMS_DIAGNOSTIC,
-    BMS_DIAGNOSTIC_MEASUREMENT,
     BMS_BALANCING,
-    BMS_BALANCING_MEASUREMENT,
     BMS_ERROR,
 } BMS_State_E;
 
@@ -55,7 +51,7 @@ typedef enum
 } AdcChannels_E;
 
 typedef struct {
-    bool sampling_started;
+    bool measurement_complete;
     uint32_t adc_buffer[BMS_ADC_BUF_LEN];
     simpleFilter_S cell_voltages[ADC_CHANNEL_COUNT];
 } BMS_Data_S;
@@ -64,7 +60,7 @@ typedef struct {
     BMS_State_E state;
     uint16_t balancing_cells;
     uint16_t cell_faults;
-    uint16_t cell_voltages[ADC_CHANNEL_COUNT];
+    uint16_t cell_voltages[CELL_COUNT];
     uint16_t max_voltage;
     uint16_t min_voltage;
     uint16_t avg_voltage;

@@ -46,6 +46,7 @@
 
 bool HW_Init(void);
 uint32_t HW_GetTick(void);
+void HW_Delay(uint32_t);
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S

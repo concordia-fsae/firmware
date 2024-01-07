@@ -78,13 +78,13 @@ void Module_10kHz_TSK(void)
     vTaskGetInfo(NULL, &start, pdFALSE, 0);
 
     /**< Run each of the modules 10kHz function in order */
-    //for (uint8_t i = 0U; i < COUNTOF(modules); i++)
-    //{
-    //    if (modules[i]->periodic10kHz_CLK != NULL)
-    //    {
-    //        (*modules[i]->periodic10kHz_CLK)();
-    //    }
-    //}
+    for (uint8_t i = 0U; i < COUNTOF(modules); i++)
+    {
+        if (modules[i]->periodic10kHz_CLK != NULL)
+        {
+            (*modules[i]->periodic10kHz_CLK)();
+        }
+    }
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
     
     stats[MODULE_10kHz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
@@ -205,8 +205,6 @@ void Module_1Hz_TSK(void)
 
 /**
  * @brief  Idle task used by FreeRTOS
- *
- * @note The BMS Worker uses this to update the task statistics
  */
 void Module_ApplicationIdleHook()
 {
