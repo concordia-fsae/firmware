@@ -237,14 +237,11 @@ objs.extend(compile_objects(rtos_env, rtos_source_files, override_dir="FreeRTOS/
 # compile project source files
 objs.extend(compile_objects(env, project_source_files))
 
-# link objects into hex
-env.Program("build/bms_worker", objs)
-## done compiling
+elf = env.Program("build/bms_worker", objs)
+env.Depends(elf, env["LINKSCRIPT"])
 
-# setup hex file as default target
-env.Default("build/bms_worker.bin")
-# make sure we recompile for changes in the linker
-env.Depends("build/bms_worker.bin", env["LINKSCRIPT"])
+binary = env.Bin(source="build/bms_worker.elf")
+env.Default(binary)## link objects into hex
 
 # build doxygen files for this component
 #env.Alias("docs", env.Doxygen("doxygen_stw.conf"))
