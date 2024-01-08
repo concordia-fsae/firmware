@@ -53,3 +53,4 @@ void HW_ADC_Init(void);
 bool HW_ADC_Calibrate(ADC_HandleTypeDef *hadc);
 bool HW_ADC_Start_DMA(ADC_HandleTypeDef*, uint32_t*, uint32_t);
 bool HW_ADC_Request_DMA(ADC_Request_E, uint32_t*);
+uint16_t HW_ADC_GetVFromCount(uint16_t);

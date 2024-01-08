@@ -13,6 +13,7 @@ PROJECT_LIB_DIR = Dir("lib")
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
+PROJECT_CELLS_DIR = Dir("cells")
 
 BUILD_DIR = Dir("build")
 
@@ -118,6 +119,7 @@ PROJECT_INCLUDE_DIRS = [
     "include/",
     "HW/include/",
     "generated/",
+    "cells/"
 ]
 
 paths = (
@@ -148,6 +150,7 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("Environment.c"),
     PROJECT_SOURCE_DIR.File("BatteryMonitoring.c"),
     PROJECT_SOURCE_DIR.File("Sys.c"),
+    PROJECT_CELLS_DIR.File("P42A.c"),
 ]
 
 project_hw_files = [

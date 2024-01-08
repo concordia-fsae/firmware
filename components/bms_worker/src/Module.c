@@ -47,6 +47,7 @@ static const ModuleDesc_S* modules[] = {
 static Module_TaskStats_S stats[MODULE_TASK_CNT] = {0};
 static uint8_t            total_percentage;
 static uint8_t            timeslice_percentage;
+static uint64_t rtos_start;
 
 
 /******************************************************************************
@@ -66,6 +67,8 @@ void Module_Init(void)
             (*modules[i]->moduleInit)();
         }
     }
+
+    rtos_start = HW_TIM_GetBaseTick();
 }
 
 /**
@@ -185,9 +188,9 @@ void Module_1Hz_TSK(void)
 
     temp_tick = HW_TIM_GetBaseTick();
 
-    for (int8_t i = MODULE_1Hz_TASK; i < MODULE_TASK_CNT; i++)
+    for (int8_t i = 0; i < MODULE_TASK_CNT; i++)
     {
-        stats[i].total_percentage     = (100 * stats[i].total_runtime) / temp_tick;
+        stats[i].total_percentage     = (100 * stats[i].total_runtime) / (temp_tick - rtos_start);
         stats[i].timeslice_percentage = (100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice);
         total_percentage += stats[i].total_percentage;
         timeslice_percentage += stats[i].timeslice_percentage;

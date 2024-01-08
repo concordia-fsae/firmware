@@ -29,6 +29,10 @@
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
 #define ADC_CALIBRATION_TIMEOUT                 10U
 
+#define ADC_MAX_COUNT 4095
+#define ADC_REF_VOLTAGE 3.3
+#define ADC_INPUT_VOLTAGE_DIVISOR 2
+
 #define ADC_BUF_CNT IO_ADC_BUF_LEN
 _Static_assert(IO_ADC_BUF_LEN == BMS_ADC_BUF_LEN, "BMS and IO must have same length ADC buffer for DMA.");
 
@@ -250,6 +254,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
                 BMS_UnpackADCBuffer(BUFFER_HALF_UPPER);
                 break;
             default:
+                return;
                 break;
         }
 
@@ -305,6 +310,18 @@ bool HW_ADC_Request_DMA(ADC_Request_E req, uint32_t* buf)
     adc_req_addr[req] = buf;
 
     return true;
+}
+
+/**
+ * @brief  Get analog input voltage in 0.1mV from ADC count 
+ *
+ * @param cnt ADC coun
+ *
+ * @retval   0.01mV
+ */
+uint16_t HW_ADC_GetVFromCount(uint16_t cnt)
+{
+    return ((uint32_t)cnt) * 10000 * ADC_INPUT_VOLTAGE_DIVISOR * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }
 
 

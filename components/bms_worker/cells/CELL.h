@@ -1,23 +1,22 @@
 /**
- * @file HW.c
- * @brief  Source code for generic firmware functions
+ * @file CELL.h
+ * @brief  Header file for cell library
+ *
+ * @note    This header file defines the methods that a compiled source file must provide
+ *          for the BMS to properly utilize the data. Only one source file can be compiled
+ *          per binary reducing the size of the system.
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-28
+ * @date 2024-01-07
  */
+
+#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-/**< Header file */
-#include "HW.h"
+#include "stdint.h"
 
-/**< System Includes */
-#include "include/HW_tim.h"
-#include "stdbool.h"
-
-/**< Firmware Includes */
-#include "stm32f1xx.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -40,56 +39,8 @@
  ******************************************************************************/
 
 /******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-/******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-/**
- * @brief  Initializes the generic low-level firmware
- *
- * @retval Always true 
- */
-bool HW_Init() 
-{
-    HAL_Init();
-    return true;
-}
-
-/**
- * @brief  Get the number of ticks since clock start
- *
- * @retval Number of ticks
- */
-uint32_t HW_GetTick()
-{
-    return HAL_GetTick();
-}
-
-/**
- * @brief  Delay the execution in blocking mode for amount of ticks
- *
- * @param delay Number of ticks to delay in blocking mode
- */
-void HW_Delay(uint32_t delay)
-{
-    HAL_Delay(delay);
-}
-
-/**
- * @brief  This function is blocking and should be avoided
- *
- * @param us Microsecond blocking delay
- */
-void HW_usDelay(uint8_t us)
-{
-    uint64_t us_start = HW_TIM_GetBaseTick();
-
-    while (HW_TIM_GetBaseTick() < us_start + us);
-}
-
-/******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
+uint32_t CELL_GetCapacityfromV(uint16_t);
+uint16_t CELL_GetVfromCapacity(uint32_t);
