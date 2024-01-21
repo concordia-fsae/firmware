@@ -5,6 +5,8 @@
  * @date 2023-12-26
  */
 
+#if defined (BMSW_BOARD_VA1)
+
 #pragma once
 
 /******************************************************************************
@@ -102,3 +104,5 @@ typedef struct {
 bool LTC_Init(void);
 bool LTC_StartMeasurement(void);
 bool LTC_GetMeasurement(void);
+
+#endif /**< BMSW_BOARD_VA1 */

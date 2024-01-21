@@ -32,7 +32,13 @@
  * @return exit status
  */
 HAL_StatusTypeDef HW_TIM_Init(void);
-void HW_TIM1_setDuty(uint8_t);
 void HW_TIM_ConfigureRunTimeStatsTimer(void);
 void HW_TIM_IncBaseTick(void);
 uint64_t HW_TIM_GetBaseTick(void);
+
+#if defined (BMSW_BOARD_VA1)
+void HW_TIM1_setDuty(uint8_t);
+#elif defined (BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+void HW_TIM4_setDuty(uint8_t, uint8_t);
+#endif
+

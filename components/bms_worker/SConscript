@@ -64,7 +64,7 @@ c_flags = [
     "-DSTM32F1",
     "-DSTM32F103xB",
     "-DUSE_HAL_DRIVER",
-    "-DBMSW_BOARD_VA1",
+    "-DBMSW_BOARD_VA3",
     "-Wall",
     "-Wextra",
     "-Werror",
@@ -168,6 +168,7 @@ project_hw_files = [
     PROJECT_HW_DIR.File("HW_HS4011.c"),
     PROJECT_HW_DIR.File("HW_MAX14921.c"),
     PROJECT_HW_DIR.File("HW_LTC2983.c"),
+    PROJECT_HW_DIR.File("HW_SHT40.c"),
 ]
 
 project_source_files += project_hw_files

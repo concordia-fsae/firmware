@@ -37,7 +37,8 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
-    
+
+#if defined (BMSW_BOARD_VA1)
     /**< Configure LTC in default state */
     HAL_GPIO_WritePin(LTC_NRST_Port, LTC_NRST_Pin, GPIO_PIN_RESET);
 
@@ -57,7 +58,8 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
     HAL_GPIO_Init(A0_GPIO_Port, &GPIO_InitStruct);
-    
+#endif /**< BMSW_BOARD_VA1 */ 
+
     GPIO_InitStruct.Pin   = A1_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
@@ -67,6 +69,18 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
     HAL_GPIO_Init(A2_GPIO_Port, &GPIO_InitStruct);
+
+#if defined (BMSW_BOARD_VA3)
+    GPIO_InitStruct.Pin   = A3_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull  = GPIO_PULLUP;
+    HAL_GPIO_Init(A3_GPIO_Port, &GPIO_InitStruct);
+    
+    GPIO_InitStruct.Pin   = NX3_NEN_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    HAL_GPIO_Init(NX3_NEN_Port, &GPIO_InitStruct);
+#endif
 }
 
 void HW_GPIO_DeInit()

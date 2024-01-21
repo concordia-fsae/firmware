@@ -30,9 +30,13 @@
 #define ADC_CALIBRATION_TIMEOUT                 10U
 
 #define ADC_MAX_COUNT 4095
-#define ADC_REF_VOLTAGE 3.3
-#define ADC_INPUT_VOLTAGE_DIVISOR 2
+#if defined(BMSW_BOARD_VA1)
+# define ADC_REF_VOLTAGE 3.3F
+#elif defined(BMSW_BOARD_VA3)
+# define ADC_REF_VOLTAGE 3.0F
+#endif
 
+#define ADC_INPUT_VOLTAGE_DIVISOR 2
 #define ADC_BUF_CNT IO_ADC_BUF_LEN
 _Static_assert(IO_ADC_BUF_LEN == BMS_ADC_BUF_LEN, "BMS and IO must have same length ADC buffer for DMA.");
 
@@ -82,7 +86,11 @@ void HW_ADC_Init(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 1;
+#if defined(BMSW_BOARD_VA1)
+    hadc1.Init.NbrOfConversion = 1;
+#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+    hadc1.Init.NbrOfConversion = 6;
+#endif                        /**< BMSW_BOARD_VA3 */
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -102,6 +110,43 @@ void HW_ADC_Init(void)
     {
         Error_Handler();
     }
+#if defined(BMSW_BOARD_VA3)
+    sConfig.Channel      = ADC_CHANNEL_MUX1;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_MUX2;
+    sConfig.Rank         = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_MUX3;
+    sConfig.Rank         = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_BRD1;
+    sConfig.Rank         = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_BRD2;
+    sConfig.Rank         = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+#endif /**< BMSW_BOARD_VA3 */
 
     // Common config
     hadc2.Instance                   = ADC2;
@@ -110,7 +155,7 @@ void HW_ADC_Init(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 1;
+    hadc2.Init.NbrOfConversion       = 6;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
@@ -159,8 +204,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         }
 
         __HAL_LINKDMA(adcHandle, DMA_Handle, hdma_adc1);
-        
-        HAL_NVIC_SetPriority(ADC1_2_IRQn, DMA_IRQ_PRIO, 0);
+
+        HAL_NVIC_SetPriority(ADC1_2_IRQn, ADC_IRQ_PRIO, 0);
         HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
     }
     else if (adcHandle->Instance == ADC2)
@@ -172,9 +217,9 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         GPIO_InitStruct.Pin  = CELL_VOLTAGE_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
         HAL_GPIO_Init(CELL_VOLTAGE_Port, &GPIO_InitStruct);
-        
-        HAL_NVIC_SetPriority(ADC1_2_IRQn, DMA_IRQ_PRIO, 0);
-        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+
+        //HAL_NVIC_SetPriority(ADC1_2_IRQn, DMA_IRQ_PRIO, 0);
+        //HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
     }
 }
 
@@ -258,7 +303,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
                 break;
         }
 
-        adc_buf_addr[ADC_REQUEST_IO] = 0;
+        adc_buf_addr[ADC_REQUEST_IO]  = 0;
         adc_buf_addr[ADC_REQUEST_BMS] = 0;
 
         if (adc_req_addr[(req + 1) % ADC_REQUEST_CNT])
@@ -275,7 +320,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
             HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*)&adc_buf, ADC_BUF_CNT);
             return;
         }
-
+        
         dma_running = false;
     }
 }
@@ -313,7 +358,7 @@ bool HW_ADC_Request_DMA(ADC_Request_E req, uint32_t* buf)
 }
 
 /**
- * @brief  Get analog input voltage in 0.1mV from ADC count 
+ * @brief  Get analog input voltage in 0.1mV from ADC count
  *
  * @param cnt ADC coun
  *

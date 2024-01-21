@@ -80,12 +80,8 @@ void HW_SystemClock_Config(void)
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {
-    if (htim->Instance == TIM4)
+    if (htim->Instance == TIM2)
     {
         HAL_IncTick();
-    }
-    else if (htim->Instance == TIM2)
-    {
-        HW_TIM_IncBaseTick();
     }
 }
