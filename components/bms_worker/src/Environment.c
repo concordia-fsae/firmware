@@ -25,6 +25,11 @@
  *                              D E F I N E S
  ******************************************************************************/
 
+#define TEMP_CHIP_V_PER_DEG_C 0.0043F    // [V/degC] slope of built-in temp sensor
+#define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
+#define TEMP_CHIP_FROM_V(v)   (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
+
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -66,7 +71,7 @@ Environment_S ENV;
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-#if defined (BMSW_BOARD_VA1)
+#if defined(BMSW_BOARD_VA1)
 static Sensor_State_E ltc_state;
 static Sensor_State_E hs_state;
 #endif /**< BMSW_BOARD_VA3 */
@@ -78,6 +83,9 @@ static Sensor_State_E hs_state;
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
+
+void ENV_CalcTempStats(void);
+
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -97,7 +105,9 @@ static void Environment_Init()
         ENV.state = ENV_ERROR;
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
     if (!SHT40_Init())
-        ENV.state = ENV_ERROR;
+    {
+        // ENV.state = ENV_ERROR;
+    }
 #endif                        /**< BMSW_BOARD_VA3 */
 
     if (ENV.state != ENV_ERROR)
@@ -109,10 +119,10 @@ static void Environment_Init()
  */
 static void Environment10Hz_PRD()
 {
-#if defined (BMSW_BOARD_VA1)
+#if defined(BMSW_BOARD_VA1)
     if (ltc_state == MEASURING)
     {
-      if (LTC_GetMeasurement())
+        if (LTC_GetMeasurement())
         {
             ltc_state = DONE;
 
@@ -148,7 +158,7 @@ static void Environment10Hz_PRD()
             ENV.values.board.rh           = hs_chip.data.rh;
         }
     }
-#elif defined (BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
     if (sht_chip.data.state == SHT_MEASURING)
     {
         if (SHT40_GetData())
@@ -157,9 +167,23 @@ static void Environment10Hz_PRD()
             ENV.values.board.rh           = sht_chip.data.rh;
         }
     }
-#endif
 
-    ENV.values.board.mcu_temp = IO.temp.mcu * 10;
+    ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu) * 10;
+    ENV.values.board.brd_temp[BRD1] = IO.temp.board[BRD1] * 10;
+    ENV.values.board.brd_temp[BRD2] = IO.temp.board[BRD2] * 10;
+
+    for (uint16_t i = 0; i < MUX_COUNT; i++)
+    {
+        ENV.values.cells.cell_temps[i]     = IO.temp.mux1[i] * 10;
+        ENV.values.cells.cell_temps[i + 8] = IO.temp.mux2[i] * 10;
+        if (i < 4)
+        {
+            ENV.values.cells.cell_temps[i + 16] = IO.temp.mux3[i] * 10;
+        }
+    }
+
+    ENV_CalcTempStats();
+#endif
 }
 
 /**
@@ -201,3 +225,19 @@ const ModuleDesc_S Environment_desc = {
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
+
+void ENV_CalcTempStats(void)
+{
+    ENV.values.cells.avg_temp = 0;
+    ENV.values.cells.max_temp = INT16_MIN;
+    ENV.values.cells.min_temp = INT16_MAX;
+
+    for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
+    {
+        ENV.values.cells.avg_temp += ENV.values.cells.cell_temps[i];
+        ENV.values.cells.max_temp = (ENV.values.cells.cell_temps[i] > ENV.values.cells.max_temp) ? ENV.values.cells.cell_temps[i] : ENV.values.cells.max_temp;
+        ENV.values.cells.min_temp = (ENV.values.cells.cell_temps[i] < ENV.values.cells.min_temp) ? ENV.values.cells.cell_temps[i] : ENV.values.cells.min_temp;
+    }
+
+    ENV.values.cells.avg_temp /= CHANNEL_COUNT;
+}

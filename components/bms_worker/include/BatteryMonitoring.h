@@ -25,13 +25,6 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BMS_ADC_BUF_LEN 300
-
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -39,32 +32,19 @@
 typedef enum {
     BMS_INIT = 0x00,
     BMS_CALIBRATING,
+    BMS_HOLDING,
     BMS_WAITING,
     BMS_SAMPLING,
-    BMS_PACK_SAMPLING,
     BMS_DIAGNOSTIC,
     BMS_BALANCING,
     BMS_ERROR,
 } BMS_State_E;
 
-typedef enum
-{
-    ADC_CELL_MEASUREMENT = 0x00,
-    ADC_CHANNEL_COUNT,
-} AdcChannels_E;
-
-typedef struct {
-    bool measurement_complete;
-    uint32_t adc_buffer[BMS_ADC_BUF_LEN];
-    simpleFilter_S cell_voltages[ADC_CHANNEL_COUNT];
-    simpleFilter_S pack_voltage;
-} BMS_Data_S;
-
 typedef struct {
     BMS_State_E state;
     uint16_t balancing_cells;
     uint16_t cell_faults;
-    uint16_t cell_voltages[CELL_COUNT];
+    uint16_t cell_voltages[CELL_COUNT]; /**< Stored in 0.0001 units */
     uint16_t pack_voltage; /**< Stored in 1mV units */
     uint16_t calculated_pack_voltage; /**< Stored in 1mV units */
     uint16_t max_voltage; /**< Stored in 0.0001 units */
@@ -73,8 +53,16 @@ typedef struct {
     uint16_t min_capacity; /**< Stored in 0.0001 units */
     uint16_t max_capacity; /**< Stored in 0.0001 units */
     uint16_t avg_capacity; /**< Stored in 0.0001 units */
-    BMS_Data_S data;
+    uint8_t connected_cells;
 } BMS_S;
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern BMS_S BMS;
+
 
 /******************************************************************************
  *                               M A C R O S
@@ -92,4 +80,5 @@ typedef struct {
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void BMS_UnpackADCBuffer(bufferHalf_E);
+void BMS_SetOutputCell(MAX_SelectedCell_E);
+void BMS_MeasurementComplete(void);

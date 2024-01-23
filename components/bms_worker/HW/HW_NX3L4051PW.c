@@ -1,22 +1,20 @@
 /**
- * @file Environment.h
- * @brief  Header file for Environment sensors
+ * @file HW_NX3LPW.c
+ * @brief  Source code for  NX3L4051PW Driver
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @version 
- * @date 2023-12-27
+ * @date 2024-01-21
  */
 
-#pragma once
-
+#include "include/HW.h"
+#if defined (BMSW_BOARD_VA3)
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_LTC2983.h"
+#include "HW_NX3L4051PW.h"
 
-#include "stdint.h"
-#include "Module.h"
+#include "HW_gpio.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -30,67 +28,6 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-#if defined (BMSW_BOARD_VA3)
-typedef enum
-{
-    BRD1 = 0x00,
-    BRD2,
-    BRD_COUNT,
-} BRDChannels_E;
-#endif /**< BMSW_BOARD_VA3 */
-
-
-typedef enum
-{
-    CH1 = 0x00,
-    CH2,
-    CH3,
-    CH4,
-    CH5,
-    CH6,
-    CH7,
-    CH8,
-    CH9,
-    CH10,
-    CH11,
-    CH12,
-    CH13,
-    CH14,
-    CH15,
-    CH16,
-    CH17,
-    CH18,
-    CH19,
-    CH20,
-    CHANNEL_COUNT,
-} ThermistorID_E;
-
-typedef enum {
-    ENV_INIT = 0x00,
-    ENV_RUNNING,
-    ENV_ERROR,
-} Environment_State_E;
-
-typedef struct {
-    struct {
-        int16_t mcu_temp; /**< Stored in 0.1 deg C */
-        int16_t brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
-        int16_t ambient_temp; /**< Stored in 0.1 deg C */
-        uint16_t rh; /**< Stored in 0.01% RH */
-    } board;
-    struct {
-        int16_t cell_temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */ 
-        int16_t max_temp;
-        int16_t min_temp;
-        int16_t avg_temp;
-    } cells;
-} Env_Variables_S;
-
-typedef struct {
-    Environment_State_E state;
-    Env_Variables_S values;
-} Environment_S;
-
 /******************************************************************************
  *                               M A C R O S
  ******************************************************************************/
@@ -102,6 +39,25 @@ typedef struct {
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
+
+#if defined(BMSW_BOARD_VA3)
+HW_GPIO_S S1 = {
+    .port = MUX_SEL1_Port,
+    .pin  = MUX_SEL1_Pin,
+};
+HW_GPIO_S S2 = {
+    .port = MUX_SEL2_Port,
+    .pin  = MUX_SEL2_Pin,
+};
+HW_GPIO_S S3 = {
+    .port = MUX_SEL3_Port,
+    .pin  = MUX_SEL3_Pin,
+};
+HW_GPIO_S MUX_NEn = {
+    .port = NX3_NEN_Port,
+    .pin  = NX3_NEN_Pin,
+};
+#endif /**< BMSW_BOARD_VA3 */
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -115,6 +71,34 @@ typedef struct {
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+bool NX3L_Init(void)
+{
+    return true;
+}
+
+bool NX3L_SetMux(MUXChannel_E chn)
+{
+    HW_GPIO_WritePin(&S1, (chn & 0x01) ? true : false);
+    HW_GPIO_WritePin(&S2, (chn & (0x01 << 1)) ? true : false);
+    HW_GPIO_WritePin(&S3, (chn & (0x01 << 2)) ? true : false);
+    return true;
+}
+
+bool NX3L_EnableMux(void)
+{
+    HW_GPIO_WritePin(&MUX_NEn, false);
+    return true;
+}
+
+bool NX3L_DisableMux(void)
+{
+    HW_GPIO_WritePin(&MUX_NEn, true);
+    return true;
+}
+
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
+
+#endif /**< BMSW_BOARD_VA3 */

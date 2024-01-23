@@ -76,6 +76,18 @@ void HW_GPIO_Init(void)
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
     HAL_GPIO_Init(A3_GPIO_Port, &GPIO_InitStruct);
     
+    GPIO_InitStruct.Pin   = MUX_SEL1_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    HAL_GPIO_Init(MUX_SEL1_Port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin   = MUX_SEL2_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    HAL_GPIO_Init(MUX_SEL2_Port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin   = MUX_SEL3_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
+    HAL_GPIO_Init(MUX_SEL3_Port, &GPIO_InitStruct);
     GPIO_InitStruct.Pin   = NX3_NEN_Pin;
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_NOPULL;

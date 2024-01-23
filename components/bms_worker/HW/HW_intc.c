@@ -101,7 +101,7 @@ void DMA1_Channel1_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&hadc1);
-    HAL_ADC_IRQHandler(&hadc2);
+//    HAL_ADC_IRQHandler(&hadc2);
 }
 /**
  * @brief This function handles TIM4 global interrupt.
@@ -109,6 +109,11 @@ void ADC1_2_IRQHandler(void)
 void TIM4_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&htim4);
+}
+
+void TIM1_IRQHandler(void)
+{
+    
 }
 
 void TIM2_IRQHandler(void)

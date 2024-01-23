@@ -169,6 +169,7 @@ project_hw_files = [
     PROJECT_HW_DIR.File("HW_MAX14921.c"),
     PROJECT_HW_DIR.File("HW_LTC2983.c"),
     PROJECT_HW_DIR.File("HW_SHT40.c"),
+    PROJECT_HW_DIR.File("HW_NX3L4051PW.c"),
 ]
 
 project_source_files += project_hw_files
