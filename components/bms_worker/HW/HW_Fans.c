@@ -135,8 +135,8 @@ void FANS_SetPower(uint8_t* fan)
 
 void FANS_GetRPM(uint16_t* rpm)
 {
-    rpm[0] = HW_TIM1_getFreqCH1();
-    rpm[1] = HW_TIM1_getFreqCH2();
+    rpm[0] = HW_TIM1_getFreqCH1() * 60;
+    rpm[1] = HW_TIM1_getFreqCH2() * 60;
 }
 
 /******************************************************************************

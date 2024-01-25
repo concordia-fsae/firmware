@@ -20,6 +20,7 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim2;
 extern CAN_HandleTypeDef hcan;
@@ -101,7 +102,7 @@ void DMA1_Channel1_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&hadc1);
-//    HAL_ADC_IRQHandler(&hadc2);
+    //    HAL_ADC_IRQHandler(&hadc2);
 }
 /**
  * @brief This function handles TIM4 global interrupt.
@@ -111,14 +112,19 @@ void TIM4_IRQHandler(void)
     HAL_TIM_IRQHandler(&htim4);
 }
 
-void TIM1_IRQHandler(void)
-{
-    
-}
-
 void TIM2_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&htim2);
+}
+
+void TIM1_TRG_COM_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&htim1);
+}
+
+void TIM1_CC_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&htim1);
 }
 
 // // CAN interrupts

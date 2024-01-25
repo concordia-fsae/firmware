@@ -78,17 +78,18 @@ static void Cooling_Init()
 static void Cooling10Hz_PRD(void)
 {
     static uint8_t step = 0;
+    FANS_GetRPM((uint16_t*)&COOLING.rpm);
 
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
         switch (COOLING.state[i])
         {
             case COOLING_INIT:
-                step += 5;
+                step += 2;
                 COOLING.percentage[i] = (step <= 100) ? step : 200 - step;
 
                 if (step >= 200)
-                    COOLING.state[i] = COOLING_OFF;
+                    COOLING.state[i] = COOLING_ON;
                 break;
             case COOLING_ON:
             case COOLING_OFF:
@@ -101,25 +102,10 @@ static void Cooling10Hz_PRD(void)
                     COOLING.state[i]      = COOLING_FULL;
                     COOLING.percentage[i] = 100;
                 }
-                else if (ENV.values.cells.max_temp > 500)
+                else
                 {
                     COOLING.state[i]      = COOLING_ON;
-                    COOLING.percentage[i] = 80;
-                }
-                else if (ENV.values.cells.max_temp > 450)
-                {
-                    COOLING.state[i]      = COOLING_ON;
-                    COOLING.percentage[i] = 60;
-                }
-                else if (ENV.values.cells.max_temp > 400)
-                {
-                    COOLING.state[i]      = COOLING_ON;
-                    COOLING.percentage[i] = 40;
-                }
-                else if (ENV.values.cells.max_temp >= 350)
-                {
-                    COOLING.state[i]      = COOLING_ON;
-                    COOLING.percentage[i] = 20;
+                    COOLING.percentage[i] = ENV.values.cells.max_temp * 100 / 20;
                 }
                 break;
             case COOLING_FULL:
@@ -139,8 +125,7 @@ static void Cooling10Hz_PRD(void)
         }
     }
 
-    FANS_GetRPM((uint16_t*)&COOLING.rpm);
-    FANS_SetPower((uint8_t*)&COOLING.percentage);    // COOLING.percentage);
+    FANS_SetPower((uint8_t*)&COOLING.percentage);
 }
 
 
