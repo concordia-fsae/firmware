@@ -5,6 +5,7 @@
  * @date 2024-01-19
  */
 
+#include "include/HW.h"
 #if defined (BMSW_BOARD_VA3)
 
 /******************************************************************************
@@ -69,6 +70,8 @@ bool SHT40_Init(void)
         return false;
     }
 
+    HW_usDelay(100);
+
     if (!HW_I2C_Master_Read(sht_chip.dev, (uint8_t*)&rdat, 6, 1000))
     {
         return false;
@@ -89,7 +92,7 @@ bool SHT40_GetData(void)
     return true;
 }
 
-bool SHT40_StartHeather(void)
+bool SHT40_StartHeater(void)
 {
     return true;
 }

@@ -12,22 +12,29 @@
  ******************************************************************************/
 
 /**< Firmware includes */
-#include "HW_adc.h"
 #include "HW_NX3L4051PW.h"
+#include "HW_adc.h"
 
 /**< Other Includes */
-#include "FloatTypes.h"
-#include "Types.h"
 #include "BatteryMonitoring.h"
 #include "Environment.h"
+#include "FloatTypes.h"
+#include "Types.h"
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define IO_ADC_BUF_LEN              48U    // number of samples to fill with DMA,
-                                         // processed when half full and again when completely full
+#if defined(BMSW_BOARD_VA1)
+# define VREF 3.3F            // [V] Bluepill reference voltage
+#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+# define VREF 3.0F            /**< Shunt Diode reference voltage */
+#endif                        /**< BMSW_BOARD_VA3 */
+
+#define ADC_MAX_VAL    4095U    // Max integer value of ADC reading (2^12 for this chip)
+#define IO_ADC_BUF_LEN 96U      // number of samples to fill with DMA,
+                                // processed when half full and again when completely full
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -38,7 +45,7 @@ typedef struct
     struct
     {
         float32_t mcu;
-#if defined (BMSW_BOARD_VA3)
+#if defined(BMSW_BOARD_VA3)
         float32_t mux1[MUX_COUNT];
         float32_t mux2[MUX_COUNT];
         float32_t mux3[MUX_COUNT];

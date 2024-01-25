@@ -14,8 +14,8 @@
 
 #include "HW_Fans.h"
 
+#include "Cooling.h"
 #include "ErrorHandler.h"
-
 
 /******************************************************************************
  *                              D E F I N E S
@@ -29,6 +29,14 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
+typedef struct
+{
+    FANS_State_E current_state[FAN_COUNT];
+    uint8_t      percentage[FAN_COUNT];
+    uint16_t     rpm[FAN_COUNT];
+} fans_S;
+
+
 /******************************************************************************
  *                               M A C R O S
  ******************************************************************************/
@@ -41,7 +49,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-FANS_State_E current_state = {0};
+static fans_S fans;
 
 
 /******************************************************************************
@@ -63,13 +71,14 @@ bool FANS_Init()
 {
     bool init_state = true;
 
-    current_state = OFF;
-    FANS_SetPower(0);
-    
-    if (init_state != true) 
+    for (uint8_t i = 0; i < FAN_COUNT; i++)
+    {
+        fans.current_state[i] = OFF;
+    }
+
+    if (init_state != true)
     {
         Error_Handler();
-        return false;
     }
 
     return true;
@@ -78,7 +87,7 @@ bool FANS_Init()
 /**
  * @brief  Verify fans initialization (Included for forward compatibility)
  *
- * @retval  always true 
+ * @retval  always true
  */
 bool FANS_Verify()
 {
@@ -86,62 +95,50 @@ bool FANS_Verify()
 }
 
 /**
- * @brief  Returns current state of the fans
- *
- * @retval   current_state of FANS state machine
- *              If the fanse are stopped, the fans must be set to 50% for atleast 0.5s
- *              so that they have time to spin up
- */
-FANS_State_E FANS_GetState()
-{
-    return current_state;
-}
-
-/**
  * @brief  Set power output of segment fans
  *
  * @param power Power range [0, 100] in percentage
  */
-void FANS_SetPower(uint8_t percentage)
+void FANS_SetPower(uint8_t* fan)
 {
-    static uint32_t start_time = 0;
+    FANS_GetRPM((uint16_t*)&fans.rpm);
 
-    if (percentage == 0)
+    for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
-        current_state = OFF;
-        HW_TIM4_setDuty(0, 0);
-        return;
-    }
-
-    if (current_state == OFF || current_state == STARTING)
-    {
-        if (current_state == OFF)
-        {   current_state = STARTING;
-            start_time = HAL_GetTick();
-        }
-        else if (start_time + 500 < HAL_GetTick())
+        if (fan[i] == 0)
         {
-            current_state = RUNNING;
-            start_time = 0;
+            fans.current_state[i] = OFF;
+            fans.percentage[i]    = 0;
         }
-
-        HW_TIM4_setDuty((percentage < 50) ? 50 : percentage, (percentage < 50) ? 50 : percentage);
-        return;
+        else if (fans.current_state[i] == OFF || fans.current_state[i] == STARTING)
+        {
+            if (fans.current_state[i] == OFF)
+            {
+                fans.current_state[i] = STARTING;
+                fans.percentage[i]    = (fans.percentage[i] > 25) ? fans.percentage[i] : 25;
+            }
+            else if (fans.current_state[i] == STARTING && fans.rpm[i] > 250)
+            {
+                fans.current_state[i] = RUNNING;
+                fans.percentage[i]    = fan[i];
+            }
+        }
+        else
+        {
+            fans.percentage[i] = fan[i];
+        }
     }
 
-    /**< Handle non-linearity of optocoupler output for duty-cycle -> response */
-    if (percentage > 100)
-        percentage = 100;
-    else if (percentage <= 10 && percentage > 0)
-        percentage = 10;
-    else if (percentage < 25 && percentage > 10)
-        percentage = 10 + (uint16_t) percentage * 5/25;
-    else percentage -= 5;
+    HW_TIM4_setDutyCH1(fans.percentage[FAN1]);
+    HW_TIM4_setDutyCH2(fans.percentage[FAN2]);
+}
 
-    HW_TIM4_setDuty(percentage, percentage);
+void FANS_GetRPM(uint16_t* rpm)
+{
+    rpm[0] = HW_TIM1_getFreqCH1();
+    rpm[1] = HW_TIM1_getFreqCH2();
 }
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
-

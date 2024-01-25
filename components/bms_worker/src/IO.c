@@ -34,13 +34,6 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#if defined(BMSW_BOARD_VA1)
-# define VREF 3.3F            // [V] Bluepill reference voltage
-#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-# define VREF 3.0F            /**< Shunt Diode reference voltage */
-#endif                        /**< BMSW_BOARD_VA3 */
-
-#define ADC_MAX_VAL           4095U      // Max integer value of ADC reading (2^12 for this chip)
 #define ADC_VOLTAGE_DIVISION  2U         /**< Voltage division for cell voltage output */
 
 
@@ -202,7 +195,7 @@ static void IO10kHz_PRD(void)
 {
     if (io.adcState == ADC_STATE_RUNNING)
     {
-        if (BMS.state == BMS_HOLDING)
+        if (BMS.state == BMS_HOLDING || BMS.state == BMS_PARASITIC_MEASUREMENT)
         {
             static MAX_SelectedCell_E current_cell = CELL_COUNT;
 
@@ -228,13 +221,13 @@ static void IO10kHz_PRD(void)
                 current_cell--;
             }
         }
-        else if (BMS.state == BMS_SAMPLING)
+        else if (BMS.state == BMS_SAMPLING || BMS.state == BMS_PARASITIC)
         {
             IO_Cells_UnpackADCBuffer();
             io.bmsData.value = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
             io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
 
-            IO.segment = io.bmsData.value * 16U;
+            IO.segment = io.bmsData.value;
         }
     }
     else

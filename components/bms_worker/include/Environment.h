@@ -15,15 +15,12 @@
 
 #include "HW_LTC2983.h"
 
+#include "stdbool.h"
 #include "stdint.h"
 #include "Module.h"
 
 /******************************************************************************
  *                              D E F I N E S
- ******************************************************************************/
-
-/******************************************************************************
- *                              E X T E R N S
  ******************************************************************************/
 
 /******************************************************************************
@@ -72,6 +69,11 @@ typedef enum {
 } Environment_State_E;
 
 typedef struct {
+    bool therm_error;
+    int16_t temp;
+} Temperature_S;
+
+typedef struct {
     struct {
         int16_t mcu_temp; /**< Stored in 0.1 deg C */
         int16_t brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
@@ -79,7 +81,7 @@ typedef struct {
         uint16_t rh; /**< Stored in 0.01% RH */
     } board;
     struct {
-        int16_t cell_temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */ 
+        Temperature_S temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */ 
         int16_t max_temp;
         int16_t min_temp;
         int16_t avg_temp;
@@ -90,6 +92,14 @@ typedef struct {
     Environment_State_E state;
     Env_Variables_S values;
 } Environment_S;
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern Environment_S ENV;
+
 
 /******************************************************************************
  *                               M A C R O S

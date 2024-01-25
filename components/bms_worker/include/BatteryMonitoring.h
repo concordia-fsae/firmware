@@ -32,6 +32,8 @@
 typedef enum {
     BMS_INIT = 0x00,
     BMS_CALIBRATING,
+    BMS_PARASITIC,
+    BMS_PARASITIC_MEASUREMENT,
     BMS_HOLDING,
     BMS_WAITING,
     BMS_SAMPLING,
@@ -40,11 +42,23 @@ typedef enum {
     BMS_ERROR,
 } BMS_State_E;
 
+typedef enum {
+    CELL_DISCONNECTED = 0x00,
+    CELL_CONNECTED,
+    CELL_ERROR,
+} BMS_Cell_E;
+
+typedef struct {
+    uint16_t voltage;
+    uint16_t capacity;
+    uint16_t parasitic_corr;
+    BMS_Cell_E state;
+} BMS_Cell_S;
+
 typedef struct {
     BMS_State_E state;
     uint16_t balancing_cells;
-    uint16_t cell_faults;
-    uint16_t cell_voltages[CELL_COUNT]; /**< Stored in 0.0001 units */
+    BMS_Cell_S cells[CELL_COUNT]; /**< Stored in 0.0001 units */
     uint16_t pack_voltage; /**< Stored in 1mV units */
     uint16_t calculated_pack_voltage; /**< Stored in 1mV units */
     uint16_t max_voltage; /**< Stored in 0.0001 units */

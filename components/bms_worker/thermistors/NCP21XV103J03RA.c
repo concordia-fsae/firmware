@@ -1,21 +1,18 @@
 /**
- * @file HW_SHT40.h
- * @brief  Header file for SHT40 Driver
+ * @file NCP21XV103J03RA.c
+ * @brief  Source code for NCP21XV103J03RA Thermistor
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2024-01-19
+ * @version 
+ * @date 2024-01-24
  */
-
-#if defined (BMSW_BOARD_VA3)
-
-#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_i2c.h"
-#include "stdbool.h"
-#include "stdint.h"
+#include "NCP21XV103J03RA.h"
+
+#include "Utility.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -28,28 +25,6 @@
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    SHT_INIT = 0x00,
-    SHT_WAITING,
-    SHT_MEASURING,
-    SHT_HEATING,
-} SHT40_State_E;
-
-typedef struct
-{
-    SHT40_State_E state;
-    uint64_t raw;
-    int16_t temp; /**< Stored in 0.1 deg C */
-    uint16_t rh; /**< Stored in 0.01% RH */
-} SHT40_Data_S;
-
-typedef struct{
-    HW_I2C_Device_S* dev;
-    uint32_t serial_number;
-    SHT40_Data_S data;
-} SHT40_S;
 
 /******************************************************************************
  *                               M A C R O S
@@ -64,15 +39,6 @@ typedef struct{
  ******************************************************************************/
 
 /******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
-
-bool SHT40_Init(void);
-bool SHT40_StartConversion(void);
-bool SHT40_GetData(void);
-bool SHT40_StartHeater(void);
-
-/******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
@@ -80,8 +46,16 @@ bool SHT40_StartHeater(void);
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+float NCP21_GetTempFromR_BParameter(THERM_BParameter_S* params, float r)
+{
+    float ret = 0.0F;
+    
+    ret = 1 / params->T0 + (1 / params->B) * ln(r / params->R0);
+
+    return 1/ret;
+}
+
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
-
-#endif /**< BMSW_BOARD_VA3 */

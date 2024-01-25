@@ -1,19 +1,18 @@
 /**
- * @file HW_Fans.h
- * @brief  Segment Fans Control Driver Header
+ * @file NCP21XV103J03RA.h
+ * @brief  Header file for NCP21XV103J03RA thermistor
  * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-18
+ * @version 
+ * @date 2024-01-24
  */
 
 #pragma once
-
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stdbool.h"
-#include "stdint.h"
+#include "THERMISTORS.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -27,19 +26,6 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum {
-    OFF = 0x00,
-    STARTING,
-    RUNNING,
-} FANS_State_E;
-
-typedef enum {
-    FAN1 = 0x00,
-    FAN2,
-    FAN_COUNT,
-} Fan_E;
-
-
 /******************************************************************************
  *                               M A C R O S
  ******************************************************************************/
@@ -52,8 +38,4 @@ typedef enum {
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool FANS_Init(void);
-bool FANS_Verify(void);
-FANS_State_E FANS_GetState(void);
-void FANS_SetPower(uint8_t*);
-void FANS_GetRPM(uint16_t*);
+float NCP21_GetTempFromR_BParameter(THERM_BParameter_S*, float);

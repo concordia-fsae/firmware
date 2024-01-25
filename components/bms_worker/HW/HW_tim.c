@@ -23,10 +23,12 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-TIM_HandleTypeDef htim1;
+//static TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
+static uint64_t fan1_last_tick[2] = { 0 };
+static uint64_t fan2_last_tick[2] = { 0 };
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -139,10 +141,24 @@ uint64_t HW_TIM_GetBaseTick()
     return (HW_GetTick() * 100) + htim4.Instance->CNT; 
 }
 
-void HW_TIM4_setDuty(uint8_t percentage1, uint8_t percentage2)
+void HW_TIM4_setDutyCH1(uint8_t percentage1)
 {
     htim4.Instance->CCR1 = (uint16_t) (((uint32_t) percentage1 * htim4.Init.Period)/100);
+}
+
+void HW_TIM4_setDutyCH2(uint8_t percentage2)
+{
     htim4.Instance->CCR2 = (uint16_t) (((uint32_t) percentage2 * htim4.Init.Period)/100);
+}
+
+uint16_t HW_TIM1_getFreqCH1(void)
+{
+    return (fan1_last_tick[1]) ? 2000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0;
+}
+
+uint16_t HW_TIM1_getFreqCH2(void)
+{
+    return (fan2_last_tick[1]) ? 2000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0;
 }
 
 

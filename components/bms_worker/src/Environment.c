@@ -19,6 +19,7 @@
 #include "HW_HS4011.h"
 #include "HW_SHT40.h"
 #include "IO.h"
+#include "NCP21XV103J03RA.h"
 
 
 /******************************************************************************
@@ -28,6 +29,11 @@
 #define TEMP_CHIP_V_PER_DEG_C 0.0043F    // [V/degC] slope of built-in temp sensor
 #define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
 #define TEMP_CHIP_FROM_V(v)   (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
+
+#define THERM_PULLUP  10000
+#define RES_FROM_V(v) (THERM_PULLUP * ((v / VREF) / (1 - (v / VREF))))
+
+#define KELVIN_OFFSET 273.15F
 
 
 /******************************************************************************
@@ -75,6 +81,12 @@ Environment_S ENV;
 static Sensor_State_E ltc_state;
 static Sensor_State_E hs_state;
 #endif /**< BMSW_BOARD_VA3 */
+
+static THERM_BParameter_S ncp = {
+    .B  = 3930U,
+    .T0 = 25U + KELVIN_OFFSET,
+    .R0 = 10000U,
+};
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -159,6 +171,13 @@ static void Environment10Hz_PRD()
         }
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+    if (sht_chip.data.state == SHT_INIT)
+    {
+        if (SHT40_Init())
+        {
+            
+        }
+    }
     if (sht_chip.data.state == SHT_MEASURING)
     {
         if (SHT40_GetData())
@@ -169,16 +188,16 @@ static void Environment10Hz_PRD()
     }
 
     ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu) * 10;
-    ENV.values.board.brd_temp[BRD1] = IO.temp.board[BRD1] * 10;
-    ENV.values.board.brd_temp[BRD2] = IO.temp.board[BRD2] * 10;
+    ENV.values.board.brd_temp[BRD1] = (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET) * 10;
+    ENV.values.board.brd_temp[BRD2] = (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET) * 10;
 
     for (uint16_t i = 0; i < MUX_COUNT; i++)
     {
-        ENV.values.cells.cell_temps[i]     = IO.temp.mux1[i] * 10;
-        ENV.values.cells.cell_temps[i + 8] = IO.temp.mux2[i] * 10;
+        ENV.values.cells.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
+        ENV.values.cells.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
         if (i < 4)
         {
-            ENV.values.cells.cell_temps[i + 16] = IO.temp.mux3[i] * 10;
+            ENV.values.cells.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) * 10 : 0;
         }
     }
 
@@ -228,16 +247,26 @@ const ModuleDesc_S Environment_desc = {
 
 void ENV_CalcTempStats(void)
 {
+    uint8_t connected_channels = 0;
+
     ENV.values.cells.avg_temp = 0;
     ENV.values.cells.max_temp = INT16_MIN;
     ENV.values.cells.min_temp = INT16_MAX;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
-        ENV.values.cells.avg_temp += ENV.values.cells.cell_temps[i];
-        ENV.values.cells.max_temp = (ENV.values.cells.cell_temps[i] > ENV.values.cells.max_temp) ? ENV.values.cells.cell_temps[i] : ENV.values.cells.max_temp;
-        ENV.values.cells.min_temp = (ENV.values.cells.cell_temps[i] < ENV.values.cells.min_temp) ? ENV.values.cells.cell_temps[i] : ENV.values.cells.min_temp;
+        if (ENV.values.cells.temps[i].temp == 0)
+        {
+            ENV.values.cells.temps[i].therm_error = true;
+            continue;
+        }
+
+        connected_channels++;
+        ENV.values.cells.temps[i].therm_error = false;
+        ENV.values.cells.avg_temp += ENV.values.cells.temps[i].temp;
+        ENV.values.cells.max_temp = (ENV.values.cells.temps[i].temp > ENV.values.cells.max_temp) ? ENV.values.cells.temps[i].temp : ENV.values.cells.max_temp;
+        ENV.values.cells.min_temp = (ENV.values.cells.temps[i].temp < ENV.values.cells.min_temp) ? ENV.values.cells.temps[i].temp : ENV.values.cells.min_temp;
     }
 
-    ENV.values.cells.avg_temp /= CHANNEL_COUNT;
+    ENV.values.cells.avg_temp /= connected_channels;
 }

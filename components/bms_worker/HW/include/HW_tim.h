@@ -39,6 +39,9 @@ uint64_t HW_TIM_GetBaseTick(void);
 #if defined (BMSW_BOARD_VA1)
 void HW_TIM1_setDuty(uint8_t);
 #elif defined (BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-void HW_TIM4_setDuty(uint8_t, uint8_t);
+void HW_TIM4_setDutyCH1(uint8_t);
+void HW_TIM4_setDutyCH2(uint8_t);
+uint16_t HW_TIM1_getFreqCH1(void);
+uint16_t HW_TIM1_getFreqCH2(void);
 #endif
 
