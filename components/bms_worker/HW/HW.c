@@ -54,8 +54,7 @@
  */
 bool HW_Init() 
 {
-    HAL_Init();
-    return true;
+    return HAL_Init() == HAL_OK;
 }
 
 /**

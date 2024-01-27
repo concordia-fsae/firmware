@@ -39,6 +39,11 @@ typedef enum {
     FAN_COUNT,
 } Fan_E;
 
+typedef struct
+{
+    FANS_State_E current_state;
+} FANS_S;
+
 
 /******************************************************************************
  *                               M A C R O S
@@ -47,6 +52,9 @@ typedef enum {
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
+
+static FANS_S FANS;
+
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -57,3 +65,7 @@ bool FANS_Verify(void);
 FANS_State_E FANS_GetState(void);
 void FANS_SetPower(uint8_t*);
 void FANS_GetRPM(uint16_t*);
+
+static inline FANS_State_E FANS_getState() {
+    return FANS.current_state;
+}

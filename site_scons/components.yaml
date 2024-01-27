@@ -1,10 +1,10 @@
 bl:
   path: components/bootloaders/
+bmsw:
+  path: components/bms_worker/
 heartbeat:
   path: components/heartbeat/
 stw:
   path: components/steering_wheel/
-bmsw:
-  path: components/bms_worker/
 network:
   path: network/

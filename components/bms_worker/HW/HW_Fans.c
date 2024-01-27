@@ -45,6 +45,8 @@ typedef struct
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
+static FANS_S FANS;
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -69,28 +71,11 @@ static fans_S fans;
  */
 bool FANS_Init()
 {
-    bool init_state = true;
-
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
         fans.current_state[i] = OFF;
     }
 
-    if (init_state != true)
-    {
-        Error_Handler();
-    }
-
-    return true;
-}
-
-/**
- * @brief  Verify fans initialization (Included for forward compatibility)
- *
- * @retval  always true
- */
-bool FANS_Verify()
-{
     return true;
 }
 
@@ -110,14 +95,14 @@ void FANS_SetPower(uint8_t* fan)
             fans.current_state[i] = OFF;
             fans.percentage[i]    = 0;
         }
-        else if (fans.current_state[i] == OFF || fans.current_state[i] == STARTING)
+        else if ((fans.current_state[i] == OFF) || (fans.current_state[i] == STARTING))
         {
             if (fans.current_state[i] == OFF)
             {
                 fans.current_state[i] = STARTING;
                 fans.percentage[i]    = (fans.percentage[i] > 25) ? fans.percentage[i] : 25;
             }
-            else if (fans.current_state[i] == STARTING && fans.rpm[i] > 250)
+            else if ((fans.current_state[i] == STARTING) && (fans.rpm[i] > 250))
             {
                 fans.current_state[i] = RUNNING;
                 fans.percentage[i]    = fan[i];

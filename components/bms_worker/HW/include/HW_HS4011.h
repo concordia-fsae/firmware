@@ -36,6 +36,12 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
+typedef enum {
+    HS4011_HIGH_PRECISION = 0x00,
+    HS4011_MED_PRECISION,
+    HS4011_LOW_PRECISION,
+} HS4011_Precision_E;
+
 typedef struct
 {
     uint8_t precision;

@@ -55,13 +55,13 @@ extern HW_I2C_Handle_T i2c2;
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-HW_I2C_Device_S HS4011 = {
+HW_I2C_Device_S I2C_HS4011 = {
     .addr   = 0x54,
     .handle = &i2c2,
 };
 
 HS4011_S hs_chip = {
-    .dev = &HS4011,
+    .dev = &I2C_HS4011,
 };
 
 /******************************************************************************
@@ -96,6 +96,11 @@ bool HS4011_Init()
 bool HS4011_StartConversion()
 {
     uint8_t wdata = NOHOLD_RH_T_MEAS;
+    
+    if (hs_chip.data.measuring)
+    {
+        return false;
+    }
 
     hs_chip.data.measuring = true;
 
@@ -107,13 +112,18 @@ bool HS4011_GetData()
     uint8_t rdata[5] = { 0 };
 
     if (!HW_I2C_Master_Read(hs_chip.dev, (uint8_t*)&rdata, 5, 100))
+    {
         return false;
+    }
 
     hs_chip.data.measuring = false;
 
     reverse_bytes((uint8_t*)&rdata[0], 2);
     reverse_bytes((uint8_t*)&rdata[2], 2);
 
+    // Formulas for the HS4011 specified at https://www.renesas.com/us/en/document/dst/hs40xx-datasheet?r=1575091
+    // rh = (humidity_cnt / (2^14 - 1) * 100 converted to 0.01%
+    // temp = (temp_cnt / (2^14 - 1) * 165 - 40 converted to 0.1 deg C
     hs_chip.data.rh   = (uint16_t)(((((uint32_t)rdata[1] << 8) | ((uint32_t)rdata[0])) * 10000) / 16383);
     hs_chip.data.temp = (int16_t)(((((int32_t)rdata[3] << 8) | ((int32_t)rdata[2])) * 1650) / 16383) - 400;
     
