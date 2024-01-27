@@ -82,7 +82,11 @@ extern "C" {
 /**
  * @brief This is the HAL system configuration section
  */
+#if defined (BMSW_BOARD_VA1)
 #define VDD_VALUE                               3300U // Value of VDD in mv
+#elif defined (BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+#define VDD_VALUE                               3000U // Value of VDD in mv
+#endif
 #define TICK_INT_PRIORITY                       0U    // tick interrupt priority (lowest by default)
 #define USE_RTOS                                0U
 #define PREFETCH_ENABLE                         1U

@@ -35,7 +35,7 @@ DMA_HandleTypeDef hdma_i2c2_tx;
 void HW_I2C_Init(void)
 {
     i2c2.Instance            = I2C2;
-    i2c2.Init.ClockSpeed     = 100000U; /**< Clocked at 100kHz */
+    i2c2.Init.ClockSpeed     = 400000U; /**< Clocked at 100kHz */
     i2c2.Init.OwnAddress1    = 0x09;    /**< Translates to 0x12*/
     i2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
     i2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

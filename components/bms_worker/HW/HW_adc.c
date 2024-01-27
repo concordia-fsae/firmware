@@ -30,11 +30,11 @@
 #define ADC_CALIBRATION_TIMEOUT                 10U
 
 #define ADC_MAX_COUNT 4095
-#define ADC_REF_VOLTAGE 3.3
-#define ADC_INPUT_VOLTAGE_DIVISOR 2
-
-#define ADC_BUF_CNT IO_ADC_BUF_LEN
-_Static_assert(IO_ADC_BUF_LEN == BMS_ADC_BUF_LEN, "BMS and IO must have same length ADC buffer for DMA.");
+#if defined(BMSW_BOARD_VA1)
+# define ADC_REF_VOLTAGE 3.3F
+#elif defined(BMSW_BOARD_VA3)
+# define ADC_REF_VOLTAGE 3.0F
+#endif
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -48,13 +48,6 @@ DMA_HandleTypeDef hdma_adc1;
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
-
-static uint32_t  adc_buf[ADC_BUF_CNT]          = { 0 };
-static uint32_t* adc_req_addr[ADC_REQUEST_CNT] = { 0 };
-static uint32_t* adc_buf_addr[ADC_REQUEST_CNT] = { 0 };
-
-static bool dma_running = false;
-
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -82,7 +75,11 @@ void HW_ADC_Init(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 1;
+#if defined(BMSW_BOARD_VA1)
+    hadc1.Init.NbrOfConversion = 1;
+#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+    hadc1.Init.NbrOfConversion = 6;
+#endif                        /**< BMSW_BOARD_VA3 */
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -102,6 +99,43 @@ void HW_ADC_Init(void)
     {
         Error_Handler();
     }
+#if defined(BMSW_BOARD_VA3)
+    sConfig.Channel      = ADC_CHANNEL_MUX1;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_MUX2;
+    sConfig.Rank         = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_MUX3;
+    sConfig.Rank         = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_BRD1;
+    sConfig.Rank         = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_BRD2;
+    sConfig.Rank         = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+#endif /**< BMSW_BOARD_VA3 */
 
     // Common config
     hadc2.Instance                   = ADC2;
@@ -110,7 +144,7 @@ void HW_ADC_Init(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 1;
+    hadc2.Init.NbrOfConversion       = 6;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
@@ -151,7 +185,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         hdma_adc1.Init.MemInc              = DMA_MINC_ENABLE;
         hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
         hdma_adc1.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
-        hdma_adc1.Init.Mode                = DMA_NORMAL;
+        hdma_adc1.Init.Mode                = DMA_CIRCULAR;
         hdma_adc1.Init.Priority            = DMA_PRIORITY_MEDIUM;
         if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
         {
@@ -159,9 +193,9 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         }
 
         __HAL_LINKDMA(adcHandle, DMA_Handle, hdma_adc1);
-        
-        HAL_NVIC_SetPriority(ADC1_2_IRQn, DMA_IRQ_PRIO, 0);
-        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+
+    HAL_NVIC_SetPriority(ADC1_2_IRQn, ADC_IRQ_PRIO, 0U);
+    HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
     }
     else if (adcHandle->Instance == ADC2)
     {
@@ -172,9 +206,6 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         GPIO_InitStruct.Pin  = CELL_VOLTAGE_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
         HAL_GPIO_Init(CELL_VOLTAGE_Port, &GPIO_InitStruct);
-        
-        HAL_NVIC_SetPriority(ADC1_2_IRQn, DMA_IRQ_PRIO, 0);
-        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
     }
 }
 
@@ -205,27 +236,6 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
     {
-        HW_ADC_UnpackBuffer(BUFFER_HALF_LOWER);
-
-        ADC_Request_E req = 0;
-
-        for (; req < ADC_REQUEST_CNT; req++)
-        {
-            if (adc_buf_addr[req])
-                break;
-        }
-
-        switch (req)
-        {
-            case ADC_REQUEST_IO:
-                IO_UnpackAdcBuffer(BUFFER_HALF_LOWER);
-                break;
-            case ADC_REQUEST_BMS:
-                BMS_UnpackADCBuffer(BUFFER_HALF_LOWER);
-                break;
-            default:
-                break;
-        }
     }
 }
 
@@ -234,49 +244,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
     {
-        HW_ADC_UnpackBuffer(BUFFER_HALF_UPPER);
-
-        ADC_Request_E req = 0;
-
-        for (; req < ADC_REQUEST_CNT; req++)
-        {
-            if (adc_buf_addr[req])
-                break;
-        }
-
-
-        switch (req)
-        {
-            case ADC_REQUEST_IO:
-                IO_UnpackAdcBuffer(BUFFER_HALF_UPPER);
-                break;
-            case ADC_REQUEST_BMS:
-                BMS_UnpackADCBuffer(BUFFER_HALF_UPPER);
-                break;
-            default:
-                return;
-                break;
-        }
-
-        adc_buf_addr[ADC_REQUEST_IO] = 0;
-        adc_buf_addr[ADC_REQUEST_BMS] = 0;
-
-        if (adc_req_addr[(req + 1) % ADC_REQUEST_CNT])
-        {
-            adc_buf_addr[(req + 1) % ADC_REQUEST_CNT] = adc_req_addr[(req + 1) % ADC_REQUEST_CNT];
-            adc_req_addr[(req + 1) % ADC_REQUEST_CNT] = 0;
-            HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*)&adc_buf, ADC_BUF_CNT);
-            return;
-        }
-        else if (adc_req_addr[req])
-        {
-            adc_buf_addr[req] = adc_req_addr[req];
-            adc_req_addr[req] = 0;
-            HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*)&adc_buf, ADC_BUF_CNT);
-            return;
-        }
-
-        dma_running = false;
     }
 }
 
@@ -291,29 +258,11 @@ bool HW_ADC_Calibrate(ADC_HandleTypeDef* hadc)
 
 bool HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
 {
-    return HAL_ADC_Start_DMA(hadc, data, size) == HAL_OK;
-}
-
-bool HW_ADC_Request_DMA(ADC_Request_E req, uint32_t* buf)
-{
-    if (!dma_running)
-    {
-        dma_running = true;
-        HAL_ADCEx_MultiModeStart_DMA(&hadc1, (uint32_t*)&adc_buf, ADC_BUF_CNT);
-        adc_buf_addr[req] = buf;
-
-        return true;
-    }
-    else if (adc_buf_addr[req] || adc_req_addr[req])
-        return false;
-
-    adc_req_addr[req] = buf;
-
-    return true;
+    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK;
 }
 
 /**
- * @brief  Get analog input voltage in 0.1mV from ADC count 
+ * @brief  Get analog input voltage in 0.1mV from ADC count
  *
  * @param cnt ADC coun
  *
@@ -321,29 +270,10 @@ bool HW_ADC_Request_DMA(ADC_Request_E req, uint32_t* buf)
  */
 uint16_t HW_ADC_GetVFromCount(uint16_t cnt)
 {
-    return ((uint32_t)cnt) * 10000 * ADC_INPUT_VOLTAGE_DIVISOR * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
+    return ((uint32_t)cnt) * 10000 * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }
 
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
-
-void HW_ADC_UnpackBuffer(bufferHalf_E half)
-{
-    ADC_Request_E req = 0;
-
-    uint16_t startIndex = (half == BUFFER_HALF_LOWER) ? 0U : ADC_BUF_CNT / 2U;
-    uint16_t endIndex   = startIndex + (ADC_BUF_CNT / 2U);
-
-    for (; req < ADC_REQUEST_CNT; req++)
-    {
-        if (adc_buf_addr[req])
-            break;
-    }
-
-    for (uint16_t i = startIndex; i < endIndex; i++)
-    {
-        *(adc_buf_addr[req] + i) = (req == ADC_REQUEST_IO) ? adc_buf[i] & (0xffff) : adc_buf[i] >> 16;
-    }
-}

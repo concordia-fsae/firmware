@@ -5,6 +5,8 @@
  * @date 2023-12-26
  */
 
+#if defined (BMSW_BOARD_VA1)
+
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -218,3 +220,5 @@ bool LTC_ReadCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
 
     return true;
 }
+
+#endif /**< BMSW_BOARD_VA1 */

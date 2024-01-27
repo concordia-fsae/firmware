@@ -7,11 +7,11 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "HW_tim.h"
+#include "SystemConfig.h"
 #include "include/ErrorHandler.h"
 #include "include/HW.h"
 #include "stm32f1xx.h"
-#include "HW_tim.h"
-#include "SystemConfig.h"
 #include <stdint.h>
 
 
@@ -23,11 +23,12 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
-static uint64_t fast_clk; /**< Stored in 20us/bit */
+static uint64_t fan1_last_tick[2] = { 0 };
+static uint64_t fan2_last_tick[2] = { 0 };
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -45,37 +46,23 @@ static uint64_t fast_clk; /**< Stored in 20us/bit */
  */
 HAL_StatusTypeDef HW_TIM_Init()
 {
-    RCC_ClkInitTypeDef clkconfig;
-    uint32_t           uwTimclock = 0;
-    uint32_t           pFLatency;
-    uint32_t uwPrescalerValue = 0;
-   
-    __HAL_RCC_TIM1_CLK_ENABLE();
+    RCC_ClkInitTypeDef      clkconfig;
+    GPIO_InitTypeDef        GPIO_InitStruct    = { 0 };
+    TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
+    TIM_OC_InitTypeDef      sConfigOC          = { 0 };
+    TIM_MasterConfigTypeDef sMasterConfig      = { 0 };
+    TIM_IC_InitTypeDef      sConfigIC          = { 0 };
+    uint32_t                uwTimclock         = 0;
+    uint32_t                pFLatency;
+    uint32_t                uwPrescalerValue = 0;
 
-    // Get clock configuration
-    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
+    __HAL_RCC_TIM4_CLK_ENABLE();
 
-    // Compute TIM4 clock
-    uwTimclock       = HAL_RCC_GetPCLK2Freq();
-    // Compute the prescaler value to have TIM4 counter clock equal to 2MHz
-    uwPrescalerValue = (uint32_t)((uwTimclock / 2000000U) - 1U);
-
-    /* USER CODE BEGIN TIM1_Init 0 */
-
-    /* USER CODE END TIM1_Init 0 */
-
-    TIM_ClockConfigTypeDef         sClockSourceConfig   = { 0 };
-    TIM_MasterConfigTypeDef        sMasterConfig        = { 0 };
-    TIM_OC_InitTypeDef             sConfigOC            = { 0 };
-    TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = { 0 };
-
-    /* USER CODE BEGIN TIM1_Init 1 */
-
-    /* USER CODE END TIM1_Init 1 */
+    uwTimclock                   = HAL_RCC_GetPCLK2Freq();
     htim1.Instance               = TIM1;
-    htim1.Init.Prescaler         = uwPrescalerValue;
+    htim1.Init.Prescaler         = (uwTimclock / 2000000) - 1;
     htim1.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim1.Init.Period            = 2000000/20000; 
+    htim1.Init.Period            = 65535;
     htim1.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
     htim1.Init.RepetitionCounter = 0;
     htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -88,13 +75,67 @@ HAL_StatusTypeDef HW_TIM_Init()
     {
         Error_Handler();
     }
-    if (HAL_TIM_OC_Init(&htim1) != HAL_OK)
+    if (HAL_TIM_IC_Init(&htim1) != HAL_OK)
     {
         Error_Handler();
     }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfigIC.ICPolarity  = TIM_INPUTCHANNELPOLARITY_RISING;
+    sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+    sConfigIC.ICPrescaler = TIM_ICPSC_DIV4;
+    sConfigIC.ICFilter    = 0;
+    if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);    // main channel
+    HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_2);    // main channel
+
+    // Get clock configuration
+    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
+    uwTimclock                   = HAL_RCC_GetPCLK1Freq();
+    uwPrescalerValue             = (uint32_t)((uwTimclock / 1000000U) - 1U);
+    htim4.Instance               = TIM4;
+    htim4.Init.Prescaler         = uwPrescalerValue;
+    htim4.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim4.Init.Period            = 2000000 / 20000;
+    htim4.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim4.Init.RepetitionCounter = 0;
+    htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+
+    if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    if (HAL_TIM_OC_Init(&htim4) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+    sConfigOC.Pulse        = 50;
+    sConfigOC.OCPolarity   = TIM_OCPOLARITY_LOW;
+    sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
+    sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
+    sConfigOC.OCIdleState  = TIM_OCIDLESTATE_RESET;
+    sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+    if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
     {
         Error_Handler();
     }
@@ -105,103 +146,96 @@ HAL_StatusTypeDef HW_TIM_Init()
     sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
     sConfigOC.OCIdleState  = TIM_OCIDLESTATE_RESET;
     sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-    if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+    if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
     {
         Error_Handler();
     }
-    sBreakDeadTimeConfig.OffStateRunMode  = TIM_OSSR_DISABLE;
-    sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-    sBreakDeadTimeConfig.LockLevel        = TIM_LOCKLEVEL_OFF;
-    sBreakDeadTimeConfig.DeadTime         = 0;
-    sBreakDeadTimeConfig.BreakState       = TIM_BREAK_DISABLE;
-    sBreakDeadTimeConfig.BreakPolarity    = TIM_BREAKPOLARITY_HIGH;
-    sBreakDeadTimeConfig.AutomaticOutput  = TIM_AUTOMATICOUTPUT_DISABLE;
-    if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }    // Configure FAN PWM pin. Open-drain for sinking optoisolator
-    
-    
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    
+
+    // Configure FAN PWM pin. Open-drain for sinking optoisolator
     __HAL_RCC_GPIOA_CLK_ENABLE();
-    
-    GPIO_InitStruct.Pin = FAN_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+
+    GPIO_InitStruct.Pin   = FAN1_PWM_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(FAN_GPIO_Port, &GPIO_InitStruct);
-    
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-    
+    HAL_GPIO_Init(FAN1_PWM_GPIO_Port, &GPIO_InitStruct);
+    GPIO_InitStruct.Pin   = FAN2_PWM_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(FAN2_PWM_GPIO_Port, &GPIO_InitStruct);
+
+    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+
     return HAL_OK;
+}
+
+void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    if (htim_base->Instance == TIM1)
+    {
+        __HAL_RCC_TIM1_CLK_ENABLE();
+
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+
+        GPIO_InitStruct.Pin  = FAN1_PWM_Pin | FAN2_PWM_Pin;
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+        HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
+        HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+    }
+}
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
+{
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)    // If the interrupt is triggered by channel 1
+    {
+        fan1_last_tick[0] = fan1_last_tick[1];
+        fan1_last_tick[1] = HW_GetTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    }
+    else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
+    {
+        fan2_last_tick[0] = fan2_last_tick[1];
+        fan2_last_tick[1] = HW_GetTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    }
 }
 
 void HW_TIM_ConfigureRunTimeStatsTimer(void)
 {
-//    RCC_ClkInitTypeDef clkconfig;
-//    uint32_t           uwTimclock = 0;
-//    uint32_t           pFLatency;
-//    uint32_t uwPrescalerValue = 0;
-//    
-//    /**< RTOS Profiling Timer */
-//    /**< Configure the TIM2 IRQ priority and enable */
-//    HAL_NVIC_SetPriority(TIM2_IRQn, FAST_TICK_IRQ_PRIO, 0);
-//    HAL_NVIC_EnableIRQ(TIM2_IRQn);
-//
-//    /**< Enable clock and initialize peripheral to be 10x RTOS clock */
-//    /**< It is recommended to have 10-100x faster clock */
-//    __HAL_RCC_TIM2_CLK_ENABLE();
-//
-//    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
-//    uwTimclock = 2 * HAL_RCC_GetPCLK1Freq();
-//
-//    /**< Set TIM2 to have 1MHz counter */
-//    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
-//
-//    htim2.Instance = TIM2;
-//
-//    // Initialize TIMx peripheral as follow:
-//    // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000)/2 s time base.
-//    // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
-//    // ClockDivision = 0
-//    // Counter direction = Up
-//    htim2.Init.Period        = (1000000U / 50000) - 1U;
-//    htim2.Init.Prescaler     = uwPrescalerValue;
-//    htim2.Init.ClockDivision = 0;
-//    htim2.Init.CounterMode   = TIM_COUNTERMODE_UP;
-//
-//    if (HAL_TIM_Base_Init(&htim2) == HAL_OK)
-//    {
-//        // Start the TIM time Base generation in interrupt mode
-//        if (HAL_TIM_Base_Start_IT(&htim2) == HAL_OK)
-//        {
-//            return;
-//        }
-//    }
-//
-//    Error_Handler();
-}
-
-void HW_TIM_IncBaseTick()
-{
-    fast_clk++;    
 }
 
 /**
  * @brief  RTOS Profiling has a ~1us accuracy by using the OS CLK and internal counter
  *
- * @retval   
+ * @retval
  */
 uint64_t HW_TIM_GetBaseTick()
 {
-    //return fast_clk;
+    // return fast_clk;
 
-    return (HW_GetTick() * 100) + htim1.Instance->CNT; 
+    return (HW_GetTick() * 100) + htim4.Instance->CNT;
 }
 
-void HW_TIM1_setDuty(uint8_t percentage)
+void HW_TIM4_setDutyCH1(uint8_t percentage1)
 {
-    htim1.Instance->CCR1 = (uint16_t) (((uint32_t) percentage * htim1.Init.Period)/100);
+    htim4.Instance->CCR1 = (uint16_t)(((uint32_t)percentage1 * htim4.Init.Period) / 100);
+}
+
+void HW_TIM4_setDutyCH2(uint8_t percentage2)
+{
+    htim4.Instance->CCR2 = (uint16_t)(((uint32_t)percentage2 * htim4.Init.Period) / 100);
+}
+
+uint16_t HW_TIM1_getFreqCH1(void)
+{
+    return (fan1_last_tick[1]) ? 2000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0;
+}
+
+uint16_t HW_TIM1_getFreqCH2(void)
+{
+    return (fan2_last_tick[1]) ? 2000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0;
 }
 
 
@@ -223,39 +257,39 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     uint32_t           pFLatency;
 
     // Configure the TIM4 IRQ priority
-    HAL_NVIC_SetPriority(TIM4_IRQn, TickPriority, 0);
+    HAL_NVIC_SetPriority(TIM2_IRQn, TickPriority, 0);
 
     // Enable the TIM4 global Interrupt
-    HAL_NVIC_EnableIRQ(TIM4_IRQn);
+    HAL_NVIC_EnableIRQ(TIM2_IRQn);
 
     // Enable TIM4 clock
-    __HAL_RCC_TIM4_CLK_ENABLE();
+    __HAL_RCC_TIM2_CLK_ENABLE();
 
     // Get clock configuration
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
 
-    // Compute TIM4 clock
-    uwTimclock = 2 * HAL_RCC_GetPCLK1Freq();
+    // Compute TIM2 clock
+    uwTimclock       = 1 * HAL_RCC_GetPCLK2Freq();
     // Compute the prescaler value to have TIM4 counter clock equal to 1MHz
     uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
 
     // Initialize TIM4
-    htim4.Instance = TIM4;
+    htim2.Instance = TIM2;
 
     // Initialize TIMx peripheral as follow:
     // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.
     // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
     // ClockDivision = 0
     // Counter direction = Up
-    htim4.Init.Period        = (1000000U / 10000) - 1U;
-    htim4.Init.Prescaler     = uwPrescalerValue;
-    htim4.Init.ClockDivision = 0;
-    htim4.Init.CounterMode   = TIM_COUNTERMODE_UP;
+    htim2.Init.Period        = (1000000U / 10000) - 1U;
+    htim2.Init.Prescaler     = uwPrescalerValue;
+    htim2.Init.ClockDivision = 0;
+    htim2.Init.CounterMode   = TIM_COUNTERMODE_UP;
 
-    if (HAL_TIM_Base_Init(&htim4) == HAL_OK)
+    if (HAL_TIM_Base_Init(&htim2) == HAL_OK)
     {
         // Start the TIM time Base generation in interrupt mode
-        return HAL_TIM_Base_Start_IT(&htim4);
+        return HAL_TIM_Base_Start_IT(&htim2);
     }
 
     return HAL_ERROR;

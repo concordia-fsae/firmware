@@ -5,16 +5,18 @@
  * @date 2023-12-26
  */
 
-#pragma once
+#if defined(BMSW_BOARD_VA1)
+
+# pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_gpio.h"
-#include "HW_spi.h"
-#include "stdbool.h"
-#include "stdint.h"
+# include "HW_gpio.h"
+# include "HW_spi.h"
+# include "stdbool.h"
+# include "stdint.h"
 
 
 /******************************************************************************
@@ -29,7 +31,8 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum {
+typedef enum
+{
     THERMOCOUPLE = 0x00,
     DIODE,
     RTD,
@@ -37,53 +40,57 @@ typedef enum {
     DIRECTADC_SGL,
 } LTC_MeasurementType_E;
 
-typedef enum {
-    CH1 = 0x00,
-    CH2,
-    CH3,
-    CH4,
-    CH5,
-    CH6,
-    CH7,
-    CH8,
-    CH9,
-    CH10,
-    CH11,
-    CH12,
-    CH13,
-    CH14,
-    CH15,
-    CH16,
-    CH17,
-    CH18,
-    CH19,
-    CH20,
-    CHANNEL_COUNT,
+typedef enum
+{
+    LTC_CH1 = 0x00,
+    LTC_CH2,
+    LTC_CH3,
+    LTC_CH4,
+    LTC_CH5,
+    LTC_CH6,
+    LTC_CH7,
+    LTC_CH8,
+    LTC_CH9,
+    LTC_CH10,
+    LTC_CH11,
+    LTC_CH12,
+    LTC_CH13,
+    LTC_CH14,
+    LTC_CH15,
+    LTC_CH16,
+    LTC_CH17,
+    LTC_CH18,
+    LTC_CH19,
+    LTC_CH20,
+    LTC_CHANNEL_COUNT,
 } LTC_Channels_E;
 
-typedef struct {
+typedef struct
+{
     LTC_MeasurementType_E msmnt_type[CHANNEL_COUNT];
-    uint32_t multiple_conversion_flags;
+    uint32_t              multiple_conversion_flags;
 
 } LTC_Config_S;
 
-typedef struct {
-    bool hard_fault;
-    bool soft_above;
-    bool soft_below;
-    bool valid;
-    int32_t result;
+typedef struct
+{
+    bool     hard_fault: 1;
+    bool     soft_above: 1;
+    bool     soft_below: 1;
+    bool     valid     : 1;
+    int32_t  result;
     uint32_t raw;
 } LTC2983_ADCResult_S;
 
-typedef struct {
-    HW_SPI_Device_S *dev;
-    HW_GPIO_S *interrupt;
-    HW_GPIO_S *nrst;
-    LTC_Config_S config;
-    bool measuring;
+typedef struct
+{
+    HW_SPI_Device_S*    dev;
+    HW_GPIO_S*          interrupt;
+    HW_GPIO_S*          nrst;
+    LTC_Config_S        config;
+    bool                measuring;
     LTC2983_ADCResult_S raw_results[CHANNEL_COUNT];
-    int16_t temps[CHANNEL_COUNT]; /**< Scale of 0.1 deg C */
+    int16_t             temps[CHANNEL_COUNT]; /**< Scale of 0.1 deg C */
 } LTC2983_S;
 
 
@@ -102,3 +109,5 @@ typedef struct {
 bool LTC_Init(void);
 bool LTC_StartMeasurement(void);
 bool LTC_GetMeasurement(void);
+
+#endif /**< BMSW_BOARD_VA1 */

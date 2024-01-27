@@ -107,16 +107,19 @@ static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_MAX_NCS_Port, &GPIO_InitStruct);
-         
+        
+#if defined (BMSW_BOARD_VA1)
         GPIO_InitStruct.Pin  = SPI1_LTC_NCS_Pin;
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_LTC_NCS_Port, &GPIO_InitStruct);
-
+#endif /**< BMSW_BOARD_VA1 */
         // set NSS pin high (disable slaves)
         HAL_GPIO_WritePin(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin, GPIO_PIN_SET);
+#if defined (BMSW_BOARD_VA1)
         HAL_GPIO_WritePin(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin, GPIO_PIN_SET);
+#endif /**< BMSW_BOARD_VA1 */
     }
 }
 
@@ -133,7 +136,9 @@ static inline void LL_SPI_GPIODeInit(SPI_TypeDef *SPIx)
 
         HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin |SPI1_MOSI_Pin);
         HAL_GPIO_DeInit(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin);
+#if defined (BMSW_BOARD_VA1)
         HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
+#endif /**, BMSW_BOARD_VA1 */
     }
 }
 

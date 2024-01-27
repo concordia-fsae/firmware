@@ -33,6 +33,7 @@
 #include "HW_HS4011.h"
 #include "HW_MAX14921.h"
 #include "HW_LTC2983.h"
+#include "HW_SHT40.h"
 
 /**< Other Includes */
 #include "Module.h"
