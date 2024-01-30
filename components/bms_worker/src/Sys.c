@@ -95,7 +95,7 @@ static void Sys1Hz_PRD()
 /**
  * @brief  System Manager Module descriptor
  */
-const ModuleDesc_S Sys_desc = {
+const ModuleDesc_S SYS_desc = {
     .moduleInit        = &Sys_Init,
     .periodic100Hz_CLK = &Sys100Hz_PRD,
     .periodic10Hz_CLK  = &Sys10Hz_PRD,

@@ -53,7 +53,7 @@ typedef struct
 #endif /**< BMSW_BOARD_VA3 */
     } temp;
 
-    float32_t cell[CELL_COUNT];
+    float32_t cell[MAX_CELL_COUNT];
     float32_t segment;
 
     uint8_t addr;

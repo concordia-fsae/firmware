@@ -22,9 +22,9 @@
 
 /**< Modules */
 extern const ModuleDesc_S BMS_desc;
-extern const ModuleDesc_S Cooling_desc;
-extern const ModuleDesc_S Environment_desc;
-extern const ModuleDesc_S Sys_desc;
+extern const ModuleDesc_S COOL_desc;
+extern const ModuleDesc_S ENV_desc;
+extern const ModuleDesc_S SYS_desc;
 extern const ModuleDesc_S IO_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;

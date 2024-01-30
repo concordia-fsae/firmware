@@ -184,11 +184,11 @@ static void Environment10Hz_PRD()
 
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
-        ENV.values.cells.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
-        ENV.values.cells.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
+        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
+        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
         if (i < 4)
         {
-            ENV.values.cells.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) * 10 : 0;
+            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) * 10 : 0;
         }
     }
 
@@ -226,7 +226,7 @@ static void Environment1Hz_PRD()
 /**
  * @brief  Environment Module decriptor
  */
-const ModuleDesc_S Environment_desc = {
+const ModuleDesc_S ENV_desc = {
     .moduleInit       = &Environment_Init,
     .periodic10Hz_CLK = &Environment10Hz_PRD,
     .periodic1Hz_CLK  = &Environment1Hz_PRD,
@@ -243,24 +243,24 @@ void ENV_CalcTempStats(void)
 {
     uint8_t connected_channels = 0;
 
-    ENV.values.cells.avg_temp = 0;
-    ENV.values.cells.max_temp = INT16_MIN;
-    ENV.values.cells.min_temp = INT16_MAX;
+    ENV.values.avg_temp = 0;
+    ENV.values.max_temp = INT16_MIN;
+    ENV.values.min_temp = INT16_MAX;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
-        if (ENV.values.cells.temps[i].temp == 0)
+        if (ENV.values.temps[i].temp == 0)
         {
-            ENV.values.cells.temps[i].therm_error = true;
+            ENV.values.temps[i].therm_error = true;
             continue;
         }
 
         connected_channels++;
-        ENV.values.cells.temps[i].therm_error = false;
-        ENV.values.cells.avg_temp += ENV.values.cells.temps[i].temp;
-        ENV.values.cells.max_temp = (ENV.values.cells.temps[i].temp > ENV.values.cells.max_temp) ? ENV.values.cells.temps[i].temp : ENV.values.cells.max_temp;
-        ENV.values.cells.min_temp = (ENV.values.cells.temps[i].temp < ENV.values.cells.min_temp) ? ENV.values.cells.temps[i].temp : ENV.values.cells.min_temp;
+        ENV.values.temps[i].therm_error = false;
+        ENV.values.avg_temp += ENV.values.temps[i].temp;
+        ENV.values.max_temp = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
+        ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
-    ENV.values.cells.avg_temp /= connected_channels;
+    ENV.values.avg_temp /= connected_channels;
 }

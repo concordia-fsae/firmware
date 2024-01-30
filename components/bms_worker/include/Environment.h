@@ -74,26 +74,21 @@ typedef struct
 
 typedef struct
 {
+    Environment_State_E state;
     struct
     {
-        int16_t  mcu_temp;            /**< Stored in 0.1 deg C */
-        int16_t  brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
-        int16_t  ambient_temp;        /**< Stored in 0.1 deg C */
-        uint16_t rh;                  /**< Stored in 0.01% RH */
-    } board;
-    struct
-    {
+        struct
+        {
+            int16_t  mcu_temp;            /**< Stored in 0.1 deg C */
+            int16_t  brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
+            int16_t  ambient_temp;        /**< Stored in 0.1 deg C */
+            uint16_t rh;                  /**< Stored in 0.01% RH */
+        } board;
         Temperature_S temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */
         int16_t       max_temp;
         int16_t       min_temp;
         int16_t       avg_temp;
-    } cells;
-} Env_Variables_S;
-
-typedef struct
-{
-    Environment_State_E state;
-    Env_Variables_S     values;
+    } values;
 } Environment_S;
 
 

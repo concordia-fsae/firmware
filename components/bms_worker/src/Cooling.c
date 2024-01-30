@@ -21,7 +21,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-Cooling_Mngr_S COOLING;
+Cooling_Mngr_S COOL;
 
 
 /******************************************************************************
@@ -35,9 +35,9 @@ static void Cooling_Init()
 {
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
-        COOLING.state[i]      = COOLING_INIT;
-        COOLING.percentage[i] = 0;
-        COOLING.rpm[i]        = 0;
+        COOL.state[i]      = COOL_INIT;
+        COOL.percentage[i] = 0;
+        COOL.rpm[i]        = 0;
     }
     FANS_Init();
 }
@@ -48,61 +48,61 @@ static void Cooling_Init()
 static void Cooling10Hz_PRD(void)
 {
     static uint8_t step = 0;
-    FANS_GetRPM((uint16_t*)&COOLING.rpm);
+    FANS_GetRPM((uint16_t*)&COOL.rpm);
 
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
-        switch (COOLING.state[i])
+        switch (COOL.state[i])
         {
-            case COOLING_INIT:
+            case COOL_INIT:
                 step += 2;
-                COOLING.percentage[i] = (step <= 100) ? step : 200 - step;
+                COOL.percentage[i] = (step <= 100) ? step : 200 - step;
 
                 if (step >= 200)
-                    COOLING.state[i] = COOLING_ON;
+                    COOL.state[i] = COOL_ON;
                 break;
-            case COOLING_ON:
-            case COOLING_OFF:
-                if (ENV.values.cells.max_temp < 350)
+            case COOL_ON:
+            case COOL_OFF:
+                if (ENV.values.max_temp < 350)
                 {
-                    COOLING.percentage[i] = 0;
+                    COOL.percentage[i] = 0;
                 }
-                else if (ENV.values.cells.max_temp > 550)
+                else if (ENV.values.max_temp > 550)
                 {
-                    COOLING.state[i]      = COOLING_FULL;
-                    COOLING.percentage[i] = 100;
+                    COOL.state[i]      = COOL_FULL;
+                    COOL.percentage[i] = 100;
                 }
                 else
                 {
-                    COOLING.state[i]      = COOLING_ON;
-                    COOLING.percentage[i] = ENV.values.cells.max_temp * 100 / 20;
+                    COOL.state[i]      = COOL_ON;
+                    COOL.percentage[i] = ENV.values.max_temp * 100 / 20;
                 }
                 break;
-            case COOLING_FULL:
-                if (ENV.values.cells.max_temp < 525)
-                    COOLING.state[i] = COOLING_ON;
+            case COOL_FULL:
+                if (ENV.values.max_temp < 525)
+                    COOL.state[i] = COOL_ON;
                 break;
-            case COOLING_ERR:
+            case COOL_ERR:
                 break;
             default:
                 break;
         }
 
 
-        if (COOLING.percentage[i] == 0)
+        if (COOL.percentage[i] == 0)
         {
-            COOLING.state[i] = COOLING_OFF;
+            COOL.state[i] = COOL_OFF;
         }
     }
 
-    FANS_SetPower((uint8_t*)&COOLING.percentage);
+    FANS_SetPower((uint8_t*)&COOL.percentage);
 }
 
 
 /**
  * @brief  Cooling Module descriptor
  */
-const ModuleDesc_S Cooling_desc = {
+const ModuleDesc_S COOL_desc = {
     .moduleInit       = &Cooling_Init,
     .periodic10Hz_CLK = &Cooling10Hz_PRD,
 };

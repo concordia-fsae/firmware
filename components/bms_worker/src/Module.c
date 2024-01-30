@@ -32,10 +32,10 @@
  */
 static const ModuleDesc_S* modules[] = {
     &BMS_desc,
-    &Environment_desc,
-    &Cooling_desc,
+    &ENV_desc,
+    &COOL_desc,
     &IO_desc,
-    &Sys_desc,
+    &SYS_desc,
     //    &CANIO_rx,
     //    &CANIO_tx,
 };

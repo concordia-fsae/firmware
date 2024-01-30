@@ -194,9 +194,9 @@ static void IO10kHz_PRD(void)
     {
         if (BMS.state == BMS_HOLDING || BMS.state == BMS_PARASITIC_MEASUREMENT)
         {
-            static MAX_SelectedCell_E current_cell = CELL_COUNT;
+            static MAX_SelectedCell_E current_cell = MAX_CELL_COUNT;
 
-            if (current_cell == CELL_COUNT)
+            if (current_cell == MAX_CELL_COUNT)
                 current_cell = BMS.connected_cells - 1;
 
             BMS_SetOutputCell(current_cell);
@@ -208,7 +208,7 @@ static void IO10kHz_PRD(void)
 
             IO.cell[current_cell] = io.bmsData.value;
 
-            if (current_cell == CELL1)
+            if (current_cell == MAX_CELL1)
             {
                 BMS_MeasurementComplete();
                 current_cell = BMS.connected_cells - 1;

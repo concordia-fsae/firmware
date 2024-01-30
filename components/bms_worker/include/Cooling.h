@@ -22,11 +22,11 @@
 
 typedef enum
 {
-    COOLING_INIT = 0x00,
-    COOLING_OFF,
-    COOLING_ON,
-    COOLING_FULL,
-    COOLING_ERR,
+    COOL_INIT = 0x00,
+    COOL_OFF,
+    COOL_ON,
+    COOL_FULL,
+    COOL_ERR,
 } Cooling_State_E;
 
 typedef struct

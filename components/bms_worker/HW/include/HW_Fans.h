@@ -21,9 +21,9 @@
 
 typedef enum
 {
-    OFF = 0x00,
-    STARTING,
-    RUNNING,
+    FANS_OFF = 0x00,
+    FANS_STARTING,
+    FANS_RUNNING,
 } FANS_State_E;
 
 typedef enum

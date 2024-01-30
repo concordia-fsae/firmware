@@ -77,12 +77,12 @@ bool MAX_Init(void)
     max_chip.config.sampling             = false;
     max_chip.config.sampling_start_100us = UINT32_MAX;
     max_chip.config.balancing            = 0x00;
-    max_chip.config.output.state         = AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell   = CELL1;
+    max_chip.config.output.state         = MAX_AMPLIFIER_SELF_CALIBRATION;
+    max_chip.config.output.output.cell   = MAX_CELL1;
 
     MAX_ReadWriteToChip();
 
-    if (max_chip.state.ic_id == PN_ERROR)
+    if (max_chip.state.ic_id == MAX_PN_ERROR)
         return false;
 
     return true;
@@ -134,7 +134,7 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
     data[0] = (uint8_t)config->balancing;
     data[1] = (uint8_t)(config->balancing >> 8);
 
-    if (config->output.state == CELL_VOLTAGE)
+    if (config->output.state == MAX_CELL_VOLTAGE)
     {
         data[2] = 0x01;
         data[2] |= (uint8_t)config->output.output.cell << 1;
@@ -145,19 +145,19 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
 
         switch (config->output.state)
         {
-            case (PARASITIC_ERROR_CALIBRATION):
+            case (MAX_PARASITIC_ERROR_CALIBRATION):
                 data[2] |= 0b0000 << 1;
                 break;
-            case (AMPLIFIER_SELF_CALIBRATION):
+            case (MAX_AMPLIFIER_SELF_CALIBRATION):
                 data[2] |= 0b0001 << 1;
                 break;
-            case (TEMPERATURE_UNBUFFERED):
+            case (MAX_TEMPERATURE_UNBUFFERED):
                 data[2] |= 0b1000 << 1;
                 break;
-            case (PACK_VOLTAGE):
+            case (MAX_PACK_VOLTAGE):
                 data[2] |= 0b1100 << 1;
                 break;
-            case (TEMPERATURE_BUFFERED):
+            case (MAX_TEMPERATURE_BUFFERED):
                 data[2] |= 0b1100 << 1;
                 break;
             default:
@@ -165,8 +165,8 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
                 break;
         }
 
-        if (config->output.state == TEMPERATURE_BUFFERED ||
-            config->output.state == TEMPERATURE_UNBUFFERED)
+        if (config->output.state == MAX_TEMPERATURE_BUFFERED ||
+            config->output.state == MAX_TEMPERATURE_UNBUFFERED)
         {
             data[2] |= config->output.output.temp << 1;
         }
@@ -190,11 +190,11 @@ void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data)
     chip->cell_undervoltage = (uint16_t)data[1] << 8 | data[0];
     if ((data[2] & 0x03) == 0x3)
     {
-        chip->ic_id = PN_ERROR;
+        chip->ic_id = MAX_PN_ERROR;
     }
     else
     {
-        chip->ic_id = ((data[2] & 0x03) == 0x01) ? PN_14920 : PN_14921;
+        chip->ic_id = ((data[2] & 0x03) == 0x01) ? MAX_PN_14920 : MAX_PN_14921;
     }
     chip->die_version      = (data[2] & 0x0c) >> 2;
     chip->va_undervoltage  = (data[2] & 0x10) ? true : false;

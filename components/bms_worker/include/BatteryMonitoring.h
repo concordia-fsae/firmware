@@ -40,9 +40,9 @@ typedef enum
 
 typedef enum
 {
-    CELL_DISCONNECTED = 0x00,
-    CELL_CONNECTED,
-    CELL_ERROR,
+    BMS_CELL_DISCONNECTED = 0x00,
+    BMS_CELL_CONNECTED,
+    BMS_CELL_ERROR,
 } BMS_Cell_E;
 
 typedef struct
@@ -57,16 +57,22 @@ typedef struct
 {
     BMS_State_E state;
     uint16_t    balancing_cells;
-    BMS_Cell_S  cells[CELL_COUNT];       /**< Stored in 0.0001 units */
-    uint16_t    pack_voltage;            /**< Stored in 1mV units */
-    uint16_t    calculated_pack_voltage; /**< Stored in 1mV units */
-    uint16_t    max_voltage;             /**< Stored in 0.0001 units */
-    uint16_t    min_voltage;             /**< Stored in 0.0001 units */
-    uint16_t    avg_voltage;             /**< Stored in 0.0001 units */
-    uint16_t    min_capacity;            /**< Stored in 0.0001 units */
-    uint16_t    max_capacity;            /**< Stored in 0.0001 units */
-    uint16_t    avg_capacity;            /**< Stored in 0.0001 units */
-    uint8_t     connected_cells;
+    BMS_Cell_S  cells[MAX_CELL_COUNT];      // [mv], precision 1mv
+    uint16_t    pack_voltage;               // [mv], precision 1mv
+    uint16_t    calculated_pack_voltage;    // [mv], precision 1mv
+    struct
+    {
+        uint16_t max;
+        uint16_t min;
+        uint16_t avg;
+    } voltage;    // [0.1mv], precision 0.1mv
+    struct
+    {
+        uint16_t min;
+        uint16_t max;
+        uint16_t avg;
+    } capacity;    // [0.1mAh], precision 0.1mAh
+    uint8_t connected_cells;
 } BMS_S;
 
 

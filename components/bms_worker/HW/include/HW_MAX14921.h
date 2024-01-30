@@ -23,47 +23,47 @@
 
 typedef enum
 {
-    PN_14920 = 0b00,
-    PN_14921 = 0b10,
-    PN_ERROR = 0b11,
+    MAX_PN_14920 = 0b00,
+    MAX_PN_14921 = 0b10,
+    MAX_PN_ERROR = 0b11,
 } MAX_ProductID_E;
 
 typedef enum
 {
-    PARASITIC_ERROR_CALIBRATION = 0x00,
-    AMPLIFIER_SELF_CALIBRATION,
-    TEMPERATURE_UNBUFFERED,
-    PACK_VOLTAGE,
-    TEMPERATURE_BUFFERED,
-    CELL_VOLTAGE,
+    MAX_PARASITIC_ERROR_CALIBRATION = 0x00,
+    MAX_AMPLIFIER_SELF_CALIBRATION,
+    MAX_TEMPERATURE_UNBUFFERED,
+    MAX_PACK_VOLTAGE,
+    MAX_TEMPERATURE_BUFFERED,
+    MAX_CELL_VOLTAGE,
 } MAX_AnalogOutput_E;
 
 typedef enum
 {
-    CELL1 = 0x00,
-    CELL2,
-    CELL3,
-    CELL4,
-    CELL5,
-    CELL6,
-    CELL7,
-    CELL8,
-    CELL9,
-    CELL10,
-    CELL11,
-    CELL12,
-    CELL13,
-    CELL14,
-    CELL15,
-    CELL16,
-    CELL_COUNT,
+    MAX_CELL1 = 0x00,
+    MAX_CELL2,
+    MAX_CELL3,
+    MAX_CELL4,
+    MAX_CELL5,
+    MAX_CELL6,
+    MAX_CELL7,
+    MAX_CELL8,
+    MAX_CELL9,
+    MAX_CELL10,
+    MAX_CELL11,
+    MAX_CELL12,
+    MAX_CELL13,
+    MAX_CELL14,
+    MAX_CELL15,
+    MAX_CELL16,
+    MAX_CELL_COUNT,
 } MAX_SelectedCell_E;
 
 typedef enum
 {
-    T1 = 0x01,
-    T2,
-    T3,
+    MAX_T1 = 0x01,
+    MAX_T2,
+    MAX_T3,
 } MAX_SelectedTemp_E;
 
 typedef union
@@ -74,18 +74,16 @@ typedef union
 
 typedef struct
 {
-    MAX_AnalogOutput_E   state;
-    MAX_SelectedOutput_U output;
-} MAX_Output_S;
-
-typedef struct
-{
-    bool         low_power_mode;
-    bool         diagnostic_enabled;
-    bool         sampling;
-    uint32_t     sampling_start_100us;
-    uint16_t     balancing;
-    MAX_Output_S output;
+    bool     low_power_mode :1;
+    bool     diagnostic_enabled :1;
+    bool     sampling :1;
+    uint32_t sampling_start_100us;
+    uint16_t balancing;
+    struct
+    {
+        MAX_AnalogOutput_E   state;
+        MAX_SelectedOutput_U output;
+    } output;
 } MAX14921_Config_S;
 
 typedef struct
