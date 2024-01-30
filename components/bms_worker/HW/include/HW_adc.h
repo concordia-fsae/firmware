@@ -1,15 +1,16 @@
 /**
- * HW_adc.h
- * Header file for the ADC hardware implementation
+ * @file HW_adc.h
+ * @brief  Header file for ADC firmware
  */
+
 #pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
+// System Includes
 #include "SystemConfig.h"
-
 #include "stdbool.h"
 
 
@@ -17,11 +18,12 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum {
+typedef enum
+{
     ADC_REQUEST_IO,
     ADC_REQUEST_BMS,
     ADC_REQUEST_CNT,
-} ADC_Request_E; 
+} ADC_Request_E;
 
 typedef enum
 {
@@ -50,7 +52,7 @@ extern DMA_HandleTypeDef hdma_adc1;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_ADC_Init(void);
-bool HW_ADC_Calibrate(ADC_HandleTypeDef *hadc);
-bool HW_ADC_Start_DMA(ADC_HandleTypeDef*, uint32_t*, uint32_t);
-uint16_t HW_ADC_GetVFromCount(uint16_t);
+void     HW_ADC_Init(void);
+bool     HW_ADC_Calibrate(ADC_HandleTypeDef* hadc);
+bool     HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
+uint16_t HW_ADC_GetVFromCount(uint16_t cnt);

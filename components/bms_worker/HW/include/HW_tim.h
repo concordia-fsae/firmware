@@ -1,6 +1,6 @@
 /**
- * HW_timebase.c
- * Hardware timer and tick config
+ * @file HW_tim.h
+ * @brief  Header file for TIM firmware
  */
 
 #pragma once
@@ -9,39 +9,24 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+// Firmware Includes
 #include "stm32f1xx_hal.h"
-
-
-/******************************************************************************
- *                           P U B L I C  V A R S
- ******************************************************************************/
 
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-/**
- * HAL_InitTick
- * This function configures the TIM4 as a time base source.
- * The time source is configured  to have 1ms time base with a dedicated
- * Tick interrupt priority.
- * @note   This function is called  automatically at the beginning of program after
- *         reset by HAL_Init() or at any time when clock is configured, by HAL_RCC_ClockConfig().
- * @param  TickPriority Tick interrupt priority.
- * @return exit status
- */
 HAL_StatusTypeDef HW_TIM_Init(void);
-void HW_TIM_ConfigureRunTimeStatsTimer(void);
-void HW_TIM_IncBaseTick(void);
-uint64_t HW_TIM_GetBaseTick(void);
+void              HW_TIM_ConfigureRunTimeStatsTimer(void);
+void              HW_TIM_IncBaseTick(void);
+uint64_t          HW_TIM_GetBaseTick(void);
 
-#if defined (BMSW_BOARD_VA1)
+#if defined(BMSW_BOARD_VA1)
 void HW_TIM1_setDuty(uint8_t);
-#elif defined (BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-void HW_TIM4_setDutyCH1(uint8_t);
-void HW_TIM4_setDutyCH2(uint8_t);
+#elif defined(BMSW_BOARD_VA3)    // BMSW_BOARD_VA1
+void     HW_TIM4_setDutyCH1(uint8_t);
+void     HW_TIM4_setDutyCH2(uint8_t);
 uint16_t HW_TIM1_getFreqCH1(void);
 uint16_t HW_TIM1_getFreqCH2(void);
-#endif
-
+#endif                           // BMSW_BOARD_VA3

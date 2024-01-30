@@ -60,18 +60,13 @@ typedef enum
     DONE
 } Sensor_State_E;
 
-/******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-/**
- * @brief  Stores public struct for BMS Module
- */
 Environment_S ENV;
+
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -88,9 +83,6 @@ static THERM_BParameter_S ncp = {
     .R0 = 10000U,
 };
 
-/******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -175,7 +167,6 @@ static void Environment10Hz_PRD()
     {
         if (SHT40_Init())
         {
-            
         }
     }
     if (sht_chip.data.state == SHT_MEASURING)
@@ -191,7 +182,7 @@ static void Environment10Hz_PRD()
     ENV.values.board.brd_temp[BRD1] = (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET) * 10;
     ENV.values.board.brd_temp[BRD2] = (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET) * 10;
 
-    for (uint16_t i = 0; i < MUX_COUNT; i++)
+    for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
         ENV.values.cells.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
         ENV.values.cells.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
@@ -245,6 +236,9 @@ const ModuleDesc_S Environment_desc = {
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief  Go through Environment variables and calculate segment statistics
+ */
 void ENV_CalcTempStats(void)
 {
     uint8_t connected_channels = 0;

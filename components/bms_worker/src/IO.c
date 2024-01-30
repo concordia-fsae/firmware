@@ -1,10 +1,7 @@
 /**
  * @file IO.c
  * @brief  Source code for IO Module
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-28
  */
-
 
 /******************************************************************************
  *                             I N C L U D E S
@@ -14,6 +11,8 @@
 #include "IO.h"
 
 /**< System Includes*/
+#include "FeatureDefs.h"
+#include "Types.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -24,9 +23,7 @@
 #include "HW_gpio.h"
 
 /**< Other Includes */
-#include "FeatureDefs.h"
 #include "ModuleDesc.h"
-#include "Types.h"
 #include "Utility.h"
 
 
@@ -34,7 +31,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_VOLTAGE_DIVISION  2U         /**< Voltage division for cell voltage output */
+#define ADC_VOLTAGE_DIVISION 2U /**< Voltage division for cell voltage output */
 
 
 /******************************************************************************
@@ -155,13 +152,13 @@ static void IO_init(void)
 
     NX3L_Init();
     NX3L_EnableMux();
-    NX3L_SetMux(MUX1);
+    NX3L_SetMux(NX3L_MUX1);
 #endif /**< BMSW_BOARD_VA3 */
 }
 
 static void IO10Hz_PRD(void)
 {
-    static MUXChannel_E current_sel = MUX1;
+    static NX3L_MUXChannel_E current_sel = NX3L_MUX1;
 
     if (io.adcState == ADC_STATE_RUNNING)
     {
@@ -181,8 +178,8 @@ static void IO10Hz_PRD(void)
         IO.temp.mux2[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX2].value;
         IO.temp.mux3[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX3].value;
 
-        if (++current_sel == MUX_COUNT)
-            current_sel = MUX1;
+        if (++current_sel == NX3L_MUX_COUNT)
+            current_sel = NX3L_MUX1;
 
         NX3L_SetMux(current_sel);
     }
@@ -205,7 +202,7 @@ static void IO10kHz_PRD(void)
             BMS_SetOutputCell(current_cell);
 
             IO_Cells_UnpackADCBuffer();
-            
+
             io.bmsData.value = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
             io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
 
@@ -267,6 +264,9 @@ const ModuleDesc_S IO_desc = {
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief  Unpack ADC buffer for the thermistor measurements
+ */
 void IO_Temps_UnpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
@@ -282,6 +282,9 @@ void IO_Temps_UnpackADCBuffer(void)
     }
 }
 
+/**
+ * @brief  Unpack ADC buffer for the cell measurements
+ */
 void IO_Cells_UnpackADCBuffer(void)
 {
     io.bmsData.raw   = 0;

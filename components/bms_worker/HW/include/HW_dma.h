@@ -1,6 +1,6 @@
 /**
- * HW_dma.h
- * Header file for the DMA hardware implementation
+ * @file HW_dma.h
+ * @brief  Header file for DMA firmware
  */
 
 #pragma once
@@ -9,6 +9,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+// System Includes
 #include "SystemConfig.h"
 
 

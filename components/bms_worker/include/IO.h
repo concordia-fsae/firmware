@@ -1,8 +1,6 @@
 /**
  * @file IO.h
  * @brief  Header file for IO Module
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-28
  */
 
 #pragma once
@@ -11,15 +9,17 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-/**< Firmware includes */
+// System Includes
+#include "FloatTypes.h"
+#include "Types.h"
+
+// Firmware Includes
 #include "HW_NX3L4051PW.h"
 #include "HW_adc.h"
 
-/**< Other Includes */
+// Other Includes
 #include "BatteryMonitoring.h"
 #include "Environment.h"
-#include "FloatTypes.h"
-#include "Types.h"
 
 
 /******************************************************************************
@@ -46,9 +46,9 @@ typedef struct
     {
         float32_t mcu;
 #if defined(BMSW_BOARD_VA3)
-        float32_t mux1[MUX_COUNT];
-        float32_t mux2[MUX_COUNT];
-        float32_t mux3[MUX_COUNT];
+        float32_t mux1[NX3L_MUX_COUNT];
+        float32_t mux2[NX3L_MUX_COUNT];
+        float32_t mux3[NX3L_MUX_COUNT];
         float32_t board[BRD_COUNT];
 #endif /**< BMSW_BOARD_VA3 */
     } temp;
@@ -65,11 +65,3 @@ typedef struct
  ******************************************************************************/
 
 extern IO_S IO;
-
-/******************************************************************************
- *                           P U B L I C  V A R S
- ******************************************************************************/
-
-/******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/

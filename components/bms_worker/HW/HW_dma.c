@@ -1,6 +1,6 @@
 /**
- * HW_dma.c
- * Hardware DMA controller implementation
+ * @file HW_dma.c
+ * @brief  Source code for DMA firmware
  */
 
 /******************************************************************************
@@ -15,8 +15,7 @@
  ******************************************************************************/
 
 /**
- * MX_DMA_Init
- * Enable DMA clock and interrupt
+ * @brief  Firmware DMA Initialization function
  */
 void HW_DMA_Init(void)
 {

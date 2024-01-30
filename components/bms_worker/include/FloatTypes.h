@@ -1,6 +1,6 @@
 /**
- * floatTypes.h
- * Defines the float types for this processor
+ * @file FloatTypes.h
+ * @brief  Definition of float types
  */
 
 #pragma once

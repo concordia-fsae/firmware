@@ -1,14 +1,13 @@
 /**
- * HW_intc.c
- * Hardware Interrupt Controller Implementation
- * Cortex-M3 Processor Interruption and Exception Handlers
+ * @file HW_intc.c
+ * @brief  Source code for STM32F1xx Cortex M3 Interrupts
  */
-
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
+// Firmware Includes
 #include "HW_intc.h"
 #include "stm32f1xx.h"
 
@@ -16,7 +15,6 @@
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
-
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
@@ -127,6 +125,7 @@ void TIM1_CC_IRQHandler(void)
     HAL_TIM_IRQHandler(&htim1);
 }
 
+// TODO: Implement in CAN update
 // // CAN interrupts
 // void CAN1_SCE_IRQHandler(void)
 // {

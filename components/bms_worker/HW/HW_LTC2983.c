@@ -1,56 +1,38 @@
 /**
  * @file HW_LTC2983.c
  * @brief  Header file for LTC2983 Thermistor Sensor
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-26
  */
 
-#if defined (BMSW_BOARD_VA1)
+#if defined(BMSW_BOARD_VA1)
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_LTC2983.h"
+# include "HW_LTC2983.h"
 
-#include "SystemConfig.h"
-#include "include/HW_spi.h"
-#include <stdint.h>
+# include "SystemConfig.h"
+# include "include/HW_spi.h"
+# include <stdint.h>
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define READ_INST_BYTE  0x03
-#define WRITE_INST_BYTE 0x02
+# define READ_INST_BYTE  0x03
+# define WRITE_INST_BYTE 0x02
 
-#define COMMAND_REG               0x00
-#define TEMP_RESULT_BASE_REG      0x10
-#define GLAB_CONFIG_REG           0xf0
-#define MULTIPLE_CHANNEL_MASK_REG 0xf4
-#define MUX_DELAY_CONFIG_REG      0xff
-#define CHANNEL_ASSIGN_REG        0x0200
-#define CUSTOM_SENSOR_TABLE       0x250
+# define COMMAND_REG               0x00
+# define TEMP_RESULT_BASE_REG      0x10
+# define GLAB_CONFIG_REG           0xf0
+# define MULTIPLE_CHANNEL_MASK_REG 0xf4
+# define MUX_DELAY_CONFIG_REG      0xff
+# define CHANNEL_ASSIGN_REG        0x0200
+# define CUSTOM_SENSOR_TABLE       0x250
 
-#define DIRECT_ADC_MEAS (0x1e << 27 | 0x01 << 26)
+# define DIRECT_ADC_MEAS (0x1e << 27 | 0x01 << 26)
 
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-/******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
-
-/******************************************************************************
- *                           P U B L I C  V A R S
- ******************************************************************************/
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -98,12 +80,12 @@ bool LTC_Init()
     ltc_chip.nrst      = &LTC2983_NRST;
 
     HW_GPIO_WritePin(ltc_chip.nrst, true);
-    
-    //uint8_t response = 0;
 
-    //do {
-    //    LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response); 
-    //} while (response != 0x40);
+    // uint8_t response = 0;
+
+    // do {
+    //     LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response);
+    // } while (response != 0x40);
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
@@ -125,12 +107,12 @@ bool LTC_StartMeasurement(void)
 
 bool LTC_GetMeasurement(void)
 {
-    //uint8_t response = 0x00;
-    //if (!LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response))
-    //    return false;
+    // uint8_t response = 0x00;
+    // if (!LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response))
+    //     return false;
 
-    //if (response != 0x40)
-    //    return false;
+    // if (response != 0x40)
+    //     return false;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
@@ -141,8 +123,8 @@ bool LTC_GetMeasurement(void)
         ltc_chip.raw_results[i].hard_fault = (ltc_chip.raw_results[i].raw & 0x01 << 31) ? true : false;
         ltc_chip.raw_results[i].soft_above = (ltc_chip.raw_results[i].raw & 0x01 << 27) ? true : false;
         ltc_chip.raw_results[i].soft_below = (ltc_chip.raw_results[i].raw & 0x01 << 26) ? true : false;
-        ltc_chip.raw_results[i].valid = (ltc_chip.raw_results[i].raw & 0x01 << 24) ? true : false;
-        ltc_chip.raw_results[i].result = (ltc_chip.raw_results[i].raw & 0xffffff) << 8;
+        ltc_chip.raw_results[i].valid      = (ltc_chip.raw_results[i].raw & 0x01 << 24) ? true : false;
+        ltc_chip.raw_results[i].result     = (ltc_chip.raw_results[i].raw & 0xffffff) << 8;
     }
 
     return true;

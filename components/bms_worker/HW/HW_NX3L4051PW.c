@@ -1,46 +1,24 @@
 /**
  * @file HW_NX3LPW.c
  * @brief  Source code for  NX3L4051PW Driver
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2024-01-21
  */
 
-#include "include/HW.h"
-#if defined (BMSW_BOARD_VA3)
+#if defined(BMSW_BOARD_VA3)
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_NX3L4051PW.h"
+// Firmware Includes
+# include "HW_NX3L4051PW.h"
+# include "HW_gpio.h"
 
-#include "HW_gpio.h"
-
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-/******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
-
-/******************************************************************************
- *                           P U B L I C  V A R S
- ******************************************************************************/
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-#if defined(BMSW_BOARD_VA3)
+# if defined(BMSW_BOARD_VA3)
 HW_GPIO_S S1 = {
     .port = MUX_SEL1_Port,
     .pin  = MUX_SEL1_Pin,
@@ -57,26 +35,31 @@ HW_GPIO_S MUX_NEn = {
     .port = NX3_NEN_Port,
     .pin  = NX3_NEN_Pin,
 };
-#endif /**< BMSW_BOARD_VA3 */
+# endif    // BMSW_BOARD_VA3
 
-/******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
-
-/******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief  Initializes NX3L chip
+ *
+ * @retval true = Success, false = Failure
+ */
 bool NX3L_Init(void)
 {
     return true;
 }
 
-bool NX3L_SetMux(MUXChannel_E chn)
+/**
+ * @brief Select a specific input from the NX3L chip
+ *
+ * @param chn Channel to select
+ *
+ * @retval true = Success, false = Failure
+ */
+bool NX3L_SetMux(NX3L_MUXChannel_E chn)
 {
     HW_GPIO_WritePin(&S1, (chn & 0x01) ? true : false);
     HW_GPIO_WritePin(&S2, (chn & (0x01 << 1)) ? true : false);
@@ -84,21 +67,26 @@ bool NX3L_SetMux(MUXChannel_E chn)
     return true;
 }
 
+/**
+ * @brief  Enables the multiplexer output to MCU
+ *
+ * @retval true = Success, false = Failure
+ */
 bool NX3L_EnableMux(void)
 {
     HW_GPIO_WritePin(&MUX_NEn, false);
     return true;
 }
 
+/**
+ * @brief  Disables the multiplexer output to MCU
+ *
+ * @retval true = Success, false = Failure
+ */
 bool NX3L_DisableMux(void)
 {
     HW_GPIO_WritePin(&MUX_NEn, true);
     return true;
 }
 
-
-/******************************************************************************
- *                     P R I V A T E  F U N C T I O N S
- ******************************************************************************/
-
-#endif /**< BMSW_BOARD_VA3 */
+#endif    // BMSW_BOARD_VA3

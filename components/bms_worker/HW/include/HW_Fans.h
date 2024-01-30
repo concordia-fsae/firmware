@@ -1,8 +1,6 @@
 /**
  * @file HW_Fans.h
  * @brief  Segment Fans Control Driver Header
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-18
  */
 
 #pragma once
@@ -12,28 +10,24 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+// System Inlcudes
 #include "stdbool.h"
 #include "stdint.h"
 
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum {
+typedef enum
+{
     OFF = 0x00,
     STARTING,
     RUNNING,
 } FANS_State_E;
 
-typedef enum {
+typedef enum
+{
     FAN1 = 0x00,
     FAN2,
     FAN_COUNT,
@@ -46,10 +40,6 @@ typedef struct
 
 
 /******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
-
-/******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
@@ -60,12 +50,13 @@ static FANS_S FANS;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool FANS_Init(void);
-bool FANS_Verify(void);
+bool         FANS_Init(void);
+bool         FANS_Verify(void);
 FANS_State_E FANS_GetState(void);
-void FANS_SetPower(uint8_t*);
-void FANS_GetRPM(uint16_t*);
+void         FANS_SetPower(uint8_t*);
+void         FANS_GetRPM(uint16_t*);
 
-static inline FANS_State_E FANS_getState() {
+static inline FANS_State_E FANS_getState()
+{
     return FANS.current_state;
 }

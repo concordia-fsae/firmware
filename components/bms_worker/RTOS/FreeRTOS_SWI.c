@@ -1,27 +1,26 @@
-/*
- * FreeRTOS_SWI.c
- * FreeRTOS Software Interrupt implementation
+/**
+ * @file FreeRTOS_SWI.c
+ * @brief  FreeRTOS SWI Implementation
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "FreeRTOS_SWI.h"
+// System Includes
+#include "FreeRTOS_types.h"
+#include "SystemConfig.h"
+#include <stdlib.h>
+#include <string.h>
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
+#include "FreeRTOS_SWI.h"
 #include "task.h"
 #include "timers.h"
 
-// Codebase includes
-#include "FreeRTOS_types.h"
-
-#include "SystemConfig.h"
+// Other Includes
 #include "Utility.h"
-
-#include <stdlib.h>
-#include <string.h>
 
 
 /******************************************************************************
@@ -31,10 +30,10 @@
 // module struct
 typedef struct
 {
-    RTOS_swiHandle_T   swiTable[RTOS_SWI_PRI_COUNT][RTOS_SWI_MAX_PER_PRI]; // table containing all SWIs
-    RTOS_taskDesc_t    swiTasks[RTOS_SWI_PRI_COUNT];                       // task descriptions
-    EventGroupHandle_t swiEvents[RTOS_SWI_PRI_COUNT];                      // event group per priority
-    uint8_t            swiCountPerPri[RTOS_SWI_PRI_COUNT];                 // count of SWIs defined in each priority
+    RTOS_swiHandle_T   swiTable[RTOS_SWI_PRI_COUNT][RTOS_SWI_MAX_PER_PRI];    // table containing all SWIs
+    RTOS_taskDesc_t    swiTasks[RTOS_SWI_PRI_COUNT];                          // task descriptions
+    EventGroupHandle_t swiEvents[RTOS_SWI_PRI_COUNT];                         // event group per priority
+    uint8_t            swiCountPerPri[RTOS_SWI_PRI_COUNT];                    // count of SWIs defined in each priority
 } rtos_S;
 
 
@@ -113,17 +112,17 @@ void RTOS_SWI_Init(void)
         rtos.swiEvents[pri] = xEventGroupCreateStatic(&eventGroups[pri]);
 
         StaticTask_t* swiTask;
-        StackType_t * swiTaskStack;
+        StackType_t*  swiTaskStack;
         uint32_t      swiTaskStackSize;
         // allocate memory for this task
         RTOS_getSwiTaskMemory((RTOS_swiPri_E)pri, &swiTask, &swiTaskStack, &swiTaskStackSize);
 
         // create the task
-        rtos.swiTasks[pri].handle = xTaskCreateStatic(&swiTaskFxn,               // handler function
-                                                      taskNames[pri],            // task name
+        rtos.swiTasks[pri].handle = xTaskCreateStatic(&swiTaskFxn,       // handler function
+                                                      taskNames[pri],    // task name
                                                       swiTaskStackSize,
-                                                      (void*)pri,                // void pointer to task priority (passed as argument to the handler function)
-                                                      RTOS_SWI_PRI_OFFSET + pri, // task priority
+                                                      (void*)pri,                   // void pointer to task priority (passed as argument to the handler function)
+                                                      RTOS_SWI_PRI_OFFSET + pri,    // task priority
                                                       swiTaskStack,
                                                       swiTask);
     }
@@ -146,13 +145,13 @@ RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler)
     }
     else
     {
-        uint8_t           index = rtos.swiCountPerPri[priority]++; // index in the table where this SWI will be placed
-        RTOS_swiHandle_T* swi   = &rtos.swiTable[priority][index]; // handle entry from the SWI table
+        uint8_t           index = rtos.swiCountPerPri[priority]++;    // index in the table where this SWI will be placed
+        RTOS_swiHandle_T* swi   = &rtos.swiTable[priority][index];    // handle entry from the SWI table
 
         // create the SWI
-        swi->handler  = handler;                // link to SWI handler
-        swi->priority = priority;               // link SWI priority
-        swi->event    = 1UL << (uint32_t)index; // set event bit mask
+        swi->handler  = handler;                   // link to SWI handler
+        swi->priority = priority;                  // link SWI priority
+        swi->event    = 1UL << (uint32_t)index;    // set event bit mask
 
         return swi;
     }
@@ -163,7 +162,7 @@ RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler)
  * @brief invoke the given SWI
  * @param handle SWI handle to invoke
  */
-void SWI_invoke(RTOS_swiHandle_T *handle)
+void SWI_invoke(RTOS_swiHandle_T* handle)
 {
     // set the event bit for the given SWI
     (void)xEventGroupSetBits(rtos.swiEvents[handle->priority], handle->event);
@@ -176,7 +175,7 @@ void SWI_invoke(RTOS_swiHandle_T *handle)
  * @param handle SWI handle to invoke
  * @return return whether the message was successfully sent to the daemon
  */
-bool SWI_invokeFromISR(RTOS_swiHandle_T *handle)
+bool SWI_invokeFromISR(RTOS_swiHandle_T* handle)
 {
     // whether the daemon task (which is used to set the bit, since this is called from an ISR) was woken in order to set the bit
     // (i.e. the daemon task is a higher priority than the interrupt which is invoking the SWI)
@@ -188,7 +187,7 @@ bool SWI_invokeFromISR(RTOS_swiHandle_T *handle)
     // required in order to switch contexts when the ISR returns
     portYIELD_FROM_ISR(higherPrioTaskWoken);
 
-    return(result == pdPASS);
+    return (result == pdPASS);
 }
 
 /**
