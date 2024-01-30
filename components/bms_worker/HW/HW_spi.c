@@ -7,23 +7,26 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+// System Includes
+#include "string.h"
+
+// Firmware Includes
 #include "HW_spi.h"
-#include "SystemConfig.h"
 #include "stm32f1xx_ll_bus.h"
 #include "stm32f1xx_ll_gpio.h"
 
-#include "string.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-typedef struct {
-    bool locked;
-    HW_SPI_Device_S* owner; 
+typedef struct
+{
+    bool             locked;
+    HW_SPI_Device_S* owner;
 } HW_SPI_Lock_S;
 
-static HW_SPI_Lock_S lock = {0};
+static HW_SPI_Lock_S      lock = { 0 };
 static LL_SPI_InitTypeDef hspi1;
 
 /******************************************************************************
@@ -33,21 +36,20 @@ static LL_SPI_InitTypeDef hspi1;
 static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx);
 static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx);
 
-bool HW_SPI_Verify(HW_SPI_Device_S*);
+bool HW_SPI_Verify(HW_SPI_Device_S* dev);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
 /**
- * MX_SPI1_Init
- * Initialize the SPI peripheral
+ * @brief  Initializes ll SPI firmware
  */
 void HW_SPI_Init(void)
 {
     // initialize SPI pins
     LL_SPI_GPIOInit(SPI1);
-    
+
     hspi1.Mode              = LL_SPI_MODE_MASTER;
     hspi1.TransferDirection = LL_SPI_FULL_DUPLEX;
     hspi1.DataWidth         = LL_SPI_DATAWIDTH_8BIT;
@@ -69,10 +71,11 @@ void HW_SPI_Init(void)
 }
 
 /**
- * LL_SPI_GPIOInit
- * @param SPIx SPI handle to operate on
+ * @brief  Initializes SPI pins
+ *
+ * @param SPIx SPI peripheral
  */
-static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
+static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
@@ -86,7 +89,7 @@ static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
-        
+
         GPIO_InitStruct.Pin   = SPI1_MOSI_Pin;
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull  = GPIO_NOPULL;
@@ -99,49 +102,57 @@ static void LL_SPI_GPIOInit(SPI_TypeDef *SPIx)
         HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
 
         LL_GPIO_AF_EnableRemap_SPI1();
-       
+
         __HAL_RCC_GPIOB_CLK_ENABLE();
 
-        GPIO_InitStruct.Pin  = SPI1_MAX_NCS_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Pin   = SPI1_MAX_NCS_Pin;
+        GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull  = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_MAX_NCS_Port, &GPIO_InitStruct);
-        
-#if defined (BMSW_BOARD_VA1)
-        GPIO_InitStruct.Pin  = SPI1_LTC_NCS_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
+
+#if defined(BMSW_BOARD_VA1)
+        GPIO_InitStruct.Pin   = SPI1_LTC_NCS_Pin;
+        GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull  = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_LTC_NCS_Port, &GPIO_InitStruct);
 #endif /**< BMSW_BOARD_VA1 */
         // set NSS pin high (disable slaves)
         HAL_GPIO_WritePin(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin, GPIO_PIN_SET);
-#if defined (BMSW_BOARD_VA1)
+#if defined(BMSW_BOARD_VA1)
         HAL_GPIO_WritePin(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin, GPIO_PIN_SET);
 #endif /**< BMSW_BOARD_VA1 */
     }
 }
 
 /**
- * LL_SPI_GPIODeInit
- * @param SPIx SPI handle to operate on
+ * @brief  Deinitializes ll SPI peripheral
+ *
+ * @param SPIx SPI peripheral
  */
-static inline void LL_SPI_GPIODeInit(SPI_TypeDef *SPIx)
+static inline void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
 {
     if (SPIx == SPI1)
     {
         // Peripheral clock disable
         LL_SPI_Disable(SPI1);
 
-        HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin |SPI1_MOSI_Pin);
+        HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin | SPI1_MOSI_Pin);
         HAL_GPIO_DeInit(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin);
-#if defined (BMSW_BOARD_VA1)
+#if defined(BMSW_BOARD_VA1)
         HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
 #endif /**, BMSW_BOARD_VA1 */
     }
 }
 
+/**
+ * @brief  Locks the SPI bus to a specific external peripheral
+ *
+ * @param dev SPI device to take ownerhsip of the bus
+ *
+ * @retval true = Device was able to lock, false = Failure
+ */
 bool HW_SPI_Lock(HW_SPI_Device_S* dev)
 {
     if (lock.locked)
@@ -150,13 +161,20 @@ bool HW_SPI_Lock(HW_SPI_Device_S* dev)
     }
 
     lock.locked = true;
-    lock.owner = dev;
+    lock.owner  = dev;
 
     HAL_GPIO_WritePin(dev->ncs_pin.port, dev->ncs_pin.pin, GPIO_PIN_RESET);
 
     return true;
 }
 
+/**
+ * @brief  Release bus ownership from device
+ *
+ * @param dev SPI external peripheral
+ *
+ * @retval true = Success, false = Failure
+ */
 bool HW_SPI_Release(HW_SPI_Device_S* dev)
 {
     if (!HW_SPI_Verify(dev))
@@ -165,14 +183,21 @@ bool HW_SPI_Release(HW_SPI_Device_S* dev)
     }
 
     lock.locked = false;
-    lock.owner = 0x00;
+    lock.owner  = 0x00;
 
     HAL_GPIO_WritePin(dev->ncs_pin.port, dev->ncs_pin.pin, GPIO_PIN_SET);
 
     return true;
 }
 
-bool HW_SPI_Verify(HW_SPI_Device_S *dev)
+/**
+ * @brief  Verify if the SPI external peripheral has ownership of the SPI bus
+ *
+ * @param dev SPI external peripheral
+ *
+ * @retval true = Device is owner of bus, false = Failure
+ */
+bool HW_SPI_Verify(HW_SPI_Device_S* dev)
 {
     if (lock.owner != dev)
     {
@@ -182,34 +207,65 @@ bool HW_SPI_Verify(HW_SPI_Device_S *dev)
     return true;
 }
 
-bool HW_SPI_Transmit8(HW_SPI_Device_S *dev, uint8_t data)
+/**
+ * @note The bus must be under ownerhsip of the device
+ *
+ * @brief  Transmit 8 bits of data to peripheral
+ *
+ * @param dev SPI external peripherl
+ * @param data Data to transmit
+ *
+ * @retval true = Success, false = Failure
+ */
+bool HW_SPI_Transmit8(HW_SPI_Device_S* dev, uint8_t data)
 {
     if (lock.owner != dev)
     {
         return false;
     }
-    
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle));
+
+    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+        ;
     LL_SPI_TransmitData8(dev->handle, data);
-    while(!LL_SPI_IsActiveFlag_TXE(dev->handle));
-    while(!LL_SPI_IsActiveFlag_RXNE(dev->handle));
+    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+        ;
+    while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
+        ;
     LL_SPI_ReceiveData8(dev->handle); /**< Dummy read to clear RXNE and prevent OVR */
-    
+
     return true;
 }
 
-bool HW_SPI_Transmit16(HW_SPI_Device_S *dev, uint16_t data)
+/* @note The bus must be under ownerhsip of the device
+ *
+ * @brief  Transmit 16 bits of data to peripheral
+ *
+ * @param dev SPI external peripherl
+ * @param data Data to transmit
+ *
+ * @retval true = Success, false = Failure
+ */
+bool HW_SPI_Transmit16(HW_SPI_Device_S* dev, uint16_t data)
 {
     if (!HW_SPI_Transmit8(dev, data >> 8))
     {
         return false;
     }
     HW_SPI_Transmit8(dev, data);
-    
+
     return true;
 }
 
-bool HW_SPI_Transmit32(HW_SPI_Device_S *dev, uint32_t data)
+/* @note The bus must be under ownerhsip of the device
+ *
+ * @brief  Transmit 32 bits of data to peripheral
+ *
+ * @param dev SPI external peripherl
+ * @param data Data to transmit
+ *
+ * @retval true = Success, false = Failure
+ */
+bool HW_SPI_Transmit32(HW_SPI_Device_S* dev, uint32_t data)
 {
     if (!HW_SPI_Transmit16(dev, data >> 16))
     {
@@ -220,17 +276,30 @@ bool HW_SPI_Transmit32(HW_SPI_Device_S *dev, uint32_t data)
     return true;
 }
 
-bool HW_SPI_TransmitReceive8(HW_SPI_Device_S *dev, uint8_t wdata, uint8_t *rdata)
+/* @note The bus must be under ownerhsip of the device
+ *
+ * @brief  Transmit 16 bits of data to peripheral
+ *
+ * @param dev SPI external peripherl
+ * @param wdata Data to transmit
+ * @param rdata Data to receive
+ *
+ * @retval true = Success, false = Failure
+ */
+bool HW_SPI_TransmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata)
 {
     if (lock.owner != dev)
     {
         return false;
     }
-    
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle));
+
+    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+        ;
     LL_SPI_TransmitData8(dev->handle, wdata);
-    while(!LL_SPI_IsActiveFlag_TXE(dev->handle));
-    while(!LL_SPI_IsActiveFlag_RXNE(dev->handle));
+    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+        ;
+    while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
+        ;
     *rdata = LL_SPI_ReceiveData8(dev->handle);
 
     return true;

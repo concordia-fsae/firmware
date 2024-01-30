@@ -1,11 +1,19 @@
-/*
- * FreeRTOSResources.h
- * Various resources for FreeRTOS
+/**
+ * @file FreeRTOSResources.c
+ * @brief  Source code for FreeRTOS Implementation
+ * @author Joshua Lafleur (josh.lafleur@outlook.com)
+ * @version
+ * @date 2024-01-30
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
+
+// System Includes
+#include "FreeRTOS_types.h"
+#include "SystemConfig.h"
+#include <stdlib.h>
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
@@ -13,14 +21,10 @@
 #include "task.h"
 #include "timers.h"
 
-// Codebase includes
-#include "FreeRTOS_types.h"
-
+// Other Includes
 #include "CAN/CAN.h"
-#include "SystemConfig.h"
 #include "Utility.h"
 
-#include <stdlib.h>
 
 /******************************************************************************
  *                              D E F I N E S
@@ -78,7 +82,7 @@ RTOS_swiHandle_T* CANTX_BUS_A_10ms_swi;
 
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
-/**< 10kHz is too fast of a frequency with 50kHz TIM2 */
+    /**< 10kHz is too fast of a frequency with 50kHz TIM2 */
     {
         .function    = &Module_10kHz_TSK,
         .name        = "Task 10kHz",
@@ -232,7 +236,7 @@ void vApplicationIdleHook(void)
      * important that vApplicationIdleHook() is permitted to return to its calling
      * function, because it is the responsibility of the idle task to clean up
      * memory allocated by the kernel to any task that has since been deleted. */
-   Module_ApplicationIdleHook();
+    Module_ApplicationIdleHook();
 }
 
 void vApplicationTickHook(void)

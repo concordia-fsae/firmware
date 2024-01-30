@@ -1,8 +1,6 @@
 /**
  * @file Module.c
  * @brief  Source code for Module Manager
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-28
  */
 
 /******************************************************************************
@@ -13,19 +11,17 @@
 #include "Module.h"
 
 /**< System Includes*/
+#include "SystemConfig.h"
 #include "stddef.h"
 #include "stdint.h"
 
-/**< Other Includes */
-#include "SystemConfig.h"
-#include "Utility.h"
-
+// FreeRTOS Includes
 #include "FreeRTOS.h"
 #include "task.h"
 
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
+/**< Other Includes */
+#include "Utility.h"
+
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -44,10 +40,10 @@ static const ModuleDesc_S* modules[] = {
     //    &CANIO_tx,
 };
 
-static Module_TaskStats_S stats[MODULE_TASK_CNT] = {0};
+static Module_TaskStats_S stats[MODULE_TASK_CNT] = { 0 };
 static uint8_t            total_percentage;
 static uint8_t            timeslice_percentage;
-static uint64_t rtos_start;
+static uint64_t           rtos_start;
 
 
 /******************************************************************************
@@ -89,7 +85,7 @@ void Module_10kHz_TSK(void)
         }
     }
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
-    
+
     stats[MODULE_10kHz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_10kHz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
 }
@@ -112,7 +108,7 @@ void Module_1kHz_TSK(void)
         }
     }
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
-    
+
     stats[MODULE_1kHz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_1kHz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
 }
@@ -135,7 +131,7 @@ void Module_100Hz_TSK(void)
         }
     }
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
-    
+
     stats[MODULE_100Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_100Hz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
 }
@@ -158,7 +154,7 @@ void Module_10Hz_TSK(void)
         }
     }
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
-    
+
     stats[MODULE_10Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_10Hz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
 }
@@ -169,11 +165,11 @@ void Module_10Hz_TSK(void)
 void Module_1Hz_TSK(void)
 {
     static uint64_t last_timeslice = 0;
-    uint64_t temp_tick;
-    TaskStatus_t start, finish;
+    uint64_t        temp_tick;
+    TaskStatus_t    start, finish;
 
     vTaskGetInfo(NULL, &start, pdFALSE, 0);
-    
+
     /**< Run each of the modules 1Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -183,7 +179,7 @@ void Module_1Hz_TSK(void)
         }
     }
 
-    total_percentage = 0x00;
+    total_percentage     = 0x00;
     timeslice_percentage = 0x00;
 
     temp_tick = HW_TIM_GetBaseTick();
@@ -194,16 +190,15 @@ void Module_1Hz_TSK(void)
         stats[i].timeslice_percentage = (100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice);
         total_percentage += stats[i].total_percentage;
         timeslice_percentage += stats[i].timeslice_percentage;
-        stats[i].timeslice_runtime    = 0;
+        stats[i].timeslice_runtime = 0;
     }
 
     last_timeslice = temp_tick;
-    
+
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
-    
+
     stats[MODULE_1Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_1Hz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
-
 }
 
 /**

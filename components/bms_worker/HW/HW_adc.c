@@ -1,22 +1,23 @@
 /**
- * HW_adc.c
- * Hardware ADC implementation
+ * @file HW_adc.c
+ * @brief  Source code for ADC firmware
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-/**< FreeRTOS Includes */
+// FreeRTOS Includes
 #include "FreeRTOS.h"
 #include "task.h"
 
+// System Inlcudes
 #include "string.h"
 
-/**< Firmware Includes */
+// Firmware Includes
 #include "HW_adc.h"
 
-/**< Other Includes */
+// Other Includes
 #include "BatteryMonitoring.h"
 #include "IO.h"
 #include "SystemConfig.h"
@@ -46,10 +47,6 @@ DMA_HandleTypeDef hdma_adc1;
 
 
 /******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-/******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
@@ -61,7 +58,7 @@ void HW_ADC_UnpackBuffer(bufferHalf_E half);
  ******************************************************************************/
 
 /**
- * MX_ADC1_Init
+ * @brief  Init function for ADC firmware
  */
 void HW_ADC_Init(void)
 {
@@ -77,9 +74,9 @@ void HW_ADC_Init(void)
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
 #if defined(BMSW_BOARD_VA1)
     hadc1.Init.NbrOfConversion = 1;
-#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+#elif defined(BMSW_BOARD_VA3)    // BMSW_BOARD_VA1
     hadc1.Init.NbrOfConversion = 6;
-#endif                        /**< BMSW_BOARD_VA3 */
+#endif                           // BMSW_BOARD_VA3
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -90,6 +87,7 @@ void HW_ADC_Init(void)
     {
         Error_Handler();
     }
+
     // Configure Regular Channels
 
     sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
@@ -135,7 +133,7 @@ void HW_ADC_Init(void)
     {
         Error_Handler();
     }
-#endif /**< BMSW_BOARD_VA3 */
+#endif    // BMSW_BOARD_VA3
 
     // Common config
     hadc2.Instance                   = ADC2;
@@ -162,8 +160,9 @@ void HW_ADC_Init(void)
 }
 
 /**
- * HAL_ADC_MspInit
- * @param adcHandle adc handle to operate on
+ * @brief  Callback for STM32 HAL once ADC initialization is complete
+ *
+ * @param adcHandle pointer to ADC peripheral
  */
 void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
@@ -194,8 +193,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 
         __HAL_LINKDMA(adcHandle, DMA_Handle, hdma_adc1);
 
-    HAL_NVIC_SetPriority(ADC1_2_IRQn, ADC_IRQ_PRIO, 0U);
-    HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+        HAL_NVIC_SetPriority(ADC1_2_IRQn, ADC_IRQ_PRIO, 0U);
+        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
     }
     else if (adcHandle->Instance == ADC2)
     {
@@ -210,8 +209,9 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 }
 
 /**
- * HAL_ADC_MspDeInit
- * @param adcHandle adc handle to operate on
+ * @brief  STM32 HAL callback. Called once de-init is complete
+ *
+ * @param adcHandle Pointer to ADC peripheral
  */
 void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 {
@@ -231,7 +231,11 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     }
 }
 
-// Called when first half of buffer is filled
+/**
+ * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
+ *
+ * @param hadc Pointer to ADC peripheral
+ */
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
@@ -239,7 +243,11 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
     }
 }
 
-// Called when buffer is completely filled
+/**
+ * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
+ *
+ * @param hadc Pointer to ADC peripheral
+ */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
@@ -251,11 +259,27 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief Firmware function to initiate ADC calibration.
+ *
+ * @param hadc Pointer to ADC peripheral
+ *
+ * @retval true = Success, false = Failure
+ */
 bool HW_ADC_Calibrate(ADC_HandleTypeDef* hadc)
 {
     return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK;
 }
 
+/**
+ * @brief  Firmware function to start DMA transfer
+ *
+ * @param hadc Pointer to ADC peripheral
+ * @param data Pointer to memory start address
+ * @param size Size of buffer
+ *
+ * @retval true = Success, false = Failure
+ */
 bool HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
 {
     return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK;
@@ -264,16 +288,11 @@ bool HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
 /**
  * @brief  Get analog input voltage in 0.1mV from ADC count
  *
- * @param cnt ADC coun
+ * @param cnt ADC count
  *
- * @retval   0.01mV
+ * @retval unit:  0.01mV
  */
 uint16_t HW_ADC_GetVFromCount(uint16_t cnt)
 {
     return ((uint32_t)cnt) * 10000 * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }
-
-
-/******************************************************************************
- *                     P R I V A T E  F U N C T I O N S
- ******************************************************************************/

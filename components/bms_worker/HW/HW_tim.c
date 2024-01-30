@@ -1,23 +1,22 @@
 /**
- * HW_timebase.c
- * Hardware timer and tick config
+ * @file HW_tim.c
+ * @brief  Source code for TIM firmware
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
+// System Includes
 #include "HW_tim.h"
+#include "ErrorHandler.h"
 #include "SystemConfig.h"
-#include "include/ErrorHandler.h"
-#include "include/HW.h"
-#include "stm32f1xx.h"
 #include <stdint.h>
 
+// Firmware Includes
+#include "HW.h"
+#include "stm32f1xx.h"
 
-/******************************************************************************
- *                           P U B L I C  V A R S
- ******************************************************************************/
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -30,21 +29,17 @@ TIM_HandleTypeDef htim4;
 static uint64_t fan1_last_tick[2] = { 0 };
 static uint64_t fan2_last_tick[2] = { 0 };
 
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
 /**
- * HAL_InitTick
- * This function configures the TIM4 as a time base source.
- * The time source is configured  to have 1ms time base with a dedicated
- * Tick interrupt priority.
- * @note   This function is called  automatically at the beginning of program after
- *         reset by HAL_Init() or at any time when clock is configured, by HAL_RCC_ClockConfig().
- * @param  TickPriority Tick interrupt priority.
- * @return exit status
+ * @brief  Initializes TIM peripherals
+ *
+ * @retval true = Success, false = Failure
  */
-HAL_StatusTypeDef HW_TIM_Init()
+HAL_StatusTypeDef HW_TIM_Init(void)
 {
     RCC_ClkInitTypeDef      clkconfig;
     GPIO_InitTypeDef        GPIO_InitStruct    = { 0 };
@@ -129,7 +124,7 @@ HAL_StatusTypeDef HW_TIM_Init()
     }
 
     sConfigOC.OCMode       = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse        = 50;
+    sConfigOC.Pulse        = 0;
     sConfigOC.OCPolarity   = TIM_OCPOLARITY_LOW;
     sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
     sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
@@ -140,7 +135,7 @@ HAL_StatusTypeDef HW_TIM_Init()
         Error_Handler();
     }
     sConfigOC.OCMode       = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse        = 50;
+    sConfigOC.Pulse        = 0;
     sConfigOC.OCPolarity   = TIM_OCPOLARITY_LOW;
     sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
     sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
@@ -169,6 +164,11 @@ HAL_StatusTypeDef HW_TIM_Init()
     return HAL_OK;
 }
 
+/**
+ * @brief  HAL callback once Initialization is complete. Used for GPIO/INTERRUPT configuration
+ *
+ * @param htim_base TIM peripheral
+ */
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
@@ -188,6 +188,11 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     }
 }
 
+/**
+ * @brief  HAL callback called once an input capture has triggered
+ *
+ * @param htim TIM peripheral
+ */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
 {
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)    // If the interrupt is triggered by channel 1
@@ -202,6 +207,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
     }
 }
 
+/**
+ * @brief  RTOS callback to configure a more precise timebase for cpu profiling
+ */
 void HW_TIM_ConfigureRunTimeStatsTimer(void)
 {
 }
@@ -209,7 +217,7 @@ void HW_TIM_ConfigureRunTimeStatsTimer(void)
 /**
  * @brief  RTOS Profiling has a ~1us accuracy by using the OS CLK and internal counter
  *
- * @retval
+ * @retval Elapsed time in us from clock start
  */
 uint64_t HW_TIM_GetBaseTick()
 {
@@ -218,21 +226,40 @@ uint64_t HW_TIM_GetBaseTick()
     return (HW_GetTick() * 100) + htim4.Instance->CNT;
 }
 
+/**
+ * @brief  Set duty cycle of TIM4 CH1 output
+ *
+ * @param percentage1 Duty cycle percentage. Unit: 1%
+ */
 void HW_TIM4_setDutyCH1(uint8_t percentage1)
 {
     htim4.Instance->CCR1 = (uint16_t)(((uint32_t)percentage1 * htim4.Init.Period) / 100);
 }
 
+/* @brief  Set duty cycle of TIM4 CH2 output
+ *
+ * @param percentage2 Duty cycle percentage. Unit: 1%
+ */
 void HW_TIM4_setDutyCH2(uint8_t percentage2)
 {
     htim4.Instance->CCR2 = (uint16_t)(((uint32_t)percentage2 * htim4.Init.Period) / 100);
 }
 
+/**
+ * @brief  Get input frequency from TIM1 CH1
+ *
+ * @retval Frequency of TIM1 CH1 input
+ */
 uint16_t HW_TIM1_getFreqCH1(void)
 {
     return (fan1_last_tick[1]) ? 2000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0;
 }
 
+/**
+ * @brief  Get input frequency from TIM1 CH2
+ *
+ * @retval Frequency of TIM1 CH2 input
+ */
 uint16_t HW_TIM1_getFreqCH2(void)
 {
     return (fan2_last_tick[1]) ? 2000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0;
@@ -296,25 +323,18 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
 }
 
 /**
- * HAL_SuspendTick
- * Suspend Tick increment
- * @note   Disable the tick increment by disabling TIM4 update interrupt.
+ * @brief  Suspends the tick interrupt
  */
 void HAL_SuspendTick(void)
 {
-    // Disable TIM4 update Interrupt
-    __HAL_TIM_DISABLE_IT(&htim4, TIM_IT_UPDATE);
     __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
 }
 
 
 /**
- * HAL_ResumeTick
- * Resume Tick increment
+ * @brief  Resumes tick interrupt
  */
 void HAL_ResumeTick(void)
 {
-    // Enable TIM4 Update interrupt
-    __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
 }

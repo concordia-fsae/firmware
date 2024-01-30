@@ -1,7 +1,8 @@
 /**
- * FeatureDefs.h
- * Feature selection file. Enable or disable desired features
+ * @file FeatureDefs.h
+ * @brief  Detail features supported by bult code
  */
+
 #pragma once
 
 /******************************************************************************
@@ -14,5 +15,3 @@
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
-
-#define FTR_HALL_EFFECT_PADDLES    true

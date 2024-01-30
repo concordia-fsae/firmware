@@ -1,6 +1,6 @@
 /**
- * FreeRTOS_SWI.h
- * Header file for FreeRTOS Software Interrupt implementation
+ * @file FreeRTOS_SWI.h
+ * @brief  FreeRTOS file for FreeRTOS SWI Implementation
  */
 
 #pragma once
@@ -12,12 +12,14 @@
 #include "FreeRTOSConfig.h"
 #include "FreeRTOS_types.h"
 
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define RTOS_SWI_PRI_OFFSET     12U              // SWI priority offset from other interrupts
-#define RTOS_SWI_MAX_PER_PRI    RTOS_EVENT_COUNT // number of SWIs allowed per priority level
+#define RTOS_SWI_PRI_OFFSET  12U                 // SWI priority offset from other interrupts
+#define RTOS_SWI_MAX_PER_PRI RTOS_EVENT_COUNT    // number of SWIs allowed per priority level
+
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -37,8 +39,8 @@ typedef void (*RTOS_swiFn_t)(void);
 typedef struct
 {
     RTOS_swiFn_t handler;                     // function to be called when SWI runs
-    uint32_t     priority : 2;                // priority of this SWI
-    uint32_t     event    : RTOS_EVENT_COUNT; // bitmask for the event bit for this SWI
+    uint32_t     priority: 2;                 // priority of this SWI
+    uint32_t     event : RTOS_EVENT_COUNT;    // bitmask for the event bit for this SWI
 } RTOS_swiHandle_T;
 
 
@@ -55,10 +57,7 @@ bool SWI_invokeFromISR(RTOS_swiHandle_T* handle);
 void SWI_disable(void);
 void SWI_enable(void);
 
-
-void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
-                           StaticTask_t **ppxSwiTaskTCBBuffer,
-                           StackType_t **ppxSwiTaskStackBuffer,
-                           uint32_t *pusSwiTaskStackSize);
-
-
+void RTOS_getSwiTaskMemory(RTOS_swiPri_E  swiPriority,
+                           StaticTask_t** ppxSwiTaskTCBBuffer,
+                           StackType_t**  ppxSwiTaskStackBuffer,
+                           uint32_t*      pusSwiTaskStackSize);

@@ -1,6 +1,6 @@
 /**
- * errorHandler.h
- * Define error handlers
+ * @file ErrorHandler.h
+ * @brief  Header file for Error Handler
  */
 
 #pragma once

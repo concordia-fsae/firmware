@@ -1,8 +1,6 @@
 /**
  * @file Module.h
  * @brief  Header file for Module Manager
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-28
  */
 
 #pragma once
@@ -11,9 +9,11 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "ModuleDesc.h"
-
+// System Includes
 #include "stdint.h"
+
+// Other Includes
+#include "ModuleDesc.h"
 
 
 /******************************************************************************
@@ -42,7 +42,8 @@ extern void Module_1Hz_TSK(void);
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum {
+typedef enum
+{
     MODULE_1Hz_TASK = 0x00,
     MODULE_10Hz_TASK,
     MODULE_100Hz_TASK,
@@ -52,11 +53,12 @@ typedef enum {
     MODULE_TASK_CNT
 } Module_TaskSpeeds_E;
 
-typedef struct {
+typedef struct
+{
     uint64_t total_runtime;
     uint32_t timeslice_runtime;
-    uint8_t total_percentage;
-    uint8_t timeslice_percentage;
+    uint8_t  total_percentage;
+    uint8_t  timeslice_percentage;
 } Module_TaskStats_S;
 
 /******************************************************************************

@@ -1,7 +1,9 @@
 /**
- * HW_can.c
- * Hardware CAN controller implementation
+ * @file HW_can.c
+ * @brief  Source code for CAN firmware
  */
+
+
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -29,9 +31,9 @@
 // CAN_IER_BOFIE  Bus Off Interrupt
 // CAN_IER_LECIE  Last Error Code Interrupt
 // CAN_IER_ERRIE  Error Interrupt
-#define CAN_ENABLED_INTERRUPTS    (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
-                                   CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
-                                   CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
+#define CAN_ENABLED_INTERRUPTS (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
+                                CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
+                                CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
 
 
 /******************************************************************************
@@ -83,17 +85,17 @@ void HW_CAN_Init(void)
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 
-    CAN_FilterTypeDef filt = { 0U };
-    filt.FilterBank = 0;
-    filt.FilterMode = CAN_FILTERMODE_IDLIST;
-    filt.FilterScale = CAN_FILTERSCALE_16BIT;
+    CAN_FilterTypeDef filt    = { 0U };
+    filt.FilterBank           = 0;
+    filt.FilterMode           = CAN_FILTERMODE_IDLIST;
+    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
     // All filters are shifted left 5 bits
-    filt.FilterIdHigh = 0x2460;          // 0x123
-    filt.FilterIdLow = 0x2480;           // 0x124
-    filt.FilterMaskIdHigh = 0x24A0;      // 0x125
-    filt.FilterMaskIdLow = 0x24C0;       // 0x126
+    filt.FilterIdHigh         = 0x2460;    // 0x123
+    filt.FilterIdLow          = 0x2480;    // 0x124
+    filt.FilterMaskIdHigh     = 0x24A0;    // 0x125
+    filt.FilterMaskIdLow      = 0x24C0;    // 0x126
     filt.FilterFIFOAssignment = 0;
-    filt.FilterActivation = ENABLE;
+    filt.FilterActivation     = ENABLE;
     HAL_CAN_ConfigFilter(&hcan, &filt);
 }
 
@@ -104,11 +106,11 @@ void HW_CAN_Init(void)
  * @param mailbox which mailbox to check
  * @return true if free
  */
-static bool CAN_checkMbFree(CAN_HandleTypeDef *canHandle, CAN_TxMailbox_E mailbox)
+static bool CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
 {
     uint32_t tsr = READ_REG(canHandle->Instance->TSR);
 
-    return(tsr & (CAN_TSR_TME0 << mailbox));
+    return (tsr & (CAN_TSR_TME0 << mailbox));
 }
 
 
@@ -128,7 +130,7 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
         if (CAN_checkMbFree(canHandle, msg.mailbox))
         {
             // set CAN ID
-            canHandle->Instance->sTxMailBox[msg.mailbox].TIR = ((msg.id << CAN_TI0R_STID_Pos) | msg.RTR);
+            canHandle->Instance->sTxMailBox[msg.mailbox].TIR  = ((msg.id << CAN_TI0R_STID_Pos) | msg.RTR);
             // set message length
             canHandle->Instance->sTxMailBox[msg.mailbox].TDTR = msg.lengthBytes;
 
@@ -201,7 +203,7 @@ bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id,
  * @param  rx pointer to a CAN_RxMessage_T where the message will be stored
  * @retval HAL status
  */
-bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx)
+bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
 {
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
     {
@@ -245,10 +247,10 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx)
     rx->IDE = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
     rx->RTR = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
+    rx->id          = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
     rx->lengthBytes = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
-    rx->timestamp = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
+    rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
     rx->filterMatchIndex = (CAN_RDT0R_FMI & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_FMI_Pos;
 
     // Get the data
@@ -596,4 +598,3 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
         HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
     }
 }
-

@@ -1,39 +1,25 @@
 /**
  * @file HW_MAX14921.c
  * @brief  Source code for the MAX14921 Cell Measurement/Balancing IC
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-23
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_MAX14921.h"
-
-#include "HW.h"
-#include "HW_spi.h"
+// System Includes
 #include "SystemConfig.h"
-
-#include "Utility.h"
+#include "stdint.h"
 #include "string.h"
-#include <stdint.h>
 
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
+// Firmware Includes
+#include "HW.h"
+#include "HW_MAX14921.h"
+#include "HW_spi.h"
 
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
+// Other Includes
+#include "Utility.h"
 
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-/******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -59,14 +45,19 @@ HW_SPI_Device_S MAX14921 = {
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void MAX_TranslateConfig(MAX14921_Config_S*, uint8_t*);
-void MAX_DecodeResponse(MAX14921_Response_S*, uint8_t*);
+void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data);
+void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-bool MAX_Init()
+/**
+ * @brief  Initializes MAX 14920/14921
+ *
+ * @retval true = Success, false = Failure
+ */
+bool MAX_Init(void)
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
@@ -77,9 +68,9 @@ bool MAX_Init()
     GPIO_InitStruct.Pull  = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(MAX_SAMPLE_GPIO_Port, &GPIO_InitStruct);
-    
+
     HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, GPIO_PIN_RESET);
-   
+
     max_chip.dev                         = &MAX14921;
     max_chip.config.low_power_mode       = false;
     max_chip.config.diagnostic_enabled   = false;
@@ -90,14 +81,19 @@ bool MAX_Init()
     max_chip.config.output.output.cell   = CELL1;
 
     MAX_ReadWriteToChip();
-    
+
     if (max_chip.state.ic_id == PN_ERROR)
         return false;
 
     return true;
 }
 
-bool MAX_ReadWriteToChip()
+/**
+ * @brief  Transfer commands and read data from MAX1492*
+ *
+ * @retval true = Success, false = Failure
+ */
+bool MAX_ReadWriteToChip(void)
 {
     if (!HW_SPI_Lock(max_chip.dev))
         return false;
@@ -127,6 +123,12 @@ bool MAX_ReadWriteToChip()
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief  Translate MAX1492* configuration to message frame
+ *
+ * @param config Configuration to translate
+ * @param data Data to send to device
+ */
 void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
 {
     data[0] = (uint8_t)config->balancing;
@@ -170,12 +172,19 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
         }
     }
 
-    /**< Device always SAMPL IO controlled */ //data[2] |= (config->sampling) ? 0 : 1 << 5;
+    /**< Device always SAMPL IO controlled */    // data[2] |= (config->sampling) ? 0 : 1 << 5;
     HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, (config->sampling) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-    if (config->sampling) data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
+    if (config->sampling)
+        data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
     // data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
 }
 
+/**
+ * @brief  Decode response from MAX1492*
+ *
+ * @param chip Chip peripheral storing the response
+ * @param data Data received from the MAX1492*
+ */
 void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data)
 {
     chip->cell_undervoltage = (uint16_t)data[1] << 8 | data[0];

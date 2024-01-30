@@ -1,15 +1,13 @@
 /**
  * @file HW_msp.c
  * @brief  Source code for generic Msp firmware calls
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-28
  */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-/**< Other Includes */
+// System Includes
 #include "SystemConfig.h"
 
 

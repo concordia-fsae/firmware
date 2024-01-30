@@ -1,6 +1,6 @@
 /**
- * HW_clock.h
- * Header file for the Clock hardware implementation
+ * @file HW_clock.h
+ * @brief  Header file for clock configuration
  */
 
 #pragma once
@@ -9,10 +9,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stm32f1xx_hal.h"
-
-#include "HW_tim.h"
+// System Includes
 #include "ErrorHandler.h"
+
+// Firmware Includes
+#include "HW_tim.h"
+#include "stm32f1xx_hal.h"
 
 
 /******************************************************************************
@@ -27,7 +29,6 @@ void HW_SystemClock_Config(void);
 
 /**
  * @brief System Clock Configuration
- * @retval None
  */
 void HW_SystemClock_Config(void)
 {
@@ -39,12 +40,12 @@ void HW_SystemClock_Config(void)
     // in the RCC_OscInitTypeDef structure.
 
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE; /**< HSE is 8MHz */
-    RCC_OscInitStruct.HSEState       = RCC_HSE_ON; 
+    RCC_OscInitStruct.HSEState       = RCC_HSE_ON;
     RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
     RCC_OscInitStruct.HSIState       = RCC_HSI_ON;
     RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource  = RCC_PLLSOURCE_HSE; /**< PLL is 8Mhz */
-    RCC_OscInitStruct.PLL.PLLMUL     = RCC_PLL_MUL8; /**< PLL output is 64MHz */
+    RCC_OscInitStruct.PLL.PLLMUL     = RCC_PLL_MUL8;      /**< PLL output is 64MHz */
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     {
         Error_Handler();
@@ -54,9 +55,9 @@ void HW_SystemClock_Config(void)
     RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
                                   RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK; /**< SYSCLK is 64MHz */
-    RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1; /**< SYSCLK output is 64MHz */
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2; /**< APB1 is 32MHz */
-    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1; /**< APB2 is 64MHz */
+    RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;         /**< SYSCLK output is 64MHz */
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;           /**< APB1 is 32MHz */
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;           /**< APB2 is 64MHz */
 
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
     {
@@ -76,7 +77,6 @@ void HW_SystemClock_Config(void)
  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
  * a global variable "uwTick" used as application time base.
  * @param  htim : TIM handle
- * @retval None
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {

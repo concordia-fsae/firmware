@@ -1,8 +1,6 @@
 /**
  * @file BatteryMonitoring.c
  * @brief  Source code for Battery Monitoring Application
- * @author Joshua Lafleur (josh.lafleur@outlook.com)
- * @date 2023-12-27
  */
 
 /******************************************************************************
@@ -47,30 +45,13 @@
 
 extern MAX14921_S max_chip;
 
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-/******************************************************************************
- *                               M A C R O S
- ******************************************************************************/
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-/**
- * @brief  Stores public BMS struct
- */
 BMS_S BMS;
 
-/******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-/******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -87,7 +68,7 @@ void BMS_CheckError(void);
 /**
  * @brief  BMS Module init function
  */
-static void BMS_Init()
+static void BMS_Init(void)
 {
     memset(&BMS, 0, sizeof(BMS));
     BMS.state = BMS_INIT;
@@ -353,6 +334,11 @@ void BMS_CheckError(void)
     }
 }
 
+/**
+ * @brief  Set output cell of the cell multiplexer
+ *
+ * @param cell Voltage of cell to output
+ */
 void BMS_SetOutputCell(MAX_SelectedCell_E cell)
 {
     max_chip.config.sampling           = false;
@@ -366,6 +352,9 @@ void BMS_SetOutputCell(MAX_SelectedCell_E cell)
     HW_usDelay(15U);
 }
 
+/**
+ * @brief Callback function for measurement completion
+ */
 void BMS_MeasurementComplete(void)
 {
     if (BMS.state == BMS_HOLDING)

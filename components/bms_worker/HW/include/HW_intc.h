@@ -1,14 +1,9 @@
 /**
- * HW_intc.h
- * Header file for the Interrupt Controller hardware implementation
+ * @file HW_intc.h
+ * @brief  Header file for STM32F1xx Cortex M3 Interrupts
  */
 
 #pragma once
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -28,12 +23,8 @@ void TIM1_TRG_COM_IRQHandler(void);
 void TIM2_IRQHandler(void);
 void TIM1_CC_IRQHandler(void);
 
-  // 
+// TODO: Need to implement in communications updates
 // void CAN1_SCE_IRQHandler(void);
 // void USB_HP_CAN1_TX_IRQHandler(void);
 // void USB_LP_CAN1_RX0_IRQHandler(void);
 // void CAN1_RX1_IRQHandler(void);
-
-#ifdef __cplusplus
-}
-#endif
