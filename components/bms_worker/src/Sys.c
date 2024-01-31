@@ -21,7 +21,7 @@
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-Sys_S SYS;
+SYS_S SYS;
 
 
 /******************************************************************************
@@ -41,7 +41,7 @@ HW_GPIO_S led = {
 /**
  * @brief  Initializes OS' System Manager
  */
-static void Sys_Init()
+static void SYS_Init()
 {
     SYS.state = SYS_INIT;
 
@@ -51,7 +51,7 @@ static void Sys_Init()
 /**
  * @brief  100Hz System Manager task
  */
-static void Sys100Hz_PRD()
+static void SYS100Hz_PRD()
 {
     /**< Evaluate state of all systems */
 }
@@ -59,7 +59,7 @@ static void Sys100Hz_PRD()
 /**
  * @brief  10 Hz System Manager task
  */
-static void Sys10Hz_PRD()
+static void SYS10Hz_PRD()
 {
     /**< 10Hz only toggles the LED in an error state */
     switch (SYS.state)
@@ -69,7 +69,7 @@ static void Sys10Hz_PRD()
         case SYS_INIT:
             break;
         case SYS_ERROR:
-            HW_GPIO_TogglePin(&led);
+            HW_GPIO_togglePin(&led);
             break;
     }
 }
@@ -77,13 +77,13 @@ static void Sys10Hz_PRD()
 /**
  * @brief  1 Hz System Manager task
  */
-static void Sys1Hz_PRD()
+static void SYS1Hz_PRD()
 {
     /**< 1Hz only toggles the LED in the running state */
     switch (SYS.state)
     {
         case SYS_RUNNING:
-            HW_GPIO_TogglePin(&led);
+            HW_GPIO_togglePin(&led);
             break;
         case SYS_INIT:
             break;
@@ -96,8 +96,8 @@ static void Sys1Hz_PRD()
  * @brief  System Manager Module descriptor
  */
 const ModuleDesc_S SYS_desc = {
-    .moduleInit        = &Sys_Init,
-    .periodic100Hz_CLK = &Sys100Hz_PRD,
-    .periodic10Hz_CLK  = &Sys10Hz_PRD,
-    .periodic1Hz_CLK   = &Sys1Hz_PRD,
+    .moduleInit        = &SYS_Init,
+    .periodic100Hz_CLK = &SYS100Hz_PRD,
+    .periodic10Hz_CLK  = &SYS10Hz_PRD,
+    .periodic1Hz_CLK   = &SYS1Hz_PRD,
 };

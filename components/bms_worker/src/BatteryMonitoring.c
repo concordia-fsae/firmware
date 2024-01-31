@@ -43,7 +43,7 @@
  *                              E X T E R N S
  ******************************************************************************/
 
-extern MAX14921_S max_chip;
+extern MAX_S max_chip;
 
 
 /******************************************************************************
@@ -57,8 +57,8 @@ BMS_S BMS;
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void BMS_CalcSegStats(void);
-void BMS_CheckError(void);
+void BMS_calcSegStats(void);
+void BMS_checkError(void);
 
 
 /******************************************************************************
@@ -73,7 +73,7 @@ static void BMS_Init(void)
     memset(&BMS, 0, sizeof(BMS));
     BMS.state = BMS_INIT;
 
-    if (!MAX_Init())
+    if (!MAX_init())
     {
         BMS.state = BMS_ERROR;
     }
@@ -94,11 +94,11 @@ static void BMS1kHz_PRD()
             max_chip.config.balancing          = 0x00;
             max_chip.config.output.state       = MAX_PARASITIC_ERROR_CALIBRATION;
 
-            MAX_ReadWriteToChip();
-            max_chip.config.sampling_start_100us = HW_GetTick();
+            MAX_readWriteToChip();
+            max_chip.config.sampling_start_100us = HW_getTick();
             return;
         }
-        else if (HW_GetTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
+        else if (HW_getTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
             max_chip.config.sampling_start_100us = UINT32_MAX;
             BMS.state                            = BMS_PARASITIC_MEASUREMENT;
@@ -116,11 +116,11 @@ static void BMS1kHz_PRD()
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
 
-            MAX_ReadWriteToChip();
-            max_chip.config.sampling_start_100us = HW_GetTick();
+            MAX_readWriteToChip();
+            max_chip.config.sampling_start_100us = HW_getTick();
             return;
         }
-        else if (HW_GetTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
+        else if (HW_getTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
             max_chip.config.sampling_start_100us = UINT32_MAX;
             BMS.state                            = BMS_HOLDING;
@@ -131,12 +131,12 @@ static void BMS1kHz_PRD()
     {
         BMS.state                            = BMS_SAMPLING;
         max_chip.config.sampling_start_100us = UINT32_MAX;
-        BMS_CalcSegStats();
-        BMS_CheckError(); /**< If cells are in error, it will override from sampling state */
+        BMS_calcSegStats();
+        BMS_checkError(); /**< If cells are in error, it will override from sampling state */
     }
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
-        if (max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS * 10) < HW_GetTick())
+        if (max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS * 10) < HW_getTick())
         {
             max_chip.config.sampling             = false;
             max_chip.config.diagnostic_enabled   = false;
@@ -145,14 +145,14 @@ static void BMS1kHz_PRD()
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell   = MAX_CELL1; /**< Prepare for next step */
             max_chip.config.sampling_start_100us = UINT32_MAX;
-            MAX_ReadWriteToChip();
+            MAX_readWriteToChip();
 
             BMS.state = BMS_SAMPLING;
         }
     }
     else if (BMS.state == BMS_CALIBRATING)
     {
-        MAX_ReadWriteToChip();
+        MAX_readWriteToChip();
 
         if (max_chip.state.ready)
             BMS.state = BMS_WAITING;
@@ -168,7 +168,7 @@ static void BMS1Hz_PRD()
     {
         static uint32_t start_time = 0;
 
-        MAX_ReadWriteToChip();
+        MAX_readWriteToChip();
 
         if (!max_chip.state.ready)
         {
@@ -180,11 +180,11 @@ static void BMS1Hz_PRD()
             max_chip.config.diagnostic_enabled = true;
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
 
-            MAX_ReadWriteToChip();
-            start_time = HW_GetTick();
+            MAX_readWriteToChip();
+            start_time = HW_getTick();
             return;
         }
-        else if (start_time + 1000 > HW_GetTick())
+        else if (start_time + 1000 > HW_getTick())
         {
             return; /**< wait atleast 100ms to sample the voltages for the first time */
         }
@@ -192,8 +192,8 @@ static void BMS1Hz_PRD()
         max_chip.config.sampling           = false;
         max_chip.config.diagnostic_enabled = false;
 
-        MAX_ReadWriteToChip();
-        MAX_ReadWriteToChip(); /**< Re-read to get updated undervoltage information */
+        MAX_readWriteToChip();
+        MAX_readWriteToChip(); /**< Re-read to get updated undervoltage information */
 
         for (uint8_t i = 0; i < BMS_CONFIGURED_CELLS; i++)
         {
@@ -237,11 +237,11 @@ static void BMS1Hz_PRD()
         max_chip.config.balancing          = 0x00;
         max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
         max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-        MAX_ReadWriteToChip();
+        MAX_readWriteToChip();
 
         max_chip.config.output.state       = MAX_PACK_VOLTAGE;
         max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-        MAX_ReadWriteToChip();
+        MAX_readWriteToChip();
 
         BMS.state = BMS_CALIBRATING;
     }
@@ -255,9 +255,9 @@ static void BMS1Hz_PRD()
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
     max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    MAX_ReadWriteToChip();
+    MAX_readWriteToChip();
 
-    max_chip.config.sampling_start_100us = HW_GetTick();
+    max_chip.config.sampling_start_100us = HW_getTick();
     BMS.state                            = BMS_DIAGNOSTIC;
 }
 
@@ -277,14 +277,14 @@ const ModuleDesc_S BMS_desc = {
 /**
  * @brief  Calculates the segments statistics.
  */
-void BMS_CalcSegStats(void)
+void BMS_calcSegStats(void)
 {
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
         BMS.cells[i].voltage = IO.cell[i] * 10000 - BMS.cells[i].parasitic_corr;
         if (BMS.cells[i].voltage > 25000 && BMS.cells[i].voltage < 42000)
         {
-            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_GetCapacityfromV(IO.cell[i] * 10000);
+            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(IO.cell[i] * 10000);
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
@@ -314,15 +314,15 @@ void BMS_CalcSegStats(void)
 
     BMS.voltage.avg = batt_tmp / max_chip.state.connected_cells;
 
-    BMS.capacity.min = BMS_CONFIGURED_PARALLEL_CELLS * CELL_GetCapacityfromV(BMS.voltage.min);
-    BMS.capacity.max = BMS_CONFIGURED_PARALLEL_CELLS * CELL_GetCapacityfromV(BMS.voltage.max);
-    BMS.capacity.avg = BMS_CONFIGURED_PARALLEL_CELLS * CELL_GetCapacityfromV(BMS.voltage.avg);
+    BMS.capacity.min = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(BMS.voltage.min);
+    BMS.capacity.max = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(BMS.voltage.max);
+    BMS.capacity.avg = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(BMS.voltage.avg);
 }
 
 /**
  * @brief  Checks for errors relative to the cells.
  */
-void BMS_CheckError(void)
+void BMS_checkError(void)
 {
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
@@ -339,7 +339,7 @@ void BMS_CheckError(void)
  *
  * @param cell Voltage of cell to output
  */
-void BMS_SetOutputCell(MAX_SelectedCell_E cell)
+void BMS_setOutputCell(MAX_selectedCell_E cell)
 {
     max_chip.config.sampling           = false;
     max_chip.config.diagnostic_enabled = false;
@@ -347,7 +347,7 @@ void BMS_SetOutputCell(MAX_SelectedCell_E cell)
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_CELL_VOLTAGE;
     max_chip.config.output.output.cell = cell;
-    MAX_ReadWriteToChip();
+    MAX_readWriteToChip();
 
     HW_usDelay(15U);
 }
@@ -355,7 +355,7 @@ void BMS_SetOutputCell(MAX_SelectedCell_E cell)
 /**
  * @brief Callback function for measurement completion
  */
-void BMS_MeasurementComplete(void)
+void BMS_measurementComplete(void)
 {
     if (BMS.state == BMS_HOLDING)
     {

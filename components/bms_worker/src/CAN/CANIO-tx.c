@@ -108,7 +108,7 @@ static void CANIO_tx_10Hz_PRD(void)
 static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
-    CAN_Start();    // start CAN
+    HW_CAN_start();    // start CAN
 }
 
 

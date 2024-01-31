@@ -49,7 +49,7 @@ typedef enum
     A1_INDEX,
     A2_INDEX,
 #endif
-} AddressIndex_E;
+} addressIndex_E;
 
 typedef enum
 {
@@ -69,7 +69,7 @@ typedef enum
     ADC_CHANNEL_TEMP_BRD1,
     ADC_CHANNEL_TEMP_BRD2,
     ADC_CHANNEL_COUNT,
-} AdcChannels_E;
+} adcChannels_E;
 _Static_assert(IO_ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
 
@@ -125,8 +125,8 @@ IO_S IO;
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void IO_Temps_UnpackADCBuffer(void);
-void IO_Cells_UnpackADCBuffer(void);
+void IO_Temps_unpackADCBuffer(void);
+void IO_Cells_unpackADCBuffer(void);
 
 
 /******************************************************************************
@@ -142,17 +142,17 @@ static void IO_init(void)
     memset(&IO, 0x00, sizeof(IO));
 
 #if defined(BMSW_BOARD_VA1)
-    IO.addr |= ((HW_GPIO_ReadPin(&A0)) ? 0x01 : 0x00) << 0;
-    IO.addr |= ((HW_GPIO_ReadPin(&A1)) ? 0x01 : 0x00) << 1;
-    IO.addr |= ((HW_GPIO_ReadPin(&A2)) ? 0x01 : 0x00) << 2;
+    IO.addr |= ((HW_GPIO_readPin(&A0)) ? 0x01 : 0x00) << 0;
+    IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x01 : 0x00) << 1;
+    IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x01 : 0x00) << 2;
 #elif defined(BMSW_BOARD_VA3)
-    IO.addr |= ((HW_GPIO_ReadPin(&A1)) ? 0x01 : 0x00) << 0;
-    IO.addr |= ((HW_GPIO_ReadPin(&A2)) ? 0x01 : 0x00) << 1;
-    IO.addr |= ((HW_GPIO_ReadPin(&A3)) ? 0x01 : 0x00) << 2;
+    IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x01 : 0x00) << 0;
+    IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x01 : 0x00) << 1;
+    IO.addr |= ((HW_GPIO_readPin(&A3)) ? 0x01 : 0x00) << 2;
 
-    NX3L_Init();
-    NX3L_EnableMux();
-    NX3L_SetMux(NX3L_MUX1);
+    NX3L_init();
+    NX3L_enableMux();
+    NX3L_setMux(NX3L_MUX1);
 #endif /**< BMSW_BOARD_VA3 */
 }
 
@@ -162,7 +162,7 @@ static void IO10Hz_PRD(void)
 
     if (io.adcState == ADC_STATE_RUNNING)
     {
-        IO_Temps_UnpackADCBuffer();
+        IO_Temps_unpackADCBuffer();
 
         for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
         {
@@ -181,7 +181,7 @@ static void IO10Hz_PRD(void)
         if (++current_sel == NX3L_MUX_COUNT)
             current_sel = NX3L_MUX1;
 
-        NX3L_SetMux(current_sel);
+        NX3L_setMux(current_sel);
     }
 }
 
@@ -194,14 +194,14 @@ static void IO10kHz_PRD(void)
     {
         if (BMS.state == BMS_HOLDING || BMS.state == BMS_PARASITIC_MEASUREMENT)
         {
-            static MAX_SelectedCell_E current_cell = MAX_CELL_COUNT;
+            static MAX_selectedCell_E current_cell = MAX_CELL_COUNT;
 
             if (current_cell == MAX_CELL_COUNT)
                 current_cell = BMS.connected_cells - 1;
 
-            BMS_SetOutputCell(current_cell);
+            BMS_setOutputCell(current_cell);
 
-            IO_Cells_UnpackADCBuffer();
+            IO_Cells_unpackADCBuffer();
 
             io.bmsData.value = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
             io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
@@ -210,7 +210,7 @@ static void IO10kHz_PRD(void)
 
             if (current_cell == MAX_CELL1)
             {
-                BMS_MeasurementComplete();
+                BMS_measurementComplete();
                 current_cell = BMS.connected_cells - 1;
             }
             else
@@ -220,7 +220,7 @@ static void IO10kHz_PRD(void)
         }
         else if (BMS.state == BMS_SAMPLING || BMS.state == BMS_PARASITIC)
         {
-            IO_Cells_UnpackADCBuffer();
+            IO_Cells_unpackADCBuffer();
             io.bmsData.value = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
             io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
 
@@ -232,9 +232,9 @@ static void IO10kHz_PRD(void)
         if (io.adcState == ADC_STATE_INIT)
         {
             io.adcState = ADC_STATE_CALIBRATION;
-            if (HW_ADC_Calibrate(&hadc1) && HW_ADC_Calibrate(&hadc2))
+            if (HW_ADC_calibrate(&hadc1) && HW_ADC_calibrate(&hadc2))
             {
-                HW_ADC_Start_DMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
+                HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
                 io.adcState = ADC_STATE_RUNNING;
             }
             else
@@ -267,7 +267,7 @@ const ModuleDesc_S IO_desc = {
 /**
  * @brief  Unpack ADC buffer for the thermistor measurements
  */
-void IO_Temps_UnpackADCBuffer(void)
+void IO_Temps_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
     {
@@ -285,7 +285,7 @@ void IO_Temps_UnpackADCBuffer(void)
 /**
  * @brief  Unpack ADC buffer for the cell measurements
  */
-void IO_Cells_UnpackADCBuffer(void)
+void IO_Cells_unpackADCBuffer(void)
 {
     io.bmsData.raw   = 0;
     io.bmsData.count = 0;

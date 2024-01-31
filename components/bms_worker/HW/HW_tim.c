@@ -39,7 +39,7 @@ static uint64_t fan2_last_tick[2] = { 0 };
  *
  * @retval true = Success, false = Failure
  */
-HAL_StatusTypeDef HW_TIM_Init(void)
+HAL_StatusTypeDef HW_TIM_init(void)
 {
     RCC_ClkInitTypeDef      clkconfig;
     GPIO_InitTypeDef        GPIO_InitStruct    = { 0 };
@@ -198,19 +198,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)    // If the interrupt is triggered by channel 1
     {
         fan1_last_tick[0] = fan1_last_tick[1];
-        fan1_last_tick[1] = HW_GetTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        fan1_last_tick[1] = HW_getTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
     }
     else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
     {
         fan2_last_tick[0] = fan2_last_tick[1];
-        fan2_last_tick[1] = HW_GetTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        fan2_last_tick[1] = HW_getTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
     }
 }
 
 /**
  * @brief  RTOS callback to configure a more precise timebase for cpu profiling
  */
-void HW_TIM_ConfigureRunTimeStatsTimer(void)
+void HW_TIM_configureRunTimeStatsTimer(void)
 {
 }
 
@@ -219,11 +219,11 @@ void HW_TIM_ConfigureRunTimeStatsTimer(void)
  *
  * @retval Elapsed time in us from clock start
  */
-uint64_t HW_TIM_GetBaseTick()
+uint64_t HW_TIM_getBaseTick()
 {
     // return fast_clk;
 
-    return (HW_GetTick() * 100) + htim4.Instance->CNT;
+    return (HW_getTick() * 100) + htim4.Instance->CNT;
 }
 
 /**

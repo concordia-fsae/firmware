@@ -44,7 +44,7 @@
 extern LTC2983_S ltc_chip;
 extern HS4011_S  hs_chip;
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-extern SHT40_S sht_chip;
+extern SHT_S sht_chip;
 #endif                        /**< BMSW_BOARD_VA3 */
 extern IO_S IO;
 
@@ -65,7 +65,7 @@ typedef enum
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-Environment_S ENV;
+ENV_S ENV;
 
 
 /******************************************************************************
@@ -88,7 +88,7 @@ static THERM_BParameter_S ncp = {
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void ENV_CalcTempStats(void);
+void ENV_calcTempStats(void);
 
 
 /******************************************************************************
@@ -103,12 +103,12 @@ static void Environment_Init()
     ENV.state = ENV_INIT;
 
 #if defined(BMSW_BOARD_VA1)
-    if (!LTC_Init())
+    if (!LTC_init())
         ENV.state = ENV_ERROR;
-    if (!HS4011_Init())
+    if (!HS4011_init())
         ENV.state = ENV_ERROR;
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-    if (!SHT40_Init())
+    if (!SHT_init())
     {
         // ENV.state = ENV_ERROR;
     }
@@ -126,7 +126,7 @@ static void Environment10Hz_PRD()
 #if defined(BMSW_BOARD_VA1)
     if (ltc_state == MEASURING)
     {
-        if (LTC_GetMeasurement())
+        if (LTC_getMeasurement())
         {
             ltc_state = DONE;
 
@@ -154,7 +154,7 @@ static void Environment10Hz_PRD()
 
     if (hs_state == MEASURING)
     {
-        if (HS4011_GetData())
+        if (HS4011_getData())
         {
             hs_state = DONE;
 
@@ -165,13 +165,13 @@ static void Environment10Hz_PRD()
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
     if (sht_chip.data.state == SHT_INIT)
     {
-        if (SHT40_Init())
+        if (SHT_init())
         {
         }
     }
     if (sht_chip.data.state == SHT_MEASURING)
     {
-        if (SHT40_GetData())
+        if (SHT_getData())
         {
             ENV.values.board.ambient_temp = sht_chip.data.temp;
             ENV.values.board.rh           = sht_chip.data.rh;
@@ -192,7 +192,7 @@ static void Environment10Hz_PRD()
         }
     }
 
-    ENV_CalcTempStats();
+    ENV_calcTempStats();
 #endif
 }
 
@@ -210,10 +210,10 @@ static void Environment1Hz_PRD()
             ltc_state = MEASURING;
             hs_state  = MEASURING;
 
-            LTC_StartMeasurement();
-            HS4011_StartConversion();
+            LTC_startMeasurement();
+            HS4011_startConversion();
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-            SHT40_StartConversion();
+            SHT_startConversion();
 #endif
             break;
         case ENV_ERROR:
@@ -239,7 +239,7 @@ const ModuleDesc_S ENV_desc = {
 /**
  * @brief  Go through Environment variables and calculate segment statistics
  */
-void ENV_CalcTempStats(void)
+void ENV_calcTempStats(void)
 {
     uint8_t connected_channels = 0;
 

@@ -25,14 +25,14 @@
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-MAX14921_S max_chip;
+MAX_S max_chip;
 
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-HW_SPI_Device_S MAX14921 = {
+HW_SPI_Device_S SPI_MAX = {
     .handle  = SPI1,
     .ncs_pin = {
         .pin  = SPI1_MAX_NCS_Pin,
@@ -45,8 +45,8 @@ HW_SPI_Device_S MAX14921 = {
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data);
-void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data);
+void MAX_translateConfig(MAX_config_S* config, uint8_t* data);
+void MAX_decodeResponse(MAX_response_S* chip, uint8_t* data);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -57,7 +57,7 @@ void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data);
  *
  * @retval true = Success, false = Failure
  */
-bool MAX_Init(void)
+bool MAX_init(void)
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
@@ -71,7 +71,7 @@ bool MAX_Init(void)
 
     HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, GPIO_PIN_RESET);
 
-    max_chip.dev                         = &MAX14921;
+    max_chip.dev                         = &SPI_MAX;
     max_chip.config.low_power_mode       = false;
     max_chip.config.diagnostic_enabled   = false;
     max_chip.config.sampling             = false;
@@ -80,7 +80,7 @@ bool MAX_Init(void)
     max_chip.config.output.state         = MAX_AMPLIFIER_SELF_CALIBRATION;
     max_chip.config.output.output.cell   = MAX_CELL1;
 
-    MAX_ReadWriteToChip();
+    MAX_readWriteToChip();
 
     if (max_chip.state.ic_id == MAX_PN_ERROR)
         return false;
@@ -93,27 +93,27 @@ bool MAX_Init(void)
  *
  * @retval true = Success, false = Failure
  */
-bool MAX_ReadWriteToChip(void)
+bool MAX_readWriteToChip(void)
 {
-    if (!HW_SPI_Lock(max_chip.dev))
+    if (!HW_SPI_lock(max_chip.dev))
         return false;
 
     uint8_t wdata[3] = { 0x00 };
     uint8_t rdata[3] = { 0x00 };
 
-    MAX_TranslateConfig(&max_chip.config, (uint8_t*)&wdata);
+    MAX_translateConfig(&max_chip.config, (uint8_t*)&wdata);
 
     for (uint8_t i = 0; i < 3; i++)
     {
         /**< Bits must be reversed because SPI bus transmits MSB first whereas MAX takes LSB first */
         wdata[i] = reverse_byte(wdata[i]);
-        HW_SPI_TransmitReceive8(max_chip.dev, wdata[i], &rdata[i]);
+        HW_SPI_transmitReceive8(max_chip.dev, wdata[i], &rdata[i]);
         rdata[i] = reverse_byte(rdata[i]);
     }
 
-    MAX_DecodeResponse(&max_chip.state, (uint8_t*)&rdata);
+    MAX_decodeResponse(&max_chip.state, (uint8_t*)&rdata);
 
-    HW_SPI_Release(max_chip.dev);
+    HW_SPI_release(max_chip.dev);
 
     return true;
 }
@@ -129,7 +129,7 @@ bool MAX_ReadWriteToChip(void)
  * @param config Configuration to translate
  * @param data Data to send to device
  */
-void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
+void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
 {
     data[0] = (uint8_t)config->balancing;
     data[1] = (uint8_t)(config->balancing >> 8);
@@ -185,7 +185,7 @@ void MAX_TranslateConfig(MAX14921_Config_S* config, uint8_t* data)
  * @param chip Chip peripheral storing the response
  * @param data Data received from the MAX1492*
  */
-void MAX_DecodeResponse(MAX14921_Response_S* chip, uint8_t* data)
+void MAX_decodeResponse(MAX_response_S* chip, uint8_t* data)
 {
     chip->cell_undervoltage = (uint16_t)data[1] << 8 | data[0];
     if ((data[2] & 0x03) == 0x3)

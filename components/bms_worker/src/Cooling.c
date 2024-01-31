@@ -21,7 +21,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-Cooling_Mngr_S COOL;
+COOL_S COOL;
 
 
 /******************************************************************************
@@ -39,7 +39,7 @@ static void Cooling_Init()
         COOL.percentage[i] = 0;
         COOL.rpm[i]        = 0;
     }
-    FANS_Init();
+    FANS_init();
 }
 
 /**
@@ -48,7 +48,7 @@ static void Cooling_Init()
 static void Cooling10Hz_PRD(void)
 {
     static uint8_t step = 0;
-    FANS_GetRPM((uint16_t*)&COOL.rpm);
+    FANS_getRPM((uint16_t*)&COOL.rpm);
 
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
@@ -95,7 +95,7 @@ static void Cooling10Hz_PRD(void)
         }
     }
 
-    FANS_SetPower((uint8_t*)&COOL.percentage);
+    FANS_setPower((uint8_t*)&COOL.percentage);
 }
 
 

@@ -30,7 +30,7 @@ typedef enum
     BRD1 = 0x00,
     BRD2,
     BRD_COUNT,
-} BRDChannels_E;
+} ENV_BRDChannels_E;
 #endif /**< BMSW_BOARD_VA3 */
 
 
@@ -57,7 +57,7 @@ typedef enum
     CH19,
     CH20,
     CHANNEL_COUNT,
-} ThermistorID_E;
+} ENV_thermistorID_E;
 
 typedef enum
 {
@@ -70,7 +70,7 @@ typedef struct
 {
     bool    therm_error;
     int16_t temp;
-} Temperature_S;
+} ENV_temperature_S;
 
 typedef struct
 {
@@ -84,16 +84,16 @@ typedef struct
             int16_t  ambient_temp;        /**< Stored in 0.1 deg C */
             uint16_t rh;                  /**< Stored in 0.01% RH */
         } board;
-        Temperature_S temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */
+        ENV_temperature_S temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */
         int16_t       max_temp;
         int16_t       min_temp;
         int16_t       avg_temp;
     } values;
-} Environment_S;
+} ENV_S;
 
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
-extern Environment_S ENV;
+extern ENV_S ENV;

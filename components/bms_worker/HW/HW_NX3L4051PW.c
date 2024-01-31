@@ -47,7 +47,7 @@ HW_GPIO_S MUX_NEn = {
  *
  * @retval true = Success, false = Failure
  */
-bool NX3L_Init(void)
+bool NX3L_init(void)
 {
     return true;
 }
@@ -59,11 +59,11 @@ bool NX3L_Init(void)
  *
  * @retval true = Success, false = Failure
  */
-bool NX3L_SetMux(NX3L_MUXChannel_E chn)
+bool NX3L_setMux(NX3L_MUXChannel_E chn)
 {
-    HW_GPIO_WritePin(&S1, (chn & 0x01) ? true : false);
-    HW_GPIO_WritePin(&S2, (chn & (0x01 << 1)) ? true : false);
-    HW_GPIO_WritePin(&S3, (chn & (0x01 << 2)) ? true : false);
+    HW_GPIO_writePin(&S1, (chn & 0x01) ? true : false);
+    HW_GPIO_writePin(&S2, (chn & (0x01 << 1)) ? true : false);
+    HW_GPIO_writePin(&S3, (chn & (0x01 << 2)) ? true : false);
     return true;
 }
 
@@ -72,9 +72,9 @@ bool NX3L_SetMux(NX3L_MUXChannel_E chn)
  *
  * @retval true = Success, false = Failure
  */
-bool NX3L_EnableMux(void)
+bool NX3L_enableMux(void)
 {
-    HW_GPIO_WritePin(&MUX_NEn, false);
+    HW_GPIO_writePin(&MUX_NEn, false);
     return true;
 }
 
@@ -83,9 +83,9 @@ bool NX3L_EnableMux(void)
  *
  * @retval true = Success, false = Failure
  */
-bool NX3L_DisableMux(void)
+bool NX3L_disableMux(void)
 {
-    HW_GPIO_WritePin(&MUX_NEn, true);
+    HW_GPIO_writePin(&MUX_NEn, true);
     return true;
 }
 

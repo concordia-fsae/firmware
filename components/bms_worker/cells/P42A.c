@@ -21,7 +21,7 @@
  *
  * @retval unit: 0.1mAh
  */
-uint32_t CELL_GetCapacityfromV(uint16_t tenth_mv)
+uint32_t CELL_getCapacityfromV(uint16_t tenth_mv)
 {
     return (((uint32_t)tenth_mv) - 25000) / 17 * 42;
 }
@@ -33,7 +33,7 @@ uint32_t CELL_GetCapacityfromV(uint16_t tenth_mv)
  *
  * @retval unit: 0.1mv
  */
-uint16_t CELL_GetVfromCapacity(uint32_t tenth_mah)
+uint16_t CELL_getVfromCapacity(uint32_t tenth_mah)
 {
     return tenth_mah / 4.2 * 1.7 + 2.5;
 }

@@ -20,13 +20,6 @@
 
 typedef enum
 {
-    ADC_REQUEST_IO,
-    ADC_REQUEST_BMS,
-    ADC_REQUEST_CNT,
-} ADC_Request_E;
-
-typedef enum
-{
     BUFFER_HALF_LOWER = 0U,
     BUFFER_HALF_UPPER,
 } bufferHalf_E;
@@ -52,7 +45,7 @@ extern DMA_HandleTypeDef hdma_adc1;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void     HW_ADC_Init(void);
-bool     HW_ADC_Calibrate(ADC_HandleTypeDef* hadc);
-bool     HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
-uint16_t HW_ADC_GetVFromCount(uint16_t cnt);
+void     HW_ADC_init(void);
+bool     HW_ADC_calibrate(ADC_HandleTypeDef* hadc);
+bool     HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
+uint16_t HW_ADC_getVFromCount(uint16_t cnt);

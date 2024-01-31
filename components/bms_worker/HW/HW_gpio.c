@@ -21,7 +21,7 @@
 /**
  * @brief  Initialization of GPIO pins.
  */
-void HW_GPIO_Init(void)
+void HW_GPIO_init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
@@ -100,7 +100,7 @@ void HW_GPIO_Init(void)
 /**
  * @brief  Deinitializes GPIO.
  */
-void HW_GPIO_DeInit(void)
+void HW_GPIO_deInit(void)
 {
     HAL_GPIO_DeInit(A2_GPIO_Port, A2_Pin);
 }
@@ -112,7 +112,7 @@ void HW_GPIO_DeInit(void)
  *
  * @retval   true = '1', false = '0'
  */
-bool HW_GPIO_ReadPin(HW_GPIO_S* dev)
+bool HW_GPIO_readPin(HW_GPIO_S* dev)
 {
     return HAL_GPIO_ReadPin(dev->port, dev->pin) == GPIO_PIN_SET;
 }
@@ -123,7 +123,7 @@ bool HW_GPIO_ReadPin(HW_GPIO_S* dev)
  * @param dev HW pin
  * @param state true = '1', false = '0'
  */
-void HW_GPIO_WritePin(HW_GPIO_S* dev, bool state)
+void HW_GPIO_writePin(HW_GPIO_S* dev, bool state)
 {
     HAL_GPIO_WritePin(dev->port, dev->pin, (state) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
@@ -133,7 +133,7 @@ void HW_GPIO_WritePin(HW_GPIO_S* dev, bool state)
  *
  * @param dev HW pin
  */
-void HW_GPIO_TogglePin(HW_GPIO_S* dev)
+void HW_GPIO_togglePin(HW_GPIO_S* dev)
 {
     HAL_GPIO_TogglePin(dev->port, dev->pin);
 }

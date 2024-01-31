@@ -27,18 +27,18 @@ typedef enum
     COOL_ON,
     COOL_FULL,
     COOL_ERR,
-} Cooling_State_E;
+} COOL_state_E;
 
 typedef struct
 {
-    Cooling_State_E state[FAN_COUNT];
+    COOL_state_E state[FAN_COUNT];
     uint8_t         percentage[FAN_COUNT];
     uint16_t        rpm[FAN_COUNT];
-} Cooling_Mngr_S;
+} COOL_S;
 
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
-extern Cooling_Mngr_S COOLING;
+extern COOL_S COOLING;

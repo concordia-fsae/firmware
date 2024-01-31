@@ -34,7 +34,7 @@ typedef struct
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-static FANS_S FANS;
+FANS_S FANS;
 
 
 /******************************************************************************
@@ -51,7 +51,7 @@ static fans_S fans;
 /**
  * @brief  Initialize fans driver
  */
-bool FANS_Init()
+bool FANS_init()
 {
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
@@ -66,9 +66,9 @@ bool FANS_Init()
  *
  * @param fan uint8_t[2] with power range [0, 100] in percentage
  */
-void FANS_SetPower(uint8_t* fan)
+void FANS_setPower(uint8_t* fan)
 {
-    FANS_GetRPM((uint16_t*)&fans.rpm);
+    FANS_getRPM((uint16_t*)&fans.rpm);
 
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
@@ -105,7 +105,7 @@ void FANS_SetPower(uint8_t* fan)
  *
  * @param rpm Pointer to uint8_t[2] for fanspeeds
  */
-void FANS_GetRPM(uint16_t* rpm)
+void FANS_getRPM(uint16_t* rpm)
 {
     rpm[0] = HW_TIM1_getFreqCH1() * 60;
     rpm[1] = HW_TIM1_getFreqCH2() * 60;

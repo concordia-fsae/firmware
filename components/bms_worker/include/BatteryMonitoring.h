@@ -87,5 +87,5 @@ extern BMS_S BMS;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void BMS_SetOutputCell(MAX_SelectedCell_E cell);
-void BMS_MeasurementComplete(void);
+void BMS_setOutputCell(MAX_selectedCell_E cell);
+void BMS_measurementComplete(void);

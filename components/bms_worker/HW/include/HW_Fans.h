@@ -43,18 +43,16 @@ typedef struct
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-static FANS_S FANS;
+extern FANS_S FANS;
 
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool         FANS_Init(void);
-bool         FANS_Verify(void);
-FANS_State_E FANS_GetState(void);
-void         FANS_SetPower(uint8_t*);
-void         FANS_GetRPM(uint16_t*);
+bool         FANS_init(void);
+void         FANS_setPower(uint8_t* percentage);
+void         FANS_getRPM(uint16_t* rpm);
 
 static inline FANS_State_E FANS_getState()
 {

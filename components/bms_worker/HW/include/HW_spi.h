@@ -36,11 +36,11 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_SPI_Init(void);
-bool HW_SPI_Lock(HW_SPI_Device_S* dev);
-bool HW_SPI_Release(HW_SPI_Device_S* dev);
+void HW_SPI_init(void);
+bool HW_SPI_lock(HW_SPI_Device_S* dev);
+bool HW_SPI_release(HW_SPI_Device_S* dev);
 
-bool HW_SPI_Transmit8(HW_SPI_Device_S* dev, uint8_t data);
-bool HW_SPI_Transmit16(HW_SPI_Device_S* dev, uint16_t data);
-bool HW_SPI_Transmit32(HW_SPI_Device_S* dev, uint32_t data);
-bool HW_SPI_TransmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata);
+bool HW_SPI_transmit8(HW_SPI_Device_S* dev, uint8_t data);
+bool HW_SPI_transmit16(HW_SPI_Device_S* dev, uint16_t data);
+bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data);
+bool HW_SPI_transmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata);

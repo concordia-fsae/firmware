@@ -17,7 +17,7 @@
 /**
  * @brief  Firmware DMA Initialization function
  */
-void HW_DMA_Init(void)
+void HW_DMA_init(void)
 {
     // DMA controller clock enable
     __HAL_RCC_DMA1_CLK_ENABLE();

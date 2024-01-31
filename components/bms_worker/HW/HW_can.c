@@ -52,7 +52,7 @@ CAN_HandleTypeDef hcan;
  * CAN_Start
  * Start the CAN module(s)
  */
-void CAN_Start(void)
+void HW_CAN_start(void)
 {
     HAL_CAN_Start(&hcan);    // start CAN
 }
@@ -62,7 +62,7 @@ void CAN_Start(void)
  * HW_CAN_Init
  * initialize the CAN peripheral
  */
-void HW_CAN_Init(void)
+void HW_CAN_init(void)
 {
     hcan.Instance                  = CAN1;
     hcan.Init.Prescaler            = 4;

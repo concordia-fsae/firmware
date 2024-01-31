@@ -27,7 +27,7 @@
  *
  * @retval Always true 
  */
-bool HW_Init(void) 
+bool HW_init(void) 
 {
     return HAL_Init() == HAL_OK;
 }
@@ -37,7 +37,7 @@ bool HW_Init(void)
  *
  * @retval Number of ticks
  */
-uint32_t HW_GetTick(void)
+uint32_t HW_getTick(void)
 {
     return HAL_GetTick();
 }
@@ -47,7 +47,7 @@ uint32_t HW_GetTick(void)
  *
  * @param delay Number of ticks to delay in blocking mode
  */
-void HW_Delay(uint32_t delay)
+void HW_delay(uint32_t delay)
 {
     HAL_Delay(delay);
 }
@@ -59,7 +59,7 @@ void HW_Delay(uint32_t delay)
  */
 void HW_usDelay(uint8_t us)
 {
-    uint64_t us_start = HW_TIM_GetBaseTick();
+    uint64_t us_start = HW_TIM_getBaseTick();
 
-    while (HW_TIM_GetBaseTick() < us_start + us);
+    while (HW_TIM_getBaseTick() < us_start + us);
 }

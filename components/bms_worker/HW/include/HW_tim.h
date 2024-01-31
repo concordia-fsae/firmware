@@ -17,10 +17,10 @@
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-HAL_StatusTypeDef HW_TIM_Init(void);
-void              HW_TIM_ConfigureRunTimeStatsTimer(void);
-void              HW_TIM_IncBaseTick(void);
-uint64_t          HW_TIM_GetBaseTick(void);
+HAL_StatusTypeDef HW_TIM_init(void);
+void              HW_TIM_configureRunTimeStatsTimer(void);
+void              HW_TIM_incBaseTick(void);
+uint64_t          HW_TIM_getBaseTick(void);
 
 #if defined(BMSW_BOARD_VA1)
 void HW_TIM1_setDuty(uint8_t);

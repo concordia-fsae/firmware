@@ -38,7 +38,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-HW_SPI_Device_S LTC2983 = {
+HW_SPI_Device_S SPI_LTC2983 = {
     .handle  = SPI1,
     .ncs_pin = {
         .pin  = SPI1_LTC_NCS_Pin,
@@ -63,17 +63,17 @@ LTC2983_S ltc_chip = { 0 };
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool LTC_WriteMeasurementType(LTC2983_S*);
-bool LTC_WriteMultConvFlags(LTC2983_S*);
-bool LTC_GetResults(LTC2983_S*);
-bool LTC_SendCMD(LTC2983_S*, uint16_t, uint8_t, uint8_t*);
-bool LTC_ReadCMD(LTC2983_S*, uint16_t, uint8_t, uint8_t*);
+bool LTC_writeMeasurementType(LTC_S* chip);
+bool LTC_writeMultConvFlags(LTC_S* chip);
+bool LTC_getResults(LTC_S* chip);
+bool LTC_sendCMD(LTC_S* chip, uint16_t addr, uint8_t size, uint8_t* val);
+bool LTC_readCMD(LTC_S* chip, uint16_t addr, uint8_t size, uint8_t* val);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-bool LTC_Init()
+bool LTC_init()
 {
     ltc_chip.dev       = &LTC2983;
     ltc_chip.interrupt = &LTC2983_INT;
@@ -99,13 +99,13 @@ bool LTC_Init()
     return true;
 }
 
-bool LTC_StartMeasurement(void)
+bool LTC_startMeasurement(void)
 {
     uint8_t data = 0x80;
     return LTC_SendCMD(&ltc_chip, COMMAND_REG, 1, &data);
 }
 
-bool LTC_GetMeasurement(void)
+bool LTC_getMeasurement(void)
 {
     // uint8_t response = 0x00;
     // if (!LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response))
@@ -134,7 +134,7 @@ bool LTC_GetMeasurement(void)
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-bool LTC_WriteMeasurementType(LTC2983_S* chip)
+bool LTC_writeMeasurementType(LTC2983_S* chip)
 {
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
@@ -156,7 +156,7 @@ bool LTC_WriteMeasurementType(LTC2983_S* chip)
     return true;
 }
 
-bool LTC_WriteMultConvFlags(LTC2983_S* chip)
+bool LTC_writeMultConvFlags(LTC2983_S* chip)
 {
     if (!LTC_SendCMD(chip, MULTIPLE_CHANNEL_MASK_REG, 4,
                      (uint8_t*)&chip->config.multiple_conversion_flags))
@@ -165,7 +165,7 @@ bool LTC_WriteMultConvFlags(LTC2983_S* chip)
     return true;
 }
 
-bool LTC_SendCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
+bool LTC_sendCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
 {
     if (!HW_SPI_Lock(chip->dev))
         return false;
@@ -184,7 +184,7 @@ bool LTC_SendCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
     return true;
 }
 
-bool LTC_ReadCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
+bool LTC_readCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
 {
     if (!HW_SPI_Lock(chip->dev))
         return false;

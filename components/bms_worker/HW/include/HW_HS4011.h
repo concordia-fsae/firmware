@@ -67,8 +67,8 @@ typedef struct
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-bool HS4011_Init(void);
-bool HS4011_StartConversion(void);
-bool HS4011_GetData(void);
+bool HS4011_init(void);
+bool HS4011_startConversion(void);
+bool HS4011_getData(void);
 
 #endif    // BMSW_BOARD_VA1

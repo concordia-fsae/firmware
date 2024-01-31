@@ -58,7 +58,7 @@ HS4011_S hs_chip = {
  *
  * @retval true = Success, false = Failure
  */
-bool HS4011_Init(void)
+bool HS4011_init(void)
 {
     uint8_t wdat    = READ_SENSOR_ID;
     uint8_t rdat[4] = { 0 };
@@ -83,7 +83,7 @@ bool HS4011_Init(void)
  *
  * @retval  true = Success, false = Failure
  */
-bool HS4011_StartConversion(void)
+bool HS4011_startConversion(void)
 {
     uint8_t wdata = NOHOLD_RH_T_MEAS;
 
@@ -103,7 +103,7 @@ bool HS4011_StartConversion(void)
  *
  * @retval true = Data Received, false = Failure
  */
-bool HS4011_GetData(void)
+bool HS4011_getData(void)
 {
     uint8_t rdata[5] = { 0 };
 

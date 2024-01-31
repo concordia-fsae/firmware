@@ -29,6 +29,7 @@ typedef struct
 static HW_SPI_Lock_S      lock = { 0 };
 static LL_SPI_InitTypeDef hspi1;
 
+
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -36,7 +37,8 @@ static LL_SPI_InitTypeDef hspi1;
 static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx);
 static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx);
 
-bool HW_SPI_Verify(HW_SPI_Device_S* dev);
+bool HW_SPI_verifyLock(HW_SPI_Device_S* dev);
+
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -45,7 +47,7 @@ bool HW_SPI_Verify(HW_SPI_Device_S* dev);
 /**
  * @brief  Initializes ll SPI firmware
  */
-void HW_SPI_Init(void)
+void HW_SPI_init(void)
 {
     // initialize SPI pins
     LL_SPI_GPIOInit(SPI1);
@@ -153,7 +155,7 @@ static inline void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
  *
  * @retval true = Device was able to lock, false = Failure
  */
-bool HW_SPI_Lock(HW_SPI_Device_S* dev)
+bool HW_SPI_lock(HW_SPI_Device_S* dev)
 {
     if (lock.locked)
     {
@@ -175,9 +177,9 @@ bool HW_SPI_Lock(HW_SPI_Device_S* dev)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_Release(HW_SPI_Device_S* dev)
+bool HW_SPI_release(HW_SPI_Device_S* dev)
 {
-    if (!HW_SPI_Verify(dev))
+    if (!HW_SPI_verifyLock(dev))
     {
         return false;
     }
@@ -197,7 +199,7 @@ bool HW_SPI_Release(HW_SPI_Device_S* dev)
  *
  * @retval true = Device is owner of bus, false = Failure
  */
-bool HW_SPI_Verify(HW_SPI_Device_S* dev)
+bool HW_SPI_verifyLock(HW_SPI_Device_S* dev)
 {
     if (lock.owner != dev)
     {
@@ -217,7 +219,7 @@ bool HW_SPI_Verify(HW_SPI_Device_S* dev)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_Transmit8(HW_SPI_Device_S* dev, uint8_t data)
+bool HW_SPI_transmit8(HW_SPI_Device_S* dev, uint8_t data)
 {
     if (lock.owner != dev)
     {
@@ -245,13 +247,13 @@ bool HW_SPI_Transmit8(HW_SPI_Device_S* dev, uint8_t data)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_Transmit16(HW_SPI_Device_S* dev, uint16_t data)
+bool HW_SPI_transmit16(HW_SPI_Device_S* dev, uint16_t data)
 {
-    if (!HW_SPI_Transmit8(dev, data >> 8))
+    if (!HW_SPI_transmit8(dev, data >> 8))
     {
         return false;
     }
-    HW_SPI_Transmit8(dev, data);
+    HW_SPI_transmit8(dev, data);
 
     return true;
 }
@@ -265,13 +267,13 @@ bool HW_SPI_Transmit16(HW_SPI_Device_S* dev, uint16_t data)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_Transmit32(HW_SPI_Device_S* dev, uint32_t data)
+bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data)
 {
-    if (!HW_SPI_Transmit16(dev, data >> 16))
+    if (!HW_SPI_transmit16(dev, data >> 16))
     {
         return false;
     }
-    HW_SPI_Transmit16(dev, data);
+    HW_SPI_transmit16(dev, data);
 
     return true;
 }
@@ -286,7 +288,7 @@ bool HW_SPI_Transmit32(HW_SPI_Device_S* dev, uint32_t data)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_TransmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata)
+bool HW_SPI_transmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata)
 {
     if (lock.owner != dev)
     {

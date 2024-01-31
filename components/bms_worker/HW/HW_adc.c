@@ -50,7 +50,7 @@ DMA_HandleTypeDef hdma_adc1;
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_ADC_UnpackBuffer(bufferHalf_E half);
+void HW_ADC_unpackBuffer(bufferHalf_E half);
 
 
 /******************************************************************************
@@ -60,7 +60,7 @@ void HW_ADC_UnpackBuffer(bufferHalf_E half);
 /**
  * @brief  Init function for ADC firmware
  */
-void HW_ADC_Init(void)
+void HW_ADC_init(void)
 {
     ADC_MultiModeTypeDef   multimode = { 0 };
     ADC_ChannelConfTypeDef sConfig   = { 0 };
@@ -266,7 +266,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_ADC_Calibrate(ADC_HandleTypeDef* hadc)
+bool HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
 {
     return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK;
 }
@@ -280,7 +280,7 @@ bool HW_ADC_Calibrate(ADC_HandleTypeDef* hadc)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
+bool HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
 {
     return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK;
 }
@@ -292,7 +292,7 @@ bool HW_ADC_Start_DMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
  *
  * @retval unit:  0.01mV
  */
-uint16_t HW_ADC_GetVFromCount(uint16_t cnt)
+uint16_t HW_ADC_getVFromCount(uint16_t cnt)
 {
     return ((uint32_t)cnt) * 10000 * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }

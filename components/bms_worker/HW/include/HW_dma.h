@@ -17,4 +17,4 @@
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_DMA_Init(void);
+void HW_DMA_init(void);

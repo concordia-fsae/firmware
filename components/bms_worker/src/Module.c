@@ -40,7 +40,7 @@ static const ModuleDesc_S* modules[] = {
     //    &CANIO_tx,
 };
 
-static Module_TaskStats_S stats[MODULE_TASK_CNT] = { 0 };
+static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
 static uint8_t            total_percentage;
 static uint8_t            timeslice_percentage;
 static uint64_t           rtos_start;
@@ -64,7 +64,7 @@ void Module_Init(void)
         }
     }
 
-    rtos_start = HW_TIM_GetBaseTick();
+    rtos_start = HW_TIM_getBaseTick();
 }
 
 /**
@@ -182,7 +182,7 @@ void Module_1Hz_TSK(void)
     total_percentage     = 0x00;
     timeslice_percentage = 0x00;
 
-    temp_tick = HW_TIM_GetBaseTick();
+    temp_tick = HW_TIM_getBaseTick();
 
     for (int8_t i = 0; i < MODULE_TASK_CNT; i++)
     {

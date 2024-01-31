@@ -33,8 +33,8 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_GPIO_Init(void);
-void HW_GPIO_DeInit(void);
-bool HW_GPIO_ReadPin(HW_GPIO_S* dev);
-void HW_GPIO_WritePin(HW_GPIO_S* dev, bool state);
-void HW_GPIO_TogglePin(HW_GPIO_S* dev);
+void HW_GPIO_init(void);
+void HW_GPIO_deInit(void);
+bool HW_GPIO_readPin(HW_GPIO_S* dev);
+void HW_GPIO_writePin(HW_GPIO_S* dev, bool state);
+void HW_GPIO_togglePin(HW_GPIO_S* dev);

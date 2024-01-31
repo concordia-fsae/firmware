@@ -21,7 +21,7 @@
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_SystemClock_Config(void);
+void HW_systemClockConfig(void);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -30,7 +30,7 @@ void HW_SystemClock_Config(void);
 /**
  * @brief System Clock Configuration
  */
-void HW_SystemClock_Config(void)
+void HW_systemClockConfig(void)
 {
     RCC_OscInitTypeDef       RCC_OscInitStruct = { 0 };
     RCC_ClkInitTypeDef       RCC_ClkInitStruct = { 0 };

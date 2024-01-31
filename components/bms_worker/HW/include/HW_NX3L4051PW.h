@@ -37,9 +37,9 @@ typedef enum
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool NX3L_Init(void);
-bool NX3L_SetMux(NX3L_MUXChannel_E chn);
-bool NX3L_EnableMux(void);
-bool NX3L_DisableMux(void);
+bool NX3L_init(void);
+bool NX3L_setMux(NX3L_MUXChannel_E chn);
+bool NX3L_enableMux(void);
+bool NX3L_disableMux(void);
 
 #endif    // BMSW_BOARD_VA3

@@ -73,7 +73,7 @@ typedef struct
     bool     valid     : 1;
     int32_t  result;
     uint32_t raw;
-} LTC2983_ADCResult_S;
+} LTC_ADCResult_S;
 
 typedef struct
 {
@@ -82,17 +82,17 @@ typedef struct
     HW_GPIO_S*          nrst;
     LTC_Config_S        config;
     bool                measuring;
-    LTC2983_ADCResult_S raw_results[CHANNEL_COUNT];
+    LTC_ADCResult_S raw_results[CHANNEL_COUNT];
     int16_t             temps[CHANNEL_COUNT]; /**< Scale of 0.1 deg C */
-} LTC2983_S;
+} LTC_S;
 
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool LTC_Init(void);
-bool LTC_StartMeasurement(void);
-bool LTC_GetMeasurement(void);
+bool LTC_init(void);
+bool LTC_startMeasurement(void);
+bool LTC_getMeasurement(void);
 
 #endif /**< BMSW_BOARD_VA1 */

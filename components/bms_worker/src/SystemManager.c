@@ -57,20 +57,20 @@ extern void RTOS_createResources(void);
 int main(void)
 {
     /**< Setup HAL Reset all peripherals. Initializes the Flash interface and the Systick. */
-    HW_Init();
+    HW_init();
 
     /**< Configure system clocks */
-    HW_SystemClock_Config();
+    HW_systemClockConfig();
 
     /**< Initiate Firmware */
     /**< Order is important, don't change without checking */
-    HW_GPIO_Init();
-    HW_TIM_Init();
-    HW_I2C_Init();
-    HW_CAN_Init();
-    HW_DMA_Init();
-    HW_ADC_Init();
-    HW_SPI_Init();
+    HW_GPIO_init();
+    HW_TIM_init();
+    HW_I2C_init();
+    HW_CAN_init();
+    HW_DMA_init();
+    HW_ADC_init();
+    HW_SPI_init();
 
     /**< Crate RTOS Tasks, Timers, etc... */
     RTOS_SWI_Init();

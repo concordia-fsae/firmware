@@ -34,13 +34,13 @@ extern HW_I2C_Handle_T i2c2;
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-HW_I2C_Device_S SHT40 = {
+HW_I2C_Device_S I2C_SHT40 = {
     .addr   = 0x44,
     .handle = &i2c2,
 };
 
-SHT40_S sht_chip = {
-    .dev = &SHT40,
+SHT_S sht_chip = {
+    .dev = &I2C_SHT40,
 };
 
 
@@ -53,19 +53,19 @@ SHT40_S sht_chip = {
  *
  * @retval true = Sucess, false = Failure
  */
-bool SHT40_Init(void)
+bool SHT_init(void)
 {
     uint8_t wdat    = READ_SENSOR_ID;
     uint8_t rdat[6] = { 0 };
 
-    if (!HW_I2C_Master_Write(sht_chip.dev, &wdat, 1, 1000))
+    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 1000))
     {
         return false;
     }
 
     HW_usDelay(100);
 
-    if (!HW_I2C_Master_Read(sht_chip.dev, (uint8_t*)&rdat, 6, 1000))
+    if (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&rdat, 6, 1000))
     {
         return false;
     }
@@ -80,7 +80,7 @@ bool SHT40_Init(void)
  *
  * @retval true = Success, false = Failure
  */
-bool SHT40_StartConversion(void)
+bool SHT_startConversion(void)
 {
     // TODO: Implement
     return false;
@@ -91,7 +91,7 @@ bool SHT40_StartConversion(void)
  *
  * @retval true = Success, false = Failure
  */
-bool SHT40_GetData(void)
+bool SHT_getData(void)
 {
     // TODO: Implement
     return true;
@@ -102,7 +102,7 @@ bool SHT40_GetData(void)
  *
  * @retval true = Success, false = Failure
  */
-bool SHT40_StartHeater(void)
+bool SHT_startHeater(void)
 {
     // TODO: Implement
     return true;

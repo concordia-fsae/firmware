@@ -51,7 +51,7 @@ typedef enum
     MODULE_10kHz_TASK,
     MODULE_IDLE_TASK,
     MODULE_TASK_CNT
-} Module_TaskSpeeds_E;
+} Module_taskSpeeds_E;
 
 typedef struct
 {
@@ -59,7 +59,7 @@ typedef struct
     uint32_t timeslice_runtime;
     uint8_t  total_percentage;
     uint8_t  timeslice_percentage;
-} Module_TaskStats_S;
+} Module_taskStats_S;
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
