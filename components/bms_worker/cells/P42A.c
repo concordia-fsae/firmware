@@ -23,7 +23,7 @@
  */
 uint32_t CELL_getCapacityfromV(uint16_t tenth_mv)
 {
-    return (uint32_t)(-2.3061*tenth_mv*tenth_mv+12.868*tenth_mv-13.827);
+    return (uint32_t)(-2.3061*tenth_mv*tenth_mv*10000*10000+12.868*tenth_mv*10000-13.827);
 }
 
 /**
