@@ -36,7 +36,7 @@ uint32_t CELL_getCapacityfromV(uint16_t tenth_mv)
         return (uint32_t)(109.75*volt-359.17);
     }
     else if(volt<=4.094) {
-        return (uint32_t)(-7496*volt*volt+61360*volt-125467);
+        return (uint32_t)(-7496.4*volt*volt+61360*volt-125467);
     }
     else if(volt>4.094) {
         return (uint32_t)(-498.39*volt*volt+4165.6*volt-8604);
