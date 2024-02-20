@@ -14,11 +14,9 @@
 #include "Types.h"
 
 // Firmware Includes
-#include "HW_NX3L4051PW.h"
 #include "HW_adc.h"
 
 // Other Includes
-#include "BatteryMonitoring.h"
 #include "Environment.h"
 
 
@@ -38,7 +36,6 @@
                                   cycles per conversion). For this firmware, there is 14 cycles
                                   per conversion. Therefore the max samples per 100us is 57, which
                                   rounded down to the nearest multiple of 12 is 48 */
-_Static_assert((IO_ADC_BUF_LEN * 0.00000175F < 0.0001F), " Must take less than 100us to fill IO buffer.");
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -46,21 +43,7 @@ _Static_assert((IO_ADC_BUF_LEN * 0.00000175F < 0.0001F), " Must take less than 1
 
 typedef struct
 {
-    struct
-    {
-        float32_t mcu;
-#if defined(BMSW_BOARD_VA3)
-        float32_t mux1[NX3L_MUX_COUNT];
-        float32_t mux2[NX3L_MUX_COUNT];
-        float32_t mux3[NX3L_MUX_COUNT];
-        float32_t board[BRD_COUNT];
-#endif /**< BMSW_BOARD_VA3 */
-    } temp;
-
-    float32_t cell[MAX_CELL_COUNT];
-    float32_t segment;
-
-    uint8_t addr;
+    float32_t current;
 } IO_S;
 
 

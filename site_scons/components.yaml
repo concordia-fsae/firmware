@@ -1,5 +1,7 @@
 bl:
   path: components/bootloaders/
+bmsb:
+  path: components/bms_boss/
 bmsw:
   path: components/bms_worker/
 heartbeat:

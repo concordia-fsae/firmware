@@ -48,6 +48,7 @@ typedef enum
     MODULE_10Hz_TASK,
     MODULE_100Hz_TASK,
     MODULE_1kHz_TASK,
+    MODULE_10kHz_TASK,
     MODULE_IDLE_TASK,
     MODULE_TASK_CNT
 } Module_taskSpeeds_E;
