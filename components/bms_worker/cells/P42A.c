@@ -23,7 +23,24 @@
  */
 uint32_t CELL_getCapacityfromV(uint16_t tenth_mv)
 {
-    return (uint32_t)(-2.3061*tenth_mv*tenth_mv*10000*10000+12.868*tenth_mv*10000-13.827);
+    // sets tenth_mv to volts to be used in calculations
+    uint16_t volt = tenth_mv/10000;
+
+    if (volt<=3.407) {
+        return (uint32_t)(28.177*volt*volt-151.31*volt-202.91);
+    }
+    else if (volt<=3.44) {
+        return (uint32_t)(-132.01*volt-435.2);
+    }
+    else if(volt<=4.054) {
+        return (uint32_t)(109.75*volt-359.17);
+    }
+    else if(volt<=4.094) {
+        return (uint32_t)(-7496*volt*volt+61360*volt-125467);
+    }
+    else if(volt>4.094) {
+        return (uint32_t)(-498.39*volt*volt+4165.6*volt-8604);
+    }
 }
 
 /**
