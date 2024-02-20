@@ -8,8 +8,8 @@
  ******************************************************************************/
 
 // System Includes
-#include "HW_tim.h"
 #include "ErrorHandler.h"
+#include "HW_tim.h"
 #include "SystemConfig.h"
 #include <stdint.h>
 
@@ -26,8 +26,8 @@ TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
-static uint64_t fan1_last_tick[2] = { 0 };
-static uint64_t fan2_last_tick[2] = { 0 };
+static uint64_t   fan1_last_tick[2] = { 0 };
+static uint64_t   fan2_last_tick[2] = { 0 };
 
 
 /******************************************************************************
@@ -49,7 +49,7 @@ HAL_StatusTypeDef HW_TIM_init(void)
     TIM_IC_InitTypeDef      sConfigIC          = { 0 };
     uint32_t                uwTimclock         = 0;
     uint32_t                pFLatency;
-    uint32_t                uwPrescalerValue = 0;
+    uint32_t                uwPrescalerValue   = 0;
 
     __HAL_RCC_TIM4_CLK_ENABLE();
 
@@ -172,6 +172,7 @@ HAL_StatusTypeDef HW_TIM_init(void)
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+
     if (htim_base->Instance == TIM1)
     {
         __HAL_RCC_TIM1_CLK_ENABLE();
@@ -301,7 +302,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
 
     // Initialize TIM4
-    htim2.Instance = TIM2;
+    htim2.Instance   = TIM2;
 
     // Initialize TIMx peripheral as follow:
     // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.

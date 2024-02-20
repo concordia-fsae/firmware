@@ -109,6 +109,8 @@ void Error_Handler(void)
         uint32_t cnt = 6400000;
         HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
         while (cnt--)
+        {
             ;
+        }
     }
 }

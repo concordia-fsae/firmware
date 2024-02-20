@@ -8,9 +8,9 @@
  ******************************************************************************/
 
 // System Includes
-#include "SystemConfig.h"
 #include "stdint.h"
 #include "string.h"
+#include "SystemConfig.h"
 
 // Firmware Includes
 #include "HW.h"
@@ -83,7 +83,9 @@ bool MAX_init(void)
     MAX_readWriteToChip();
 
     if (max_chip.state.ic_id == MAX_PN_ERROR)
+    {
         return false;
+    }
 
     return true;
 }
@@ -96,7 +98,9 @@ bool MAX_init(void)
 bool MAX_readWriteToChip(void)
 {
     if (!HW_SPI_lock(max_chip.dev))
+    {
         return false;
+    }
 
     uint8_t wdata[3] = { 0x00 };
     uint8_t rdata[3] = { 0x00 };
@@ -136,7 +140,7 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
 
     if (config->output.state == MAX_CELL_VOLTAGE)
     {
-        data[2] = 0x01;
+        data[2]  = 0x01;
         data[2] |= (uint8_t)config->output.output.cell << 1;
     }
     else
@@ -148,25 +152,31 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
             case (MAX_PARASITIC_ERROR_CALIBRATION):
                 data[2] |= 0b0000 << 1;
                 break;
+
             case (MAX_AMPLIFIER_SELF_CALIBRATION):
                 data[2] |= 0b0001 << 1;
                 break;
+
             case (MAX_TEMPERATURE_UNBUFFERED):
                 data[2] |= 0b1000 << 1;
                 break;
+
             case (MAX_PACK_VOLTAGE):
                 data[2] |= 0b1100 << 1;
                 break;
+
             case (MAX_TEMPERATURE_BUFFERED):
                 data[2] |= 0b1100 << 1;
                 break;
+
             default:
                 /**< Should never reach here */
                 break;
         }
 
-        if (config->output.state == MAX_TEMPERATURE_BUFFERED ||
-            config->output.state == MAX_TEMPERATURE_UNBUFFERED)
+        if ((config->output.state == MAX_TEMPERATURE_BUFFERED) ||
+            (config->output.state == MAX_TEMPERATURE_UNBUFFERED)
+            )
         {
             data[2] |= config->output.output.temp << 1;
         }
@@ -175,7 +185,9 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
     /**< Device always SAMPL IO controlled */    // data[2] |= (config->sampling) ? 0 : 1 << 5;
     HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, (config->sampling) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     if (config->sampling)
+    {
         data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
+    }
     // data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
 }
 

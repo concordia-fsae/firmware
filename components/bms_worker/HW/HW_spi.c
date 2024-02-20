@@ -22,8 +22,8 @@
 
 typedef struct
 {
-    bool             locked;
-    HW_SPI_Device_S* owner;
+    bool            locked;
+    HW_SPI_Device_S * owner;
 } HW_SPI_Lock_S;
 
 static HW_SPI_Lock_S      lock = { 0 };
@@ -37,7 +37,7 @@ static LL_SPI_InitTypeDef hspi1;
 static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx);
 static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx);
 
-bool HW_SPI_verifyLock(HW_SPI_Device_S* dev);
+bool        HW_SPI_verifyLock(HW_SPI_Device_S* dev);
 
 
 /******************************************************************************
@@ -83,7 +83,7 @@ static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
 
     if (SPIx == SPI1)
     {
-        //__HAL_RCC_SPI1_CLK_ENABLE();
+        // __HAL_RCC_SPI1_CLK_ENABLE();
         LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
         LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
 
@@ -98,9 +98,9 @@ static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
 
-        GPIO_InitStruct.Pin  = SPI1_MISO_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Pin   = SPI1_MISO_Pin;
+        GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull  = GPIO_NOPULL;
         HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
 
         LL_GPIO_AF_EnableRemap_SPI1();
@@ -140,7 +140,7 @@ static inline void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
         // Peripheral clock disable
         LL_SPI_Disable(SPI1);
 
-        HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin | SPI1_MOSI_Pin);
+        HAL_GPIO_DeInit(SPI1_GPIO_Port,    SPI1_CLK_Pin | SPI1_MISO_Pin | SPI1_MOSI_Pin);
         HAL_GPIO_DeInit(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin);
 #if defined(BMSW_BOARD_VA1)
         HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
@@ -227,13 +227,19 @@ bool HW_SPI_transmit8(HW_SPI_Device_S* dev, uint8_t data)
     }
 
     while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    {
         ;
+    }
     LL_SPI_TransmitData8(dev->handle, data);
     while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    {
         ;
+    }
     while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
+    {
         ;
-    LL_SPI_ReceiveData8(dev->handle); /**< Dummy read to clear RXNE and prevent OVR */
+    }
+    LL_SPI_ReceiveData8(dev->handle);    /**< Dummy read to clear RXNE and prevent OVR */
 
     return true;
 }
@@ -296,12 +302,18 @@ bool HW_SPI_transmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata
     }
 
     while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    {
         ;
+    }
     LL_SPI_TransmitData8(dev->handle, wdata);
     while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    {
         ;
+    }
     while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
+    {
         ;
+    }
     *rdata = LL_SPI_ReceiveData8(dev->handle);
 
     return true;

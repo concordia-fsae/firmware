@@ -27,14 +27,14 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
-#define ADC_CALIBRATION_TIMEOUT                 10U
+#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES    2U
+#define ADC_CALIBRATION_TIMEOUT                    10U
 
-#define ADC_MAX_COUNT 4095
+#define ADC_MAX_COUNT                              4095
 #if defined(BMSW_BOARD_VA1)
-# define ADC_REF_VOLTAGE 3.3F
+# define ADC_REF_VOLTAGE                           3.3F
 #elif defined(BMSW_BOARD_VA3)
-# define ADC_REF_VOLTAGE 3.0F
+# define ADC_REF_VOLTAGE                           3.0F
 #endif
 
 /******************************************************************************
@@ -73,10 +73,10 @@ void HW_ADC_init(void)
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
 #if defined(BMSW_BOARD_VA1)
-    hadc1.Init.NbrOfConversion = 1;
+    hadc1.Init.NbrOfConversion       = 1;
 #elif defined(BMSW_BOARD_VA3)    // BMSW_BOARD_VA1
-    hadc1.Init.NbrOfConversion = 6;
-#endif                           // BMSW_BOARD_VA3
+    hadc1.Init.NbrOfConversion       = 6;
+#endif // BMSW_BOARD_VA3
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -133,7 +133,7 @@ void HW_ADC_init(void)
     {
         Error_Handler();
     }
-#endif    // BMSW_BOARD_VA3
+#endif // BMSW_BOARD_VA3
 
     // Common config
     hadc2.Instance                   = ADC2;
@@ -239,8 +239,7 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
-    {
-    }
+    {}
 }
 
 /**
@@ -251,8 +250,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
-    {
-    }
+    {}
 }
 
 /******************************************************************************

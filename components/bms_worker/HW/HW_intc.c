@@ -34,8 +34,7 @@ extern CAN_HandleTypeDef hcan;
 void NMI_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -46,8 +45,7 @@ void HardFault_Handler(void)
     volatile uint8_t c = 0;
 
     while (c == 0)
-    {
-    }
+    {}
 }
 
 /**
@@ -56,8 +54,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -66,8 +63,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -76,8 +72,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -100,7 +95,7 @@ void DMA1_Channel1_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&hadc1);
-    //    HAL_ADC_IRQHandler(&hadc2);
+    // HAL_ADC_IRQHandler(&hadc2);
 }
 /**
  * @brief This function handles TIM4 global interrupt.
@@ -126,35 +121,35 @@ void TIM1_CC_IRQHandler(void)
 }
 
 // TODO: Implement in CAN update
-// // CAN interrupts
+//// CAN interrupts
 // void CAN1_SCE_IRQHandler(void)
 // {
-//     HAL_CAN_IRQHandler(&hcan);
+// HAL_CAN_IRQHandler(&hcan);
 // }
 //
-// /**
-//  * CAN1_TX_IRQHandler
-//  *
-//  */
+///**
+// * CAN1_TX_IRQHandler
+// *
+// */
 // void CAN1_TX_IRQHandler(void)
 // {
-//     HAL_CAN_IRQHandler(&hcan);
+// HAL_CAN_IRQHandler(&hcan);
 // }
 //
-// /**
-//  * CAN1_RX0_IRQHandler
-//  *
-//  */
+///**
+// * CAN1_RX0_IRQHandler
+// *
+// */
 // void CAN1_RX0_IRQHandler(void)
 // {
-//     HAL_CAN_IRQHandler(&hcan);
+// HAL_CAN_IRQHandler(&hcan);
 // }
 //
-// /**
-//  * CAN1_RX1_IRQHandler
-//  *
-//  */
+///**
+// * CAN1_RX1_IRQHandler
+// *
+// */
 // void CAN1_RX1_IRQHandler(void)
 // {
-//     HAL_CAN_IRQHandler(&hcan);
+// HAL_CAN_IRQHandler(&hcan);
 // }

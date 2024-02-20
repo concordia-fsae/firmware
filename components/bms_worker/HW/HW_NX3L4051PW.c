@@ -10,15 +10,15 @@
  ******************************************************************************/
 
 // Firmware Includes
-# include "HW_NX3L4051PW.h"
-# include "HW_gpio.h"
+#include "HW_gpio.h"
+#include "HW_NX3L4051PW.h"
 
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-# if defined(BMSW_BOARD_VA3)
+#if defined(BMSW_BOARD_VA3)
 HW_GPIO_S S1 = {
     .port = MUX_SEL1_Port,
     .pin  = MUX_SEL1_Pin,
@@ -35,7 +35,7 @@ HW_GPIO_S MUX_NEn = {
     .port = NX3_NEN_Port,
     .pin  = NX3_NEN_Pin,
 };
-# endif    // BMSW_BOARD_VA3
+#endif // BMSW_BOARD_VA3
 
 
 /******************************************************************************
@@ -89,4 +89,4 @@ bool NX3L_disableMux(void)
     return true;
 }
 
-#endif    // BMSW_BOARD_VA3
+#endif // BMSW_BOARD_VA3

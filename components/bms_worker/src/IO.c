@@ -31,7 +31,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_VOLTAGE_DIVISION 2U /**< Voltage division for cell voltage output */
+#define ADC_VOLTAGE_DIVISION    2U /**< Voltage division for cell voltage output */
 
 
 /******************************************************************************
@@ -44,7 +44,7 @@ typedef enum
     A1_INDEX = 0x00,
     A2_INDEX,
     A3_INDEX,
-#elif defined(BMSW_BOARD_VA1) /**< BMSW_BOARD_VA3 */
+#elif defined(BMSW_BOARD_VA1)    /**< BMSW_BOARD_VA3 */
     A0_INDEX = 0x00,
     A1_INDEX,
     A2_INDEX,
@@ -70,7 +70,7 @@ typedef enum
     ADC_CHANNEL_TEMP_BRD2,
     ADC_CHANNEL_COUNT,
 } adcChannels_E;
-_Static_assert(IO_ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
+_Static_assert(IO_ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0,       "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
 
 typedef struct
@@ -166,20 +166,22 @@ static void IO10Hz_PRD(void)
 
         for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
         {
-            io.adcData[i].value = (io.adcData[i].count != 0) ? ((float32_t)io.adcData[i].raw) / io.adcData[i].count : 0;
+            io.adcData[i].value  = (io.adcData[i].count != 0) ? ((float32_t)io.adcData[i].raw) / io.adcData[i].count : 0;
             io.adcData[i].value *= VREF / ADC_MAX_VAL;
         }
 
-        IO.temp.mcu         = io.adcData[ADC_CHANNEL_TEMP_MCU].value;
-        IO.temp.board[BRD1] = io.adcData[ADC_CHANNEL_TEMP_BRD1].value;
-        IO.temp.board[BRD2] = io.adcData[ADC_CHANNEL_TEMP_BRD2].value;
+        IO.temp.mcu               = io.adcData[ADC_CHANNEL_TEMP_MCU].value;
+        IO.temp.board[BRD1]       = io.adcData[ADC_CHANNEL_TEMP_BRD1].value;
+        IO.temp.board[BRD2]       = io.adcData[ADC_CHANNEL_TEMP_BRD2].value;
 
         IO.temp.mux1[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX1].value;
         IO.temp.mux2[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX2].value;
         IO.temp.mux3[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX3].value;
 
         if (++current_sel == NX3L_MUX_COUNT)
+        {
             current_sel = NX3L_MUX1;
+        }
 
         NX3L_setMux(current_sel);
     }
@@ -192,19 +194,21 @@ static void IO10kHz_PRD(void)
 {
     if (io.adcState == ADC_STATE_RUNNING)
     {
-        if (BMS.state == BMS_HOLDING || BMS.state == BMS_PARASITIC_MEASUREMENT)
+        if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
         {
             static MAX_selectedCell_E current_cell = MAX_CELL_COUNT;
 
             if (current_cell == MAX_CELL_COUNT)
+            {
                 current_cell = BMS.connected_cells - 1;
+            }
 
             BMS_setOutputCell(current_cell);
 
             IO_Cells_unpackADCBuffer();
 
-            io.bmsData.value = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
-            io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
+            io.bmsData.value      = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
+            io.bmsData.value     *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
 
             IO.cell[current_cell] = io.bmsData.value;
 
@@ -218,13 +222,13 @@ static void IO10kHz_PRD(void)
                 current_cell--;
             }
         }
-        else if (BMS.state == BMS_SAMPLING || BMS.state == BMS_PARASITIC)
+        else if ((BMS.state == BMS_SAMPLING) || (BMS.state == BMS_PARASITIC))
         {
             IO_Cells_unpackADCBuffer();
-            io.bmsData.value = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
+            io.bmsData.value  = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
             io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
 
-            IO.segment = io.bmsData.value;
+            IO.segment        = io.bmsData.value;
         }
     }
     else

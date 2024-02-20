@@ -12,15 +12,15 @@
  ******************************************************************************/
 
 // Firmware Includes
-# include "HW_SHT40.h"
-# include "HW.h"
+#include "HW.h"
+#include "HW_SHT40.h"
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-# define READ_SENSOR_ID 0x89
+#define READ_SENSOR_ID    0x89
 
 
 /******************************************************************************
@@ -35,11 +35,11 @@ extern HW_I2C_Handle_T i2c2;
  ******************************************************************************/
 
 HW_I2C_Device_S I2C_SHT40 = {
-    .addr   = 0x44,
+    .addr   =  0x44,
     .handle = &i2c2,
 };
 
-SHT_S sht_chip = {
+SHT_S           sht_chip = {
     .dev = &I2C_SHT40,
 };
 
@@ -108,4 +108,4 @@ bool SHT_startHeater(void)
     return true;
 }
 
-#endif
+#endif // if defined(BMSW_BOARD_VA3)

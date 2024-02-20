@@ -50,9 +50,9 @@ void HW_GPIO_init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(LTC_NRST_Port, &GPIO_InitStruct);
 
-    GPIO_InitStruct.Pin  = LTC_INTERRUPT_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pin   = LTC_INTERRUPT_Pin;
+    GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull  = GPIO_NOPULL;
     HAL_GPIO_Init(LTC_INTERRUPT_Port, &GPIO_InitStruct);
 
     // Configure Address Pins
@@ -60,7 +60,7 @@ void HW_GPIO_init(void)
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(A0_GPIO_Port, &GPIO_InitStruct);
-#endif    // BMSW_BOARD_VA1
+#endif // BMSW_BOARD_VA1
 
     GPIO_InitStruct.Pin  = A1_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -94,7 +94,7 @@ void HW_GPIO_init(void)
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(NX3_NEN_Port, &GPIO_InitStruct);
-#endif
+#endif // if defined(BMSW_BOARD_VA3)
 }
 
 /**

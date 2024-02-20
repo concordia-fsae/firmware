@@ -14,8 +14,8 @@
 
 #include "FreeRTOS_SWI.h"
 #include "ModuleDesc.h"
-#include "Utility.h"
 #include "string.h"
+#include "Utility.h"
 
 
 /******************************************************************************
@@ -82,7 +82,7 @@ void CANRX_BUS_A_SWI(void)
         }
 
         // FIXME: notification should be reactivated in the hardware layer
-        uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
+        uint32_t it = (rxFifo == CAN_RX_FIFO_0) ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
         HAL_CAN_ActivateNotification(&hcan, it);
     }
 }

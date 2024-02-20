@@ -9,29 +9,29 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-# include "HW_LTC2983.h"
+#include "HW_LTC2983.h"
 
-# include "SystemConfig.h"
-# include "include/HW_spi.h"
-# include <stdint.h>
+#include "include/HW_spi.h"
+#include "SystemConfig.h"
+#include <stdint.h>
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-# define READ_INST_BYTE  0x03
-# define WRITE_INST_BYTE 0x02
+#define READ_INST_BYTE               0x03
+#define WRITE_INST_BYTE              0x02
 
-# define COMMAND_REG               0x00
-# define TEMP_RESULT_BASE_REG      0x10
-# define GLAB_CONFIG_REG           0xf0
-# define MULTIPLE_CHANNEL_MASK_REG 0xf4
-# define MUX_DELAY_CONFIG_REG      0xff
-# define CHANNEL_ASSIGN_REG        0x0200
-# define CUSTOM_SENSOR_TABLE       0x250
+#define COMMAND_REG                  0x00
+#define TEMP_RESULT_BASE_REG         0x10
+#define GLAB_CONFIG_REG              0xf0
+#define MULTIPLE_CHANNEL_MASK_REG    0xf4
+#define MUX_DELAY_CONFIG_REG         0xff
+#define CHANNEL_ASSIGN_REG           0x0200
+#define CUSTOM_SENSOR_TABLE          0x250
 
-# define DIRECT_ADC_MEAS (0x1e << 27 | 0x01 << 26)
+#define DIRECT_ADC_MEAS              (0x1e << 27 | 0x01 << 26)
 
 
 /******************************************************************************
@@ -46,17 +46,17 @@ HW_SPI_Device_S SPI_LTC2983 = {
     }
 };
 
-HW_GPIO_S LTC2983_INT = {
+HW_GPIO_S       LTC2983_INT = {
     .pin  = LTC_INTERRUPT_Pin,
     .port = LTC_INTERRUPT_Port,
 };
 
-HW_GPIO_S LTC2983_NRST = {
+HW_GPIO_S       LTC2983_NRST = {
     .pin  = LTC_NRST_Pin,
     .port = LTC_NRST_Port,
 };
 
-LTC2983_S ltc_chip = { 0 };
+LTC2983_S       ltc_chip = { 0 };
 
 
 /******************************************************************************
@@ -84,12 +84,12 @@ bool LTC_init()
     // uint8_t response = 0;
 
     // do {
-    //     LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response);
+    // LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response);
     // } while (response != 0x40);
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
-        ltc_chip.config.msmnt_type[i] = DIRECTADC_SGL;
+        ltc_chip.config.msmnt_type[i]              = DIRECTADC_SGL;
         ltc_chip.config.multiple_conversion_flags |= 0x01 << i;
     }
 
@@ -102,6 +102,7 @@ bool LTC_init()
 bool LTC_startMeasurement(void)
 {
     uint8_t data = 0x80;
+
     return LTC_SendCMD(&ltc_chip, COMMAND_REG, 1, &data);
 }
 
@@ -109,16 +110,19 @@ bool LTC_getMeasurement(void)
 {
     // uint8_t response = 0x00;
     // if (!LTC_ReadCMD(&ltc_chip, COMMAND_REG, 1, &response))
-    //     return false;
+    // return false;
 
     // if (response != 0x40)
-    //     return false;
+    // return false;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
         if (!LTC_ReadCMD(&ltc_chip, TEMP_RESULT_BASE_REG + 4 * i, 4,
-                         (uint8_t*)&ltc_chip.raw_results[i].raw))
+                         (uint8_t*)&ltc_chip.raw_results[i].raw)
+            )
+        {
             return false;
+        }
 
         ltc_chip.raw_results[i].hard_fault = (ltc_chip.raw_results[i].raw & 0x01 << 31) ? true : false;
         ltc_chip.raw_results[i].soft_above = (ltc_chip.raw_results[i].raw & 0x01 << 27) ? true : false;
@@ -145,12 +149,15 @@ bool LTC_writeMeasurementType(LTC2983_S* chip)
             case DIRECTADC_SGL:
                 chn_val = DIRECT_ADC_MEAS;
                 break;
+
             default:
                 return false;
         }
 
         if (!LTC_SendCMD(chip, CHANNEL_ASSIGN_REG + 4 * i, 4, (uint8_t*)&chn_val))
+        {
             return false;
+        }
     }
 
     return true;
@@ -159,8 +166,11 @@ bool LTC_writeMeasurementType(LTC2983_S* chip)
 bool LTC_writeMultConvFlags(LTC2983_S* chip)
 {
     if (!LTC_SendCMD(chip, MULTIPLE_CHANNEL_MASK_REG, 4,
-                     (uint8_t*)&chip->config.multiple_conversion_flags))
+                     (uint8_t*)&chip->config.multiple_conversion_flags)
+        )
+    {
         return false;
+    }
 
     return true;
 }
@@ -168,7 +178,9 @@ bool LTC_writeMultConvFlags(LTC2983_S* chip)
 bool LTC_sendCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
 {
     if (!HW_SPI_Lock(chip->dev))
+    {
         return false;
+    }
 
     HW_SPI_Transmit8(chip->dev, WRITE_INST_BYTE);
     HW_SPI_Transmit16(chip->dev, addr);
@@ -179,7 +191,9 @@ bool LTC_sendCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
     }
 
     if (!HW_SPI_Release(chip->dev))
+    {
         return false;
+    }
 
     return true;
 }
@@ -187,7 +201,9 @@ bool LTC_sendCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
 bool LTC_readCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
 {
     if (!HW_SPI_Lock(chip->dev))
+    {
         return false;
+    }
 
     HW_SPI_Transmit8(chip->dev, READ_INST_BYTE);
     HW_SPI_Transmit16(chip->dev, addr);
@@ -198,7 +214,9 @@ bool LTC_readCMD(LTC2983_S* chip, uint16_t addr, uint8_t size, uint8_t* val)
     }
 
     if (!HW_SPI_Release(chip->dev))
+    {
         return false;
+    }
 
     return true;
 }

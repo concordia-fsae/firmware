@@ -10,8 +10,8 @@
 
 #include "HW_can.h"
 
-#include "CAN/CAN.h"
 #include "CAN/CanTypes.h"
+#include "CAN/CAN.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -31,9 +31,9 @@
 // CAN_IER_BOFIE  Bus Off Interrupt
 // CAN_IER_LECIE  Last Error Code Interrupt
 // CAN_IER_ERRIE  Error Interrupt
-#define CAN_ENABLED_INTERRUPTS (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
-                                CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
-                                CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
+#define CAN_ENABLED_INTERRUPTS    (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
+                                   CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
+                                   CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
 
 
 /******************************************************************************
@@ -85,7 +85,7 @@ void HW_CAN_init(void)
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 
-    CAN_FilterTypeDef filt    = { 0U };
+    CAN_FilterTypeDef filt = { 0U };
     filt.FilterBank           = 0;
     filt.FilterMode           = CAN_FILTERMODE_IDLIST;
     filt.FilterScale          = CAN_FILTERSCALE_16BIT;
@@ -110,7 +110,7 @@ static bool CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbo
 {
     uint32_t tsr = READ_REG(canHandle->Instance->TSR);
 
-    return (tsr & (CAN_TSR_TME0 << mailbox));
+    return(tsr & (CAN_TSR_TME0 << mailbox));
 }
 
 
@@ -240,21 +240,22 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
         default:
             // should never reach this state
             return false;
+
             break;
     }
 
     // Get the header
-    rx->IDE = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
-    rx->RTR = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
+    rx->IDE              = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
+    rx->RTR              = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id          = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
-    rx->lengthBytes = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
+    rx->id               = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
+    rx->lengthBytes      = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
     rx->filterMatchIndex = (CAN_RDT0R_FMI & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_FMI_Pos;
 
     // Get the data
-    rx->data.u64 = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
+    rx->data.u64         = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
     // aData[0] = (uint8_t)((CAN_RDL0R_DATA0 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA0_Pos);
     // aData[1] = (uint8_t)((CAN_RDL0R_DATA1 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA1_Pos);
     // aData[2] = (uint8_t)((CAN_RDL0R_DATA2 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA2_Pos);
@@ -269,12 +270,12 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
     {
         case CAN_RX_FIFO0:
             SET_BIT(hcan.Instance->RF0R, CAN_RF0R_RFOM0);
-            /* HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE0); */
+            // HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE0);
             break;
 
         case CAN_RX_FIFO1:
             SET_BIT(hcan.Instance->RF1R, CAN_RF1R_RFOM1);
-            /* HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE1); */
+            // HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE1);
             break;
 
         default:
@@ -507,7 +508,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
-    /* HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1); */
+    // HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 }
 
@@ -519,7 +520,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
-    /* HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1); */
+    // HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 }
 
@@ -553,9 +554,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
          */
         GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
-        GPIO_InitStruct.Pin  = GPIO_PIN_11;
-        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Pin   = GPIO_PIN_11;
+        GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull  = GPIO_NOPULL;
         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
         GPIO_InitStruct.Pin   = GPIO_PIN_12;
@@ -564,7 +565,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
-        HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN_TX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN1_TX_IRQn,  CAN_TX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN_RX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_RX1_IRQn, CAN_RX_IRQ_PRIO, 0U);
 

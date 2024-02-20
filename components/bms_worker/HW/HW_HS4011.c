@@ -12,20 +12,20 @@
  ******************************************************************************/
 
 // System Includes
-# include "ErrorHandler.h"
-# include "Utility.h"
-# include <stdint.h>
+#include "ErrorHandler.h"
+#include "Utility.h"
+#include <stdint.h>
 
 // Firmware Includes
-# include "HW_HS4011.h"
+#include "HW_HS4011.h"
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-# define READ_SENSOR_ID   0xD7
-# define NOHOLD_RH_T_MEAS 0xF5
+#define READ_SENSOR_ID      0xD7
+#define NOHOLD_RH_T_MEAS    0xF5
 
 
 /******************************************************************************
@@ -40,11 +40,11 @@ extern HW_I2C_Handle_T i2c2;
  ******************************************************************************/
 
 HW_I2C_Device_S I2C_HS4011 = {
-    .addr   = 0x54,
+    .addr   =  0x54,
     .handle = &i2c2,
 };
 
-HS4011_S hs_chip = {
+HS4011_S        hs_chip = {
     .dev = &I2C_HS4011,
 };
 

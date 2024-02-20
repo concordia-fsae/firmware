@@ -14,8 +14,8 @@
 #include "stdbool.h"
 
 // Firmware Includes
-#include "stm32f1xx.h"
 #include "include/HW_tim.h"
+#include "stm32f1xx.h"
 
 
 /******************************************************************************
@@ -25,9 +25,9 @@
 /**
  * @brief  Initializes the generic low-level firmware
  *
- * @retval Always true 
+ * @retval Always true
  */
-bool HW_init(void) 
+bool HW_init(void)
 {
     return HAL_Init() == HAL_OK;
 }
@@ -61,5 +61,8 @@ void HW_usDelay(uint8_t us)
 {
     uint64_t us_start = HW_TIM_getBaseTick();
 
-    while (HW_TIM_getBaseTick() < us_start + us);
+    while (HW_TIM_getBaseTick() < us_start + us)
+    {
+        ;
+    }
 }

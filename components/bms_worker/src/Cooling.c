@@ -48,6 +48,7 @@ static void Cooling_Init()
 static void Cooling10Hz_PRD(void)
 {
     static uint8_t step = 0;
+
     FANS_getRPM((uint16_t*)&COOL.rpm);
 
     for (uint8_t i = 0; i < FAN_COUNT; i++)
@@ -55,12 +56,15 @@ static void Cooling10Hz_PRD(void)
         switch (COOL.state[i])
         {
             case COOL_INIT:
-                step += 2;
+                step              += 2;
                 COOL.percentage[i] = (step <= 100) ? step : 200 - step;
 
                 if (step >= 200)
+                {
                     COOL.state[i] = COOL_ON;
+                }
                 break;
+
             case COOL_ON:
             case COOL_OFF:
                 if (ENV.values.max_temp < 350)
@@ -78,12 +82,17 @@ static void Cooling10Hz_PRD(void)
                     COOL.percentage[i] = ENV.values.max_temp * 100 / 20;
                 }
                 break;
+
             case COOL_FULL:
                 if (ENV.values.max_temp < 525)
+                {
                     COOL.state[i] = COOL_ON;
+                }
                 break;
+
             case COOL_ERR:
                 break;
+
             default:
                 break;
         }

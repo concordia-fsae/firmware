@@ -66,8 +66,10 @@ static void SYS10Hz_PRD()
     {
         case SYS_RUNNING:
             break;
+
         case SYS_INIT:
             break;
+
         case SYS_ERROR:
             HW_GPIO_togglePin(&led);
             break;
@@ -85,8 +87,10 @@ static void SYS1Hz_PRD()
         case SYS_RUNNING:
             HW_GPIO_togglePin(&led);
             break;
+
         case SYS_INIT:
             break;
+
         case SYS_ERROR:
             break;
     }
