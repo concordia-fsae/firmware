@@ -20,5 +20,5 @@
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-uint32_t CELL_getCapacityfromV(uint16_t tenth_mv);
+float CELL_getSoCfromV(uint16_t tenth_mv);
 uint16_t CELL_getVfromCapacity(uint32_t tenth_mah);
