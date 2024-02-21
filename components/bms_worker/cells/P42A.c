@@ -21,25 +21,25 @@
  *
  * @retval unit: 0.1mAh
  */
-uint32_t CELL_getCapacityfromV(uint16_t tenth_mv)
+float CELL_getSoCfromV(uint16_t tenth_mv)
 {
     // sets tenth_mv to volts to be used in calculations
-    uint16_t volt = tenth_mv/10000;
+    float volt = (float)tenth_mv/10000;
 
     if (volt<=3.407) {
-        return (uint32_t)(28.177*volt*volt-151.31*volt-202.91);
+        return (28.177f*volt*volt-151.31f*volt-202.91f);
     }
     else if (volt<=3.44) {
-        return (uint32_t)(-132.01*volt-435.2);
+        return (-132.01f*volt-435.2f);
     }
     else if(volt<=4.054) {
-        return (uint32_t)(109.75*volt-359.17);
+        return (109.75f*volt-359.17f);
     }
     else if(volt<=4.094) {
-        return (uint32_t)(-7496.4*volt*volt+61360*volt-125467);
+        return (-7496.4f*volt*volt+61360.0f*volt-125467.0f);
     }
     else if(volt>4.094) {
-        return (uint32_t)(-498.39*volt*volt+4165.6*volt-8604);
+        return (-498.39f*volt*volt+4165.6f*volt-8604.0f);
     }
 }
 

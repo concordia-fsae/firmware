@@ -284,7 +284,7 @@ void BMS_calcSegStats(void)
         BMS.cells[i].voltage = IO.cell[i] * 10000 - BMS.cells[i].parasitic_corr;
         if (BMS.cells[i].voltage > 25000 && BMS.cells[i].voltage < 42000)
         {
-            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(IO.cell[i] * 10000);
+            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(IO.cell[i] * 10000);
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
