@@ -39,6 +39,14 @@
 #ifndef BMS_CONFIGURED_SAMPLING_TIME_MS
 # define BMS_CONFIGURED_SAMPLING_TIME_MS 20
 #endif
+
+#ifndef STANDARD_CHARGE_CURRENT
+#define STANDARD_CHARGE_CURRENT 4.2 //in Amps
+#endif
+
+#ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
+#define MAX_CONTINOUS_DISCHARGE_CURRENT 45 //in Ampsi
+#endif
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -368,5 +376,23 @@ void BMS_measurementComplete(void)
             BMS.cells[i].parasitic_corr = ((uint32_t)IO.cell[i] * 10000) / 128;
             BMS.state                   = BMS_WAITING;
         }
+    }
+}
+
+float BMS_ChargeLimit(uint16_t tenth_mv) {
+    float SoC = CELL_getSoCfromV(tenth_mv);
+    if (SoC <= 80){
+        return STANDARD_CHARGE_CURRENT;
+    } else {
+        return -21*SoC/100+21; //linear function for the last 20% of charge
+    }
+} 
+
+float BMS_DischargeLimit(uint16_t tenth_mv) { 
+    float SoC = CELL_getSoCfromV(tenth_mv);
+    if (SoC > 20) {
+        return MAX_CONTINOUS_DISCHARGE_CURRENT;
+    } else {
+        return 2.25f*SoC; //linear function for the last 20% of discharge
     }
 }

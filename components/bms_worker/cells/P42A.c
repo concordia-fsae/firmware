@@ -21,16 +21,18 @@
  *
  * @retval unit: 0.1mAh
  */
+
+// return a number between (0-100) which represents a percentage
 float CELL_getSoCfromV(uint16_t tenth_mv)
 {
     // sets tenth_mv to volts to be used in calculations
     float volt = (float)tenth_mv/10000;
 
     if (volt<=3.407) {
-        return (28.177f*volt*volt-151.31f*volt-202.91f);
+        return (28.177f*volt*volt-151.31f*volt+202.91f);
     }
     else if (volt<=3.44) {
-        return (-132.01f*volt-435.2f);
+        return (132.01f*volt-435.2f);
     }
     else if(volt<=4.054) {
         return (109.75f*volt-359.17f);
