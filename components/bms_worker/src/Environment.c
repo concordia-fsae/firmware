@@ -19,7 +19,9 @@
 #include "HW_HS4011.h"
 #include "HW_SHT40.h"
 #include "IO.h"
+#include "THERMISTORS.h"
 #include "NCP21XV103J03RA.h"
+#include "MF52C1103F3380.h"
 
 
 /******************************************************************************
@@ -32,8 +34,6 @@
 
 #define THERM_PULLUP  10000
 #define RES_FROM_V(v) (THERM_PULLUP * ((v / VREF) / (1 - (v / VREF))))
-
-#define KELVIN_OFFSET 273.15F
 
 
 /******************************************************************************
@@ -76,12 +76,6 @@ ENV_S ENV;
 static Sensor_State_E ltc_state;
 static Sensor_State_E hs_state;
 #endif /**< BMSW_BOARD_VA3 */
-
-static THERM_BParameter_S ncp = {
-    .B  = 3930U,
-    .T0 = 25U + KELVIN_OFFSET,
-    .R0 = 10000U,
-};
 
 
 /******************************************************************************
@@ -188,16 +182,16 @@ static void Environment10Hz_PRD()
     }
 
     ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu) * 10;
-    ENV.values.board.brd_temp[BRD1] = (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET) * 10;
-    ENV.values.board.brd_temp[BRD2] = (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET) * 10;
+    ENV.values.board.brd_temp[BRD1] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET) * 10;
+    ENV.values.board.brd_temp[BRD2] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET) * 10;
 
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
-        ENV.values.temps[i].temp     = ((IO.temp.mux1[i] > 0.25F) && (IO.temp.mux1[i] < 2.25F)) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
-        ENV.values.temps[i + 8].temp = ((IO.temp.mux2[i] > 0.25F) && (IO.temp.mux2[i] < 2.9F)) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
+        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
+        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
         if (i < 4)
         {
-            ENV.values.temps[i + 16].temp = ((IO.temp.mux3[i] > 0.25F) && (IO.temp.mux3[i] < 2.9F)) ? (NCP21_GetTempFromR_BParameter(&ncp, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) * 10 : 0;
+            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) * 10 : 0;
         }
     }
 
@@ -243,6 +237,7 @@ const ModuleDesc_S ENV_desc = {
     .periodic10Hz_CLK = &Environment10Hz_PRD,
     .periodic1Hz_CLK  = &Environment1Hz_PRD,
 };
+
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
