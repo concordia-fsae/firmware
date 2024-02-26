@@ -1,12 +1,12 @@
 [submodule "testing/eth_gtw/lib/lib_MCP_2515"]
 	path = testing/eth_gtw/lib/lib_MCP_2515
-	url = git@github.com:concordia-fsae/lib_MCP_2515
+	url = https://github.com/concordia-fsae/lib_MCP_2515
 [submodule "testing/stm32_screen/lib/lib_FTDI_FT800"]
 	path = testing/stm32_screen/lib/lib_FTDI_FT800
-	url = git@github.com:concordia-fsae/lib_FTDI_FT800.git
+	url = https://github.com/concordia-fsae/lib_FTDI_FT800.git
 [submodule "components/steering_wheel/lib/lib_FTDI_FT81x"]
 	path = components/steering_wheel/lib/lib_FTDI_FT81x
-	url = git@github.com:concordia-fsae/lib_FTDI_FT81x.git
+	url = https://github.com/concordia-fsae/lib_FTDI_FT81x.git
 [submodule "FreeRTOS"]
 	path = embedded/libs/FreeRTOS
 	url = git@github.com:ARM-software/CMSIS-FreeRTOS.git
@@ -22,6 +22,3 @@
 [submodule "embedded/platforms/stm32/f1/hal"]
 	path = embedded/platforms/stm32/f1/hal
 	url = git@github.com:STMicroelectronics/stm32f1xx_hal_driver.git
-[submodule "embedded/libs/isotp"]
-	path = embedded/libs/isotp
-	url = git@github.com:lishen2/isotp-c.git
