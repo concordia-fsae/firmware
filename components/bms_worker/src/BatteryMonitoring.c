@@ -2,7 +2,7 @@
  * @file BatteryMonitoring.c
  * @brief  Source code for Battery Monitoring Application
  */
-jflsdakjflk
+
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -292,7 +292,7 @@ void BMS_calcSegStats(void)
         BMS.cells[i].voltage = IO.cell[i] * 10000 - BMS.cells[i].parasitic_corr;
         if (BMS.cells[i].voltage > 25000 && BMS.cells[i].voltage < 42000)
         {
-            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(IO.cell[i] * 10000);
+            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(IO.cell[i]);
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
@@ -322,9 +322,9 @@ void BMS_calcSegStats(void)
 
     BMS.voltage.avg = batt_tmp / max_chip.state.connected_cells;
 
-    BMS.capacity.min = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(BMS.voltage.min);
-    BMS.capacity.max = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(BMS.voltage.max);
-    BMS.capacity.avg = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getCapacityfromV(BMS.voltage.avg);
+    //BMS.capacity.min = BMS.cells[min].totalCapacity * CELL_getSoCfromV(BMS.voltage.min);
+    BMS.capacity.max = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(BMS.voltage.max);
+    BMS.capacity.avg = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(BMS.voltage.avg);
 }
 
 /**
@@ -379,20 +379,20 @@ void BMS_measurementComplete(void)
     }
 }
 
-float BMS_ChargeLimit(uint16_t tenth_mv) {
-    float SoC = CELL_getSoCfromV(tenth_mv);
+void BMS_ChargeLimit(float minVolt) {
+    float SoC = CELL_getSoCfromV(minVolt);
     if (SoC <= 80){
-        return STANDARD_CHARGE_CURRENT;
+        BMS.chargeLimit = STANDARD_CHARGE_CURRENT;
     } else {
-        return -21*SoC/100+21; //linear function for the last 20% of charge
+        BMS.chargeLimit = -21*SoC/100+21; //linear function for the last 20% of charge
     }
 } 
 
-float BMS_DischargeLimit(uint16_t tenth_mv) { 
-    float SoC = CELL_getSoCfromV(tenth_mv);
+void BMS_DischargeLimit(float minVolt) { 
+    float SoC = CELL_getSoCfromV(minVolt);
     if (SoC > 20) {
-        return MAX_CONTINOUS_DISCHARGE_CURRENT;
+        BMS.dischargeLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
     } else {
-        return 2.25f*SoC; //linear function for the last 20% of discharge
+        BMS.dischargeLimit = 2.25f*SoC; //linear function for the last 20% of discharge
     }
 }

@@ -60,6 +60,8 @@ typedef struct
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [mv], precision 1mv
     uint16_t    pack_voltage;               // [mv], precision 1mv
     uint16_t    calculated_pack_voltage;    // [mv], precision 1mv
+    float      chargeLimit;
+    float      dischargeLimit;
     struct
     {
         uint16_t max;
@@ -89,3 +91,5 @@ extern BMS_S BMS;
 
 void BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_measurementComplete(void);
+void BMS_ChargeLimit(float minVolt);
+void BMS_DischargeLimit(float minVolt);

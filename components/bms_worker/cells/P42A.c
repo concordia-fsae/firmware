@@ -43,6 +43,7 @@ float CELL_getSoCfromV(float volt)
     else if(volt>4.094) {
         return (-498.39f*volt*volt+4165.6f*volt-8604.0f);
     }
+    return 0;
 }
 
 /**
