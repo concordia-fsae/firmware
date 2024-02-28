@@ -396,3 +396,4 @@ float BMS_DischargeLimit(uint16_t tenth_mv) {
         return 2.25f*SoC; //linear function for the last 20% of discharge
     }
 }
+dfasf
