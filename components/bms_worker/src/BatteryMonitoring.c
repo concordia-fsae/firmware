@@ -2,7 +2,7 @@
  * @file BatteryMonitoring.c
  * @brief  Source code for Battery Monitoring Application
  */
-asdfasdf
+
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
