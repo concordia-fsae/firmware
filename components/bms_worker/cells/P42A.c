@@ -23,10 +23,10 @@
  */
 
 // return a number between (0-100) which represents a percentage
-float CELL_getSoCfromV(uint16_t tenth_mv)
+float CELL_getSoCfromV(float volt)
 {
     // sets tenth_mv to volts to be used in calculations
-    float volt = (float)tenth_mv/10000;
+    // float volt = (float)tenth_mv/10000;
 
     if (volt<=3.407) {
         return (28.177f*volt*volt-151.31f*volt+202.91f);
