@@ -1,4 +1,0 @@
-[tool.pyright]
-venvPath = "."
-venv = "env"
-src = "conuds"
