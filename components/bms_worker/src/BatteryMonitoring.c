@@ -311,6 +311,12 @@ void BMS_calcSegStats(void)
     BMS.capacity.max            = 0x00;
     BMS.capacity.avg            = 0x00;
     BMS.calculated_pack_voltage = 0x00;
+    BMS.totalCapacity.max       = UINT16_MAX;
+    BMS.totalCapacity.min       = 0x00;
+
+    // need to setup the BMS.cells[].totalCapacity from the excel sheet
+    //BMS.cells[].totalCapacity = {}  
+    // ??
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
     {
@@ -318,13 +324,19 @@ void BMS_calcSegStats(void)
         BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
         batt_tmp += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage / 10;
+
+        BMS.totalCapacity.max = (BMS.totalCapacity.max > BMS.cells[i].totalCapacity) ? BMS.totalCapacity.max : BMS.cells[i].totalCapacity;
+        BMS.totalCapacity.min = (BMS.totalCapacity.min < BMS.cells[i].totalCapacity) ? BMS.totalCapacity.min : BMS.cells[i].totalCapacity;
     }
 
     BMS.voltage.avg = batt_tmp / max_chip.state.connected_cells;
 
-    //BMS.capacity.min = BMS.cells[min].totalCapacity * CELL_getSoCfromV(BMS.voltage.min);
-    BMS.capacity.max = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(BMS.voltage.max);
-    BMS.capacity.avg = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(BMS.voltage.avg);
+    BMS.capacity.min = BMS.totalCapacity.min * CELL_getSoCfromV(BMS.voltage.min);
+    BMS.capacity.max = BMS.totalCapacity.max * CELL_getSoCfromV(BMS.voltage.max);
+    BMS.capacity.avg = BMS.totalCapacity.avg * CELL_getSoCfromV(BMS.voltage.avg);
+
+    BMS_DischargeLimit(BMS.capacity.min);
+    BMS_ChargeLimit(BMS.capacity.min);
 }
 
 /**
