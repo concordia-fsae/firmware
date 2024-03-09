@@ -49,8 +49,8 @@ typedef struct
 {
     uint16_t   voltage;
     uint16_t   capacity;
-    uint16_t   totalCapacity;
     uint16_t   parasitic_corr;
+    uint16_t   relativeSoC;
     BMS_Cell_E state;
 } BMS_Cell_S;
 
@@ -61,6 +61,7 @@ typedef struct
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [mv], precision 1mv
     uint16_t    pack_voltage;               // [mv], precision 1mv
     uint16_t    calculated_pack_voltage;    // [mv], precision 1mv
+
     float       chargeLimit;
     float       dischargeLimit;
 
@@ -76,12 +77,13 @@ typedef struct
         uint16_t max;
         uint16_t avg;
     } capacity;    // [0.1mAh], precision 0.1mAh
+
     struct
     {
         uint16_t min;
         uint16_t max;
         uint16_t avg;
-    } totalCapacity;    // [0.1mAh], precision 0.1mAh
+    } relativeSoC;    // number from 0-100 
     uint8_t connected_cells;
 } BMS_S;
 
@@ -99,5 +101,5 @@ extern BMS_S BMS;
 
 void BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_measurementComplete(void);
-void BMS_ChargeLimit(float minVolt);
-void BMS_DischargeLimit(float minVolt);
+void BMS_ChargeLimit(uint16_t relativeSoC);
+void BMS_DischargeLimit(uint16_t relativeSoC);
