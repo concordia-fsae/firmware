@@ -8,3 +8,8 @@ stw:
   path: components/steering_wheel/
 network:
   path: network/
+
+bmsw:
+  path: components/bms_worker/
+network:
+  path: network/

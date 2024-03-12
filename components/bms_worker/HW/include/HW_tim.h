@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 // Firmware Includes
+#include "HW.h"
 #include "stm32f1xx_hal.h"
 
 
@@ -17,7 +18,8 @@
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-HAL_StatusTypeDef HW_TIM_init(void);
+HW_StatusTypeDef_E HW_TIM_init(void);
+HW_StatusTypeDef_E HW_TIM_deInit(void);
 void              HW_TIM_configureRunTimeStatsTimer(void);
 void              HW_TIM_incBaseTick(void);
 uint64_t          HW_TIM_getBaseTick(void);

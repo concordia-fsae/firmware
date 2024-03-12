@@ -35,11 +35,11 @@ static uint64_t fan2_last_tick[2] = { 0 };
  ******************************************************************************/
 
 /**
- * @brief  Initializes TIM peripherals
+ * @brief Initializes TIM peripheral
  *
- * @retval true = Success, false = Failure
+ * @retval HW_OK
  */
-HAL_StatusTypeDef HW_TIM_init(void)
+HW_StatusTypeDef_E HW_TIM_init(void)
 {
     RCC_ClkInitTypeDef      clkconfig;
     GPIO_InitTypeDef        GPIO_InitStruct    = { 0 };
@@ -161,7 +161,20 @@ HAL_StatusTypeDef HW_TIM_init(void)
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 
-    return HAL_OK;
+    return HW_OK;
+}
+
+/**
+ * @brief Deinitializes TIM peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_TIM_deInit(void)
+{
+    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    __HAL_RCC_TIM1_CLK_DISABLE();
+
+    return HW_OK;
 }
 
 /**

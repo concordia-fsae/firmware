@@ -27,8 +27,10 @@ I2C_HandleTypeDef i2c2;
 
 /**
  * @brief  Initializes the I2C1 bus
+ *
+ * @retval HW_OK
  */
-void HW_I2C_init(void)
+HW_StatusTypeDef_E HW_I2C_init(void)
 {
     i2c2.Instance             = I2C2;
     i2c2.Init.ClockSpeed      = 400000U; /**< Clocked at 100kHz */
@@ -42,7 +44,22 @@ void HW_I2C_init(void)
     {
         Error_Handler();
     }
+
+    return HW_OK;
 }
+
+/**
+ * @brief  Deinitializes the I2C bus
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_I2C_deInit(void)
+{
+	HAL_I2C_DeInit(&i2c2);
+
+	return HW_OK;
+}
+
 
 /**
  * @brief  Msp call back for I2C initialization

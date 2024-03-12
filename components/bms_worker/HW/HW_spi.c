@@ -45,9 +45,11 @@ bool HW_SPI_verifyLock(HW_SPI_Device_S* dev);
  ******************************************************************************/
 
 /**
- * @brief  Initializes ll SPI firmware
+ * @brief Initializes the SPI peripheral
+ *
+ * @retval HW_OK
  */
-void HW_SPI_init(void)
+HW_StatusTypeDef_E HW_SPI_init(void)
 {
     // initialize SPI pins
     LL_SPI_GPIOInit(SPI1);
@@ -70,6 +72,20 @@ void HW_SPI_init(void)
 
     // enable SPI
     LL_SPI_Enable(SPI1);
+
+    return HW_OK;
+}
+
+/**
+ * @brief Deinitializes the SPI peripheral
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_SPI_deInit(void)
+{
+    LL_SPI_GPIODeInit(SPI1);
+
+    return HW_OK;
 }
 
 /**
@@ -145,6 +161,12 @@ static inline void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
 #if defined(BMSW_BOARD_VA1)
         HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
 #endif /**, BMSW_BOARD_VA1 */
+	
+	    LL_GPIO_AF_DisableRemap_SPI1();
+
+        HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin |SPI1_MOSI_Pin);
+
+	    LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_SPI1);
     }
 }
 

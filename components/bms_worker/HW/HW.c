@@ -25,11 +25,23 @@
 /**
  * @brief  Initializes the generic low-level firmware
  *
- * @retval Always true 
+ * @retval HW_OK  
  */
-bool HW_init(void) 
+HW_StatusTypeDef_E HW_init(void) 
 {
-    return HAL_Init() == HAL_OK;
+    HAL_Init();
+    return HW_OK;
+}
+
+/**
+ * @brief Deinitializes the generic low-level firmware
+ *
+ * @retval HW_OK
+ */
+HW_StatusTypeDef_E HW_deInit(void)
+{
+    HAL_DeInit();
+    return HW_OK;
 }
 
 /**
