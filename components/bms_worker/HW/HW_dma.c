@@ -28,8 +28,6 @@ HW_StatusTypeDef_E HW_DMA_init(void)
     // DMA1_Channel1_IRQn interrupt configuration
     HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIO, 0U);
     HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, DMA_IRQ_PRIO, 0U);
-    HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
 
     return HW_OK;
 }
