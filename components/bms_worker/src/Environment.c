@@ -35,6 +35,10 @@
 
 #define KELVIN_OFFSET 273.15F
 
+#ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
+#define MAX_CONTINOUS_DISCHARGE_CURRENT 45 //in Amps
+#endif
+
 
 /******************************************************************************
  *                              E X T E R N S
@@ -262,5 +266,28 @@ void ENV_calcTempStats(void)
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
+    ENV_HeatCurrentChargeLimit(ENV.values.max_temp);
+    ENV_HeatCurrentDischargeLimit(ENV.values.max_temp);
+
     ENV.values.avg_temp /= connected_channels;
+}
+
+void ENV_HeatCurrentDischargeLimit(int16_t cellTemp) {
+    if (cellTemp >= 48) {
+        ENV.heatChargeCurrentLimit    = -3.75f * cellTemp + 225;
+    } else if (cellTemp > 60) {
+        ENV.heatDischargeCurrentLimit = 0;
+    } else {
+        ENV.heatDischargeCurrentLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
+    }
+}
+
+void ENV_HeatCurrentChargeLimit(int16_t cellTemp) {
+    if (cellTemp >= 48) {
+        ENV.heatChargeCurrentLimit    = -0.35f * cellTemp + 21; 
+    } else if (cellTemp > 60) {
+        ENV.heatDischargeCurrentLimit = 0;
+    } else {
+        ENV.heatChargeCurrentLimit    = MAX_CONTINOUS_DISCHARGE_CURRENT;
+    }
 }

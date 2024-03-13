@@ -103,3 +103,4 @@ void BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_measurementComplete(void);
 void BMS_ChargeLimit(uint16_t relativeSoC);
 void BMS_DischargeLimit(uint16_t relativeSoC);
+

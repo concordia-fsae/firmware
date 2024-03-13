@@ -75,6 +75,8 @@ typedef struct
 typedef struct
 {
     Environment_State_E state;
+    float       heatDischargeCurrentLimit;
+    float       heatChargeCurrentLimit;
     struct
     {
         struct
@@ -97,3 +99,10 @@ typedef struct
  ******************************************************************************/
 
 extern ENV_S ENV;
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+void ENV_HeatCurrentChargeLimit(int16_t cellTemp);
+void ENV_HeatCurrentDischargeLimit(int16_t cellTemp);
