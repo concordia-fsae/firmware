@@ -348,6 +348,9 @@ void BMS_calcSegStats(void)
 
     BMS_DischargeLimit(BMS.relativeSoC.min);
     BMS_ChargeLimit(BMS.relativeSoC.min);
+
+    BMS_HeatCurrentChargeLimit(ENV.values.max_temp);
+    BMS_HeatCurrentDischargeLimit(ENV.values.max_temp);
 }
 
 /**
@@ -418,6 +421,24 @@ void BMS_DischargeLimit(uint16_t relativeSoC) {
     }
 }
 
+void BMS_HeatCurrentDischargeLimit(int16_t cellTemp) {
+    if (cellTemp >= 48) {
+        BMS.heatChargeCurrentLimit    = -3.75f * cellTemp + 225;
+    } else if (cellTemp > 60) {
+        BMS.heatDischargeCurrentLimit = 0;
+    } else {
+        BMS.heatDischargeCurrentLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
+    }
+}
 
+void BMS_HeatCurrentChargeLimit(int16_t cellTemp) {
+    if (cellTemp >= 48) {
+        BMS.heatChargeCurrentLimit    = -0.35f * cellTemp + 21; 
+    } else if (cellTemp > 60) {
+        BMS.heatDischargeCurrentLimit = 0;
+    } else {
+        BMS.heatChargeCurrentLimit    = MAX_CONTINOUS_DISCHARGE_CURRENT;
+    }
+}
 
 
