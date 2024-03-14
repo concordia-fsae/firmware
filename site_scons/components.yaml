@@ -1,4 +1,8 @@
-stw:
-  path: components/steering_wheel/
+bl:
+  path: components/bootloaders/
+heartbeat:
+  path: components/heartbeat/
 network:
   path: network/
+stw:
+  path: components/steering_wheel/

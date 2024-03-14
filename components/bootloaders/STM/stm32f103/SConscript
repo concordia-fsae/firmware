@@ -1,0 +1,189 @@
+#!/usr/bin/python
+
+import SCons
+
+from os.path import splitext
+from typing import List
+
+Import("*")
+# suppress missing import errors this way since I can't
+# figure out where in SCons to import these from
+Dir = Dir
+File = File
+GetOption = GetOption
+Environment = Environment
+
+PROJECT_DIR = Dir(".")
+PROJECT_SOURCE_DIR = Dir("src")
+LIBS_DIR = Dir("#/embedded/libs")
+UDS_DIR = LIBS_DIR.Dir("uds")
+ISOTP_DIR = LIBS_DIR.Dir("isotp")
+
+BUILD_DIR = Dir("build")
+ARTIFACT_NAME = "bootloader"
+
+OPENOCD_INTERFACE = "stlink"
+OPENOCD_BOARD = "stm32f103c8"
+
+env = Environment(tools=["arm-none-eabi", "st-flash", "openocd", "compilation_db"])
+
+env["REPO_ROOT_DIR"] = Dir("#")
+
+common_flags = [
+    "-mthumb",
+    "-mcpu=cortex-m3",
+    "-Os",  # optimize for size
+]
+if not GetOption("release"):
+    common_flags += ["-g3", "-ggdb3"]
+
+link_flags = [
+    "-Wl,--gc-sections",
+    "-Wl,--relax",
+    "-Wl,--print-memory-usage",
+    f"-Wl,-Map={BUILD_DIR.File(ARTIFACT_NAME + '.map').path}",
+    # "-Wl,--print-gc-sections",
+    "--specs=nano.specs",
+    "--specs=nosys.specs",
+]
+
+as_flags = [
+    # tell the assembler to run the c preprocessor on assembly files
+    "-xassembler-with-cpp",
+    # "-Wa,-adhlns=$(BUILDDIR)/$(subst $(suffix $<),.lst,$<)"
+]
+
+c_flags = [
+    "-std=c11",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    "-fstack-usage",
+    # https://stackoverflow.com/questions/26300819/why-gcc-compiled-c-program-needs-eh-frame-section%20
+    "-fno-asynchronous-unwind-tables",
+    "-nostdlib",
+    "-msoft-float",
+    "-Wall",
+    "-Wcast-align",
+    "-Werror",
+    "-Wextra",
+    "-Wfloat-equal",
+    "-Wimplicit",
+    "-Winit-self",
+    "-Winline",
+    "-Wlogical-op",
+    "-Wmissing-prototypes",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+    "-Wpointer-arith",
+    "-Wredundant-decls",
+    "-Wreturn-type",
+    "-Wshadow",
+    "-Wunused",
+]
+
+inc_paths = [
+    PROJECT_DIR.Dir("include/"),
+    PROJECT_DIR.Dir("include/HW"),
+    UDS_DIR.Dir("include"),
+    ISOTP_DIR,
+]
+
+src_files = [
+    PROJECT_DIR.File("src/main.c"),
+    PROJECT_DIR.File("src/CAN.c"),
+    PROJECT_DIR.File("src/UDS.c"),
+    PROJECT_DIR.File("src/HW/HW.c"),
+    PROJECT_DIR.File("src/HW/HW_CAN.c"),
+    PROJECT_DIR.File("src/HW/HW_CLK.c"),
+    PROJECT_DIR.File("src/HW/HW_CRC.c"),
+    PROJECT_DIR.File("src/HW/HW_FLASH.c"),
+    PROJECT_DIR.File("src/HW/HW_GPIO.c"),
+    PROJECT_DIR.File("src/HW/HW_NVIC.c"),
+    PROJECT_DIR.File("src/HW/HW_SYS.c"),
+    PROJECT_DIR.File("src/HW/HW_TIM.c"),
+    PROJECT_DIR.File("src/c_only_startup.S"),
+    PROJECT_DIR.File("src/cortexm3_macro.S"),
+]
+
+uds_srcs = [
+    ISOTP_DIR.File("isotp.c"),
+    UDS_DIR.File("src/udsServer.c"),
+]
+
+env.Append(
+    ASFLAGS=as_flags,
+    CPPPATH=inc_paths,
+    CCFLAGS=common_flags + c_flags,
+    LINKSCRIPT=File("STM32F103C8.ld"),
+    LINKFLAGS=common_flags + link_flags,
+)
+
+uds_env = env.Clone()
+uds_env.Append(
+    CCFLAGS=[
+        "-Wno-missing-prototypes",
+        # "-Wno-float-equal",
+        "-Wno-unused-parameter",
+        "-DBYTE_ORDER=_BYTE_ORDER",
+        "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+    ]
+)
+
+
+def make_build_target(file, ext):
+    if isinstance(file, SCons.Node.FS.Base):
+        file = file.abspath
+    file = file.replace(PROJECT_DIR.abspath + "/", "")
+    if not PROJECT_DIR.abspath in file:
+        file = file.replace(Dir("#").abspath + "/", "")
+    return BUILD_DIR.File(file).target_from_source(prefix="", suffix=ext)
+
+
+def compile_srcs(files: List[str], env):
+    objs = []
+    for file in files:
+        obj = make_build_target(file, ".obj")
+        tar = [obj]
+        if "-fstack-usage" in c_flags:
+            tar.append(obj.target_from_source(prefix="", suffix=".su"))
+        env.Object(target=tar, source=file)
+        objs.append(obj)
+    return objs
+
+
+objs = compile_srcs(src_files, env) + compile_srcs(uds_srcs, uds_env)
+
+
+elf = env.Program(BUILD_DIR.File(ARTIFACT_NAME + ".elf"), objs)
+env.Depends(elf, env["LINKSCRIPT"])
+
+binary = env.Bin(source=BUILD_DIR.File(ARTIFACT_NAME + ".elf"))
+
+env.Default(binary)
+
+
+# asms target generates disassembled binaries
+def generate_asms():
+    asms = []
+    for obj in objs:
+        asms.append(env.Asm(source=obj))
+    asms.append(env.Asm(source=BUILD_DIR.File(ARTIFACT_NAME + ".elf")))
+    return asms
+
+
+env.Alias("asms", generate_asms())
+
+
+env.Alias("compiledb", env.CompilationDatabase())
+
+env.Alias("upload", env.flash(source=BUILD_DIR.File(ARTIFACT_NAME + ".bin")))
+env.Alias(
+    "openocd-gdb",
+    env.launch_gdb(
+        BUILD_DIR.File(ARTIFACT_NAME + ".elf"),
+        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
+        '-ex "monitor reset"',
+    ),
+)
