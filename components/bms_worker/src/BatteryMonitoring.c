@@ -346,11 +346,9 @@ void BMS_calcSegStats(void)
     // BMS.capacity.max = BMS.totalCapacity.max * CELL_getSoCfromV(BMS.voltage.max);
     // BMS.capacity.avg = BMS.totalCapacity.avg * CELL_getSoCfromV(BMS.voltage.avg);
 
-    BMS_DischargeLimit(BMS.relativeSoC.min);
-    BMS_ChargeLimit(BMS.relativeSoC.min);
+    BMS.dischargeLimit = minimum(BMS_dischargeLimit(BMS.relativeSoC.min), BMS_heatCurrentDischargeLimit(ENV.values.max_temp));
+    BMS.chargeLimit = minimum(BMS_chargeLimit(BMS.relativeSoC.min), BMS_heatCurrentChargeLimit(ENV.values.max_temp));
 
-    BMS_HeatCurrentChargeLimit(ENV.values.max_temp);
-    BMS_HeatCurrentDischargeLimit(ENV.values.max_temp);
 }
 
 /**
@@ -405,39 +403,46 @@ void BMS_measurementComplete(void)
     }
 }
 
-void BMS_ChargeLimit(uint16_t relativeSoC) {
+float minimum(float SoCBasedLimit, float heatBasedLimit) { // returns min between heat and SoC based limit
+    if (SoCBasedLimit <= heatBasedLimit)
+        return SoCBasedLimit;
+    else
+        return heatBasedLimit;
+}
+
+float BMS_chargeLimit(uint16_t relativeSoC) {
     if (relativeSoC <= 80){
-        BMS.chargeLimit = STANDARD_CHARGE_CURRENT;
+        return STANDARD_CHARGE_CURRENT;
     } else {
-        BMS.chargeLimit = -0.21f * relativeSoC + 21; //linear function for the last 20% of charge
+        return -0.21f * relativeSoC + 21; //linear function for the last 20% of charge
     }
 } 
 
-void BMS_DischargeLimit(uint16_t relativeSoC) { 
+float BMS_dischargeLimit(uint16_t relativeSoC) { 
     if (relativeSoC > 20) {
-        BMS.dischargeLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
+        return MAX_CONTINOUS_DISCHARGE_CURRENT;
     } else {
-        BMS.dischargeLimit = 2.25f*relativeSoC; //linear function for the last 20% of discharge
+        return 2.25f*relativeSoC; //linear function for the last 20% of discharge
     }
 }
 
-void BMS_HeatCurrentDischargeLimit(int16_t cellTemp) {
+float BMS_heatCurrentDischargeLimit(int16_t cellTemp) {
     if (cellTemp >= 48) {
-        BMS.heatChargeCurrentLimit    = -3.75f * cellTemp + 225;
+        return -3.75f * cellTemp + 225; // linear function from 20% of max operating temp (60°C), giving back a current limit of (45A-0A on that range for discharge)
     } else if (cellTemp > 60) {
-        BMS.heatDischargeCurrentLimit = 0;
+        return 0;
     } else {
-        BMS.heatDischargeCurrentLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
+        return MAX_CONTINOUS_DISCHARGE_CURRENT;
     }
 }
 
-void BMS_HeatCurrentChargeLimit(int16_t cellTemp) {
+float BMS_heatCurrentChargeLimit(int16_t cellTemp) {
     if (cellTemp >= 48) {
-        BMS.heatChargeCurrentLimit    = -0.35f * cellTemp + 21; 
+        return -0.35f * cellTemp + 21; // linear function from 20% of max operating temp (60°C), giving back a current limit of (4.2A-0A on that range for charge)
     } else if (cellTemp > 60) {
-        BMS.heatDischargeCurrentLimit = 0;
+        return 0;
     } else {
-        BMS.heatChargeCurrentLimit    = MAX_CONTINOUS_DISCHARGE_CURRENT;
+        return MAX_CONTINOUS_DISCHARGE_CURRENT;
     }
 }
 

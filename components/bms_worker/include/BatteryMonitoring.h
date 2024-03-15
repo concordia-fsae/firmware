@@ -65,9 +65,6 @@ typedef struct
     float       chargeLimit;
     float       dischargeLimit;
 
-    float       heatDischargeCurrentLimit;
-    float       heatChargeCurrentLimit;
-
     struct
     {
         uint16_t max;
@@ -104,8 +101,11 @@ extern BMS_S BMS;
 
 void BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_measurementComplete(void);
-void BMS_ChargeLimit(uint16_t relativeSoC);
-void BMS_DischargeLimit(uint16_t relativeSoC);
 
-void BMS_HeatCurrentChargeLimit(int16_t cellTemp);
-void BMS_HeatCurrentDischargeLimit(int16_t cellTemp);
+float minimum(float SoCBasedLimit, float heatBasedLimit);
+
+float BMS_chargeLimit(uint16_t relativeSoC);
+float BMS_dischargeLimit(uint16_t relativeSoC);
+
+float BMS_heatCurrentChargeLimit(int16_t cellTemp);
+float BMS_heatCurrentDischargeLimit(int16_t cellTemp);
