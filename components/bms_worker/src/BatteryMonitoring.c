@@ -118,7 +118,6 @@ static void BMS1kHz_PRD()
         if (max_chip.config.sampling_start_100us == UINT32_MAX)
         {
             max_chip.config.sampling             = true;
-            max_chip.config.diagnostic_enabled   = false;
             max_chip.config.low_power_mode       = false;
             max_chip.config.balancing            = 0x00;
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
@@ -131,6 +130,7 @@ static void BMS1kHz_PRD()
         else if (HW_getTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
             max_chip.config.sampling_start_100us = UINT32_MAX;
+            max_chip.config.diagnostic_enabled   = false;
             BMS.state                            = BMS_HOLDING;
             BMS.pack_voltage                     = IO.segment * 1000 * 16;
         }
@@ -138,6 +138,8 @@ static void BMS1kHz_PRD()
     else if (BMS.state == BMS_WAITING)
     {
         BMS.state                            = BMS_SAMPLING;
+        max_chip.config.diagnostic_enabled   = false;
+        max_chip.config.low_power_mode     = false;
         max_chip.config.sampling_start_100us = UINT32_MAX;
         BMS_calcSegStats();
         BMS_checkError();    /**< If cells are in error, it will override from sampling state */
@@ -156,6 +158,7 @@ static void BMS1kHz_PRD()
             MAX_readWriteToChip();
 
             BMS.state                            = BMS_SAMPLING;
+            max_chip.config.diagnostic_enabled   = true;
         }
     }
     else if (BMS.state == BMS_CALIBRATING)
@@ -397,6 +400,8 @@ void BMS_measurementComplete(void)
     if (BMS.state == BMS_HOLDING)
     {
         BMS.state = BMS_WAITING;
+        max_chip.config.low_power_mode     = true;
+        MAX_readWriteToChip();
     }
     else if (BMS.state == BMS_PARASITIC_MEASUREMENT)
     {

@@ -37,7 +37,7 @@ static const ModuleDesc_S * modules[] = {
     &IO_desc,
     &SYS_desc,
     // &CANIO_rx,
-    // &CANIO_tx,
+    &CANIO_tx,
 };
 
 static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };

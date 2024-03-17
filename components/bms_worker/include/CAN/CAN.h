@@ -19,11 +19,10 @@
  *                              E X T E R N S
  ******************************************************************************/
 
-// Receiver
-extern RTOS_swiHandle_T *CANRX_BUS_A_swi;
-extern void CANRX_BUS_A_SWI(void); // Prototype for SWI function
-extern void CANRX_BUS_A_notify(CAN_RxFifo_E rxFifo);
-
 // Transmitter
-extern RTOS_swiHandle_T *CANTX_BUS_A_10ms_swi;
-extern void CANTX_BUS_A_10ms_SWI(void);  // Prototype for SWI function
+extern RTOS_swiHandle_T* CANTX_BUS_A_100Hz_swi;
+extern RTOS_swiHandle_T* CANTX_BUS_A_10Hz_swi;
+extern RTOS_swiHandle_T* CANTX_BUS_A_1Hz_swi;
+extern void CANTX_BUS_A_100Hz_SWI(void);  // Prototype for SWI function
+extern void CANTX_BUS_A_10Hz_SWI(void);  // Prototype for SWI function
+extern void CANTX_BUS_A_1Hz_SWI(void);  // Prototype for SWI function

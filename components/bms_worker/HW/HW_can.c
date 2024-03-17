@@ -102,18 +102,18 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 
-    CAN_FilterTypeDef filt = { 0U };
-    filt.FilterBank           = 0;
-    filt.FilterMode           = CAN_FILTERMODE_IDLIST;
-    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
-    // All filters are shifted left 5 bits
-    filt.FilterIdHigh         = 0x2460;    // 0x123
-    filt.FilterIdLow          = 0x2480;    // 0x124
-    filt.FilterMaskIdHigh     = 0x24A0;    // 0x125
-    filt.FilterMaskIdLow      = 0x24C0;    // 0x126
-    filt.FilterFIFOAssignment = 0;
-    filt.FilterActivation     = ENABLE;
-    HAL_CAN_ConfigFilter(&hcan, &filt);
+    //CAN_FilterTypeDef filt = { 0U };
+    //filt.FilterBank           = 0;
+    //filt.FilterMode           = CAN_FILTERMODE_IDLIST;
+    //filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+    //// All filters are shifted left 5 bits
+    //filt.FilterIdHigh         = 0x2460;    // 0x123
+    //filt.FilterIdLow          = 0x2480;    // 0x124
+    //filt.FilterMaskIdHigh     = 0x24A0;    // 0x125
+    //filt.FilterMaskIdLow      = 0x24C0;    // 0x126
+    //filt.FilterFIFOAssignment = 0;
+    //filt.FilterActivation     = ENABLE;
+    //HAL_CAN_ConfigFilter(&hcan, &filt);
 
     return HW_OK;
 }
@@ -169,18 +169,6 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
             // set message data
             canHandle->Instance->sTxMailBox[msg.mailbox].TDHR = msg.data.u32[1];
             canHandle->Instance->sTxMailBox[msg.mailbox].TDLR = msg.data.u32[0];
-            // TODO: test whether WRITE_REG compiles down to a different instruction than
-            // just directly setting the register
-            // WRITE_REG(hcan->Instance->sTxMailBox[msg.mailbox].TDHR,
-            // ((uint32_t)aData[7] << CAN_TDH0R_DATA7_Pos) |
-            // ((uint32_t)aData[6] << CAN_TDH0R_DATA6_Pos) |
-            // ((uint32_t)aData[5] << CAN_TDH0R_DATA5_Pos) |
-            // ((uint32_t)aData[4] << CAN_TDH0R_DATA4_Pos));
-            // WRITE_REG(hcan->Instance->sTxMailBox[msg.mailbox].TDLR,
-            // ((uint32_t)aData[3] << CAN_TDL0R_DATA3_Pos) |
-            // ((uint32_t)aData[2] << CAN_TDL0R_DATA2_Pos) |
-            // ((uint32_t)aData[1] << CAN_TDL0R_DATA1_Pos) |
-            // ((uint32_t)aData[0] << CAN_TDL0R_DATA0_Pos));
 
             // request message transmission
             SET_BIT(canHandle->Instance->sTxMailBox[msg.mailbox].TIR, CAN_TI0R_TXRQ);
@@ -216,7 +204,7 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
  */
 bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len)
 {
-    CAN_TxMessage_T msg;
+    CAN_TxMessage_T msg = {0};
 
     msg.id          = id;
     msg.data        = data;
@@ -403,20 +391,17 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
     UNUSED(canHandle);
     switch ((CAN_TX_Priorities_E)mailbox)
     {
-        case CAN_TX_PRIO_1KHZ:
-            // not yet implemented
-            // SWI_invokeFromISR(CANTX_BUS_A_1ms_swi);
-            break;
-
         case CAN_TX_PRIO_100HZ:
-            SWI_invokeFromISR(CANTX_BUS_A_10ms_swi);
+            SWI_invokeFromISR(CANTX_BUS_A_100Hz_swi);
             break;
-
         case CAN_TX_PRIO_10HZ:
             // not yet implemented
-            // SWI_invokeFromISR(CANTX_BUS_A_100ms_swi);
+            SWI_invokeFromISR(CANTX_BUS_A_10Hz_swi);
             break;
-
+        case CAN_TX_PRIO_1HZ:
+            // not yet implemented
+            SWI_invokeFromISR(CANTX_BUS_A_1Hz_swi);
+            break;
         default:
             // should never reach here
             break;
@@ -433,8 +418,9 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
 static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
     UNUSED(canHandle);
-    CANRX_BUS_A_notify(fifoId);
-    SWI_invokeFromISR(CANRX_BUS_A_swi);
+    UNUSED(fifoId);
+    //CANRX_BUS_A_notify(fifoId);
+    //SWI_invokeFromISR(CANRX_BUS_A_swi);
 }
 
 
@@ -579,22 +565,25 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         // CAN1 clock enable
         __HAL_RCC_CAN1_CLK_ENABLE();
 
-        __HAL_RCC_GPIOA_CLK_ENABLE();
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        
         /**CAN GPIO Configuration
-         * PA11     ------> CAN_RX
-         * PA12     ------> CAN_TX
+         * PB8     ------> CAN_RX
+         * PB9     ------> CAN_TX
          */
         GPIO_InitTypeDef GPIO_InitStruct = { 0 };
 
-        GPIO_InitStruct.Pin   = GPIO_PIN_11;
+        GPIO_InitStruct.Pin   = CAN_RXD_Pin;
         GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
         GPIO_InitStruct.Pull  = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+        HAL_GPIO_Init(CAN_Port, &GPIO_InitStruct);
 
-        GPIO_InitStruct.Pin   = GPIO_PIN_12;
+        GPIO_InitStruct.Pin   = CAN_TXD_Pin;
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+        HAL_GPIO_Init(CAN_Port, &GPIO_InitStruct);
+        
+        __HAL_AFIO_REMAP_CAN1_2();
 
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_TX_IRQn,  CAN_TX_IRQ_PRIO, 0U);
@@ -623,7 +612,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
          * PA11     ------> CAN_RX
          * PA12     ------> CAN_TX
          */
-        HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
+        HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8 | GPIO_PIN_9);
 
         HAL_NVIC_DisableIRQ(CAN1_SCE_IRQn);
         HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);

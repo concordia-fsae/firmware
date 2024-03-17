@@ -22,22 +22,26 @@
 
 
 /******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-/******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
 {
-    uint8_t txBusA10msIdx;
+    uint8_t tx_1Hz_msg;
+    uint8_t tx_10Hz_msg;
+    uint8_t tx_100Hz_msg;
 } cantx_S;
+
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define MSG_packTable_100Hz_SIZE    (sizeof(MSG_packTable_100Hz) / sizeof(packTable_S))
+#define MSG_packTable_10Hz_SIZE     (sizeof(MSG_packTable_10Hz) / sizeof(packTable_S))
+#define MSG_packTable_1Hz_SIZE      (sizeof(MSG_packTable_1Hz) / sizeof(packTable_S))
+
+#define MSG_UID_SEGMENT(id)         (id + IO.addr)
 
 
 /******************************************************************************
@@ -46,10 +50,29 @@ typedef struct
 
 static cantx_S cantx;
 
-
 /******************************************************************************
- *                       P U B L I C  F U N C T I O N S
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
+
+static const packTable_S* packNextMessage(const packTable_S *packTable,
+                                          const uint8_t     packTableLength,
+                                          uint8_t           *index,
+                                          CAN_data_T        *message,
+                                          uint8_t           *nextCounter);
+
+static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_10Hz(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter);
+
+static const packTable_S MSG_packTable_100Hz[] = {
+    { &MSG_pack_BMS_100Hz, 0x100, 8U },
+};
+static const packTable_S MSG_packTable_10Hz[]  = {
+    { &MSG_pack_BMS_10Hz, 0x10, 8U },
+};
+static const packTable_S MSG_packTable_1Hz[]   = {
+    { &MSG_pack_BMS_1Hz, 0x1, 8U },
+};
 
 
 /******************************************************************************
@@ -60,26 +83,125 @@ static cantx_S cantx;
  * CANTX_BUS_A_10ms_SWI
  * send BUS_A messages
  */
-void CANTX_BUS_A_10ms_SWI(void)
+void CANTX_BUS_A_100Hz_SWI(void)
 {
     // TODO: add overrun detection here
+    if (cantx.tx_100Hz_msg == MSG_packTable_100Hz_SIZE)
+    {
+        return;
+    }
 
-    // static uint8_t    counter = 0U;
+    static uint8_t    counter = 0U;
     CAN_data_T        message;
 
-    const packTable_S *entry = 0x00;
+    const packTable_S *entry  = packNextMessage((const packTable_S*)&MSG_packTable_100Hz,
+                                                MSG_packTable_100Hz_SIZE,
+                                                &cantx.tx_100Hz_msg,
+                                                &message,
+                                                &counter);
 
     if (entry != NULL)
     {
-        CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message, entry->id, entry->len);
+        CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message, MSG_UID_SEGMENT(entry->id), entry->len);
         return;
     }
 }
 
+void CANTX_BUS_A_10Hz_SWI(void)
+{
+    // TODO: add overrun detection here
+    if (cantx.tx_10Hz_msg == MSG_packTable_10Hz_SIZE)
+    {
+        return;
+    }
+
+    static uint8_t    counter = 0U;
+    CAN_data_T        message;
+
+    const packTable_S *entry  = packNextMessage((const packTable_S*)&MSG_packTable_10Hz,
+                                                MSG_packTable_10Hz_SIZE,
+                                                &cantx.tx_10Hz_msg,
+                                                &message,
+                                                &counter);
+
+    if (entry != NULL)
+    {
+        CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message, MSG_UID_SEGMENT(entry->id), entry->len);
+        return;
+    }
+}
+
+void CANTX_BUS_A_1Hz_SWI(void)
+{
+    // TODO: add overrun detection here
+    if (cantx.tx_1Hz_msg == MSG_packTable_1Hz_SIZE)
+    {
+        return;
+    }
+
+    static uint8_t    counter = 0U;
+    CAN_data_T        message;
+
+    const packTable_S *entry  = packNextMessage((const packTable_S*)&MSG_packTable_1Hz,
+                                                MSG_packTable_1Hz_SIZE,
+                                                &cantx.tx_1Hz_msg,
+                                                &message,
+                                                &counter);
+
+    if (entry != NULL)
+    {
+        CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message, MSG_UID_SEGMENT(entry->id), entry->len);
+        return;
+    }
+}
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
+
+static const packTable_S* packNextMessage(const packTable_S *packTable,
+                                          const uint8_t     packTableLength,
+                                          uint8_t           *index,
+                                          CAN_data_T        *message,
+                                          uint8_t           *nextCounter)
+{
+    while (*index < packTableLength)
+    {
+        const packTable_S *entry  = &packTable[(*index)++];
+        uint16_t          counter = *nextCounter;
+        if (*index == packTableLength)
+        {
+            (*nextCounter)++;
+        }
+        message->u64 = 0ULL;
+        if ((*entry->pack)(message, counter))
+        {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter)
+{
+    message->u64    = 0x100;
+    message->u32[1] = counter;
+    return true;
+}
+
+static bool MSG_pack_BMS_10Hz(CAN_data_T* message, const uint8_t counter)
+{
+    message->u64    = 0x10;
+    message->u32[1] = counter;
+    return true;
+}
+
+static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter)
+{
+    message->u64    = 0x1;
+    message->u32[1] = counter;
+    return true;
+}
 
 /**
  * CANIO_tx_100Hz_PRD
@@ -88,8 +210,8 @@ void CANTX_BUS_A_10ms_SWI(void)
 static void CANIO_tx_100Hz_PRD(void)
 {
     // transmit 100Hz messages
-    cantx.txBusA10msIdx = 0U;
-    SWI_invoke(CANTX_BUS_A_10ms_swi);
+    cantx.tx_100Hz_msg = 0U;
+    SWI_invoke(CANTX_BUS_A_100Hz_swi);
 }
 
 /**
@@ -98,7 +220,16 @@ static void CANIO_tx_100Hz_PRD(void)
  */
 static void CANIO_tx_10Hz_PRD(void)
 {
-    // CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, (CAN_data_T){0x01}, 0x101, 8U);
+    // transmit 10Hz messages
+    // cantx.tx_10Hz_msg = 0U;
+    // SWI_invoke(CANTX_BUS_A_10Hz_swi);
+}
+
+static void CANIO_tx_1Hz_PRD(void)
+{
+    // transmit 1Hz messages
+    // cantx.tx_1Hz_msg = 0U;
+    // SWI_invoke(CANTX_BUS_A_1Hz_swi);
 }
 
 /**
@@ -116,5 +247,5 @@ const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
     .periodic100Hz_CLK = &CANIO_tx_100Hz_PRD,
     .periodic10Hz_CLK  = &CANIO_tx_10Hz_PRD,
+    .periodic1Hz_CLK   = &CANIO_tx_1Hz_PRD,
 };
-
