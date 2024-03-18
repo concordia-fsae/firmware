@@ -35,6 +35,7 @@
 #define ADC_MAX_VAL    4095U    // Max integer value of ADC reading (2^12 for this chip)
 #define IO_ADC_BUF_LEN 96U      // number of samples to fill with DMA,
                                 // processed when half full and again when completely full
+                                // (1.5+3) cycles * 96 samples @ 8MHz -> 54us < 100us - 15us 
 
 /******************************************************************************
  *                             T Y P E D E F S

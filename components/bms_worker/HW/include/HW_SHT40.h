@@ -31,21 +31,29 @@ typedef enum
     SHT_WAITING,
     SHT_MEASURING,
     SHT_HEATING,
+    SHT_ERROR,
 } SHT_State_E;
+
+typedef enum
+{
+    SHT_HEAT_LOW = 0x00,
+    SHT_HEAT_MED,
+    SHT_HEAT_HIGH,
+} SHT_Heat_E;
 
 typedef struct
 {
-    SHT_State_E state;
-    uint64_t      raw;
-    int16_t       temp; /**< Stored in 0.1 deg C */
-    uint16_t      rh;   /**< Stored in 0.01% RH */
+    uint64_t  raw;
+    float32_t temp; // [deg C], precision 0.01 deg C
+    float32_t rh;   // [%], precision 0.01%
 } SHT_Data_S;
 
 typedef struct
 {
+    SHT_State_E      state;
     HW_I2C_Device_S* dev;
     uint32_t         serial_number;
-    SHT_Data_S     data;
+    SHT_Data_S       data;
 } SHT_S;
 
 
@@ -56,6 +64,6 @@ typedef struct
 bool SHT_init(void);
 bool SHT_startConversion(void);
 bool SHT_getData(void);
-bool SHT_startHeater(void);
+bool SHT_startHeater(SHT_Heat_E heat);
 
 #endif    // BMSW_BOARD_VA3

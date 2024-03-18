@@ -18,6 +18,7 @@
 
 // Other Includes
 #include "Module.h"
+#include "FloatTypes.h"
 
 
 /******************************************************************************
@@ -63,6 +64,7 @@ typedef enum
 {
     ENV_INIT = 0x00,
     ENV_RUNNING,
+    ENV_FAULT,
     ENV_ERROR,
 } Environment_State_E;
 
@@ -79,15 +81,15 @@ typedef struct
     {
         struct
         {
-            int16_t  mcu_temp;            /**< Stored in 0.1 deg C */
-            int16_t  brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
-            int16_t  ambient_temp;        /**< Stored in 0.1 deg C */
-            uint16_t rh;                  /**< Stored in 0.01% RH */
+            float32_t  mcu_temp;            /**< Stored in 0.1 deg C */
+            float32_t  brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
+            float32_t  ambient_temp;        /**< Stored in 0.1 deg C */
+            float32_t  rh;                  /**< Stored in 0.01% RH */
         } board;
         ENV_temperature_S temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */
-        int16_t       max_temp;
-        int16_t       min_temp;
-        int16_t       avg_temp;
+        float32_t       max_temp;
+        float32_t       min_temp;
+        float32_t       avg_temp;
     } values;
 } ENV_S;
 

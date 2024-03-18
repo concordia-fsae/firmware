@@ -188,7 +188,7 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
     {
         data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
     }
-    // data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
+    data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
 }
 
 /**

@@ -15,7 +15,8 @@
 
 /**< Other Includes */
 #include "Module.h"
-
+#include "BatteryMonitoring.h"
+#include "Environment.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -54,6 +55,14 @@ static void SYS_Init()
 static void SYS100Hz_PRD()
 {
     /**< Evaluate state of all systems */
+    if ((ENV.state == ENV_ERROR) || (ENV.state == ENV_FAULT)|| (BMS.fault) || (BMS.state == BMS_ERROR))
+    {
+        SYS.state = SYS_ERROR;
+    }
+    else 
+    {
+        SYS.state = SYS_RUNNING;
+    }
 }
 
 /**

@@ -82,7 +82,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     }
     sConfigIC.ICPolarity  = TIM_INPUTCHANNELPOLARITY_RISING;
     sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-    sConfigIC.ICPrescaler = TIM_ICPSC_DIV4;
+    sConfigIC.ICPrescaler = TIM_ICPSC_DIV8;
     sConfigIC.ICFilter    = 0;
     if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
     {
@@ -212,12 +212,12 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)    // If the interrupt is triggered by channel 1
     {
         fan1_last_tick[0] = fan1_last_tick[1];
-        fan1_last_tick[1] = HW_getTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        fan1_last_tick[1] = HW_TIM_getBaseTick();
     }
     else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
     {
         fan2_last_tick[0] = fan2_last_tick[1];
-        fan2_last_tick[1] = HW_getTick() * 100 + HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+        fan2_last_tick[1] = HW_TIM_getBaseTick();
     }
 }
 
@@ -266,7 +266,11 @@ void HW_TIM4_setDutyCH2(uint8_t percentage2)
  */
 uint16_t HW_TIM1_getFreqCH1(void)
 {
-    return (fan1_last_tick[1]) ? 2000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0;
+    if ((fan1_last_tick[1] + 1000000) < HW_TIM_getBaseTick()) 
+    {
+        return 0;
+    }
+    return (fan1_last_tick[1]) ? 4000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0;
 }
 
 /**
@@ -276,7 +280,11 @@ uint16_t HW_TIM1_getFreqCH1(void)
  */
 uint16_t HW_TIM1_getFreqCH2(void)
 {
-    return (fan2_last_tick[1]) ? 2000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0;
+    if ((fan2_last_tick[1] + 1000000) < HW_TIM_getBaseTick()) 
+    {
+        return 0;
+    }
+    return (fan2_last_tick[1]) ? 4000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0;
 }
 
 
