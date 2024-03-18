@@ -28,7 +28,7 @@ def _get_openocd_cmd(env, interface, board):
         env["interface"] = interface
         env["board"] = board
         ret = (
-            f'openocd -s {OPENOCD_DIR.path} -f $interface -f $board -c "gdb_port pipe"'
+            f'/opt/openocd/bin/openocd -s {OPENOCD_DIR.path} -f $interface -f $board -c "gdb_port pipe"'
         )
     else:
         print("Interface or Board file does not exist")
@@ -42,7 +42,7 @@ def generate(env):
     env.AddMethod(_get_openocd_cmd, "openocd_cmd")
 
     env["BUILDERS"]["openocd"] = SCons.Builder.Builder(
-        action=f"openocd -s {OPENOCD_DIR.path} -f $interface -f $board"
+        action=f"/opt/openocd/bin/openocd -s {OPENOCD_DIR.path} -f $interface -f $board"
     )
 
 
