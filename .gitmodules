@@ -13,9 +13,6 @@
 [submodule "CMSIS"]
 	path = embedded/libs/CMSIS
 	url = git@github.com:ARM-software/CMSIS_5.git
-[submodule "embedded/libs/printf"]
-	path = embedded/libs/printf
-	url = git@github.com:mpaland/printf.git
 [submodule "embedded/platforms/stm32/f1/cmsis"]
 	path = embedded/platforms/stm32/f1/cmsis
 	url = git@github.com:STMicroelectronics/cmsis_device_f1.git
