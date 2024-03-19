@@ -39,6 +39,8 @@
 #ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
 # define MAX_CONTINOUS_DISCHARGE_CURRENT 45
 #endif
+
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -58,7 +60,7 @@ BMS_S BMS;
  ******************************************************************************/
 
 void BMS_calcSegStats(void);
-void BMS_checkFaults(void);
+void BMS_checkFault(void);
 void BMS_chargeLimit(void);
 void BMS_dischargeLimit(void);
 
@@ -127,6 +129,7 @@ static void BMS1kHz_PRD()
             max_chip.config.diagnostic_enabled   = false;
             BMS.pack_voltage                     = IO.segment * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
+            HW_usDelay(15U);
             BMS.state                            = BMS_HOLDING;
         }
     }
@@ -188,6 +191,7 @@ static void BMS1Hz_PRD()
 
         if (!max_chip.state.ready)
         {
+            BMS.fault = true;
             return;
         }
         else if (start_time == 0)
@@ -224,6 +228,10 @@ static void BMS1Hz_PRD()
             start_time = 0;
             return;
         }
+        else if (max_chip.state.connected_cells != BMS_CONFIGURED_SERIES_CELLS)
+        {
+            BMS.state = BMS_ERROR;
+        }
 
         for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
         {
@@ -258,7 +266,7 @@ static void BMS1Hz_PRD()
             return;
         }
     }
-
+    
     static uint8_t cnt = 0;
 
 
@@ -317,9 +325,20 @@ void BMS_calcSegStats(void)
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
         BMS.cells[i].voltage = IO.cell[i] + BMS.cells[i].parasitic_corr;
-        if ((BMS.cells[i].voltage > 2.5f) && (BMS.cells[i].voltage < 4.2f))
+        if ((BMS.cells[i].voltage > 2.0f) && (BMS.cells[i].voltage < 4.5f))
         {
-            BMS.cells[i].state = BMS_CELL_CONNECTED;
+            if (BMS.cells[i].voltage < 2.5f)
+            {
+                BMS.cells[i].state = BMS_CELL_FAULT_UV;
+                continue;
+            }
+            else if (BMS.cells[i].voltage > 4.2f)
+            {
+                BMS.cells[i].state = BMS_CELL_FAULT_OV;
+                continue;
+            }
+
+            BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
         {
@@ -366,7 +385,7 @@ void BMS_calcSegStats(void)
     BMS.relative_soc.max = CELL_getSoCfromV((BMS.voltage.max));
     BMS.relative_soc.avg = CELL_getSoCfromV((BMS.voltage.avg));
 
-    BMS_checkFaults();    // If cells are in error, it will override from sampling state
+    BMS_checkFault();    // If cells are in error, it will override from sampling state
 
     BMS_dischargeLimit();
     BMS_chargeLimit();
@@ -375,7 +394,7 @@ void BMS_calcSegStats(void)
 /**
  * @brief  Checks for errors relative to the cells.
  */
-void BMS_checkFaults(void)
+void BMS_checkFault(void)
 {
     bool faulted = false;
 
@@ -412,8 +431,6 @@ void BMS_setOutputCell(MAX_selectedCell_E cell)
     max_chip.config.output.state       = MAX_CELL_VOLTAGE;
     max_chip.config.output.output.cell = cell;
     MAX_readWriteToChip();
-
-    HW_usDelay(15U);
 }
 
 /**

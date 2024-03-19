@@ -32,6 +32,7 @@
 # define BMS_CONFIGURED_PARALLEL_CELLS 5
 #endif
 
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -54,6 +55,8 @@ typedef enum
 {
     BMS_CELL_DISCONNECTED = 0x00,
     BMS_CELL_CONNECTED,
+    BMS_CELL_FAULT_UV,
+    BMS_CELL_FAULT_OV,
     BMS_CELL_ERROR,
 } BMS_Cell_E;
 

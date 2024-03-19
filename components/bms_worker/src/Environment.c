@@ -22,6 +22,7 @@
 #include "THERMISTORS.h"
 #include "NCP21XV103J03RA.h"
 #include "MF52C1103F3380.h"
+#include "BatteryMonitoring.h"
 
 
 /******************************************************************************
@@ -208,6 +209,7 @@ static void Environment1Hz_PRD()
     {
         case ENV_INIT:
             break;
+        
         case ENV_FAULT:
         case ENV_RUNNING:
 #if defined(BMSW_BOARD_VA1)
@@ -251,8 +253,8 @@ void ENV_calcTempStats(void)
     uint8_t connected_channels = 0;
 
     ENV.values.avg_temp = 0;
-    ENV.values.max_temp = -200;
-    ENV.values.min_temp = -200;
+    ENV.values.max_temp = 0;
+    ENV.values.min_temp = 200;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
@@ -268,15 +270,14 @@ void ENV_calcTempStats(void)
         ENV.values.max_temp = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
-
-    if (ENV.values.max_temp >= -200 && ENV.values.max_temp <= -200)
+    
+    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F) 
     {
-        ENV.values.max_temp = 0;
+        ENV.state = ENV_ERROR;
     }
-
-    if (ENV.values.min_temp >= -200 && ENV.values.min_temp <= -200)
+    else if (connected_channels < CHANNEL_COUNT)
     {
-        ENV.values.min_temp = 0;
+        ENV.state = ENV_FAULT;
     }
 
     ENV.values.avg_temp /= connected_channels;

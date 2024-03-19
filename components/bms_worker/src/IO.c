@@ -141,6 +141,8 @@ static void IO_init(void)
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
 
+
+
 #if defined(BMSW_BOARD_VA1)
     IO.addr |= ((HW_GPIO_readPin(&A0)) ? 0x01 : 0x00) << 0;
     IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x01 : 0x00) << 1;
@@ -154,6 +156,8 @@ static void IO_init(void)
     NX3L_enableMux();
     NX3L_setMux(NX3L_MUX1);
 #endif /**< BMSW_BOARD_VA3 */
+
+    IO.addr ^= 0x03; // invert last 3 bits
 }
 
 static void IO10Hz_PRD(void)

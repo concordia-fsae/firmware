@@ -13,6 +13,8 @@
 #include "HW_can.h"
 
 #include "FreeRTOS_SWI.h"
+#include "HW_tim.h"
+#include "Module.h"
 #include "ModuleDesc.h"
 
 #include "string.h"
@@ -52,6 +54,7 @@ typedef struct
  ******************************************************************************/
 
 static cantx_S cantx;
+extern Module_taskStats_S swi_stats;
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -271,7 +274,12 @@ static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter)
 
 static void CANIO_tx_1kHz_PRD(void)
 {
-    SWI_invoke(CANTX_BUS_A_swi);
+    // FIXME: SWI bogs the MCU
+    //static uint8_t cnt = 0;
+    //if (cnt++ % 2) return;
+
+    //SWI_invoke(CANTX_BUS_A_swi);
+    CANTX_BUS_A_SWI();
 }
 
 /**

@@ -12,6 +12,7 @@
 
 #include "CAN/CanTypes.h"
 #include "CAN/CAN.h"
+#include "stm32f103xb.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -34,7 +35,8 @@
 #define CAN_ENABLED_INTERRUPTS    (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
                                    CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
                                    CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
-
+ #undef CAN_ENABLED_INTERRUPTS
+ #define CAN_ENABLED_INTERRUPTS CAN_IER_ERRIE
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -549,6 +551,7 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef* canHandle)
 {
     UNUSED(canHandle);
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_ERRIE);
 }
 
 

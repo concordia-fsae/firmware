@@ -55,7 +55,7 @@ static void SYS_Init()
 static void SYS100Hz_PRD()
 {
     /**< Evaluate state of all systems */
-    if ((ENV.state == ENV_ERROR) || (BMS.fault) || (BMS.state == BMS_ERROR))
+    if ((ENV.state == ENV_ERROR) || (ENV.state == ENV_FAULT)|| (BMS.fault) || (BMS.state == BMS_ERROR))
     {
         SYS.state = SYS_ERROR;
     }
