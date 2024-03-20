@@ -153,7 +153,9 @@ project_source_files = [
     PROJECT_SOURCE_DIR.File("BatteryMonitoring.c"),
     PROJECT_SOURCE_DIR.File("Sys.c"),
     PROJECT_CELLS_DIR.File("P42A.c"),
+    PROJECT_THERMS_DIR.File("THERMISTORS.c"),
     PROJECT_THERMS_DIR.File("NCP21XV103J03RA.c"),
+    PROJECT_THERMS_DIR.File("MF52C1103F3380.c"),
 ]
 
 project_hw_files = [

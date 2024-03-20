@@ -1,9 +1,7 @@
 /**
- * @file NCP21XV103J03RA.h
- * @brief  Header file for NCP21XV103J03RA thermistor
+ * @file MF52C1103F3380.c
+ * @brief  Source code for MF52C1103F3380 thermistor
  */
-
-#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
@@ -14,7 +12,11 @@
 
 
 /******************************************************************************
- *                              E X T E R N S
+ *                         P R I V A T E  V A R S
  ******************************************************************************/
- 
-extern THERM_BParameter_S NCP21_bParam;
+
+THERM_BParameter_S MF52_bParam = {
+    .B  = 3380U,
+    .T0 = 25U + KELVIN_OFFSET,
+    .R0 = 10000U,
+};
