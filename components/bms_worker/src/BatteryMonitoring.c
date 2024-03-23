@@ -325,25 +325,26 @@ void BMS_calcSegStats(void)
     BMS.capacity.max             = 0x00;
     BMS.capacity.avg             = 0x00;
     BMS.calculated_pack_voltage  = 0x00;
-    BMS.relative_SoC.max         = UINT16_MAX;
+    BMS.relative_SoC.max         = UINT8_MAX;
     BMS.relative_SoC.min         = 0x00;
-
-
+    BMS.relative_SoC.avg         = 0x00;
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
     {
         BMS.voltage.max = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
         BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
+
+        BMS.capacity.max = (BMS.capacity.max > BMS.cells[i].capacity) ? BMS.capacity.max : BMS.cells[i].capacity;
+        BMS.capacity.min = (BMS.capacity.min < BMS.cells[i].capacity) ? BMS.capacity.min : BMS.cells[i].capacity; 
         batt_tmp += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage / 10;
     }
 
     BMS.voltage.avg     = batt_tmp / max_chip.state.connected_cells;
 
-    BMS.relativeSoC.min = CELL_getSoCfromV(BMS.voltage.min);
-
-    BMS.capacity.max    = BMS.total_capacity.max * CELL_getSoCfromV(BMS.voltage.max);
-    BMS.capacity.avg    = BMS.total_capacity.avg * CELL_getSoCfromV(BMS.voltage.avg);
+    BMS.relative_SoC.min = CELL_getSoCfromV(BMS.voltage.min);
+    BMS.relative_SoC.max = CELL_getSoCfromV(BMS.voltage.max);
+    BMS.relative_SoC.avg = CELL_getSoCfromV(BMS.voltage.avg);
 
     // use delta system
     BMS.discharge_limit  = BMS_minf(BMS_dischargeLimit(BMS.relative_SoC.min), BMS_heatCurrentDischargeLimit(ENV.values.max_temp));
@@ -455,7 +456,7 @@ uint8_t BMS_heatCurrentDischargeLimit(int16_t cell_temp) {
     if (cell_temp/10.0f > 60) {
         return 0;
     } else if (cell_temp/10.0f >= 48) {
-        return (-3.75f * cellTemp/10.0f + 225) * 5; 
+        return (-3.75f * cell_temp/10.0f + 225) * 5; 
     } else {
         return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     }
@@ -472,10 +473,8 @@ uint8_t BMS_heatCurrentChargeLimit(int16_t cell_temp) {
     if (cell_temp/10.0f > 60) {
         return 0;
     } else if (cell_temp/10.0f >= 48) {
-        return (-0.35f * cellTemp/10.0f + 21) * 5;
+        return (-0.35f * cell_temp/10.0f + 21) * 5;
     } else {
         return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     }
 }
-
-

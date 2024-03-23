@@ -32,7 +32,7 @@
 uint8_t CELL_getSoCfromV(uint16_t tenth_mv)
 {
     // sets tenth_mv to volts to be used in calculations
-    float32_t volt = (float)tenth_mv/10000;
+    float volt = (float)tenth_mv/10000;
 
     // add *2 for more precision later (to use 200 of the 255 available numbers with the uint8_t)
 

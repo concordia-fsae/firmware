@@ -83,7 +83,7 @@ typedef struct
         uint8_t min;
         uint8_t max;
         uint8_t avg;
-    } relativeSoC; // [1%], precision 1%
+    } relative_SoC; // [1%], precision 1%
     uint8_t connected_cells;
 } BMS_S;
 
@@ -104,8 +104,8 @@ void BMS_measurementComplete(void);
 
 float BMS_minf(float SoCBasedLimit, float heatBasedLimit);
 
-float BMS_chargeLimit(uint16_t relativeSoC);
-float BMS_dischargeLimit(uint16_t relativeSoC);
+uint8_t BMS_chargeLimit(uint8_t relativeSoC);
+uint8_t BMS_dischargeLimit(uint8_t relativeSoC);
 
-float BMS_heatCurrentChargeLimit(int16_t cellTemp);
-float BMS_heatCurrentDischargeLimit(int16_t cellTemp);
+uint8_t BMS_heatCurrentChargeLimit(int16_t cell_temp);
+uint8_t BMS_heatCurrentDischargeLimit(int16_t cell_temp);
