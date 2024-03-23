@@ -345,8 +345,8 @@ void BMS_calcSegStats(void)
     BMS.relative_SoC.max = CELL_getSoCfromV(BMS.voltage.max);
     BMS.relative_SoC.avg = CELL_getSoCfromV(BMS.voltage.avg);
 
-    BMS.discharge_limit  = (BMS_dischargeLimit_SoC(BMS.relative_SoC.min) + BMS_dischargeLimit_heat(ENV.values.max_temp) > MAX_CONTINOUS_DISCHARGE_CURRENT) ? 0 : BMS_dischargeLimit_SoC(BMS.relative_SoC.min) + BMS_dischargeLimit_heat(ENV.values.max_temp);
-    BMS.charge_limit     = (BMS_chargeLimit_SoC(BMS.relative_SoC.min)    + BMS_chargeLimit_heat(ENV.values.max_temp)    > STANDARD_CHARGE_CURRENT)         ? 0 : BMS_chargeLimit_SoC(BMS.relative_SoC.min)    + BMS_chargeLimit_heat(ENV.values.max_temp);
+    BMS.discharge_limit  = (BMS_dischargeLimit_SoC(BMS.relative_SoC.min) + BMS_dischargeLimit_heat(ENV.values.max_temp) > MAX_CONTINOUS_DISCHARGE_CURRENT * 5) ? 0 : BMS_dischargeLimit_SoC(BMS.relative_SoC.min) + BMS_dischargeLimit_heat(ENV.values.max_temp);
+    BMS.charge_limit     = (BMS_chargeLimit_SoC(BMS.relative_SoC.min)    + BMS_chargeLimit_heat(ENV.values.max_temp)    > STANDARD_CHARGE_CURRENT * 5)         ? 0 : BMS_chargeLimit_SoC(BMS.relative_SoC.min)    + BMS_chargeLimit_heat(ENV.values.max_temp);
 }
 
 /**
