@@ -333,7 +333,6 @@ void BMS_calcSegStats(void)
     {
         BMS.voltage.max = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
         BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
-
         BMS.capacity.max = (BMS.capacity.max > BMS.cells[i].capacity) ? BMS.capacity.max : BMS.cells[i].capacity;
         BMS.capacity.min = (BMS.capacity.min < BMS.cells[i].capacity) ? BMS.capacity.min : BMS.cells[i].capacity; 
         batt_tmp += BMS.cells[i].voltage;
@@ -346,9 +345,8 @@ void BMS_calcSegStats(void)
     BMS.relative_SoC.max = CELL_getSoCfromV(BMS.voltage.max);
     BMS.relative_SoC.avg = CELL_getSoCfromV(BMS.voltage.avg);
 
-    // use delta system
-    BMS.discharge_limit  = BMS_minf(BMS_dischargeLimit(BMS.relative_SoC.min), BMS_heatCurrentDischargeLimit(ENV.values.max_temp));
-    BMS.charge_limit     = BMS_minf(BMS_chargeLimit(BMS.relative_SoC.min), BMS_heatCurrentChargeLimit(ENV.values.max_temp));
+    BMS.discharge_limit  = (BMS_dischargeLimit_SoC(BMS.relative_SoC.min) + BMS_dischargeLimit_heat(ENV.values.max_temp) > MAX_CONTINOUS_DISCHARGE_CURRENT) ? 0 : BMS_dischargeLimit_SoC(BMS.relative_SoC.min) + BMS_dischargeLimit_heat(ENV.values.max_temp);
+    BMS.charge_limit     = (BMS_chargeLimit_SoC(BMS.relative_SoC.min)    + BMS_chargeLimit_heat(ENV.values.max_temp)    > STANDARD_CHARGE_CURRENT)         ? 0 : BMS_chargeLimit_SoC(BMS.relative_SoC.min)    + BMS_chargeLimit_heat(ENV.values.max_temp);
 }
 
 /**
@@ -404,29 +402,17 @@ void BMS_measurementComplete(void)
 }
 
 /**
- * @brief calculates minimum (needs tuning to get minimum of any size array)
- *
- * @param SoCBasedLimit state of charge of a cell
- */
-float BMS_minf(float SoCBasedLimit, float heatBasedLimit) { 
-    if (SoCBasedLimit <= heatBasedLimit)
-        return SoCBasedLimit;
-    else
-        return heatBasedLimit;
-}
-
-/**
  * @brief Increases/decreases delta charge limit
  *
  * @param relativeSoC state of charge of a cell
  * 
  * @retval returns amperage for group of 5 cells (so need to multiply by 5)
  */
-uint8_t BMS_chargeLimit(uint8_t relative_SoC) {
+uint8_t BMS_chargeLimit_SoC(uint8_t relative_SoC) {
     if (relative_SoC <= 80){
         return STANDARD_CHARGE_CURRENT;
     } else {
-        return (-0.21f * relative_SoC + 21); 
+        return (STANDARD_CHARGE_CURRENT-(-0.21f * relative_SoC + 21) * 5); 
     }
 } 
 
@@ -437,44 +423,44 @@ uint8_t BMS_chargeLimit(uint8_t relative_SoC) {
  * 
  * @retval returns amperage for group of 5 cells (so need to multiply by 5)
  */
-uint8_t BMS_dischargeLimit(uint8_t relative_SoC) { 
+uint8_t BMS_dischargeLimit_SoC(uint8_t relative_SoC) { 
     if (relative_SoC > 20) {
         return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     } else {
-        return (2.25f*relative_SoC) * 5; 
+        return (MAX_CONTINOUS_DISCHARGE_CURRENT-(-2.25f*relative_SoC + 225)) * 5; 
     }
 }
 
 /**
  * @brief Increases/decreases delta discharge limit
  *
- * @param cell_temp temperature of a cell
+ * @param cell_temp temperature of a cell, stored in 0.1°C
  * 
  * @retval returns amperage for group of 5 cells (so need to multiply by 5)
  */
-uint8_t BMS_heatCurrentDischargeLimit(int16_t cell_temp) {
+uint8_t BMS_dischargeLimit_heat(int16_t cell_temp) {
     if (cell_temp/10.0f > 60) {
         return 0;
     } else if (cell_temp/10.0f >= 48) {
-        return (-3.75f * cell_temp/10.0f + 225) * 5; 
+        return (MAX_CONTINOUS_DISCHARGE_CURRENT-(-3.75f * cell_temp/10.0f + 225)) * 5; 
     } else {
         return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     }
 }
 
 /**
- * @brief Increases/decreases delta charge limit, returns amperage for groupe of 5 cells
+ * @brief Increases/decreases delta charge limit
  *
- * @param cell_temp temperature of a cell
+ * @param cell_temp temperature of a cell, stored in 0.1°C
  * 
- * @retval returns amperage for group of 5 cells (so need to multiply by 5)
+ * @retval returns amperage for group of 5 cells in parallel (so need to multiply by 5)
  */
-uint8_t BMS_heatCurrentChargeLimit(int16_t cell_temp) {
-    if (cell_temp/10.0f > 60) {
+uint8_t BMS_chargeLimit_heat(int16_t cell_temp) {
+    if (cell_temp > 600) {
         return 0;
-    } else if (cell_temp/10.0f >= 48) {
-        return (-0.35f * cell_temp/10.0f + 21) * 5;
+    } else if (cell_temp >= 480) {
+        return (STANDARD_CHARGE_CURRENT-(-0.35f * cell_temp/10.0f + 21)) * 5;
     } else {
-        return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
+        return STANDARD_CHARGE_CURRENT * 5;
     }
 }

@@ -15,14 +15,6 @@
  ******************************************************************************/
 
 /**
- * @brief  Calculates the cell capacity in 0.0001Ah from a Voltage in 0.0001V
- *
- * @param tenth_mv unit: 0.1mV
- *
- * @retval unit: 0.1mAh
- */
-
-/**
  * @brief  Calculates State of Charge from voltage
  *
  * @param volt 0.1 mV

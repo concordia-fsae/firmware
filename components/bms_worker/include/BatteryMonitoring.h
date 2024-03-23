@@ -77,7 +77,6 @@ typedef struct
         uint16_t max;
         uint16_t avg;
     } capacity;    // [0.1mAh], precision 0.1mAh
-
     struct
     {
         uint8_t min;
@@ -104,8 +103,8 @@ void BMS_measurementComplete(void);
 
 float BMS_minf(float SoCBasedLimit, float heatBasedLimit);
 
-uint8_t BMS_chargeLimit(uint8_t relativeSoC);
-uint8_t BMS_dischargeLimit(uint8_t relativeSoC);
+uint8_t BMS_chargeLimit_SoC(uint8_t relativeSoC);
+uint8_t BMS_dischargeLimit_SoC(uint8_t relativeSoC);
 
-uint8_t BMS_heatCurrentChargeLimit(int16_t cell_temp);
-uint8_t BMS_heatCurrentDischargeLimit(int16_t cell_temp);
+uint8_t BMS_chargeLimit_heat(int16_t cell_temp);
+uint8_t BMS_dischargeLimit_heat(int16_t cell_temp);
