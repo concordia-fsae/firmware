@@ -22,11 +22,19 @@
  * @retval unit: 0.1mAh
  */
 
-// return a number between (0-100) which represents a percentage
-float CELL_getSoCfromV(float volt)
+/**
+ * @brief  Calculates State of Charge from voltage
+ *
+ * @param volt 0.1 mV
+ *
+ * @retval unit: % from 0-100  
+ */
+uint8_t CELL_getSoCfromV(uint16_t tenth_mv)
 {
     // sets tenth_mv to volts to be used in calculations
-    // float volt = (float)tenth_mv/10000;
+    float32_t volt = (float)tenth_mv/10000;
+
+    // add *2 for more precision later (to use 200 of the 255 available numbers with the uint8_t)
 
     if (volt<=3.407) {
         return (28.177f*volt*volt-151.31f*volt+202.91f);
@@ -34,13 +42,13 @@ float CELL_getSoCfromV(float volt)
     else if (volt<=3.44) {
         return (132.01f*volt-435.2f);
     }
-    else if(volt<=4.054) {
+    else if (volt<=4.054) {
         return (109.75f*volt-359.17f);
     }
-    else if(volt<=4.094) {
+    else if (volt<=4.094) {
         return (-7496.4f*volt*volt+61360.0f*volt-125467.0f);
     }
-    else if(volt>4.094) {
+    else if (volt>4.094) {
         return (-498.39f*volt*volt+4165.6f*volt-8604.0f);
     }
     return 0;

@@ -35,10 +35,6 @@
 
 #define KELVIN_OFFSET 273.15F
 
-#ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
-#define MAX_CONTINOUS_DISCHARGE_CURRENT 45 //in Amps
-#endif
-
 
 /******************************************************************************
  *                              E X T E R N S
@@ -266,8 +262,5 @@ void ENV_calcTempStats(void)
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
-
-
     ENV.values.avg_temp /= connected_channels;
 }
-

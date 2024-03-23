@@ -41,11 +41,11 @@
 #endif
 
 #ifndef STANDARD_CHARGE_CURRENT
-#define STANDARD_CHARGE_CURRENT 4.2 //in Amps
+#define STANDARD_CHARGE_CURRENT 4.2
 #endif
 
 #ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
-#define MAX_CONTINOUS_DISCHARGE_CURRENT 45 //in Amps
+#define MAX_CONTINOUS_DISCHARGE_CURRENT 45 
 #endif
 /******************************************************************************
  *                              E X T E R N S
@@ -290,23 +290,24 @@ void BMS_calcSegStats(void)
     
 
     // initiate the array (room for 8 segments and 16 cells, only 7 and 14 used respectively)
-    uint16_t cell_totalCapacity[8][16] = {{20924,20921,20920,20910,20909,20902,20901,20899,20899,20899,20899,20892,20889,20883,0    ,0}
-                                         ,{20876,20874,20872,20869,20865,20864,20863,20858,20858,20857,20855,20854,20854,20852,0    ,0}
-                                         ,{20851,20851,20850,20849,20848,20848,20847,20847,20847,20846,20846,20846,20845,20845,0    ,0}
-                                         ,{20845,20844,20844,20844,20843,20843,20843,20842,20842,20841,20841,20841,20840,20840,0    ,0}
-                                         ,{20840,20839,20839,20839,20839,20838,20837,20837,20837,20835,20834,20834,20833,20833,0    ,0}
-                                         ,{20832,20831,20830,20830,20828,20827,20826,20825,20822,20819,20817,20816,20815,20815,0    ,0}
-                                         ,{20810,20810,20808,20807,20805,20801,20800,20798,20794,20793,20787,20779,20779,20778,0    ,0}
-                                         ,{0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0}
-                                         };
+    uint16_t cell_total_capacity[8][16] = {{20924,20921,20920,20910,20909,20902,20901,20899,20899,20899,20899,20892,20889,20883,0    ,0}
+                                          ,{20876,20874,20872,20869,20865,20864,20863,20858,20858,20857,20855,20854,20854,20852,0    ,0}
+                                          ,{20851,20851,20850,20849,20848,20848,20847,20847,20847,20846,20846,20846,20845,20845,0    ,0}
+                                          ,{20845,20844,20844,20844,20843,20843,20843,20842,20842,20841,20841,20841,20840,20840,0    ,0}
+                                          ,{20840,20839,20839,20839,20839,20838,20837,20837,20837,20835,20834,20834,20833,20833,0    ,0}
+                                          ,{20832,20831,20830,20830,20828,20827,20826,20825,20822,20819,20817,20816,20815,20815,0    ,0}
+                                          ,{20810,20810,20808,20807,20805,20801,20800,20798,20794,20793,20787,20779,20779,20778,0    ,0}
+                                          ,{0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0}
+                                          };
 
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
         BMS.cells[i].voltage = IO.cell[i] * 10000 - BMS.cells[i].parasitic_corr;
         if (BMS.cells[i].voltage > 25000 && BMS.cells[i].voltage < 42000)
         {
-            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(IO.cell[i]);
-            BMS.cells[i].state    = BMS_CELL_CONNECTED;
+            BMS.cells[i].capacity     = cell_total_capacity[IO.addr][i] * CELL_getSoCfromV(IO.cell[i]);
+            BMS.cells[i].relative_SoC = CELL_getSoCfromV(BMS.cells[i].voltage);
+            BMS.cells[i].state        = BMS_CELL_CONNECTED;
         }
         else
         {
@@ -317,17 +318,17 @@ void BMS_calcSegStats(void)
 
     float32_t batt_tmp = 0;
 
-    BMS.voltage.max             = 0x00;
-    BMS.voltage.min             = UINT16_MAX;
-    BMS.voltage.avg             = 0x00;
-    BMS.capacity.min            = UINT16_MAX;
-    BMS.capacity.max            = 0x00;
-    BMS.capacity.avg            = 0x00;
-    BMS.calculated_pack_voltage = 0x00;
-    BMS.relativeSoC.max         = UINT16_MAX;
-    BMS.relativeSoC.min         = 0x00;
+    BMS.voltage.max              = 0x00;
+    BMS.voltage.min              = UINT16_MAX;
+    BMS.voltage.avg              = 0x00;
+    BMS.capacity.min             = UINT16_MAX;
+    BMS.capacity.max             = 0x00;
+    BMS.capacity.avg             = 0x00;
+    BMS.calculated_pack_voltage  = 0x00;
+    BMS.relative_SoC.max         = UINT16_MAX;
+    BMS.relative_SoC.min         = 0x00;
 
-    
+
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
     {
@@ -335,20 +336,18 @@ void BMS_calcSegStats(void)
         BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
         batt_tmp += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage / 10;
-
-        BMS.cells[i].relativeSoC = CELL_getSoCfromV(BMS.cells[i].voltage);
-        BMS.cells[i].capacity    = cell_totalCapacity[IO.addr][i] * BMS.cells[i].relativeSoC;
     }
 
-    BMS.voltage.avg = batt_tmp / max_chip.state.connected_cells;
+    BMS.voltage.avg     = batt_tmp / max_chip.state.connected_cells;
 
     BMS.relativeSoC.min = CELL_getSoCfromV(BMS.voltage.min);
-    // BMS.capacity.max = BMS.totalCapacity.max * CELL_getSoCfromV(BMS.voltage.max);
-    // BMS.capacity.avg = BMS.totalCapacity.avg * CELL_getSoCfromV(BMS.voltage.avg);
 
-    BMS.dischargeLimit = minimum(BMS_dischargeLimit(BMS.relativeSoC.min), BMS_heatCurrentDischargeLimit(ENV.values.max_temp));
-    BMS.chargeLimit = minimum(BMS_chargeLimit(BMS.relativeSoC.min), BMS_heatCurrentChargeLimit(ENV.values.max_temp));
+    BMS.capacity.max    = BMS.total_capacity.max * CELL_getSoCfromV(BMS.voltage.max);
+    BMS.capacity.avg    = BMS.total_capacity.avg * CELL_getSoCfromV(BMS.voltage.avg);
 
+    // use delta system
+    BMS.discharge_limit  = BMS_minf(BMS_dischargeLimit(BMS.relative_SoC.min), BMS_heatCurrentDischargeLimit(ENV.values.max_temp));
+    BMS.charge_limit     = BMS_minf(BMS_chargeLimit(BMS.relative_SoC.min), BMS_heatCurrentChargeLimit(ENV.values.max_temp));
 }
 
 /**
@@ -403,46 +402,79 @@ void BMS_measurementComplete(void)
     }
 }
 
-float minimum(float SoCBasedLimit, float heatBasedLimit) { // returns min between heat and SoC based limit
+/**
+ * @brief calculates minimum (needs tuning to get minimum of any size array)
+ *
+ * @param SoCBasedLimit state of charge of a cell
+ */
+float BMS_minf(float SoCBasedLimit, float heatBasedLimit) { 
     if (SoCBasedLimit <= heatBasedLimit)
         return SoCBasedLimit;
     else
         return heatBasedLimit;
 }
 
-float BMS_chargeLimit(uint16_t relativeSoC) {
-    if (relativeSoC <= 80){
+/**
+ * @brief Increases/decreases delta charge limit
+ *
+ * @param relativeSoC state of charge of a cell
+ * 
+ * @retval returns amperage for group of 5 cells (so need to multiply by 5)
+ */
+uint8_t BMS_chargeLimit(uint8_t relative_SoC) {
+    if (relative_SoC <= 80){
         return STANDARD_CHARGE_CURRENT;
     } else {
-        return -0.21f * relativeSoC + 21; //linear function for the last 20% of charge
+        return (-0.21f * relative_SoC + 21); 
     }
 } 
 
-float BMS_dischargeLimit(uint16_t relativeSoC) { 
-    if (relativeSoC > 20) {
-        return MAX_CONTINOUS_DISCHARGE_CURRENT;
+/**
+ * @brief Increases/decreases delta discharge limit 
+ *
+ * @param relativeSoC state of charge of a cell
+ * 
+ * @retval returns amperage for group of 5 cells (so need to multiply by 5)
+ */
+uint8_t BMS_dischargeLimit(uint8_t relative_SoC) { 
+    if (relative_SoC > 20) {
+        return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     } else {
-        return 2.25f*relativeSoC; //linear function for the last 20% of discharge
+        return (2.25f*relative_SoC) * 5; 
     }
 }
 
-float BMS_heatCurrentDischargeLimit(int16_t cellTemp) {
-    if (cellTemp >= 48) {
-        return -3.75f * cellTemp + 225; // linear function from 20% of max operating temp (60°C), giving back a current limit of (45A-0A on that range for discharge)
-    } else if (cellTemp > 60) {
+/**
+ * @brief Increases/decreases delta discharge limit
+ *
+ * @param cell_temp temperature of a cell
+ * 
+ * @retval returns amperage for group of 5 cells (so need to multiply by 5)
+ */
+uint8_t BMS_heatCurrentDischargeLimit(int16_t cell_temp) {
+    if (cell_temp/10.0f > 60) {
         return 0;
+    } else if (cell_temp/10.0f >= 48) {
+        return (-3.75f * cellTemp/10.0f + 225) * 5; 
     } else {
-        return MAX_CONTINOUS_DISCHARGE_CURRENT;
+        return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     }
 }
 
-float BMS_heatCurrentChargeLimit(int16_t cellTemp) {
-    if (cellTemp >= 48) {
-        return -0.35f * cellTemp + 21; // linear function from 20% of max operating temp (60°C), giving back a current limit of (4.2A-0A on that range for charge)
-    } else if (cellTemp > 60) {
+/**
+ * @brief Increases/decreases delta charge limit, returns amperage for groupe of 5 cells
+ *
+ * @param cell_temp temperature of a cell
+ * 
+ * @retval returns amperage for group of 5 cells (so need to multiply by 5)
+ */
+uint8_t BMS_heatCurrentChargeLimit(int16_t cell_temp) {
+    if (cell_temp/10.0f > 60) {
         return 0;
+    } else if (cell_temp/10.0f >= 48) {
+        return (-0.35f * cellTemp/10.0f + 21) * 5;
     } else {
-        return MAX_CONTINOUS_DISCHARGE_CURRENT;
+        return MAX_CONTINOUS_DISCHARGE_CURRENT * 5;
     }
 }
 
