@@ -41,4 +41,4 @@ typedef struct
  *                              E X T E R N S
  ******************************************************************************/
 
-extern COOL_S COOLING;
+extern COOL_S COOL;

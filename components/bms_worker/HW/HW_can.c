@@ -392,15 +392,15 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
     switch ((CAN_TX_Priorities_E)mailbox)
     {
         case CAN_TX_PRIO_100HZ:
-            SWI_invokeFromISR(CANTX_BUS_A_100Hz_swi);
+            //SWI_invokeFromISR(CANTX_BUS_A_100Hz_swi);
             break;
         case CAN_TX_PRIO_10HZ:
             // not yet implemented
-            SWI_invokeFromISR(CANTX_BUS_A_10Hz_swi);
+            //SWI_invokeFromISR(CANTX_BUS_A_10Hz_swi);
             break;
         case CAN_TX_PRIO_1HZ:
             // not yet implemented
-            SWI_invokeFromISR(CANTX_BUS_A_1Hz_swi);
+            //SWI_invokeFromISR(CANTX_BUS_A_1Hz_swi);
             break;
         default:
             // should never reach here
