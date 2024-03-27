@@ -197,13 +197,18 @@ static void IO10kHz_PRD(void)
         if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
         {
             static MAX_selectedCell_E current_cell = MAX_CELL_COUNT;
+            static bool started = false;
 
             if (current_cell == MAX_CELL_COUNT)
             {
                 current_cell = BMS.connected_cells - 1;
             }
 
-            BMS_setOutputCell(current_cell);
+            if (!started)
+            {
+                started = true;
+                return;
+            }
 
             IO_Cells_unpackADCBuffer();
 
@@ -216,10 +221,12 @@ static void IO10kHz_PRD(void)
             {
                 BMS_measurementComplete();
                 current_cell = BMS.connected_cells - 1;
+                started = false;
             }
             else
             {
                 current_cell--;
+                BMS_setOutputCell(current_cell);
             }
         }
         else if ((BMS.state == BMS_SAMPLING) || (BMS.state == BMS_PARASITIC))

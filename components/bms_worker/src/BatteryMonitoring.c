@@ -29,23 +29,23 @@
  ******************************************************************************/
 
 #ifndef BMS_CONFIGURED_CELLS
-# define BMS_CONFIGURED_CELLS    4
+# define BMS_CONFIGURED_CELLS 4
 #endif
 
 #ifndef BMS_CONFIGURED_PARALLEL_CELLS
-# define BMS_CONFIGURED_PARALLEL_CELLS    1
+# define BMS_CONFIGURED_PARALLEL_CELLS 1
 #endif
 
 #ifndef BMS_CONFIGURED_SAMPLING_TIME_MS
-# define BMS_CONFIGURED_SAMPLING_TIME_MS    20
+# define BMS_CONFIGURED_SAMPLING_TIME_MS 20
 #endif
 
 #ifndef STANDARD_CHARGE_CURRENT
-#define STANDARD_CHARGE_CURRENT 4.2 //in Amps
+# define STANDARD_CHARGE_CURRENT 4.2    // in Amps
 #endif
 
 #ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
-#define MAX_CONTINOUS_DISCHARGE_CURRENT 45 //in Ampsi
+# define MAX_CONTINOUS_DISCHARGE_CURRENT 45    // in Ampsi
 #endif
 /******************************************************************************
  *                              E X T E R N S
@@ -96,11 +96,11 @@ static void BMS1kHz_PRD()
     {
         if (max_chip.config.sampling_start_100us == UINT32_MAX)
         {
-            max_chip.config.sampling             = false;
-            max_chip.config.diagnostic_enabled   = false;
-            max_chip.config.low_power_mode       = false;
-            max_chip.config.balancing            = 0x00;
-            max_chip.config.output.state         = MAX_PARASITIC_ERROR_CALIBRATION;
+            max_chip.config.sampling           = false;
+            max_chip.config.diagnostic_enabled = false;
+            max_chip.config.low_power_mode     = false;
+            max_chip.config.balancing          = 0x00;
+            max_chip.config.output.state       = MAX_PARASITIC_ERROR_CALIBRATION;
 
             MAX_readWriteToChip();
             max_chip.config.sampling_start_100us = HW_getTick();
@@ -117,11 +117,11 @@ static void BMS1kHz_PRD()
     {
         if (max_chip.config.sampling_start_100us == UINT32_MAX)
         {
-            max_chip.config.sampling             = true;
-            max_chip.config.low_power_mode       = false;
-            max_chip.config.balancing            = 0x00;
-            max_chip.config.output.state         = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell   = MAX_CELL1; /**< Prepare for next step */
+            max_chip.config.sampling           = true;
+            max_chip.config.low_power_mode     = false;
+            max_chip.config.balancing          = 0x00;
+            max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+            max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
 
             MAX_readWriteToChip();
             max_chip.config.sampling_start_100us = HW_getTick();
@@ -133,16 +133,17 @@ static void BMS1kHz_PRD()
             max_chip.config.diagnostic_enabled   = false;
             BMS.state                            = BMS_HOLDING;
             BMS.pack_voltage                     = IO.segment * 1000 * 16;
+            BMS_setOutputCell(BMS.connected_cells - 1);
         }
     }
     else if (BMS.state == BMS_WAITING)
     {
         BMS.state                            = BMS_SAMPLING;
         max_chip.config.diagnostic_enabled   = false;
-        max_chip.config.low_power_mode     = false;
+        max_chip.config.low_power_mode       = false;
         max_chip.config.sampling_start_100us = UINT32_MAX;
         BMS_calcSegStats();
-        BMS_checkError();    /**< If cells are in error, it will override from sampling state */
+        BMS_checkError(); /**< If cells are in error, it will override from sampling state */
     }
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
@@ -157,8 +158,8 @@ static void BMS1kHz_PRD()
             max_chip.config.sampling_start_100us = UINT32_MAX;
             MAX_readWriteToChip();
 
-            BMS.state                            = BMS_SAMPLING;
-            max_chip.config.diagnostic_enabled   = true;
+            BMS.state                          = BMS_SAMPLING;
+            max_chip.config.diagnostic_enabled = true;
         }
     }
     else if (BMS.state == BMS_CALIBRATING)
@@ -194,19 +195,19 @@ static void BMS1Hz_PRD()
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
 
             MAX_readWriteToChip();
-            start_time                         = HW_getTick();
+            start_time = HW_getTick();
             return;
         }
         else if (start_time + 1000 > HW_getTick())
         {
-            return;    /**< wait atleast 100ms to sample the voltages for the first time */
+            return; /**< wait atleast 100ms to sample the voltages for the first time */
         }
 
         max_chip.config.sampling           = false;
         max_chip.config.diagnostic_enabled = false;
 
         MAX_readWriteToChip();
-        MAX_readWriteToChip();    /**< Re-read to get updated undervoltage information */
+        MAX_readWriteToChip(); /**< Re-read to get updated undervoltage information */
 
         for (uint8_t i = 0; i < MAX_CELL_COUNT; i++)
         {
@@ -238,7 +239,7 @@ static void BMS1Hz_PRD()
 
         BMS.connected_cells = max_chip.state.connected_cells;
 
-        BMS.state           = BMS_PARASITIC;
+        BMS.state = BMS_PARASITIC;
         return;
     }
 
@@ -251,14 +252,14 @@ static void BMS1Hz_PRD()
         max_chip.config.low_power_mode     = false;
         max_chip.config.balancing          = 0x00;
         max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
-        max_chip.config.output.output.cell = MAX_CELL1;    /**< Prepare for next step */
+        max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
         MAX_readWriteToChip();
 
         max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-        max_chip.config.output.output.cell = MAX_CELL1;    /**< Prepare for next step */
+        max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
         MAX_readWriteToChip();
 
-        BMS.state                          = BMS_CALIBRATING;
+        BMS.state = BMS_CALIBRATING;
     }
 
     while (BMS.state == BMS_CALIBRATING)
@@ -266,12 +267,12 @@ static void BMS1Hz_PRD()
         ;
     }
 
-    max_chip.config.diagnostic_enabled   = true;
-    max_chip.config.sampling             = true;
-    max_chip.config.low_power_mode       = false;
-    max_chip.config.balancing            = 0x00;
-    max_chip.config.output.state         = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell   = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.diagnostic_enabled = true;
+    max_chip.config.sampling           = true;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
     MAX_readWriteToChip();
 
     max_chip.config.sampling_start_100us = HW_getTick();
@@ -296,18 +297,8 @@ const ModuleDesc_S BMS_desc = {
  */
 void BMS_calcSegStats(void)
 {
-    
-
     // initiate the array (room for 8 segments and 16 cells, only 7 and 14 used respectively)
-    uint16_t cell_totalCapacity[8][16] = {{20924,20921,20920,20910,20909,20902,20901,20899,20899,20899,20899,20892,20889,20883,0    ,0}
-                                        ,{20876,20874,20872,20869,20865,20864,20863,20858,20858,20857,20855,20854,20854,20852,0    ,0}
-                                        ,{20851,20851,20850,20849,20848,20848,20847,20847,20847,20846,20846,20846,20845,20845,0    ,0}
-                                        ,{20845,20844,20844,20844,20843,20843,20843,20842,20842,20841,20841,20841,20840,20840,0    ,0}
-                                        ,{20840,20839,20839,20839,20839,20838,20837,20837,20837,20835,20834,20834,20833,20833,0    ,0}
-                                        ,{20832,20831,20830,20830,20828,20827,20826,20825,20822,20819,20817,20816,20815,20815,0    ,0}
-                                        ,{20810,20810,20808,20807,20805,20801,20800,20798,20794,20793,20787,20779,20779,20778,0    ,0}
-                                        ,{0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0    ,0}
-                                        };
+    uint16_t cell_totalCapacity[8][16] = { { 20924, 20921, 20920, 20910, 20909, 20902, 20901, 20899, 20899, 20899, 20899, 20892, 20889, 20883, 0, 0 }, { 20876, 20874, 20872, 20869, 20865, 20864, 20863, 20858, 20858, 20857, 20855, 20854, 20854, 20852, 0, 0 }, { 20851, 20851, 20850, 20849, 20848, 20848, 20847, 20847, 20847, 20846, 20846, 20846, 20845, 20845, 0, 0 }, { 20845, 20844, 20844, 20844, 20843, 20843, 20843, 20842, 20842, 20841, 20841, 20841, 20840, 20840, 0, 0 }, { 20840, 20839, 20839, 20839, 20839, 20838, 20837, 20837, 20837, 20835, 20834, 20834, 20833, 20833, 0, 0 }, { 20832, 20831, 20830, 20830, 20828, 20827, 20826, 20825, 20822, 20819, 20817, 20816, 20815, 20815, 0, 0 }, { 20810, 20810, 20808, 20807, 20805, 20801, 20800, 20798, 20794, 20793, 20787, 20779, 20779, 20778, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
@@ -333,27 +324,30 @@ void BMS_calcSegStats(void)
     BMS.capacity.max            = 0x00;
     BMS.capacity.avg            = 0x00;
     BMS.calculated_pack_voltage = 0x00;
-    BMS.relativeSoC.max       = UINT16_MAX;
-    BMS.relativeSoC.min       = 0x00;
+    BMS.relativeSoC.max         = 0x00;
+    BMS.relativeSoC.min         = UINT16_MAX;
 
-    
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
     {
-        BMS.voltage.max              = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
-        BMS.voltage.min              = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
-        batt_tmp                    += BMS.cells[i].voltage;
+        BMS.voltage.max = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
+        BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
+        batt_tmp += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage / 10;
 
-        BMS.cells[i].relativeSoC = CELL_getSoCfromV(BMS.cells[i].voltage);
+        BMS.cells[i].relativeSoC = CELL_getSoCfromV(((float)BMS.cells[i].voltage) / 10000);
         BMS.cells[i].capacity    = cell_totalCapacity[IO.addr][i] * BMS.cells[i].relativeSoC;
     }
 
-    BMS.voltage.avg  = batt_tmp / max_chip.state.connected_cells;
+    BMS.voltage.avg = batt_tmp / max_chip.state.connected_cells;
 
-    BMS.relativeSoC.min = CELL_getSoCfromV(BMS.voltage.min);
-    // BMS.capacity.max = BMS.totalCapacity.max * CELL_getSoCfromV(BMS.voltage.max);
-    // BMS.capacity.avg = BMS.totalCapacity.avg * CELL_getSoCfromV(BMS.voltage.avg);
+    BMS.relativeSoC.min = CELL_getSoCfromV(((float)BMS.voltage.min) / 10000);
+    BMS.relativeSoC.max = CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
+    BMS.relativeSoC.avg = CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
+
+    BMS.capacity.max = 42 * CELL_getSoCfromV(((float)BMS.voltage.min) / 10000);
+    BMS.capacity.max = 42 * CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
+    BMS.capacity.avg = 42 * CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
 
     BMS_DischargeLimit(BMS.relativeSoC.min);
     BMS_ChargeLimit(BMS.relativeSoC.min);
@@ -399,8 +393,8 @@ void BMS_measurementComplete(void)
 {
     if (BMS.state == BMS_HOLDING)
     {
-        BMS.state = BMS_WAITING;
-        max_chip.config.low_power_mode     = true;
+        BMS.state                      = BMS_WAITING;
+        max_chip.config.low_power_mode = true;
         MAX_readWriteToChip();
     }
     else if (BMS.state == BMS_PARASITIC_MEASUREMENT)
@@ -413,18 +407,26 @@ void BMS_measurementComplete(void)
     }
 }
 
-void BMS_ChargeLimit(uint16_t relativeSoC) {
-    if (relativeSoC <= 80){
+void BMS_ChargeLimit(uint16_t relativeSoC)
+{
+    if (relativeSoC <= 80)
+    {
         BMS.chargeLimit = STANDARD_CHARGE_CURRENT;
-    } else {
-        BMS.chargeLimit = -21*relativeSoC/100+21; //linear function for the last 20% of charge
     }
-} 
+    else
+    {
+        BMS.chargeLimit = -21 * relativeSoC / 100 + 21;    // linear function for the last 20% of charge
+    }
+}
 
-void BMS_DischargeLimit(uint16_t relativeSoC) { 
-    if (relativeSoC > 20) {
+void BMS_DischargeLimit(uint16_t relativeSoC)
+{
+    if (relativeSoC > 20)
+    {
         BMS.dischargeLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
-    } else {
-        BMS.dischargeLimit = 2.25f*relativeSoC; //linear function for the last 20% of discharge
+    }
+    else
+    {
+        BMS.dischargeLimit = 2.25f * relativeSoC;    // linear function for the last 20% of discharge
     }
 }
