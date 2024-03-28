@@ -27,6 +27,10 @@ float CELL_getSoCfromV(float volt)
 {
     // sets tenth_mv to volts to be used in calculations
     // float volt = (float)tenth_mv/10000;
+    if (volt <= 2.7f || volt >= 4.15f)
+    {
+        return 0;
+    }
 
     if (volt<=3.407) {
         return (28.177f*volt*volt-151.31f*volt+202.91f);
@@ -43,6 +47,7 @@ float CELL_getSoCfromV(float volt)
     else if(volt>4.094) {
         return (-498.39f*volt*volt+4165.6f*volt-8604.0f);
     }
+
     return 0;
 }
 

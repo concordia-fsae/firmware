@@ -21,6 +21,18 @@
 
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#ifndef BMS_CONFIGURED_SERIES_CELLS
+# define BMS_CONFIGURED_SERIES_CELLS 4
+#endif
+
+#ifndef BMS_CONFIGURED_PARALLEL_CELLS
+# define BMS_CONFIGURED_PARALLEL_CELLS 1
+#endif
+
+/******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
@@ -35,6 +47,7 @@ typedef enum
     BMS_SAMPLING,
     BMS_DIAGNOSTIC,
     BMS_BALANCING,
+    BMS_FAULT,
     BMS_ERROR,
 } BMS_State_E;
 

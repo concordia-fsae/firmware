@@ -63,6 +63,7 @@ typedef enum
 {
     ENV_INIT = 0x00,
     ENV_RUNNING,
+    ENV_FAULT,
     ENV_ERROR,
 } Environment_State_E;
 
