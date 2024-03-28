@@ -59,6 +59,8 @@ BMS_S BMS;
 
 void BMS_calcSegStats(void);
 void BMS_checkError(void);
+void BMS_chargeLimit(void);
+void BMS_dischargeLimit(void);
 
 
 /******************************************************************************
@@ -312,20 +314,15 @@ const ModuleDesc_S BMS_desc = {
  */
 void BMS_calcSegStats(void)
 {
-    // initiate the array (room for 8 segments and 16 cells, only 7 and 14 used respectively)
-    uint16_t cell_totalCapacity[8][16] = { { 20924, 20921, 20920, 20910, 20909, 20902, 20901, 20899, 20899, 20899, 20899, 20892, 20889, 20883, 0, 0 }, { 20876, 20874, 20872, 20869, 20865, 20864, 20863, 20858, 20858, 20857, 20855, 20854, 20854, 20852, 0, 0 }, { 20851, 20851, 20850, 20849, 20848, 20848, 20847, 20847, 20847, 20846, 20846, 20846, 20845, 20845, 0, 0 }, { 20845, 20844, 20844, 20844, 20843, 20843, 20843, 20842, 20842, 20841, 20841, 20841, 20840, 20840, 0, 0 }, { 20840, 20839, 20839, 20839, 20839, 20838, 20837, 20837, 20837, 20835, 20834, 20834, 20833, 20833, 0, 0 }, { 20832, 20831, 20830, 20830, 20828, 20827, 20826, 20825, 20822, 20819, 20817, 20816, 20815, 20815, 0, 0 }, { 20810, 20810, 20808, 20807, 20805, 20801, 20800, 20798, 20794, 20793, 20787, 20779, 20779, 20778, 0, 0 }, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
-
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
         BMS.cells[i].voltage = IO.cell[i] * 10000 + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > 25000) && (BMS.cells[i].voltage < 42000))
         {
-            BMS.cells[i].capacity = BMS_CONFIGURED_PARALLEL_CELLS * CELL_getSoCfromV(IO.cell[i]);
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
         {
-            BMS.cells[i].capacity = 0;
             BMS.cells[i].state    = BMS_CELL_ERROR;
         }
     }
@@ -336,20 +333,16 @@ void BMS_calcSegStats(void)
     BMS.voltage.max             = 0x00;
     BMS.voltage.min             = UINT16_MAX;
     BMS.voltage.avg             = 0x00;
-    BMS.capacity.min            = UINT16_MAX;
-    BMS.capacity.max            = 0x00;
-    BMS.capacity.avg            = 0x00;
     BMS.calculated_pack_voltage = 0x00;
-    BMS.relativeSoC.max         = 0x00;
-    BMS.relativeSoC.min         = UINT16_MAX;
+    BMS.relative_soc.max         = 0x00;
+    BMS.relative_soc.min         = UINT16_MAX;
 
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
     {
         if (BMS.cells[i].state == BMS_CELL_ERROR)
         {
-            BMS.cells[i].relativeSoC = 0;
-            BMS.cells[i].capacity    = 0;
+            BMS.cells[i].relative_soc = 0;
             BMS.state                = BMS_FAULT;
             continue;
         }
@@ -360,8 +353,7 @@ void BMS_calcSegStats(void)
         batt_tmp += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage / 10;
 
-        BMS.cells[i].relativeSoC = CELL_getSoCfromV(((float)BMS.cells[i].voltage) / 10000);
-        BMS.cells[i].capacity    = cell_totalCapacity[IO.addr][i] * BMS.cells[i].relativeSoC;
+        BMS.cells[i].relative_soc = CELL_getSoCfromV(((float)BMS.cells[i].voltage) / 10000);
     }
 
     BMS.voltage.avg = batt_tmp / tmp_count;
@@ -371,26 +363,14 @@ void BMS_calcSegStats(void)
         BMS.voltage.min = 0;
     }
 
-    BMS.relativeSoC.min = CELL_getSoCfromV(((float)BMS.voltage.min) / 10000);
-    BMS.relativeSoC.max = CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
-    BMS.relativeSoC.avg = CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
-
-    BMS.capacity.max = 42 * CELL_getSoCfromV(((float)BMS.voltage.min) / 10000);
-    BMS.capacity.max = 42 * CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
-    BMS.capacity.avg = 42 * CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
+    BMS.relative_soc.min = CELL_getSoCfromV(((float)BMS.voltage.min) / 10000);
+    BMS.relative_soc.max = CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
+    BMS.relative_soc.avg = CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
 
     BMS_checkError(); // If cells are in error, it will override from sampling state
 
-    if (BMS.state == BMS_FAULT)
-    {
-        BMS.dischargeLimit = 0;
-        BMS.chargeLimit    = 0;
-
-        return;
-    }
-
-    BMS_DischargeLimit(BMS.relativeSoC.min);
-    BMS_ChargeLimit(BMS.relativeSoC.min);
+    BMS_dischargeLimit();
+    BMS_chargeLimit();
 }
 
 /**
@@ -452,38 +432,38 @@ void BMS_measurementComplete(void)
     }
 }
 
-void BMS_ChargeLimit(uint16_t relativeSoC)
+void BMS_chargeLimit()
 {
-    if (relativeSoC == 0 || relativeSoC == 100)
+    if (BMS.relative_soc.max == 100 || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.state == BMS_FAULT || BMS.state == BMS_ERROR)
     {
-        BMS.chargeLimit = 0;
+        BMS.charge_limit = 0;
         return;
     }
 
-    if (relativeSoC <= 80)
+    if (BMS.relative_soc.max <= 80)
     {
-        BMS.chargeLimit = STANDARD_CHARGE_CURRENT;
+        BMS.charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
     else
     {
-        BMS.chargeLimit = -21 * relativeSoC / 100 + 21;    // linear function for the last 20% of charge
+        BMS.charge_limit = (-21 * BMS.relative_soc.max / 100 + 21) * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
     }
 }
 
-void BMS_DischargeLimit(uint16_t relativeSoC)
+void BMS_dischargeLimit()
 {
-    if (relativeSoC == 0 || relativeSoC == 100)
+    if (BMS.relative_soc.min == 0 || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.state == BMS_FAULT || BMS.state == BMS_ERROR)
     {
-        BMS.dischargeLimit = 0;
+        BMS.discharge_limit = 0;
         return;
     }
 
-    if (relativeSoC > 20)
+    if (BMS.relative_soc.min > 20)
     {
-        BMS.dischargeLimit = MAX_CONTINOUS_DISCHARGE_CURRENT;
+        BMS.discharge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
     else
     {
-        BMS.dischargeLimit = 2.25f * relativeSoC;    // linear function for the last 20% of discharge
+        BMS.discharge_limit = 2.25f * BMS.relative_soc.min * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
     }
 }

@@ -111,10 +111,9 @@ void CANTX_BUS_A_1kHz_SWI(void)
                                                &message_100Hz,
                                                &counter_100Hz);
 
-    if (entry_100Hz != NULL)
+    if (entry_100Hz != NULL && CAN_getRxFifoFillLevelBus0(CAN_TX_PRIO_100HZ) == 0)
     {
         CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message_100Hz, MSG_UID_SEGMENT(entry_100Hz->id), entry_100Hz->len);
-        return;
     }
     
     // TODO: add overrun detection here
@@ -133,10 +132,9 @@ continue1:
                                                &message_10Hz,
                                                &counter_10Hz);
 
-    if (entry_10Hz != NULL)
+    if (entry_10Hz != NULL && CAN_getRxFifoFillLevelBus0(CAN_TX_PRIO_10HZ) == 0)
     {
         CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_10Hz, MSG_UID_SEGMENT(entry_10Hz->id), entry_10Hz->len);
-        return;
     }
     
     // TODO: add overrun detection here
@@ -155,10 +153,9 @@ continue2:
                                                &message_1Hz,
                                                &counter_1Hz);
 
-    if (entry_1Hz != NULL)
+    if (entry_1Hz != NULL && CAN_getRxFifoFillLevelBus0(CAN_TX_PRIO_1HZ) == 0)
     {
         CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message_1Hz, MSG_UID_SEGMENT(entry_1Hz->id), entry_1Hz->len);
-        return;
     }
 }
 
@@ -202,11 +199,11 @@ static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter)
 static bool MSG_pack_BMS_100Hz1(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u16[0] = BMS.relativeSoC.min;
-    message->u16[1] = BMS.relativeSoC.max;
-    message->u16[2] = BMS.relativeSoC.avg;
-    message->u8[6] = BMS.dischargeLimit;
-    message->u8[7] = BMS.chargeLimit;
+    message->u16[0] = BMS.relative_soc.min;
+    message->u16[1] = BMS.relative_soc.max;
+    message->u16[2] = BMS.relative_soc.avg;
+    message->u8[6] = BMS.discharge_limit;
+    message->u8[7] = BMS.charge_limit;
     return true;
 }
 
