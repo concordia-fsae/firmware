@@ -319,11 +319,11 @@ void BMS_calcSegStats(void)
         BMS.cells[i].voltage = IO.cell[i] * 10000 + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > 25000) && (BMS.cells[i].voltage < 42000))
         {
-            BMS.cells[i].state    = BMS_CELL_CONNECTED;
+            BMS.cells[i].state = BMS_CELL_CONNECTED;
         }
         else
         {
-            BMS.cells[i].state    = BMS_CELL_ERROR;
+            BMS.cells[i].state = BMS_CELL_ERROR;
         }
     }
 
@@ -334,8 +334,8 @@ void BMS_calcSegStats(void)
     BMS.voltage.min             = UINT16_MAX;
     BMS.voltage.avg             = 0x00;
     BMS.calculated_pack_voltage = 0x00;
-    BMS.relative_soc.max         = 0x00;
-    BMS.relative_soc.min         = UINT16_MAX;
+    BMS.relative_soc.max        = 0x00;
+    BMS.relative_soc.min        = UINT16_MAX;
 
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
@@ -343,7 +343,7 @@ void BMS_calcSegStats(void)
         if (BMS.cells[i].state == BMS_CELL_ERROR)
         {
             BMS.cells[i].relative_soc = 0;
-            BMS.state                = BMS_FAULT;
+            BMS.state                 = BMS_FAULT;
             continue;
         }
 
@@ -367,7 +367,7 @@ void BMS_calcSegStats(void)
     BMS.relative_soc.max = CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
     BMS.relative_soc.avg = CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
 
-    BMS_checkError(); // If cells are in error, it will override from sampling state
+    BMS_checkError();    // If cells are in error, it will override from sampling state
 
     BMS_dischargeLimit();
     BMS_chargeLimit();
@@ -448,6 +448,15 @@ void BMS_chargeLimit()
     {
         BMS.charge_limit = (-21 * BMS.relative_soc.max / 100 + 21) * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
     }
+    
+    if (ENV.values.max_temp > 600)
+    {
+        BMS.charge_limit = 0;
+    }
+    else if (ENV.values.max_temp >= 480)
+    {
+         BMS.charge_limit -= (-0.35f * ENV.values.max_temp / 10.0f + 21) * BMS_CONFIGURED_PARALLEL_CELLS;
+    }
 }
 
 void BMS_dischargeLimit()
@@ -465,5 +474,15 @@ void BMS_dischargeLimit()
     else
     {
         BMS.discharge_limit = 2.25f * BMS.relative_soc.min * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+    }
+
+    if (ENV.values.max_temp > 600)
+    {
+        BMS.discharge_limit = 0;
+        return;
+    }
+    else if (ENV.values.max_temp >= 480)
+    {
+        BMS.discharge_limit -= (-3.75f * ENV.values.max_temp / 10.0f + 225) * BMS_CONFIGURED_PARALLEL_CELLS;
     }
 }

@@ -287,7 +287,7 @@ void ENV_calcTempStats(void)
     ENV.values.avg_temp /= connected_channels;
 
     if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) || 
-        connected_channels == 0)
+        connected_channels == 0 || ENV.values.max_temp >= 600)
     {
         ENV.state = ENV_FAULT;
     }
