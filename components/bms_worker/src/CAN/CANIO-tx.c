@@ -19,9 +19,9 @@
 
 // imports for data access
 #include "BatteryMonitoring.h"
-#include "IO.h"
-#include "Environment.h"
 #include "Cooling.h"
+#include "Environment.h"
+#include "IO.h"
 
 
 /******************************************************************************
@@ -59,7 +59,7 @@ static cantx_S cantx;
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           const uint8_t      packTableLength,
-                                          uint8_t*           index,
+                                          const uint8_t*     index,
                                           CAN_data_T*        message,
                                           uint8_t*           nextCounter);
 
@@ -94,7 +94,7 @@ static const packTable_S MSG_packTable_1Hz[] = {
  * CANTX_BUS_A_1ms_SWI
  * send BUS_A messages
  */
-void CANTX_BUS_A_1kHz_SWI(void)
+void CANTX_BUS_A_SWI(void)
 {
     // TODO: add overrun detection here
     if (cantx.tx_100Hz_msg == MSG_packTable_100Hz_SIZE)
@@ -106,16 +106,19 @@ void CANTX_BUS_A_1kHz_SWI(void)
     CAN_data_T     message_100Hz;
 
     const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&MSG_packTable_100Hz,
-                                               MSG_packTable_100Hz_SIZE,
-                                               &cantx.tx_100Hz_msg,
-                                               &message_100Hz,
-                                               &counter_100Hz);
+                                                     MSG_packTable_100Hz_SIZE,
+                                                     &cantx.tx_100Hz_msg,
+                                                     &message_100Hz,
+                                                     &counter_100Hz);
 
-    if (entry_100Hz != NULL && CAN_getRxFifoFillLevelBus0(CAN_TX_PRIO_100HZ) == 0)
+    if (entry_100Hz != NULL)
     {
-        CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message_100Hz, MSG_UID_SEGMENT(entry_100Hz->id), entry_100Hz->len);
+        if (CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message_100Hz, MSG_UID_SEGMENT(entry_100Hz->id), entry_100Hz->len))
+        {
+            cantx.tx_100Hz_msg++;
+        }
     }
-    
+
     // TODO: add overrun detection here
 continue1:
     if (cantx.tx_10Hz_msg == MSG_packTable_10Hz_SIZE)
@@ -127,16 +130,19 @@ continue1:
     CAN_data_T     message_10Hz;
 
     const packTable_S* entry_10Hz = packNextMessage((const packTable_S*)&MSG_packTable_10Hz,
-                                               MSG_packTable_10Hz_SIZE,
-                                               &cantx.tx_10Hz_msg,
-                                               &message_10Hz,
-                                               &counter_10Hz);
+                                                    MSG_packTable_10Hz_SIZE,
+                                                    &cantx.tx_10Hz_msg,
+                                                    &message_10Hz,
+                                                    &counter_10Hz);
 
-    if (entry_10Hz != NULL && CAN_getRxFifoFillLevelBus0(CAN_TX_PRIO_10HZ) == 0)
+    if (entry_10Hz != NULL)
     {
-        CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_10Hz, MSG_UID_SEGMENT(entry_10Hz->id), entry_10Hz->len);
+        if (CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_10Hz, MSG_UID_SEGMENT(entry_10Hz->id), entry_10Hz->len))
+        {
+            cantx.tx_10Hz_msg++;
+        }
     }
-    
+
     // TODO: add overrun detection here
 continue2:
     if (cantx.tx_1Hz_msg == MSG_packTable_1Hz_SIZE)
@@ -148,14 +154,17 @@ continue2:
     CAN_data_T     message_1Hz;
 
     const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&MSG_packTable_1Hz,
-                                               MSG_packTable_1Hz_SIZE,
-                                               &cantx.tx_1Hz_msg,
-                                               &message_1Hz,
-                                               &counter_1Hz);
+                                                   MSG_packTable_1Hz_SIZE,
+                                                   &cantx.tx_1Hz_msg,
+                                                   &message_1Hz,
+                                                   &counter_1Hz);
 
-    if (entry_1Hz != NULL && CAN_getRxFifoFillLevelBus0(CAN_TX_PRIO_1HZ) == 0)
+    if (entry_1Hz != NULL)
     {
-        CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message_1Hz, MSG_UID_SEGMENT(entry_1Hz->id), entry_1Hz->len);
+        if (CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message_1Hz, MSG_UID_SEGMENT(entry_1Hz->id), entry_1Hz->len))
+        {
+            cantx.tx_1Hz_msg++;
+        }
     }
 }
 
@@ -165,24 +174,27 @@ continue2:
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           const uint8_t      packTableLength,
-                                          uint8_t*           index,
+                                          const uint8_t*     index,
                                           CAN_data_T*        message,
                                           uint8_t*           nextCounter)
 {
     while (*index < packTableLength)
     {
-        const packTable_S* entry   = &packTable[(*index)++];
+        const packTable_S* entry   = &packTable[*index];
         uint16_t           counter = *nextCounter;
-        if (*index == packTableLength)
-        {
-            (*nextCounter)++;
-        }
+
         message->u64 = 0ULL;
         if ((*entry->pack)(message, counter))
         {
             return entry;
         }
     }
+
+    if (*index == packTableLength)
+    {
+        (*nextCounter)++;
+    }
+
     return NULL;
 }
 
@@ -192,7 +204,12 @@ static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter)
     message->u16[0] = BMS.voltage.min;
     message->u16[1] = BMS.voltage.max;
     message->u16[2] = BMS.voltage.avg;
-    message->u16[3] = BMS.calculated_pack_voltage; 
+    message->u8[6]  = ((float32_t)BMS.calculated_pack_voltage) / 20000;    // Gives range 0-510V
+    message->u8[7]  = (BMS.state == BMS_ERROR) ? 0x01 << 7 : 0U | (BMS.fault)            ? 0x01 << 6
+                                                         : 0U | (ENV.state == ENV_ERROR) ? 0x01 << 5
+                                                         : 0U | (ENV.state == ENV_FAULT) ? 0x01 << 4
+                                                                                         : 0U;
+
     return true;
 }
 
@@ -202,8 +219,8 @@ static bool MSG_pack_BMS_100Hz1(CAN_data_T* message, const uint8_t counter)
     message->u16[0] = BMS.relative_soc.min;
     message->u16[1] = BMS.relative_soc.max;
     message->u16[2] = BMS.relative_soc.avg;
-    message->u8[6] = BMS.discharge_limit;
-    message->u8[7] = BMS.charge_limit;
+    message->u8[6]  = BMS.discharge_limit;
+    message->u8[7]  = BMS.charge_limit;
     return true;
 }
 
@@ -220,10 +237,10 @@ static bool MSG_pack_BMS_100Hz2(CAN_data_T* message, const uint8_t counter)
 static bool MSG_pack_BMS_100Hz3(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u8[0] = ENV.values.board.mcu_temp/10;
-    message->u8[1] = ENV.values.board.brd_temp[0]/10;
-    message->u8[2] = ENV.values.board.brd_temp[1]/10;
-    message->u8[3] = ENV.values.max_temp/10;
+    message->u8[0]  = ENV.values.board.mcu_temp / 10;
+    message->u8[1]  = ENV.values.board.brd_temp[0] / 10;
+    message->u8[2]  = ENV.values.board.brd_temp[1] / 10;
+    message->u8[3]  = ENV.values.max_temp / 10;
     message->u16[3] = COOL.rpm[0];
     message->u16[4] = COOL.rpm[1];
     return true;
@@ -243,9 +260,14 @@ static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter)
     return false;
 }
 
+static void CANIO_tx_10kHz_PRD(void)
+{
+    SWI_invoke(CANTX_BUS_A_swi);
+}
+
 static void CANIO_tx_1kHz_PRD(void)
 {
-    SWI_invoke(CANTX_BUS_A_1kHz_swi);
+    // SWI_invoke(CANTX_BUS_A_1kHz_swi);
 }
 
 /**
@@ -254,7 +276,6 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_100Hz_PRD(void)
 {
-    // transmit 100Hz messages
     cantx.tx_100Hz_msg = 0U;
 }
 
@@ -285,7 +306,8 @@ static void CANIO_tx_init(void)
 
 const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
-    .periodic1kHz_CLK = &CANIO_tx_1kHz_PRD,
+    .periodic10kHz_CLK = &CANIO_tx_10kHz_PRD,
+    .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
     .periodic100Hz_CLK = &CANIO_tx_100Hz_PRD,
     .periodic10Hz_CLK  = &CANIO_tx_10Hz_PRD,
     .periodic1Hz_CLK   = &CANIO_tx_1Hz_PRD,

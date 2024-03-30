@@ -29,6 +29,7 @@
 
 HW_StatusTypeDef_E HW_CAN_start(void);
 HW_StatusTypeDef_E HW_CAN_stop(void);
+bool HW_CAN_checkMbFree(CAN_TxMailbox_E mailbox);
 
 HW_StatusTypeDef_E HW_CAN_init(void);
 HW_StatusTypeDef_E HW_CAN_deInit(void);

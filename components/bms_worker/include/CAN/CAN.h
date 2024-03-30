@@ -20,5 +20,5 @@
  ******************************************************************************/
 
 // Transmitter
-extern RTOS_swiHandle_T* CANTX_BUS_A_1kHz_swi;
-extern void CANTX_BUS_A_1kHz_SWI(void);  // Prototype for SWI function
+extern RTOS_swiHandle_T* CANTX_BUS_A_swi;
+extern void CANTX_BUS_A_SWI(void);  // Prototype for SWI function

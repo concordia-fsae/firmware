@@ -47,7 +47,6 @@ typedef enum
     BMS_SAMPLING,
     BMS_DIAGNOSTIC,
     BMS_BALANCING,
-    BMS_FAULT,
     BMS_ERROR,
 } BMS_State_E;
 
@@ -69,14 +68,15 @@ typedef struct
 typedef struct
 {
     BMS_State_E state;
+    bool        fault;
     uint16_t    balancing_cells;
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [mv], precision 1mv
     uint16_t    pack_voltage;               // [mv], precision 1mv
     uint16_t    calculated_pack_voltage;    // [mv], precision 1mv
-    uint8_t connected_cells;
+    uint8_t     connected_cells;
 
-    float       charge_limit;
-    float       discharge_limit;
+    float charge_limit;
+    float discharge_limit;
 
     struct
     {
@@ -89,7 +89,7 @@ typedef struct
         uint16_t min;
         uint16_t max;
         uint16_t avg;
-    } relative_soc;    // number from 0-100 
+    } relative_soc;    // number from 0-100
 } BMS_S;
 
 
