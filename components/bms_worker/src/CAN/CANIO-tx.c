@@ -204,7 +204,7 @@ static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter)
     message->u16[0] = BMS.voltage.min;
     message->u16[1] = BMS.voltage.max;
     message->u16[2] = BMS.voltage.avg;
-    message->u8[6]  = ((float32_t)BMS.calculated_pack_voltage) / 20000;    // Gives range 0-510V
+    message->u8[6]  = (BMS.calculated_pack_voltage) / 2;    // Gives range 0-510V
     message->u8[7]  = (BMS.state == BMS_ERROR) ? 0x01 << 7 : 0U | (BMS.fault)            ? 0x01 << 6
                                                          : 0U | (ENV.state == ENV_ERROR) ? 0x01 << 5
                                                          : 0U | (ENV.state == ENV_FAULT) ? 0x01 << 4
@@ -237,10 +237,10 @@ static bool MSG_pack_BMS_100Hz2(CAN_data_T* message, const uint8_t counter)
 static bool MSG_pack_BMS_100Hz3(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u8[0]  = ENV.values.board.mcu_temp / 10;
-    message->u8[1]  = ENV.values.board.brd_temp[0] / 10;
-    message->u8[2]  = ENV.values.board.brd_temp[1] / 10;
-    message->u8[3]  = ENV.values.max_temp / 10;
+    message->u8[0]  = ENV.values.board.mcu_temp;
+    message->u8[1]  = ENV.values.board.brd_temp[0];
+    message->u8[2]  = ENV.values.board.brd_temp[1];
+    message->u8[3]  = ENV.values.max_temp;
     message->u16[3] = COOL.rpm[0];
     message->u16[4] = COOL.rpm[1];
     return true;

@@ -59,9 +59,9 @@ typedef enum
 
 typedef struct
 {
-    uint16_t   voltage;
-    uint16_t   parasitic_corr;
-    uint16_t   relative_soc;
+    float32_t  voltage;
+    float32_t  parasitic_corr;
+    float32_t  relative_soc;
     BMS_Cell_E state;
 } BMS_Cell_S;
 
@@ -71,25 +71,25 @@ typedef struct
     bool        fault;
     uint16_t    balancing_cells;
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [mv], precision 1mv
-    uint16_t    pack_voltage;               // [mv], precision 1mv
-    uint16_t    calculated_pack_voltage;    // [mv], precision 1mv
+    float32_t   pack_voltage;               // [mv], precision 1mv
+    float32_t   calculated_pack_voltage;    // [mv], precision 1mv
     uint8_t     connected_cells;
 
-    float charge_limit;
-    float discharge_limit;
+    float32_t charge_limit;
+    float32_t discharge_limit;
 
     struct
     {
-        uint16_t max;
-        uint16_t min;
-        uint16_t avg;
-    } voltage;    // [0.1mv], precision 0.1mv
+        float32_t max;
+        float32_t min;
+        float32_t avg;
+    } voltage;         // [0.1mv], precision 0.1mv
     struct
     {
-        uint16_t min;
-        uint16_t max;
-        uint16_t avg;
-    } relative_soc;    // number from 0-100
+        float32_t min;
+        float32_t max;
+        float32_t avg;
+    } relative_soc;    // [100-0], precision 0.1%
 } BMS_S;
 
 

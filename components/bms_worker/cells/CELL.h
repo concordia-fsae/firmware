@@ -14,11 +14,11 @@
  ******************************************************************************/
 
 #include "stdint.h"
-
+#include "FloatTypes.h"
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-float CELL_getSoCfromV(float volt);
+float32_t CELL_getSoCfromV(float32_t volt);
 uint16_t CELL_getVfromCapacity(uint32_t tenth_mah);
