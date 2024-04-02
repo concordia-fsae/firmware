@@ -162,8 +162,8 @@ static void Environment10Hz_PRD()
         {
             hs_state = DONE;
 
-            ENV.values.board.ambient_temp = hs_chip.data.temp;
-            ENV.values.board.rh           = hs_chip.data.rh;
+            ENV.values.board.ambient_temp = hs_chip.data.temp / 10;
+            ENV.values.board.rh           = hs_chip.data.rh / 100;
         }
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
@@ -176,22 +176,22 @@ static void Environment10Hz_PRD()
     {
         if (SHT_getData())
         {
-            ENV.values.board.ambient_temp = sht_chip.data.temp;
-            ENV.values.board.rh           = sht_chip.data.rh;
+            ENV.values.board.ambient_temp = sht_chip.data.temp / 10;
+            ENV.values.board.rh           = sht_chip.data.rh / 100;
         }
     }
 
-    ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu) * 10;
-    ENV.values.board.brd_temp[BRD1] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET) * 10;
-    ENV.values.board.brd_temp[BRD2] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET) * 10;
+    ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu);
+    ENV.values.board.brd_temp[BRD1] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET);
+    ENV.values.board.brd_temp[BRD2] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET);
 
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
-        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) * 10 : 0;
-        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) * 10 : 0;
+        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) : 0;
+        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) : 0;
         if (i < 4)
         {
-            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) * 10 : 0;
+            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) : 0;
         }
     }
 
@@ -269,12 +269,12 @@ void ENV_calcTempStats(void)
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
-    if (ENV.values.max_temp == INT16_MIN)
+    if (ENV.values.max_temp >= INT16_MIN && ENV.values.max_temp <= INT16_MIN)
     {
         ENV.values.max_temp = 0;
     }
 
-    if (ENV.values.min_temp == INT16_MAX)
+    if (ENV.values.min_temp >= INT16_MAX && ENV.values.min_temp <= INT16_MAX)
     {
         ENV.values.min_temp = 0;
     }
@@ -282,7 +282,7 @@ void ENV_calcTempStats(void)
     ENV.values.avg_temp /= connected_channels;
 
     if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) || 
-        connected_channels == 0 || ENV.values.max_temp >= 600)
+        connected_channels == 0 || ENV.values.max_temp >= 60)
     {
         ENV.state = ENV_FAULT;
     }
