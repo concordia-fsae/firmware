@@ -33,11 +33,11 @@
 #endif
 
 #ifndef STANDARD_CHARGE_CURRENT
-# define STANDARD_CHARGE_CURRENT 4.2    // in Amps
+# define STANDARD_CHARGE_CURRENT 4.2f
 #endif
 
 #ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
-# define MAX_CONTINOUS_DISCHARGE_CURRENT 45    // in Ampsi
+# define MAX_CONTINOUS_DISCHARGE_CURRENT 45
 #endif
 /******************************************************************************
  *                              E X T E R N S
@@ -104,7 +104,7 @@ static void BMS1kHz_PRD()
         {
             max_chip.config.sampling_start_100us = UINT32_MAX;
             BMS.state                            = BMS_PARASITIC_MEASUREMENT;
-            BMS.pack_voltage                     = IO.segment * 1000 * 16;
+            BMS.pack_voltage                     = IO.segment * 16;
         }
     }
     else if (BMS.state == BMS_SAMPLING)
@@ -126,7 +126,7 @@ static void BMS1kHz_PRD()
             max_chip.config.sampling_start_100us = UINT32_MAX;
             max_chip.config.diagnostic_enabled   = false;
             BMS.state                            = BMS_HOLDING;
-            BMS.pack_voltage                     = IO.segment * 1000 * 16;
+            BMS.pack_voltage                     = IO.segment * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
         }
     }
@@ -316,8 +316,8 @@ void BMS_calcSegStats(void)
 {
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
-        BMS.cells[i].voltage = IO.cell[i] * 10000 + BMS.cells[i].parasitic_corr;
-        if ((BMS.cells[i].voltage > 25000) && (BMS.cells[i].voltage < 42000))
+        BMS.cells[i].voltage = IO.cell[i] + BMS.cells[i].parasitic_corr;
+        if ((BMS.cells[i].voltage > 2.5f) && (BMS.cells[i].voltage < 4.2f))
         {
             BMS.cells[i].state = BMS_CELL_CONNECTED;
         }
@@ -331,11 +331,11 @@ void BMS_calcSegStats(void)
     uint8_t   tmp_count = 0;
 
     BMS.voltage.max             = 0x00;
-    BMS.voltage.min             = UINT16_MAX;
+    BMS.voltage.min             = 5.0f;
     BMS.voltage.avg             = 0x00;
     BMS.calculated_pack_voltage = 0x00;
     BMS.relative_soc.max        = 0x00;
-    BMS.relative_soc.min        = UINT16_MAX;
+    BMS.relative_soc.min        = 101.0f;
 
 
     for (uint8_t i = 0; i < max_chip.state.connected_cells; i++)
@@ -350,21 +350,21 @@ void BMS_calcSegStats(void)
         BMS.voltage.max = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
         BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
         batt_tmp += BMS.cells[i].voltage;
-        BMS.calculated_pack_voltage += BMS.cells[i].voltage / 10;
+        BMS.calculated_pack_voltage += BMS.cells[i].voltage;
 
-        BMS.cells[i].relative_soc = CELL_getSoCfromV(((float)BMS.cells[i].voltage) / 10000);
+        BMS.cells[i].relative_soc = CELL_getSoCfromV((BMS.cells[i].voltage));
     }
 
     BMS.voltage.avg = batt_tmp / tmp_count;
 
-    if (BMS.voltage.min == UINT16_MAX)
+    if (BMS.voltage.min <= 5.0f && BMS.voltage.min >= 5.0f)
     {
         BMS.voltage.min = 0;
     }
 
-    BMS.relative_soc.min = CELL_getSoCfromV(((float)BMS.voltage.min) / 10000);
-    BMS.relative_soc.max = CELL_getSoCfromV(((float)BMS.voltage.max) / 10000);
-    BMS.relative_soc.avg = CELL_getSoCfromV(((float)BMS.voltage.avg) / 10000);
+    BMS.relative_soc.min = CELL_getSoCfromV((BMS.voltage.min));
+    BMS.relative_soc.max = CELL_getSoCfromV((BMS.voltage.max));
+    BMS.relative_soc.avg = CELL_getSoCfromV((BMS.voltage.avg));
 
     BMS_checkFaults();    // If cells are in error, it will override from sampling state
 
@@ -431,7 +431,7 @@ void BMS_measurementComplete(void)
     {
         for (uint8_t i = 0; i < BMS.connected_cells; i++)
         {
-            BMS.cells[i].parasitic_corr = ((uint32_t)IO.cell[i] * 10000) / 128;
+            BMS.cells[i].parasitic_corr = ((uint32_t)IO.cell[i]) / 128;
             BMS.state                   = BMS_WAITING;
         }
     }
@@ -439,7 +439,7 @@ void BMS_measurementComplete(void)
 
 void BMS_chargeLimit()
 {
-    if (BMS.relative_soc.max == 100 || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR)
+    if ((BMS.relative_soc.max <= 100 && BMS.relative_soc.max >= 100) || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR)
     {
         BMS.charge_limit = 0;
         return;
@@ -454,19 +454,19 @@ void BMS_chargeLimit()
         BMS.charge_limit = (-0.21f * BMS.relative_soc.max) * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
     }
     
-    if (ENV.values.max_temp > 600)
+    if (ENV.values.max_temp > 60)
     {
         BMS.charge_limit = 0;
     }
-    else if (ENV.values.max_temp >= 480)
+    else if (ENV.values.max_temp >= 48)
     {
-         BMS.charge_limit += (-0.7f * ENV.values.max_temp / 10.0f) * BMS_CONFIGURED_PARALLEL_CELLS;
+         BMS.charge_limit += (-0.7f * ENV.values.max_temp) * BMS_CONFIGURED_PARALLEL_CELLS;
     }
 }
 
 void BMS_dischargeLimit()
 {
-    if (BMS.relative_soc.min == 0 || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR)
+    if ((BMS.relative_soc.max <= 0 && BMS.relative_soc.max >= 0) || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR)
     {
         BMS.discharge_limit = 0;
         return;
@@ -481,13 +481,13 @@ void BMS_dischargeLimit()
         BMS.discharge_limit = 0.45f * BMS.relative_soc.min * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
     }
 
-    if (ENV.values.max_temp > 600)
+    if (ENV.values.max_temp > 60)
     {
         BMS.discharge_limit = 0;
         return;
     }
-    else if (ENV.values.max_temp >= 480)
+    else if (ENV.values.max_temp >= 48)
     {
-        BMS.discharge_limit += (-0.75f * ENV.values.max_temp / 10.0f) * BMS_CONFIGURED_PARALLEL_CELLS;
+        BMS.discharge_limit += (-0.75f * ENV.values.max_temp) * BMS_CONFIGURED_PARALLEL_CELLS;
     }
 }
