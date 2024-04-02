@@ -251,8 +251,8 @@ void ENV_calcTempStats(void)
     uint8_t connected_channels = 0;
 
     ENV.values.avg_temp = 0;
-    ENV.values.max_temp = INT16_MIN;
-    ENV.values.min_temp = INT16_MAX;
+    ENV.values.max_temp = -200;
+    ENV.values.min_temp = -200;
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
@@ -269,12 +269,12 @@ void ENV_calcTempStats(void)
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
-    if (ENV.values.max_temp >= INT16_MIN && ENV.values.max_temp <= INT16_MIN)
+    if (ENV.values.max_temp >= -200 && ENV.values.max_temp <= -200)
     {
         ENV.values.max_temp = 0;
     }
 
-    if (ENV.values.min_temp >= INT16_MAX && ENV.values.min_temp <= INT16_MAX)
+    if (ENV.values.min_temp >= -200 && ENV.values.min_temp <= -200)
     {
         ENV.values.min_temp = 0;
     }

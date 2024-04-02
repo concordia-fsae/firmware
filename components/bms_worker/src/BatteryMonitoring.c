@@ -431,7 +431,7 @@ void BMS_measurementComplete(void)
     {
         for (uint8_t i = 0; i < BMS.connected_cells; i++)
         {
-            BMS.cells[i].parasitic_corr = ((uint32_t)IO.cell[i]) / 128;
+            BMS.cells[i].parasitic_corr = (IO.cell[i]) / 128;
             BMS.state                   = BMS_WAITING;
         }
     }
