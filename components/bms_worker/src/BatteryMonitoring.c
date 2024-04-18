@@ -125,9 +125,9 @@ static void BMS1kHz_PRD()
         {
             max_chip.config.sampling_start_100us = UINT32_MAX;
             max_chip.config.diagnostic_enabled   = false;
-            BMS.state                            = BMS_HOLDING;
             BMS.pack_voltage                     = IO.segment * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
+            BMS.state                            = BMS_HOLDING;
         }
     }
     else if (BMS.state == BMS_WAITING)

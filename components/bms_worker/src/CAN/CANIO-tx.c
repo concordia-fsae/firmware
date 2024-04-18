@@ -59,7 +59,7 @@ static cantx_S cantx;
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           const uint8_t      packTableLength,
-                                          const uint8_t*     index,
+                                          uint8_t*     index,
                                           CAN_data_T*        message,
                                           uint8_t*           nextCounter);
 
@@ -174,7 +174,7 @@ continue2:
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           const uint8_t      packTableLength,
-                                          const uint8_t*     index,
+                                          uint8_t*     index,
                                           CAN_data_T*        message,
                                           uint8_t*           nextCounter)
 {
@@ -187,6 +187,10 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
         if ((*entry->pack)(message, counter))
         {
             return entry;
+        }
+        else
+        {
+            (*index)++;
         }
     }
 
@@ -260,14 +264,14 @@ static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter)
     return false;
 }
 
-static void CANIO_tx_10kHz_PRD(void)
-{
-    SWI_invoke(CANTX_BUS_A_swi);
-}
+//static void CANIO_tx_10kHz_PRD(void)
+//{
+//    SWI_invoke(CANTX_BUS_A_swi);
+//}
 
 static void CANIO_tx_1kHz_PRD(void)
 {
-    // SWI_invoke(CANTX_BUS_A_1kHz_swi);
+    SWI_invoke(CANTX_BUS_A_swi);
 }
 
 /**
@@ -306,7 +310,7 @@ static void CANIO_tx_init(void)
 
 const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
-    .periodic10kHz_CLK = &CANIO_tx_10kHz_PRD,
+    //.periodic10kHz_CLK = &CANIO_tx_10kHz_PRD,
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
     .periodic100Hz_CLK = &CANIO_tx_100Hz_PRD,
     .periodic10Hz_CLK  = &CANIO_tx_10Hz_PRD,

@@ -25,11 +25,11 @@
  ******************************************************************************/
 
 #ifndef BMS_CONFIGURED_SERIES_CELLS
-# define BMS_CONFIGURED_SERIES_CELLS 4
+# define BMS_CONFIGURED_SERIES_CELLS 14
 #endif
 
 #ifndef BMS_CONFIGURED_PARALLEL_CELLS
-# define BMS_CONFIGURED_PARALLEL_CELLS 1
+# define BMS_CONFIGURED_PARALLEL_CELLS 5
 #endif
 
 /******************************************************************************
