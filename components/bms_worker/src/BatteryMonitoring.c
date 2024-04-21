@@ -88,6 +88,11 @@ static void BMS_Init(void)
  */
 static void BMS1kHz_PRD()
 {
+    if (BMS.state == BMS_SLEEPING)
+    {
+      return;
+    }
+    
     if (BMS.state == BMS_PARASITIC)
     {
         if (max_chip.config.sampling_start_100us == UINT32_MAX)
@@ -137,7 +142,7 @@ static void BMS1kHz_PRD()
     {
         static uint8_t cnt = 0;
 
-        if (cnt++ == 10)
+        if (cnt++ == 100)
         {
             return;
         }
@@ -183,6 +188,11 @@ static void BMS1kHz_PRD()
  */
 static void BMS1Hz_PRD()
 {
+    if (BMS.state == BMS_SLEEPING)
+    {
+      return;
+    }
+
     if (BMS.state == BMS_INIT)
     {
         static uint32_t start_time = 0;
@@ -302,6 +312,39 @@ static void BMS1Hz_PRD()
 
     max_chip.config.sampling_start_100us = HW_getTick();
     BMS.state                            = BMS_DIAGNOSTIC;
+}
+
+void BMS_toSleep(void)
+{
+    BMS.state = BMS_SLEEPING;
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.sampling           = false;
+    max_chip.config.low_power_mode     = true;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.sampling_start_100us = UINT32_MAX;
+    MAX_readWriteToChip();
+    MAX_readWriteToChip(); // Update value
+    
+    BMS.discharge_limit = 0.0f;
+    BMS.charge_limit = 0.0f;
+}
+
+void BMS_wakeUp(void)
+{
+    if (BMS.state != BMS_SLEEPING) return;
+
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.sampling           = false;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    MAX_readWriteToChip();
+    
+    while (!max_chip.state.ready) MAX_readWriteToChip(); // Update value
+    BMS.state = BMS_WAITING;
 }
 
 /**
@@ -456,7 +499,7 @@ void BMS_measurementComplete(void)
 
 void BMS_chargeLimit()
 {
-    if ((BMS.relative_soc.max <= 100 && BMS.relative_soc.max >= 100) || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR)
+    if (ENV.values.max_temp > 60.0f || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
     {
         BMS.charge_limit = 0;
         return;
@@ -468,43 +511,40 @@ void BMS_chargeLimit()
     }
     else
     {
-        BMS.charge_limit = (-0.21f * BMS.relative_soc.max) * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
+        BMS.charge_limit = ((BMS.relative_soc.max - 80.0f)/20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
     }
     
-    if (ENV.values.max_temp > 60)
+    if (ENV.values.max_temp >= 48)
     {
-        BMS.charge_limit = 0;
+         BMS.charge_limit += -((ENV.values.max_temp - 48.0f)/12.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
-    else if (ENV.values.max_temp >= 48)
-    {
-         BMS.charge_limit += (-0.7f * ENV.values.max_temp) * BMS_CONFIGURED_PARALLEL_CELLS;
-    }
+
+    if (BMS.charge_limit < 0.0f) BMS.charge_limit = 0.0f;
+    if (BMS.charge_limit > STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 }
 
 void BMS_dischargeLimit()
 {
-    if ((BMS.relative_soc.max <= 0 && BMS.relative_soc.max >= 0) || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR)
+    if (ENV.values.max_temp > 60.0f || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
     {
-        BMS.discharge_limit = 0;
+        BMS.discharge_limit = 0.f;
         return;
     }
 
-    if (BMS.relative_soc.min > 20)
+    if (BMS.relative_soc.min > 20.0f)
     {
         BMS.discharge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
     else
     {
-        BMS.discharge_limit = 0.45f * BMS.relative_soc.min * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+        BMS.discharge_limit =  (BMS.relative_soc.min / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
     }
 
-    if (ENV.values.max_temp > 60)
+    if (ENV.values.max_temp >= 48.0f)
     {
-        BMS.discharge_limit = 0;
-        return;
+        BMS.discharge_limit += -((ENV.values.max_temp - 48.0f) / 12.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
-    else if (ENV.values.max_temp >= 48)
-    {
-        BMS.discharge_limit += (-0.75f * ENV.values.max_temp) * BMS_CONFIGURED_PARALLEL_CELLS;
-    }
+    
+    if (BMS.discharge_limit < 0.0f) BMS.discharge_limit = 0.0f;
+    if (BMS.discharge_limit > MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 }

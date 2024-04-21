@@ -48,6 +48,7 @@ typedef enum
     BMS_SAMPLING,
     BMS_DIAGNOSTIC,
     BMS_BALANCING,
+    BMS_SLEEPING,
     BMS_ERROR,
 } BMS_State_E;
 
@@ -108,4 +109,6 @@ extern BMS_S BMS;
  ******************************************************************************/
 
 void BMS_setOutputCell(MAX_selectedCell_E cell);
+void BMS_toSleep(void);
+void BMS_wakeUp(void);
 void BMS_measurementComplete(void);

@@ -58,14 +58,14 @@ bool SHT_init(void)
     uint8_t wdat    = READ_SENSOR_ID;
     uint8_t rdat[6] = { 0 };
 
-    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 1000))
+    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 10))
     {
         return false;
     }
 
     HW_usDelay(100);
 
-    if (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&rdat, 6, 1000))
+    if (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&rdat, 6, 10))
     {
         return false;
     }

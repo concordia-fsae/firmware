@@ -23,28 +23,34 @@
  */
 float32_t CELL_getSoCfromV(float32_t volt)
 {
-    if (volt <= 2.7f || volt >= 4.15f)
+    
+    float32_t ret = 0.0f;
+
+    if (volt <= 2.7f || volt >= 4.17f)
     {
         return 0;
     }
 
     if (volt <= 3.407f) {
-        return (28.177f*volt*volt-151.31f*volt+202.91f);
+        ret = (28.177f*volt*volt-151.31f*volt+202.91f);
     }
     else if (volt <= 3.44f) {
-        return (132.01f*volt-435.2f);
+        ret = (132.01f*volt-435.2f);
     }
     else if (volt <= 4.054f) {
-        return (109.75f*volt-359.17f);
+        ret = (109.75f*volt-359.17f);
     }
     else if (volt <= 4.094f) {
-        return (-7496.4f*volt*volt+61360.0f*volt-125467.0f);
+        ret = (-7496.4f*volt*volt+61360.0f*volt-125467.0f);
     }
     else if (volt > 4.094f) {
-        return (-498.39f*volt*volt+4165.6f*volt-8604.0f);
+        ret = (-498.39f*volt*volt+4165.6f*volt-8604.0f);
     }
 
-    return 0;
+    if (ret < 0.0f) ret = 0.0f;
+    if (ret > 100.0f) ret = 100.0f;
+
+    return ret;
 }
 
 /**

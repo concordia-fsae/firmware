@@ -56,9 +56,9 @@ extern IO_S IO;
 
 typedef enum
 {
-    INIT = 0x00,
-    MEASURING,
-    DONE,
+    SENS_INIT = 0x00,
+    SENS_RUNNING,
+    SENS_ERROR,
 } Sensor_State_E;
 
 
@@ -76,7 +76,9 @@ ENV_S ENV;
 #if defined(BMSW_BOARD_VA1)
 static Sensor_State_E ltc_state;
 static Sensor_State_E hs_state;
-#endif /**< BMSW_BOARD_VA3 */
+#elif defined(BMSW_BOARD_VA3) // BMSW_BOARD_VA1
+static Sensor_State_E sht_state;
+#endif // BMSW_BOARD_VA3
 
 
 /******************************************************************************
@@ -107,9 +109,15 @@ static void Environment_Init()
         ENV.state = ENV_ERROR;
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
+    sht_state = SENS_INIT;
+
     if (!SHT_init())
     {
-        // ENV.state = ENV_ERROR;
+        sht_state = SENS_ERROR;
+    }
+    else 
+    {
+        sht_state = SENS_RUNNING;
     }
 #endif                        /**< BMSW_BOARD_VA3 */
 
@@ -168,11 +176,6 @@ static void Environment10Hz_PRD()
         }
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-    if (sht_chip.data.state == SHT_INIT)
-    {
-        if (SHT_init())
-        {}
-    }
     if (sht_chip.data.state == SHT_MEASURING)
     {
         if (SHT_getData())
@@ -219,7 +222,11 @@ static void Environment1Hz_PRD()
             LTC_startMeasurement();
             HS4011_startConversion();
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-            SHT_startConversion();
+            if (sht_state == SENS_RUNNING) SHT_startConversion();
+            else if (sht_state == SENS_ERROR)
+            {
+                // TODO: Implement error handling
+            }
 #endif
             break;
 
