@@ -274,12 +274,7 @@ static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter)
 
 static void CANIO_tx_1kHz_PRD(void)
 {
-    // FIXME: SWI bogs the MCU
-    //static uint8_t cnt = 0;
-    //if (cnt++ % 2) return;
-
-    //SWI_invoke(CANTX_BUS_A_swi);
-    CANTX_BUS_A_SWI();
+    SWI_invoke(CANTX_BUS_A_swi);
 }
 
 /**
