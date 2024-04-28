@@ -56,6 +56,7 @@ typedef struct
 static cantx_S cantx;
 extern Module_taskStats_S swi_stats;
 
+
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -66,27 +67,37 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           CAN_data_T*        message,
                                           uint8_t*           nextCounter);
 
-static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter);
-static bool MSG_pack_BMS_100Hz1(CAN_data_T* message, const uint8_t counter);
-static bool MSG_pack_BMS_100Hz2(CAN_data_T* message, const uint8_t counter);
-static bool MSG_pack_BMS_100Hz3(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_100Hz_Critical(CAN_data_T* message, const uint8_t counter);
 static bool MSG_pack_BMS_10Hz(CAN_data_T* message, const uint8_t counter);
-static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_SOC_Voltage_Temp(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Cell_Temp_2_to_10(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Cell_Temp_11_to_19(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Cell_Voltage_0_to_5(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Cell_Voltage_6_to_11(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Temperatures_and_Humidity(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Fans(CAN_data_T* message, const uint8_t counter);
 
 static const packTable_S MSG_packTable_100Hz[] = {
-    //{ &MSG_pack_BMS_100Hz, 0x100, 8U },
-    //{ &MSG_pack_BMS_100Hz1, 0x110, 8U },
+    { &MSG_pack_BMS_100Hz_Critical, 0x100, 8U },
 };
 static const packTable_S MSG_packTable_10Hz[] = {
     { &MSG_pack_BMS_10Hz, 0x10, 8U },
 };
 static const packTable_S MSG_packTable_1Hz[] = {
-    { &MSG_pack_BMS_1Hz, 0x1, 8U },
-    { &MSG_pack_BMS_100Hz, 0x100, 8U },
-    { &MSG_pack_BMS_100Hz1, 0x110, 8U },
-    { &MSG_pack_BMS_100Hz2, 0x700, 8U },
-    { &MSG_pack_BMS_100Hz3, 0x740, 8U },
+    { &MSG_pack_BMS_1Hz_SOC_Voltage_Temp, 0x700, 8U },
+    { &MSG_pack_BMS_1Hz_Cell_Temp_2_to_10, 0x710, 8U },
+    { &MSG_pack_BMS_1Hz_Cell_Temp_11_to_19, 0x720, 8U },
+    { &MSG_pack_BMS_1Hz_Cell_Voltage_0_to_5, 0x730, 8U },
+    { &MSG_pack_BMS_1Hz_Cell_Voltage_6_to_11, 0x740, 8U },
+    { &MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15, 0x750, 8U },
+    { &MSG_pack_BMS_1Hz_Temperatures_and_Humidity, 0x760, 8U },
+    { &MSG_pack_BMS_1Hz_Fans, 0x770, 8U },
 };
+
+_Static_assert(MSG_packTable_100Hz_SIZE <= sizeof(MSG_packTable_100Hz) / sizeof(packTable_S), "Size of 100Hz pack table is incorrect.");
+_Static_assert(MSG_packTable_10Hz_SIZE <= sizeof(MSG_packTable_10Hz) / sizeof(packTable_S), "Size of 10Hz pack table is incorrect.");
+_Static_assert(MSG_packTable_1Hz_SIZE <= sizeof(MSG_packTable_1Hz) / sizeof(packTable_S), "Size of 1Hz pack table is incorrect.");
 
 
 /******************************************************************************
@@ -99,77 +110,67 @@ static const packTable_S MSG_packTable_1Hz[] = {
  */
 void CANTX_BUS_A_SWI(void)
 {
-    // TODO: add overrun detection here
-    if (cantx.tx_100Hz_msg == MSG_packTable_100Hz_SIZE)
+    if (cantx.tx_100Hz_msg != MSG_packTable_100Hz_SIZE)
     {
-        goto continue1;
-    }
+        static uint8_t counter_100Hz = 0U;
+        CAN_data_T     message_100Hz;
 
-    static uint8_t counter_100Hz = 0U;
-    CAN_data_T     message_100Hz;
+        const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&MSG_packTable_100Hz,
+                                                        MSG_packTable_100Hz_SIZE,
+                                                        &cantx.tx_100Hz_msg,
+                                                        &message_100Hz,
+                                                        &counter_100Hz);
 
-    const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&MSG_packTable_100Hz,
-                                                     MSG_packTable_100Hz_SIZE,
-                                                     &cantx.tx_100Hz_msg,
-                                                     &message_100Hz,
-                                                     &counter_100Hz);
-
-    if (entry_100Hz != NULL)
-    {
-        if (CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message_100Hz, MSG_UID_SEGMENT(entry_100Hz->id), entry_100Hz->len))
+        if (entry_100Hz != NULL)
         {
-            cantx.tx_100Hz_msg++;
+            if (CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message_100Hz, MSG_UID_SEGMENT(entry_100Hz->id), entry_100Hz->len))
+            {
+                cantx.tx_100Hz_msg++;
+            }
         }
     }
 
-    // TODO: add overrun detection here
-continue1:
-    if (cantx.tx_10Hz_msg == MSG_packTable_10Hz_SIZE)
+    if (cantx.tx_10Hz_msg != MSG_packTable_10Hz_SIZE)
     {
-        goto continue2;
-    }
+        static uint8_t counter_10Hz = 0U;
+        CAN_data_T     message_10Hz;
 
-    static uint8_t counter_10Hz = 0U;
-    CAN_data_T     message_10Hz;
+        const packTable_S* entry_10Hz = packNextMessage((const packTable_S*)&MSG_packTable_10Hz,
+                                                        MSG_packTable_10Hz_SIZE,
+                                                        &cantx.tx_10Hz_msg,
+                                                        &message_10Hz,
+                                                        &counter_10Hz);
 
-    const packTable_S* entry_10Hz = packNextMessage((const packTable_S*)&MSG_packTable_10Hz,
-                                                    MSG_packTable_10Hz_SIZE,
-                                                    &cantx.tx_10Hz_msg,
-                                                    &message_10Hz,
-                                                    &counter_10Hz);
-
-    if (entry_10Hz != NULL)
-    {
-        if (CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_10Hz, MSG_UID_SEGMENT(entry_10Hz->id), entry_10Hz->len))
+        if (entry_10Hz != NULL)
         {
-            cantx.tx_10Hz_msg++;
+            if (CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_10Hz, MSG_UID_SEGMENT(entry_10Hz->id), entry_10Hz->len))
+            {
+                cantx.tx_10Hz_msg++;
+            }
         }
     }
-
-    // TODO: add overrun detection here
-continue2:
-    if (cantx.tx_1Hz_msg == MSG_packTable_1Hz_SIZE)
+    
+    if (cantx.tx_1Hz_msg != MSG_packTable_1Hz_SIZE)
     {
-        return;
-    }
+        static uint8_t counter_1Hz = 0U;
+        CAN_data_T     message_1Hz;
 
-    static uint8_t counter_1Hz = 0U;
-    CAN_data_T     message_1Hz;
+        const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&MSG_packTable_1Hz,
+                                                    MSG_packTable_1Hz_SIZE,
+                                                    &cantx.tx_1Hz_msg,
+                                                    &message_1Hz,
+                                                    &counter_1Hz);
 
-    const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&MSG_packTable_1Hz,
-                                                   MSG_packTable_1Hz_SIZE,
-                                                   &cantx.tx_1Hz_msg,
-                                                   &message_1Hz,
-                                                   &counter_1Hz);
-
-    if (entry_1Hz != NULL)
-    {
-        if (CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message_1Hz, MSG_UID_SEGMENT(entry_1Hz->id), entry_1Hz->len))
+        if (entry_1Hz != NULL)
         {
-            cantx.tx_1Hz_msg++;
+            if (CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message_1Hz, MSG_UID_SEGMENT(entry_1Hz->id), entry_1Hz->len))
+            {
+                cantx.tx_1Hz_msg++;
+            }
         }
     }
 }
+
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -205,52 +206,20 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
     return NULL;
 }
 
-static bool MSG_pack_BMS_100Hz(CAN_data_T* message, const uint8_t counter)
+static bool MSG_pack_BMS_100Hz_Critical(CAN_data_T* message, const uint8_t counter)
 {
-    UNUSED(counter);
-    message->u16[0] = BMS.voltage.min;
-    message->u16[1] = BMS.voltage.max;
-    message->u16[2] = BMS.voltage.avg;
-    message->u8[6]  = (BMS.calculated_pack_voltage) / 2;    // Gives range 0-510V
-    message->u8[7]  = (BMS.state == BMS_ERROR) ? 0x01 << 7 : 0U | (BMS.fault)            ? 0x01 << 6
-                                                         : 0U | (ENV.state == ENV_ERROR) ? 0x01 << 5
-                                                         : 0U | (ENV.state == ENV_FAULT) ? 0x01 << 4
-                                                                                         : 0U;
-
-    return true;
-}
-
-static bool MSG_pack_BMS_100Hz1(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    message->u16[0] = BMS.relative_soc.min;
-    message->u16[1] = BMS.relative_soc.max;
-    message->u16[2] = BMS.relative_soc.avg;
-    message->u8[6]  = BMS.discharge_limit;
-    message->u8[7]  = BMS.charge_limit;
-    return true;
-}
-
-static bool MSG_pack_BMS_100Hz2(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    message->u16[0] = BMS.cells[0].voltage;
-    message->u16[1] = BMS.cells[1].voltage;
-    message->u16[2] = BMS.cells[2].voltage;
-    message->u16[3] = BMS.cells[3].voltage;
-    return true;
-}
-
-static bool MSG_pack_BMS_100Hz3(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    message->u8[0]  = ENV.values.board.mcu_temp;
-    message->u8[1]  = ENV.values.board.brd_temp[0];
-    message->u8[2]  = ENV.values.board.brd_temp[1];
-    message->u8[3]  = ENV.values.max_temp;
-    message->u16[3] = COOL.rpm[0];
-    message->u16[4] = COOL.rpm[1];
-    return true;
+    message->u64  = ((uint64_t)((uint16_t)(BMS.voltage.min / 50) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.voltage.max / 50) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.min_temp & 0x7F)) << 37;        //7 bits, 1 deg C precision
+    message->u64 |= ((uint8_t)ENV.values.max_temp & 0x7F) << 30;                    //7 bits, 1 deg C precision
+    message->u64 |= ((uint8_t)BMS.discharge_limit & 0x1F) << 25;                    //5 bits, 1A precision
+    message->u64 |= ((uint8_t)BMS.charge_limit & 0xFF) << 17;                       //8 bits, 1A precision
+    message->u64 |= (((BMS.state == BMS_ERROR) ? 0x01 << 7 : 0U) |
+                    ((BMS.fault) ? 0x01 << 6 : 0U) |
+                    ((ENV.state == ENV_ERROR) ? 0x01 << 5 : 0U) |
+                    ((ENV.state == ENV_FAULT) ? 0x01 << 4 : 0U)) << 9;              //8 bits, 1 bit per flag, currently 4 unused
+    message->u64 |= counter << 1;                                                   //8 bits
+    return true; //63 bits used, 1 bit unused
 }
 
 static bool MSG_pack_BMS_10Hz(CAN_data_T* message, const uint8_t counter)
@@ -260,11 +229,104 @@ static bool MSG_pack_BMS_10Hz(CAN_data_T* message, const uint8_t counter)
     return false;
 }
 
-static bool MSG_pack_BMS_1Hz(CAN_data_T* message, const uint8_t counter)
+static bool MSG_pack_BMS_1Hz_SOC_Voltage_Temp(CAN_data_T* message, const uint8_t counter)
 {
-    UNUSED(message);
     UNUSED(counter);
-    return false;
+    message->u64  = ((uint64_t)((uint16_t)(BMS.voltage.avg / 3) & 0x3FF)) << 54;        //10 bits, 3mv precisiion
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.avg_temp & 0x7F)) << 47;            //7 bits, 1 deg C precission
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.relative_soc.min * 10) & 0x3FF)) << 37;   //10 bits, 0.1% precision, range [0-102.3]%
+    message->u64 |= ((uint16_t)(BMS.relative_soc.avg * 10) & 0x3FF) << 27;              //10 bits, 0.1% precision, range [0-102.3]%
+    message->u64 |= ((uint16_t)(BMS.relative_soc.max * 10) & 0x3FF) << 17;              //10 bits, 0.1% precision, range [0-102.3]%
+    message->u64 |= ((uint8_t)ENV.values.temps[0].temp & 0x7F) << 10;                   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint8_t)ENV.values.temps[1].temp & 0x7F) << 3;                    //7 bits, 1 deg C precision, range [0-127]deg C
+    return true; //61 bits used, 3 bits unused
+}
+
+static bool MSG_pack_BMS_1Hz_Cell_Temp_2_to_10(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64  = ((uint64_t)((uint8_t)ENV.values.temps[2].temp & 0x7F)) << 57;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[3].temp & 0x7F)) << 50;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[4].temp & 0x7F)) << 43;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[5].temp & 0x7F)) << 36;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[6].temp & 0x7F)) << 29;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[7].temp & 0x7F)) << 22;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[8].temp & 0x7F)) << 15;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[9].temp & 0x7F)) << 8;    //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[10].temp & 0x7F)) << 1;   //7 bits, 1 deg C precision, range [0-127]deg C
+    return true; //63 bits used, 1 bit unused
+}
+
+
+static bool MSG_pack_BMS_1Hz_Cell_Temp_11_to_19(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64  = ((uint64_t)((uint8_t)ENV.values.temps[11].temp & 0x7F)) << 57;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[12].temp & 0x7F)) << 50;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[13].temp & 0x7F)) << 43;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[14].temp & 0x7F)) << 36;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[15].temp & 0x7F)) << 29;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[16].temp & 0x7F)) << 22;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[17].temp & 0x7F)) << 15;   //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[18].temp & 0x7F)) << 8;    //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[19].temp & 0x7F)) << 1;   //7 bits, 1 deg C precision, range [0-127]deg C
+    return true; //63 bits used, 1 bit unused
+}
+
+static bool MSG_pack_BMS_1Hz_Cell_Voltage_0_to_5(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[0].voltage / 5) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[1].voltage / 5) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[2].voltage / 5) & 0x3FF)) << 34;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[3].voltage / 5) & 0x3FF)) << 24;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[4].voltage / 5) & 0x3FF)) << 14;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[5].voltage / 5) & 0x3FF)) << 4;    //10 bits, 5mV precision, range [0-5120]mV
+    return true; //60 bits used, 4 unused
+}
+
+static bool MSG_pack_BMS_1Hz_Cell_Voltage_6_to_11(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[6].voltage / 5) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[7].voltage / 5) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[8].voltage / 5) & 0x3FF)) << 34;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[9].voltage / 5) & 0x3FF)) << 24;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[10].voltage / 5) & 0x3FF)) << 14;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[11].voltage / 5) & 0x3FF)) << 4;   //10 bits, 5mV precision, range [0-5120]mV
+    return true; //60 bits used, 4 unused
+}
+
+static bool MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[12].voltage / 5) & 0x3FF)) << 54;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[13].voltage / 5) & 0x3FF)) << 44;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[14].voltage / 5) & 0x3FF)) << 34;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[15].voltage / 5) & 0x3FF)) << 24;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.pack_voltage / 10) & 0x1FFF)) << 11;     //13 bits, 10mV precision, range [0-81910]mV
+    return true; //53 bits used, 11 unused
+}
+
+static bool MSG_pack_BMS_1Hz_Temperatures_and_Humidity(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u8[0] = (uint8_t)(ENV.values.board.brd_temp[0] / 10);  //8 bits, 1 deg C precision, range [0-255]deg C
+    message->u8[1] = (uint8_t)(ENV.values.board.brd_temp[1] / 10);  //8 bits, 1 deg C precision, range [0-255]deg C
+    message->u8[2] = (uint8_t)(ENV.values.board.mcu_temp / 10);     //8 bits, 1 deg C precision, range [0-255]deg C
+    message->u8[3] = (uint8_t)(ENV.values.board.ambient_temp / 10); //8 bits, 1 deg C precision, range [0-255]deg C
+    message->u8[4] = (uint8_t)(ENV.values.board.rh / 100);          //8 bits, 1% precision, range [0-255]%
+    return true; //40 bits used, 24 unused
+}
+
+static bool MSG_pack_BMS_1Hz_Fans(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u8[0]  = COOL.percentage[0];   //8 bits, 1% precision, range [0-255]%
+    message->u8[1]  = COOL.percentage[1];   //8 bits, 1% precision, range [0-255]%
+    message->u16[1] = COOL.rpm[0];          //16 bits, 1 rpm precision, range [0-65525]rpm
+    message->u16[2] = COOL.rpm[1];          //16 bits, 1 rpm precision, range [0-65525]rpm
+    return true; //48 bits used, 16 unused
 }
 
 //static void CANIO_tx_10kHz_PRD(void)
@@ -283,6 +345,9 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_100Hz_PRD(void)
 {
+    if (cantx.tx_100Hz_msg < MSG_packTable_100Hz_SIZE) {
+        // all the message weren't sent. TO-DO: error handling
+    }
     cantx.tx_100Hz_msg = 0U;
 }
 
@@ -292,11 +357,17 @@ static void CANIO_tx_100Hz_PRD(void)
  */
 static void CANIO_tx_10Hz_PRD(void)
 {
+    if (cantx.tx_10Hz_msg < MSG_packTable_10Hz_SIZE) {
+        // all the message weren't sent. TO-DO: error handling
+    }
     cantx.tx_10Hz_msg = 0U;
 }
 
 static void CANIO_tx_1Hz_PRD(void)
 {
+    if (cantx.tx_1Hz_msg < MSG_packTable_1Hz_SIZE) {
+        // all the message weren't sent. TO-DO: error handling
+    }
     cantx.tx_1Hz_msg = 0U;
 }
 
@@ -307,6 +378,9 @@ static void CANIO_tx_1Hz_PRD(void)
 static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
+    cantx.tx_1Hz_msg = MSG_packTable_1Hz_SIZE;
+    cantx.tx_10Hz_msg = MSG_packTable_10Hz_SIZE;
+    cantx.tx_100Hz_msg = MSG_packTable_100Hz_SIZE;
     HW_CAN_start();    // start CAN
 }
 
