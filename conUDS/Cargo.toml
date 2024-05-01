@@ -11,4 +11,4 @@ ecu_diagnostics = "0.95.6"
 futures = "0.3.30"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_derive = "1.0.197"
-tokio = { version = "1.36.0", features = ["macros", "tokio-macros", "rt", "rt-multi-thread", "time"] }
+tokio = { version = "1.36.0", features = ["macros", "tokio-macros", "rt", "rt-multi-thread", "time", "sync"] }
