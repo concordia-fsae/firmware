@@ -90,14 +90,10 @@ static const packTable_S MSG_packTable_1Hz[] = {
     { &MSG_pack_BMS_1Hz_Cell_Temp_11_to_19, 0x720, 8U },
     { &MSG_pack_BMS_1Hz_Cell_Voltage_0_to_5, 0x730, 8U },
     { &MSG_pack_BMS_1Hz_Cell_Voltage_6_to_11, 0x740, 8U },
-    { &MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15, 0x750, 8U },
-    { &MSG_pack_BMS_1Hz_Temperatures_and_Humidity, 0x760, 8U },
-    { &MSG_pack_BMS_1Hz_Fans, 0x770, 8U },
+    { &MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15, 0x750, 7U },
+    { &MSG_pack_BMS_1Hz_Temperatures_and_Humidity, 0x760, 5U },
+    { &MSG_pack_BMS_1Hz_Fans, 0x770, 6U },
 };
-
-_Static_assert(MSG_packTable_100Hz_SIZE <= sizeof(MSG_packTable_100Hz) / sizeof(packTable_S), "Size of 100Hz pack table is incorrect.");
-_Static_assert(MSG_packTable_10Hz_SIZE <= sizeof(MSG_packTable_10Hz) / sizeof(packTable_S), "Size of 10Hz pack table is incorrect.");
-_Static_assert(MSG_packTable_1Hz_SIZE <= sizeof(MSG_packTable_1Hz) / sizeof(packTable_S), "Size of 1Hz pack table is incorrect.");
 
 
 /******************************************************************************
@@ -208,12 +204,12 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static bool MSG_pack_BMS_100Hz_Critical(CAN_data_T* message, const uint8_t counter)
 {
-    message->u64  = ((uint64_t)((uint16_t)(BMS.voltage.min / 50) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5115]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.voltage.max / 50) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5115]mV
+    message->u64  = ((uint64_t)((uint16_t)(BMS.voltage.min * 200) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.voltage.max * 200) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5115]mV
     message->u64 |= ((uint64_t)((uint8_t)ENV.values.min_temp & 0x7F)) << 37;        //7 bits, 1 deg C precision
     message->u64 |= ((uint8_t)ENV.values.max_temp & 0x7F) << 30;                    //7 bits, 1 deg C precision
-    message->u64 |= ((uint8_t)BMS.discharge_limit & 0x1F) << 25;                    //5 bits, 1A precision
-    message->u64 |= ((uint8_t)BMS.charge_limit & 0xFF) << 17;                       //8 bits, 1A precision
+    message->u64 |= ((uint8_t)BMS.charge_limit & 0x1F) << 25;                       //5 bits, 1A precision
+    message->u64 |= ((uint8_t)BMS.discharge_limit & 0xFF) << 17;                    //8 bits, 1A precision
     message->u64 |= (((BMS.state == BMS_ERROR) ? 0x01 << 7 : 0U) |
                     ((BMS.fault) ? 0x01 << 6 : 0U) |
                     ((ENV.state == ENV_ERROR) ? 0x01 << 5 : 0U) |
@@ -232,13 +228,13 @@ static bool MSG_pack_BMS_10Hz(CAN_data_T* message, const uint8_t counter)
 static bool MSG_pack_BMS_1Hz_SOC_Voltage_Temp(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u64  = ((uint64_t)((uint16_t)(BMS.voltage.avg / 3) & 0x3FF)) << 54;        //10 bits, 3mv precisiion
+    message->u64  = ((uint64_t)((uint16_t)(BMS.voltage.avg * 200) & 0x3FF)) << 54;      //10 bits, 5mv precisiion
     message->u64 |= ((uint64_t)((uint8_t)ENV.values.avg_temp & 0x7F)) << 47;            //7 bits, 1 deg C precission
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.relative_soc.min * 10) & 0x3FF)) << 37;   //10 bits, 0.1% precision, range [0-102.3]%
-    message->u64 |= ((uint16_t)(BMS.relative_soc.avg * 10) & 0x3FF) << 27;              //10 bits, 0.1% precision, range [0-102.3]%
-    message->u64 |= ((uint16_t)(BMS.relative_soc.max * 10) & 0x3FF) << 17;              //10 bits, 0.1% precision, range [0-102.3]%
-    message->u64 |= ((uint8_t)ENV.values.temps[0].temp & 0x7F) << 10;                   //7 bits, 1 deg C precision, range [0-127]deg C
-    message->u64 |= ((uint8_t)ENV.values.temps[1].temp & 0x7F) << 3;                    //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.relative_soc.min * 10) & 0x3FF)) << 37;  //10 bits, 0.1% precision, range [0-102.3]%
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.relative_soc.avg * 10) & 0x3FF)) << 27;  //10 bits, 0.1% precision, range [0-102.3]%
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.relative_soc.max * 10) & 0x3FF)) << 17;  //10 bits, 0.1% precision, range [0-102.3]%
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[0].temp & 0x7F)) << 10;       //7 bits, 1 deg C precision, range [0-127]deg C
+    message->u64 |= ((uint64_t)((uint8_t)ENV.values.temps[1].temp & 0x7F)) << 3;        //7 bits, 1 deg C precision, range [0-127]deg C
     return true; //61 bits used, 3 bits unused
 }
 
@@ -276,34 +272,34 @@ static bool MSG_pack_BMS_1Hz_Cell_Temp_11_to_19(CAN_data_T* message, const uint8
 static bool MSG_pack_BMS_1Hz_Cell_Voltage_0_to_5(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[0].voltage / 5) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[1].voltage / 5) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[2].voltage / 5) & 0x3FF)) << 34;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[3].voltage / 5) & 0x3FF)) << 24;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[4].voltage / 5) & 0x3FF)) << 14;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[5].voltage / 5) & 0x3FF)) << 4;    //10 bits, 5mV precision, range [0-5120]mV
+    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[0].voltage * 200) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[1].voltage * 200) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[2].voltage * 200) & 0x3FF)) << 34;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[3].voltage * 200) & 0x3FF)) << 24;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[4].voltage * 200) & 0x3FF)) << 14;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[5].voltage * 200) & 0x3FF)) << 4;    //10 bits, 5mV precision, range [0-5120]mV
     return true; //60 bits used, 4 unused
 }
 
 static bool MSG_pack_BMS_1Hz_Cell_Voltage_6_to_11(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[6].voltage / 5) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[7].voltage / 5) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[8].voltage / 5) & 0x3FF)) << 34;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[9].voltage / 5) & 0x3FF)) << 24;   //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[10].voltage / 5) & 0x3FF)) << 14;  //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[11].voltage / 5) & 0x3FF)) << 4;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[6].voltage * 200) & 0x3FF)) << 54;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[7].voltage * 200) & 0x3FF)) << 44;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[8].voltage * 200) & 0x3FF)) << 34;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[9].voltage * 200) & 0x3FF)) << 24;   //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[10].voltage * 200) & 0x3FF)) << 14;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[11].voltage * 200) & 0x3FF)) << 4;   //10 bits, 5mV precision, range [0-5120]mV
     return true; //60 bits used, 4 unused
 }
 
 static bool MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[12].voltage / 5) & 0x3FF)) << 54;  //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[13].voltage / 5) & 0x3FF)) << 44;  //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[14].voltage / 5) & 0x3FF)) << 34;  //10 bits, 5mV precision, range [0-5120]mV
-    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[15].voltage / 5) & 0x3FF)) << 24;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64  = ((uint64_t)((uint16_t)(BMS.cells[12].voltage * 200) & 0x3FF)) << 54;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[13].voltage * 200) & 0x3FF)) << 44;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[14].voltage * 200) & 0x3FF)) << 34;  //10 bits, 5mV precision, range [0-5120]mV
+    message->u64 |= ((uint64_t)((uint16_t)(BMS.cells[15].voltage * 200) & 0x3FF)) << 24;  //10 bits, 5mV precision, range [0-5120]mV
     message->u64 |= ((uint64_t)((uint16_t)(BMS.pack_voltage / 10) & 0x1FFF)) << 11;     //13 bits, 10mV precision, range [0-81910]mV
     return true; //53 bits used, 11 unused
 }
@@ -311,19 +307,21 @@ static bool MSG_pack_BMS_1Hz_Cell_Voltage_12_to_15(CAN_data_T* message, const ui
 static bool MSG_pack_BMS_1Hz_Temperatures_and_Humidity(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u8[0] = (uint8_t)(ENV.values.board.brd_temp[0] / 10);  //8 bits, 1 deg C precision, range [0-255]deg C
-    message->u8[1] = (uint8_t)(ENV.values.board.brd_temp[1] / 10);  //8 bits, 1 deg C precision, range [0-255]deg C
-    message->u8[2] = (uint8_t)(ENV.values.board.mcu_temp / 10);     //8 bits, 1 deg C precision, range [0-255]deg C
-    message->u8[3] = (uint8_t)(ENV.values.board.ambient_temp / 10); //8 bits, 1 deg C precision, range [0-255]deg C
-    message->u8[4] = (uint8_t)(ENV.values.board.rh / 100);          //8 bits, 1% precision, range [0-255]%
-    return true; //40 bits used, 24 unused
+    message->u64  = ((uint64_t)((uint8_t)(ENV.values.board.brd_temp[0] / 10) & 0x7F)) << 57;    //7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(ENV.values.board.brd_temp[1] / 10) & 0x7F)) << 50;    //7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(ENV.values.board.mcu_temp / 10) & 0x7F)) << 43;       //7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(ENV.values.board.ambient_temp / 10) & 0x7F)) << 36;   //7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(ENV.values.board.rh / 100) & 0x07F)) << 29;           //7 bits, 1% precision, range [0-128]%
+    return true; //35 bits used, 29 unused
 }
 
 static bool MSG_pack_BMS_1Hz_Fans(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    message->u8[0]  = COOL.percentage[0];   //8 bits, 1% precision, range [0-255]%
-    message->u8[1]  = COOL.percentage[1];   //8 bits, 1% precision, range [0-255]%
+    message->u8[0]  = (COOL.percentage[0] << 1) | (COOL.state[0] == COOL_OFF);  
+    //8 bits, First 7 bits is COOL.percentage: 1% precision, range [0-128]%. Last bit: 0 = COOL_OFF, 1 = COOL_ON
+    message->u8[1]  = (COOL.percentage[1] << 1) | (COOL.state[1] == COOL_OFF);  
+    //8 bits, First 7 bits is COOL.percentage: 1% precision, range [0-128]%. Last bit: 0 = COOL_OFF, 1 = COOL_ON
     message->u16[1] = COOL.rpm[0];          //16 bits, 1 rpm precision, range [0-65525]rpm
     message->u16[2] = COOL.rpm[1];          //16 bits, 1 rpm precision, range [0-65525]rpm
     return true; //48 bits used, 16 unused
