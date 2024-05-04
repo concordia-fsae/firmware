@@ -74,9 +74,9 @@ typedef struct
     BMS_State_E state;
     bool        fault;
     uint16_t    balancing_cells;
-    BMS_Cell_S  cells[MAX_CELL_COUNT];      // [mv], precision 1mv
-    float32_t   pack_voltage;               // [mv], precision 1mv
-    float32_t   calculated_pack_voltage;    // [mv], precision 1mv
+    BMS_Cell_S  cells[MAX_CELL_COUNT];      // [V], precision 1V
+    float32_t   pack_voltage;               // [V], precision 1V
+    float32_t   calculated_pack_voltage;    // [V], precision 1V
     uint8_t     connected_cells;
 
     float32_t charge_limit;
@@ -87,7 +87,7 @@ typedef struct
         float32_t max;
         float32_t min;
         float32_t avg;
-    } voltage;         // [0.1mv], precision 0.1mv
+    } voltage;         // [V], precision 1V
     struct
     {
         float32_t min;
