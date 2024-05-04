@@ -4,14 +4,13 @@ use std::{sync::Arc, sync::Mutex};
 use std::io::stdin;
 
 use anyhow::Result;
-use anyhow::anyhow;
-use ecu_diagnostics::dynamic_diag::{DiagProtocol, DiagPayload};
-use ecu_diagnostics::uds::{UDSProtocol, UdsCommand};
-use modules::canio::CANIO;
+use automotive_diag::uds::{UdsCommand, UdsError, UdsErrorByte, RoutineControlType};
+use ecu_diagnostics::dynamic_diag::{DiagProtocol, DiagPayload, EcuNRC};
+use ecu_diagnostics::uds::UDSProtocol;
 use tokio::sync::mpsc;
-use tokio::sync::oneshot;
 
-pub mod modules;
+use conuds::{CanioCmd, PrdCmd, UdsDownloadStart, start_routine_frame, start_download_frame, DownloadStartResponse, transfer_data_frame, stop_download_frame};
+use conuds::modules::canio::CANIO;
 
 struct App {
     exit: bool,
@@ -21,44 +20,6 @@ impl App {
     fn new() -> Self {
         Self { exit: false }
     }
-}
-
-// struct CmdResp {
-//     cmd: Vec<u8>,
-//     resp: oneshot::Sender<Vec<u8>>,
-// }
-
-// impl CmdResp {
-//     async fn send(cmd: Vec<u8>, send: &mut mpsc::Sender<Self>) -> oneshot::Receiver<Vec<u8>> {
-//         let (resp, recv) = oneshot::channel::<Vec<u8>>();
-
-//         let _ = send.send(Self { cmd, resp }).await;
-//         recv
-//     }
-// }
-
-#[derive(Debug)]
-pub enum CanioCmd {
-    UdsCmdNoResponse(Vec<u8>),
-    UdsCmdWithResponse(Vec<u8>, oneshot::Sender<Vec<u8>>),
-}
-
-impl CanioCmd {
-    #[allow(dead_code)]
-    async fn send_with_resp(
-        buf: &[u8],
-        queue: mpsc::Sender<CanioCmd>,
-    ) -> Result<oneshot::Receiver<Vec<u8>>> {
-        let (tx, rx) = oneshot::channel();
-        match queue.send(Self::UdsCmdWithResponse(buf.to_owned(), tx)).await {
-            Ok(_) => Ok(rx),
-            Err(e) => Err(anyhow!(e)),
-        }
-    }
-}
-
-enum PrdCmd {
-    PersistentTesterPresent(bool),
 }
 
 #[tokio::main]
@@ -76,28 +37,8 @@ async fn main() {
     let t1 = tokio::spawn(async move { tsk_canio(app_canio, uds_queue_rx).await });
     let t2 = tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx2).await });
 
-    let _ = cmd_queue_tx
-        .send(PrdCmd::PersistentTesterPresent(true))
-        .await;
+    do_uds_things(cmd_queue_tx.clone(), uds_queue_tx.clone()).await;
 
-    let mut buf = String::new();
-    while !stdin().read_line(&mut buf).is_ok() {
-        // wait for user to hit enter
-    }
-
-    let buf = DiagPayload::new(
-        UdsCommand::RoutineControl.into(),
-        &[0x01, 0xf0, 0x0f],
-    ).to_bytes();
-
-    let resp = CanioCmd::send_with_resp(&buf, uds_queue_tx);
-
-    if let Ok(resp) = resp.await {
-        if let Ok(resp) = resp.await {
-            println!("response: {:?}", resp);
-        }
-
-    }
 
     let _ = t1.await.unwrap();
     let _ = t2.await.unwrap();
@@ -111,6 +52,81 @@ async fn main() {
     //         app.lock().unwrap().exit = true;
     //     }
     // }
+}
+
+async fn do_uds_things(cmd_queue_tx: mpsc::Sender<PrdCmd>, uds_queue_tx: mpsc::Sender<CanioCmd>) {
+    let _ = cmd_queue_tx
+        .send(PrdCmd::PersistentTesterPresent(true))
+        .await;
+
+    let mut garbage = String::new();
+    while !stdin().read_line(&mut garbage).is_ok() {
+        // wait for user to hit enter
+    }
+
+    // start routine 0xf00f
+    let buf = start_routine_frame(0xf00f, None);
+    println!("Starting routine 0xf00f: {:02x?}", buf);
+
+    if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone()).await {
+        if let Ok(resp) = resp.await {
+            println!("response: {:02x?}", resp);
+        }
+    }
+
+    while !stdin().read_line(&mut garbage).is_ok() {
+        // wait for user to hit enter
+    }
+
+    // start download
+    let mut started = false;
+    let mut deets: DownloadStartResponse;
+    let buf = start_download_frame(UdsDownloadStart::default(0x08002000, 4));
+    println!("Starting UDS download: {:02x?}", buf);
+
+    if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone()).await {
+        if let Ok(resp) = resp.await {
+            println!("response: {:02x?}", resp);
+
+            if resp[0] == 0x7F {
+                let nrc = UdsErrorByte::from(*resp.last().unwrap());
+                if nrc.is_ecu_busy() {
+                    print!("ECU is processing the command");
+                } else if nrc.is_repeat_request() {
+                    print!("ECU requests retransmission");
+                } else {
+                    print!("Error: {}", nrc.desc());
+                }
+            } else {
+                deets = DownloadStartResponse {
+                    chunksize_len: resp[1],
+                    chunksize: resp[2] as u16,
+                };
+                started = true;
+            }
+        }
+    }
+
+    // actually transfer some data
+    while !stdin().read_line(&mut garbage).is_ok() {
+        // wait for user to hit enter
+    }
+    if started {
+        let buf = transfer_data_frame();
+        println!("Transferring data over UDS: {:02x?}", buf);
+
+        if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone()).await {
+            if let Ok(resp) = resp.await {
+                println!("response: {:02x?}", resp);
+            }
+        }
+
+        if let Ok(resp) = CanioCmd::send_recv(&stop_download_frame(), uds_queue_tx.clone()).await {
+            if let Ok(resp) = resp.await {
+                println!("response: {:02x?}", resp);
+            }
+        }
+    }
 }
 
 /// CANIO task
