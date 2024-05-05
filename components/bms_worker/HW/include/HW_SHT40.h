@@ -31,21 +31,22 @@ typedef enum
     SHT_WAITING,
     SHT_MEASURING,
     SHT_HEATING,
+    SHT_ERROR,
 } SHT_State_E;
 
 typedef struct
 {
-    SHT_State_E state;
-    uint64_t      raw;
-    int16_t       temp; /**< Stored in 0.1 deg C */
-    uint16_t      rh;   /**< Stored in 0.01% RH */
+    uint64_t  raw;
+    float32_t temp; // [deg C], precision 0.01 deg C
+    float32_t rh;   // [%], precision 0.01%
 } SHT_Data_S;
 
 typedef struct
 {
+    SHT_State_E      state;
     HW_I2C_Device_S* dev;
     uint32_t         serial_number;
-    SHT_Data_S     data;
+    SHT_Data_S       data;
 } SHT_S;
 
 

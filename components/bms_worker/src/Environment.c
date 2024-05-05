@@ -76,8 +76,6 @@ ENV_S ENV;
 #if defined(BMSW_BOARD_VA1)
 static Sensor_State_E ltc_state;
 static Sensor_State_E hs_state;
-#elif defined(BMSW_BOARD_VA3) // BMSW_BOARD_VA1
-static Sensor_State_E sht_state;
 #endif // BMSW_BOARD_VA3
 
 
@@ -109,16 +107,7 @@ static void Environment_Init()
         ENV.state = ENV_ERROR;
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-    sht_state = SENS_INIT;
-
-    if (!SHT_init())
-    {
-        sht_state = SENS_ERROR;
-    }
-    else 
-    {
-        sht_state = SENS_RUNNING;
-    }
+    (void)SHT_init();
 #endif                        /**< BMSW_BOARD_VA3 */
 
     if (ENV.state != ENV_ERROR)
@@ -176,12 +165,12 @@ static void Environment10Hz_PRD()
         }
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-    if (sht_chip.data.state == SHT_MEASURING)
+    if (sht_chip.state == SHT_MEASURING)
     {
         if (SHT_getData())
         {
-            ENV.values.board.ambient_temp = sht_chip.data.temp / 10;
-            ENV.values.board.rh           = sht_chip.data.rh / 100;
+            ENV.values.board.ambient_temp = sht_chip.data.temp;
+            ENV.values.board.rh           = sht_chip.data.rh;
         }
     }
 
@@ -222,8 +211,8 @@ static void Environment1Hz_PRD()
             LTC_startMeasurement();
             HS4011_startConversion();
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-            if (sht_state == SENS_RUNNING) SHT_startConversion();
-            else if (sht_state == SENS_ERROR)
+            if (sht_chip.state == SHT_WAITING) SHT_startConversion();
+            else if (sht_chip.state == SHT_ERROR)
             {
                 // TODO: Implement error handling
             }

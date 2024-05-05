@@ -21,6 +21,7 @@
  ******************************************************************************/
 
 #define READ_SENSOR_ID    0x89
+#define HIGH_PRECISION_MEASURE 0xfd
 
 
 /******************************************************************************
@@ -58,20 +59,17 @@ bool SHT_init(void)
     uint8_t wdat    = READ_SENSOR_ID;
     uint8_t rdat[6] = { 0 };
 
-    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 10))
+    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 1))
     {
+        sht_chip.state = SHT_ERROR;
         return false;
     }
 
-    HW_usDelay(100);
-
-    if (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&rdat, 6, 10))
-    {
-        return false;
-    }
+    while (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&rdat, 6, 10));
 
     sht_chip.serial_number = ((uint32_t)rdat[0]) | ((uint32_t)rdat[1] << 8) | ((uint32_t)rdat[2] << 16) | ((uint32_t)rdat[3] << 24);
 
+    sht_chip.state = SHT_WAITING;
     return true;
 }
 
@@ -82,8 +80,18 @@ bool SHT_init(void)
  */
 bool SHT_startConversion(void)
 {
-    // TODO: Implement
-    return false;
+    if (sht_chip.state != SHT_WAITING) return false;
+    
+    uint8_t wdat    = HIGH_PRECISION_MEASURE;
+
+    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 10))
+    {
+        return false;
+    }
+
+    sht_chip.state = SHT_MEASURING;
+
+    return true;
 }
 
 /**
@@ -93,7 +101,22 @@ bool SHT_startConversion(void)
  */
 bool SHT_getData(void)
 {
-    // TODO: Implement
+    if (sht_chip.state != SHT_MEASURING) return false;
+    
+    if (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&sht_chip.data.raw, 6, 10))
+    {
+        return false;
+    }
+    
+
+    float32_t temp_tmp = sht_chip.data.raw & 0xffff;
+    float32_t rh_tmp = sht_chip.data.raw & 0xffff000000 >> 24;
+
+    sht_chip.data.temp = -45 + 175.0f*(temp_tmp/65535);
+    sht_chip.data.rh = -6 + 125.0f*(rh_tmp/65535);
+    
+    sht_chip.state = SHT_WAITING;
+
     return true;
 }
 
@@ -105,7 +128,7 @@ bool SHT_getData(void)
 bool SHT_startHeater(void)
 {
     // TODO: Implement
-    return true;
+    return false;
 }
 
 #endif // if defined(BMSW_BOARD_VA3)
