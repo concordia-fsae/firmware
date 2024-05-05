@@ -165,13 +165,17 @@ static void Environment10Hz_PRD()
         }
     }
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-    if (sht_chip.state == SHT_MEASURING)
+    if (sht_chip.state == SHT_MEASURING || sht_chip.state == SHT_HEATING)
     {
         if (SHT_getData())
         {
             ENV.values.board.ambient_temp = sht_chip.data.temp;
             ENV.values.board.rh           = sht_chip.data.rh;
         }
+    }
+    else if (sht_chip.state == SHT_WAITING)
+    {
+        SHT_startConversion();
     }
 
     ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu);

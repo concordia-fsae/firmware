@@ -15,6 +15,8 @@
 #include "HW.h"
 #include "HW_SHT40.h"
 
+#include "Utility.h"
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -22,6 +24,9 @@
 
 #define READ_SENSOR_ID    0x89
 #define HIGH_PRECISION_MEASURE 0xfd
+#define HEATER_110mW_100ms 0x24
+#define HEATER_20mW_100ms 0x15
+#define SOFT_RESET 0x94
 
 
 /******************************************************************************
@@ -56,9 +61,15 @@ SHT_S           sht_chip = {
  */
 bool SHT_init(void)
 {
-    uint8_t wdat    = READ_SENSOR_ID;
+    uint8_t wdat    = SOFT_RESET;
     uint8_t rdat[6] = { 0 };
 
+    HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 1);
+
+    HW_delay(10);
+
+    wdat    = READ_SENSOR_ID;
+    
     if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 1))
     {
         sht_chip.state = SHT_ERROR;
@@ -101,7 +112,7 @@ bool SHT_startConversion(void)
  */
 bool SHT_getData(void)
 {
-    if (sht_chip.state != SHT_MEASURING) return false;
+    if (sht_chip.state != SHT_MEASURING && sht_chip.state != SHT_HEATING) return false;
     
     if (!HW_I2C_masterRead(sht_chip.dev, (uint8_t*)&sht_chip.data.raw, 6, 10))
     {
@@ -109,11 +120,14 @@ bool SHT_getData(void)
     }
     
 
-    float32_t temp_tmp = sht_chip.data.raw & 0xffff;
-    float32_t rh_tmp = sht_chip.data.raw & 0xffff000000 >> 24;
+    uint16_t temp_tmp = sht_chip.data.raw & 0xffff;
+    uint16_t rh_tmp = sht_chip.data.raw & 0xffff000000 >> 24;
 
-    sht_chip.data.temp = -45 + 175.0f*(temp_tmp/65535);
-    sht_chip.data.rh = -6 + 125.0f*(rh_tmp/65535);
+    reverse_bytes((uint8_t*)&temp_tmp, 2);
+    reverse_bytes((uint8_t*)&rh_tmp, 2);
+
+    sht_chip.data.temp = -45 + 175.0f*((float32_t)temp_tmp/65535);
+    sht_chip.data.rh = -6 + 125.0f*((float32_t)rh_tmp/65535);
     
     sht_chip.state = SHT_WAITING;
 
@@ -127,8 +141,18 @@ bool SHT_getData(void)
  */
 bool SHT_startHeater(void)
 {
-    // TODO: Implement
-    return false;
+    if (sht_chip.state != SHT_WAITING) return false;
+    
+    uint8_t wdat    = HEATER_20mW_100ms;
+
+    if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 10))
+    {
+        return false;
+    }
+
+    sht_chip.state = SHT_HEATING;
+
+    return true;
 }
 
 #endif // if defined(BMSW_BOARD_VA3)
