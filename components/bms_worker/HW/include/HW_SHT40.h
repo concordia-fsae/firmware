@@ -34,6 +34,13 @@ typedef enum
     SHT_ERROR,
 } SHT_State_E;
 
+typedef enum
+{
+    SHT_HEAT_LOW = 0x00,
+    SHT_HEAT_MED,
+    SHT_HEAT_HIGH,
+} SHT_Heat_E;
+
 typedef struct
 {
     uint64_t  raw;
@@ -57,6 +64,6 @@ typedef struct
 bool SHT_init(void);
 bool SHT_startConversion(void);
 bool SHT_getData(void);
-bool SHT_startHeater(void);
+bool SHT_startHeater(SHT_Heat_E heat);
 
 #endif    // BMSW_BOARD_VA3

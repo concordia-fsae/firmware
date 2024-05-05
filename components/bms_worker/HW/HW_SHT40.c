@@ -139,11 +139,25 @@ bool SHT_getData(void)
  *
  * @retval true = Success, false = Failure
  */
-bool SHT_startHeater(void)
+bool SHT_startHeater(SHT_Heat_E heat)
 {
     if (sht_chip.state != SHT_WAITING) return false;
     
-    uint8_t wdat    = HEATER_20mW_100ms;
+
+    uint8_t wdat = HEATER_20mW_100ms;
+
+    switch(heat)
+    {
+        case SHT_HEAT_LOW:
+            break;
+        case SHT_HEAT_MED:
+            wdat = HEATER_110mW_100ms;
+            break;
+        case SHT_HEAT_HIGH:
+            wdat = HEATER_110mW_100ms;
+        default:
+            break;
+    }
 
     if (!HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 10))
     {

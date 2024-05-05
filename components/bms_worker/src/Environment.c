@@ -215,7 +215,17 @@ static void Environment1Hz_PRD()
             LTC_startMeasurement();
             HS4011_startConversion();
 #elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-            if (sht_chip.state == SHT_WAITING) SHT_startConversion();
+            if (sht_chip.state == SHT_WAITING) 
+            {
+                if (ENV.values.board.rh > 90.0f)
+                {
+                    SHT_startHeater(SHT_HEAT_MED);
+                }
+                else 
+                {
+                    SHT_startConversion();
+                }
+            }
             else if (sht_chip.state == SHT_ERROR)
             {
                 // TODO: Implement error handling
