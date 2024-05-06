@@ -9,16 +9,28 @@ pub mod modules;
 #[derive(Debug)]
 pub enum CanioCmd {
     UdsCmdNoResponse(Vec<u8>),
-    UdsCmdWithResponse(Vec<u8>, oneshot::Sender<Vec<u8>>),
+    UdsCmdWithResponse {
+        buf: Vec<u8>,
+        resp_channel: oneshot::Sender<Vec<u8>>,
+        timeout_ms: u32,
+    },
 }
 
 impl CanioCmd {
     pub async fn send_recv(
         buf: &[u8],
         queue: mpsc::Sender<CanioCmd>,
+        timeout_ms: u32,
     ) -> Result<oneshot::Receiver<Vec<u8>>> {
         let (tx, rx) = oneshot::channel();
-        match queue.send(Self::UdsCmdWithResponse(buf.to_owned(), tx)).await {
+        match queue
+            .send(Self::UdsCmdWithResponse {
+                buf: buf.to_owned(),
+                resp_channel: tx,
+                timeout_ms,
+            })
+            .await
+        {
             Ok(_) => Ok(rx),
             Err(e) => Err(anyhow!(e)),
         }
@@ -64,11 +76,12 @@ impl UdsDownloadStart {
 }
 
 #[allow(dead_code)]
-pub struct DownloadStartResponse {
+#[derive(Default)]
+pub struct DownloadParams {
+    pub counter: u8,
     pub chunksize_len: u8,
     pub chunksize: u16,
 }
-
 
 pub fn start_routine_frame(routine_id: u16, data: Option<Vec<u8>>) -> Vec<u8> {
     let mut ret = vec![
@@ -83,13 +96,10 @@ pub fn start_routine_frame(routine_id: u16, data: Option<Vec<u8>>) -> Vec<u8> {
     }
 
     ret
-
 }
 
 pub fn start_download_frame(data: UdsDownloadStart) -> Vec<u8> {
-    let mut ret = vec![
-        UdsCommand::RequestDownload.into(),
-    ];
+    let mut ret = vec![UdsCommand::RequestDownload.into()];
 
     ret.extend_from_slice(&data.to_bytes());
 
@@ -100,15 +110,11 @@ pub fn stop_download_frame() -> Vec<u8> {
     vec![UdsCommand::RequestTransferExit.into()]
 }
 
-pub fn transfer_data_frame() -> Vec<u8> {
-    let mut ret = vec![
-        UdsCommand::TransferData.into(),
-        0,
-        0xDE,
-        0xAD,
-        0xBE,
-        0xEF,
-    ];
+pub fn transfer_data_frame(params: &mut DownloadParams, data: &[u8]) -> Vec<u8> {
+    let mut ret = vec![UdsCommand::TransferData.into(), params.counter.clone()];
+
+    params.counter = params.counter.wrapping_add(1);
+    ret.extend_from_slice(data);
 
     ret
 }

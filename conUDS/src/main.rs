@@ -1,16 +1,19 @@
 use core::time;
-// use futures::future::BoxFuture;
-use std::{sync::Arc, sync::Mutex};
+use std::fs::read;
 use std::io::stdin;
+use std::{sync::Arc, sync::Mutex};
 
 use anyhow::Result;
-use automotive_diag::uds::{UdsCommand, UdsError, UdsErrorByte, RoutineControlType};
-use ecu_diagnostics::dynamic_diag::{DiagProtocol, DiagPayload, EcuNRC};
+use automotive_diag::uds::UdsErrorByte;
+use ecu_diagnostics::dynamic_diag::{DiagProtocol, EcuNRC};
 use ecu_diagnostics::uds::UDSProtocol;
 use tokio::sync::mpsc;
 
-use conuds::{CanioCmd, PrdCmd, UdsDownloadStart, start_routine_frame, start_download_frame, DownloadStartResponse, transfer_data_frame, stop_download_frame};
 use conuds::modules::canio::CANIO;
+use conuds::{
+    start_download_frame, start_routine_frame, stop_download_frame, transfer_data_frame, CanioCmd,
+    DownloadParams, PrdCmd, UdsDownloadStart,
+};
 
 struct App {
     exit: bool,
@@ -35,10 +38,19 @@ async fn main() {
     let (cmd_queue_tx, mut cmd_queue_rx) = mpsc::channel::<PrdCmd>(10);
 
     let t1 = tokio::spawn(async move { tsk_canio(app_canio, uds_queue_rx).await });
-    let t2 = tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx2).await });
+    let t2 =
+        tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx2).await });
 
-    do_uds_things(cmd_queue_tx.clone(), uds_queue_tx.clone()).await;
+    let _ = cmd_queue_tx
+        .send(PrdCmd::PersistentTesterPresent(true))
+        .await;
 
+    let mut garbage = String::new();
+    while !stdin().read_line(&mut garbage).is_ok() {
+        // wait for user to hit enter
+    }
+
+    uds_app_download(cmd_queue_tx.clone(), uds_queue_tx.clone()).await;
 
     let _ = t1.await.unwrap();
     let _ = t2.await.unwrap();
@@ -54,37 +66,38 @@ async fn main() {
     // }
 }
 
-async fn do_uds_things(cmd_queue_tx: mpsc::Sender<PrdCmd>, uds_queue_tx: mpsc::Sender<CanioCmd>) {
+/// Trigger an app download process
+///
+/// Starts by telling the device to erase the current app, then starts the app download, and lastly
+/// starts actually transferring the app
+async fn uds_app_download(
+    cmd_queue_tx: mpsc::Sender<PrdCmd>,
+    uds_queue_tx: mpsc::Sender<CanioCmd>,
+) {
+    // disable tester present. bootloader is not currently robust to having tester present enabled
+    // during an app download
     let _ = cmd_queue_tx
-        .send(PrdCmd::PersistentTesterPresent(true))
+        .send(PrdCmd::PersistentTesterPresent(false))
         .await;
 
-    let mut garbage = String::new();
-    while !stdin().read_line(&mut garbage).is_ok() {
-        // wait for user to hit enter
-    }
-
-    // start routine 0xf00f
+    // start routine 0xf00f, erase app
     let buf = start_routine_frame(0xf00f, None);
     println!("Starting routine 0xf00f: {:02x?}", buf);
 
-    if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone()).await {
+    if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone(), 20).await {
         if let Ok(resp) = resp.await {
             println!("response: {:02x?}", resp);
         }
     }
 
-    while !stdin().read_line(&mut garbage).is_ok() {
-        // wait for user to hit enter
-    }
-
     // start download
     let mut started = false;
-    let mut deets: DownloadStartResponse;
+    let mut dl_params = DownloadParams::default();
+
     let buf = start_download_frame(UdsDownloadStart::default(0x08002000, 4));
     println!("Starting UDS download: {:02x?}", buf);
 
-    if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone()).await {
+    if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone(), 50).await {
         if let Ok(resp) = resp.await {
             println!("response: {:02x?}", resp);
 
@@ -98,7 +111,8 @@ async fn do_uds_things(cmd_queue_tx: mpsc::Sender<PrdCmd>, uds_queue_tx: mpsc::S
                     print!("Error: {}", nrc.desc());
                 }
             } else {
-                deets = DownloadStartResponse {
+                dl_params = DownloadParams {
+                    counter: 0,
                     chunksize_len: resp[1],
                     chunksize: resp[2] as u16,
                 };
@@ -108,22 +122,48 @@ async fn do_uds_things(cmd_queue_tx: mpsc::Sender<PrdCmd>, uds_queue_tx: mpsc::S
     }
 
     // actually transfer some data
-    while !stdin().read_line(&mut garbage).is_ok() {
-        // wait for user to hit enter
-    }
     if started {
-        let buf = transfer_data_frame();
-        println!("Transferring data over UDS: {:02x?}", buf);
+        // load the binary to download
+        if let Ok(file) = read("../../firmware/components/heartbeat/build/heartbeat_crc.bin") {
+            // iterate over it in chunks, the size of which were specified by the ECUs response to
+            // the "start transfer" command
+            for chunk in file.chunks(dl_params.chunksize as usize) {
+                let buf = transfer_data_frame(&mut dl_params, chunk);
+                // done reading the file once the frame doesn't contain any data bytes
+                if buf.len() == 2 {
+                    println!("File read in its entirety");
+                    break;
+                }
+                println!("Transferring data over UDS: {:02x?}", buf);
 
-        if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone()).await {
-            if let Ok(resp) = resp.await {
-                println!("response: {:02x?}", resp);
+                // send the frame
+                if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone(), 50).await {
+                    match resp.await {
+                        Ok(resp) => {
+                            println!("response: {:02x?}", resp);
+                            if resp[0] == 0x7f {
+                                let nrc = UdsErrorByte::from(*resp.last().unwrap());
+                                println!("ECU reports failure: {}", nrc.desc());
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            println!("error in response: {:?}", e);
+                            loop {}
+                        }
+                    }
+                }
+                // tokio::time::sleep(time::Duration::from_micros(500)).await;
             }
-        }
 
-        if let Ok(resp) = CanioCmd::send_recv(&stop_download_frame(), uds_queue_tx.clone()).await {
-            if let Ok(resp) = resp.await {
-                println!("response: {:02x?}", resp);
+            // finish the download, either because it completed successfully or because it failed
+            // early
+            if let Ok(resp) =
+                CanioCmd::send_recv(&stop_download_frame(), uds_queue_tx.clone(), 20).await
+            {
+                if let Ok(resp) = resp.await {
+                    println!("response: {:02x?}", resp);
+                }
             }
         }
     }
