@@ -82,14 +82,14 @@ impl<'a> CANIO<'a> {
             match cmd {
                 CanioCmd::UdsCmdNoResponse(msg) => {
                     // println!("msg received from channel {:#?}", msg);
-                    let _ = self.uds_send(&msg, 1);
+                    let _ = self.uds_send(&msg, 5);
                     // println!("result: {:#?}", res);
                 }
                 CanioCmd::UdsCmdWithResponse {
                     buf,
                     resp_channel,
                     timeout_ms,
-                } => match self.uds_send_recv(&buf, 1, timeout_ms) {
+                } => match self.uds_send_recv(&buf, 5, timeout_ms) {
                     Ok(resp) => {
                         let _ = resp_channel.send(resp);
                     }

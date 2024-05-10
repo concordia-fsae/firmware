@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.80"
 automotive_diag = { version = "0.1.6", features = ["display", "std", "with-uds"], default-features = false }
+crc = "3.2.1"
 ecu_diagnostics = "0.95.6"
 futures = "0.3.30"
 serde = { version = "1.0.197", features = ["derive"] }

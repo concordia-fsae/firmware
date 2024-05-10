@@ -1,10 +1,13 @@
 use anyhow::{anyhow, Result};
 use automotive_diag::uds::RoutineControlType;
 use automotive_diag::uds::UdsCommand;
+use crc::Crc;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
 pub mod modules;
+
+const CRC8: Crc<u8> = Crc::<u8>::new(&crc::CRC_8_SAE_J1850);
 
 #[derive(Debug)]
 pub enum CanioCmd {
@@ -75,7 +78,6 @@ impl UdsDownloadStart {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Default)]
 pub struct DownloadParams {
     pub counter: u8,
@@ -98,6 +100,17 @@ pub fn start_routine_frame(routine_id: u16, data: Option<Vec<u8>>) -> Vec<u8> {
     ret
 }
 
+pub fn get_routine_results_frame(routine_id: u16) -> Vec<u8> {
+    let mut ret = vec![
+        UdsCommand::RoutineControl.into(),
+        RoutineControlType::RequestRoutineResult.into(),
+    ];
+
+    ret.extend_from_slice(&routine_id.to_le_bytes());
+
+    ret
+}
+
 pub fn start_download_frame(data: UdsDownloadStart) -> Vec<u8> {
     let mut ret = vec![UdsCommand::RequestDownload.into()];
 
@@ -111,10 +124,12 @@ pub fn stop_download_frame() -> Vec<u8> {
 }
 
 pub fn transfer_data_frame(params: &mut DownloadParams, data: &[u8]) -> Vec<u8> {
-    let mut ret = vec![UdsCommand::TransferData.into(), params.counter.clone()];
+    let mut ret = vec![UdsCommand::TransferData.into(), params.counter];
 
     params.counter = params.counter.wrapping_add(1);
     ret.extend_from_slice(data);
+    let chunk_crc = CRC8.checksum(data);
+    ret.push(chunk_crc);
 
     ret
 }

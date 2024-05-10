@@ -4,15 +4,15 @@ use std::io::stdin;
 use std::{sync::Arc, sync::Mutex};
 
 use anyhow::Result;
-use automotive_diag::uds::UdsErrorByte;
+use automotive_diag::uds::{UdsCommand, UdsErrorByte};
 use ecu_diagnostics::dynamic_diag::{DiagProtocol, EcuNRC};
 use ecu_diagnostics::uds::UDSProtocol;
 use tokio::sync::mpsc;
 
 use conuds::modules::canio::CANIO;
 use conuds::{
-    start_download_frame, start_routine_frame, stop_download_frame, transfer_data_frame, CanioCmd,
-    DownloadParams, PrdCmd, UdsDownloadStart,
+    get_routine_results_frame, start_download_frame, start_routine_frame, stop_download_frame,
+    transfer_data_frame, CanioCmd, DownloadParams, PrdCmd, UdsDownloadStart,
 };
 
 struct App {
@@ -46,7 +46,7 @@ async fn main() {
         .await;
 
     let mut garbage = String::new();
-    while !stdin().read_line(&mut garbage).is_ok() {
+    while stdin().read_line(&mut garbage).is_err() {
         // wait for user to hit enter
     }
 
@@ -80,6 +80,8 @@ async fn uds_app_download(
         .send(PrdCmd::PersistentTesterPresent(false))
         .await;
 
+    // tokio::time::sleep(time::Duration::from_millis(5)).await;
+
     // start routine 0xf00f, erase app
     let buf = start_routine_frame(0xf00f, None);
     println!("Starting routine 0xf00f: {:02x?}", buf);
@@ -87,6 +89,48 @@ async fn uds_app_download(
     if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone(), 20).await {
         if let Ok(resp) = resp.await {
             println!("response: {:02x?}", resp);
+        }
+    }
+
+    // give it some time to finish and then check results
+    loop {
+        tokio::time::sleep(time::Duration::from_millis(10)).await;
+
+        let buf = get_routine_results_frame(0xf00f);
+        println!("Getting routine results for 0xf00f: {:02x?}", buf);
+
+        if let Ok(resp) = CanioCmd::send_recv(&buf, uds_queue_tx.clone(), 20).await {
+            if let Ok(resp) = resp.await {
+                println!("f00f status: {:02x?}", resp);
+
+                if resp[0] == 0x7F {
+                    println!("erase failed, not started");
+                    panic!()
+                }
+
+                // let rout: u8 = ;
+                let sid: u8 = UdsCommand::RoutineControl.into();
+                if resp[0] == sid + 0x40 {
+                    if resp.len() == 3 && resp[2] == 2 {
+                        match resp[2] {
+                            0 => {
+                                println!("erase failed");
+                                panic!("erase failed")
+                            }
+                            1 => {
+                                println!("erase in progress");
+                                continue;
+                            }
+                            2 => {
+                                println!("erase completed");
+                                break;
+                            }
+                            _ => {}
+                        }
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -113,7 +157,7 @@ async fn uds_app_download(
             } else {
                 dl_params = DownloadParams {
                     counter: 0,
-                    chunksize_len: resp[1],
+                    chunksize_len: resp[1] >> 4,
                     chunksize: resp[2] as u16,
                 };
                 started = true;
@@ -127,7 +171,7 @@ async fn uds_app_download(
         if let Ok(file) = read("../../firmware/components/heartbeat/build/heartbeat_crc.bin") {
             // iterate over it in chunks, the size of which were specified by the ECUs response to
             // the "start transfer" command
-            for chunk in file.chunks(dl_params.chunksize as usize) {
+            for chunk in file.chunks(dl_params.chunksize as usize - 1) {
                 let buf = transfer_data_frame(&mut dl_params, chunk);
                 // done reading the file once the frame doesn't contain any data bytes
                 if buf.len() == 2 {
@@ -149,11 +193,10 @@ async fn uds_app_download(
                         }
                         Err(e) => {
                             println!("error in response: {:?}", e);
-                            loop {}
+                            break;
                         }
                     }
                 }
-                // tokio::time::sleep(time::Duration::from_micros(500)).await;
             }
 
             // finish the download, either because it completed successfully or because it failed
@@ -207,8 +250,8 @@ async fn tsk_10ms(
                 }
             }
         }
+
         if send_tp {
-            // println!("sending tp to channel");
             uds_queue
                 .clone()
                 .send(CanioCmd::UdsCmdNoResponse(
