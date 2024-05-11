@@ -4,13 +4,14 @@ use std::path::PathBuf;
 use std::{sync::Arc, sync::Mutex};
 
 use anyhow::Result;
+use argh::FromArgs;
 use conuds::modules::uds::UdsClient;
 use ecu_diagnostics::dynamic_diag::DiagProtocol;
 use ecu_diagnostics::uds::UDSProtocol;
 use tokio::sync::mpsc;
 
 use conuds::modules::canio::CANIO;
-use conuds::{CanioCmd, PrdCmd};
+use conuds::{CanioCmd, PrdCmd, SupportedResetTypes};
 
 struct App {
     exit: bool,
@@ -22,9 +23,45 @@ impl App {
     }
 }
 
+#[derive(Debug, FromArgs)]
+/// conUDS - a UDS client deigned for use by Concordia FSAE to interact with ECUs on their vehicles
+/// using the UDS protocol
+struct Arguments {
+    #[argh(subcommand)]
+    subcmd: ArgSubCommands,
+}
+
+#[derive(Debug, FromArgs)]
+#[argh(subcommand)]
+enum ArgSubCommands {
+    Download(SubArgDownload),
+    Reset(SubArgReset),
+}
+
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "download")]
+/// Download an application to an ECU
+struct SubArgDownload {
+    #[argh(positional)]
+    /// path to the binary file to flash
+    binary: PathBuf,
+}
+
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "reset")]
+/// Reset an ECU
+struct SubArgReset {
+    #[argh(option, default = "SupportedResetTypes::Hard")]
+    /// reset type. `soft` or `hard`
+    reset_type: SupportedResetTypes,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("startup");
+
+    let args: Arguments = argh::from_env();
+    println!("{:?}", args);
 
     let app = Arc::new(Mutex::new(App::new()));
     let app_canio = Arc::clone(&app);
@@ -37,20 +74,22 @@ async fn main() -> Result<()> {
     let t1 = tokio::spawn(async move { tsk_canio(app_canio, uds_queue_rx).await });
     let t2 = tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx).await });
 
-    uds_client.start_persistent_tp().await?;
+    match args.subcmd {
+        ArgSubCommands::Reset(reset) => {
+            uds_client.ecu_reset(reset.reset_type).await?;
+        }
+        ArgSubCommands::Download(dl) => {
+            uds_client.start_persistent_tp().await?;
 
-    let mut garbage = String::new();
-    while stdin().read_line(&mut garbage).is_err() {
-        // wait for user to hit enter
-    }
+            let mut garbage = String::new();
+            while stdin().read_line(&mut garbage).is_err() {
+                // wait for user to hit enter
+            }
 
-    if let Err(e) = uds_client
-        .app_download(PathBuf::from(
-            "../../firmware/components/heartbeat/build/heartbeat_crc.bin",
-        ))
-        .await
-    {
-        println!("Error downloading app: {}", e);
+            if let Err(e) = uds_client.app_download(dl.binary).await {
+                println!("Error downloading app: {}", e);
+            }
+        }
     }
 
     let _ = t1.await.unwrap();

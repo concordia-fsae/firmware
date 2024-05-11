@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use crc::Crc;
 use tokio::sync::mpsc;
@@ -83,13 +85,38 @@ pub struct DownloadParams {
     pub chunksize: u16,
 }
 
+pub struct ParseError {}
 
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Error parsing data")
     }
 }
 
+#[derive(Debug)]
+pub enum SupportedResetTypes {
+    Hard = 0x01,
+    Soft = 0x03,
 }
 
+impl FromStr for SupportedResetTypes {
+    type Err = ParseError;
 
+    // Required method
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "hard" => Ok(Self::Hard),
+            "soft" => Ok(Self::Soft),
+            _ => Err(ParseError {}),
+        }
+    }
 }
 
+impl From<SupportedResetTypes> for automotive_diag::uds::ResetType {
+    fn from(value: SupportedResetTypes) -> Self {
+        match value {
+            SupportedResetTypes::Hard => Self::HardReset,
+            SupportedResetTypes::Soft => Self::SoftReset,
+        }
+    }
 }

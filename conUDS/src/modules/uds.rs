@@ -4,13 +4,14 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use automotive_diag::uds::RoutineControlType;
 use automotive_diag::uds::UdsCommand;
 use automotive_diag::uds::UdsErrorByte;
+use automotive_diag::uds::{ResetType, RoutineControlType};
 use ecu_diagnostics::dynamic_diag::EcuNRC;
 use tokio::sync::mpsc;
 
 use crate::DownloadParams;
+use crate::SupportedResetTypes;
 use crate::UdsDownloadStart;
 use crate::CRC8;
 use crate::{CanioCmd, PrdCmd};
@@ -42,6 +43,22 @@ impl UdsClient {
         Ok(self
             .send_cmd(PrdCmd::PersistentTesterPresent(false))
             .await?)
+    }
+
+    pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
+        let buf = [
+            UdsCommand::ECUReset.into(),
+            <SupportedResetTypes as Into<ResetType>>::into(reset_type).into(),
+        ];
+
+        println!("Sending ECU reset command: {:02x?}", buf);
+
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
+            .await?
+            .await?;
+        println!("ECU Reset results: {:02x?}", resp);
+
+        Ok(())
     }
 
     /// Start the given routine
