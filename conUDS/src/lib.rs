@@ -1,6 +1,4 @@
-use anyhow::{anyhow, Result};
-use automotive_diag::uds::RoutineControlType;
-use automotive_diag::uds::UdsCommand;
+use anyhow::Result;
 use crc::Crc;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -35,7 +33,7 @@ impl CanioCmd {
             .await
         {
             Ok(_) => Ok(rx),
-            Err(e) => Err(anyhow!(e)),
+            Err(e) => Err(e.into()),
         }
     }
 }
@@ -85,51 +83,13 @@ pub struct DownloadParams {
     pub chunksize: u16,
 }
 
-pub fn start_routine_frame(routine_id: u16, data: Option<Vec<u8>>) -> Vec<u8> {
-    let mut ret = vec![
-        UdsCommand::RoutineControl.into(),
-        RoutineControlType::StartRoutine.into(),
-    ];
 
-    ret.extend_from_slice(&routine_id.to_le_bytes());
-
-    if let Some(data) = data {
-        ret.extend(data)
     }
-
-    ret
 }
 
-pub fn get_routine_results_frame(routine_id: u16) -> Vec<u8> {
-    let mut ret = vec![
-        UdsCommand::RoutineControl.into(),
-        RoutineControlType::RequestRoutineResult.into(),
-    ];
-
-    ret.extend_from_slice(&routine_id.to_le_bytes());
-
-    ret
 }
 
-pub fn start_download_frame(data: UdsDownloadStart) -> Vec<u8> {
-    let mut ret = vec![UdsCommand::RequestDownload.into()];
 
-    ret.extend_from_slice(&data.to_bytes());
-
-    ret
 }
 
-pub fn stop_download_frame() -> Vec<u8> {
-    vec![UdsCommand::RequestTransferExit.into()]
-}
-
-pub fn transfer_data_frame(params: &mut DownloadParams, data: &[u8]) -> Vec<u8> {
-    let mut ret = vec![UdsCommand::TransferData.into(), params.counter];
-
-    params.counter = params.counter.wrapping_add(1);
-    ret.extend_from_slice(data);
-    let chunk_crc = CRC8.checksum(data);
-    ret.push(chunk_crc);
-
-    ret
 }
