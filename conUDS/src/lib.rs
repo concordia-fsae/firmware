@@ -5,6 +5,8 @@ use crc::Crc;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
+pub mod arguments;
+pub mod config;
 pub mod modules;
 
 const CRC8: Crc<u8> = Crc::<u8>::new(&crc::CRC_8_SAE_J1850);
@@ -102,7 +104,6 @@ pub enum SupportedResetTypes {
 impl FromStr for SupportedResetTypes {
     type Err = ParseError;
 
-    // Required method
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "hard" => Ok(Self::Hard),

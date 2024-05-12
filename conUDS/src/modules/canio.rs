@@ -1,12 +1,15 @@
 /// CANIO module
-use anyhow::{anyhow, Result};
+use std::marker::PhantomData;
 
+use anyhow::{anyhow, Result};
 use ecu_diagnostics::channel::{ChannelResult, IsoTPChannel, IsoTPSettings};
 use ecu_diagnostics::hardware::{socketcan::SocketCanScanner, Hardware, HardwareScanner};
+use log::{debug, error};
 use tokio::sync::mpsc::Receiver;
 
 use crate::CanioCmd;
 
+#[derive(Debug)]
 struct IDs {
     tx: u32,
     #[allow(dead_code)]
@@ -16,23 +19,46 @@ struct IDs {
 pub struct CANIO<'a> {
     ids: IDs,
     channel: Box<dyn IsoTPChannel>,
-    uds_queue: &'a mut Receiver<CanioCmd>,
+    uds_queue: Receiver<CanioCmd>,
+    _marker: PhantomData<&'a str>,
 }
 
 impl<'a> CANIO<'a> {
-    pub fn new(send_id: u32, recv_id: u32, uds_queue: &'a mut Receiver<CanioCmd>) -> Result<Self> {
+    pub fn new<'b>(
+        device: &'b str,
+        send_id: u32,
+        recv_id: u32,
+        uds_queue: Receiver<CanioCmd>,
+    ) -> Result<Self> {
         let scanner = SocketCanScanner::new();
         let devices = scanner.list_devices();
 
         if devices.is_empty() {
+            error!("No CAN devices detected");
             return Err(anyhow!("No CAN devices detected"));
         }
-        // println!("Devices: {:#?}", devices);
+        debug!("CAN Devices: {:#?}", devices);
 
-        let mut device = scanner.open_device_by_name("can0").unwrap();
-        // println!("opened device: {:#?}", device);
+        let mut device = {
+            match scanner.open_device_by_name(device) {
+                Ok(dev) => dev,
+                Err(e) => {
+                    error!("Failed to open CAN device: {}", e);
+                    return Err(anyhow!("Failed to open CAN device: {}", e));
+                }
+            }
+        };
+        debug!("opened CAN device: {:#?}", device);
 
-        let mut channel = device.create_iso_tp_channel().unwrap();
+        let mut channel = {
+            match device.create_iso_tp_channel() {
+                Ok(ch) => ch,
+                Err(e) => {
+                    error!("Failed to create ISO-TP channel: {}", e);
+                    return Err(anyhow!("Failed to create ISO-TP channel: {}", e));
+                }
+            }
+        };
 
         let iso_tp_cfg = IsoTPSettings {
             block_size: 5,
@@ -43,9 +69,18 @@ impl<'a> CANIO<'a> {
             can_use_ext_addr: false,
         };
 
-        channel.set_iso_tp_cfg(iso_tp_cfg)?;
-        channel.set_ids(send_id, recv_id)?;
-        channel.open()?;
+        if let Err(e) = channel.set_iso_tp_cfg(iso_tp_cfg) {
+            error!("Failed to set ISO-TP config on channel: {}", e);
+            return Err(anyhow!("Failed to set ISO-TP config on channel: {}", e));
+        }
+        if let Err(e) = channel.set_ids(send_id, recv_id) {
+            error!("Failed to set UDS IDs on channel: {}", e);
+            return Err(anyhow!("Failed to set UDS IDs on channel: {}", e));
+        }
+        if let Err(e) = channel.open() {
+            error!("Failed to open channel: {}", e);
+            return Err(anyhow!("Failed to open channel: {}", e));
+        }
 
         Ok(Self {
             ids: IDs {
@@ -54,6 +89,7 @@ impl<'a> CANIO<'a> {
             },
             channel,
             uds_queue,
+            _marker: PhantomData,
         })
     }
 
@@ -66,7 +102,6 @@ impl<'a> CANIO<'a> {
         self.channel.read_bytes(timeout_ms)
     }
 
-    #[allow(dead_code)]
     fn uds_send_recv(
         &mut self,
         buf: &[u8],
@@ -81,27 +116,48 @@ impl<'a> CANIO<'a> {
         if let Ok(cmd) = self.uds_queue.try_recv() {
             match cmd {
                 CanioCmd::UdsCmdNoResponse(msg) => {
-                    // println!("msg received from channel {:#?}", msg);
-                    let _ = self.uds_send(&msg, 5);
-                    // println!("result: {:#?}", res);
+                    if let Err(e) = self.uds_send(&msg, 5) {
+                        error!("Failed to send UDS message (no response expected): {}", e);
+                        return Err(anyhow!(
+                            "Failed to send UDS message (no response expected): {}",
+                            e
+                        ));
+                    }
                 }
                 CanioCmd::UdsCmdWithResponse {
                     buf,
                     resp_channel,
                     timeout_ms,
                 } => {
-                    resp_channel
-                        .send(self.uds_send_recv(&buf, 5, timeout_ms)?)
-                        .unwrap();
-                } // match self.uds_send_recv(&buf, 5, timeout_ms) {
-                  //     Ok(resp) => {
-                  //         let _ = resp_channel.send(resp);
-                  //     }
-                  //     Err(_) => {}
-                  // },
+                    let resp = self.uds_send_recv(&buf, 5, timeout_ms);
+                    match resp {
+                        Ok(b) => {
+                            if let Err(e) = resp_channel.send(b) {
+                                error!("Failed to send UDS response back to caller: {:?}", e);
+                                return Err(anyhow!(
+                                    "Failed to send UDS response back to caller: {:?}",
+                                    e
+                                ));
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to send UDS message (response expected): {}", e);
+                            return Err(anyhow!(
+                                "Failed to send UDS message (response expected): {}",
+                                e
+                            ));
+                        }
+                    }
+                }
             }
         }
 
         Ok(())
+    }
+}
+
+impl std::fmt::Display for CANIO<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ids: {:#?}", self.ids)
     }
 }

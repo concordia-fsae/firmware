@@ -12,6 +12,9 @@ automotive_diag = { version = "0.1.6", features = ["display", "std", "with-uds"]
 crc = "3.2.1"
 ecu_diagnostics = "0.95.6"
 futures = "0.3.30"
+log = { version = "0.4.21", features = ["std"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_derive = "1.0.197"
+serde_yaml = "0.9.34"
+simplelog = "0.12.2"
 tokio = { version = "1.36.0", features = ["macros", "tokio-macros", "rt", "rt-multi-thread", "time", "sync"] }

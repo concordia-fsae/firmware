@@ -8,6 +8,7 @@ use automotive_diag::uds::UdsCommand;
 use automotive_diag::uds::UdsErrorByte;
 use automotive_diag::uds::{ResetType, RoutineControlType};
 use ecu_diagnostics::dynamic_diag::EcuNRC;
+use log::{error, info};
 use tokio::sync::mpsc;
 
 use crate::DownloadParams;
@@ -16,6 +17,7 @@ use crate::UdsDownloadStart;
 use crate::CRC8;
 use crate::{CanioCmd, PrdCmd};
 
+#[derive(Debug)]
 pub struct UdsClient {
     cmd_queue_tx: mpsc::Sender<PrdCmd>,
     uds_queue_tx: mpsc::Sender<CanioCmd>,
@@ -36,10 +38,12 @@ impl UdsClient {
     }
 
     pub async fn start_persistent_tp(&mut self) -> Result<()> {
+        info!("Starting persistent TP");
         Ok(self.send_cmd(PrdCmd::PersistentTesterPresent(true)).await?)
     }
 
     pub async fn stop_persistent_tp(&mut self) -> Result<()> {
+        info!("Stopping persistent TP");
         Ok(self
             .send_cmd(PrdCmd::PersistentTesterPresent(false))
             .await?)
@@ -51,12 +55,12 @@ impl UdsClient {
             <SupportedResetTypes as Into<ResetType>>::into(reset_type).into(),
         ];
 
-        println!("Sending ECU reset command: {:02x?}", buf);
+        info!("Sending ECU reset command: {:02x?}", buf);
 
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        println!("ECU Reset results: {:02x?}", resp);
+        info!("ECU Reset results: {:02x?}", resp);
 
         Ok(())
     }
@@ -74,15 +78,15 @@ impl UdsClient {
             buf.extend(data)
         }
 
-        println!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
+        info!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
 
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await
         {
-            Ok(resp) => println!("Start routine response: {:02x?}", resp),
+            Ok(resp) => info!("Start routine response: {:02x?}", resp),
             Err(e) => {
-                println!("Error when waiting for response from ECU: {}", e);
+                error!("When waiting for response from ECU: {}", e);
                 return Err(e.into());
             }
         }
@@ -99,7 +103,7 @@ impl UdsClient {
 
         buf.extend_from_slice(&routine_id.to_le_bytes());
 
-        println!(
+        info!(
             "Getting routine results for routine 0x{:02x}: {:02x?}",
             routine_id, buf
         );
@@ -107,7 +111,8 @@ impl UdsClient {
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        println!(
+
+        info!(
             "Routine results response for 0x{:02x}: {:02x?}",
             routine_id, resp
         );
@@ -125,7 +130,7 @@ impl UdsClient {
         loop {
             let resp = self.routine_get_results(0xf00f).await?;
             if resp[0] == 0x7F {
-                println!("App erase failed, not started");
+                info!("App erase failed, not started");
                 return Err(anyhow!("App erase failed, not started"));
             }
 
@@ -172,25 +177,25 @@ impl UdsClient {
 
         buf.extend_from_slice(&data.to_bytes());
 
-        println!("Starting UDS download: {:02x?}", buf);
+        info!("Starting UDS download: {:02x?}", buf);
 
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        println!("Download start response: {:02x?}", resp);
+        info!("Download start response: {:02x?}", resp);
 
         if resp[0] == 0x7F {
             let nrc = UdsErrorByte::from(*resp.last().unwrap());
             // FIXME: some of these should result in a retry
             if nrc.is_ecu_busy() {
-                print!("ECU is processing the command");
+                error!("ECU is processing the command");
                 Err(anyhow!("ECU is processing the command"))
             } else if nrc.is_repeat_request() {
-                print!("ECU requests retransmission");
+                error!("ECU requests retransmission");
                 Err(anyhow!("ECU requests retransmission"))
             } else {
-                print!("Error: {}", nrc.desc());
-                Err(anyhow!("Error: {}", nrc.desc()))
+                error!("In ECU response: {}", nrc.desc());
+                Err(anyhow!("Error in ECU response: {}", nrc.desc()))
             }
         } else {
             Ok(DownloadParams {
@@ -207,7 +212,7 @@ impl UdsClient {
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        println!("Transfer stop response: {:02x?}", resp);
+        info!("Transfer stop response: {:02x?}", resp);
 
         Ok(())
     }
@@ -221,17 +226,17 @@ impl UdsClient {
         let chunk_crc = CRC8.checksum(data);
         buf.push(chunk_crc);
 
-        println!("Transferring data over UDS: {:02x?}", buf);
+        info!("Transferring data over UDS: {:02x?}", buf);
 
         // send the frame
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        println!("Transfer payload response: {:02x?}", resp);
+        info!("Transfer payload response: {:02x?}", resp);
 
         if resp[0] == 0x7f {
             let nrc = UdsErrorByte::from(*resp.last().unwrap());
-            println!("ECU reports failure: {}", nrc.desc());
+            error!("ECU reports failure: {}", nrc.desc());
             return Err(anyhow!("ECU reports failure"));
         }
 
@@ -275,7 +280,7 @@ impl UdsClient {
             if !chunk.is_empty() {
                 self.transfer_payload(&mut dl_params, chunk).await?;
             } else {
-                println!("File read and transferred in its entirety");
+                info!("File read and transferred in its entirety");
                 return Ok(());
             }
         }

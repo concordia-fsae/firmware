@@ -1,0 +1,8 @@
+nodes:
+  dbg:
+    request_id: 0x456
+    response_id: 0x123
+  stw:
+    # just added this for testing, this isn't actually true yet
+    request_id: 0x111
+    response_id: 0x112
