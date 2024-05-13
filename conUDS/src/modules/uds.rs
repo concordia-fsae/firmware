@@ -1,4 +1,5 @@
 use core::time;
+use std::borrow::Cow;
 use std::fs::read;
 use std::path::PathBuf;
 
@@ -8,7 +9,8 @@ use automotive_diag::uds::UdsCommand;
 use automotive_diag::uds::UdsErrorByte;
 use automotive_diag::uds::{ResetType, RoutineControlType};
 use ecu_diagnostics::dynamic_diag::EcuNRC;
-use log::{error, info};
+use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, error, info};
 use tokio::sync::mpsc;
 
 use crate::DownloadParams;
@@ -78,13 +80,13 @@ impl UdsClient {
             buf.extend(data)
         }
 
-        info!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
+        debug!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
 
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await
         {
-            Ok(resp) => info!("Start routine response: {:02x?}", resp),
+            Ok(resp) => debug!("Start routine response: {:02x?}", resp),
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
                 return Err(e.into());
@@ -103,7 +105,7 @@ impl UdsClient {
 
         buf.extend_from_slice(&routine_id.to_le_bytes());
 
-        info!(
+        debug!(
             "Getting routine results for routine 0x{:02x}: {:02x?}",
             routine_id, buf
         );
@@ -112,7 +114,7 @@ impl UdsClient {
             .await?
             .await?;
 
-        info!(
+        debug!(
             "Routine results response for 0x{:02x}: {:02x?}",
             routine_id, resp
         );
@@ -122,7 +124,12 @@ impl UdsClient {
 
     /// Tell the ECU to erase the app
     pub async fn app_erase(&mut self) -> Result<()> {
+        info!("Starting App Erase");
         self.routine_start(0xf00f, None).await?;
+
+        let pg = ProgressBar::new_spinner()
+            .with_message(Cow::Borrowed("Erasing app"))
+            .with_style(ProgressStyle::with_template("{spinner} {msg} [{elapsed}]")?);
 
         let mut retries = 100; // 100 retries with a 10ms delay is 1s, which should be plenty of time
                                // to erase any of our current apps.
@@ -140,29 +147,70 @@ impl UdsClient {
                     // FIXME: this should be an enum, not an int
                     match resp[2] {
                         0 => {
-                            println!("App erase failed");
+                            pg.set_style(ProgressStyle::with_template(&format!(
+                                "App erase failed in {:.2}s",
+                                pg.elapsed().as_secs_f32()
+                            ))?);
+                            pg.tick();
+                            pg.finish();
+                            error!("App erase failed");
                             return Err(anyhow!("App erase failed"));
                         }
                         1 => {
-                            println!("App erase in progress");
+                            debug!("App erase in progress");
+                            pg.tick();
                         }
                         2 => {
-                            println!("App erase completed!");
+                            pg.set_style(ProgressStyle::with_template(&format!(
+                                "App erased succesfully in {:.2}s",
+                                pg.elapsed().as_secs_f32()
+                            ))?);
+                            pg.tick();
+                            pg.finish();
+                            debug!("App erase completed successfully!");
                             return Ok(());
                         }
                         _ => {
-                            return Err(anyhow!("Unexpected response from ECU"));
+                            pg.set_style(ProgressStyle::with_template(&format!(
+                                "App erase failed in {:.2}s",
+                                pg.elapsed().as_secs_f32()
+                            ))?);
+                            pg.tick();
+                            pg.finish();
+                            error!("App erase failed, unexpected response from ECU");
+                            return Err(anyhow!("App erase failed, unexpected response from ECU"));
                         }
                     }
                 } else {
+                    pg.set_style(ProgressStyle::with_template(&format!(
+                        "App erase failed in {:.2}s",
+                        pg.elapsed().as_secs_f32()
+                    ))?);
+                    pg.tick();
+                    pg.finish();
+                    error!("Unexpected response size from ECU");
                     return Err(anyhow!("Unexpected response size from ECU"));
                 }
             } else {
+                pg.set_style(ProgressStyle::with_template(&format!(
+                    "App erase failed in {:.2}s",
+                    pg.elapsed().as_secs_f32()
+                ))?);
+                pg.tick();
+                pg.finish();
+                error!("Response is not a positive response for this SID");
                 return Err(anyhow!("Response is not a positive response for this SID"));
             }
 
             retries -= 1;
             if retries == 0 {
+                pg.set_style(ProgressStyle::with_template(&format!(
+                    "App erase timed out after {:.2}s",
+                    pg.elapsed().as_secs_f32()
+                ))?);
+                pg.tick();
+                pg.finish();
+                error!("App erase did not report success within 1s");
                 return Err(anyhow!("App erase did not report success within 1s"));
             }
 
@@ -177,12 +225,12 @@ impl UdsClient {
 
         buf.extend_from_slice(&data.to_bytes());
 
-        info!("Starting UDS download: {:02x?}", buf);
+        debug!("Starting UDS download: {:02x?}", buf);
 
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        info!("Download start response: {:02x?}", resp);
+        debug!("Download start response: {:02x?}", resp);
 
         if resp[0] == 0x7F {
             let nrc = UdsErrorByte::from(*resp.last().unwrap());
@@ -209,10 +257,12 @@ impl UdsClient {
     /// Stop transfer (download or upload)
     async fn transfer_stop(&mut self) -> Result<()> {
         let buf = [UdsCommand::RequestTransferExit.into()];
+        debug!("Stopping UDS transfer: {:02x?}", buf);
+
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        info!("Transfer stop response: {:02x?}", resp);
+        debug!("Transfer stop response: {:02x?}", resp);
 
         Ok(())
     }
@@ -226,13 +276,13 @@ impl UdsClient {
         let chunk_crc = CRC8.checksum(data);
         buf.push(chunk_crc);
 
-        info!("Transferring data over UDS: {:02x?}", buf);
+        debug!("Transferring data over UDS: {:02x?}", buf);
 
         // send the frame
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await?
             .await?;
-        info!("Transfer payload response: {:02x?}", resp);
+        debug!("Transfer payload response: {:02x?}", resp);
 
         if resp[0] == 0x7f {
             let nrc = UdsErrorByte::from(*resp.last().unwrap());
@@ -274,15 +324,40 @@ impl UdsClient {
         // BufReader
         let file = read(file)?;
 
+        let pg = ProgressBar::new(file_len_bytes)
+            .with_message(Cow::Borrowed("Downloading app: "))
+            .with_style(ProgressStyle::with_template(
+                "{msg} {bar} {decimal_bytes} / {decimal_total_bytes} [{duration}]",
+            )?);
+
+        let mut error = false;
         // iterate over the file in chunks of the size specified by the ECUs response to
         // the "start transfer" command
         for chunk in file.chunks(dl_params.chunksize as usize - 1) {
+            // FIXME: this `if` might not be necessary
             if !chunk.is_empty() {
-                self.transfer_payload(&mut dl_params, chunk).await?;
-            } else {
-                info!("File read and transferred in its entirety");
-                return Ok(());
+                if let Err(_) = self.transfer_payload(&mut dl_params, chunk).await {
+                    pg.set_style(ProgressStyle::with_template(&format!(
+                        "App download failed in {:.2}s",
+                        pg.elapsed().as_secs_f32()
+                    ))?);
+                    pg.tick();
+                    pg.finish();
+                    error = true;
+                    break
+                }
+                pg.inc(dl_params.chunksize.into());
             }
+        }
+
+        if !error {
+            debug!("File read and transferred in its entirety");
+            pg.set_style(ProgressStyle::with_template(&format!(
+                "App download completed! Transferred {{decimal_total_bytes}} in {:.2}s",
+                pg.elapsed().as_secs_f32()
+            ))?);
+            pg.tick();
+            pg.finish();
         }
 
         // finish the download, either because it completed successfully or because it failed

@@ -116,12 +116,14 @@ impl<'a> CANIO<'a> {
         if let Ok(cmd) = self.uds_queue.try_recv() {
             match cmd {
                 CanioCmd::UdsCmdNoResponse(msg) => {
-                    if let Err(e) = self.uds_send(&msg, 5) {
-                        error!("Failed to send UDS message (no response expected): {}", e);
-                        return Err(anyhow!(
-                            "Failed to send UDS message (no response expected): {}",
-                            e
-                        ));
+                    if let Err(_) = self.uds_send(&msg, 5) {
+                        // FIXME: these should be uncommented, but they will cause the program to
+                        // error out early if the bus is down
+                        // error!("Failed to send UDS message (no response expected): {}", e);
+                        // return Err(anyhow!(
+                        //     "Failed to send UDS message (no response expected): {}",
+                        //     e
+                        // ));
                     }
                 }
                 CanioCmd::UdsCmdWithResponse {
@@ -140,12 +142,14 @@ impl<'a> CANIO<'a> {
                                 ));
                             }
                         }
-                        Err(e) => {
-                            error!("Failed to send UDS message (response expected): {}", e);
-                            return Err(anyhow!(
-                                "Failed to send UDS message (response expected): {}",
-                                e
-                            ));
+                        Err(_) => {
+                            // FIXME: these should be uncommented, but they will cause the program to
+                            // error out early if the bus is down
+                            // error!("Failed to send UDS message (response expected): {}", e);
+                            // return Err(anyhow!(
+                            //     "Failed to send UDS message (response expected): {}",
+                            //     e
+                            // ));
                         }
                     }
                 }
@@ -158,6 +162,6 @@ impl<'a> CANIO<'a> {
 
 impl std::fmt::Display for CANIO<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ids: {:#?}", self.ids)
+        write!(f, "Request ID: {:02x?}\nResponse ID: {:02x?}", self.ids.tx, self.ids.rx)
     }
 }

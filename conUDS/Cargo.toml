@@ -12,6 +12,7 @@ automotive_diag = { version = "0.1.6", features = ["display", "std", "with-uds"]
 crc = "3.2.1"
 ecu_diagnostics = "0.95.6"
 futures = "0.3.30"
+indicatif = "0.17.8"
 log = { version = "0.4.21", features = ["std"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_derive = "1.0.197"

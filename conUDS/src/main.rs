@@ -30,17 +30,23 @@ impl App {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // initialize logger
+    // initialize logging
     CombinedLogger::init(vec![
         TermLogger::new(
             simplelog::LevelFilter::Info,
-            simplelog::Config::default(),
+            simplelog::ConfigBuilder::new()
+                .set_max_level(log::LevelFilter::Debug)
+                .set_time_level(log::LevelFilter::Debug)
+                .build(),
             simplelog::TerminalMode::Mixed,
             simplelog::ColorChoice::Auto,
         ),
         WriteLogger::new(
             simplelog::LevelFilter::Debug,
-            simplelog::Config::default(),
+            simplelog::ConfigBuilder::new()
+                .set_target_level(log::LevelFilter::Info)
+                .set_thread_mode(simplelog::ThreadLogMode::Names)
+                .build(),
             File::create("conuds.log").unwrap(),
         ),
     ])?;
@@ -119,6 +125,8 @@ async fn main() -> Result<()> {
         }
     }
 
+    app.lock().unwrap().exit = true;
+
     debug!("Main app logic done, joining threads");
     let _ = t1.await.unwrap();
     let _ = t2.await.unwrap();
@@ -188,7 +196,7 @@ async fn tsk_10ms(
                 ))
                 .await
             {
-                error!("Failed to add to CANIO queue from 10ms task: {}", e);
+                error!(target: "10ms thread", "Failed to add to CANIO queue from 10ms task: {}", e);
                 return Err(e.into());
             }
         }
