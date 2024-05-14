@@ -24,7 +24,11 @@ runs:
         [[ -z $sha_short ]] && sha_short="unknown"
         echo "sha_short=$sha_short" >> "$GITHUB_OUTPUT"
 
-        export archive_name="conUDS_${sha_short}_${{ inputs.target }}.zip"
+        if [[ ${{ startsWith(github.ref, 'refs/tags/v') }} ]]; then
+          export archive_name="conUDS_${{ github.ref_name }}_${{ inputs.target }}.zip"
+        else
+          export archive_name="conUDS_${sha_short}_${{ inputs.target }}.zip"
+        fi
         echo "archive_name=$archive_name"  >> "$GITHUB_OUTPUT"
 
         cat "$GITHUB_OUTPUT"
@@ -36,4 +40,4 @@ runs:
         sha256sum $archive_name > CHECKSUM
         rm "./conUDS/conUDS"
 
-        printf "\n✔ Successfully created the archive.\n"
+        printf "\n✔ Successfully created the archive: %s.\n" $archive_name
