@@ -13,16 +13,19 @@ So far, this UDS client supports:
   - App Downloading
 
 # Building the Application
-Releases are not currently set up yet, though eventually you will be able to simply download
-a zip file containing the binary.
 
-For now, you must set up Rust on your computer and use Cargo to build this application. Instructions for
+## Download a release
+Download a pre-built and packaged release from [the releases page](https://github.com/concordia-fsae/conUDS/releases).
+Unzip it, and follow the rest of the instructions
+
+## Build it yourself
+You must have Rust and Cargo set up on your computer in order to build this application. Instructions for
 setting up Rust are ubiquitous, so details are not provided here. See [here](https://www.rust-lang.org/tools/install)
 for instructions.
 
 Once Rust is installed, simply clone this repo, cd into the `conUDS` directory contained within it, and build the
 application with Cargo:
-`cargo build --release`
+`cargo build --release` (you may omit the `--release` if you know what you're doing)
 
 The resulting binary lives in the `target` directory which is created when building.
 
