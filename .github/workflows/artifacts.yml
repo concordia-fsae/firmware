@@ -22,13 +22,6 @@ jobs:
           export sha_short=$(git rev-parse --short "$GITHUB_SHA")
           [[ -z $sha_short ]] && sha_short="unknown"
           echo "sha_short=$sha_short" >> "$GITHUB_ENV"
-      - uses: actions/upload-artifact@v3
-        with:
-          name: conUDS_${{ env.sha_short }}
-          path: |
-            ./conUDS/assets
-            ./conUDS/conUDS
-          if-no-files-found: error
       - name: Generate Archive Checksum
         shell: bash
         run: |
@@ -36,7 +29,9 @@ jobs:
           sha256sum ./conUDS/assets/nodes.yml >> CHECKSUM
       - uses: actions/upload-artifact@v3
         with:
-          name: CHECKSUM
+          name: conUDS_${{ env.sha_short }}
           path: |
+            ./conUDS/assets
+            ./conUDS/conUDS
             ./CHECKSUM
           if-no-files-found: error

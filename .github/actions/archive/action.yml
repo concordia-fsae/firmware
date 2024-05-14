@@ -24,12 +24,13 @@ runs:
         [[ -z $sha_short ]] && sha_short="unknown"
         echo "sha_short=$sha_short" >> "$GITHUB_OUTPUT"
 
-        if [[ ${{ startsWith(github.ref, 'refs/tags/v') }} ]]; then
+        echo "github_ref: ${{ github.ref }}"
+        if [[ ${{ github.ref }} =~ refs/tags/v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
           export archive_name="conUDS_${{ github.ref_name }}_${{ inputs.target }}.zip"
         else
           export archive_name="conUDS_${sha_short}_${{ inputs.target }}.zip"
         fi
-        echo "archive_name=$archive_name"  >> "$GITHUB_OUTPUT"
+        echo "archive_name=$archive_name" >> "$GITHUB_OUTPUT"
 
         cat "$GITHUB_OUTPUT"
 
