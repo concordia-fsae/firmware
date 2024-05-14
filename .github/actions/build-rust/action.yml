@@ -1,0 +1,23 @@
+name: Build Rust Project
+description: Build Rust Project
+inputs:
+  target:
+    description: Target to build for
+    required: true
+runs:
+  using: "composite"
+  steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ inputs.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          workspaces: |
+            ./conUDS -> ./conUDS/target
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --manifest-path ./conUDS/Cargo.toml --target ${{ inputs.target }}

@@ -1,0 +1,36 @@
+name: Create Archive
+description: Create archive containing build artifacts
+inputs:
+  target:
+    description: Target to build for
+    required: true
+outputs:
+  archive_name:
+    description: Name of the archive
+    value: ${{ steps.create-artifact-archive.outputs.archive_name}}
+  short_sha:
+    description: Shorthash
+    value: ${{ steps.create-artifact-archive.outputs.short_sha }}
+runs:
+  using: "composite"
+  steps:
+    - name: Create Artifact Archive
+      env:
+        TARGET: ${{ inputs.target }}
+      shell: bash
+      run: |
+        export sha_short=$(git rev-parse --short "$GITHUB_SHA")
+        [[ -z $sha_short ]] && sha_short="unknown"
+        echo "sha_short=$sha_short" >> "$GITHUB_OUTPUT"
+
+        export archive_name="conUDS_$sha_short_${{ inputs.target }}.zip"
+        echo "archive_name=$archive_name"  >> "$GITHUB_OUTPUT"
+
+        printf "\n📦 Creating the archive...\n"
+
+        cp "./conUDS/target/${{ inputs.target }}/release/conUDS" "./conUDS/"
+        zip -r "$archive_name" "./conUDS/assets/" "./conUDS/conUDS" || { printf "\n⛔ Unable to create tar archive.\n"; exit 1; }
+        sha256sum $archive_name > CHECKSUM
+        rm "./conUDS/conUDS"
+
+        printf "\n✔ Successfully created the archive.\n"
