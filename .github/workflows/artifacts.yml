@@ -32,10 +32,8 @@ jobs:
       - name: Generate Archive Checksum
         shell: bash
         run: |
-          ls -lap
           sha256sum ./conUDS/conUDS >> CHECKSUM
           sha256sum ./conUDS/assets/nodes.yml >> CHECKSUM
-          cat CHECKSUM
       - uses: actions/upload-artifact@v3
         with:
           name: CHECKSUM

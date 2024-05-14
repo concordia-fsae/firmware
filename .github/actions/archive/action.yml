@@ -7,14 +7,15 @@ inputs:
 outputs:
   archive_name:
     description: Name of the archive
-    value: ${{ steps.create-artifact-archive.outputs.archive_name}}
+    value: ${{ steps.create-archive.outputs.archive_name}}
   short_sha:
     description: Shorthash
-    value: ${{ steps.create-artifact-archive.outputs.short_sha }}
+    value: ${{ steps.create-archive.outputs.short_sha }}
 runs:
   using: "composite"
   steps:
     - name: Create Artifact Archive
+      id: create-archive
       env:
         TARGET: ${{ inputs.target }}
       shell: bash
@@ -23,8 +24,10 @@ runs:
         [[ -z $sha_short ]] && sha_short="unknown"
         echo "sha_short=$sha_short" >> "$GITHUB_OUTPUT"
 
-        export archive_name="conUDS_$sha_short_${{ inputs.target }}.zip"
+        export archive_name="conUDS_${sha_short}_${{ inputs.target }}.zip"
         echo "archive_name=$archive_name"  >> "$GITHUB_OUTPUT"
+
+        cat "$GITHUB_OUTPUT"
 
         printf "\n📦 Creating the archive...\n"
 

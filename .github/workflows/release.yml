@@ -19,6 +19,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
       - name: Create Artifact Archive
+        id: create-archive
         uses: ./.github/actions/archive
         with:
           target: ${{ matrix.target }}
