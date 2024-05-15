@@ -2,10 +2,11 @@ on:
   push:
     branches:
       - main
+
 name: Auto Release
 jobs:
   build_and_release:
-    name: Build
+    name: Build and Release
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -18,13 +19,19 @@ jobs:
       - uses: ./.github/actions/build-rust
         with:
           target: ${{ matrix.target }}
+      - name: Get Tag
+        shell: bash
+        run: |
+          export GIT_TAG=$(git describe --tags --abbrev=0)
+          [[ -z "$GIT_TAG" ]] && GIT_TAG=none
+          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
       - name: Create Artifact Archive
         id: create-archive
         uses: ./.github/actions/archive
         with:
           target: ${{ matrix.target }}
       # make pre-release for regular pushes
-      - if: ${{ ! startsWith(github.ref, 'refs/tags/v') }}
+      - if: ${{ env.GIT_TAG == 'none' }}
         uses: marvinpinto/action-automatic-releases@v1.2.1
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -35,7 +42,7 @@ jobs:
             ${{ steps.create-archive.outputs.archive_name }}
             CHECKSUM
       # make a real release if there's a tag
-      - if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+      - if: ${{ env.GIT_TAG != 'none' }}
         uses: marvinpinto/action-automatic-releases@v1.2.1
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
