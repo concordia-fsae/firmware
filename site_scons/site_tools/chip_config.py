@@ -1,8 +1,8 @@
-from yaml import load, Loader
-
-from SCons.Script import *
-
 from os.path import join
+
+from SCons.Script import Dir, File
+
+from oyaml import safe_load
 
 
 def generate_defines(chip_config):
@@ -20,27 +20,23 @@ def _configure_chip(env, config_file):
     REPO_ROOT_DIR = env["REPO_ROOT_DIR"]
     KNOWN_CHIPS_FILE = REPO_ROOT_DIR.File("site_scons/chips.yaml")
 
-    with open(str(KNOWN_CHIPS_FILE), "r") as known_chips_file_handle:
-        known_chips = load(known_chips_file_handle, Loader)
+    with open(KNOWN_CHIPS_FILE.abspath, "r") as known_chips_file_handle:
+        known_chips = safe_load(known_chips_file_handle)
 
-    with open(str(File(config_file)), "r") as chip_file_handle:
-        chip_config = load(chip_file_handle, Loader)
+    with open(File(config_file).abspath, "r") as chip_file_handle:
+        chip_config = safe_load(chip_file_handle)
 
     try:
         chip_name = chip_config["mcu"].lower()
-    # FIXME: figure out which exception to catch here
-    except Exception as e:
-        print("Expected an 'mcu' key in mcuConfig.yaml")
-        raise e
+    except KeyError as e:
+        raise Exception(f"Expected an 'mcu' key in mcuConfig.yaml\n{e}")
 
     try:
         chip = known_chips["translation"][chip_name]
-    # FIXME: figure out which exception to catch here
-    except Exception as e:
-        print(
+    except KeyError as e:
+        raise Exception(
             "Chip specified in mcuConfig.yaml does not have a translation. See site_scons/chips.yaml"
         )
-        raise e
 
     chip_line = known_chips["line"][chip["line"]]
     chip_family = chip_line["families"][chip["family"]]
@@ -50,7 +46,7 @@ def _configure_chip(env, config_file):
     hal_src_path = join(base_path, chip_line["families"][chip["family"]]["hal"]["src"])
 
     with open(REPO_ROOT_DIR.File(chip_config_file).abspath) as chip_config_file_handle:
-        global_chip_config = load(chip_config_file_handle, Loader)
+        global_chip_config = safe_load(chip_config_file_handle)
 
     required_drivers = [
         driver
@@ -142,7 +138,9 @@ def _configure_chip(env, config_file):
             )
 
     if chip_family.get("hal", False) and chip_family["hal"].get("include", False):
-        ret["hal_includes"] = REPO_ROOT_DIR.Dir(base_path).Dir(chip_family["hal"]["include"])
+        ret["hal_includes"] = REPO_ROOT_DIR.Dir(base_path).Dir(
+            chip_family["hal"]["include"]
+        )
 
     if chip_family.get("cmsis", False):
         ret["cmsis_includes"] = REPO_ROOT_DIR.Dir(base_path).Dir(chip_family["cmsis"])

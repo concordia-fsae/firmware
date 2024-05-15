@@ -160,5 +160,7 @@ SECTIONS
     libc.a ( * )
     libm.a ( * )
     libgcc.a ( * )
+    libc_nano.a ( * )
+    libg_nano.a ( * )
   }
 }

@@ -1,64 +1,44 @@
 #!/usr/bin/python3
-from os.path import splitext
 
-from SCons.Script import *
+from SCons.Script import AddOption, Default, Depends, Dir, GetOption, Import, Return
 
-Import("*")
+Import("GlobalEnv")
 
 RTOS_DIR = Dir("RTOS")
-PROJECT_SOURCE_DIR = Dir("src")
-PROJECT_HW_DIR= Dir("HW")
-PROJECT_LIB_DIR = Dir("lib")
+SRC_DIR = Dir("src")
+HW_DIR = Dir("HW")
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
 
 BUILD_DIR = Dir("build")
 
-OPENOCD_INTERFACE = "stlink"
-OPENOCD_BOARD = "stm32f103c8"
+APP_START_ADDR = 0x08000000
 
+env = GlobalEnv.Clone(
+    tools=["gcc-arm-none-eabi", "chip_config", "st-flash", "openocd", "compilation_db"],
+    BUILD_DIR=BUILD_DIR,
+)
+rtos_env = GlobalEnv.Clone(tools=["gcc-arm-none-eabi"])
 
-env = Environment(tools=["arm-none-eabi", "chip_config", "st-flash", "openocd"])
-rtos_env = Environment(tools=["arm-none-eabi"])
+env["OPENOCD_INTERFACE"] = "stlink"
+env["OPENOCD_MCU"] = "stm32f103c8"
 
-env.Tool("compilation_db")
-env["REPO_ROOT_DIR"] = Dir("#")
-
-common_flags = [
-    "-mthumb",
-    "-mcpu=cortex-m3",
-]
-
-debug_flags = [
-    "-ggdb2",
-    "-g2",
-    "-Og",
-]
-
-release_flags = [
-    "-O2",
-]
-
-link_flags = [
-    "-Wl,--gc-sections,--relax,--print-memory-usage",
-    f"-Wl,-Map={BUILD_DIR.File('steering_wheel.map').path}",
-    # "-Wl,--print-gc-sections",
-    "--specs=nano.specs",
-    "--specs=nosys.specs",
-]
-
-as_flags = ["-xassembler-with-cpp"]
 
 c_flags = [
     "-std=c11",
+    "-mthumb",
+    "-mcpu=cortex-m3",
+    "-mfloat-abi=soft",
+    "-msoft-float",
+    # "-nostdlib",
+    # "-nostartfiles", # uncomment after porting start files from bootloader
+    "--specs=nano.specs",
+    "--specs=nosys.specs",
     "-ffunction-sections",
     "-fdata-sections",
     "-fshort-enums",
     "-funsigned-char",
-    "-fstack-usage",
-    "-nostdlib",
-    "-msoft-float",
     "-DSTM32F1",
     "-DSTM32F103xB",
     "-DUSE_HAL_DRIVER",
@@ -78,22 +58,41 @@ c_flags = [
     "-Wno-unused-local-typedefs",
 ]
 
+debug_flags = [
+    "-ggdb3",
+    "-g3",
+    "-Og",
+]
+
+release_flags = [
+    "-O2",
+]
+
+if GetOption("release"):
+    c_flags += release_flags
+else:
+    c_flags += debug_flags
+
+link_flags = [
+    "-Wl,--gc-sections",
+    # "-Wl,--print-gc-sections",
+    "-Wl,--relax",
+    "-Wl,--print-memory-usage",
+]
+
+as_flags = [
+    # tell the assembler to run the c preprocessor on assembly files
+    "-xassembler-with-cpp"
+]
+
 free_rtos_flags = [
     "-Wno-missing-prototypes",
     "-Wno-cast-align",
 ]
 
 chip_config = env.ChipConfig(config_file="HW/mcuConfig.yaml")
-if "defines" in chip_config:
-    c_flags.append(chip_config["defines"])
+c_flags.extend(chip_config.get("defines", []))
 
-if GetOption("release"):
-    common_flags += release_flags
-else:
-    common_flags += debug_flags
-
-
-env["LINKFLAGS"] = [link_flags + common_flags]
 
 RTOS_INCLUDE_DIRS = [
     RTOS_DIR.Dir("include"),
@@ -126,47 +125,49 @@ paths = (
 env.Append(
     ASFLAGS=as_flags,
     CPPPATH=paths,
-    CCFLAGS=common_flags + c_flags,
+    CCFLAGS=c_flags,
     LINKSCRIPT=chip_config["linker_file"],
+    LINKFLAGS=c_flags + link_flags,
+    MAPFILE=BUILD_DIR.File('steering_wheel.map'),
 )
 
 rtos_env.Append(
     CPPPATH=paths,
-    CCFLAGS=common_flags + c_flags + free_rtos_flags,
+    CCFLAGS=c_flags + free_rtos_flags,
 )
 
 # List of component C files
 
-project_source_files = [
-    PROJECT_SOURCE_DIR.File("SystemManager.c"),
-    PROJECT_SOURCE_DIR.File("Module.c"),
-    PROJECT_SOURCE_DIR.File("CAN/CANIO-tx.c"),
-    PROJECT_SOURCE_DIR.File("CAN/CANIO-rx.c"),
-    PROJECT_SOURCE_DIR.File("IO.c"),
-    PROJECT_SOURCE_DIR.File("Screen.c"),
-    PROJECT_SOURCE_DIR.File("Display/Pills.c"),
-    PROJECT_SOURCE_DIR.File("Display/Dots.c"),
+src_files = [
+    SRC_DIR.File("SystemManager.c"),
+    SRC_DIR.File("Module.c"),
+    SRC_DIR.File("CAN/CANIO-tx.c"),
+    SRC_DIR.File("CAN/CANIO-rx.c"),
+    SRC_DIR.File("IO.c"),
+    SRC_DIR.File("Screen.c"),
+    SRC_DIR.File("Display/Pills.c"),
+    SRC_DIR.File("Display/Dots.c"),
 ]
 
-project_hw_files = [
-    PROJECT_HW_DIR.File("HW_adc.c"),
-    PROJECT_HW_DIR.File("HW_can.c"),
-    PROJECT_HW_DIR.File("HW_dma.c"),
-    PROJECT_HW_DIR.File("HW_gpio.c"),
-    PROJECT_HW_DIR.File("HW_intc.c"),
-    PROJECT_HW_DIR.File("HW_msp.c"),
-    PROJECT_HW_DIR.File("HW_spi.c"),
-    PROJECT_HW_DIR.File("HW_timebase.c"),
+hw_src_files = [
+    HW_DIR.File("HW_adc.c"),
+    HW_DIR.File("HW_can.c"),
+    HW_DIR.File("HW_dma.c"),
+    HW_DIR.File("HW_gpio.c"),
+    HW_DIR.File("HW_intc.c"),
+    HW_DIR.File("HW_msp.c"),
+    HW_DIR.File("HW_spi.c"),
+    HW_DIR.File("HW_timebase.c"),
 ]
 
 ftdi_lib_files = [
-    PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_commands.c"),
-    PROJECT_LIB_DIR.File("lib_FTDI_FT81x/src/EVE_target.c"),
+    Dir("lib").File("lib_FTDI_FT81x/src/EVE_commands.c"),
+    Dir("lib").File("lib_FTDI_FT81x/src/EVE_target.c"),
 ]
 
-project_source_files += project_hw_files + ftdi_lib_files
+src_files += hw_src_files + ftdi_lib_files
 
-rtos_source_files = [
+rtos_src_files = [
     RTOS_DIR.File("FreeRTOSResources.c"),
     RTOS_DIR.File("FreeRTOS_SWI.c"),
     FREERTOS_DIR.File("Source/croutine.c"),
@@ -190,31 +191,24 @@ platform_source_files = [
 # add driver source files
 platform_source_files.extend(chip_config["sources"])
 
-# with open("env_dump.txt", "w") as file:
-#     env_dumped = env.Dump()
-#     for key in env_dumped:
-#         file.write(key)
+
+def create_output_file_path(file, new_ext, target_dir=None) -> str:
+    fn = file.target_from_source(prefix="", suffix=new_ext).name
+
+    if target_dir:
+        return BUILD_DIR.Dir(target_dir).File(fn)
+
+    return BUILD_DIR.Dir("/".join(file.path.split("/")[2:-1]) + "/").File(fn)
 
 
-def create_output_file_path(file, new_ext, override_dir=None) -> str:
-    if not override_dir:
-        path = "/".join(file.path.split("/")[2:-1]) + "/"
-    else:
-        path = override_dir
-    fn = splitext(file.name)[0] + new_ext
-    return BUILD_DIR.File(path + fn)
-
-
-def compile_objects(env, files, extra_flags=[], override_dir=None):
+def compile_objects(env, files, extra_flags=[], target_dir=None):
     objs = []
     for i, src_file in enumerate(files):
-        object = create_output_file_path(src_file, ".obj", override_dir)
-        tar = [object]
-        if "-fstack-usage" in c_flags:
-            tar.append(create_output_file_path(src_file, '.su', override_dir))
+        target = create_output_file_path(src_file, ".obj", target_dir)
         flags = extra_flags[i] if extra_flags else []
-        env.Object(target=tar, source=src_file, CCFLAGS=env["CCFLAGS"]+flags)
-        objs.append(object)
+        objs.append(
+            env.Object(target=target, source=src_file, CCFLAGS=env["CCFLAGS"] + flags)
+        )
     return objs
 
 
@@ -223,42 +217,48 @@ def compile_objects(env, files, extra_flags=[], override_dir=None):
 objs = []  # store objects here
 
 # compile platform files
-objs.extend(compile_objects(env, *list(zip(*platform_source_files)), override_dir="embedded/"))
+objs.extend(
+    compile_objects(env, *list(zip(*platform_source_files)), target_dir="embedded/")
+)
 
 # compile rtos source files
-objs.extend(compile_objects(rtos_env, rtos_source_files, override_dir="FreeRTOS/"))
+objs.extend(compile_objects(rtos_env, rtos_src_files, target_dir="FreeRTOS/"))
 
 # compile project source files
-objs.extend(compile_objects(env, project_source_files))
+objs.extend(compile_objects(env, src_files))
 
-## done compiling
+# link all the compiled objects into an elf
+elf, map = env.Program(BUILD_DIR.File("steering_wheel.elf"), objs)
+Depends(elf, env["LINKSCRIPT"])
 
-# setup default target which links all object files, builds the program,
-# and generates a HEX file
-built = lambda: env.Program("build/steering_wheel", objs)
-env.Alias("build", built())
-env.Depends(built(), env["LINKSCRIPT"])
-env.Default("build")
+# generate a binary for flashing
+binary = env.Bin(source=elf)
+Default(binary)
 
-# setup additional targets
-env.Alias("cdb", env.CompilationDatabase("build/compile_commands.json"))
-env.Alias("upload", env.flash(source="build/steering_wheel.bin"))
-env.Alias("openocd", env.openocd_srv(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD))
+# Generate compile_commands.json
+compile_db = env.CompilationDatabase(BUILD_DIR.File("compile_commands.json"))
+Depends(compile_db, objs)
+# generate it by default
+Default(compile_db)
+# add an alias to _only_ generate the compilation database
+env.Alias("compiledb", compile_db)
 
-env.Alias(
-    "openocd-gdb",
-    env.launch_gdb(
-        "build/steering_wheel.elf",
-        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
-        '-ex "monitor reset"',
-    ),
-)
-env.Alias(
-    "gdb",
-    env.launch_gdb(
-        "build/steering_wheel.elf",
-        '-ex "target extended-remote localhost:3333"',
-        '-ex "monitor reset"',
-        '-ex load', # fixed an issue found when debugging IO global struct for aggregated Digital and Analog IO
-    ),
-)
+# Return artifacts to the caller
+artifacts = {
+    "FLASHABLE_ARTIFACT": {
+        "artifact": binary,
+        "addr": APP_START_ADDR,
+        "tools": ["st-flash"],
+    },
+    "DEBUG_ARTIFACT": {
+        "artifact": elf,
+        "args": [],
+        "tools": ["gcc-arm-none-eabi", "openocd"],
+        "env": {
+            "OPENOCD_INTERFACE": "stlink",
+            "OPENOCD_MCU": "stm32f103c8",
+        },
+    },
+}
+
+Return("artifacts")

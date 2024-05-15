@@ -1,32 +1,31 @@
-import SCons
-from SCons.Script import *
+from SCons.Script import Action, Builder
 
 
 def generate(env):
-    if not GetOption("verbose"):
-        env["FLASHCOMSTR"] = "Flashing $SOURCE to address ${hex(addr)}"
-        env["ERASECOMSTR"] = "Erasing chip"
+    env.Replace(
+        FLASHCOMSTR="Flashing $SOURCE to address ${hex(addr)}",
+        ERASECOMSTR="Erasing chip",
+    )
 
-    env["BUILDERS"]["_erase"] = SCons.Builder.Builder(
-        action=SCons.Action.Action(
+    env["BUILDERS"]["_erase"] = Builder(
+        action=Action(
             "st-flash erase",
-            "$ERASECOMSTR",
+            cmdstr="$ERASECOMSTR",
         )
     )
 
-    env["BUILDERS"]["_flash"] = SCons.Builder.Builder(
-        action=SCons.Action.Action(
+    env["BUILDERS"]["_flash"] = Builder(
+        action=Action(
             "st-flash write $SOURCE $addr",
-            "$FLASHCOMSTR",
+            cmdstr="$FLASHCOMSTR",
         )
     )
 
     env.AddMethod(flash, "flash")
 
 
-def flash(env, source, target=0x08000000):
-    env._erase()
-    return env._flash(source=source, addr=target)
+def flash(env, source, start_addr):
+    return [env._erase(), env._flash(source=source, addr=start_addr)]
 
 
 def exists():
