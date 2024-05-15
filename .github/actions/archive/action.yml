@@ -24,9 +24,9 @@ runs:
         [[ -z $sha_short ]] && sha_short="unknown"
         echo "sha_short=$sha_short" >> "$GITHUB_OUTPUT"
 
-        echo "github_ref: ${{ github.ref }}"
-        if [[ ${{ github.ref }} =~ refs/tags/v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-          export archive_name="conUDS_${{ github.ref_name }}_${{ inputs.target }}.zip"
+        if [[ "$GIT_TAG" != "none" ]]; then
+          printf "\nThis commit has a tag, using that in the archive name\n"
+          export archive_name="conUDS_${GIT_TAG}_${{ inputs.target }}.zip"
         else
           export archive_name="conUDS_${sha_short}_${{ inputs.target }}.zip"
         fi
