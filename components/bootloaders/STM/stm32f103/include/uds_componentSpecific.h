@@ -4,13 +4,23 @@
  */
 #pragma once
 
-#define ISOTP_TX_BUF_SIZE    128U  // mostly arbitrary
-#define ISOTP_RX_BUF_SIZE    4096U // maximum multi-frame isotp transmission is 4096
 
-#define UDS_RESPONSE_ID      0x123
-#define UDS_REQUEST_ID       0x456 // 0x124
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define ISOTP_TX_BUF_SIZE              128U  // [bytes] mostly arbitrary
+#define ISOTP_RX_BUF_SIZE              128U  // [bytes] maximum size of a multi-frame ISOTP transaction (mostly arbitrary, increase if necessary)
+
+#define UDS_RESPONSE_ID                0x123
+#define UDS_REQUEST_ID                 0x456 // 0x124
+
+#define UDS_DOWNLOAD_MAX_BLOCK_SIZE    8U    // [bytes] maximum size of each packet during UDS download
+#define UDS_DOWNLOAD_USE_CRC           true  // whether each download block has a CRC appended
+#define UDS_DOWNLOAD_CRC_SIZE          8U    // [bits] size of the CRC in each download block
 
 
 // supported UDS services
 #define UDS_SERVICE_SUPPORTED_ECU_RESET          true
 #define UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL    true
+#define UDS_SERVICE_SUPPORTED_DOWNLOAD           true

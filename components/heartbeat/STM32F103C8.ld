@@ -94,9 +94,9 @@ SECTIONS
 
   } > RAM AT> FLASH
 
-  __app_end_addr = LOADADDR(.relocate);
+  __app_end_addr = LOADADDR(.relocate) + SIZEOF(.relocate);
   /* CRC goes at the very end of the app */
-  .crc LOADADDR(.relocate) + SIZEOF(.relocate): ALIGN(4)
+  .crc __app_end_addr :
   {
     __app_crc_addr = .;
     KEEP(*(.appCrc))                 /* app description location */

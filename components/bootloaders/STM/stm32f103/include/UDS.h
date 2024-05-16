@@ -33,3 +33,4 @@
 void UDS_init(void);
 void UDS_periodic_1kHz(void);
 bool UDS_shouldInhibitBoot(void);
+void UDS_extendBootTimeout(uint8_t);

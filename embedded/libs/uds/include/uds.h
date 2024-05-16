@@ -116,6 +116,14 @@ typedef enum
 
 typedef enum
 {
+    UDS_TRANSFER_TYPE_NONE = 0x00,
+    UDS_TRANSFER_TYPE_DOWNLOAD,
+    UDS_TRANSFER_TYPE_UPLOAD,
+} udsTransferType_E;
+
+
+typedef enum
+{
     UDS_NRC_NONE                               = 0x00,
     UDS_NRC_GENERAL_REJECT                     = 0x10,
     UDS_NRC_SERVICE_NOT_SUPPORTED              = 0x11,
@@ -156,7 +164,7 @@ typedef enum
     UDS_NRC_SHIFTER_NOT_PARK                   = 0x90,
     UDS_NRC_TORQUE_CONVERTER_CLUTCH_LOCKED     = 0x91,
     UDS_NRC_VOLTAGE_TOO_HIGH                   = 0x92,
-    UDS_NRC_COLTAGE_TOO_LOW                    = 0x93,
+    UDS_NRC_VOLTAGE_TOO_LOW                    = 0x93,
     UDS_MANUF_SPECIFIC_START                   = 0xF0,
     UDS_MANUF_SPECIFIC_END                     = 0xFE,
 } udsNegativeResponse_E;
@@ -173,10 +181,24 @@ typedef struct
 
 typedef struct
 {
-    udsServiceId_E id;
-    uint16_t       payloadLengthBytes;
-    uint8_t        *payload;
+    udsServiceId_E                           id;
+    uint16_t                                 payloadLengthBytes;
+    __attribute__((__aligned__(4U))) uint8_t *payload;
 } udsRequestDesc_S;
+
+
+typedef struct
+{
+    // putting these first even though it doesn't align with the actual
+    // layout in the frame because the required alignment will otherwise
+    // make this take up more space than it needs to
+    __attribute__((__aligned__(4U))) uint32_t size;
+    __attribute__((__aligned__(4U))) uint32_t addr;
+    uint8_t compressionType:4U;
+    uint8_t encryptionType :4U;
+    uint8_t sizeLen        :4U;
+    uint8_t addrLen        :4U;
+} udsDownloadDesc_S;
 
 
 /******************************************************************************
@@ -195,7 +217,7 @@ uint32_t         udsSrv_timeSinceLastTp(void);
 // general functions
 udsResult_E uds_sendNegativeResponse(udsServiceId_E sid, udsNegativeResponse_E nrc);
 udsResult_E uds_sendPositiveResponse(udsServiceId_E sid, uint8_t subFunction, uint8_t *payload, uint8_t payloadLengthBytes);
-bool        uds_checkResponseRequired(udsRequestDesc_S req);
+bool        uds_checkResponseRequired(udsRequestDesc_S *req);
 
 
 /******************************************************************************
@@ -213,10 +235,35 @@ udsNegativeResponse_E uds_cb_sessionChangeAllowed(udsSessionType_E currentSessio
 
 /*
  * uds_cb_ecuReset
- * @brief performans a reset of the component
+ * @brief performs a reset of the component
  * @param resetType udsResetType_E the type of reset to perform
  */
-udsNegativeResponse_E uds_cb_ecuReset(udsResetType_E resetType);
+void uds_cb_ecuReset(udsResetType_E resetType);
 
 
-udsNegativeResponse_E uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes);
+/*
+ * uds_cb_routineControl
+ * @brief callback after a uds routine control request
+ */
+void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes);
+
+
+/*
+ * uds_cb_transferStart
+ * @brief callback after a uds transfer start request
+ */
+void uds_cb_transferStart(udsTransferType_E transferType, uint8_t *payload, uint8_t payloadLengthBytes);
+
+
+/*
+ * uds_cb_transferStop
+ * @brief callback after a uds transfer stop request
+ */
+void uds_cb_transferStop(uint8_t *payload, uint8_t payloadLengthBytes);
+
+
+/*
+ * uds_cb_transfer
+ * @brief callback after a uds transfer payload request
+ */
+void uds_cb_transferPayload(uint8_t *payload, uint8_t payloadLengthBytes);

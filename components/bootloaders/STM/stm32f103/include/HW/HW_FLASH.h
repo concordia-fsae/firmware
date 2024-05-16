@@ -41,17 +41,50 @@
 
 #define FLASH_BUSY()       ((bool)(GET_REG(FLASH_SR) &FLASH_SR_BSY))  // returns true if flash is busy
 
+// Address where the application code starts
+// The app descriptor is expected at this address
+#define APP_FLASH_START    (0x08002000UL)
+#define APP_FLASH_END      ((const uint32_t)__FLASH_END)
+
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+// defined in the linker script
+extern const uint8_t __FLASH_END[];
+
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef struct
+{
+    bool     started   :1; // TRUE if app erase has started
+    bool     completed :1; // TRUE if app erase has completed
+    bool     status    :1; // TRUE if app has been erased successfully, FALSE if failed or unknown (i.e. in progress)
+    uint16_t currPage;     // page to be erased
+} FLASH_eraseState_S;
+
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+void               FLASH_init(void);
+
 void               FLASH_lock(void);
 void               FLASH_unlock(void);
 
+FLASH_eraseState_S FLASH_getEraseState(void);
 bool               FLASH_erasePages(uint32_t pageAddr, uint16_t pages);
-static inline bool FLASH_erasePage(uint32_t pageAddr)            { return FLASH_erasePages(pageAddr, 1U); }
-bool               FLASH_eraseApp(void);
+static inline bool FLASH_erasePage(uint32_t pageAddr) { return FLASH_erasePages(pageAddr, 1U); }
+bool               FLASH_eraseAppStart(void);
+bool               FLASH_eraseAppContinue(void);
+bool               FLASH_eraseAppBlocking(void);
+void               FLASH_eraseCompleteAck(void);
 
+bool               FLASH_writeHalfwords(uint32_t addr, uint16_t *data, uint16_t dataLen);
 bool               FLASH_writeWords(uint32_t addr, uint32_t *data, uint16_t dataLen);
 static inline bool FLASH_writeWord(uint32_t addr, uint32_t data) { return FLASH_writeWords(addr, &data, 1U); };

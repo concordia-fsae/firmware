@@ -87,7 +87,8 @@ inc_paths = [
     PROJECT_DIR.Dir("include/"),
     PROJECT_DIR.Dir("include/HW"),
     UDS_DIR.Dir("include"),
-    ISOTP_DIR,
+    ISOTP_DIR.Dir("include"),
+    LIBS_DIR.Dir("libcrc"),
 ]
 
 src_files = [
@@ -110,6 +111,7 @@ src_files = [
 uds_srcs = [
     ISOTP_DIR.File("isotp.c"),
     UDS_DIR.File("src/udsServer.c"),
+    LIBS_DIR.File("libcrc/libcrc.c"),
 ]
 
 env.Append(
