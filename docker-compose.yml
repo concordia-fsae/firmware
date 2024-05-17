@@ -1,6 +1,6 @@
 services:
   buildroot:
-    image: ghcr.io/concordia-fsae/containers/ubuntu-jammy-2022.04.21
+    image: ghcr.io/concordia-fsae/containers/ubuntu-jammy-2022.04.21:v0.1.0
     container_name: buildroot
     hostname: builder
     volumes: # mount pts
