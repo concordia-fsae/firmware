@@ -225,13 +225,7 @@ static void BMS1Hz_PRD()
         MAX_readWriteToChip();
         MAX_readWriteToChip(); /**< Re-read to get updated undervoltage information */
 
-        for (uint8_t i = 0; i < MAX_CELL_COUNT; i++)
-        {
-            if ((max_chip.state.cell_undervoltage & (1 << i)) == 0x00)
-            {
-                max_chip.state.connected_cells++;
-            }
-        }
+        max_chip.state.connected_cells = BMS_CONFIGURED_SERIES_CELLS;
 
         if (max_chip.state.connected_cells == 0)
         {
@@ -255,11 +249,6 @@ static void BMS1Hz_PRD()
             {
                 BMS.cells[i].state = BMS_CELL_CONNECTED;
             }
-        }
-
-        if (max_chip.state.connected_cells != BMS_CONFIGURED_SERIES_CELLS)
-        {
-            BMS.fault = true;
         }
 
         BMS.connected_cells = max_chip.state.connected_cells;
