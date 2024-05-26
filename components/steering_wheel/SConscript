@@ -41,6 +41,7 @@ c_flags = [
     "-fdata-sections",
     "-fshort-enums",
     "-funsigned-char",
+    f"-DAPP_START_ADDR={APP_START_ADDR}",
     "-DSTM32F1",
     "-DSTM32F103xB",
     "-DUSE_HAL_DRIVER",

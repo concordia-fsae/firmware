@@ -6,36 +6,94 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
+/* Chip-specific constants */
+#define FLASH_ORIGIN 0x08000000
+#define FLASH_SIZE   64K
+#define RAM_ORIGIN   0x20000000
+#define RAM_SIZE     20K
+/* end chip specific constants */
+
+
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);    /* bottom of stack (grows down) */
 
+/* stack and heap definitions */
+#if defined(LD_USE_STACK)
 __STACK_SIZE = 0x400;
+#else
+__STACK_SIZE = 0;
+#endif
+
+#if defined(LD_USE_HEAP)
 __HEAP_SIZE = 0x200;
+#endif
 
-__RAM_SIZE = 20K;
-__NVM_SIZE = 1K;
-__FLASH_SIZE = 64K - __NVM_SIZE;
 
-__RAM_ORIGIN = 0x20000000;
-__FLASH_ORIGIN = 0x8000000;
-__NVM_ORIGIN = __FLASH_ORIGIN + __FLASH_SIZE;
-
+/* determine app start address and size */
+#if defined(APP_START_ADDR)
+# if APP_START_ADDR < FLASH_ORIGIN
+#  error "App flash cannot start earlier than the flash origin address"
+# endif
+__APP_SIZE = FLASH_SIZE - (APP_START_ADDR - FLASH_ORIGIN);
+#else
+__APP_SIZE = FLASH_SIZE;
+#define APP_START_ADDR  FLASH_ORIGIN
+#endif
 
 /* Memory definition */
 MEMORY
 {
-    RAM      (rwx)    : ORIGIN = __RAM_ORIGIN,       LENGTH = __RAM_SIZE
-    FLASH    (rx)     : ORIGIN = __FLASH_ORIGIN,     LENGTH = __FLASH_SIZE
-    NVM      (r)      : ORIGIN = __NVM_ORIGIN,       LENGTH = __NVM_SIZE
+    RAM      (rwx)    : ORIGIN = RAM_ORIGIN,         LENGTH = RAM_SIZE
+    FLASH    (rx)     : ORIGIN = APP_START_ADDR,     LENGTH = __APP_SIZE
 }
 
 SECTIONS
 {
+/*
+ * if the app is starting at the origin, the vector table must come before the
+ * app descriptor
+ */
+#if APP_START_ADDR != FLASH_ORIGIN
+  /*
+   * for an app, the app descriptor must be at the origin so that the bootloader can find it.
+   */
+  .appDescriptor :
+  {
+    . = ALIGN(4);
+    KEEP(*(.appDescriptor))
+  } > FLASH
+#endif
+
+  /* The interrupt vector table must be aligned according to the number of interrupts in the table,
+   * with a minimum alignment of 32 words (128 bytes) to support the built-in arm interrupts plus
+   * an additional 16 interrupts.
+   * Alignment is effectively 16 plus the number of interrupts in the table, rounded up to the next power
+   * of 2. E.g. for 17 to 64 interrupts, the table must be aligned to 64 words (256 bytes)
+   * https://developer.arm.com/documentation/dui0552/a/cortex-m3-peripherals/system-control-block/vector-table-offset-register
+   */
+  .isr_vector : ALIGN(0x100)
+  {
+    __app_start_addr = .;
+    KEEP(*(.isr_vector))    /* interrupt vector table */
+  } > FLASH
+
+/*
+* If the app starts at the flash origin, the app descriptor must come after
+* the vector table
+*/
+#if APP_START_ADDR == FLASH_ORIGIN
+  .appDescriptor :
+  {
+    . = ALIGN(4);
+    KEEP(*(.appDescriptor))
+  } > FLASH
+#endif
+
+
   /* The program code and other data into "FLASH" Rom type memory */
   .text :
   {
     . = ALIGN(4);
-    KEEP(*(.isr_vector))                      /* interrupt vector table */
     *(.text .text.* .gnu.linkonce.t.*)        /* .text sections (code) */
     *(.rodata .rodata.* .gnu.linkonce.r.*)    /* .rodata sections (constants, strings, etc.) */
     *(.eh_frame)                              /* https://stackoverflow.com/questions/26300819/why-gcc-compiled-c-program-needs-eh-frame-section */
@@ -111,6 +169,18 @@ SECTIONS
   /* Used by the startup to initialize data */
   _sidata = LOADADDR(.relocate);
 
+  /* CRC needs to be at the end of the _image_, which should be right after the
+   * "relocate" section
+   */
+  __app_end_addr = LOADADDR(.relocate) + SIZEOF(.relocate);
+
+  /* CRC goes at the very end of the app */
+  .crc __app_end_addr :
+  {
+    __app_crc_addr = .;
+    KEEP(*(.appCrc))
+  } > FLASH
+
 
   /* Uninitialized data section into "RAM" Ram type memory */
   .bss(NOLOAD) :
@@ -127,6 +197,7 @@ SECTIONS
   } > RAM
 
   /* Heap and Stack definitions, if needed */
+#if defined(LD_USE_HEAP)
   .heap (COPY) :
   {
     . = ALIGN(8);
@@ -136,7 +207,9 @@ SECTIONS
     __HeapTop = .;
     PROVIDE(end = .);
   } > RAM
+#endif
 
+#if defined(LD_USE_HEAP)
   .stack (ORIGIN(RAM) + LENGTH(RAM) - __STACK_SIZE) (COPY) :
   {
     . = ALIGN(8);
@@ -147,12 +220,11 @@ SECTIONS
     _estack = .;
     PROVIDE(__stack = __StackTop);
   } > RAM
+#endif
 
+#if defined(LD_USE_HEAP) && defined(LD_USE_STACK)
   ASSERT(__HeapTop < __StackLimit, "RAM overflowed stack")
-
-   /* some global symbols to reference the flash pages we've dedicated to specific functions */
-  _nvm_base_address = ORIGIN(NVM);
-  _nvm_length = LENGTH(NVM);
+#endif
 
   /* Remove information from the compiler libraries */
   /DISCARD/ :

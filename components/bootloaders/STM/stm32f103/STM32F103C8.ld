@@ -30,11 +30,16 @@ MEMORY
 
 SECTIONS
 {
+  .isr_vector : ALIGN(0x100)
+  {
+    __app_start_addr = .;
+    KEEP(*(.isr_vector))    /* interrupt vector table */
+  } > FLASH
+
   /* The program code and other data into "FLASH" Rom type memory */
   .text :
   {
     . = ALIGN(4);
-    KEEP(*(.isr_vector))                      /* interrupt vector table */
     *(.text .text.* .gnu.linkonce.t.*)        /* .text sections (code) */
     *(.rodata .rodata.* .gnu.linkonce.r.*)    /* .rodata sections (constants, strings, etc.) */
     *(.eh_frame)                              /* https://stackoverflow.com/questions/26300819/why-gcc-compiled-c-program-needs-eh-frame-section */

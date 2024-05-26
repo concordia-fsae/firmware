@@ -55,6 +55,7 @@ def generate(env):
         OBJCOPY=tool_path("objcopy"),
         OBJDUMP=tool_path("objdump"),
         GDB=tool_path("gdb"),
+        CPP=tool_path("cpp"),  # c pre-processor, not c++
     )
 
     env.Replace(
@@ -92,10 +93,7 @@ def generate(env):
         env["BUILDERS"]["Object"].add_emitter(".c", su_emitter)
 
     env["BUILDERS"]["Program"] = Builder(
-        action=Action(
-            f"$CC -o $TARGET -T $LINKSCRIPT $LINKFLAGS $__MAPFLAG $SOURCES",
-            cmdstr="$LINKCOMSTR",
-        ),
+        generator=prog_generator,
         emitter="$PROGEMITTER",
         src_suffix="$OBJSUFFIX",
         suffix="$PROGSUFFIX",
@@ -187,10 +185,42 @@ def handle_mapfile(env) -> bool:
     return False
 
 
+def handle_ldscript(target, env):
+    if not "LINKSCRIPT" in env:
+        raise Exception("Link script has not been provided!")
+    ldfile = env["LINKSCRIPT"]
+
+    if isinstance(ldfile, Node.FS.File):
+        ldname = ldfile.name
+    elif isinstance(ldfile, str):
+        ldname = ldfile.split("/")[-1]
+    else:
+        raise Exception("LINKSCRIPT env var was neither a File object nor a str")
+    env["__LINKSCRIPT"] = target[0].File(ldname)
+
+    Clean(target[0], env["__LINKSCRIPT"])
+
+
+def prog_generator(target, source, env, for_signature):
+    handle_ldscript(target, env)
+
+    prep_ldfile = Action(
+        f"$CPP -P -undef $LINKFLAGS $LINKSCRIPT | sed -e '/^#.\\+$/d' > $__LINKSCRIPT",
+        cmdstr="Running c preprocessor on provided linkscript",
+    )
+
+    link = Action(
+        f"$CC -o $TARGET -T $__LINKSCRIPT $LINKFLAGS $__MAPFLAG $SOURCES",
+        cmdstr="$LINKCOMSTR",
+    )
+    return [prep_ldfile, link]
+
+
 def prog_emitter(target, source, env):
     map_exists = handle_mapfile(env)
     if map_exists and not env["MAPFILE"] in target:
         target.append(env["MAPFILE"])
+
     return target, source
 
 
