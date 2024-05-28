@@ -149,7 +149,7 @@ static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
  *
  * @param SPIx SPI peripheral
  */
-static inline void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
+static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
 {
     if (SPIx == SPI1)
     {

@@ -10,9 +10,11 @@
  ******************************************************************************/
 
 // System Includes
+#include "FloatTypes.h"
 #include "Types.h"
-#include "stddef.h"
-#include "string.h"
+
+#include <stddef.h>
+#include <string.h>
 
 /******************************************************************************
  *                               M A C R O S
@@ -484,13 +486,4 @@ static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
  *
  * @retval result of ln(x)
  */
-static inline float ln(float x)
-{
-    unsigned int bx = *(unsigned int*)(&x);
-    unsigned int ex = bx >> 23;
-    signed int   t  = (signed int)ex - (signed int)127;
-    // unsigned int s = (t < 0) ? (-t) : t;
-    bx              = 1065353216 | (bx & 8388607);
-    x               = *(float*)(&bx);
-    return -1.49278 + (2.11263 + (-0.729104 + 0.10969 * x) * x) * x + 0.6931471806 * t;
-}
+float ln(float32_t x);
