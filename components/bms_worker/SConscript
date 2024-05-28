@@ -67,13 +67,12 @@ link_flags = [
     f"-Wl,-Map={BUILD_DIR.File('bms_worker.map').path}",
     # "-Wl,--print-gc-sections",
     "--specs=nano.specs",
-    "--specs=nosys.specs",
 ]
 
 as_flags = ["-xassembler-with-cpp"]
 
 c_flags = [
-    "-std=c11",
+    "-std=gnu17",
     "-ffunction-sections",
     "-fdata-sections",
     "-fshort-enums",

@@ -32,7 +32,7 @@ env = GlobalEnv.Clone(
 )
 
 c_flags = [
-    "-std=c11",
+    "-std=gnu17",
     "-mthumb",
     "-mcpu=cortex-m3",
     "-mfloat-abi=soft",
@@ -40,7 +40,6 @@ c_flags = [
     # "-nostdlib", # this actually _increases_ flash usage, somehow
     "-nostartfiles",
     "--specs=nano.specs",
-    "--specs=nosys.specs",
     "-Os",  # optimize for size
     "-ffunction-sections",
     "-fdata-sections",

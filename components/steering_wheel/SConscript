@@ -26,7 +26,7 @@ env["OPENOCD_MCU"] = "stm32f103c8"
 
 
 c_flags = [
-    "-std=c11",
+    "-std=gnu17",
     "-mthumb",
     "-mcpu=cortex-m3",
     "-mfloat-abi=soft",
@@ -34,7 +34,6 @@ c_flags = [
     # "-nostdlib",
     # "-nostartfiles", # uncomment after porting start files from bootloader
     "--specs=nano.specs",
-    "--specs=nosys.specs",
     "-ffunction-sections",
     "-fdata-sections",
     "-fshort-enums",
