@@ -11,6 +11,7 @@
 #include "CAN/CAN.h"
 
 #include "HW_can.h"
+#include "HW_gpio.h"
 
 #include "FreeRTOS_SWI.h"
 #include "ModuleDesc.h"
@@ -128,6 +129,7 @@ static void CANIO_rx_100Hz_PRD(void)
 static void CANIO_rx_10Hz_PRD(void)
 {
     // TODO Implement this
+    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 }
 
 

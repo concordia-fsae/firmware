@@ -71,8 +71,9 @@ extern uint32_t SystemCoreClock;
 
 
 #define configSTACK_DEPTH_TYPE         UBaseType_t
-#define configMINIMAL_STACK_SIZE       (128)
+#define configMINIMAL_STACK_SIZE       (256)
 #define configIDLE_TASK_STACK_DEPTH    (128)
+#define configCHECK_FOR_STACK_OVERFLOW (2)
 
 // heap is not used because dynamic allocation disabled
 #define configAPPLICATION_ALLOCATED_HEAP    (0)

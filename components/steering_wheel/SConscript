@@ -7,16 +7,20 @@ from SCons.Script import Default, Depends, Dir, GetOption, Import, Return
 
 Import("GlobalEnv")
 
-RTOS_DIR = Dir("RTOS")
 SRC_DIR = Dir("src")
-HW_DIR = Dir("HW")
+INC_DIR = Dir("include")
+HW_DIR = SRC_DIR.Dir("HW")
+RTOS_DIR = SRC_DIR.Dir("RTOS")
+
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
+UDS_DIR = LIBS_DIR.Dir("uds")
+ISOTP_DIR = LIBS_DIR.Dir("isotp")
 
 BUILD_DIR = Dir("build")
 
-APP_START_ADDR = 0x08000000
+APP_START_ADDR = 0x08002000
 
 env = GlobalEnv.Clone(
     tools=["gcc-arm-none-eabi", "chip_config", "st-flash", "openocd", "compilation_db"],
@@ -34,14 +38,16 @@ c_flags = [
     "-mcpu=cortex-m3",
     "-mfloat-abi=soft",
     "-msoft-float",
-    # "-nostdlib",
-    # "-nostartfiles", # uncomment after porting start files from bootloader
+    "-nostdlib",
+    "-nostartfiles",
     "--specs=nano.specs",
     "-ffunction-sections",
     "-fdata-sections",
     "-fshort-enums",
     "-funsigned-char",
     f"-DAPP_START_ADDR={APP_START_ADDR}",
+    # "-DLD_USE_STACK",
+    # "-DLD_USE_HEAP",
     "-DSTM32F1",
     "-DSTM32F103xB",
     "-DUSE_HAL_DRIVER",
@@ -93,12 +99,12 @@ free_rtos_flags = [
     "-Wno-cast-align",
 ]
 
-chip_config = env.ChipConfig(config_file="HW/mcuConfig.yaml")
+chip_config = env.ChipConfig(config_file=HW_DIR.File("mcuConfig.yaml"))
 c_flags.extend(chip_config.get("defines", []))
 
 
 RTOS_INCLUDE_DIRS = [
-    RTOS_DIR.Dir("include"),
+    INC_DIR.Dir("RTOS"),
     FREERTOS_DIR.Dir("Source/include/"),
     FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
     CMSIS_DIR.Dir("CMSIS/Core/Include/"),
@@ -110,15 +116,18 @@ DRIVERS_INCLUDE_DIRS = [
 ]
 
 LIBS_INCLUDE_DIRS = [
-    LIBS_DIR.Dir("printf"),
     LIBS_DIR.Dir("atomic"),
+    LIBS_DIR.Dir("lib_FTDI_FT81x/include"),
+    LIBS_DIR.Dir("printf/src"),
+    LIBS_DIR.Dir("printf/src/printf"),
+    UDS_DIR.Dir("include"),
+    ISOTP_DIR.Dir("include"),
 ]
 
 PROJECT_INCLUDE_DIRS = [
-    "include/",
-    "HW/include/",
-    "generated/",
-    "lib/lib_FTDI_FT81x/include",
+    INC_DIR,
+    INC_DIR.Dir("HW"),
+    Dir("generated/"),
 ]
 
 paths = (
@@ -132,6 +141,17 @@ env.Append(
     LINKSCRIPT=chip_config["linker_file"],
     LINKFLAGS=c_flags + link_flags,
     MAPFILE=BUILD_DIR.File("steering_wheel.map"),
+)
+
+uds_env = env.Clone()
+uds_env.Append(
+    CCFLAGS=[
+        "-Wno-missing-prototypes",
+        "-Wno-unused-parameter",
+        "-DBYTE_ORDER=_BYTE_ORDER",
+        "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+        "-Wno-inline",
+    ]
 )
 
 rtos_env.Append(
@@ -150,9 +170,7 @@ src_files = [
     SRC_DIR.File("Screen.c"),
     SRC_DIR.File("Display/Pills.c"),
     SRC_DIR.File("Display/Dots.c"),
-]
-
-hw_src_files = [
+    SRC_DIR.File("UDS.c"),
     HW_DIR.File("HW_adc.c"),
     HW_DIR.File("HW_can.c"),
     HW_DIR.File("HW_dma.c"),
@@ -164,11 +182,11 @@ hw_src_files = [
 ]
 
 ftdi_lib_files = [
-    (Dir("lib").File("lib_FTDI_FT81x/src/EVE_commands.c"), ["-Wno-inline"]),
-    (Dir("lib").File("lib_FTDI_FT81x/src/EVE_target.c"), ["-Wno-inline"]),
+    (LIBS_DIR.File("lib_FTDI_FT81x/src/EVE_commands.c"), ["-Wno-inline"]),
+    (LIBS_DIR.File("lib_FTDI_FT81x/src/EVE_target.c"), ["-Wno-inline"]),
 ]
 
-src_files += hw_src_files + ftdi_lib_files
+src_files += ftdi_lib_files
 
 rtos_src_files = [
     RTOS_DIR.File("FreeRTOSResources.c"),
@@ -186,8 +204,8 @@ rtos_src_files = [
 
 platform_source_files = [
     (
-        LIBS_DIR.File("printf/printf.c"),
-        ["-Wno-float-equal", "-DPRINTF_INCLUDE_CONFIG_H"],
+        LIBS_DIR.File("printf/src/printf/printf.c"),
+        ["-DPRINTF_INCLUDE_CONFIG_H=1", "-Wno-float-equal", "-Wno-inline"],
     ),
 ]
 
@@ -195,6 +213,11 @@ platform_source_files = [
 platform_source_files.extend(
     [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
 )
+
+uds_srcs = [
+    ISOTP_DIR.File("isotp.c"),
+    UDS_DIR.File("src/udsServer.c"),
+]
 
 
 def create_output_file_path(
@@ -246,13 +269,26 @@ objs.extend(compile_objects(rtos_env, rtos_src_files, target_dir="FreeRTOS/"))
 # compile project source files
 objs.extend(compile_objects(env, src_files))
 
+# compile UDS source files
+objs.extend(compile_objects(uds_env, uds_srcs, target_dir="uds/"))
+
 # link all the compiled objects into an elf
 elf, map = env.Program(BUILD_DIR.File("steering_wheel.elf"), objs)
 Depends(elf, env["LINKSCRIPT"])
 
 # generate a binary for flashing
 binary = env.Bin(source=elf)
-Default(binary)
+
+# asms target generates disassembled binaries
+asms = env.Asm(source=objs + [elf])
+env.Alias("asms", asms)
+
+# env for generarting the CRC
+crc_env = GlobalEnv.Clone(tools=["hextools"])
+
+# generate the CRCd binary
+binary_crced = crc_env.InjectMpeg2CRC(source=binary, start_addr=APP_START_ADDR)
+Default(binary_crced)
 
 # Generate compile_commands.json
 compile_db = env.CompilationDatabase(BUILD_DIR.File("compile_commands.json"))
@@ -265,7 +301,7 @@ env.Alias("compiledb", compile_db)
 # Return artifacts to the caller
 artifacts = {
     "FLASHABLE_ARTIFACT": {
-        "artifact": binary,
+        "artifact": binary_crced,
         "addr": APP_START_ADDR,
         "tools": ["st-flash"],
     },

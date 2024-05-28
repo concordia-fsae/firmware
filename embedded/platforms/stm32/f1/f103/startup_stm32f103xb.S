@@ -187,13 +187,13 @@ g_pfnVectors:
   .word EXTI15_10_IRQHandler
   .word RTC_Alarm_IRQHandler
   .word USBWakeUp_IRQHandler
-  .word 0
-  .word 0
-  .word 0
-  .word 0
-  .word 0
-  .word 0
-  .word 0
+  ; .word 0
+  ; .word 0
+  ; .word 0
+  ; .word 0
+  ; .word 0
+  ; .word 0
+  ; .word 0
   .word BootRAM          /* @0x108. This is for boot in RAM mode for
                             STM32F10x Medium Density devices. */
 
