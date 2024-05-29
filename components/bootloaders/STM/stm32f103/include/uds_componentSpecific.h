@@ -24,3 +24,4 @@
 #define UDS_SERVICE_SUPPORTED_ECU_RESET          true
 #define UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL    true
 #define UDS_SERVICE_SUPPORTED_DOWNLOAD           true
+#define UDS_SERVICE_SUPPORTED_DID_READ           true
