@@ -20,7 +20,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-appDesc_S appDesc;
+appDesc_S *appDesc;
 
 
 /******************************************************************************
@@ -110,7 +110,7 @@ static void tryBoot(void)
 
         case RESET_TYPE_NONE:
         default:
-            if (!SYS_checkAppValid(&appDesc) || readButtonState())
+            if (!SYS_checkAppValid(appDesc) || readButtonState())
             {
                 // TODO: throw an error on CAN here
                 CAN_TxMessage_S msg = { 0U };
@@ -120,7 +120,7 @@ static void tryBoot(void)
                 msg.data.u64    = 0ULL;
 
                 msg.data.u8[0] = 0xFF;
-                msg.data.u8[1] = (uint8_t)SYS_checkAppValid(&appDesc);
+                msg.data.u8[1] = (uint8_t)SYS_checkAppValid(appDesc);
                 msg.data.u8[2] = (uint8_t)readButtonState();
 
                 CAN_sendMsg(msg);
@@ -134,9 +134,9 @@ static void tryBoot(void)
     if (doBoot)
     {
         {
-            if (SYS_checkAppValid(&appDesc))
+            if (SYS_checkAppValid(appDesc))
             {
-                SYS_bootApp(appDesc.appStart);
+                SYS_bootApp(appDesc->appStart);
             }
             else
             {
@@ -159,7 +159,7 @@ int main(void)
 {
     SYS_init();
 
-    appDesc = *(appDesc_S*)(APP_FLASH_START);
+    appDesc = (appDesc_S*)(APP_FLASH_START);
 
     for (;;)
     {
