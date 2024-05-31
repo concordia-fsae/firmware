@@ -7,6 +7,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "BuildDefines_generated.h"
 #include "CAN.h"
 #include "HW.h"
 #include "HW_CAN.h"
@@ -106,7 +107,7 @@ static void filterInit(void)
     // set the filter bits to a particular identifier
     // per the configuration above (dual 16bit, identifier list mode)
     // we can catch up to four IDs with this filter
-    SET_REG(&(pCAN->sFilterRegister[0].FR1), 0x456 << 5U);
+    SET_REG(&(pCAN->sFilterRegister[0].FR1), UDS_REQUEST_ID << 5U);
     SET_REG(&(pCAN->sFilterRegister[0].FR2), 0x00UL);
 
     // Exit filter initialization mode

@@ -1,9 +1,13 @@
 #!/usr/bin/python
 
+from os import makedirs
 from typing import List
 
+from mako.template import Template
 import SCons
 from SCons.Script import (
+    Alias,
+    Clean,
     Depends,
     Default,
     Dir,
@@ -14,7 +18,7 @@ from SCons.Script import (
     Return,
 )
 
-Import("GlobalEnv")
+Import("GlobalEnv", "CONFIG_IDS")
 
 PROJECT_DIR = Dir(".")
 SRC_DIR = Dir("src")
@@ -22,13 +26,13 @@ LIBS_DIR = Dir("#/embedded/libs")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
 
-BUILD_DIR = Dir("build")
+BUILDS_DIR = Dir("build")
 ARTIFACT_NAME = "bootloader"
 
 APP_START_ADDR = 0x08000000
 
 env = GlobalEnv.Clone(
-    tools=["gcc-arm-none-eabi", "st-flash", "openocd", "compilation_db"]
+    tools=["gcc-arm-none-eabi", "st-flash", "openocd", "compilation_db", "variants"]
 )
 
 c_flags = [
@@ -119,7 +123,6 @@ env.Append(
     CCFLAGS=c_flags,
     LINKSCRIPT=File("STM32F103C8.ld"),
     LINKFLAGS=c_flags + link_flags,
-    MAPFILE=BUILD_DIR.File(ARTIFACT_NAME + '.map'),
 )
 
 uds_env = env.Clone()
@@ -133,63 +136,124 @@ uds_env.Append(
     ]
 )
 
+renderers = [
+    File("renderers/BuildDefines_generated.h.mako"),
+]
 
-def make_build_target(file, ext):
-    if isinstance(file, SCons.Node.FS.Base):
+
+def render_generated_files(options, output_dir):
+    targets = []
+    for template in renderers:
+        renderer = Template(filename=template.abspath)
+        rendered = renderer.render(**options)
+        if not isinstance(rendered, str):
+            raise Exception("Mako rendering didn't produce a str to write to the file")
+
+        file = (
+            output_dir.File(template.name)
+            .target_from_source(prefix="", suffix="")
+            .abspath
+        )
+
+        with open(file, "w") as out_fd:
+            out_fd.write(rendered)
+
+        targets.append(file)
+    return targets
+
+
+def make_build_target(variant_dir, file, ext):
+    if isinstance(file, SCons.Node.FS.File):
         file = file.abspath
     file = file.replace(PROJECT_DIR.abspath + "/", "")
     if not PROJECT_DIR.abspath in file:
         file = file.replace(Dir("#").abspath + "/", "")
-    return BUILD_DIR.File(file).target_from_source(prefix="", suffix=ext)
+    return variant_dir.File(file).target_from_source(prefix="", suffix=ext)
 
 
-objs = []
-objs.extend(
-    [env.Object(target=make_build_target(src, ".obj"), source=src) for src in src_files]
-)
-objs.extend(
-    [
-        uds_env.Object(target=make_build_target(src, ".obj"), source=src)
-        for src in uds_srcs
-    ]
-)
+configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
+elfs = []
+binaries = []
+asms = []
 
-# link all the compiled objects into an elf
-elf, map = env.Program(BUILD_DIR.File(ARTIFACT_NAME + ".elf"), objs)
-Depends(elf, env["LINKSCRIPT"])
+for config_id, config in configs.items():
+    variant_dir = BUILDS_DIR.Dir(
+        "_".join(config["description"].split(" ")) + f"_{config_id}"
+    )
+    generated_dir = variant_dir.Dir("generated")
+    makedirs(generated_dir.abspath, exist_ok=True)
 
-# generate a binary for flashing
-binary = env.Bin(source=elf)
-Default(binary)
+    generated = render_generated_files(config["options"], generated_dir)
 
-# asms target generates disassembled binaries
-asms = env.Asm(source=objs + [elf])
-env.Alias("asms", asms)
+    objs = []
+    objs.extend(
+        [
+            env.Object(
+                target=make_build_target(variant_dir, src, ".obj"),
+                source=src,
+                CPPPATH=inc_paths + [generated_dir],
+            )
+            for src in src_files
+        ]
+    )
+    objs.extend(
+        [
+            uds_env.Object(
+                target=make_build_target(variant_dir, src, ".obj"),
+                source=src,
+                CPPPATH=inc_paths + [generated_dir],
+            )
+            for src in uds_srcs
+        ]
+    )
 
-# build compilation database
-compile_db = env.CompilationDatabase(BUILD_DIR.File("compile_commands.json"))
-Depends(compile_db, objs)
-# always generate compilation database
-Default(compile_db)
-# use compiledb alias to _only_ build the compiledb
-env.Alias("compiledb", compile_db)
+    # link all the compiled objects into an elf
+    elf, map = env.Program(
+        variant_dir.File(ARTIFACT_NAME + ".elf"),
+        objs,
+        MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
+    )
+    elfs.append(elf)
+    Depends(elf, env["LINKSCRIPT"])
+    Clean(elf, generated)
+
+    # generate a binary
+    binaries.append(env.Bin(source=elf))
+
+    # asms target generates disassembled binaries
+    asms.append(env.Asm(source=objs + [elf]))
+
+    # build compilation database
+    compile_db = env.CompilationDatabase(variant_dir.File("compile_commands.json"))
+    Depends(compile_db, objs)
+    # always generate compilation database
+    Default(compile_db)
+    # use compiledb alias to _only_ build the compiledb
+    env.Alias("compiledb", compile_db)
+
+
+Default(binaries)
+Alias("asms", asms)
 
 # Return artifacts to the caller
-artifacts = {
-    "FLASHABLE_ARTIFACT": {
-        "artifact": binary,
+artifacts = {}
+
+if len(binaries) == 1:
+    artifacts["FLASHABLE_ARTIFACT"] = {
+        "artifact": binaries[0],
         "addr": APP_START_ADDR,
         "tools": ["st-flash"],
-    },
-    "DEBUG_ARTIFACT": {
-        "artifact": elf,
+    }
+
+if len(elfs) == 1:
+    artifacts["DEBUG_ARTIFACT"] = {
+        "artifact": elfs[0],
         "args": [],
         "tools": ["gcc-arm-none-eabi", "openocd"],
         "env": {
             "OPENOCD_INTERFACE": "stlink",
             "OPENOCD_MCU": "stm32f103c8",
         },
-    },
-}
+    }
 
 Return("artifacts")
