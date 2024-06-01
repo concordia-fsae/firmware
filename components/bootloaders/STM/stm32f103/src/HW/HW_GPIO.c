@@ -70,7 +70,7 @@ void GPIO_strobePin(uint32_t bank, uint8_t pin, uint8_t count, uint32_t rate, ui
 }
 
 
-bool readButtonState(void)
+bool GPIO_readPin(void)
 {
     bool state = false;
 

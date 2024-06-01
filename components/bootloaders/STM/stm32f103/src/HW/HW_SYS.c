@@ -151,6 +151,7 @@ void SYS_bootApp(uint32_t appAddr)
     GPIO_destroy();
     NVIC_disableInterrupts();
     CAN_destroy();
+    TIM_destroy();
     // TODO: tear down everything else we configured too
 
     SYS_resetSoft();

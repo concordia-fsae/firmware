@@ -42,9 +42,30 @@
  *                              E X T E R N S
  ******************************************************************************/
 
+// this needs to be defined for __libc_init_array() from newlib_nano to be happy
+extern void _init(void);
+void _init(void){}
 extern void RTOS_createResources(void);
 
+// defined by linker
+extern const uint32_t __app_start_addr;
+extern const uint32_t __app_end_addr;
 
+
+typedef struct
+{
+    const uint32_t appStart;
+    const uint32_t appEnd;
+    const uint32_t appCrcLocation;
+} appDesc_S;
+
+__attribute__((section(".appDescriptor")))
+const appDesc_S appDesc = {
+    .appStart       = (const uint32_t)&__app_start_addr,
+    .appEnd         = (const uint32_t)&__app_end_addr,
+    // .appCrcLocation = (const uint32_t)&__app_crc_addr,
+    .appCrcLocation = (const uint32_t)&__app_end_addr,
+};
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/

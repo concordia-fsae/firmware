@@ -57,6 +57,15 @@ void TIM_init(void)
     NVIC_EnableIRQ(TIM2_IRQn);
 }
 
+void TIM_destroy(void)
+{
+    // enable the update interrupt
+    SET_REG(RCC_APB1RSTR, GET_REG(RCC_APB1RSTR) | 1U);
+    BLOCKING_DELAY(1000);
+    SET_REG(RCC_APB1RSTR, GET_REG(RCC_APB1RSTR) & 0xFEUL);
+    BLOCKING_DELAY(1000);
+}
+
 Time_t TIM_getTimeMs(void)
 {
     return timeMs;

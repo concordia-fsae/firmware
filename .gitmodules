@@ -19,4 +19,3 @@
 [submodule "embedded/libs/isotp"]
 	path = embedded/libs/isotp
 	url = git@github.com:concordia-fsae/isotp.git
-	branch = user/rl/disableAsserts

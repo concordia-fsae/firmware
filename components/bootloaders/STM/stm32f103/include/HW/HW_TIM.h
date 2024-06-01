@@ -38,4 +38,5 @@
  ******************************************************************************/
 
 void   TIM_init(void);
+void   TIM_destroy(void);
 Time_t TIM_getTimeMs(void);

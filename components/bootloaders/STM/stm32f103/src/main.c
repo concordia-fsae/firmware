@@ -100,57 +100,40 @@ static void tryBoot(void)
 
     switch (SYS_getResetType())
     {
-        case RESET_TYPE_JUST_UPDATED:
-            // try to boot fast if we just updated the app
-            break;
-
         case RESET_TYPE_PERSISTENT_BOOTLOADER:
             doBoot = false;
             break;
 
+        case RESET_TYPE_JUST_UPDATED:
         case RESET_TYPE_NONE:
         default:
-            if (!SYS_checkAppValid(appDesc) || readButtonState())
-            {
-                // TODO: throw an error on CAN here
-                CAN_TxMessage_S msg = { 0U };
-                msg.id          = 0x401;
-                msg.lengthBytes = 3;
-                msg.mailbox     = 2;
-                msg.data.u64    = 0ULL;
-
-                msg.data.u8[0] = 0xFF;
-                msg.data.u8[1] = (uint8_t)SYS_checkAppValid(appDesc);
-                msg.data.u8[2] = (uint8_t)readButtonState();
-
-                CAN_sendMsg(msg);
-
-                doBoot = false;
-            }
             break;
     }
 
-
     if (doBoot)
     {
+        bool appValid = SYS_checkAppValid(appDesc);
+        if (appValid)
         {
-            if (SYS_checkAppValid(appDesc))
-            {
-                SYS_bootApp(appDesc->appStart);
-            }
-            else
-            {
-                // NO valid app to execute
-                // TODO: throw error on CAN here with boot failure reason
-                GPIO_strobePin(LED_PORT, LED_PIN, 5, BLINK_SLOW, LED_ON_STATE);
-                SYS_resetHard();
-            }
+            SYS_bootApp(appDesc->appStart);
         }
-    }
-    else
-    {
-        // TODO: throw error on CAN here with boot failure reason
-        // SYS_resetHard();
+        else
+        {
+            CAN_TxMessage_S msg = { 0U };
+            msg.id          = 0x401;
+            msg.lengthBytes = 2;
+            msg.mailbox     = 2;
+            msg.data.u64    = 0ULL;
+
+            msg.data.u8[0] = 0xFF;
+            msg.data.u8[1] |= appValid ? 1U : 0U;
+
+            CAN_sendMsg(msg);
+
+            // NO valid app to execute
+            GPIO_strobePin(LED_PORT, LED_PIN, 5, BLINK_SLOW, LED_ON_STATE);
+            SYS_resetHard();
+        }
     }
 }
 

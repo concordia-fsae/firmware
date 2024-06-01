@@ -125,6 +125,10 @@ static void CAN_hwInit(void)
     // Enable AFIO clock
     pRCC->APB2ENR |= RCC_APB2ENR_AFIO_CLK;
 
+#if CAN_AFIO_REMAP
+    // set AFIO for CAN pins
+    SET_REG(AFIO_MAPR, GET_REG(AFIO_MAPR) | (1U << 14U));
+#endif
 
     // set interrupt priorities
     NVIC_SetPriority(CAN1_SCE_IRQn, 5U, 0U);
@@ -297,20 +301,24 @@ CAN_exitCode_E CAN_init(void)
     // enable interrupts
     WRITE_REG(pCAN->IER, GET_REG(pCAN->IER) | CAN_ENABLED_INTERRUPTS);
 
+    // configure filters
+    filterInit();
+
     // clear the initialization request bit to exit init mode
     // and allow the peripheral to begin operating
     CLEAR_BIT(pCAN->MCR, CAN_MCR_INRQ);
 
-    // configure filters
-    filterInit();
-
+    tick = 0U;
     while ((pCAN->MSR & CAN_MSR_INAK) != 0U)
     {
+        BLOCKING_DELAY(100);
         // Check for the Timeout
         if (tick > CAN_TIMEOUT_VALUE)
         {
             return HAL_CAN_ERROR_NOT_READY;
         }
+
+        tick++;
     }
 
     return HAL_CAN_ERROR_NONE;
@@ -331,12 +339,12 @@ void CAN_destroy(void)
     SET_BIT(pCAN->MCR, CAN_MCR_RESET);
 
     // Set pins back to reset value (input floating)
-    SET_REG(GPIO_CR(GPIOA, CAN_TX_PIN), (GET_REG(GPIO_CR(GPIOA, CAN_TX_PIN)) & CR_MASK(CAN_TX_PIN)) | CR_INPUT << CR_SHIFT(CAN_TX_PIN));
-    SET_REG(GPIO_CR(GPIOA, CAN_RX_PIN), (GET_REG(GPIO_CR(GPIOA, CAN_RX_PIN)) & CR_MASK(CAN_RX_PIN)) | CR_INPUT << CR_SHIFT(CAN_RX_PIN));
+    SET_REG(GPIO_CR(CAN_TX_PORT, CAN_TX_PIN), (GET_REG(GPIO_CR(CAN_TX_PORT, CAN_TX_PIN)) & CR_MASK(CAN_TX_PIN)) | CR_INPUT << CR_SHIFT(CAN_TX_PIN));
+    SET_REG(GPIO_CR(CAN_RX_PORT, CAN_RX_PIN), (GET_REG(GPIO_CR(CAN_RX_PORT, CAN_RX_PIN)) & CR_MASK(CAN_RX_PIN)) | CR_INPUT << CR_SHIFT(CAN_RX_PIN));
 
     // clear odr bits
-    SET_REG(GPIO_ODR(GPIOA), GET_REG(GPIO_ODR(GPIOA)) & ~CAN_TX_PIN);
-    SET_REG(GPIO_ODR(GPIOA), GET_REG(GPIO_ODR(GPIOA)) & ~CAN_RX_PIN);
+    SET_REG(GPIO_ODR(CAN_TX_PORT), GET_REG(GPIO_ODR(CAN_TX_PORT)) & ~CAN_TX_PIN);
+    SET_REG(GPIO_ODR(CAN_RX_PORT), GET_REG(GPIO_ODR(CAN_RX_PORT)) & ~CAN_RX_PIN);
 }
 
 
