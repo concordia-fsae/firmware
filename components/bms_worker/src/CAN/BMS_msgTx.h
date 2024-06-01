@@ -12,57 +12,57 @@
 
 static inline void set_BMSVoltageMin(CAN_data_T* message, uint16_t value)
 {
-    message->u64 |= ((uint64_t)((uint16_t)(value * 200) & 0x3FF)) << 54;  // 10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((uint16_t)(value * 200) & 0x3FF)) << 53;  // 10 bits, 5mV precision, range [0-5115]mV
 }
 
 static inline void set_BMSVoltageMax(CAN_data_T* message, uint16_t value)
 {
-    message->u64 |= ((uint64_t)((uint16_t)(value * 200) & 0x3FF)) << 44;  // 10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((uint16_t)(value * 200) & 0x3FF)) << 43;  // 10 bits, 5mV precision, range [0-5115]mV
 }
 
-static inline void set_ENVTempMin(CAN_data_T* message, uint8_t value)
+static inline void set_ENVPackVoltage(CAN_data_T* message, uint8_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)value & 0x7F)) << 37;  // 7 bits, 1 deg C precision
+    message->u64 |= ((uint64_t)((uint8_t)value & 0x7F)) << 36;  // 7 bits, 1 deg C precision
 }
 
 static inline void set_ENVTempMax(CAN_data_T* message, uint8_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)value & 0x7F)) << 30;  // 7 bits, 1 deg C precision
+    message->u64 |= ((uint64_t)((uint8_t)value & 0x7F)) << 29;  // 7 bits, 1 deg C precision
 }
 
 static inline void set_BMSChargeLimit(CAN_data_T* message, uint8_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)value & 0x1F)) << 25;  // 5 bits, 1A precision
+    message->u64 |= ((uint64_t)((uint8_t)value & 0x1F)) << 24;  // 5 bits, 1A precision
 }
 
 static inline void set_BMSDischargeLimit(CAN_data_T* message, uint8_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)value & 0xFF)) << 17;  // 8 bits, 1A precision
+    message->u64 |= ((uint64_t)((uint8_t)value & 0xFF)) << 16;  // 8 bits, 1A precision
 }
 
 static inline void set_BMSErrorFlag(CAN_data_T* message, bool value)
 {
-    message->u64 |= ((uint64_t)((value) ? 0x01 : 0U)) << 16;    // 1 bit
+    message->u64 |= ((uint64_t)((value) ? 0x01 : 0U)) << 11;    // 1 bit
 }
 
 static inline void set_BMSFaultFlag(CAN_data_T* message, bool value)
 {
-    message->u64 |= ((uint64_t)((value ? 0x01 : 0U))) << 15;    // 1 bit
+    message->u64 |= ((uint64_t)((value ? 0x01 : 0U))) << 10;    // 1 bit
 }
 
 static inline void set_ENVErrorFlag(CAN_data_T* message, bool value)
 {
-    message->u64 |= ((uint64_t)((value ? 0x01 : 0U))) << 14;    // 1 bit
+    message->u64 |= ((uint64_t)((value ? 0x01 : 0U))) << 9;    // 1 bit
 }
 
 static inline void set_ENVFaultFlag(CAN_data_T* message, bool value)
 {
-    message->u64 |= ((uint64_t)((value) ? 0x01 : 0U)) << 13;    // 1 bit
+    message->u64 |= ((uint64_t)((value) ? 0x01 : 0U)) << 8;    // 1 bit
 }
 
 static inline void set_Counter(CAN_data_T* message, uint8_t value)
 {
-    message->u64 |= value << 1;   // 8 bits
+    message->u64 |= value;   // 8 bits
 }
 
 // pack_VEH_BMS_averagesSOCcellTemps_1s

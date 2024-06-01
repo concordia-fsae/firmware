@@ -185,7 +185,7 @@ static bool pack_VEH_BMS_criticalData_10ms(CAN_data_T* message, const uint8_t co
 {
     set_BMSVoltageMin(message, BMS.voltage.min);
     set_BMSVoltageMax(message, BMS.voltage.max);
-    set_ENVTempMin(message, ENV.values.min_temp);
+    set_ENVPackVoltage(message, BMS.pack_voltage);
     set_ENVTempMax(message, ENV.values.max_temp);
     set_BMSChargeLimit(message, BMS.charge_limit);
     set_BMSDischargeLimit(message, BMS.discharge_limit);
