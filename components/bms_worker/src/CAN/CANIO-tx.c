@@ -35,7 +35,7 @@
 typedef struct
 {
     uint8_t tx_1Hz_msg;
-    uint8_t tx_100Hz_msg;
+    uint8_t tx_10Hz_msg;
 } cantx_S;
 
 
@@ -46,7 +46,7 @@ typedef struct
 #define VEH_packTable_10ms_SIZE    (sizeof(VEH_packTable_10ms) / sizeof(packTable_S))
 #define VEH_packTable_1s_SIZE      (sizeof(VEH_packTable_1s) / sizeof(packTable_S))
 
-#define MSG_UID_SEGMENT(id)        (id + IO.addr)
+#define MSG_UID_SEGMENT(id)        (id + 2)
 
 
 /******************************************************************************
@@ -107,12 +107,12 @@ void CANTX_BUS_A_SWI(void)
     static uint8_t   counter_1Hz = 0U;
     CAN_data_T       message = { 0U };
 
-    if (cantx.tx_100Hz_msg != VEH_packTable_10ms_SIZE)
+    if (cantx.tx_10Hz_msg != VEH_packTable_10ms_SIZE)
     {
 
         const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&VEH_packTable_10ms,
                                                          VEH_packTable_10ms_SIZE,
-                                                         &cantx.tx_100Hz_msg,
+                                                         &cantx.tx_10Hz_msg,
                                                          &message,
                                                          &counter_100Hz);
 
@@ -120,9 +120,14 @@ void CANTX_BUS_A_SWI(void)
         {
             if (CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message, MSG_UID_SEGMENT(entry_100Hz->id), entry_100Hz->len))
             {
-                cantx.tx_100Hz_msg++;
+                cantx.tx_10Hz_msg++;
             }
             memset(&message, 0, sizeof(message));
+        }
+        
+        if (cantx.tx_10Hz_msg != VEH_packTable_10ms_SIZE)
+        {
+            cantx.tx_10Hz_msg++;
         }
     }
 
@@ -144,6 +149,11 @@ void CANTX_BUS_A_SWI(void)
             memset(&message, 0, sizeof(message));
         }
     }
+    else
+    {
+        cantx.tx_1Hz_msg++;
+    }
+
 }
 
 
@@ -308,13 +318,13 @@ static void CANIO_tx_1kHz_PRD(void)
  * CANIO_tx_100Hz_PRD
  * module 100Hz periodic function
  */
-static void CANIO_tx_100Hz_PRD(void)
+static void CANIO_tx_10Hz_PRD(void)
 {
-    if (cantx.tx_100Hz_msg < VEH_packTable_10ms_SIZE)
+    if (cantx.tx_10Hz_msg < VEH_packTable_10ms_SIZE)
     {
         // all the message weren't sent. TO-DO: error handling
     }
-    cantx.tx_100Hz_msg = 0U;
+    cantx.tx_10Hz_msg = 0U;
 }
 
 /**
@@ -338,7 +348,7 @@ static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
     cantx.tx_1Hz_msg   = VEH_packTable_1s_SIZE;
-    cantx.tx_100Hz_msg = VEH_packTable_10ms_SIZE;
+    cantx.tx_10Hz_msg = VEH_packTable_10ms_SIZE;
     HW_CAN_start();    // start CAN
 }
 
@@ -347,6 +357,6 @@ const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
  // .periodic10kHz_CLK = &CANIO_tx_10kHz_PRD,
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
-    .periodic100Hz_CLK = &CANIO_tx_100Hz_PRD,
+    .periodic10Hz_CLK = &CANIO_tx_10Hz_PRD,
     .periodic1Hz_CLK   = &CANIO_tx_1Hz_PRD,
 };
