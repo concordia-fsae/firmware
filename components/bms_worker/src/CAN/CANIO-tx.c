@@ -22,6 +22,7 @@
 #include "BMS_msgTx.h"
 
 // imports for data access
+#include "BuildDefines_generated.h"
 #include "BatteryMonitoring.h"
 #include "Cooling.h"
 #include "Environment.h"
@@ -46,7 +47,7 @@ typedef struct
 #define VEH_packTable_10ms_SIZE    (sizeof(VEH_packTable_10ms) / sizeof(packTable_S))
 #define VEH_packTable_1s_SIZE      (sizeof(VEH_packTable_1s) / sizeof(packTable_S))
 
-#define MSG_UID_SEGMENT(id) (id + IO.addr)
+#define MSG_UID_SEGMENT(id) (id + CAN_BASE_OFFSET)
 
 
 /******************************************************************************

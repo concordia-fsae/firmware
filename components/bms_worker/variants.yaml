@@ -1,0 +1,37 @@
+configs:
+  0:
+    description: BMS Segment 0 Worker
+    options:
+      udsRequestId: 0x600
+      udsResponseId: 0x640
+      canIdOffset: 0
+  1:
+    description: BMS Segment 1 Worker
+    options:
+      udsRequestId: 0x601
+      udsResponseId: 0x641
+      canIdOffset: 1
+  2:
+    description: BMS Segment 2 Worker
+    options:
+      udsRequestId: 0x602
+      udsResponseId: 0x642
+      canIdOffset: 2
+  3:
+    description: BMS Segment 3 Worker
+    options:
+      udsRequestId: 0x603
+      udsResponseId: 0x643
+      canIdOffset: 3
+  4:
+    description: BMS Segment 4 Worker
+    options:
+      udsRequestId: 0x604
+      udsResponseId: 0x644
+      canIdOffset: 4
+  5:
+    description: BMS Segment 5 Worker
+    options:
+      udsRequestId: 0x605
+      udsResponseId: 0x645
+      canIdOffset: 5
