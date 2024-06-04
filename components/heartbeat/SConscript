@@ -1,26 +1,28 @@
 #!/usr/bin/python
 
-import SCons
-
 from os.path import splitext
-import struct
 
-from fastcrc import crc32
+from SCons.Script import (
+    AddOption,
+    Default,
+    Depends,
+    Dir,
+    Environment,
+    File,
+    GetOption,
+    Import,
+    Return,
+)
 
-Import("*")
+Import("GlobalEnv")
 
-PROJECT_SOURCE_DIR = Dir("src")
 # LIBS_DIR = Dir("#/embedded/libs")
-
+SRC_DIR = Dir("src")
 BUILD_DIR = Dir("build")
 
-OPENOCD_INTERFACE = "stlink"
-OPENOCD_BOARD = "stm32f103c8"
+APP_START_ADDR = 0x08002000
 
-env = Environment(tools=["arm-none-eabi", "st-flash", "openocd"])
-
-env.Tool("compilation_db")
-env["REPO_ROOT_DIR"] = Dir("#")
+env = GlobalEnv.Clone(tools=["gcc-arm-none-eabi", "st-flash", "openocd", "compilation_db"])
 
 common_flags = [
     "-mthumb",
@@ -53,16 +55,12 @@ c_flags = [
     "-fdata-sections",
     "-fshort-enums",
     "-funsigned-char",
-    "-fstack-usage",
     # https://stackoverflow.com/questions/26300819/why-gcc-compiled-c-program-needs-eh-frame-section%20
     "-fno-asynchronous-unwind-tables",
     "-fverbose-asm",
     "-nostdlib",
     "-nostartfiles",
     "-msoft-float",
-    # "-DSTM32F1",
-    # "-DSTM32F103xB",
-    # "-DUSE_HAL_DRIVER",
     "-Wall",
     "-Wcast-align",
     "-Werror",
@@ -96,104 +94,59 @@ env.Append(
 
 
 src_files = [
-    "src/main.c",
-    "src/HW.c",
-    "src/c_only_startup.S",
-    "src/cortexm3_macro.S",
+    SRC_DIR.File("main.c"),
+    SRC_DIR.File("HW.c"),
+    SRC_DIR.File("c_only_startup.S"),
+    SRC_DIR.File("cortexm3_macro.S"),
 ]
 
-objs = []
-for src_file in src_files:
-    obj = BUILD_DIR.File(splitext(src_file)[0] + ".obj")
-    tar = [obj]
-    if "-fstack-usage" in c_flags:
-        tar.append(BUILD_DIR.File(splitext(src_file)[0] + ".su"))
-    env.Object(target=tar, source=src_file)
-    objs.append(obj)
+objs = [
+    env.Object(BUILD_DIR.File(splitext(src.name)[0] + ".obj"), src) for src in src_files
+]
 
-elf = env.Program(BUILD_DIR.File("heartbeat.elf"), objs)
+# link all the compiled objects into an elf
+elf, map = env.Program(BUILD_DIR.File("heartbeat.elf"), objs)
 env.Depends(elf, env["LINKSCRIPT"])
-env.AlwaysBuild(elf)
 
-binary = env.Bin(source=BUILD_DIR.File("heartbeat.elf"))
-env.AlwaysBuild(binary)
+binary = env.Bin(source=elf)
 
-
-# move the following builder to a tool
-def calc_binary_crc(target, source, env):
-    with open(source[0].abspath, "rb") as fd:
-        # get the app start address from the first word of the binary
-        # TODO: figure out a better solution than subtracting the start addr here
-        app_start = struct.unpack("<L", fd.read(4))[0] - 0x08002000
-        fd.seek(0)
-
-        # extract the app header since we don't want to crc it
-        app_header = fd.read(app_start)
-
-        # extract the app data
-        fd.seek(app_start)
-        app_bytes = fd.read()
-
-    # crc initial value, per mpeg2 crc spec
-    app_crc = 0xFFFFFFFF
-    for word in struct.iter_unpack("<L", app_bytes):
-        app_crc = crc32.mpeg_2(word[0].to_bytes(length=4, byteorder="big"), app_crc)
-
-    app_crc_packed = struct.pack("<L", app_crc)
-
-    print("app len: ", len(app_bytes))
-    print("last word: ", app_bytes[-4:].hex())
-    print("app crc: ", hex(app_crc))
-    print("app crc packed: ", app_crc_packed.hex())
-
-    with open(target[0].abspath, "wb") as fd_crc:
-        fd_crc.write(app_header)
-        fd_crc.write(app_bytes)
-        fd_crc.write(app_crc_packed)
-        # fd_crc.write(0x00.to_bytes(4, byteorder="big"))
-
-    return None
-
-crc_binary_builder = SCons.Builder.Builder(
-        action=calc_binary_crc,
-        suffix="_crc.bin",
-    )
-
-env.Append(
-    BUILDERS={"crc": crc_binary_builder}
-)
-
+# env for generarting the CRC
+crc_env = Environment(tools=["hextools"])
 
 # generate the CRCd binary
-binary_crced = env.crc(source=BUILD_DIR.File("heartbeat.bin"))
-
-env.Default(binary_crced)
-env.Depends(binary_crced, binary)
-env.AlwaysBuild(binary_crced)
+binary_crced = crc_env.InjectMpeg2CRC(source=binary, start_addr=APP_START_ADDR)
+Default(binary_crced)
 
 
 # asms target generates disassembled binaries
-def generate_asms():
-    asms = []
-    for obj in objs:
-        asms.append(env.Asm(source=obj))
-    asms.append(env.Asm(source=BUILD_DIR.File("heartbeat.elf")))
-    return asms
-env.Alias("asms", generate_asms())
+asms = env.Asm(source=objs + [elf])
+env.Alias("asms", asms)
 
 
-# generate compilation database
-env.Alias("compiledb", env.CompilationDatabase())
+# build compilation database
+compile_db = env.CompilationDatabase(BUILD_DIR.File("compile_commands.json"))
+Depends(compile_db, objs)
+# always generate compilation database
+Default(compile_db)
+# use compiledb alias to _only_ build the compiledb
+env.Alias("compiledb", compile_db)
 
-# upload compiled bin to chip
-env.Alias("upload", env.flash(source=BUILD_DIR.File("heartbeat_crc.bin"), target=0x08002000))
+# Return artifacts to the caller
+artifacts = {
+    "FLASHABLE_ARTIFACT": {
+        "artifact": binary_crced,
+        "addr": APP_START_ADDR,
+        "tools": ["st-flash"],
+    },
+    "DEBUG_ARTIFACT": {
+        "artifact": elf,
+        "args": [],
+        "tools": ["gcc-arm-none-eabi", "openocd"],
+        "env": {
+            "OPENOCD_INTERFACE": "stlink",
+            "OPENOCD_MCU": "stm32f103c8",
+        },
+    },
+}
 
-# launch gdb with openocd
-env.Alias(
-    "openocd-gdb",
-    env.launch_gdb(
-        BUILD_DIR.File("heartbeat.elf"),
-        f"-ex 'target extended-remote | {env.openocd_cmd(interface=OPENOCD_INTERFACE, board=OPENOCD_BOARD)}'",
-        '-ex "monitor reset"',
-    ),
-)
+Return("artifacts")

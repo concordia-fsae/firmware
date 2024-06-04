@@ -2,84 +2,64 @@
 
 from SCons.Script import (
     AddOption,
-    Builder,
-    COMMAND_LINE_TARGETS,
+    Default,
+    Dir,
     Environment,
-    Execute,
     Export,
+    Exit,
     GetOption,
     SConscript,
 )
 
 from os.path import dirname
-from yaml import load, Loader
+from os import environ
+from oyaml import safe_load
 
-env = Environment()
+# create a global environment which all targets can start from
+GlobalEnv = Environment(REPO_ROOT_DIR=Dir("#"), tools=[])
+GlobalEnv["ENV"]["TERM"] = environ["TERM"]
+Export("GlobalEnv")
 
 # add option to choose target
 AddOption("--target", dest="target", type="string", action="store")
-# add option to not generate the compilation database
-AddOption("--nocompiledb", dest="nocompiledb", action="store_true")
 # add option to make build verbose
 AddOption("--verbose", dest="verbose", action="store_true")
-# add option to log output to file
-AddOption("--savelog", dest="savelog", action="store_true")
-# add option for clean build
-AddOption("--cleanbuild", dest="cleanbuild", action="store_true")
-# add option for platformio commandline args
-AddOption("--pio_args", dest="pio_args", type="string", action="store", default="")
 # add option to build without debug info
 AddOption("--release", dest="release", action="store_true")
 
 
-def pio_build_cmd(source, **_):
-    pio_dir = dirname(str(source[0]))
-    if GetOption("cleanbuild"):
-        Execute(f"cd {pio_dir} && pio run -t clean")
-
-    cmd = f"cd {pio_dir} && pio run"
-
-    if GetOption("upload"):
-        cmd += " -t upload"
-
-    if GetOption("savelog"):
-        cmd += " -v | tee build.log"
-    elif GetOption("verbose"):
-        cmd += " -v"
-
-    cmd += get_pio_args()
-
-    Execute(cmd)
-
-    # TODO: we shouldn't try to compiledb if the build above fails
-    if not GetOption("nocompiledb") and not GetOption("cleanbuild"):
-        Execute(f"cd {pio_dir} && pio run -t compiledb")
-
-def get_pio_args():
-    pio_args = GetOption("pio_args")
-    if pio_args:
-        return pio_args.split(",")
-    else:
-        return ""
-
-pio_build = Builder(action=pio_build_cmd)
-env.Append(BUILDERS={"pio_build": pio_build})
-
-Export("env")
-
 with open("site_scons/components.yaml") as components_file:
-    components = load(components_file, Loader=Loader)
+    components = safe_load(components_file)
 
 target = GetOption("target")
-if not target:
-    print("No targets specified!")
-else:
-    targets_arr = target.split(",")
-    targets = [
-        f"{components[target]['path']}/SConscript"
-        for target in targets_arr
-        if target in components
-    ]
-    if len(targets) != len(targets_arr):
-        print("Warning: Some of the specified targets do not exist")
-    SConscript(targets)
+if target:
+    if not target in components:
+        print(f"Unknown target '{target}'. See site_scons/components.yaml")
+        Exit(1)
+
+    target = f"{components[target]['path']}/SConscript"
+    artifacts = SConscript(target)
+
+    if artifacts:
+        if artifacts.get("FLASHABLE_ARTIFACT", None):
+            AddOption("--upload", dest="upload", action="store_true")
+            if GetOption("upload"):
+                artifact = artifacts["FLASHABLE_ARTIFACT"]["artifact"]
+                start_addr = artifacts["FLASHABLE_ARTIFACT"]["addr"]
+                tools = artifacts["FLASHABLE_ARTIFACT"]["tools"]
+                flashing_env = GlobalEnv.Clone(tools=tools)
+
+                upload = flashing_env.flash(source=artifact, start_addr=start_addr)
+                Default(upload)
+
+        if artifacts.get("DEBUG_ARTIFACT", None):
+            AddOption("--debugger", dest="debugger", action="store_true")
+            if GetOption("debugger"):
+                artifact = artifacts["DEBUG_ARTIFACT"]["artifact"]
+                args = artifacts["DEBUG_ARTIFACT"]["args"]
+                tools = artifacts["DEBUG_ARTIFACT"]["tools"]
+                env = artifacts["DEBUG_ARTIFACT"].get("env", {})
+                debug_env = GlobalEnv.Clone(tools=tools, **env)
+
+                openocd_gdb = debug_env.openocd_gdb(artifact, *args)
+                Default(openocd_gdb)

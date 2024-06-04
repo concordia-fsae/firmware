@@ -1,2 +1,5 @@
-#!/bin/bash
-SConscript("STM/stm32f103/SConscript")
+#!/usr/bin/python
+from SCons.Script import Return
+
+artifacts = SConscript("STM/stm32f103/SConscript")
+Return('artifacts')
