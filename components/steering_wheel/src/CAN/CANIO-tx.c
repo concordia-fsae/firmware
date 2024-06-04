@@ -16,7 +16,6 @@
 #include "MessagePack.h"
 #include "ModuleDesc.h"
 #include "Screen.h"
-#include "VEH_sigTx.h"
 
 #include "string.h"
 

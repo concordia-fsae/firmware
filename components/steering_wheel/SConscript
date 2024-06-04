@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 
-from SCons.Script import AddOption, Default, Depends, Dir, GetOption, Import, Return
+from typing import List, Optional, Tuple, Union
+
+from SCons.Node import FS
+from SCons.Script import Default, Depends, Dir, GetOption, Import, Return
 
 Import("GlobalEnv")
 
@@ -26,7 +29,7 @@ env["OPENOCD_MCU"] = "stm32f103c8"
 
 
 c_flags = [
-    "-std=c11",
+    "-std=gnu17",
     "-mthumb",
     "-mcpu=cortex-m3",
     "-mfloat-abi=soft",
@@ -34,7 +37,6 @@ c_flags = [
     # "-nostdlib",
     # "-nostartfiles", # uncomment after porting start files from bootloader
     "--specs=nano.specs",
-    "--specs=nosys.specs",
     "-ffunction-sections",
     "-fdata-sections",
     "-fshort-enums",
@@ -128,7 +130,7 @@ env.Append(
     CCFLAGS=c_flags,
     LINKSCRIPT=chip_config["linker_file"],
     LINKFLAGS=c_flags + link_flags,
-    MAPFILE=BUILD_DIR.File('steering_wheel.map'),
+    MAPFILE=BUILD_DIR.File("steering_wheel.map"),
 )
 
 rtos_env.Append(
@@ -161,8 +163,8 @@ hw_src_files = [
 ]
 
 ftdi_lib_files = [
-    Dir("lib").File("lib_FTDI_FT81x/src/EVE_commands.c"),
-    Dir("lib").File("lib_FTDI_FT81x/src/EVE_target.c"),
+    (Dir("lib").File("lib_FTDI_FT81x/src/EVE_commands.c"), ["-Wno-inline"]),
+    (Dir("lib").File("lib_FTDI_FT81x/src/EVE_target.c"), ["-Wno-inline"]),
 ]
 
 src_files += hw_src_files + ftdi_lib_files
@@ -189,10 +191,14 @@ platform_source_files = [
 ]
 
 # add driver source files
-platform_source_files.extend(chip_config["sources"])
+platform_source_files.extend(
+    [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
+)
 
 
-def create_output_file_path(file, new_ext, target_dir=None) -> str:
+def create_output_file_path(
+    file: FS.File, new_ext: str, target_dir: Optional[str] = None
+) -> str:
     fn = file.target_from_source(prefix="", suffix=new_ext).name
 
     if target_dir:
@@ -201,14 +207,28 @@ def create_output_file_path(file, new_ext, target_dir=None) -> str:
     return BUILD_DIR.Dir("/".join(file.path.split("/")[2:-1]) + "/").File(fn)
 
 
-def compile_objects(env, files, extra_flags=[], target_dir=None):
+def compile_objects(
+    env,
+    files: List[Union[FS.File, Tuple[FS.File, List[str]]]],
+    target_dir: Optional[str] = None,
+) -> List[FS.File]:
     objs = []
-    for i, src_file in enumerate(files):
+    flags = env["CCFLAGS"]
+    for src in files:
+        if isinstance(src, tuple):
+            src_file = src[0]
+            these_flags = flags + src[1]
+        elif isinstance(src, FS.File):
+            src_file = src
+            these_flags = flags
+        else:
+            raise Exception(
+                "Source file should either be a 'File' \
+                object or a tuple of a 'File' and a list of extra flags to compile with"
+            )
+
         target = create_output_file_path(src_file, ".obj", target_dir)
-        flags = extra_flags[i] if extra_flags else []
-        objs.append(
-            env.Object(target=target, source=src_file, CCFLAGS=env["CCFLAGS"] + flags)
-        )
+        objs.append(env.Object(target=target, source=src_file, CCFLAGS=these_flags))
     return objs
 
 
@@ -217,9 +237,7 @@ def compile_objects(env, files, extra_flags=[], target_dir=None):
 objs = []  # store objects here
 
 # compile platform files
-objs.extend(
-    compile_objects(env, *list(zip(*platform_source_files)), target_dir="embedded/")
-)
+objs.extend(compile_objects(env, platform_source_files, target_dir="embedded/"))
 
 # compile rtos source files
 objs.extend(compile_objects(rtos_env, rtos_src_files, target_dir="FreeRTOS/"))

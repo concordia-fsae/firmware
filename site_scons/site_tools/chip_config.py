@@ -77,12 +77,12 @@ def _configure_chip(env, config_file):
             )
 
         if not "extra_flags" in known_drivers[driver]:
-            known_drivers[driver]["extra_flags"] = ""
+            known_drivers[driver]["extra_flags"] = []
 
         if not driver_settings is None and driver_settings.get("use_ll", False):
             if known_drivers[driver].get("ll_available", False):
                 if not "ll_extra_flags" in known_drivers[driver]:
-                    known_drivers[driver]["ll_extra_flags"] = ""
+                    known_drivers[driver]["ll_extra_flags"] = []
                 chip_source_files[known_drivers[driver]["ll_path"]] = known_drivers[
                     driver
                 ]["ll_extra_flags"]
@@ -96,7 +96,7 @@ def _configure_chip(env, config_file):
                 )
         elif known_drivers[driver].get("ll_only", False):
             if not "ll_extra_flags" in known_drivers[driver]:
-                known_drivers[driver]["ll_extra_flags"] = ""
+                known_drivers[driver]["ll_extra_flags"] = []
             chip_source_files[known_drivers[driver]["ll_path"]] = known_drivers[driver][
                 "ll_extra_flags"
             ]
@@ -119,7 +119,7 @@ def _configure_chip(env, config_file):
             chip_source_files_full_path.append(
                 (
                     REPO_ROOT_DIR.Dir(base_path).Dir(chip["family"]).File(file),
-                    "",
+                    [],
                 )
             )
 
@@ -131,7 +131,7 @@ def _configure_chip(env, config_file):
     if chip_config.get("linker", False) and chip_config["linker"].get(
         "useDefault", False
     ):
-        linker_file = global_chip_config.get("defaultLinkerFile", "")
+        linker_file = global_chip_config.get("defaultLinkerFile", None)
         if linker_file:
             ret["linker_file"] = (
                 REPO_ROOT_DIR.Dir(base_path).Dir(chip["family"]).File(linker_file)

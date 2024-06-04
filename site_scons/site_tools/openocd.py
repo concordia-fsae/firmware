@@ -1,7 +1,7 @@
 from SCons.Script import Action, Builder, Dir, File
 
 OPENOCD_DIR = Dir("#embedded/openocd")
-OPENOCD_BIN = File("/opt/openocd/bin/openocd")
+OPENOCD_BIN = File("/usr/bin/openocd")
 MCU_DIR = OPENOCD_DIR.Dir("mcu")
 IFACE_DIR = OPENOCD_DIR.Dir("interface")
 

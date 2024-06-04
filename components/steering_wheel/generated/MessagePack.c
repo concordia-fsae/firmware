@@ -11,6 +11,7 @@
 #include "CAN/CanTypes.h"
 
 #include "MessagePack.h"
+#include "VEH_sigTx.c"
 
 
 /******************************************************************************

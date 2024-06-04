@@ -10,9 +10,9 @@
 [submodule "FreeRTOS"]
 	path = embedded/libs/FreeRTOS
 	url = git@github.com:ARM-software/CMSIS-FreeRTOS.git
-[submodule "CMSIS"]
+[submodule "embedded/libs/CMSIS"]
 	path = embedded/libs/CMSIS
-	url = git@github.com:ARM-software/CMSIS_5.git
+	url = git@github.com:ARM-software/CMSIS_6.git
 [submodule "embedded/libs/printf"]
 	path = embedded/libs/printf
 	url = git@github.com:mpaland/printf.git
