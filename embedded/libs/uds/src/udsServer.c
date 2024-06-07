@@ -211,6 +211,16 @@ static inline void handleTransferStop(udsRequestDesc_S *req)
 }
 
 
+static inline void handleDIDRead(udsRequestDesc_S *req)
+{
+#if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+    uds_cb_DIDRead(req->payload, req->payloadLengthBytes);
+#else // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+    uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_SERVICE_NOT_SUPPORTED);
+#endif // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+}
+
+
 /*
  * udsSrv_handleReceive
  * @brief handles received completed uds message
@@ -235,12 +245,17 @@ static udsResult_E udsSrv_handleReceive(udsRequestDesc_S *req)
             handleRoutineControl(req);
             break;
 
-        // generally useful services
         case UDS_SID_READ_DID:
+            handleDIDRead(req);
+            break;
+
+        // generally useful services
         case UDS_SID_WRITE_DID:
         case UDS_SID_READ_ADDRESS:
         case UDS_SID_WRITE_ADDRESS:
         case UDS_SID_IO_CONTROL:
+            // not handled yet
+            uds_sendNegativeResponse(req->id, UDS_NRC_SERVICE_NOT_SUPPORTED);
             break;
 
         // services required for downloads

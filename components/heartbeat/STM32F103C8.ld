@@ -28,7 +28,7 @@ MEMORY
 
 SECTIONS
 {
-  /* app descriptor contains info about the app */
+  /* app descriptor must be at the origin so that the bootloader can find it */
   .appDescriptor __FLASH_ORIGIN :
   {
     . = ALIGN(4);
@@ -36,6 +36,7 @@ SECTIONS
   } > FLASH
 
   /* The program code and other data into "FLASH" Rom type memory */
+  /* vector table must be aligned on */
   .isr_vector : ALIGN(0x100)
   {
     __app_start_addr = .;

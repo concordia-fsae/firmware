@@ -1,5 +1,8 @@
 #!/usr/bin/python
-from SCons.Script import Return
+from SCons.Script import Import, Return
 
-artifacts = SConscript("STM/stm32f103/SConscript")
+Import("*")
+
+artifacts = SConscript("STM/stm32f103/SConscript", exports="CONFIG_IDS")
+
 Return('artifacts')

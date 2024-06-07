@@ -7,12 +7,16 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "Display/Pills.h"  // module header include
+#include "Display/Pills.h"    // module header include
 
 #include "Display/DisplayImports.h"
-
+// *FORMAT-OFF*
+#include "printf_config.h"
 #include "printf.h"
+// *FORMAT-ON*
 #include "Utility.h"
+
+#include <string.h>
 
 
 /******************************************************************************
@@ -26,13 +30,15 @@
 void render_ValuePill(ValuePill_S pill)
 {
     // TODO: Math
-    uint16_t offset   = (pill.width - pill.height) / 2U;
-    uint16_t p1x      = pill.coords.x - offset;
-    uint16_t p2x      = pill.coords.x + offset;
+    uint16_t    offset       = (pill.width - pill.height) / 2U;
+    uint16_t    p1x          = pill.coords.x - offset;
+    uint16_t    p2x          = pill.coords.x + offset;
 
-    char     text[20] = { 0U };
+    static char pillText[20] = { 0U };
 
-    snprintf(text, 20, "% 2.*f %s", pill.precision, pill.value, pill.unit);
+    memset(&pillText, 0x00, 20);
+
+    snprintf(pillText, 20, "% 2.*f %s", pill.precision, pill.value, pill.unit);
 
     // make pill
     EVE_cmd_dl_burst(DL_COLOR_RGB | pill.bgColor);
@@ -48,7 +54,7 @@ void render_ValuePill(ValuePill_S pill)
                        pill.coords.y,
                        21U,
                        EVE_OPT_CENTER,
-                       text);
+                       pillText);
 
     // write label above pill
     EVE_cmd_dl_burst(DL_COLOR_RGB | pill.labelColor);

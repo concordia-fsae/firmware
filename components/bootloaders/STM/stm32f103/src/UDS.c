@@ -22,6 +22,18 @@
 // system includes
 #include <string.h>
 
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len);
+extern uint32_t isotp_user_get_ms(void);
+#if ISO_TP_USER_DEBUG_ENABLED
+extern void     isotp_user_debug(const char* message, ...);
+#endif
+
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -580,13 +592,49 @@ void uds_cb_transferPayload(uint8_t *payload, uint8_t payloadLengthBytes)
 }
 
 
+/*
+ * uds_cb_DIDRead
+ * @brief callback for a data ID read
+ */
+void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
+{
+    if (payloadLengthBytes != 2U)
+    {
+        uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_INVALID_LEN_FORMAT);
+        return;
+    }
+
+    union
+    {
+        uint8_t  u8[2U];
+        uint16_t u16;
+    } did;
+
+    memcpy(did.u8, payload, 2);
+
+    switch (did.u16)
+    {
+        case 0x101:
+        {
+            // always respond with 0x00 since we're in the bootloader
+            uint8_t data = 0x00;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, 0x00, &data, 1);
+            break;
+        }
+
+        default:
+            uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_GENERAL_REJECT);
+            break;
+    }
+}
+
+
 /******************************************************************************
  *                U D S   L I B R A R Y   F U N C T I O N S
  ******************************************************************************/
 // define functions required for isotp library
 
-extern uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len);
-uint16_t        isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len)
+uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len)
 {
     CAN_TxMessage_S msg = {
         .id          = id,
@@ -600,8 +648,7 @@ uint16_t        isotp_user_send_can(const uint32_t id, const uint8_t data[], con
 }
 
 
-extern uint32_t isotp_user_get_ms(void);
-extern uint32_t isotp_user_get_ms(void)
+uint32_t isotp_user_get_ms(void)
 {
     return (uint32_t)TIM_getTimeMs();
 }

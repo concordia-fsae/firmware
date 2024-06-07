@@ -267,3 +267,9 @@ void uds_cb_transferStop(uint8_t *payload, uint8_t payloadLengthBytes);
  * @brief callback after a uds transfer payload request
  */
 void uds_cb_transferPayload(uint8_t *payload, uint8_t payloadLengthBytes);
+
+/*
+ * uds_cb_DIDRead
+ * @brief callback for a data ID read
+ */
+void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes);

@@ -21,6 +21,7 @@
 #define RCC_CR                  (RCC_BASE)
 #define RCC_CFGR                (RCC_BASE + 0x04UL)
 #define RCC_CIR                 (RCC_BASE + 0x08UL)
+#define RCC_APB1RSTR            (RCC_BASE + 0x10UL)
 #define RCC_AHBENR              (RCC_BASE + 0x14UL)
 #define RCC_APB2ENR             (RCC_BASE + 0x18UL)
 #define RCC_APB1ENR             (RCC_BASE + 0x1CUL)

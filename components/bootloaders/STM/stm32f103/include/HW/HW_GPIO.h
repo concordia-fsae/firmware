@@ -99,4 +99,4 @@ void GPIO_init(const GPIO_config_S pinmux[], uint8_t pinCount);
 void GPIO_destroy(void);
 void GPIO_assignPin(uint32_t bank, uint8_t pin, uint8_t val);
 void GPIO_strobePin(uint32_t bank, uint8_t pin, uint8_t count, uint32_t rate, uint8_t onState);
-bool readButtonState(void);
+bool GPIO_readPin(void);

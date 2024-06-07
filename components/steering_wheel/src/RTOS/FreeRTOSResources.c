@@ -32,12 +32,18 @@
 #define PERIODIC_TASK_10Hz     (1U) << (2U)
 #define PERIODIC_TASK_1Hz      (1U) << (3U)
 
+#define NUM_TASKS              (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
+
 
 /******************************************************************************
- *                               M A C R O S
+ *                              E X T E R N S
  ******************************************************************************/
 
-#define NUM_TASKS    (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
+// module periodic tasks, defined in Module.h
+extern void Module_1kHz_TSK(void);
+extern void Module_100Hz_TSK(void);
+extern void Module_10Hz_TSK(void);
+extern void Module_1Hz_TSK(void);
 
 
 /******************************************************************************
@@ -46,10 +52,10 @@
 
 // periodic event group. each bit in the group signifies that the
 // respective periodic task is ready to run
-EventGroupHandle_t PeriodicEvent;
+EventGroupHandle_t  PeriodicEvent;
 
 // timer which will run all of the periodic tasks
-TimerHandle_t rtos_tick_timer;
+TimerHandle_t       rtos_tick_timer;
 
 // task handle and stack definitions
 static StaticTask_t Task1kHz;
@@ -61,18 +67,12 @@ static StackType_t  task10HzStack[configMINIMAL_STACK_SIZE];
 static StaticTask_t Task1Hz;
 static StackType_t  task1HzStack[configMINIMAL_STACK_SIZE];
 
-// module periodic tasks, defined in Module.h
-extern void Module_1kHz_TSK(void);
-extern void Module_100Hz_TSK(void);
-extern void Module_10Hz_TSK(void);
-extern void Module_1Hz_TSK(void);
-
 // SWIs
-RTOS_swiHandle_T *CANRX_BUS_A_swi;
-RTOS_swiHandle_T *CANTX_BUS_A_10ms_swi;
+RTOS_swiHandle_T    *CANRX_BUS_A_swi;
+RTOS_swiHandle_T    *CANTX_BUS_A_10ms_swi;
 
 // task definitions
-RTOS_taskDesc_t ModuleTasks[] = {
+RTOS_taskDesc_t     ModuleTasks[] = {
     {
         .function    = &Module_1kHz_TSK,
         .name        = "Task 1kHz",
@@ -177,11 +177,11 @@ static void rtosTickTimer(TimerHandle_t xTimer)
  */
 static void taskFxn(void* parameters)
 {
-    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;   // convert the parameter back into a task description
+    RTOS_taskDesc_t   * task        = (RTOS_taskDesc_t*)parameters; // convert the parameter back into a task description
 
-    void(*const function)(void) = task->function;           // get the function that will be called for this task
-    EventGroupHandle_t* event_group = task->event.group;    // get the shared event group
-    EventBits_t         event_bit   = task->event.bit;      // get the event bit for this task
+    void(*const function)(void) = task->function;                   // get the function that will be called for this task
+    EventGroupHandle_t* event_group = task->event.group;            // get the shared event group
+    EventBits_t       event_bit     = task->event.bit;              // get the event bit for this task
 
     // if the processor has a floating point unit, uncomment the following line
     // portTASK_USES_FLOATING_POINT();
@@ -227,7 +227,7 @@ void RTOS_createResources(void)
     /*
      * create SWI handles
      */
-    CANRX_BUS_A_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_BUS_A_SWI);
+    CANRX_BUS_A_swi      = SWI_create(RTOS_SWI_PRI_0, &CANRX_BUS_A_SWI);
     CANTX_BUS_A_10ms_swi = SWI_create(RTOS_SWI_PRI_1, &CANTX_BUS_A_10ms_SWI);
 
     /*
@@ -275,10 +275,6 @@ void RTOS_createResources(void)
 /******************************************************************************
  *                              O S  H O O K S
  ******************************************************************************/
-extern void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
-                                          StackType_t**  ppxIdleTaskStackBuffer,
-                                          uint32_t*      pusIdleTaskStackSize);
-
 /**
  * vApplicationGetIdleTaskMemory
  * @brief allocate memory for the idle task
@@ -287,8 +283,8 @@ extern void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
  * @param pusIdleTaskStackSize TODO
  */
 void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
-                                   StackType_t**  ppxIdleTaskStackBuffer,
-                                   uint32_t*      pusIdleTaskStackSize)
+                                   StackType_t ** ppxIdleTaskStackBuffer,
+                                   uint32_t    * pusIdleTaskStackSize)
 {
     static StaticTask_t idleTask;
     static StackType_t  idleTaskStack[configIDLE_TASK_STACK_DEPTH];
@@ -298,11 +294,6 @@ void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
     *pusIdleTaskStackSize   = sizeof(idleTaskStack) / sizeof(StackType_t);
 }
 
-extern void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
-                                           StackType_t**  ppxTimerTaskStackBuffer,
-                                           uint32_t*      pusTimerTaskStackSize);
-
-
 /**
  * vApplicationGetTimerTaskMemory
  * @brief allocate memory for the timer task
@@ -311,8 +302,8 @@ extern void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
  * @param pusTimerTaskStackSize TODO
  */
 void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
-                                    StackType_t**  ppxTimerTaskStackBuffer,
-                                    uint32_t*      pusTimerTaskStackSize)
+                                    StackType_t ** ppxTimerTaskStackBuffer,
+                                    uint32_t    * pusTimerTaskStackSize)
 {
     static StaticTask_t timerTask;
     static StackType_t  timerTaskStack[configTIMER_TASK_STACK_DEPTH];
@@ -320,6 +311,24 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
     *ppxTimerTaskTCBBuffer   = &timerTask;
     *ppxTimerTaskStackBuffer = timerTaskStack;
     *pusTimerTaskStackSize   = sizeof(timerTaskStack) / sizeof(StackType_t);
+}
+
+/**
+ * vApplicationStackOverflowHook
+ * @brief called when FreeRTOS detects a stack overflow
+ * @param xTask the task which overflowed its stack
+ * @param pcTaskName the name of the task which overflowed its stack
+ */
+void vApplicationStackOverflowHook(TaskHandle_t xTask,
+                                   char         *pcTaskName)
+{
+    UNUSED(xTask);
+    UNUSED(pcTaskName);
+
+    bool c = true;
+
+    while (c)
+    {}
 }
 
 
@@ -332,9 +341,9 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
  * @param pusSwiTaskStackSize pointer to the stack size var for this SWI priority
  */
 void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
-                           StaticTask_t **ppxSwiTaskTCBBuffer,
-                           StackType_t **ppxSwiTaskStackBuffer,
-                           uint32_t *pusSwiTaskStackSize)
+                           StaticTask_t  **ppxSwiTaskTCBBuffer,
+                           StackType_t   **ppxSwiTaskStackBuffer,
+                           uint32_t      *pusSwiTaskStackSize)
 {
     switch (swiPriority)
     {

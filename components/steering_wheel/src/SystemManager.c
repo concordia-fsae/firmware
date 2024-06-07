@@ -13,7 +13,7 @@
 #include "FreeRTOS_SWI.h"
 
 // System includes
-#include "stdbool.h"
+#include <stdbool.h>
 
 // Other Includes
 #include "HW_can.h"
@@ -28,7 +28,40 @@
  *                              E X T E R N S
  ******************************************************************************/
 
+// this needs to be defined for __libc_init_array() from newlib_nano to be happy
+extern void _init(void);
+void _init(void){}
+
 extern void RTOS_createResources(void);
+
+// defined by linker
+extern const uint32_t __app_start_addr;
+extern const uint32_t __app_end_addr;
+
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef struct
+{
+    const uint32_t appStart;
+    const uint32_t appEnd;
+    const uint32_t appCrcLocation;
+} appDesc_S;
+
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+__attribute__((section(".appDescriptor")))
+const appDesc_S appDesc = {
+    .appStart       = (const uint32_t)&__app_start_addr,
+    .appEnd         = (const uint32_t)&__app_end_addr,
+    // .appCrcLocation = (const uint32_t)&__app_crc_addr,
+    .appCrcLocation = (const uint32_t)&__app_end_addr,
+};
 
 
 /******************************************************************************
@@ -71,8 +104,7 @@ int main(void)
 }
 
 /**
- * @brief  This function is executed in case of error occurrence.
- * @retval None
+ * @brief  General error handler
  */
 void Error_Handler(void)
 {

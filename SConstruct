@@ -1,18 +1,18 @@
 #!/usr/bin/python3
 
+from os import environ
+from re import compile, findall, search
+
 from SCons.Script import (
     AddOption,
     Default,
     Dir,
     Environment,
-    Export,
     Exit,
+    Export,
     GetOption,
     SConscript,
 )
-
-from os.path import dirname
-from os import environ
 from oyaml import safe_load
 
 # create a global environment which all targets can start from
@@ -31,14 +31,28 @@ AddOption("--release", dest="release", action="store_true")
 with open("site_scons/components.yaml") as components_file:
     components = safe_load(components_file)
 
+
+COMPONENT_REGEX = compile(r"(?P<component>[A-Za-z]+)")
+CONFIG_ID_REGEX = compile(r"(?:(\d+),?)")
+
 target = GetOption("target")
 if target:
-    if not target in components:
-        print(f"Unknown target '{target}'. See site_scons/components.yaml")
+    component = search(COMPONENT_REGEX, target)
+    if not component:
+        print(
+            f"Target string '{target}' does not match the required format of '<component name>:[<config id1>[,<config id2>[,...]]]'"
+        )
         Exit(1)
 
-    target = f"{components[target]['path']}/SConscript"
-    artifacts = SConscript(target)
+    if component["component"] not in components:
+        print(f"Unknown target '{target}'. See site_scons/components.yaml")
+        Exit(1)
+    component = component["component"]
+
+    config_ids = [int(id) for id in findall(CONFIG_ID_REGEX, target)]
+
+    target = f"{components[component]['path']}/SConscript"
+    artifacts = SConscript(target, exports={"CONFIG_IDS": config_ids})
 
     if artifacts:
         if artifacts.get("FLASHABLE_ARTIFACT", None):

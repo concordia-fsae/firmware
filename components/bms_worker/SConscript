@@ -19,7 +19,7 @@ THERMS_DIR = Dir("thermistors")
 
 BUILD_DIR = Dir("build")
 
-APP_START_ADDR = 0x08000000
+APP_START_ADDR = 0x08002000
 
 env = GlobalEnv.Clone(
     tools=[
@@ -79,13 +79,14 @@ c_flags = [
     "-DSTM32F103xB",
     "-DUSE_HAL_DRIVER",
     "-DBMSW_BOARD_VA3",
+    f"-DAPP_START_ADDR={APP_START_ADDR}",
     "-Wall",
     "-Wextra",
     "-Werror",
     "-Wfloat-equal",
     "-Wcast-align",
     "-Wlogical-op",
-    "-Winline",
+    # "-Winline",
     "-Wshadow",
     "-Winit-self",
     "-Wmissing-prototypes",
@@ -138,7 +139,7 @@ env.Append(
     CPPPATH=paths,
     CCFLAGS=common_flags + c_flags,
     LINKSCRIPT=chip_config["linker_file"],
-    LINKFLAGS=link_flags + common_flags,
+    LINKFLAGS=c_flags + link_flags + common_flags,
 )
 
 rtos_env.Append(
@@ -257,12 +258,18 @@ objs.extend(compile_objects(rtos_env, rtos_source_files, target_dir="FreeRTOS/")
 objs.extend(compile_objects(env, project_source_files))
 
 # link all the compiled objects into an elf
-elf = env.Program(BUILD_DIR.File("bms_worker.elf"), objs)
+elf, map = env.Program(BUILD_DIR.File("bms_worker.elf"), objs)
 Depends(elf, env["LINKSCRIPT"])
 
 # generate a binary for flashing
 binary = env.Bin(source=elf)
 Default(binary)
+
+crc_env = GlobalEnv.Clone(tools=["hextools"])
+
+# generate the CRCd binary
+binary_crced = crc_env.InjectMpeg2CRC(source=binary, start_addr=APP_START_ADDR)
+Default(binary_crced)
 
 # build doxygen files for this component
 # env.Alias("docs", env.Doxygen("doxygen_stw.conf"))
@@ -281,7 +288,7 @@ env.Alias("compiledb", compile_db)
 # Return artifacts to the caller
 artifacts = {
     "FLASHABLE_ARTIFACT": {
-        "artifact": binary,
+        "artifact": binary_crced,
         "addr": APP_START_ADDR,
         "tools": ["st-flash"],
     },

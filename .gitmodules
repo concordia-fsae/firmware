@@ -1,12 +1,6 @@
-[submodule "testing/eth_gtw/lib/lib_MCP_2515"]
-	path = testing/eth_gtw/lib/lib_MCP_2515
-	url = https://github.com/concordia-fsae/lib_MCP_2515
-[submodule "testing/stm32_screen/lib/lib_FTDI_FT800"]
-	path = testing/stm32_screen/lib/lib_FTDI_FT800
-	url = https://github.com/concordia-fsae/lib_FTDI_FT800.git
-[submodule "components/steering_wheel/lib/lib_FTDI_FT81x"]
-	path = components/steering_wheel/lib/lib_FTDI_FT81x
-	url = https://github.com/concordia-fsae/lib_FTDI_FT81x.git
+[submodule "embedded/libs/lib_FTDI_FT81x"]
+	path = embedded/libs/lib_FTDI_FT81x
+	url = git@github.com:concordia-fsae/lib_FTDI_FT81x.git
 [submodule "FreeRTOS"]
 	path = embedded/libs/FreeRTOS
 	url = git@github.com:ARM-software/CMSIS-FreeRTOS.git
@@ -15,7 +9,7 @@
 	url = git@github.com:ARM-software/CMSIS_6.git
 [submodule "embedded/libs/printf"]
 	path = embedded/libs/printf
-	url = git@github.com:mpaland/printf.git
+	url = git@github.com:eyalroz/printf.git
 [submodule "embedded/platforms/stm32/f1/cmsis"]
 	path = embedded/platforms/stm32/f1/cmsis
 	url = git@github.com:STMicroelectronics/cmsis_device_f1.git
@@ -25,4 +19,3 @@
 [submodule "embedded/libs/isotp"]
 	path = embedded/libs/isotp
 	url = git@github.com:concordia-fsae/isotp.git
-	branch = user/rl/disableAsserts

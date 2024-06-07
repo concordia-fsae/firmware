@@ -11,6 +11,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "BuildDefines_generated.h"
 #include "Types.h"
 
 
@@ -18,13 +19,26 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define HSE_STARTUP_TIMEOUT     ((unsigned int)0x0500) // Time out for HSE start up
+#define HSE_STARTUP_TIMEOUT    0x0500UL  // Time out for HSE start up
 
-#define CAN_RX_PORT             GPIOA
-#define CAN_RX_PIN              11U
+#if PCB_ID == 0
 
-#define CAN_TX_PORT             GPIOA
-#define CAN_TX_PIN              12U
+# define CAN_AFIO_REMAP    true
+# define CAN_RX_PORT       GPIOB
+# define CAN_RX_PIN        8U
+
+# define CAN_TX_PORT       GPIOB
+# define CAN_TX_PIN        9U
+
+#elif PCB_ID == 10
+
+# define CAN_AFIO_REMAP    false
+# define CAN_RX_PORT       GPIOA
+# define CAN_RX_PIN        11U
+
+# define CAN_TX_PORT       GPIOA
+# define CAN_TX_PIN        12U
+#endif // if PCB_ID == 0
 
 // Use Boot1 (PB2)
 #define BUTTON_PORT             GPIOB
@@ -34,6 +48,11 @@
 #define LED_PORT                GPIOC
 #define LED_PIN                 13U
 #define LED_ON_STATE            0U // this can probably be refactored
+#if PCB_ID == 0
+# define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
+#elif PCB_ID == 10
+# define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
+#endif
 
 
 // Speed controls for strobing the LED pin
