@@ -1,0 +1,13 @@
+/**
+ * @file PACK.h
+ * @brief  Pack helper functions
+ */
+
+#define BMS_PACK_VOLTAGE_MAX 352.8f
+#define BMS_CONFIGURED_SEGMENTS 6U
+
+#define BMS_CONFIGURED_PARALLEL_CELLS 5U
+#define BMS_CONFIGURED_SERIES_CELLS 14U
+
+#define BMS_MAX_CONT_DISCHARGE_CURRENT 45U
+#define BMS_MAX_CONT_CHARGE_CURRENT 4.2f

@@ -9,7 +9,7 @@
 
 /**< System Includes */
 #include "stdbool.h"
-
+#include "SystemConfig.h"
 /**< Firmware Includes */
 #include "HW.h"
 #include "HW_adc.h"
@@ -18,15 +18,7 @@
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_i2c.h"
-#include "HW_spi.h"
 #include "HW_tim.h"
-
-/**< Driver Includes */
-#include "HW_Fans.h"
-#include "HW_HS4011.h"
-#include "HW_LTC2983.h"
-#include "HW_MAX14921.h"
-#include "HW_SHT40.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -37,6 +29,8 @@
 #include "Module.h"
 #include "Utility.h"
 
+#include "IMD.h"
+
 
 /******************************************************************************
  *                              E X T E R N S
@@ -45,6 +39,7 @@
 // this needs to be defined for __libc_init_array() from newlib_nano to be happy
 extern void _init(void);
 void _init(void){}
+
 extern void RTOS_createResources(void);
 
 // defined by linker
@@ -75,6 +70,8 @@ const appDesc_S appDesc = {
     // .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appCrcLocation = (const uint32_t)&__app_end_addr,
 };
+
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -100,16 +97,15 @@ int main(void)
     HW_CAN_init();
     HW_DMA_init();
     HW_ADC_init();
-    HW_SPI_init();
 
-    /**< Crate RTOS Tasks, Timers, etc... */
+    ///**< Create RTOS Tasks, Timers, etc... */
     RTOS_SWI_Init();
     RTOS_createResources();
 
-    /**< Initialize Modules */
+    ///**< Initialize Modules */
     Module_Init();
 
-    /**< Start RTOS task scheduler. Should never return */
+    ///**< Start RTOS task scheduler. Should never return */
     vTaskStartScheduler();
 
     return 0;
@@ -131,16 +127,14 @@ void Error_Handler(void)
     GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(LED_Port, &GPIO_InitStruct);
 
     /**< Fast Toggle LED */
     while (1)
     {
         uint32_t cnt = 6400000;
-        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        HAL_GPIO_TogglePin(LED_Port, LED_Pin);
         while (cnt--)
-        {
             ;
-        }
     }
 }

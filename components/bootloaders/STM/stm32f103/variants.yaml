@@ -1,48 +1,54 @@
 configs:
   0:
-    description: BMS Segment 0 Worker
+    description: BMS Worker 0 Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
   1:
-    description: BMS Segment 1 Worker
+    description: BMS Worker 1 Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x601
       udsResponseId: 0x641
   2:
-    description: BMS Segment 2 Worker
+    description: BMS Worker 2 Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x602
       udsResponseId: 0x642
   3:
-    description: BMS Segment 3 Worker
+    description: BMS Worker 3 Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x603
       udsResponseId: 0x643
   4:
-    description: BMS Segment 4 Worker
+    description: BMS Worker 4 Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x604
       udsResponseId: 0x644
   5:
-    description: BMS Segment 5 Worker
+    description: BMS Worker 5 Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x605
       udsResponseId: 0x645
+  10:
+    description: BMS Boss Bootloader
+    options:
+      pcbId: 0
+      udsRequestId: 0x610
+      udsResponseId: 0x650
   20:
-    description: Steering Wheel
+    description: Steering Wheel Bootloader
     options:
       pcbId: 10
       udsRequestId: 0x650
       udsResponseId: 0x690
   100:
-    description: Debug Board
+    description: Debug Board Bootloader
     options:
       pcbId: 10
       udsRequestId: 0x6BF
