@@ -22,6 +22,8 @@
 #include "BMS.h"
 #include "PACK.h"
 #include "Sys.h"
+#include "IMD.h"
+#include "ENV.h"
 
 
 /******************************************************************************
@@ -62,6 +64,8 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static bool MSG_pack_BMS_100Hz_Critical(CAN_data_T* message, const uint8_t counter);
 static bool MSG_pack_BMS_100Hz_Critical_Charger(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Balancing_Command(CAN_data_T* message, const uint8_t counter);
+static bool MSG_pack_BMS_1Hz_Environment(CAN_data_T* message, const uint8_t counter);
 
 static const packTable_S MSG_packTable_100Hz[] = {
     { &MSG_pack_BMS_100Hz_Critical, 0x99, 5U },
@@ -70,6 +74,8 @@ static const packTable_S MSG_packTable_100Hz[] = {
 static const packTable_S MSG_packTable_10Hz[] = {
 };
 static const packTable_S MSG_packTable_1Hz[] = {
+    { &MSG_pack_BMS_1Hz_Balancing_Command, 0x300, 2U },
+    { &MSG_pack_BMS_1Hz_Environment, 0x301, 5U },
 };
 
 /******************************************************************************
@@ -232,6 +238,40 @@ static bool MSG_pack_BMS_100Hz_Critical_Charger(CAN_data_T* message, const uint8
 	    return false;
     }
 }
+
+static bool MSG_pack_BMS_1Hz_Balancing_Command(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64 = 0x00;
+
+    if (SYS_SFT_checkChargerTimeout())
+    {
+	return false;
+    }
+
+    switch (SYS.contacts)
+    {
+	case SYS_CONTACTORS_HVP_CLOSED:
+	    message->u16[0] = BMS.voltages.min * 200;
+	    return true;
+	default:
+	    return false;
+    }
+}
+
+static bool MSG_pack_BMS_1Hz_Environment(CAN_data_T* message, const uint8_t counter)
+{
+    UNUSED(counter);
+    message->u64 = 0x00;
+    
+    message->u16[0] = IMD_getIsolation();
+    message->u8[2] = ENV.board.rh;
+    message->u8[3] = ENV.board.ambient_temp;
+    message->u8[4] = ENV.board.mcu_temp;
+
+    return true;
+}
+
 
 static void CANIO_tx_1kHz_PRD(void)
 {
