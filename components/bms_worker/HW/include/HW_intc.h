@@ -23,8 +23,7 @@ void TIM1_TRG_COM_IRQHandler(void);
 void TIM2_IRQHandler(void);
 void TIM1_CC_IRQHandler(void);
 
-// TODO: Need to implement in communications updates
-// void CAN1_SCE_IRQHandler(void);
-// void USB_HP_CAN1_TX_IRQHandler(void);
-// void USB_LP_CAN1_RX0_IRQHandler(void);
-// void CAN1_RX1_IRQHandler(void);
+ void CAN1_SCE_IRQHandler(void);
+ void USB_HP_CAN1_TX_IRQHandler(void);
+ void USB_LP_CAN1_RX0_IRQHandler(void);
+ void CAN1_RX1_IRQHandler(void);

@@ -18,9 +18,9 @@
 
 typedef enum
 {
-    CAN_TX_PRIO_1KHZ = 0U,
-    CAN_TX_PRIO_100HZ,
+    CAN_TX_PRIO_100HZ = 0U,
     CAN_TX_PRIO_10HZ,
+    CAN_TX_PRIO_1HZ,
     CAN_TX_PRIO_COUNT,
 } CAN_TX_Priorities_E;
 
@@ -88,7 +88,7 @@ typedef struct
     uint8_t                  filterMatchIndex;
 } CAN_RxMessage_T;
 
-typedef bool (*packFn)(CAN_data_T *messsage, const int counter);
+typedef bool (*packFn)(CAN_data_T *messsage, const uint8_t counter);
 
 typedef struct
 {

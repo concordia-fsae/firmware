@@ -77,7 +77,7 @@ extern uint64_t HW_TIM_getBaseTick(void);
 #define portGET_RUN_TIME_COUNTER_VALUE()         HW_TIM_getBaseTick()
 
 #define configSTACK_DEPTH_TYPE      UBaseType_t
-#define configMINIMAL_STACK_SIZE    (128)
+#define configMINIMAL_STACK_SIZE    (256)
 #define configIDLE_TASK_STACK_DEPTH (128)
 
 // heap is not used because dynamic allocation disabled

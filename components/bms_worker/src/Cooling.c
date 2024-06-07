@@ -67,11 +67,17 @@ static void Cooling10Hz_PRD(void)
 
             case COOL_ON:
             case COOL_OFF:
-                if (ENV.values.max_temp < 350)
+                if (ENV.state == ENV_FAULT)
+                {
+                    COOL.state[i]      = COOL_FULL;
+                    COOL.percentage[i] = 100;
+                    return;
+                }
+                if (ENV.values.max_temp < 35)
                 {
                     COOL.percentage[i] = 0;
                 }
-                else if (ENV.values.max_temp > 550)
+                else if (ENV.values.max_temp > 55)
                 {
                     COOL.state[i]      = COOL_FULL;
                     COOL.percentage[i] = 100;
@@ -79,12 +85,12 @@ static void Cooling10Hz_PRD(void)
                 else
                 {
                     COOL.state[i]      = COOL_ON;
-                    COOL.percentage[i] = ENV.values.max_temp * 100 / 20;
+                    COOL.percentage[i] = ((float32_t)(ENV.values.max_temp - 40) * 100 / 20);
                 }
                 break;
 
             case COOL_FULL:
-                if (ENV.values.max_temp < 525)
+                if (ENV.values.max_temp < 525 && ENV.state == ENV_RUNNING)
                 {
                     COOL.state[i] = COOL_ON;
                 }

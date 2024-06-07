@@ -141,14 +141,16 @@ static void IO_init(void)
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
 
+
+
 #if defined(BMSW_BOARD_VA1)
     IO.addr |= ((HW_GPIO_readPin(&A0)) ? 0x01 : 0x00) << 0;
     IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x01 : 0x00) << 1;
     IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x01 : 0x00) << 2;
 #elif defined(BMSW_BOARD_VA3)
-    IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x01 : 0x00) << 0;
-    IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x01 : 0x00) << 1;
-    IO.addr |= ((HW_GPIO_readPin(&A3)) ? 0x01 : 0x00) << 2;
+    IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x00 : 0x01) << 0;
+    IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x00 : 0x01) << 1;
+    IO.addr |= ((HW_GPIO_readPin(&A3)) ? 0x00 : 0x01) << 2;
 
     NX3L_init();
     NX3L_enableMux();
@@ -197,13 +199,18 @@ static void IO10kHz_PRD(void)
         if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
         {
             static MAX_selectedCell_E current_cell = MAX_CELL_COUNT;
+            static bool started = false;
 
             if (current_cell == MAX_CELL_COUNT)
             {
                 current_cell = BMS.connected_cells - 1;
             }
 
-            BMS_setOutputCell(current_cell);
+            if (!started)
+            {
+                started = true;
+                return;
+            }
 
             IO_Cells_unpackADCBuffer();
 
@@ -216,10 +223,12 @@ static void IO10kHz_PRD(void)
             {
                 BMS_measurementComplete();
                 current_cell = BMS.connected_cells - 1;
+                started = false;
             }
             else
             {
                 current_cell--;
+                BMS_setOutputCell(current_cell);
             }
         }
         else if ((BMS.state == BMS_SAMPLING) || (BMS.state == BMS_PARASITIC))

@@ -120,36 +120,35 @@ void TIM1_CC_IRQHandler(void)
     HAL_TIM_IRQHandler(&htim1);
 }
 
-// TODO: Implement in CAN update
-//// CAN interrupts
-// void CAN1_SCE_IRQHandler(void)
-// {
-// HAL_CAN_IRQHandler(&hcan);
-// }
-//
-///**
-// * CAN1_TX_IRQHandler
-// *
-// */
-// void CAN1_TX_IRQHandler(void)
-// {
-// HAL_CAN_IRQHandler(&hcan);
-// }
-//
-///**
-// * CAN1_RX0_IRQHandler
-// *
-// */
-// void CAN1_RX0_IRQHandler(void)
-// {
-// HAL_CAN_IRQHandler(&hcan);
-// }
-//
-///**
-// * CAN1_RX1_IRQHandler
-// *
-// */
-// void CAN1_RX1_IRQHandler(void)
-// {
-// HAL_CAN_IRQHandler(&hcan);
-// }
+// CAN interrupts
+ void CAN1_SCE_IRQHandler(void)
+ {
+ HAL_CAN_IRQHandler(&hcan);
+ }
+
+/**
+ * CAN1_TX_IRQHandler
+ *
+ */
+ void CAN1_TX_IRQHandler(void)
+ {
+ HAL_CAN_IRQHandler(&hcan);
+ }
+
+/**
+ * CAN1_RX0_IRQHandler
+ *
+ */
+ void CAN1_RX0_IRQHandler(void)
+ {
+ HAL_CAN_IRQHandler(&hcan);
+ }
+
+/**
+ * CAN1_RX1_IRQHandler
+ *
+ */
+ void CAN1_RX1_IRQHandler(void)
+ {
+ HAL_CAN_IRQHandler(&hcan);
+ }
