@@ -52,12 +52,21 @@ extern const uint32_t __app_start_addr;
 extern const uint32_t __app_end_addr;
 
 
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
 typedef struct
 {
     const uint32_t appStart;
     const uint32_t appEnd;
     const uint32_t appCrcLocation;
 } appDesc_S;
+
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 __attribute__((section(".appDescriptor")))
 const appDesc_S appDesc = {

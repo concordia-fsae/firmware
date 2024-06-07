@@ -1,0 +1,7 @@
+configs:
+  0:
+    description: BMS Boss
+    options:
+      udsRequestId: 0x610
+      udsResponseId: 0x650
+
