@@ -134,7 +134,6 @@ static void BMS1kHz_PRD()
             max_chip.config.diagnostic_enabled   = false;
             BMS.pack_voltage                     = IO.segment * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
-            HW_usDelay(15U);
             BMS.state                            = BMS_HOLDING;
         }
     }
@@ -169,7 +168,6 @@ static void BMS1kHz_PRD()
             MAX_readWriteToChip();
 
             BMS.state                          = BMS_SAMPLING;
-            max_chip.config.diagnostic_enabled = true;
         }
     }
     else if (BMS.state == BMS_CALIBRATING)
@@ -291,16 +289,16 @@ static void BMS1Hz_PRD()
         return;
     }
 
-    max_chip.config.diagnostic_enabled = true;
-    max_chip.config.sampling           = true;
-    max_chip.config.low_power_mode     = false;
-    max_chip.config.balancing          = 0x00;
-    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    MAX_readWriteToChip();
+    //max_chip.config.diagnostic_enabled = true;
+    //max_chip.config.sampling           = true;
+    //max_chip.config.low_power_mode     = false;
+    //max_chip.config.balancing          = 0x00;
+    //max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    //max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    //MAX_readWriteToChip();
 
-    max_chip.config.sampling_start_100us = HW_getTick();
-    BMS.state                            = BMS_DIAGNOSTIC;
+    //max_chip.config.sampling_start_100us = HW_getTick();
+    //BMS.state                            = BMS_DIAGNOSTIC;
 }
 
 void BMS_toSleep(void)

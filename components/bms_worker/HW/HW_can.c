@@ -106,16 +106,16 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 
-    CAN_FilterTypeDef filt = { 0U };
-    filt.FilterBank           = 0;
-    filt.FilterMode           = CAN_FILTERMODE_IDMASK;
-    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
-    // All filters are shifted left 5 bits
-    filt.FilterIdHigh = 0x200;
-    filt.FilterIdHigh = 0x201;
-    filt.FilterFIFOAssignment = 0;
-    filt.FilterActivation     = ENABLE;
-    HAL_CAN_ConfigFilter(&hcan, &filt);
+    //CAN_FilterTypeDef filt = { 0U };
+    //filt.FilterBank           = 0;
+    //filt.FilterMode           = CAN_FILTERMODE_IDMASK;
+    //filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+    //// All filters are shifted left 5 bits
+    //filt.FilterIdHigh = 0x200;
+    //filt.FilterIdHigh = 0x201;
+    //filt.FilterFIFOAssignment = 0;
+    //filt.FilterActivation     = ENABLE;
+    //HAL_CAN_ConfigFilter(&hcan, &filt);
 
     return HW_OK;
 }
