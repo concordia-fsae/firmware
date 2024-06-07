@@ -22,6 +22,8 @@
 #include "BMS.h"
 #include "PACK.h"
 #include "Sys.h"
+#include "IMD.h"
+#include "ENV.h"
 
 
 /******************************************************************************

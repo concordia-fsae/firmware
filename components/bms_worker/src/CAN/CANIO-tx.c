@@ -162,6 +162,7 @@ void CANTX_BUS_A_SWI(void)
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+
 static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           const uint8_t    packTableLength,
                                           uint8_t          * index,

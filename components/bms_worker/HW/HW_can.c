@@ -16,6 +16,12 @@
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal_can.h"
 
+<<<<<<< HEAD
+=======
+#include "MessageUnpack_generated.h"
+#include "Cooling.h"
+
+>>>>>>> 71b99bd (BMSW fault error handling fix)
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -92,7 +98,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     hcan.Init.TimeSeg1             = CAN_BS1_6TQ;
     hcan.Init.TimeSeg2             = CAN_BS2_1TQ;
     hcan.Init.TimeTriggeredMode    = DISABLE;
-    hcan.Init.AutoBusOff           = DISABLE;
+    hcan.Init.AutoBusOff           = ENABLE;
     hcan.Init.AutoWakeUp           = DISABLE;
     hcan.Init.AutoRetransmission   = ENABLE;
     hcan.Init.ReceiveFifoLocked    = DISABLE;

@@ -53,7 +53,7 @@ static void BMS10Hz_PRD(void)
     tmp.voltages.min         = 5.0f;
     tmp.max_temp             = 0.0f;
     tmp.pack_charge_limit    = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    tmp.pack_discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    tmp.pack_discharge_limit = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 
     for (uint8_t i = 0; i < BMS_MAX_SEGMENTS; i++)
     {

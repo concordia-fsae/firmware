@@ -67,3 +67,5 @@ void SYS_SFT_setTSVoltage(float32_t v);
 bool SYS_SFT_checkMCTimeout(void);
 void SYS_SFT_setChargerVoltage(float32_t v);
 bool SYS_SFT_checkChargerTimeout(void);
+void SYS_stopCharging(void);
+void SYS_continueCharging(void);

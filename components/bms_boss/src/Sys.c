@@ -180,3 +180,13 @@ bool SYS_SFT_checkChargerTimeout(void)
 {
     return (SYS.charger.last_message + SYS_CONFIG_CHARGER_TIMEOUT < HW_getTick());
 }
+
+void SYS_stopCharging(void)
+{
+    BMS.charging_paused = true;
+}
+
+void SYS_continueCharging(void)
+{
+    BMS.charging_paused = false;
+}

@@ -35,6 +35,7 @@ typedef struct {
 
 typedef struct {
     bool fault :1;
+    bool charging_paused :1;
     uint8_t connected_segments;
     float32_t pack_charge_limit; // [A] precision 1A
     float32_t pack_discharge_limit; // [A] precision 1A
