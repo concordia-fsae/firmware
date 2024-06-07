@@ -194,8 +194,8 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static bool pack_VEH_BMS_criticalData_10ms(CAN_data_T* message, const uint8_t counter)
 {
-    set_BMSVoltageMin(message, BMS.voltage.min);
-    set_BMSVoltageMax(message, BMS.voltage.max);
+    set_BMSVoltageMin(message, BMS.voltage.min * 200);
+    set_BMSVoltageMax(message, BMS.voltage.max * 200);
     set_ENVPackVoltage(message, BMS.pack_voltage);
     set_ENVTempMax(message, ENV.values.max_temp);
     set_BMSChargeLimit(message, BMS.charge_limit);

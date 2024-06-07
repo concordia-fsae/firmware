@@ -436,7 +436,6 @@ void BMS_checkFault(void)
         if (BMS.cells[i].state != BMS_CELL_CONNECTED)
         {
             BMS.fault = true;
-            faulted = true;
         }
     }
 

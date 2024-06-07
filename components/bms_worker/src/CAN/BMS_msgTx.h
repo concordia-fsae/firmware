@@ -12,12 +12,12 @@
 
 static inline void set_BMSVoltageMin(CAN_data_T* message, uint16_t value)
 {
-    message->u64 |= ((uint64_t)((uint16_t)(value * 200) & 0x3FF)) << 53;  // 10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((value) & 0x3FF)) << 53;  // 10 bits, 5mV precision, range [0-5115]mV
 }
 
 static inline void set_BMSVoltageMax(CAN_data_T* message, uint16_t value)
 {
-    message->u64 |= ((uint64_t)((uint16_t)(value * 200) & 0x3FF)) << 43;  // 10 bits, 5mV precision, range [0-5115]mV
+    message->u64 |= ((uint64_t)((uint16_t)(value) & 0x3FF)) << 43;  // 10 bits, 5mV precision, range [0-5115]mV
 }
 
 static inline void set_ENVPackVoltage(CAN_data_T* message, uint8_t value)
