@@ -212,6 +212,7 @@ static void IO10kHz_PRD(void)
                 return;
             }
 
+            started = false;
             IO_Cells_unpackADCBuffer();
 
             io.bmsData.value      = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
@@ -223,7 +224,6 @@ static void IO10kHz_PRD(void)
             {
                 BMS_measurementComplete();
                 current_cell = BMS.connected_cells - 1;
-                started = false;
             }
             else
             {
