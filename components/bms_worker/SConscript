@@ -16,7 +16,7 @@ PROJECT_LIB_DIR = Dir("lib")
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
-CELLS_DIR = Dir("cells")
+CELLS_DIR = LIBS_DIR.Dir("cells")
 THERMS_DIR = Dir("thermistors")
 
 BUILDS_DIR = Dir("build")
@@ -123,13 +123,13 @@ DRIVERS_INCLUDE_DIRS = [
 LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("printf"),
     LIBS_DIR.Dir("atomic"),
+    CELLS_DIR,
 ]
 
 PROJECT_INCLUDE_DIRS = [
     "include/",
     "HW/include/",
     "generated/",
-    "cells/",
     "thermistors/",
 ]
 
@@ -337,6 +337,7 @@ for config_id, config in configs.items():
         objs,
         MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
     )
+    elfs.append(elf)
     Depends(elf, env["LINKSCRIPT"])
     Clean(elf, generated)
 
