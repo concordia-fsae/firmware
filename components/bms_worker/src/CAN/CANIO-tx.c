@@ -312,7 +312,8 @@ static bool pack_VEH_BMS_fans_1s(CAN_data_T* message, const uint8_t counter)
 
 static void CANIO_tx_1kHz_PRD(void)
 {
-    SWI_invoke(CANTX_BUS_A_swi);
+    //SWI_invoke(CANTX_BUS_A_swi);
+    CANTX_BUS_A_SWI();
 }
 
 /**
