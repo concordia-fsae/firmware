@@ -22,7 +22,10 @@ def GenerateVariants(env, variants_file: FS.File, config_ids: List[int] = list()
             f"Some of the specified config IDs do not exist: {config_ids_set - valid_config_ids}"
         )
 
-    return dict(filter(lambda item: item[0] in config_ids, variants["configs"].items()))
+    if config_ids:
+        return dict(filter(lambda item: item[0] in config_ids, variants["configs"].items()))
+
+    return  variants["configs"]
 
 
 def generate(env):
