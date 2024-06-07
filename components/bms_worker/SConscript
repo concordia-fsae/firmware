@@ -337,6 +337,7 @@ for config_id, config in configs.items():
         objs,
         MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
     )
+    elfs.append(elf)
     Depends(elf, env["LINKSCRIPT"])
     Clean(elf, generated)
 
