@@ -28,8 +28,18 @@
  *                              D E F I N E S
  ******************************************************************************/
 
+#define BMS_CONFIGRED_BALANCING_MARGIN 0.025f // [V], precision 1mV
+
 #ifndef BMS_CONFIGURED_SAMPLING_TIME_MS
 # define BMS_CONFIGURED_SAMPLING_TIME_MS 20
+#endif
+
+#ifndef BMS_CONFIGURED_BALANCING_TIME_MS
+# define BMS_CONFIGURED_BALANCING_TIME_MS 500
+#endif
+
+#ifndef BMS_CONFIGURED_BALANCING_TIMEOUT_MS
+# define BMS_CONFIGURED_BALANCING_TIMEOUT_MS 1500
 #endif
 
 #ifndef STANDARD_CHARGE_CURRENT
@@ -186,6 +196,13 @@ static void BMS1kHz_PRD()
  */
 static void BMS1Hz_PRD()
 {
+    if (BMS.balancing.requested && ((BMS.balancing.last_request + BMS_CONFIGURED_BALANCING_TIMEOUT_MS) < HW_getTick()))
+    {
+        BMS.balancing.requested = false;
+        BMS.balancing.last_request = 0x00;
+        BMS.balancing.target_v = 0.0f;
+    }
+
     if (BMS.state == BMS_SLEEPING)
     {
       return;
@@ -334,6 +351,13 @@ void BMS_wakeUp(void)
     BMS.state = BMS_WAITING;
 }
 
+void BMS_setBalancing(float32_t target_v)
+{
+    BMS.balancing.target_v = target_v;
+    BMS.balancing.last_request = HW_getTick();
+    BMS.balancing.requested = true;
+}
+
 /**
  * @brief  BMS Module descriptor
  */
@@ -469,8 +493,26 @@ void BMS_measurementComplete(void)
 {
     if (BMS.state == BMS_HOLDING)
     {
-        BMS.state                      = BMS_WAITING;
-        max_chip.config.low_power_mode = true;
+        BMS.state = BMS_WAITING;
+        if (BMS.balancing.requested)
+        {
+            static uint8_t even = 0;
+            
+            max_chip.config.balancing = 0x00;
+            max_chip.config.low_power_mode = false;
+            
+            for (uint8_t i = even; i < BMS.connected_cells; i += 2)
+            {
+                max_chip.config.balancing |= (BMS.cells[i].voltage > (BMS.balancing.target_v + BMS_CONFIGRED_BALANCING_MARGIN)) ? 1 << i : 0x00;
+            }
+
+            even = (even + 1) % 2;
+        }
+        else
+        {
+            max_chip.config.low_power_mode = true;
+            max_chip.config.balancing = 0x00;
+        }
         MAX_readWriteToChip();
     }
     else if (BMS.state == BMS_PARASITIC_MEASUREMENT)

@@ -106,16 +106,18 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 
-    //CAN_FilterTypeDef filt = { 0U };
-    //filt.FilterBank           = 0;
-    //filt.FilterMode           = CAN_FILTERMODE_IDMASK;
-    //filt.FilterScale          = CAN_FILTERSCALE_16BIT;
-    //// All filters are shifted left 5 bits
-    //filt.FilterIdHigh = 0x200;
-    //filt.FilterIdHigh = 0x201;
-    //filt.FilterFIFOAssignment = 0;
-    //filt.FilterActivation     = ENABLE;
-    //HAL_CAN_ConfigFilter(&hcan, &filt);
+    CAN_FilterTypeDef filt = { 0U };
+    filt.FilterBank           = 0;
+    filt.FilterMode           = CAN_FILTERMODE_IDMASK;
+    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+    // All filters are shifted left 5 bits
+    filt.FilterIdHigh = 0x300;
+    filt.FilterMaskIdHigh = 0x7ff;
+    filt.FilterIdLow = 0x000;
+    filt.FilterMaskIdLow = 0x7ff;
+    filt.FilterFIFOAssignment = 0;
+    filt.FilterActivation     = ENABLE;
+    HAL_CAN_ConfigFilter(&hcan, &filt);
 
     return HW_OK;
 }
@@ -419,14 +421,10 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, &data[0]);
     }
 
-    //if (header.StdId == 0x200)
-    //{
-    //    if (data[0] == 0x00) BMS_toSleep();
-    //}
-    //else if (header.StdId == 0x201)
-    //{
-    //    if (data[0] == 0x00) BMS_wakeUp();
-    //}
+    if (header.StdId == 0x300)
+    {
+        BMS_setBalancing((float32_t)((uint16_t)(data[1] << 8 | data[0])) * 0.005f);
+    }
     //CANRX_BUS_A_notify(fifoId);
     //SWI_invokeFromISR(CANRX_BUS_A_swi);
 }

@@ -291,27 +291,27 @@ static inline void set_PackVoltage(CAN_data_T* message, float32_t value)
 
 static inline void set_BoardTemp0(CAN_data_T* message, float32_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)(value / 10) & 0x7F)) << 57;   // 7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(value) & 0x7F)) << 28;   // 7 bits, 1 deg C precision, range [0-128]deg C
 }
 
 static inline void set_BoardTemp1(CAN_data_T* message, float32_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)(value / 10) & 0x7F)) << 50;   // 7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(value) & 0x7F)) << 21;   // 7 bits, 1 deg C precision, range [0-128]deg C
 }
 
 static inline void set_MCUTemp(CAN_data_T* message, float32_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)(value / 10) & 0x7F)) << 43;   // 7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(value) & 0x7F)) << 14;   // 7 bits, 1 deg C precision, range [0-128]deg C
 }
 
 static inline void set_BoardAmbientTemp(CAN_data_T* message, float32_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)(value / 10) & 0x7F)) << 36;   // 7 bits, 1 deg C precision, range [0-128]deg C
+    message->u64 |= ((uint64_t)((uint8_t)(value) & 0x7F)) << 7;   // 7 bits, 1 deg C precision, range [0-128]deg C
 }
 
 static inline void set_BoardRelativeHumidity(CAN_data_T* message, float32_t value)
 {
-    message->u64 |= ((uint64_t)((uint8_t)(value / 100) & 0x07F)) << 29; // 7 bits, 1% precision, range [0-128]%
+    message->u64 |= ((uint64_t)((uint8_t)(value) & 0x07F)); // 7 bits, 1% precision, range [0-128]%
 }
 
 // pack_VEH_BMS_fans_1s
