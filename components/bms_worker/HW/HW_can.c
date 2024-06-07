@@ -92,7 +92,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     hcan.Init.TimeSeg1             = CAN_BS1_6TQ;
     hcan.Init.TimeSeg2             = CAN_BS2_1TQ;
     hcan.Init.TimeTriggeredMode    = DISABLE;
-    hcan.Init.AutoBusOff           = DISABLE;
+    hcan.Init.AutoBusOff           = ENABLE;
     hcan.Init.AutoWakeUp           = DISABLE;
     hcan.Init.AutoRetransmission   = ENABLE;
     hcan.Init.ReceiveFifoLocked    = DISABLE;
@@ -419,14 +419,14 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, &data[0]);
     }
 
-    if (header.StdId == 0x200)
-    {
-        if (data[0] == 0x00) BMS_toSleep();
-    }
-    else if (header.StdId == 0x201)
-    {
-        if (data[0] == 0x00) BMS_wakeUp();
-    }
+    //if (header.StdId == 0x200)
+    //{
+    //    if (data[0] == 0x00) BMS_toSleep();
+    //}
+    //else if (header.StdId == 0x201)
+    //{
+    //    if (data[0] == 0x00) BMS_wakeUp();
+    //}
     //CANRX_BUS_A_notify(fifoId);
     //SWI_invokeFromISR(CANRX_BUS_A_swi);
 }

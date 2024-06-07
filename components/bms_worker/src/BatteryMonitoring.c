@@ -157,7 +157,7 @@ static void BMS1kHz_PRD()
     }
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
-        if (max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS * 10) < HW_getTick())
+        if (max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_getTick())
         {
             max_chip.config.sampling             = false;
             max_chip.config.diagnostic_enabled   = false;
