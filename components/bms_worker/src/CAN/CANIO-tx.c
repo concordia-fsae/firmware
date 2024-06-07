@@ -301,9 +301,9 @@ static bool pack_VEH_BMS_tempHumidity_1s(CAN_data_T* message, const uint8_t coun
 static bool pack_VEH_BMS_fans_1s(CAN_data_T* message, const uint8_t counter)
 {
     UNUSED(counter);
-    set_CoolState0(message, COOL.state[0] == COOL_OFF);
+    set_CoolState0(message, COOL.state[0] == COOL_ON);
     set_CoolPercentage0(message, COOL.percentage[0]);
-    set_CoolState1(message, COOL.state[1] == COOL_OFF);
+    set_CoolState1(message, COOL.state[1] == COOL_ON);
     set_CoolPercentage1(message, COOL.percentage[1]);
     set_FanRPM0(message, COOL.rpm[0]);
     set_FanRPM1(message, COOL.rpm[1]);
