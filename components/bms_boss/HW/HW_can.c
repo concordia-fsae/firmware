@@ -118,13 +118,13 @@ void HW_CAN_init(void)
     filt.FilterActivation     = CAN_FILTER_ENABLE;
     HAL_CAN_ConfigFilter(&hcan, &filt);
 
-    filt.FilterBank           = 0;
+    filt.FilterBank           = 1;
     filt.FilterMode           = CAN_FILTERMODE_IDMASK;
     filt.FilterScale          = CAN_FILTERSCALE_16BIT;
     filt.FilterIdHigh         = CHARGER_MESSAGE_ID;
     filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
-    filt.FilterIdLow          = (uint16_t)0x00;
-    filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
+    filt.FilterIdLow          = (uint16_t)0x310;
+    filt.FilterMaskIdHigh     = (uint16_t)0x000;
     filt.FilterFIFOAssignment = 0;
     filt.FilterActivation     = CAN_FILTER_ENABLE;
     HAL_CAN_ConfigFilter(&hcan, &filt);
@@ -460,9 +460,20 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
 
             BMS_setSegmentStats(header.StdId & 0x07, &tmp);
         }
-	else if (header.StdId == CHARGER_MESSAGE_ID)
+	    else if (header.StdId == CHARGER_MESSAGE_ID)
         {
             SYS_SFT_setChargerVoltage((float32_t)(((int16_t)data.u8[CHARGER_DC_BUS_VOLTAGE_MSB] << 8) | (int16_t)data.u8[CHARGER_DC_BUS_VOLTAGE_LSB]) / 10);
+        }
+        else if (header.StdId == 0x310)
+        {
+            if (data.u8[0] == 0x00)
+            {
+                SYS_stopCharging();
+            }
+            else
+            {
+                SYS_continueCharging();
+            }
         }
     }
 }

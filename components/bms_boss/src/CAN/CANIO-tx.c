@@ -214,27 +214,28 @@ static bool MSG_pack_BMS_100Hz_Critical_Charger(CAN_data_T* message, const uint8
 {
     UNUSED(counter);
     message->u64 = 0x00;
+    static bool started = false;
 
-    if (SYS_SFT_checkChargerTimeout())
+    if (SYS_SFT_checkChargerTimeout() || BMS.charging_paused)
     {
-	return false;
+        started = false;
+	    return false;
     }
 
     switch (SYS.contacts)
     {
-	case SYS_CONTACTORS_CLOSED:
-	    message->u8[0] = 0x40;
-	    return true;
 	case SYS_CONTACTORS_HVP_CLOSED:
-	    message->u8[0] = 0x80;
+	    message->u8[0] = (started) ? 0x80 : 0x40;
 	    message->u8[1] = (uint16_t)(160) >> 8;
 	    message->u8[2] = (uint16_t)(160);
 	    message->u8[3] = (uint16_t)(BMS_PACK_VOLTAGE_MAX * 10) >> 8;
 	    message->u8[4] = (uint16_t)(BMS_PACK_VOLTAGE_MAX * 10) & 0xff;
 	    message->u8[5] = (uint16_t)(BMS.pack_charge_limit * 10) >> 8;
 	    message->u8[6] = (uint16_t)(BMS.pack_charge_limit * 10) & 0xff;
+        started = true;
 	    return true;
 	default:
+        started = false;
 	    return false;
     }
 }
