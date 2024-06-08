@@ -16,6 +16,8 @@
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal_can.h"
 
+#include "Cooling.h"
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -111,10 +113,22 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     filt.FilterMode           = CAN_FILTERMODE_IDMASK;
     filt.FilterScale          = CAN_FILTERSCALE_16BIT;
     // All filters are shifted left 5 bits
+    filt.FilterIdHigh = 0x320;
+    filt.FilterMaskIdHigh = 0x7ff;
+    filt.FilterIdHigh = 0x321;
+    filt.FilterMaskIdLow = 0x7ff;
+    filt.FilterFIFOAssignment = 0;
+    filt.FilterActivation     = ENABLE;
+    HAL_CAN_ConfigFilter(&hcan, &filt);
+    
+    filt.FilterBank           = 1;
+    filt.FilterMode           = CAN_FILTERMODE_IDMASK;
+    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+    // All filters are shifted left 5 bits
     filt.FilterIdHigh = 0x300;
     filt.FilterMaskIdHigh = 0x7ff;
-    filt.FilterIdLow = 0x000;
-    filt.FilterMaskIdLow = 0x7ff;
+    filt.FilterIdHigh = 0x000;
+    filt.FilterMaskIdLow = 0x000;
     filt.FilterFIFOAssignment = 0;
     filt.FilterActivation     = ENABLE;
     HAL_CAN_ConfigFilter(&hcan, &filt);
@@ -424,6 +438,21 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
     if (header.StdId == 0x300)
     {
         BMS_setBalancing((float32_t)((uint16_t)(data[1] << 8 | data[0])) * 0.005f);
+    }
+    if (header.StdId == 0x320)
+    {
+        if (data[0] == 0x00) 
+        {
+            BMS_toSleep();
+        }
+        else
+        {
+            BMS_wakeUp();
+        }
+    }
+    else if (header.StdId == 0x321)
+    {
+        COOL_setFans(data[0]);
     }
     //CANRX_BUS_A_notify(fifoId);
     //SWI_invokeFromISR(CANRX_BUS_A_swi);

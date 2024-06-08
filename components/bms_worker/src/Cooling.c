@@ -53,6 +53,12 @@ static void Cooling10Hz_PRD(void)
 
     for (uint8_t i = 0; i < FAN_COUNT; i++)
     {
+        if (COOL.override != 0x00) 
+        {
+            COOL.percentage[i] = COOL.override;
+            continue;
+        }
+
         switch (COOL.state[i])
         {
             case COOL_INIT:
@@ -111,6 +117,11 @@ static void Cooling10Hz_PRD(void)
     }
 
     FANS_setPower((uint8_t*)&COOL.percentage);
+}
+
+void COOL_setFans(uint8_t percent)
+{
+    COOL.override = percent;
 }
 
 
