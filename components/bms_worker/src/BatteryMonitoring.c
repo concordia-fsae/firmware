@@ -539,7 +539,7 @@ void BMS_chargeLimit()
     }
     else
     {
-        BMS.charge_limit = ((BMS.relative_soc.max - 80.0f)/20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
+        BMS.charge_limit = ((100.0f - BMS.relative_soc.max)/20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
     }
     
     if (ENV.values.max_temp >= 48)
