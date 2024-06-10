@@ -527,7 +527,7 @@ void BMS_measurementComplete(void)
 
 void BMS_chargeLimit()
 {
-    if (ENV.values.max_temp > 60.0f || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
+    if (ENV.values.max_temp > 60.0f || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
     {
         BMS.charge_limit = 0;
         return;
@@ -553,7 +553,7 @@ void BMS_chargeLimit()
 
 void BMS_dischargeLimit()
 {
-    if (ENV.values.max_temp > 60.0f || ENV.state == ENV_FAULT || ENV.state == ENV_ERROR || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
+    if (ENV.values.max_temp > 60.0f || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
     {
         BMS.discharge_limit = 0.f;
         return;
