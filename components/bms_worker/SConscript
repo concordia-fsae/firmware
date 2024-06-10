@@ -12,7 +12,6 @@ Import("GlobalEnv", "CONFIG_IDS")
 RTOS_DIR = Dir("RTOS")
 SRC_DIR = Dir("src")
 HW_DIR = Dir("HW")
-PROJECT_LIB_DIR = Dir("lib")
 LIBS_DIR = Dir("#/embedded/libs")
 FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
@@ -126,16 +125,14 @@ LIBS_INCLUDE_DIRS = [
     CELLS_DIR,
 ]
 
-PROJECT_INCLUDE_DIRS = [
+INCLUDE_DIRS = [
     "include/",
     "HW/include/",
     "generated/",
     "thermistors/",
 ]
 
-paths = (
-    RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + PROJECT_INCLUDE_DIRS + LIBS_INCLUDE_DIRS
-)
+paths = RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + INCLUDE_DIRS + LIBS_INCLUDE_DIRS
 
 env.Append(
     ASFLAGS=as_flags,
@@ -152,7 +149,7 @@ rtos_env.Append(
 
 # List of component C files
 
-project_source_files = [
+src_files = [
     SRC_DIR.File("SystemManager.c"),
     SRC_DIR.File("Module.c"),
     SRC_DIR.File("CAN/CANIO-tx.c"),
@@ -169,7 +166,7 @@ project_source_files = [
     THERMS_DIR.File("MF52C1103F3380.c"),
 ]
 
-project_hw_files = [
+hw_files = [
     HW_DIR.File("HW.c"),
     HW_DIR.File("HW_adc.c"),
     HW_DIR.File("HW_can.c"),
@@ -188,9 +185,9 @@ project_hw_files = [
     HW_DIR.File("HW_NX3L4051PW.c"),
 ]
 
-project_source_files += project_hw_files
+src_files += hw_files
 
-rtos_source_files = [
+rtos_src_files = [
     RTOS_DIR.File("FreeRTOSResources.c"),
     RTOS_DIR.File("FreeRTOS_SWI.c"),
     FREERTOS_DIR.File("Source/croutine.c"),
@@ -204,16 +201,11 @@ rtos_source_files = [
     # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
 ]
 
-platform_source_files = []
+platform_src_files = []
 # add driver source files
-platform_source_files.extend(
+platform_src_files.extend(
     [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
 )
-
-
-renderers = [
-    File("renderers/BuildDefines_generated.h.mako"),
-]
 
 
 def render_generated_files(options, output_dir):
@@ -280,6 +272,7 @@ def compile_objects(
     return objs
 
 
+network_env = GlobalEnv.Clone(tools=["network"])
 configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
 elfs = []
 binaries = []
@@ -293,6 +286,12 @@ for config_id, config in configs.items():
     generated_dir = variant_dir.Dir("generated")
     makedirs(generated_dir.abspath, exist_ok=True)
 
+    network_env.BuildNetwork({f"bmsw{config['options']['canIdOffset']}": generated_dir})
+
+    renderers = [
+        File("renderers/BuildDefines_generated.h.mako"),
+    ]
+
     generated = render_generated_files(config["options"], generated_dir)
 
     ## actually compile stuff
@@ -303,7 +302,7 @@ for config_id, config in configs.items():
     objs.extend(
         compile_objects(
             env,
-            platform_source_files,
+            platform_src_files,
             variant_dir=variant_dir,
             target_dir="embedded/",
             CPPPATH=paths + [generated_dir],
@@ -314,7 +313,7 @@ for config_id, config in configs.items():
     objs.extend(
         compile_objects(
             rtos_env,
-            rtos_source_files,
+            rtos_src_files,
             variant_dir=variant_dir,
             target_dir="FreeRTOS/",
             CPPPATH=paths + [generated_dir],
@@ -325,7 +324,7 @@ for config_id, config in configs.items():
     objs.extend(
         compile_objects(
             env,
-            project_source_files,
+            src_files,
             variant_dir=variant_dir,
             CPPPATH=paths + [generated_dir],
         )
@@ -339,7 +338,7 @@ for config_id, config in configs.items():
     )
     elfs.append(elf)
     Depends(elf, env["LINKSCRIPT"])
-    Clean(elf, generated)
+    Clean(elf, variant_dir)
 
     # generate a binary for flashing
     binary = env.Bin(source=elf)
