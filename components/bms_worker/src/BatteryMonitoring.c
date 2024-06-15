@@ -29,6 +29,7 @@
  ******************************************************************************/
 
 #define BMS_CONFIGRED_BALANCING_MARGIN 0.050f // [V], precision 1mV
+#define BMS_CONFIGURED_DERATING_DELAY 1000 // [ms]
 
 #ifndef BMS_CONFIGURED_SAMPLING_TIME_MS
 # define BMS_CONFIGURED_SAMPLING_TIME_MS 20
@@ -156,13 +157,13 @@ static void BMS1kHz_PRD()
             return;
         }
 
+        BMS_calcSegStats();
         cnt = 0;
 
         BMS.state                            = BMS_SAMPLING;
         max_chip.config.diagnostic_enabled   = false;
         max_chip.config.low_power_mode       = false;
         max_chip.config.sampling_start_100us = UINT32_MAX;
-        BMS_calcSegStats();
     }
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
@@ -381,16 +382,16 @@ void BMS_calcSegStats(void)
         BMS.cells[i].voltage = IO.cell[i] + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > 2.0f) && (BMS.cells[i].voltage < 4.5f))
         {
-            if (BMS.cells[i].voltage < 2.5f)
-            {
-                BMS.cells[i].state = BMS_CELL_FAULT_UV;
-                continue;
-            }
-            else if (BMS.cells[i].voltage > 4.2f)
-            {
-                BMS.cells[i].state = BMS_CELL_FAULT_OV;
-                continue;
-            }
+            //if (BMS.cells[i].voltage < 2.5f)
+            //{
+            //    BMS.cells[i].state = BMS_CELL_FAULT_UV;
+            //    continue;
+            //}
+            //else if (BMS.cells[i].voltage > 4.2f)
+            //{
+            //    BMS.cells[i].state = BMS_CELL_FAULT_OV;
+            //    continue;
+            //}
 
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
@@ -553,19 +554,34 @@ void BMS_chargeLimit()
 
 void BMS_dischargeLimit()
 {
+    static uint32_t start_derate = 0x00;
+
     if (ENV.values.max_temp > 60.0f || BMS.fault || BMS.state == BMS_ERROR || BMS.state == BMS_SLEEPING)
     {
-        BMS.discharge_limit = 0.f;
+        BMS.discharge_limit = 0.0f;
         return;
     }
 
     if (BMS.relative_soc.min > 20.0f)
     {
         BMS.discharge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+        start_derate = 0x00;
     }
     else
     {
-        BMS.discharge_limit =  (BMS.relative_soc.avg / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+        if (start_derate == 0x00)
+        {
+            start_derate = HW_getTick();
+        }
+        else if ((start_derate + BMS_CONFIGURED_DERATING_DELAY) < HW_getTick())
+        {
+            start_derate = 0x00;
+            float32_t dis = BMS.discharge_limit;
+
+            dis -= 1.0f;
+
+            BMS.discharge_limit =  (dis > ((BMS.relative_soc.avg / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)) ? dis : (BMS.relative_soc.avg / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+        }
     }
 
     if (ENV.values.max_temp >= 48.0f)
