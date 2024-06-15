@@ -244,6 +244,8 @@ static bool MSG_pack_BMS_1Hz_Balancing_Command(CAN_data_T* message, const uint8_
 {
     UNUSED(counter);
     message->u64 = 0x00;
+    
+    return false;
 
     if (SYS_SFT_checkChargerTimeout())
     {
