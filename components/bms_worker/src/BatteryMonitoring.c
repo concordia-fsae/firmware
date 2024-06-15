@@ -28,7 +28,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BMS_CONFIGRED_BALANCING_MARGIN 0.025f // [V], precision 1mV
+#define BMS_CONFIGRED_BALANCING_MARGIN 0.050f // [V], precision 1mV
 
 #ifndef BMS_CONFIGURED_SAMPLING_TIME_MS
 # define BMS_CONFIGURED_SAMPLING_TIME_MS 20
@@ -200,7 +200,7 @@ static void BMS1Hz_PRD()
     {
         BMS.balancing.requested = false;
         BMS.balancing.last_request = 0x00;
-        BMS.balancing.target_v = 0.0f;
+        BMS.balancing.target_v = 4.5f;
     }
 
     if (BMS.state == BMS_SLEEPING)
@@ -565,7 +565,7 @@ void BMS_dischargeLimit()
     }
     else
     {
-        BMS.discharge_limit =  (BMS.relative_soc.min / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+        BMS.discharge_limit =  (BMS.relative_soc.avg / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
     }
 
     if (ENV.values.max_temp >= 48.0f)

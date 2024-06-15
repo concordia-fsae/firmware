@@ -437,7 +437,7 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
 
     if (header.StdId == 0x300)
     {
-        BMS_setBalancing((float32_t)((uint16_t)(data[1] << 8 | data[0])) * 0.005f);
+        BMS_setBalancing((float32_t)((uint16_t)((uint16_t)data[1] << 8 | data[0])) * 0.005f);
     }
     if (header.StdId == 0x320)
     {
