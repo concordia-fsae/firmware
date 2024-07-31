@@ -1,0 +1,521 @@
+VERSION ""
+
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    CAT_DEF_
+    CAT_
+    FILTER
+    BA_DEF_DEF_
+    EV_DATA_
+    ENVVAR_DATA_
+    SGTYPE_
+    SGTYPE_VAL_
+    BA_DEF_SGTYPE_
+    BA_SGTYPE_
+    SIG_TYPE_REF_
+    VAL_TABLE_
+    SIG_GROUP_
+    SIG_VALTYPE_
+    SIGTYPE_VALTYPE_
+    BO_TX_BU_
+    BA_DEF_REL_
+    BA_REL_
+    BA_DEF_DEF_REL_
+    BU_SG_REL_
+    BU_EV_REL_
+    BU_BO_REL_
+    SG_MUL_VAL_
+
+BS_: 
+BU_: CHARGER BMSB BMSW0 BMSW1 BMSW2 BMSW3 BMSW4 BMSW5 
+
+BO_ 153 msgCritical: 5 BMSB
+   SG_ packVoltage : 24|16@1+ (0.1,0) [0|600] "V" Vector__XXX
+   SG_ packDischargeCurrent : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ packChargeCurrent : 8|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ counter : 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 768 balancingCommand: 2 BMSB
+   SG_ targetVoltage : 0|16@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 769 envData: 5 BMSB
+   SG_ isolation : 0|16@1+ (1,0) [0|52800] "kOhm" Vector__XXX
+   SG_ relativeHumidity : 16|8@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ ambientTemp : 24|8@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 32|8@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1560 msgCriticalCharger: 7 BMSB
+   SG_ commandByte : 0|8@1+ (1,0) [0|128] "" Vector__XXX
+   SG_ maxACCurrent : 8|16@1+ (0.1,0) [0|255] "A" Vector__XXX
+   SG_ packVoltageMax : 24|16@1+ (0.1,0) [0|600] "V" Vector__XXX
+   SG_ packChargeLimit : 40|16@1+ (0.1,0) [0|255] "A" Vector__XXX
+
+BO_ 256 msgCritical: 8 BMSW0
+   SG_ voltageMin : 53|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltageMax : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 36|7@1+ (1,0) [0|65] "V" Vector__XXX
+   SG_ tempMax : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ chargeLimit : 24|5@1+ (1,0) [0|31] "A" Vector__XXX
+   SG_ dischargeLimit : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ bmsErrorFlag: 11|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ bmsFaultFlag: 10|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envErrorFlag: 9|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envFaultFlag: 8|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ counter: 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 1792 voltsSOCTemp0_1: 8 BMSW0
+   SG_ voltageAvg : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ tempAvg : 47|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ socMin : 37|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socAvg : 27|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socMax : 17|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ temp0 : 10|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp1 : 3|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1808 temp2_10: 8 BMSW0
+   SG_ temp2 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp3 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp4 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp5 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp6 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp7 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp8 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp9 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp10: 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1824 temp11_19: 8 BMSW0
+   SG_ temp11 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp12 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp13 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp14 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp15 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp16 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp17 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp18 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp19 : 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1840 voltage0_5: 8 BMSW0
+   SG_ voltage0 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage1 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage2 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage3 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage4 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage5 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1856 voltage6_11: 8 BMSW0
+   SG_ voltage6 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage7 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage8 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage9 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage10 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage11 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1872 voltage12_15: 7 BMSW0
+   SG_ voltage12 : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage13 : 33|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage14 : 23|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage15 : 13|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 0|13@1+ (10,0) [0|65] "V" Vector__XXX
+BO_ 1888 envData: 5 BMSW0
+   SG_ boardTemp0 : 28|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ boardTemp1 : 21|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 14|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ ambientTemp : 7|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ relativeHumidity : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+BO_ 1904 fans: 6 BMSW0
+   SG_ coolState0 : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage0 : 22|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ coolState1 : 21|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage1 : 14|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM0 : 7|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM1 : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+   
+BO_ 257 msgCritical: 8 BMSW1
+   SG_ voltageMin : 53|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltageMax : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 36|7@1+ (1,0) [0|65] "V" Vector__XXX
+   SG_ tempMax : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ chargeLimit : 24|5@1+ (1,0) [0|31] "A" Vector__XXX
+   SG_ dischargeLimit : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ bmsErrorFlag: 11|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ bmsFaultFlag: 10|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envErrorFlag: 9|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envFaultFlag: 8|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ counter: 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 1793 voltsSOCTemp0_1: 8 BMSW1
+   SG_ voltageAvg : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ tempAvg : 47|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ socMin : 37|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socAvg : 27|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socMax : 17|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ temp0 : 10|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp1 : 3|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1809 temp2_10: 8 BMSW1
+   SG_ temp2 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp3 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp4 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp5 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp6 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp7 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp8 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp9 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp10: 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1825 temp11_19: 8 BMSW1
+   SG_ temp11 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp12 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp13 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp14 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp15 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp16 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp17 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp18 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp19 : 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1841 voltage0_5: 8 BMSW1
+   SG_ voltage0 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage1 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage2 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage3 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage4 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage5 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1857 voltage6_11: 8 BMSW1
+   SG_ voltage6 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage7 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage8 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage9 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage10 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage11 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1873 voltage12_15: 7 BMSW1
+   SG_ voltage12 : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage13 : 33|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage14 : 23|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage15 : 13|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 0|13@1+ (10,0) [0|65] "V" Vector__XXX
+BO_ 1889 envData: 5 BMSW1
+   SG_ boardTemp0 : 28|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ boardTemp1 : 21|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 14|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ ambientTemp : 7|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ relativeHumidity : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+BO_ 1905 fans: 6 BMSW1
+   SG_ coolState0 : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage0 : 22|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ coolState1 : 21|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage1 : 14|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM0 : 7|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM1 : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+
+BO_ 258 msgCritical: 8 BMSW2
+   SG_ voltageMin : 53|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltageMax : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 36|7@1+ (1,0) [0|65] "V" Vector__XXX
+   SG_ tempMax : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ chargeLimit : 24|5@1+ (1,0) [0|31] "A" Vector__XXX
+   SG_ dischargeLimit : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ bmsErrorFlag: 11|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ bmsFaultFlag: 10|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envErrorFlag: 9|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envFaultFlag: 8|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ counter: 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 1794 voltsSOCTemp0_1: 8 BMSW2
+   SG_ voltageAvg : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ tempAvg : 47|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ socMin : 37|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socAvg : 27|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socMax : 17|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ temp0 : 10|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp1 : 3|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1810 temp2_10: 8 BMSW2
+   SG_ temp2 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp3 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp4 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp5 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp6 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp7 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp8 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp9 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp10: 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1826 temp11_19: 8 BMSW2
+   SG_ temp11 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp12 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp13 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp14 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp15 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp16 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp17 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp18 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp19 : 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1842 voltage0_5: 8 BMSW2
+   SG_ voltage0 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage1 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage2 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage3 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage4 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage5 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1858 voltage6_11: 8 BMSW2
+   SG_ voltage6 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage7 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage8 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage9 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage10 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage11 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1874 voltage12_15: 7 BMSW2
+   SG_ voltage12 : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage13 : 33|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage14 : 23|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage15 : 13|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 0|13@1+ (10,0) [0|65] "V" Vector__XXX
+BO_ 1890 envData: 5 BMSW2
+   SG_ boardTemp0 : 28|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ boardTemp1 : 21|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 14|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ ambientTemp : 7|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ relativeHumidity : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+BO_ 1906 fans: 6 BMSW2
+   SG_ coolState0 : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage0 : 22|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ coolState1 : 21|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage1 : 14|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM0 : 7|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM1 : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+
+BO_ 259 msgCritical: 8 BMSW3
+   SG_ voltageMin : 53|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltageMax : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 36|7@1+ (1,0) [0|65] "V" Vector__XXX
+   SG_ tempMax : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ chargeLimit : 24|5@1+ (1,0) [0|31] "A" Vector__XXX
+   SG_ dischargeLimit : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ bmsErrorFlag: 11|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ bmsFaultFlag: 10|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envErrorFlag: 9|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envFaultFlag: 8|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ counter: 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 1795 voltsSOCTemp0_1: 8 BMSW3
+   SG_ voltageAvg : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ tempAvg : 47|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ socMin : 37|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socAvg : 27|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socMax : 17|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ temp0 : 10|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp1 : 3|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1811 temp2_10: 8 BMSW3
+   SG_ temp2 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp3 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp4 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp5 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp6 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp7 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp8 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp9 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp10: 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1827 temp11_19: 8 BMSW3
+   SG_ temp11 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp12 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp13 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp14 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp15 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp16 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp17 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp18 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp19 : 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1843 voltage0_5: 8 BMSW3
+   SG_ voltage0 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage1 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage2 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage3 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage4 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage5 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1859 voltage6_11: 8 BMSW3
+   SG_ voltage6 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage7 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage8 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage9 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage10 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage11 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1875 voltage12_15: 7 BMSW3
+   SG_ voltage12 : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage13 : 33|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage14 : 23|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage15 : 13|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 0|13@1+ (10,0) [0|65] "V" Vector__XXX
+BO_ 1891 envData: 5 BMSW3
+   SG_ boardTemp0 : 28|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ boardTemp1 : 21|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 14|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ ambientTemp : 7|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ relativeHumidity : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+BO_ 1907 fans: 6 BMSW3
+   SG_ coolState0 : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage0 : 22|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ coolState1 : 21|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage1 : 14|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM0 : 7|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM1 : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+
+BO_ 260 msgCritical: 8 BMSW4
+   SG_ voltageMin : 53|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltageMax : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 36|7@1+ (1,0) [0|65] "V" Vector__XXX
+   SG_ tempMax : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ chargeLimit : 24|5@1+ (1,0) [0|31] "A" Vector__XXX
+   SG_ dischargeLimit : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ bmsErrorFlag: 11|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ bmsFaultFlag: 10|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envErrorFlag: 9|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envFaultFlag: 8|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ counter: 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 1796 voltsSOCTemp0_1: 8 BMSW4
+   SG_ voltageAvg : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ tempAvg : 47|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ socMin : 37|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socAvg : 27|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socMax : 17|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ temp0 : 10|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp1 : 3|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1812 temp2_10: 8 BMSW4
+   SG_ temp2 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp3 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp4 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp5 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp6 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp7 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp8 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp9 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp10: 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1828 temp11_19: 8 BMSW4
+   SG_ temp11 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp12 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp13 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp14 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp15 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp16 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp17 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp18 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp19 : 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1844 voltage0_5: 8 BMSW4
+   SG_ voltage0 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage1 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage2 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage3 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage4 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage5 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1860 voltage6_11: 8 BMSW4
+   SG_ voltage6 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage7 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage8 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage9 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage10 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage11 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1876 voltage12_15: 7 BMSW4
+   SG_ voltage12 : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage13 : 33|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage14 : 23|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage15 : 13|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 0|13@1+ (10,0) [0|65] "V" Vector__XXX
+BO_ 1892 envData: 5 BMSW4
+   SG_ boardTemp0 : 28|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ boardTemp1 : 21|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 14|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ ambientTemp : 7|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ relativeHumidity : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+BO_ 1908 fans: 6 BMSW4
+   SG_ coolState0 : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage0 : 22|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ coolState1 : 21|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage1 : 14|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM0 : 7|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM1 : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+
+BO_ 261 msgCritical: 8 BMSW5
+   SG_ voltageMin : 53|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltageMax : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 36|7@1+ (1,0) [0|65] "V" Vector__XXX
+   SG_ tempMax : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ chargeLimit : 24|5@1+ (1,0) [0|31] "A" Vector__XXX
+   SG_ dischargeLimit : 16|8@1+ (1,0) [0|255] "A" Vector__XXX
+   SG_ bmsErrorFlag: 11|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ bmsFaultFlag: 10|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envErrorFlag: 9|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ envFaultFlag: 8|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ counter: 0|8@1+ (1,0) [0|255] "" Vector__XXX
+BO_ 1797 voltsSOCTemp0_1: 8 BMSW5
+   SG_ voltageAvg : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ tempAvg : 47|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ socMin : 37|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socAvg : 27|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ socMax : 17|10@1+ (0.1,0) [0|100] "%" Vector__XXX
+   SG_ temp0 : 10|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp1 : 3|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1813 temp2_10: 8 BMSW5
+   SG_ temp2 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp3 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp4 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp5 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp6 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp7 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp8 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp9 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp10: 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1829 temp11_19: 8 BMSW5
+   SG_ temp11 : 57|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp12 : 50|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp13 : 43|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp14 : 36|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp15 : 29|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp16 : 22|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp17 : 15|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp18 : 8|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ temp19 : 1|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+BO_ 1845 voltage0_5: 8 BMSW5
+   SG_ voltage0 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage1 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage2 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage3 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage4 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage5 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1861 voltage6_11: 8 BMSW5
+   SG_ voltage6 : 54|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage7 : 44|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage8 : 34|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage9 : 24|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage10 : 14|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage11 : 4|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+BO_ 1877 voltage12_15: 7 BMSW5
+   SG_ voltage12 : 43|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage13 : 33|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage14 : 23|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltage15 : 13|10@1+ (0.005,0) [0|5] "V" Vector__XXX
+   SG_ voltagePack : 0|13@1+ (10,0) [0|65] "V" Vector__XXX
+BO_ 1893 envData: 5 BMSW5
+   SG_ boardTemp0 : 28|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ boardTemp1 : 21|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ mcuTemp : 14|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ ambientTemp : 7|7@1+ (1,0) [0|127] "deg C" Vector__XXX
+   SG_ relativeHumidity : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+BO_ 1909 fans: 6 BMSW5
+   SG_ coolState0 : 29|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage0 : 22|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ coolState1 : 21|1@1+ (1,0) [0|1] "" Vector__XXX
+   SG_ coolPercentage1 : 14|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM0 : 7|7@1+ (1,0) [0|100] "%" Vector__XXX
+   SG_ fanRPM1 : 0|7@1+ (1,0) [0|100] "%" Vector__XXX
+
+BO_ 1553 msgCritical: 7 CHARGER
+   SG_ outputCurrent : 48|16@1+ (0.01,0) [0|500] "A" Vector__XXX
+   SG_ outputVoltage : 32|16@1+ (0.1,0) [0|1000] "V" Vector__XXX
+   SG_ mainsVoltage : 16|16@1+ (0.1,0) [0|1000] "V" Vector__XXX
+   SG_ mainsCurrent : 0|16@1+ (0.01,0) [0|500] "A" Vector__XXX
+
+BA_DEF_ BO_ "GenMsgBackgroundColor" STRING ;
+BA_DEF_ BO_ "GenMsgForegroundColor" STRING ;
+BA_DEF_ BO_ "matchingcriteria" INT 0 0;
+BA_DEF_ BO_ "filterlabeling" INT 0 0;
+BA_DEF_ BO_ "matchingcriteria" INT 0 0;
+BA_DEF_ BO_ "filterlabeling" INT 0 0;
+BA_ "GenMsgForegroundColor" BO_ 153 "#000000";
+BA_ "GenMsgForegroundColor" BO_ 256 "#000000";
+BA_ "GenMsgForegroundColor" BO_ 258 "#000000";
+BA_ "GenMsgForegroundColor" BO_ 259 "#000000";
+BA_ "GenMsgForegroundColor" BO_ 260 "#000000";
+BA_ "GenMsgForegroundColor" BO_ 261 "#000000";
+BA_ "GenMsgForegroundColor" BO_ 1553 "#000000";
+BA_DEF_DEF_ "GenMsgBackgroundColor" "#ffffff";
+BA_DEF_DEF_ "GenMsgForegroundColor" "#000000";
+BA_DEF_DEF_ "matchingcriteria" 0;
+BA_DEF_DEF_ "filterlabeling" 0;
