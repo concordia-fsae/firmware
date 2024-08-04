@@ -59,7 +59,7 @@ static inline void set_${bus.upper()}_${signal.name}(CAN_data_T *message, int32_
 </%def>
 \
 <%def name="make_packtable(bus, msgs, cycle_time)">
-const packTable_S ${bus.upper()}_packTable_${cycle_time}ms [] = {
+static const packTable_S ${bus.upper()}_packTable_${cycle_time}ms [] = {
   %for msg in msgs:
     { &pack_${bus.upper()}_${msg.name}, ${hex(msg.id)}, ${msg.length_bytes}U },
   %endfor
