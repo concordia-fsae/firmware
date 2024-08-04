@@ -27,12 +27,20 @@ def build_network(env, nodes: Optional[Dict[str, Dir]] = None):
         )
     env._networkBuilder(nodes=nodes, codegen_args=codegen_args)
 
+def build_dbc(env):
+    env._networkDBC()
 
-def emit(target, source, env):
+def emitDBC(target,source,env):
     source.extend(recursive_glob(NETWORK_PATH, "*.py"))
     source.extend(recursive_glob(NETWORK_DATA_DIR, "*.yaml"))
     source.extend(recursive_glob(NETWORK_DATA_DIR, "*.mako"))
     target.append(env["NETWORK_OUTPUT_DIR"].File("dbcs/veh.dbc"))
+    return (target, source)
+
+def emitGen(target, source, env):
+    source.extend(recursive_glob(NETWORK_PATH, "*.py"))
+    source.extend(recursive_glob(NETWORK_DATA_DIR, "*.yaml"))
+    source.extend(recursive_glob(NETWORK_DATA_DIR, "*.mako"))
     for _, dir in env["nodes"].items():
         target.extend(
             [dir.File("MessagePack_generated.c"), dir.File("MessagePack_generated.h")]
@@ -47,6 +55,7 @@ def generate(env):
         NETWORK_OUTPUT_DIR=NETWORK_OUTPUT_DIR,
         NETWORK="python $NETWORK_TOOL_PATH $NETWORK_DATA_DIR $NETWORK_OUTPUT_DIR",
         NETWORKCOMSTR="Building Network with command '$NETWORK $codegen_args'",
+        DBCCOMSTR="Building Network with command '$NETWORK $codegen_args'",
     )
 
     env["BUILDERS"]["_networkBuilder"] = Builder(
@@ -54,10 +63,19 @@ def generate(env):
             "$NETWORK $codegen_args",
             cmdstr="$NETWORKCOMSTR",
         ),
-        emitter=emit,
+        emitter=emitGen,
+    )
+
+    env["BUILDERS"]["_networkDBC"] = Builder(
+        action=Action(
+            "$NETWORK --node --dbc",
+            cmdstr="$DBCCOMSTR",
+        ),
+        emitter=emitDBC,
     )
 
     env.AddMethod(build_network, "BuildNetwork")
+    env.AddMethod(build_dbc, "BuildDBC")
 
 
 def exists():

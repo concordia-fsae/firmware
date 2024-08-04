@@ -141,11 +141,14 @@ class CanSignal(CanObject):
             signal_def, "validationRole", ValidationRole, ValidationRole.none
             )
         self.var = get_if_exists(
-                signal_def, "var", str, ""
-                )
+            signal_def, "var", str, ""
+            )
         self.member = get_if_exists(
-                signal_def, "member", str, ""
-                )
+            signal_def, "member", str, ""
+            )
+        self.condition = get_if_exists(
+            signal_def, "condition", str, ""
+            )
 
         # these will be set when building the message
         self.message_ref = None
@@ -171,10 +174,12 @@ class CanSignal(CanObject):
             f"bitWidth: {self.native_representation.bit_width}, "
             f"offset: {self.offset}, "
             f"scale: {self.scale}, "
+            f"continuous: {self.continuous}, "
             f"startBit: {self.start_bit}, "
             f"unit: {self.unit.value}"
             f"var: {self.var}"
             f"member: {self.member}"
+            f"conditionr: {self.condition}"
         )
 
     def _check_valid(self):
@@ -183,12 +188,17 @@ class CanSignal(CanObject):
         dv = self.discrete_values
         name = self.name
         role = self.validation_role
+        var = self.var
+        member = self.member
+        condition = self.condition
 
-        if role is not ValidationRole.counter and (self.var == "" or self.member == ""):
-            print(
-                f"Signal {name} must either be a counter or have a variable and member specified"
-            )
-            valid = False
+        if role is not ValidationRole.counter:
+            if (condition == "" and (var == "" or member == "")) or \
+                    (condition != "" and (var != "" or member != "")):
+                print(
+                    f"Signal {name} must either have a condition, or a var AND member field."
+                )
+                valid = False
 
         if not nat_rep and not dv:
             print(

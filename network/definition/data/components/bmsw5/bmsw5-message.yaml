@@ -1,0 +1,119 @@
+messages:
+  criticalData:
+    description: Critical data from segment
+    id: 0x100
+    lengthBytes: 8
+    signals:
+      criticalDataCounter:
+      envFaultFlag:
+      envErrorFlag:
+      faultFlag:
+      errorFlag:
+      dischargeLimit:
+        startBit: 16
+      chargeLimit:
+      tempMax:
+      segmentVoltage:
+      voltageMax:
+      voltageMin:
+
+  cellTemps0:
+    description: First set of cell temperatures
+    id: 0x710
+    lengthBytes: 8
+    signals:
+      cellTemp10:
+      cellTemp9:
+      cellTemp8:
+      cellTemp7:
+      cellTemp6:
+      cellTemp5:
+      cellTemp4:
+      cellTemp3:
+      cellTemp2:
+
+  cellTemps1:
+    description: Second set of cell temperatures
+    id: 0x720
+    lengthBytes: 8
+    signals:
+      cellTemp19:
+      cellTemp18:
+      cellTemp17:
+      cellTemp16:
+      cellTemp15:
+      cellTemp14:
+      cellTemp13:
+      cellTemp12:
+      cellTemp11:
+
+  cellVoltages0:
+    description: First set of cell voltages
+    id: 0x730
+    lengthBytes: 8
+    signals:
+      cellVoltage5:
+      cellVoltage4:
+      cellVoltage3:
+      cellVoltage2:
+      cellVoltage1:
+      cellVoltage0:
+
+  cellVoltages1:
+    description: Second set of cell voltages
+    id: 0x740
+    lengthBytes: 8
+    signals:
+      cellVoltage11:
+      cellVoltage10:
+      cellVoltage9:
+      cellVoltage8:
+      cellVoltage7:
+      cellVoltage6:
+
+  cellVoltages2:
+    description: Third set of cell voltages
+    id: 0x750
+    lengthBytes: 7
+    signals:
+      segmentVoltageHighRes:
+      cellVoltage15:
+      cellVoltage14:
+      cellVoltage13:
+      cellVoltage12:
+
+  environment:
+    description: Segment temperature and humidity data
+    id: 0x760
+    lengthBytes: 5
+    signals:
+      boardRelativeHumidity:
+      boardAmbientTemp:
+      mcuTemp:
+      boardTemp0:
+      boardTemp1:
+
+  fans:
+    description: Segment fan data
+    id: 0x770
+    lengthBytes: 6
+    signals:
+      fan1RPM:
+      fan0RPM:
+      coolPct1:
+      coolState1:
+      coolPct0:
+      coolState0:
+
+  miscData:
+    description: Segment average temps, SOC, and cell temps 0 and 1
+    id: 0x700
+    lengthBytes: 8
+    signals:
+      cellTemp1:
+      cellTemp0:
+      socMax:
+      socAvg:
+      socMin:
+      tempAvg:
+      cellVoltageAvg:

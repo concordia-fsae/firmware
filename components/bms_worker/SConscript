@@ -273,8 +273,9 @@ def compile_objects(
         )
     return objs
 
-
 network_env = GlobalEnv.Clone(tools=["network"])
+network_env.BuildDBC()
+
 configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
 elfs = []
 binaries = []

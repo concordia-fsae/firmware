@@ -294,6 +294,13 @@ def parse_args() -> Namespace:
         help="Directory in which to store generated files for the preceding `--node` argument",
     )
 
+    parser.add_argument(
+        "--dbc",
+        dest="dbc",
+        type=bool,
+        help="Will run the DBC file generation",
+    )
+
     args = parser.parse_args()
 
     if (args.codegen_dir and not args.node) or (not args.codegen_dir and args.node):
@@ -329,8 +336,10 @@ def main():
         raise Exception("Build failed. See previous errors in output")
 
     lookup = TemplateLookup(directories=[args.data_dir.joinpath("templates")])
-    for bus in can_bus_defs.values():
-        generate_dbcs(lookup, bus, args.output_dir)
+
+    if args.dbc:
+        for bus in can_bus_defs.values():
+            generate_dbcs(lookup, bus, args.output_dir)
 
     if args.node:
         codegen(lookup, zip(args.node, args.codegen_dir))

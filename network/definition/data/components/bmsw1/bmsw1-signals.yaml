@@ -25,7 +25,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: voltage.max
 
   segmentVoltage:
     cycleTimeMs: 10
@@ -37,7 +37,7 @@ signals:
         min: 0
         max: 127
     var: BMS
-    member: voltage.min
+    member: pack_voltage
 
   tempMax:
     cycleTimeMs: 10
@@ -48,8 +48,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.max_temp
 
   chargeLimit:
     cycleTimeMs: 10
@@ -61,7 +61,7 @@ signals:
         min: 0
         max: 32
     var: BMS
-    member: voltage.min
+    member: charge_limit
 
   dischargeLimit:
     cycleTimeMs: 10
@@ -73,35 +73,31 @@ signals:
         min: 0
         max: 255
     var: BMS
-    member: voltage.min
+    member: discharge_limit
 
   errorFlag:
     cycleTimeMs: 10
     description: Error flag
     discreteValues: flag
-    var: BMS
-    member: voltage.min
+    condition: BMS.state == BMS_ERROR
 
   faultFlag:
     cycleTimeMs: 10
     description: Fault flag
     discreteValues: flag
-    var: BMS
-    member: voltage.min
+    condition: BMS.fault
 
   envErrorFlag:
     cycleTimeMs: 10
     description: Environment error flag
     discreteValues: flag
-    var: BMS
-    member: voltage.min
+    condition: ENV.state == ENV_ERROR
 
   envFaultFlag:
     cycleTimeMs: 10
     description: Environment fault flag
     discreteValues: flag
-    var: BMS
-    member: voltage.min
+    condition: ENV.state == ENV_FAULT
 
   criticalDataCounter:
     cycleTimeMs: 10
@@ -109,8 +105,6 @@ signals:
     nativeRepresentation:
       bitWidth: 8
     validationRole: counter
-    var: BMS
-    member: voltage.min
 
   cellTemp10:
     cycleTimeMs: 1000
@@ -121,8 +115,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[10].temp
 
   cellTemp9:
     cycleTimeMs: 1000
@@ -133,8 +127,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[9].temp
 
   cellTemp8:
     cycleTimeMs: 1000
@@ -145,8 +139,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[8].temp
 
   cellTemp7:
     cycleTimeMs: 1000
@@ -157,8 +151,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[7].temp
 
   cellTemp6:
     cycleTimeMs: 1000
@@ -169,8 +163,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[6].temp
 
   cellTemp5:
     cycleTimeMs: 1000
@@ -181,8 +175,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[5].temp
 
   cellTemp4:
     cycleTimeMs: 1000
@@ -193,8 +187,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[4].temp
 
   cellTemp3:
     cycleTimeMs: 1000
@@ -205,8 +199,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[3].temp
 
   cellTemp2:
     cycleTimeMs: 1000
@@ -217,8 +211,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[2].temp
 
   cellTemp19:
     cycleTimeMs: 1000
@@ -229,8 +223,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[19].temp
 
   cellTemp18:
     cycleTimeMs: 1000
@@ -241,8 +235,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[18].temp
 
   cellTemp17:
     cycleTimeMs: 1000
@@ -253,8 +247,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[17].temp
 
   cellTemp16:
     cycleTimeMs: 1000
@@ -265,8 +259,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[16].temp
 
   cellTemp15:
     cycleTimeMs: 1000
@@ -277,8 +271,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[15].temp
 
   cellTemp14:
     cycleTimeMs: 1000
@@ -289,8 +283,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[14].temp
 
   cellTemp13:
     cycleTimeMs: 1000
@@ -301,8 +295,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[13].temp
 
   cellTemp12:
     cycleTimeMs: 1000
@@ -313,8 +307,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[12].temp
 
   cellTemp11:
     cycleTimeMs: 1000
@@ -325,8 +319,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[11].temp
 
   cellVoltage15:
     cycleTimeMs: 1000
@@ -340,7 +334,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[15].voltage
 
   cellVoltage14:
     cycleTimeMs: 1000
@@ -354,7 +348,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[14].voltage
 
   cellVoltage13:
     cycleTimeMs: 1000
@@ -368,7 +362,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[13].voltage
 
   cellVoltage12:
     cycleTimeMs: 1000
@@ -382,7 +376,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[12].voltage
 
   cellVoltage11:
     cycleTimeMs: 1000
@@ -396,7 +390,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[11].voltage
 
   cellVoltage10:
     cycleTimeMs: 1000
@@ -410,7 +404,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[10].voltage
 
   cellVoltage9:
     cycleTimeMs: 1000
@@ -424,7 +418,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[9].voltage
 
   cellVoltage8:
     cycleTimeMs: 1000
@@ -438,7 +432,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[8].voltage
 
   cellVoltage7:
     cycleTimeMs: 1000
@@ -452,7 +446,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[7].voltage
 
   cellVoltage6:
     cycleTimeMs: 1000
@@ -466,7 +460,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[6].voltage
 
   cellVoltage5:
     cycleTimeMs: 1000
@@ -480,7 +474,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[5].voltage
 
   cellVoltage4:
     cycleTimeMs: 1000
@@ -494,7 +488,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[4].voltage
 
   cellVoltage3:
     cycleTimeMs: 1000
@@ -508,7 +502,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[3].voltage
 
   cellVoltage2:
     cycleTimeMs: 1000
@@ -522,7 +516,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[2].voltage
 
   cellVoltage1:
     cycleTimeMs: 1000
@@ -536,7 +530,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[1].voltage
 
   cellVoltage0:
     cycleTimeMs: 1000
@@ -550,7 +544,7 @@ signals:
       resolution: 0.005
     continuous: true
     var: BMS
-    member: voltage.min
+    member: cells[0].voltage
 
   segmentVoltageHighRes:
     cycleTimeMs: 1000
@@ -564,7 +558,7 @@ signals:
       resolution: 0.010
     continuous: true
     var: BMS
-    member: voltage.min
+    member: pack_voltage
 
   boardRelativeHumidity:
     cycleTimeMs: 1000
@@ -576,8 +570,8 @@ signals:
         min: 0
         max: 100
       resolution: 1
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.board.rh
 
   boardAmbientTemp:
     cycleTimeMs: 1000
@@ -588,8 +582,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.board.ambient_temp
 
   mcuTemp:
     cycleTimeMs: 1000
@@ -600,8 +594,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.board.mcu_temp
 
   boardTemp0:
     cycleTimeMs: 1000
@@ -612,8 +606,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.board.brd_temp[0]
 
   boardTemp1:
     cycleTimeMs: 1000
@@ -624,8 +618,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.board.brd_temp[1]
 
   fan1RPM:
     cycleTimeMs: 1000
@@ -635,9 +629,11 @@ signals:
       bitWidth: 7
       range:
         min: 0
-        max: 127
-    var: BMS
-    member: voltage.min
+        max: 10000
+      resolution: 78.74
+    continuous: true
+    var: COOL
+    member: rpm[1]
 
   fan0RPM:
     cycleTimeMs: 1000
@@ -647,13 +643,15 @@ signals:
       bitWidth: 7
       range:
         min: 0
-        max: 127
-    var: BMS
-    member: voltage.min
+        max: 10000
+      resolution: 78.74
+    continuous: true
+    var: COOL
+    member: rpm[0]
 
   coolPct1:
     cycleTimeMs: 1000
-    description: Fan 1 cooling percentage????
+    description: Fan 1 power
     unit: "%"
     nativeRepresentation:
       bitWidth: 7
@@ -661,19 +659,18 @@ signals:
         min: 0
         max: 100
       resolution: 1
-    var: BMS
-    member: voltage.min
+    var: COOL
+    member: percentage[1]
 
   coolState1:
     cycleTimeMs: 1000
     description: Fan 1 cooling state
     discreteValues: outputState
-    var: BMS
-    member: voltage.min
+    condition: (COOL.state[1] == COOL_ON) | (COOL.state[1] == COOL_FULL)
 
   coolPct0:
     cycleTimeMs: 1000
-    description: Fan 0 cooling percentage????
+    description: Fan 0 power
     unit: "%"
     nativeRepresentation:
       bitWidth: 7
@@ -681,15 +678,14 @@ signals:
         min: 0
         max: 100
       resolution: 1
-    var: BMS
-    member: voltage.min
+    var: COOL
+    member: percentage[0]
 
   coolState0:
     cycleTimeMs: 1000
     description: Fan 0 cooling state
     discreteValues: outputState
-    var: BMS
-    member: voltage.min
+    condition: (COOL.state[1] == COOL_ON) | (COOL.state[1] == COOL_FULL)
 
   cellTemp1:
     cycleTimeMs: 1000
@@ -700,8 +696,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[1].temp
 
   cellTemp0:
     cycleTimeMs: 1000
@@ -712,8 +708,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.temps[0].temp
 
   socMax:
     cycleTimeMs: 1000
@@ -725,8 +721,9 @@ signals:
         min: 0
         max: 100
       resolution: 0.1
+    continuous: true
     var: BMS
-    member: voltage.min
+    member: relative_soc.max
 
   socAvg:
     cycleTimeMs: 1000
@@ -738,8 +735,9 @@ signals:
         min: 0
         max: 100
       resolution: 0.1
+    continuous: true
     var: BMS
-    member: voltage.min
+    member: relative_soc.avg
 
   socMin:
     cycleTimeMs: 1000
@@ -751,8 +749,9 @@ signals:
         min: 0
         max: 100
       resolution: 0.1
+    continuous: true
     var: BMS
-    member: voltage.min
+    member: relative_soc.min
 
   tempAvg:
     cycleTimeMs: 1000
@@ -763,8 +762,8 @@ signals:
       range:
         min: 0
         max: 127
-    var: BMS
-    member: voltage.min
+    var: ENV
+    member: values.avg_temp
 
   cellVoltageAvg:
     cycleTimeMs: 1000
@@ -776,6 +775,7 @@ signals:
         min: 0
         max: 5.12
       resolution: 0.005
+    continuous: true
     var: BMS
-    member: voltage.min
+    member: voltage.avg
 

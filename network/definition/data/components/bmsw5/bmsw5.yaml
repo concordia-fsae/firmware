@@ -1,0 +1,3 @@
+description: "BMS Worker 5"
+onBuses:
+  - "veh"
