@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict
+from typing import Dict, Literal, Union
 
 
 class Continuous(Enum):
@@ -93,7 +93,67 @@ class Units(Enum):
     rpm = "RPM"
     pct = "%"
 
+
 class ValidationRole(Enum):
     none = "none"
     counter = "counter"
     checksum = "checksum"
+
+
+class CType(Enum):
+    _bool = "bool"
+    uint8_t = "uint8_t"
+    int8_t = "int8_t"
+    uint16_t = "uint16_t"
+    int16_t = "int16_t"
+    uint32_t = "uint32_t"
+    int32_t = "int32_t"
+    uint64_t = "uint64_t"
+    int64_t = "int64_t"
+    float32_t = "float32_t"
+    float64_t = "float64_t"
+
+    @classmethod
+    def from_val(cls, bit_width: int, signed: bool, flt: bool):
+        if bit_width == 1:
+            return CType._bool
+
+        req_width_bytes = (bit_width + 7) // 8
+        req_width_bytes = 4 if req_width_bytes == 3 else 8 if req_width_bytes > 4 else req_width_bytes
+
+        if req_width_bytes not in _DATA_SIZE_MAPPING[flt][signed]:
+            raise KeyError("Error in calculation of required C type")
+
+        return _DATA_SIZE_MAPPING[flt][signed][req_width_bytes]
+
+
+_DATA_SIZE_MAPPING = {
+    False: {
+        False: {
+            1: CType.uint8_t,
+            2: CType.uint16_t,
+            4: CType.uint32_t,
+            8: CType.uint64_t,
+        },
+        True: {
+            1: CType.int8_t,
+            2: CType.int16_t,
+            4: CType.int32_t,
+            8: CType.int64_t,
+        },
+    },
+    True: {
+        True: {
+            1: CType.float32_t,
+            2: CType.float32_t,
+            4: CType.float32_t,
+            8: CType.float64_t,
+        },
+        False: {
+            1: CType.float32_t,
+            2: CType.float32_t,
+            4: CType.float32_t,
+            8: CType.float64_t,
+        },
+    },
+}

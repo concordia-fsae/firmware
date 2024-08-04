@@ -2,6 +2,7 @@ from argparse import ArgumentParser, Namespace
 from os import makedirs
 from pathlib import Path
 from typing import Dict, Iterator, Tuple
+import pickle
 
 from mako.lookup import TemplateLookup
 from oyaml import safe_load
@@ -111,19 +112,32 @@ def generate_can_nodes(data_dir: Path) -> None:
             node_def = safe_load(fd)
             node_dict.update(node_def)
 
-        # create one object and add it to all buses so that each bus will have the same object
-        # that way if we modify it in one place it will apply to all buses
-        can_node = CanNode(node.name, node_dict)
-        can_node.on_buses = node_def["onBuses"]
-        can_nodes[node.name] = can_node
+        if "duplicateNode" in node_dict:
+            for i in range(0, node_def["duplicateNode"]):
+                # create one object and add it to all buses so that each bus will have the same object
+                # that way if we modify it in one place it will apply to all buses
+                can_node = CanNode(node.name + str(i), node_dict)
+                can_node.on_buses = node_def["onBuses"]
+                can_nodes[node.name + str(i)] = can_node
+        else:
+            # create one object and add it to all buses so that each bus will have the same object
+            # that way if we modify it in one place it will apply to all buses
+            can_node = CanNode(node.name, node_dict)
+            can_node.on_buses = node_def["onBuses"]
+            can_nodes[node.name] = can_node
+
 
 
 def process_node(node: CanNode):
     """Process the signals and messages associated with a given CAN node"""
     global ERROR
 
-    sig_file = SIG_FILE.format(name=node.name)
-    msg_file = MESSAGE_FILE.format(name=node.name)
+    node_name = ""
+    if any(char.isdigit() for char in node.name):
+        node_name = ''.join([i for i in node.name if not i.isdigit()])
+
+    sig_file = SIG_FILE.format(name=node_name)
+    msg_file = MESSAGE_FILE.format(name=node_name)
 
     if sig_file not in node.def_files:
         return
@@ -153,6 +167,12 @@ def process_node(node: CanNode):
 
     for name, definition in messages_dict.items():
         msg_name = f"{node.name.upper()}_{name}"
+
+        node_number = 0
+        if any(char.isdigit() for char in node.name):
+            node_number = int(''.join([i for i in node.name if i.isdigit()]))
+
+        definition["id"] = definition["id"] + node_number;
         msg_obj = CanMessage(node, msg_name, definition)
 
         if msg_obj.signals is None:
@@ -244,9 +264,14 @@ def generate_dbcs(mako_lookup: TemplateLookup, bus: CanBus, output_dir: Path):
 
 def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
     for node, output_dir in nodes:
+        if node not in can_nodes:
+            print(f"Warning: Node not defined for node '{node}'")
+            return
+
         makos = [
             ["MessagePack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessagePack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["SigTx.c.mako", {"nodes": [can_nodes[node]]}]
         ]
         for template in makos:
             rendered = mako_lookup.get_template(template[0]).render(**template[1])
@@ -265,12 +290,14 @@ def parse_args() -> Namespace:
     parser = ArgumentParser()
 
     parser.add_argument(
+        "--data-dir",
         dest="data_dir",
         type=Path,
         help="Path to the network definition directory",
     )
 
     parser.add_argument(
+        "--output-dir",
         dest="output_dir",
         type=Path,
         help="Directory where generated DBC files will be placed",
@@ -294,6 +321,22 @@ def parse_args() -> Namespace:
         help="Directory in which to store generated files for the preceding `--node` argument",
     )
 
+    parser.add_argument(
+        "--build",
+        "-b",
+        dest="build",
+        action="store_true",
+        help="Process YAMCAN files and create network data. Use with a '--cache-dir' argument to cache network for later usage with code generation.",
+    )
+
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        dest="cache_dir",
+        action="store",
+        help="Directory where generated network files will be placed",
+    )
+
     args = parser.parse_args()
 
     if (args.codegen_dir and not args.node) or (not args.codegen_dir and args.node):
@@ -308,12 +351,7 @@ def parse_args() -> Namespace:
     return args
 
 
-def main():
-    """Main function"""
-
-    # parse arguments
-    args = parse_args()
-
+def parseNetwork(args, lookup):
     generate_discrete_values(args.data_dir)
     generate_can_buses(args.data_dir)
     generate_can_nodes(args.data_dir)
@@ -325,12 +363,38 @@ def main():
         for node in [node for node in bus.nodes.values() if not node.processed]:
             process_receivers(bus, node)
 
+    generate_dbcs(lookup, bus, args.output_dir)
+
+
+def main():
+    """Main function"""
+    global ERROR
+    global can_nodes
+    global can_bus_defs
+
+    # parse arguments
+    args = parse_args()
+    lookup = TemplateLookup(directories=[args.data_dir.joinpath("templates")])
+
+    if args.build:
+        print(f"Parsing network...")
+        parseNetwork(args, lookup)
+
+        for bus in can_bus_defs.values():
+            generate_dbcs(lookup, bus, args.output_dir)
+        if args.cache_dir:
+            pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
+            pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))
+    elif args.cache_dir:
+        try:
+            can_nodes = pickle.load(open(args.cache_dir.joinpath("CachedNodes.pickle"), "rb"))
+            can_bus_defs = pickle.load(open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "rb"))
+        except Exception as e:
+            print(f"Could not retreive cache files. Try building the network again...")
+            ERROR = True
+
     if ERROR:
         raise Exception("Build failed. See previous errors in output")
-
-    lookup = TemplateLookup(directories=[args.data_dir.joinpath("templates")])
-    for bus in can_bus_defs.values():
-        generate_dbcs(lookup, bus, args.output_dir)
 
     if args.node:
         codegen(lookup, zip(args.node, args.codegen_dir))

@@ -288,9 +288,7 @@ for config_id, config in configs.items():
     generated_dir = variant_dir.Dir("generated")
     makedirs(generated_dir.abspath, exist_ok=True)
 
-    network_env.BuildNetwork(
-        {f"bmsw{config['options']['canIdOffset']}": generated_dir}
-    )
+    network_env.GenerateNodes({ f"bmsw{config['options']['canIdOffset']}": generated_dir, })
 
     renderers = [
         File("renderers/BuildDefines_generated.h.mako"),
@@ -372,22 +370,20 @@ Default(binaries_crced)
 
 # Return artifacts to the caller
 artifacts = {}
-if len(binaries) == 1:
-    artifacts["FLASHABLE_ARTIFACT"] = {
-        "artifact": binaries_crced[0],
-        "addr": APP_START_ADDR,
-        "tools": ["st-flash"],
-    }
+artifacts["FLASHABLE_ARTIFACT"] = {
+        "artifact": binaries_crced,
+    "addr": APP_START_ADDR,
+    "tools": ["st-flash"],
+}
 
-if len(elfs) == 1:
-    artifacts["DEBUG_ARTIFACT"] = {
-        "artifact": elfs[0],
-        "args": [],
-        "tools": ["gcc-arm-none-eabi", "openocd"],
-        "env": {
-            "OPENOCD_INTERFACE": "stlink",
-            "OPENOCD_MCU": "stm32f103c8",
-        },
-    }
+artifacts["DEBUG_ARTIFACT"] = {
+    "artifact": elfs,
+    "args": [],
+    "tools": ["gcc-arm-none-eabi", "openocd"],
+    "env": {
+        "OPENOCD_INTERFACE": "stlink",
+        "OPENOCD_MCU": "stm32f103c8",
+    },
+}
 
 Return("artifacts")
