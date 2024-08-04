@@ -1,3 +1,0 @@
-description: "Motec node, data sent by Motec that isn't engine related"
-onBuses:
-  - "veh"
