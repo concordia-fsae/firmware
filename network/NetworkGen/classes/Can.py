@@ -72,7 +72,7 @@ class NativeRepresentation:
         self.endianness = get_if_exists(
             signal_def, "endianness", Endianess, Endianess.little
         )
-        self.resolution = get_if_exists(signal_def, "resolution", float, None)
+        self.resolution = get_if_exists(signal_def, "resolution", float, 1)
 
 
 class SnaParams:
@@ -139,7 +139,13 @@ class CanSignal(CanObject):
 
         self.validation_role = get_if_exists(
             signal_def, "validationRole", ValidationRole, ValidationRole.none
-        )
+            )
+        self.var = get_if_exists(
+                signal_def, "var", str, ""
+                )
+        self.member = get_if_exists(
+                signal_def, "member", str, ""
+                )
 
         # these will be set when building the message
         self.message_ref = None
@@ -167,6 +173,8 @@ class CanSignal(CanObject):
             f"scale: {self.scale}, "
             f"startBit: {self.start_bit}, "
             f"unit: {self.unit.value}"
+            f"var: {self.var}"
+            f"member: {self.member}"
         )
 
     def _check_valid(self):
@@ -174,6 +182,13 @@ class CanSignal(CanObject):
         nat_rep = self.native_representation
         dv = self.discrete_values
         name = self.name
+        role = self.validation_role
+
+        if role is not ValidationRole.counter and (self.var == "" or self.member == ""):
+            print(
+                f"Signal {name} must either be a counter or have a variable and member specified"
+            )
+            valid = False
 
         if not nat_rep and not dv:
             print(

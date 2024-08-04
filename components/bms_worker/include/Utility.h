@@ -104,6 +104,14 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
  } while (zero())
 
 
+#define MASK_U1 0b1
+#define MASK_U5 0b11111
+#define MASK_U7 0b1111111
+#define MASK_U8 0b11111111
+#define MASK_U10 0b1111111111
+#define MASK_U13 0b1111111111111
+
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/

@@ -12,12 +12,25 @@
 #include "CAN/CanTypes.h"
 
 #include "MessagePack_generated.h"
-
+#include "NetworkGen_config.h"
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
-\
+
+ \
+%for node in nodes:
+  %for bus in node.on_buses:
+    %for cycle_time, msgs in node.messages_by_cycle_time().items():
+      %for msg in msgs:
+        %for signal in msg.get_non_val_sigs():
+<%make_setfn(bus, signal)%>\
+        %endfor
+      %endfor
+    %endfor
+  %endfor
+%endfor
+ \
 %for node in nodes:
   %for bus in node.on_buses:
     %for cycle_time, msgs in node.messages_by_cycle_time().items():
@@ -30,3 +43,5 @@
     %endfor
   %endfor
 %endfor
+
+

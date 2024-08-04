@@ -17,16 +17,9 @@
 #include "Module.h"
 #include "ModuleDesc.h"
 
-#include "string.h"
-
-#include "BMS_msgTx.h"
-
 // imports for data access
 #include "BuildDefines_generated.h"
-#include "BatteryMonitoring.h"
-#include "Cooling.h"
-#include "Environment.h"
-#include "IO.h"
+#include "MessagePack_generated.c"
 
 
 /******************************************************************************
@@ -44,84 +37,7 @@ typedef struct
  *                              D E F I N E S
  ******************************************************************************/
 
-#define VEH_packTable_10ms_SIZE    (sizeof(VEH_packTable_10ms) / sizeof(packTable_S))
-#define VEH_packTable_1s_SIZE      (sizeof(VEH_packTable_1s) / sizeof(packTable_S))
-
 #define MSG_UID_SEGMENT(id) (id + CAN_BASE_OFFSET)
-
-#define set_raw(msg, bus, node, signal, val)                 SNAKE4(setRaw, bus, node, signal)(msg, val)
-#define set_value(msg, bus, node, signal, val)               SNAKE4(set, bus, node, signal)(msg, val)
-#define set_scale(msg, bus, node, signal, val, base, off)    SNAKE4(set, bus, node, sig)(msg, val, base, off)
-#define unsent_signal(m)                                     UNUSED(m)
-
-
-// Temporary stubbing
-
-#define set_envFaultFlag(m,b,n,s)                unsent_signal(m)
-#define set_envErrorFlag(m, b, n, s)             unsent_signal(m)
-#define set_faultFlag(m, b, n, s)                unsent_signal(m)
-#define set_errorFlag(m, b, n, s)                unsent_signal(m)
-#define set_dischargeLimit(m, b, n, s)           unsent_signal(m)
-#define set_chargeLimit(m, b, n, s)              unsent_signal(m)
-#define set_tempMax(m, b, n, s)                  unsent_signal(m)
-#define set_segmentVoltage(m, b, n, s)           unsent_signal(m)
-#define set_voltageMax(m, b, n, s)               unsent_signal(m)
-#define set_voltageMin(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp1(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp0(m, b, n, s)                unsent_signal(m)
-#define set_socMax(m, b, n, s)                   unsent_signal(m)
-#define set_socAvg(m, b, n, s)                   unsent_signal(m)
-#define set_socMin(m, b, n, s)                   unsent_signal(m)
-#define set_tempAvg(m, b, n, s)                  unsent_signal(m)
-#define set_cellVoltageAvg(m, b, n, s)           unsent_signal(m)
-#define set_cellTemp10(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp9(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp8(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp7(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp6(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp5(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp4(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp3(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp2(m, b, n, s)                unsent_signal(m)
-#define set_cellTemp19(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp18(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp17(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp16(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp15(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp14(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp13(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp12(m, b, n, s)               unsent_signal(m)
-#define set_cellTemp11(m, b, n, s)               unsent_signal(m)
-#define set_cellVoltage5(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage4(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage3(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage2(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage1(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage0(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage11(m, b, n, s)            unsent_signal(m)
-#define set_cellVoltage10(m, b, n, s)            unsent_signal(m)
-#define set_cellVoltage9(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage8(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage7(m, b, n, s)             unsent_signal(m)
-#define set_cellVoltage6(m, b, n, s)             unsent_signal(m)
-#define set_segmentVoltageHighRes(m, b, n, s)    unsent_signal(m)
-#define set_cellVoltage15(m, b, n, s)            unsent_signal(m)
-#define set_cellVoltage14(m, b, n, s)            unsent_signal(m)
-#define set_cellVoltage13(m, b, n, s)            unsent_signal(m)
-#define set_cellVoltage12(m, b, n, s)            unsent_signal(m)
-#define set_boardRelativeHumidity(m, b, n, s)    unsent_signal(m)
-#define set_boardAmbientTemp(m, b, n, s)         unsent_signal(m)
-#define set_mcuTemp(m, b, n, s)                  unsent_signal(m)
-#define set_boardTemp0(m, b, n, s)               unsent_signal(m)
-#define set_boardTemp1(m, b, n, s)               unsent_signal(m)
-#define set_fan1RPM(m, b, n, s)                  unsent_signal(m)
-#define set_fan0RPM(m, b, n, s)                  unsent_signal(m)
-#define set_coolPct1(m, b, n, s)                 unsent_signal(m)
-#define set_coolState1(m, b, n, s)               unsent_signal(m)
-#define set_coolPct0(m, b, n, s)                 unsent_signal(m)
-#define set_coolState0(m,b,n,s)                  unsent_signal(m)
-
-#include "MessagePack_generated.c"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -141,32 +57,6 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           CAN_data_T       * message,
                                           uint8_t          * nextCounter);
 
-static bool pack_VEH_BMS_criticalData_10ms(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_averagesSOCcellTemps_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_cellTemp2To10_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_cellTemp11To19_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_cellVoltage0To5_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_cellVoltage6To11_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_cellVoltage12To15_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_tempHumidity_1s(CAN_data_T* message, const uint8_t counter);
-static bool pack_VEH_BMS_fans_1s(CAN_data_T* message, const uint8_t counter);
-
-static const packTable_S VEH_packTable_10ms[] = {
-    { &pack_VEH_BMS_criticalData_10ms, 0x100, 8U },
-};
-
-static const packTable_S VEH_packTable_1s[]   = {
-    { &pack_VEH_BMS_averagesSOCcellTemps_1s, 0x700, 8U },
-    { &pack_VEH_BMS_cellTemp2To10_1s,        0x710, 8U },
-    { &pack_VEH_BMS_cellTemp11To19_1s,       0x720, 8U },
-    { &pack_VEH_BMS_cellVoltage0To5_1s,      0x730, 8U },
-    { &pack_VEH_BMS_cellVoltage6To11_1s,     0x740, 8U },
-    { &pack_VEH_BMS_cellVoltage12To15_1s,    0x750, 7U },
-    { &pack_VEH_BMS_tempHumidity_1s,         0x760, 5U },
-    { &pack_VEH_BMS_fans_1s,                 0x770, 6U },
-};
-
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -181,11 +71,11 @@ void CANTX_BUS_A_SWI(void)
     static uint8_t   counter_1Hz = 0U;
     CAN_data_T       message = { 0U };
 
-    if (cantx.tx_10Hz_msg != VEH_packTable_10ms_SIZE)
+    if (cantx.tx_10Hz_msg != VEH_packTable_10_length)
     {
 
         const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&VEH_packTable_10ms,
-                                                         VEH_packTable_10ms_SIZE,
+                                                         VEH_packTable_10_length,
                                                          &cantx.tx_10Hz_msg,
                                                          &message,
                                                          &counter_100Hz);
@@ -198,18 +88,13 @@ void CANTX_BUS_A_SWI(void)
             }
             memset(&message, 0, sizeof(message));
         }
-
-        if (cantx.tx_10Hz_msg != VEH_packTable_10ms_SIZE)
-        {
-            cantx.tx_10Hz_msg++;
-        }
     }
 
-    if (cantx.tx_1Hz_msg != VEH_packTable_1s_SIZE)
+    if (cantx.tx_1Hz_msg != VEH_packTable_1000_length)
     {
 
-        const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&VEH_packTable_1s,
-                                                       VEH_packTable_1s_SIZE,
+        const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&VEH_packTable_1000ms,
+                                                       VEH_packTable_1000_length,
                                                        &cantx.tx_1Hz_msg,
                                                        &message,
                                                        &counter_1Hz);
@@ -223,11 +108,6 @@ void CANTX_BUS_A_SWI(void)
             memset(&message, 0, sizeof(message));
         }
     }
-    else
-    {
-        cantx.tx_1Hz_msg++;
-    }
-
 }
 
 
@@ -265,124 +145,6 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
     return NULL;
 }
 
-static bool pack_VEH_BMS_criticalData_10ms(CAN_data_T* message, const uint8_t counter)
-{
-    set_BMSVoltageMin(message, BMS.voltage.min * 200);
-    set_BMSVoltageMax(message, BMS.voltage.max * 200);
-    set_ENVPackVoltage(message, BMS.pack_voltage);
-    set_ENVTempMax(message, ENV.values.max_temp);
-    set_BMSChargeLimit(message, BMS.charge_limit);
-    set_BMSDischargeLimit(message, BMS.discharge_limit);
-    set_BMSErrorFlag(message, BMS.state == BMS_ERROR);
-    set_BMSFaultFlag(message, BMS.fault);
-    set_ENVErrorFlag(message, ENV.state == ENV_ERROR);
-    set_ENVFaultFlag(message, ENV.state == ENV_FAULT);
-    set_Counter(message, counter);
-    return true;
-}
-
-static bool pack_VEH_BMS_averagesSOCcellTemps_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_BMSVoltageAvg(message, BMS.voltage.avg);
-    set_ENVAvgTemp(message, ENV.values.avg_temp);
-    set_BMSSOCMin(message, BMS.relative_soc.min);
-    set_BMSSOCAAvg(message, BMS.relative_soc.avg);
-    set_BMSSOCMax(message, BMS.relative_soc.max);
-    set_CellTemp0(message, ENV.values.temps[0].temp);
-    set_CellTemp1(message, ENV.values.temps[1].temp);
-    return true;
-}
-
-static bool pack_VEH_BMS_cellTemp2To10_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_CellTemp2(message, ENV.values.temps[2].temp);
-    set_CellTemp3(message, ENV.values.temps[3].temp);
-    set_CellTemp4(message, ENV.values.temps[4].temp);
-    set_CellTemp5(message, ENV.values.temps[5].temp);
-    set_CellTemp6(message, ENV.values.temps[6].temp);
-    set_CellTemp7(message, ENV.values.temps[7].temp);
-    set_CellTemp8(message, ENV.values.temps[8].temp);
-    set_CellTemp9(message, ENV.values.temps[9].temp);
-    set_CellTemp10(message, ENV.values.temps[10].temp);
-    return true;
-}
-
-
-static bool pack_VEH_BMS_cellTemp11To19_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_CellTemp11(message, ENV.values.temps[11].temp);
-    set_CellTemp12(message, ENV.values.temps[12].temp);
-    set_CellTemp13(message, ENV.values.temps[13].temp);
-    set_CellTemp14(message, ENV.values.temps[14].temp);
-    set_CellTemp15(message, ENV.values.temps[15].temp);
-    set_CellTemp16(message, ENV.values.temps[16].temp);
-    set_CellTemp17(message, ENV.values.temps[17].temp);
-    set_CellTemp18(message, ENV.values.temps[18].temp);
-    set_CellTemp19(message, ENV.values.temps[19].temp);
-    return true;
-}
-
-static bool pack_VEH_BMS_cellVoltage0To5_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_CellVoltage0(message, BMS.cells[0].voltage);
-    set_CellVoltage1(message, BMS.cells[1].voltage);
-    set_CellVoltage2(message, BMS.cells[2].voltage);
-    set_CellVoltage3(message, BMS.cells[3].voltage);
-    set_CellVoltage4(message, BMS.cells[4].voltage);
-    set_CellVoltage5(message, BMS.cells[5].voltage);
-    return true;
-}
-
-static bool pack_VEH_BMS_cellVoltage6To11_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_CellVoltage6(message, BMS.cells[6].voltage);
-    set_CellVoltage7(message, BMS.cells[7].voltage);
-    set_CellVoltage8(message, BMS.cells[8].voltage);
-    set_CellVoltage9(message, BMS.cells[9].voltage);
-    set_CellVoltage10(message, BMS.cells[10].voltage);
-    set_CellVoltage11(message, BMS.cells[11].voltage);
-    return true;
-}
-
-static bool pack_VEH_BMS_cellVoltage12To15_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_CellVoltage12(message, BMS.cells[12].voltage);
-    set_CellVoltage13(message, BMS.cells[13].voltage);
-    set_CellVoltage14(message, BMS.cells[14].voltage);
-    set_CellVoltage15(message, BMS.cells[15].voltage);
-    set_PackVoltage(message, BMS.pack_voltage);
-    return true;
-}
-
-static bool pack_VEH_BMS_tempHumidity_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_BoardTemp0(message, ENV.values.board.brd_temp[0]);
-    set_BoardTemp1(message, ENV.values.board.brd_temp[1]);
-    set_MCUTemp(message, ENV.values.board.mcu_temp);
-    set_BoardAmbientTemp(message, ENV.values.board.ambient_temp);
-    set_BoardRelativeHumidity(message, ENV.values.board.rh);
-    return true;
-}
-
-static bool pack_VEH_BMS_fans_1s(CAN_data_T* message, const uint8_t counter)
-{
-    UNUSED(counter);
-    set_CoolState0(message, COOL.state[0] == COOL_OFF);
-    set_CoolPercentage0(message, COOL.percentage[0]);
-    set_CoolState1(message, COOL.state[1] == COOL_OFF);
-    set_CoolPercentage1(message, COOL.percentage[1]);
-    set_FanRPM0(message, COOL.rpm[0]);
-    set_FanRPM1(message, COOL.rpm[1]);
-    return true;
-}
-
 static void CANIO_tx_1kHz_PRD(void)
 {
     //SWI_invoke(CANTX_BUS_A_swi);
@@ -395,7 +157,7 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_10Hz_PRD(void)
 {
-    if (cantx.tx_10Hz_msg < VEH_packTable_10ms_SIZE)
+    if (cantx.tx_10Hz_msg < VEH_packTable_10_length)
     {
         // all the message weren't sent. TO-DO: error handling
     }
@@ -408,7 +170,7 @@ static void CANIO_tx_10Hz_PRD(void)
  */
 static void CANIO_tx_1Hz_PRD(void)
 {
-    if (cantx.tx_1Hz_msg < VEH_packTable_1s_SIZE)
+    if (cantx.tx_1Hz_msg < VEH_packTable_1000_length)
     {
         // all the message weren't sent. TO-DO: error handling
     }
@@ -422,8 +184,8 @@ static void CANIO_tx_1Hz_PRD(void)
 static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
-    cantx.tx_1Hz_msg   = VEH_packTable_1s_SIZE;
-    cantx.tx_10Hz_msg = VEH_packTable_10ms_SIZE;
+    cantx.tx_1Hz_msg   = VEH_packTable_1000_length;
+    cantx.tx_10Hz_msg = VEH_packTable_10_length;
     HW_CAN_start();    // start CAN
 }
 
