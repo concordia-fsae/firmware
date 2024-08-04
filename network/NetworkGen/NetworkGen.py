@@ -329,7 +329,7 @@ def main():
         process_node(node)
 
     for bus in can_bus_defs.values():
-        for node in [node for node in bus.nodes.values() if not node.processed]:
+        for node in [node for node in bus.nodes.values() if (not node.processed and node.name in args.node)]:
             process_receivers(bus, node)
 
     if ERROR:
