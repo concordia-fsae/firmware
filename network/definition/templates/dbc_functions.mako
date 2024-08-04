@@ -11,7 +11,7 @@ BO_ ${message.id} ${message.name}: ${message.length_bytes} ${message.node_name}\
  SG_ ${signal.name} : \
 ${signal.start_bit}|${signal.native_representation.bit_width}@${signal.native_representation.endianness.value}${signal.native_representation.signedness.value} \
 (${signal.scale},${signal.offset}) [${signal.native_representation.range.min}|${signal.native_representation.range.max}] \
-"${signal.unit.value}" ${",".join([sig.name.upper() for sig in signal.receivers]) if signal.receivers else "Vector__XXX"}\
+"${signal.unit.value}" ${",".join([sig.alias.upper() for sig in signal.receivers]) if signal.receivers else "Vector__XXX"}\
 </%def>
 
 <%def name="make_comment(name, item, item_text)">

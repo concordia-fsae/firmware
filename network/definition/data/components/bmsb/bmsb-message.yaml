@@ -1,0 +1,20 @@
+messages:
+  criticalData:
+    description: BMS Boss Critical Data
+    id: 0x99
+    lengthBytes: 8
+    signals:
+      criticalDataCounter:
+      packChargeLimit:
+      packDischargeLimit:
+      packVoltage:
+
+  brusaChargeCommand:
+    description: Brusa Charge Command
+    id: 0x618
+    lengthBytes: 7
+    signals:
+      nlg513ControlByte:
+      nlg513MaxMainsCurrent:
+      nlg513MaxChargeVoltage:
+      nlg513MaxChargeCurrent:

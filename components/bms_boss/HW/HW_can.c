@@ -20,6 +20,8 @@
 #include "BMS.h"
 #include "Sys.h"
 
+#include "MessageUnpack_generated.h"
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -105,29 +107,46 @@ void HW_CAN_init(void)
         Error_Handler();
     }
 
+    for (uint32_t i = 0; i < CANRX_VEH_unpackList_length; )
+    {
+        CAN_FilterTypeDef filt = { 0U };
+        filt.FilterBank           = i / 4;
+        filt.FilterMode           = CAN_FILTERMODE_IDLIST;
+        filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+        // All filters are shifted left 5 bits
+        filt.FilterIdHigh = CANRX_VEH_unpackList[i + 0];
+        if ((i + 1) < CANRX_VEH_unpackList_length) { filt.FilterIdLow = CANRX_VEH_unpackList[i + 1]; }
+        if ((i + 2) < CANRX_VEH_unpackList_length) { filt.FilterMaskIdHigh = CANRX_VEH_unpackList[i + 2]; }
+        if ((i + 3) < CANRX_VEH_unpackList_length) { filt.FilterMaskIdLow = CANRX_VEH_unpackList[i + 3]; }
+        filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
+        filt.FilterActivation     = ENABLE;
+        HAL_CAN_ConfigFilter(&hcan, &filt);
 
-    CAN_FilterTypeDef filt    = { 0U };
-    filt.FilterBank           = 0;
-    filt.FilterMode           = CAN_FILTERMODE_IDMASK;
-    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
-    filt.FilterIdHigh         = (uint16_t)0x100;
-    filt.FilterMaskIdHigh     = (uint16_t)0x7f8;
-    filt.FilterIdLow          = (uint16_t)MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID;
-    filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
-    filt.FilterFIFOAssignment = 0;
-    filt.FilterActivation     = CAN_FILTER_ENABLE;
-    HAL_CAN_ConfigFilter(&hcan, &filt);
+        i += 4;
+    }
 
-    filt.FilterBank           = 0;
-    filt.FilterMode           = CAN_FILTERMODE_IDMASK;
-    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
-    filt.FilterIdHigh         = CHARGER_MESSAGE_ID;
-    filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
-    filt.FilterIdLow          = (uint16_t)0x00;
-    filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
-    filt.FilterFIFOAssignment = 0;
-    filt.FilterActivation     = CAN_FILTER_ENABLE;
-    HAL_CAN_ConfigFilter(&hcan, &filt);
+    //CAN_FilterTypeDef filt    = { 0U };
+    //filt.FilterBank           = 0;
+    //filt.FilterMode           = CAN_FILTERMODE_IDMASK;
+    //filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+    //filt.FilterIdHigh         = (uint16_t)0x100;
+    //filt.FilterMaskIdHigh     = (uint16_t)0x7f8;
+    //filt.FilterIdLow          = (uint16_t)MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID;
+    //filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
+    //filt.FilterFIFOAssignment = 0;
+    //filt.FilterActivation     = CAN_FILTER_ENABLE;
+    //HAL_CAN_ConfigFilter(&hcan, &filt);
+
+    //filt.FilterBank           = 0;
+    //filt.FilterMode           = CAN_FILTERMODE_IDMASK;
+    //filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+    //filt.FilterIdHigh         = CHARGER_MESSAGE_ID;
+    //filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
+    //filt.FilterIdLow          = (uint16_t)0x00;
+    //filt.FilterMaskIdHigh     = (uint16_t)0x7ff;
+    //filt.FilterFIFOAssignment = 0;
+    //filt.FilterActivation     = CAN_FILTER_ENABLE;
+    //HAL_CAN_ConfigFilter(&hcan, &filt);
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 }
@@ -432,38 +451,38 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
  */
 static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
-    data_S              data = { 0x00 };
+    CAN_data_T              data = { 0x00 };
     CAN_RxHeaderTypeDef header;
 
     if (canHandle == &hcan)
     {
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
-
-        if (header.StdId == MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID)
-        {
-            SYS_SFT_setTSVoltage((float32_t)(((int16_t)data.u8[MC_DC_BUS_VOLTAGE_MSB] << 8) | (int16_t)data.u8[MC_DC_BUS_VOLTAGE_LSB]) / 10);
-        }
-        else if (header.StdId >= 0x100 && header.StdId <= 0x107)
-        {
-            BMSW_S tmp          = { 0x00 };
-            tmp.fault           = data.u8[1] != 0x00;
-            tmp.last_message    = HW_getTick();
-            tmp.segment_voltage = (data.u64 >> 36) & 0x7f;
-            tmp.charge_limit    = (data.u64 >> 24) & 0x1f;
-            tmp.discharge_limit = (data.u64 >> 16) & 0xff;
-            tmp.voltages.max    = (float32_t)((data.u64 >> 43) & 0x3ff);
-	    tmp.voltages.max /= 200;
-            tmp.voltages.min    = (float32_t)((data.u64 >> 53) & 0x3ff);
-	    tmp.voltages.min /= 200;
-            tmp.max_temp        = (data.u64 >> 29) & 0x7f;
-
-
-            BMS_setSegmentStats(header.StdId & 0x07, &tmp);
-        }
-	else if (header.StdId == CHARGER_MESSAGE_ID)
-        {
-            SYS_SFT_setChargerVoltage((float32_t)(((int16_t)data.u8[CHARGER_DC_BUS_VOLTAGE_MSB] << 8) | (int16_t)data.u8[CHARGER_DC_BUS_VOLTAGE_LSB]) / 10);
-        }
+        CANRX_VEH_unpackMessage(header.StdId, &data);
+//        if (header.StdId == MOTOR_CONTROLLER_HIGHSPEED_MESSAGE_ID)
+//        {
+//            SYS_SFT_setTSVoltage((float32_t)(((int16_t)data.u8[MC_DC_BUS_VOLTAGE_MSB] << 8) | (int16_t)data.u8[MC_DC_BUS_VOLTAGE_LSB]) / 10);
+//        }
+//        else if (header.StdId >= 0x100 && header.StdId <= 0x107)
+//        {
+//            BMSW_S tmp          = { 0x00 };
+//            tmp.fault           = data.u8[1] != 0x00;
+//            tmp.last_message    = HW_getTick();
+//            tmp.segment_voltage = (data.u64 >> 36) & 0x7f;
+//            tmp.charge_limit    = (data.u64 >> 24) & 0x1f;
+//            tmp.discharge_limit = (data.u64 >> 16) & 0xff;
+//            tmp.voltages.max    = (float32_t)((data.u64 >> 43) & 0x3ff);
+//	    tmp.voltages.max /= 200;
+//            tmp.voltages.min    = (float32_t)((data.u64 >> 53) & 0x3ff);
+//	    tmp.voltages.min /= 200;
+//            tmp.max_temp        = (data.u64 >> 29) & 0x7f;
+//
+//
+//            BMS_setSegmentStats(header.StdId & 0x07, &tmp);
+//        }
+//	else if (header.StdId == CHARGER_MESSAGE_ID)
+//        {
+//            SYS_SFT_setChargerVoltage((float32_t)(((int16_t)data.u8[CHARGER_DC_BUS_VOLTAGE_MSB] << 8) | (int16_t)data.u8[CHARGER_DC_BUS_VOLTAGE_LSB]) / 10);
+//        }
     }
 }
 

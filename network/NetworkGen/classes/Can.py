@@ -144,16 +144,18 @@ class CanSignal(CanObject):
         # these will be set when building the message
         self.message_ref = None
         self.start_bit = 0
+        self.receivers = []
+
         self.offset = 0
         self.scale = 1
-        self.receivers = []
+        self.datatype: Optional[CType] = None
 
         # check validity
         self.is_valid = False
         self._check_valid()
 
         if self.is_valid:
-            self.calc_length_bits()
+            self.calc_signal_params()
 
         self._check_val_roles()
 
@@ -162,7 +164,7 @@ class CanSignal(CanObject):
             f"\nCAN Signal: {self.name}, "
             f"Description: {self.description}, "
             f"cycleTimeMs: {self.cycle_time_ms}, "
-            f"bitWidth: {self.native_representation.bit_width}, "
+            f"bitWidth: {self.native_representation.bit_width or 'TBD'}, "
             f"offset: {self.offset}, "
             f"scale: {self.scale}, "
             f"startBit: {self.start_bit}, "
@@ -239,8 +241,12 @@ class CanSignal(CanObject):
                 )
                 self.is_valid = False
 
-    def calc_length_bits(self):
-        """calculate the bit length of the signal from the native representation"""
+    def calc_signal_params(self):
+        """
+        calculate parameters of the signal (bit_width, scale, offset, etc.)
+
+        marks the signal as invalid on errors, and returns early
+        """
         if self.native_representation and self.discrete_values:
             print(
                 f"Signal '{self.name}' has both discreteValues and nativeRepresentation defined, when only one of the two should be used at a time."
@@ -259,10 +265,8 @@ class CanSignal(CanObject):
                     f"Signal '{self.name}' uses discrete value table '{dv}' which has an invalid range"
                 )
                 self.is_valid = False
-            return
-
         # handle case where nativeRepresentation is provided
-        if nat_rep := self.native_representation:
+        elif nat_rep := self.native_representation:
             if nat_rep.range:
                 if not nat_rep.range.is_valid:
                     print(f"Signal '{self.name}' has an invalid range")
@@ -296,6 +300,16 @@ class CanSignal(CanObject):
             nat_rep.bit_width = 1
             nat_rep.resolution = 1
             nat_rep.range = Range({"min": 0, "max": 1})
+
+        assert (
+            self.native_representation
+        ), "native_representation was not defined somehow"
+        assert self.native_representation.bit_width, "bit_width was not defined somehow"
+        self.datatype = CType.from_val(
+            self.native_representation.bit_width,
+            self.native_representation.signedness == Signedness.signed,
+            self.continuous == Continuous.continuous,
+        )
 
     def get_name_nodeless(self):
         return "_".join(self.name.split("_")[1:])
@@ -337,7 +351,7 @@ class CanMessage(CanObject):
         self.is_valid = False
 
     def __repr__(self):
-        return f"id: {self.id}, Signals: {list(self.signal_objs.values())}"
+        return f"id: {self.id}, Counter: {self.counter_sig}, Checksum: {self.checksum_sig}, Signals: {list(self.signal_objs.values())}"
 
     def add_signal(self, msg_signal: dict, signal_obj: CanSignal):
         """Add the given signal to this message"""
@@ -446,6 +460,16 @@ class CanNode(CanObject):
 
     def __init__(self, name, node_def):
         self.name: str = name
+        self.offset: int = 0
+        self.duplicateNode: bool = False
+        self.alias = name
+
+        if '_' in name:
+            self.name = name.split('_')[0]
+            self.offset = int(name.split('_')[1])
+            self.duplicateNode = True
+            self.alias = self.name + str(self.offset)
+
         self.def_files = node_def["def_files"]
         self.description: str = get_if_exists(node_def, "description", str, "")
         self.messages: Dict[str, CanMessage] = {}
@@ -460,7 +484,8 @@ class CanNode(CanObject):
     def __repr__(self):
         return f"CAN Node Definition:\n\
                 Name: {self.name}\n\
-                Messages: {self.messages}\n"
+                Messages: {self.messages}\n\
+                RxMessages: {self.received_msgs}\n"
 
     def add_message(self, message: CanMessage):
         """Add a message to this node"""
@@ -509,6 +534,7 @@ class CanBus(CanObject):
         return f"CAN Bus Definition:\n\
                 Name: {self.name}\n\
                 Description: {self.description}\n\
+                Signals: {self.signals}\n\
                 Nodes: {self.nodes}\n"
 
     def _check_valid(self):
@@ -530,6 +556,9 @@ class CanBus(CanObject):
             )
             return
 
-        self.nodes[node.name] = node
+        if node.duplicateNode:
+            self.nodes[node.name + "_" + str(node.offset)] = node
+        else:
+            self.nodes[node.name] = node
         self.messages.update(node.messages)
         self.signals.update(node.signals)

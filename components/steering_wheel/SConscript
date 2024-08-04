@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple, Union
 from SCons.Node import FS
 from SCons.Script import Default, Depends, Dir, GetOption, Import, Return
 
-Import("GlobalEnv")
+Import("PLATFORM_ENV", "NETWORK_ENV")
 
 SRC_DIR = Dir("src")
 INC_DIR = Dir("include")
@@ -18,15 +18,16 @@ CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
 
-BUILD_DIR = Dir("build")
+ARTIFACT_NAME = "steering_wheel"
+BUILD_DIR = PLATFORM_ENV["PLATFORM_ARTIFACTS"].Dir(f"{ARTIFACT_NAME.upper()}")
 
 APP_START_ADDR = 0x08002000
 
-env = GlobalEnv.Clone(
+env = PLATFORM_ENV.Clone(
     tools=["gcc-arm-none-eabi", "chip_config", "st-flash", "openocd", "compilation_db"],
     BUILD_DIR=BUILD_DIR,
 )
-rtos_env = GlobalEnv.Clone(tools=["gcc-arm-none-eabi"])
+rtos_env = PLATFORM_ENV.Clone(tools=["gcc-arm-none-eabi"])
 
 env["OPENOCD_INTERFACE"] = "stlink"
 env["OPENOCD_MCU"] = "stm32f103c8"
@@ -255,6 +256,8 @@ def compile_objects(
         objs.append(env.Object(target=target, source=src_file, CCFLAGS=these_flags))
     return objs
 
+generated_dir = BUILD_DIR.Dir("generated")
+NETWORK_ENV.GenerateNodes({ f"stw": generated_dir, })
 
 ## actually compile stuff
 
@@ -284,7 +287,7 @@ asms = env.Asm(source=objs + [elf])
 env.Alias("asms", asms)
 
 # env for generarting the CRC
-crc_env = GlobalEnv.Clone(tools=["hextools"])
+crc_env = PLATFORM_ENV.Clone(tools=["hextools"])
 
 # generate the CRCd binary
 binary_crced = crc_env.InjectMpeg2CRC(source=binary, start_addr=APP_START_ADDR)
