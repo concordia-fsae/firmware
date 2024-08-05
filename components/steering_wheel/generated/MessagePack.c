@@ -18,12 +18,6 @@
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-/**
- * testMessage_pack10ms
- * @param message message reference
- * @param counter counter value
- * @return success
- */
 static bool pack_VEH_STW_switchStatus_10ms(CAN_data_T *message, const int counter)
 {
     set_switch0Status(message, VEH, STW, switch0Status);

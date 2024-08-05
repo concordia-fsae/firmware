@@ -3,6 +3,7 @@ messages:
     description: "Status of the Steering Wheel switches"
     id: 0x600
     lengthBytes: 1
+    sourceBuses: veh
     signals:
       switch0Status:
         startBit: 0

@@ -1,5 +1,5 @@
 /*
- * MessagePack.h
+ * MessagePack_generated.h
  * Header for can message stuff
  */
 
@@ -19,5 +19,10 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUS_A_packTable_10ms_length 1U
-
+%for node in nodes:
+  %for bus in node.on_buses:
+    %for cycle_time, msgs in node.messages_by_cycle_time().items():
+#define ${bus.upper()}_packTable_${cycle_time}ms_length ${len(msgs)}U
+    %endfor
+  %endfor
+%endfor
