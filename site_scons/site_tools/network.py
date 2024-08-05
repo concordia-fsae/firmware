@@ -35,7 +35,11 @@ def emit(target, source, env):
     target.append(env["NETWORK_OUTPUT_DIR"].File("dbcs/veh.dbc"))
     for _, dir in env["nodes"].items():
         target.extend(
-            [dir.File("MessagePack_generated.c"), dir.File("MessagePack_generated.h")]
+            [
+                dir.File("MessagePack_generated.c"),
+                dir.File("MessagePack_generated.h"),
+                dir.File("SigTx.c"),
+            ]
         )
     return (target, source)
 

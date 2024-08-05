@@ -247,6 +247,7 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
         makos = [
             ["MessagePack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessagePack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["SigTx.c.mako", {"nodes": [can_nodes[node]]}]
         ]
         for template in makos:
             rendered = mako_lookup.get_template(template[0]).render(**template[1])
