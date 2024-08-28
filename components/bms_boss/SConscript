@@ -264,19 +264,12 @@ def compile_objects(
     return objs
 
 
+network_env = GlobalEnv.Clone(tools=["network"])
 configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
 elfs = []
 binaries = []
 binaries_crced = []
 asms = []
-network_dirs = {}
-
-for config_id, config in configs.items():
-    variant_dir = BUILDS_DIR.Dir(
-        "_".join(config["description"].split(" ")) + f"_{config_id}"
-    )
-    generated_dir = variant_dir.Dir("generated")
-    network_dirs[f"bmsb"] = generated_dir
 
 for config_id, config in configs.items():
     variant_dir = BUILDS_DIR.Dir(
@@ -284,6 +277,8 @@ for config_id, config in configs.items():
     )
     generated_dir = variant_dir.Dir("generated")
     makedirs(generated_dir.abspath, exist_ok=True)
+
+    network_env.GenerateNodes({ f"bmsb": generated_dir, })
 
     generated = render_generated_files(config["options"], generated_dir)
 
@@ -361,8 +356,6 @@ Default(binaries_crced)
 
 # Return artifacts to the caller
 artifacts = {}
-artifacts["NETWORK_DIR"] = network_dirs
-
 if len(binaries) == 1:
     artifacts["FLASHABLE_ARTIFACT"] = {
         "artifact": binaries_crced[0],

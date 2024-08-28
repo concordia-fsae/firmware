@@ -255,6 +255,9 @@ def compile_objects(
         objs.append(env.Object(target=target, source=src_file, CCFLAGS=these_flags))
     return objs
 
+network_env = GlobalEnv.Clone(tools=["network"])
+generated_dir = BUILD_DIR.Dir("generated")
+network_env.GenerateNodes({ f"stw": generated_dir, })
 
 ## actually compile stuff
 

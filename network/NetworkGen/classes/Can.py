@@ -460,6 +460,16 @@ class CanNode(CanObject):
 
     def __init__(self, name, node_def):
         self.name: str = name
+        self.offset: int = 0
+        self.duplicateNode: bool = False
+        self.alias = name
+
+        if '_' in name:
+            self.name = name.split('_')[0]
+            self.offset = int(name.split('_')[1])
+            self.duplicateNode = True
+            self.alias = self.name + str(self.offset)
+
         self.def_files = node_def["def_files"]
         self.description: str = get_if_exists(node_def, "description", str, "")
         self.messages: Dict[str, CanMessage] = {}

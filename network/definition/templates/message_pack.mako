@@ -81,3 +81,10 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
 %endif
 }
 </%def>
+\
+<%def name="make_sigstub(bus, node, signal)">
+#ifndef set_${signal.get_name_nodeless()}
+#define set_${signal.get_name_nodeless()}(m,b,n,s) set(m,b,n,s, 0U); unsent_signal(m)
+#endif
+</%def>
+\

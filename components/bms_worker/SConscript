@@ -288,7 +288,7 @@ for config_id, config in configs.items():
     generated_dir = variant_dir.Dir("generated")
     makedirs(generated_dir.abspath, exist_ok=True)
 
-    network_env.GenerateNodes({ f"bmsw{config['options']['canIdOffset']}": generated_dir, })
+    network_env.GenerateNodes({ f"bmsw_{config['options']['canIdOffset']}": generated_dir, })
 
     renderers = [
         File("renderers/BuildDefines_generated.h.mako"),

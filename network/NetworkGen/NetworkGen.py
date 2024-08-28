@@ -116,9 +116,9 @@ def generate_can_nodes(data_dir: Path) -> None:
             for i in range(0, node_def["duplicateNode"]):
                 # create one object and add it to all buses so that each bus will have the same object
                 # that way if we modify it in one place it will apply to all buses
-                can_node = CanNode(node.name + str(i), node_dict)
+                can_node = CanNode(node.name + "_" + str(i), node_dict)
                 can_node.on_buses = node_def["onBuses"]
-                can_nodes[node.name + str(i)] = can_node
+                can_nodes[node.name + "_" + str(i)] = can_node
         else:
             # create one object and add it to all buses so that each bus will have the same object
             # that way if we modify it in one place it will apply to all buses
@@ -132,12 +132,8 @@ def process_node(node: CanNode):
     """Process the signals and messages associated with a given CAN node"""
     global ERROR
 
-    node_name = ""
-    if any(char.isdigit() for char in node.name):
-        node_name = ''.join([i for i in node.name if not i.isdigit()])
-
-    sig_file = SIG_FILE.format(name=node_name)
-    msg_file = MESSAGE_FILE.format(name=node_name)
+    sig_file = SIG_FILE.format(name=node.name)
+    msg_file = MESSAGE_FILE.format(name=node.name)
 
     if sig_file not in node.def_files:
         return
@@ -153,7 +149,10 @@ def process_node(node: CanNode):
         return
 
     for signal in signals_dict:
-        sig_name = f"{node.name.upper()}_{signal}"
+        if node.duplicateNode:
+            sig_name = f"{node.name.upper()}{node.offset}_{signal}"
+        else:
+            sig_name = f"{node.name.upper()}_{signal}"
         sig_obj = CanSignal(sig_name, signals_dict[signal])
         signals[sig_obj.name] = sig_obj
 
@@ -165,14 +164,14 @@ def process_node(node: CanNode):
         ERROR = True
         return
 
+    
     for name, definition in messages_dict.items():
-        msg_name = f"{node.name.upper()}_{name}"
+        if node.duplicateNode:
+            msg_name = f"{node.name.upper()}{node.offset}_{name}"
+        else:
+            msg_name = f"{node.name.upper()}_{name}"
 
-        node_number = 0
-        if any(char.isdigit() for char in node.name):
-            node_number = int(''.join([i for i in node.name if i.isdigit()]))
-
-        definition["id"] = definition["id"] + node_number;
+        definition["id"] = definition["id"] + node.offset;
         msg_obj = CanMessage(node, msg_name, definition)
 
         if msg_obj.signals is None:
@@ -263,15 +262,16 @@ def generate_dbcs(mako_lookup: TemplateLookup, bus: CanBus, output_dir: Path):
 
 
 def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
+    global ERROR
     for node, output_dir in nodes:
         if node not in can_nodes:
-            print(f"Warning: Node not defined for node '{node}'")
-            return
+            raise Exception(f"Error: Node not defined for node '{node}'")
 
         makos = [
             ["MessagePack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessagePack_generated.h.mako", {"nodes": [can_nodes[node]]}],
-            ["SigTx.c.mako", {"nodes": [can_nodes[node]]}]
+            ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
+            ["TemporaryStubbing.h.mako", {"nodes": [can_nodes[node]]}],
         ]
         for template in makos:
             rendered = mako_lookup.get_template(template[0]).render(**template[1])

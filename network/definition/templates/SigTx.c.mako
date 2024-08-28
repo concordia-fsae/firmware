@@ -12,9 +12,11 @@
     %for msg in node.messages.values():
       %if bus in msg.source_buses:
         %for signal in msg.signal_objs.values():
-<%make_sigpack(bus, node.name, signal)%>\
+<%make_sigpack(bus, node.alias, signal)%>\
         %endfor
       %endif
     %endfor
   %endfor
 %endfor
+
+
