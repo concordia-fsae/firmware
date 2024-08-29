@@ -4,10 +4,7 @@ from typing import Dict, Optional
 from SCons.Script import Action, Builder, Dir, Flatten, Glob
 
 NETWORK_PATH = Dir("#/network")
-NETWORK_TOOL_PATH = NETWORK_PATH.File("NetworkGen/NetworkGen.py")
 NETWORK_DATA_DIR = NETWORK_PATH.Dir("definition")
-NETWORK_OUTPUT_DIR = Dir("#/generated")
-NETWORK_CACHE_DIR = NETWORK_PATH.Dir("cache")
 
 def recursive_glob(dir, glob):
     ret = []
@@ -18,18 +15,17 @@ def recursive_glob(dir, glob):
 
 def build_network(env):
     env._networkBuilder()
-    return [env["NETWORK_OUTPUT_DIR"].File("dbcs/veh.dbc")]
+    return [env["NETWORK_OUTPUT_DIR"].File("veh.dbc")]
 
 
-def generate_nodes(env, nodes: Optional[Dict[str, Dir]] = None):
+def generate_nodes(env, nodes: Optional[Dict[str, Dir]], ):
     codegen_args = ""
-    if nodes:
-        codegen_args = " ".join(
-            [
-                f"--node {node} --codegen-dir {dir.abspath}"
-                for node, dir in nodes.items()
-            ]
-        )
+    codegen_args = " ".join(
+        [
+            f"--node {node} --codegen-dir {dir.abspath}"
+            for node, dir in nodes.items()
+        ]
+    )
 
     env._generateNodes(nodes=nodes, codegen_args=codegen_args)
 
@@ -38,7 +34,7 @@ def emitBuild(target, source, env):
     source.extend(recursive_glob(NETWORK_PATH, "*.py"))
     source.extend(recursive_glob(NETWORK_DATA_DIR, "*.yaml"))
     source.extend(recursive_glob(NETWORK_DATA_DIR, "*.mako"))
-    target.append(env["NETWORK_OUTPUT_DIR"].File("dbcs/veh.dbc"))
+    target.append(env["NETWORK_OUTPUT_DIR"].File("veh.dbc"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
     return (target, source)
@@ -59,13 +55,13 @@ def emitGen(target, source, env):
 
 def generate(env):
     env.Replace(
-        NETWORK_TOOL_PATH=NETWORK_TOOL_PATH,
+        NETWORK_TOOL_PATH=NETWORK_PATH.File("NetworkGen/NetworkGen.py"),
         NETWORK_DATA_DIR=NETWORK_DATA_DIR,
-        NETWORK_OUTPUT_DIR=NETWORK_OUTPUT_DIR,
-        NETWORK_CACHE_DIR=NETWORK_CACHE_DIR,
+        NETWORK_OUTPUT_DIR=env["PLATFORM_ARTIFACTS"].Dir("network"),
+        NETWORK_CACHE_DIR=NETWORK_DATA_DIR.Dir("cache"),
         NETWORK="python $NETWORK_TOOL_PATH --data-dir $NETWORK_DATA_DIR --output-dir $NETWORK_OUTPUT_DIR",
-        NETWORKBUILDCOMSTR="Building Network with command '$NETWORKBUILD --build --cache-dir $NETWORK_CACHE_DIR'",
-        NETWORKNODEGENCOMSTR="Generating Node with command '$NETWORKCODEGEN --cache-dir $NETWORK_CACHE_DIR $codegen_args'",
+        NETWORKBUILDCOMSTR="Building Network with command '$NETWORK --build --cache-dir $NETWORK_CACHE_DIR'",
+        NETWORKNODEGENCOMSTR="Generating Node with command '$NETWORK --cache-dir $NETWORK_CACHE_DIR $codegen_args'",
     )
 
     env["BUILDERS"]["_networkBuilder"] = Builder(

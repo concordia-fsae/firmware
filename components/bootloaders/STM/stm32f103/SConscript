@@ -18,7 +18,7 @@ from SCons.Script import (
     Return,
 )
 
-Import("GlobalEnv", "CONFIG_IDS")
+Import("PLATFORM_ENV", "CONFIG_IDS")
 
 PROJECT_DIR = Dir(".")
 SRC_DIR = Dir("src")
@@ -26,12 +26,12 @@ LIBS_DIR = Dir("#/embedded/libs")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
 
-BUILDS_DIR = Dir("build")
 ARTIFACT_NAME = "bootloader"
+BUILDS_DIR = PLATFORM_ENV["PLATFORM_ARTIFACTS"].Dir(f"{ARTIFACT_NAME.upper()}")
 
 APP_START_ADDR = 0x08000000
 
-env = GlobalEnv.Clone(
+env = PLATFORM_ENV.Clone(
     tools=["gcc-arm-none-eabi", "st-flash", "openocd", "compilation_db", "variants"]
 )
 

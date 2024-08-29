@@ -18,7 +18,9 @@ from oyaml import safe_load
 # create a global environment which all targets can start from
 GlobalEnv = Environment(REPO_ROOT_DIR=Dir("#"), tools=[])
 GlobalEnv["ENV"]["TERM"] = environ["TERM"]
-Export("GlobalEnv")
+# Export("GlobalEnv")
+PlatformEnv = GlobalEnv.Clone()
+NetworkEnv = None
 
 # add option to choose target or platforam
 AddOption("--targets", dest="targets", type="string", action="store")
@@ -50,6 +52,11 @@ target_dict = {}
 
 if platform and not targets:
     if platform in platforms:
+        PlatformEnv["PLATFORM_ID"] = platform
+        PlatformEnv["PLATFORM_ARTIFACTS"] = GlobalEnv["REPO_ROOT_DIR"].Dir(f"platform-artifacts/{platform.upper()}")
+        NetworkEnv = PlatformEnv.Clone(tools=["network"])
+        NetworkEnv["NETWORK_ARTIFACTS"] = PlatformEnv["PLATFORM_ARTIFACTS"]
+
         for parts in platforms[platform]:
             for id in parts:
                 target_dict[id] = parts[id]
@@ -63,13 +70,16 @@ elif targets and platform:
     # TODO: Handle
     pass
 elif targets:
+    PlatformEnv["PLATFORM_ARTIFACTS"] = GlobalEnv["REPO_ROOT_DIR"].Dir("platform-artifacts/generic")
+    NetworkEnv = PlatformEnv.Clone(tools=["network"])
+    NetworkEnv["NETWORK_ARTIFACTS"] = PlatformEnv["PLATFORM_ARTIFACTS"]
     targets = targets.split('+')
     for target in targets:
         target_dict[target] = []
 
-network_env = GlobalEnv.Clone(tools=["network"])
-dbc = network_env.BuildNetwork()
-Default(dbc)
+if NetworkEnv:
+    dbc = NetworkEnv.BuildNetwork()
+    Default(dbc)
 
 multiple_targets = False
 
@@ -95,7 +105,7 @@ for target in target_dict:
         config_ids = [int(id) for id in findall(CONFIG_ID_REGEX, target)]
 
     target = f"{components[component["component"]]['path']}SConscript"
-    artifacts = SConscript(target, exports={"CONFIG_IDS": config_ids})
+    artifacts = SConscript(target, exports={"CONFIG_IDS": config_ids, "PLATFORM_ENV": PlatformEnv, "NETWORK_ENV": NetworkEnv })
     if artifacts:
         if artifacts.get("FLASHABLE_ARTIFACT", None):
             if GetOption("upload"):

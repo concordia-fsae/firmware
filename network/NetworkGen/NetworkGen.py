@@ -164,7 +164,7 @@ def process_node(node: CanNode):
         ERROR = True
         return
 
-    
+
     for name, definition in messages_dict.items():
         if node.duplicateNode:
             msg_name = f"{node.name.upper()}{node.offset}_{name}"
@@ -247,7 +247,7 @@ def process_receivers(bus: CanBus, node: CanNode):
 
 
 def generate_dbcs(mako_lookup: TemplateLookup, bus: CanBus, output_dir: Path):
-    dbc_dir = output_dir.joinpath("dbcs")
+    dbc_dir = output_dir
 
     dbc_template = mako_lookup.get_template("template.dbc.mako")
 
