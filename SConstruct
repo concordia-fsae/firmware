@@ -18,9 +18,6 @@ from oyaml import safe_load
 # create a global environment which all targets can start from
 GlobalEnv = Environment(REPO_ROOT_DIR=Dir("#"), tools=[])
 GlobalEnv["ENV"]["TERM"] = environ["TERM"]
-# Export("GlobalEnv")
-PlatformEnv = GlobalEnv.Clone()
-NetworkEnv = None
 
 # add option to choose target or platforam
 AddOption("--targets", dest="targets", type="string", action="store")
@@ -29,8 +26,6 @@ AddOption("--platform", dest="platform", type="string", action="store")
 AddOption("--verbose", dest="verbose", action="store_true")
 # add option to build without debug info
 AddOption("--release", dest="release", action="store_true")
-AddOption("--upload", dest="upload", action="store_true")
-AddOption("--debugger", dest="debugger", action="store_true")
 
 components = None
 platforms = None
@@ -49,6 +44,9 @@ network_dirs = {}
 targets = GetOption("targets")
 platform = GetOption("platform")
 target_dict = {}
+PlatformEnv = GlobalEnv.Clone()
+PlatformEnv["ARTIFACTS"] = {}
+NetworkEnv = None
 
 if platform and not targets:
     if platform in platforms:
@@ -79,6 +77,7 @@ elif targets:
 
 if NetworkEnv:
     dbc = NetworkEnv.BuildNetwork()
+    PlatformEnv["ARTIFACTS"]["DBC"] = dbc
     Default(dbc)
 
 multiple_targets = False
@@ -104,47 +103,62 @@ for target in target_dict:
     else:
         config_ids = [int(id) for id in findall(CONFIG_ID_REGEX, target)]
 
-    target = f"{components[component["component"]]['path']}SConscript"
-    artifacts = SConscript(target, exports={"CONFIG_IDS": config_ids, "PLATFORM_ENV": PlatformEnv, "NETWORK_ENV": NetworkEnv })
-    if artifacts:
-        if artifacts.get("FLASHABLE_ARTIFACT", None):
+    target_sconscript = f"{components[component["component"]]['path']}SConscript"
+    PlatformEnv["ARTIFACTS"][f"{target.upper()}"] = SConscript(target_sconscript, exports={"CONFIG_IDS": config_ids, "PLATFORM_ENV": PlatformEnv, "NETWORK_ENV": NetworkEnv })
+
+if PlatformEnv["ARTIFACTS"]:
+    AddOption("--upload", dest="upload", action="store_true")
+    AddOption("--debugger", dest="debugger", action="store_true")
+    AddOption("--package", dest="package", action="store_true")
+
+    if GetOption("package"):
+        packaging_env = PlatformEnv.Clone(tools=["package"])
+        package = packaging_env.Package(PlatformEnv["PLATFORM_ARTIFACTS"].File(f"{PlatformEnv["PLATFORM_ID"]}-package.tgz"))
+        Depends(package, PlatformEnv["ARTIFACTS"]["DBC"])
+        Default(package)
+
+    for component in PlatformEnv["ARTIFACTS"]:
+        if component == "DBC":
+            continue
+
+        if any("FLASHABLE_ARTIFACT" in artifact for artifact in PlatformEnv["ARTIFACTS"][component]):
             if GetOption("upload"):
                 if multiple_targets:
                     print(f"Cannot upload multiple targets...")
                     print(f"Exiting...")
                     Exit(1)
 
-                if type(artifacts["FLASHABLE_ARTIFACT"]["artifact"]) is list:
-                    if len(artifacts["FLASHABLE_ARTIFACT"]["artifact"]) > 1:
+                if type(PlatformEnv["ARTIFACTS"][component]["FLASHABLE_ARTIFACT"]["artifact"]) is list:
+                    if len(PlatformEnv["ARTIFACTS"][component]["FLASHABLE_ARTIFACT"]["artifact"]) > 1:
                         print(f"Cannot flash multiple configs...")
                         print(f"Exiting...")
                         Exit(1)
 
-                artifact = artifacts["FLASHABLE_ARTIFACT"]["artifact"]
-                start_addr = artifacts["FLASHABLE_ARTIFACT"]["addr"]
-                tools = artifacts["FLASHABLE_ARTIFACT"]["tools"]
+                artifact = PlatformEnv["ARTIFACTS"][component]["FLASHABLE_ARTIFACT"]["artifact"]
+                start_addr = PlatformEnv["ARTIFACTS"][component]["FLASHABLE_ARTIFACT"]["addr"]
+                tools = PlatformEnv["ARTIFACTS"][component]["FLASHABLE_ARTIFACT"]["tools"]
                 flashing_env = GlobalEnv.Clone(tools=tools)
 
                 upload = flashing_env.flash(source=artifact, start_addr=start_addr)
                 Default(upload)
 
-        if artifacts.get("DEBUG_ARTIFACT", None):
+        if any("DEBUG_ARTIFACT" in artifact for artifact in PlatformEnv["ARTIFACTS"][component]):
             if GetOption("debugger"):
                 if multiple_targets:
                     print(f"Cannot debug multiple targets...")
                     print(f"Exiting...")
                     Exit(1)
 
-                if type(artifacts["DEBUG_ARTIFACT"]["artifact"]) is list:
-                    if len(artifacts["DEBUG_ARTIFACT"]["artifact"]) > 1:
+                if type(PlatformEnv["ARTIFACTS"][component]["DEBUG_ARTIFACT"]["artifact"]) is list:
+                    if len(PlatformEnv["ARTIFACTS"][component]["DEBUG_ARTIFACT"]["artifact"]) > 1:
                         print(f"Cannot debug multiple configs...")
                         print(f"Exiting...")
                         Exit(1)
 
-                artifact = artifacts["DEBUG_ARTIFACT"]["artifact"]
-                args = artifacts["DEBUG_ARTIFACT"]["args"]
-                tools = artifacts["DEBUG_ARTIFACT"]["tools"]
-                env = artifacts["DEBUG_ARTIFACT"].get("env", {})
+                artifact = PlatformEnv["ARTIFACTS"][component]["DEBUG_ARTIFACT"]["artifact"]
+                args = PlatformEnv["ARTIFACTS"][component]["DEBUG_ARTIFACT"]["args"]
+                tools = PlatformEnv["ARTIFACTS"][component]["DEBUG_ARTIFACT"]["tools"]
+                env = PlatformEnv["ARTIFACTS"][component]["DEBUG_ARTIFACT"].get("env", {})
                 debug_env = GlobalEnv.Clone(tools=tools, **env)
 
                 openocd_gdb = debug_env.openocd_gdb(artifact, *args)
