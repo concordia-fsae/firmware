@@ -102,7 +102,7 @@ void CANTX_BUS_A_SWI(void)
             }
         }
     }
-    else if (cantx.tx_100Hz_msg == VEH_packTable_10_length)
+    if (cantx.tx_100Hz_msg == VEH_packTable_10_length)
     {
         counter_100Hz++;
         cantx.tx_100Hz_msg++;

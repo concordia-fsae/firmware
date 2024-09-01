@@ -160,6 +160,11 @@ void CANTX_BUS_A_SWI(void)
             memset(&message, 0, sizeof(message));
         }
     }
+    if (cantx.tx_10Hz_msg == VEH_packTable_10_length)
+    {
+        counter_100Hz++;
+        cantx.tx_10Hz_msg++;
+    }
 
     if (cantx.tx_1Hz_msg != VEH_packTable_1000_length)
     {
@@ -178,6 +183,11 @@ void CANTX_BUS_A_SWI(void)
             }
             memset(&message, 0, sizeof(message));
         }
+    }
+    if (cantx.tx_10Hz_msg == VEH_packTable_10_length)
+    {
+        counter_1Hz++;
+        cantx.tx_1Hz_msg++;
     }
 }
 
@@ -207,11 +217,6 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
         {
             (*index)++;
         }
-    }
-
-    if (*index == packTableLength)
-    {
-        (*nextCounter)++;
     }
 
     return NULL;
