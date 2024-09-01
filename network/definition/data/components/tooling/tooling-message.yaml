@@ -1,0 +1,14 @@
+messages:
+  balancingCommand:
+    description: Command to balance to a target voltage
+    id: 0x300
+    lengthBytes: 2
+    signals:
+      targetBalancingVoltage:
+
+  fanSetDutyCycleCommand:
+    description: Commanded fan duty cycle
+    id: 0x301
+    lengthBytes: 1
+    signals:
+      commandedFansDutyCycle:

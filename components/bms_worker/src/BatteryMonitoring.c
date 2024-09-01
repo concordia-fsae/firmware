@@ -24,6 +24,8 @@
 #include "CELL.h"
 #include "IO.h"
 
+#include "MessageUnpack_generated.h"
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -37,10 +39,6 @@
 
 #ifndef BMS_CONFIGURED_BALANCING_TIME_MS
 # define BMS_CONFIGURED_BALANCING_TIME_MS 500
-#endif
-
-#ifndef BMS_CONFIGURED_BALANCING_TIMEOUT_MS
-# define BMS_CONFIGURED_BALANCING_TIMEOUT_MS 1500
 #endif
 
 #ifndef STANDARD_CHARGE_CURRENT
@@ -103,7 +101,7 @@ static void BMS1kHz_PRD()
     {
       return;
     }
-    
+
     if (BMS.state == BMS_PARASITIC)
     {
         if (max_chip.config.sampling_start_100us == UINT32_MAX)
@@ -197,13 +195,6 @@ static void BMS1kHz_PRD()
  */
 static void BMS1Hz_PRD()
 {
-    if (BMS.balancing.requested && ((BMS.balancing.last_request + BMS_CONFIGURED_BALANCING_TIMEOUT_MS) < HW_getTick()))
-    {
-        BMS.balancing.requested = false;
-        BMS.balancing.last_request = 0x00;
-        BMS.balancing.target_v = 4.5f;
-    }
-
     if (BMS.state == BMS_SLEEPING)
     {
       return;
@@ -281,7 +272,7 @@ static void BMS1Hz_PRD()
             return;
         }
     }
-    
+
     static uint8_t cnt = 0;
 
 
@@ -331,7 +322,7 @@ void BMS_toSleep(void)
     max_chip.config.sampling_start_100us = UINT32_MAX;
     MAX_readWriteToChip();
     MAX_readWriteToChip(); // Update value
-    
+
     BMS.discharge_limit = 0.0f;
     BMS.charge_limit = 0.0f;
 }
@@ -347,16 +338,9 @@ void BMS_wakeUp(void)
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
     max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
     MAX_readWriteToChip();
-    
+
     while (!max_chip.state.ready) MAX_readWriteToChip(); // Update value
     BMS.state = BMS_WAITING;
-}
-
-void BMS_setBalancing(float32_t target_v)
-{
-    BMS.balancing.target_v = target_v;
-    BMS.balancing.last_request = HW_getTick();
-    BMS.balancing.requested = true;
 }
 
 /**
@@ -495,16 +479,16 @@ void BMS_measurementComplete(void)
     if (BMS.state == BMS_HOLDING)
     {
         BMS.state = BMS_WAITING;
-        if (BMS.balancing.requested)
+        if (CANRX_get_signal(VEH, TOOLING_targetBalancingVoltage).health == CANRX_MESSAGE_VALID)
         {
             static uint8_t even = 0;
-            
+
             max_chip.config.balancing = 0x00;
             max_chip.config.low_power_mode = false;
-            
+
             for (uint8_t i = even; i < BMS.connected_cells; i += 2)
             {
-                max_chip.config.balancing |= (BMS.cells[i].voltage > (BMS.balancing.target_v + BMS_CONFIGRED_BALANCING_MARGIN)) ? 1 << i : 0x00;
+                max_chip.config.balancing |= (BMS.cells[i].voltage > (CANRX_get_signal(VEH, TOOLING_targetBalancingVoltage).value + BMS_CONFIGRED_BALANCING_MARGIN)) ? 1 << i : 0x00;
             }
 
             even = (even + 1) % 2;
@@ -542,7 +526,7 @@ void BMS_chargeLimit()
     {
         BMS.charge_limit = ((100.0f - BMS.relative_soc.max)/20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
     }
-    
+
     if (ENV.values.max_temp >= 48)
     {
          BMS.charge_limit += -((ENV.values.max_temp - 48.0f)/12.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
@@ -588,7 +572,7 @@ void BMS_dischargeLimit()
     {
         BMS.discharge_limit += -((ENV.values.max_temp - 48.0f) / 12.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
-    
+
     if (BMS.discharge_limit < 0.0f) BMS.discharge_limit = 0.0f;
     if (BMS.discharge_limit > MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 }

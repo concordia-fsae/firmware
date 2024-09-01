@@ -1,3 +1,5 @@
 messages:
 signals:
   BMSB_criticalDataCounter:
+  TOOLING_commandedFansDutyCycle:
+  TOOLING_targetBalancingVoltage:

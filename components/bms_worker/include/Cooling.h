@@ -34,7 +34,6 @@ typedef struct
     COOL_state_E    state[FAN_COUNT];
     uint8_t         percentage[FAN_COUNT];
     uint16_t        rpm[FAN_COUNT];
-    uint8_t         override;
 } COOL_S;
 
 
@@ -43,5 +42,3 @@ typedef struct
  ******************************************************************************/
 
 extern COOL_S COOL;
-
-void COOL_setFans(uint8_t percent);

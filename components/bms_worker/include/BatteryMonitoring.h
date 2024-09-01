@@ -84,13 +84,6 @@ typedef struct
 
     struct
     {
-        bool requested :1;
-        uint32_t last_request;
-        float32_t target_v;
-    }balancing;
-
-    struct
-    {
         float32_t max;
         float32_t min;
         float32_t avg;
@@ -119,4 +112,3 @@ void BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_toSleep(void);
 void BMS_wakeUp(void);
 void BMS_measurementComplete(void);
-void BMS_setBalancing(float32_t target_v);
