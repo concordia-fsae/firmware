@@ -19,10 +19,9 @@
 #include "Module.h"
 #include "BMS.h"
 #include "IMD.h"
-
-
-#define SYS_CONFIG_MC_TIMEOUT 1000
-#define SYS_CONFIG_CHARGER_TIMEOUT 1000
+#include "MessageUnpack_generated.h"
+#include "stdbool.h"
+#include "stdint.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -159,24 +158,12 @@ void SYS_SFT_cycleContacts(void)
     }
 }
 
-void SYS_SFT_setTSVoltage(float32_t v)
-{
-    SYS.ts.voltage = v;
-    SYS.ts.last_message = HW_getTick();
-}
-
-void SYS_SFT_setChargerVoltage(float32_t v)
-{
-    SYS.charger.voltage = v;
-    SYS.charger.last_message = HW_getTick();
-}
-
 bool SYS_SFT_checkMCTimeout(void)
 {
-    return (SYS.ts.last_message + SYS_CONFIG_MC_TIMEOUT < HW_getTick());
+    return (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_MIA);
 }
 
 bool SYS_SFT_checkChargerTimeout(void)
 {
-    return (SYS.charger.last_message + SYS_CONFIG_CHARGER_TIMEOUT < HW_getTick());
+    return (CANRX_get_signal(VEH, BRUSA513_chargerBusVoltage).health == CANRX_MESSAGE_MIA);
 }

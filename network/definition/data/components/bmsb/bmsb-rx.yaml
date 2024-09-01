@@ -5,4 +5,6 @@ messages:
   BMSW3_criticalData:
   BMSW4_criticalData:
   BMSW5_criticalData:
+  BRUSA513_criticalData:
+  PM100DX_criticalData:
 signals:

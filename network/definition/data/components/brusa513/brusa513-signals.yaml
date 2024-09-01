@@ -1,0 +1,13 @@
+signals:
+  chargerBusVoltage:
+    cycleTimeMs: 100
+    unit: 'V'
+    description: Charger DC Bus Voltage
+    endianness: big
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true

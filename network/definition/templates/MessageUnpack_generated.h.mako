@@ -18,7 +18,7 @@
  ******************************************************************************/
 
  #define CANRX_get_signal(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))()
- #define CANRX_get_signal_duplicateNode(bus, node, id, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN4(node,id,_,signal)))()
+ #define CANRX_get_signal_duplicateNode(bus, node, id, signal) (JOIN(JOIN(JOIN3(CANRX_,bus,_get),_),JOIN3(node,id,JOIN(_,signal))))()
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -100,3 +100,5 @@ CANRX_SIGNAL_${node.received_sigs[signal].datatype.name} CANRX_${bus.upper()}_ge
     %endfor
   %endfor
 %endfor
+
+

@@ -35,7 +35,7 @@ static const ModuleDesc_S* modules[] = {
     &IO_desc,
     &BMS_desc,
     &SYS_desc,
-    //    &CANIO_rx,
+    &CANIO_rx,
     &CANIO_tx,
 };
 

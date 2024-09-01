@@ -1,0 +1,8 @@
+messages:
+  criticalData:
+    description: Brusa NLG513 Critical Data
+    id: 0x611
+    lengthBytes: 8
+    signals:
+      chargerBusVoltage:
+        startBit: 32

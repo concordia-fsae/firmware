@@ -11,6 +11,7 @@
 #include "PACK.h"
 
 #define BMS_MAX_SEGMENTS 8U
+_Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SEGMENTS);
 
 typedef enum {
     BMS_INIT = 0x00,
@@ -38,7 +39,6 @@ typedef struct {
     uint8_t connected_segments;
     float32_t pack_charge_limit; // [A] precision 1A
     float32_t pack_discharge_limit; // [A] precision 1A
-    BMSW_S workers[BMS_MAX_SEGMENTS];
     float32_t pack_voltage;
     float32_t max_temp; // [deg C] precision 1degC
     struct
@@ -49,5 +49,3 @@ typedef struct {
 } BMSB_S;
 
 extern BMSB_S BMS;
-
-void BMS_setSegmentStats(uint8_t seg_id, const BMSW_S* seg);

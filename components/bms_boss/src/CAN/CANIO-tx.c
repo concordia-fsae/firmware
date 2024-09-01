@@ -59,14 +59,14 @@ static cantx_S cantx;
  *                              D E F I N E S
  ******************************************************************************/
 
-#define set_criticalDataCounter(m,b,n,s) set(m,b,n,s, cantx.tx_100Hz_msg);
-#define set_packChargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit);
-#define set_packDischargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit);
-#define set_packVoltage(m,b,n,s) set(m,b,n,s, BMS.pack_voltage);
-#define set_nlg513ControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getNLG513ControlByte());
-#define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f);
-#define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_PACK_VOLTAGE_MAX);
-#define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit);
+#define set_criticalDataCounter(m,b,n,s) set(m,b,n,s, cantx.tx_100Hz_msg)
+#define set_packChargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
+#define set_packDischargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit)
+#define set_packVoltage(m,b,n,s) set(m,b,n,s, BMS.pack_voltage)
+#define set_nlg513ControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getNLG513ControlByte())
+#define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
+#define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_PACK_VOLTAGE_MAX)
+#define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define transmit_BMSB_brusaChargeCommand SYS_SFT_checkChargerTimeout()
 
 #include "TemporaryStubbing.h"
