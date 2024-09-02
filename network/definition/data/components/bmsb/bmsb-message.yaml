@@ -9,6 +9,13 @@ messages:
       packDischargeLimit:
       packVoltage:
 
+  information:
+    description: BMS Boss Information
+    id: 0x98
+    lengthBytes: 2
+    signals:
+      packCurrent:
+
   brusaChargeCommand:
     description: Brusa Charge Command
     id: 0x618

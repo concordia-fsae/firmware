@@ -1,3 +1,4 @@
+<%! import math %>
 <%def name="make_packfn(bus, msg)">
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
@@ -63,15 +64,33 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
 \
     %if dtype == 64:
       %if signal.native_representation.endianness.value == 1:
-      atomicXorU64(&m->u64, ((uint64_t)val & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
+    atomicXorU64(&m->u64, ((uint64_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f) & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit}U);
       %else:
+    uint64_t tmp_${signal.name} = (uint64_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f);
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)}U);
+    tmp_${signal.name} = ((tmp_${signal.name} >> ${(8 - (signal.native_representation.bit_width % 8)) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U));
+    atomicXorU64(&m->u64, (tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
       %endif
     %else:
-      atomicXorU${dtype}(&m->u${dtype}[${idx_s}], ((uint${dtype}_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f) & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
+      %if signal.native_representation.endianness.value == 1:
+    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], ((uint${dtype}_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f) & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
+    %else:
+    uint${dtype}_t tmp_${signal.name} = (uint${dtype}_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f);
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)}U);
+    tmp_${signal.name} = ((tmp_${signal.name} >> ${(8 - (signal.native_representation.bit_width % 8)) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U));
+    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], (tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
+      %endif
     %endif
   %elif "uint" in signal.datatype.value:
       %if signal.native_representation.bit_width > 32 or (signal.start_bit < 32 and (signal.start_bit +signal.native_representation.bit_width - 1) >= 32):
-      atomicXorU64(&m->u64, m->u64 ^ (((uint64_t)val & ${(2**signal.native_representation.bit_width - 1)}) << ${signal.start_bit}U));
+        %if signal.native_representation.endianness.value == 1:
+    atomicXorU64(&m->u64, ((uint64_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f) & ${(2**signal.native_representation.bit_width - 1)}) << ${signal.start_bit}U);
+        %else:
+    uint64_t tmp_${signal.name} = (uint64_t)((val - ${int(signal.offset)}U) / ${int(signal.scale)}U);
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)}U);
+    tmp_${signal.name} = ((tmp_${signal.name} >> ${(8 - (signal.native_representation.bit_width % 8)) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U));
+    atomicXorU64(&m->u64, (tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit}U);
+        %endif
       %else:
 <%
       startBit = signal.start_bit
@@ -81,7 +100,14 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
         startBit = startBit - 32
         startIndex = 1
 %>\
-      atomicXorU32(&m->u32[${startIndex}], m->u32[${startIndex}] ^ (((uint32_t)val & ${(2**signal.native_representation.bit_width - 1)}) << ${startBit}U));
+        %if signal.native_representation.endianness.value == 1:
+    atomicXorU32(&m->u32[${startIndex}], m->u32[${startIndex}] ^ (((uint32_t)val & ${(2**signal.native_representation.bit_width - 1)}) << ${startBit}U));
+        %else:
+    uint32_t tmp_${signal.name} = (uint32_t)((val - ${int(signal.offset)}U) / ${int(signal.scale)}U);
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)}U);
+    tmp_${signal.name} = ((tmp_${signal.name} >> ${(8 - (signal.native_representation.bit_width % 8)) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U));
+    atomicXorU32(&m->u32[${startIndex}], (tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}) << ${start_bit}U);
+        %endif
       %endif
 %else:
     (void)m;

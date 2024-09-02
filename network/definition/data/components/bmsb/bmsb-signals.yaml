@@ -10,6 +10,7 @@ signals:
     unit: 'A'
     description: Brusa NLG513 Max Mains Current During Charging
     nativeRepresentation:
+      endianness: 0
       bitWidth: 16
       resolution: 0.1
       range:
@@ -22,6 +23,7 @@ signals:
     unit: 'V'
     description: Brusa NLG513 Max Battery Voltage During Charging
     nativeRepresentation:
+      endianness: 0
       bitWidth: 16
       resolution: 0.1
       range:
@@ -34,6 +36,7 @@ signals:
     unit: 'A'
     description: Brusa NLG513 Max Battery Voltage During Charging
     nativeRepresentation:
+      endianness: 0
       bitWidth: 16
       resolution: 0.1
       range:
@@ -82,4 +85,16 @@ signals:
       range:
         min: 0
         max: 450
+    continuous: true
+
+  packCurrent:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: BMS Boss Pack Current
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.03
+      range:
+        min: 0
+        max: 400
     continuous: true

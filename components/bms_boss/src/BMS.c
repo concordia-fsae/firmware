@@ -19,6 +19,8 @@
 
 #include "PACK.h"
 
+#define CURRENT_SENSE_V_per_A 0.0025f
+
 BMSB_S BMS;
 
 HW_GPIO_S imd_status = {
@@ -94,6 +96,8 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
+    BMS.pack_current = IO.current / CURRENT_SENSE_V_per_A;
+
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkChargerTimeout()))
     {
         SYS_SFT_openShutdown();
@@ -126,7 +130,7 @@ static void BMS100Hz_PRD(void)
             }
             else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
             {
-                if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).value > 0.95f * BMS.pack_voltage) && 
+                if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).value > 0.95f * BMS.pack_voltage) &&
                      (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_VALID)) ||
 		            ((CANRX_get_signal(VEH, BRUSA513_chargerBusVoltage).value > 0.95f * BMS.pack_voltage) &&
                      (CANRX_get_signal(VEH, BRUSA513_chargerBusVoltage).health == CANRX_MESSAGE_VALID)))
@@ -136,7 +140,7 @@ static void BMS100Hz_PRD(void)
             }
             else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
             {
-                if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).value > 0.97f * BMS.pack_voltage) && 
+                if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).value > 0.97f * BMS.pack_voltage) &&
                      (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_VALID)) ||
 		            ((CANRX_get_signal(VEH, BRUSA513_chargerBusVoltage).value > 0.97f * BMS.pack_voltage) &&
                      (CANRX_get_signal(VEH, BRUSA513_chargerBusVoltage).health == CANRX_MESSAGE_VALID)))

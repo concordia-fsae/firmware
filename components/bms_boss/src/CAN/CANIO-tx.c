@@ -38,6 +38,11 @@ typedef struct
     uint8_t tx_100Hz_msg;
 } cantx_S;
 
+typedef struct
+{
+    uint8_t counter_100Hz;
+} cantx_counter_S;
+
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -54,15 +59,17 @@ static uint8_t CANIO_tx_getNLG513ControlByte(void);
  ******************************************************************************/
 
 static cantx_S cantx;
+static cantx_counter_S cantx_counter;
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define set_criticalDataCounter(m,b,n,s) set(m,b,n,s, cantx.tx_100Hz_msg)
+#define set_criticalDataCounter(m,b,n,s) set(m,b,n,s, cantx_counter.counter_100Hz)
 #define set_packChargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define set_packDischargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit)
 #define set_packVoltage(m,b,n,s) set(m,b,n,s, BMS.pack_voltage)
+#define set_packCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_current)
 #define set_nlg513ControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getNLG513ControlByte())
 #define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_PACK_VOLTAGE_MAX)
@@ -82,8 +89,6 @@ static cantx_S cantx;
  */
 void CANTX_BUS_A_SWI(void)
 {
-    static uint8_t counter_100Hz = 0U;
-
     if (cantx.tx_100Hz_msg < VEH_packTable_10_length)
     {
         CAN_data_T     message_100Hz = {0};
@@ -92,7 +97,7 @@ void CANTX_BUS_A_SWI(void)
                                                         VEH_packTable_10_length,
                                                         &cantx.tx_100Hz_msg,
                                                         &message_100Hz,
-                                                        &counter_100Hz);
+                                                        &cantx_counter.counter_100Hz);
 
         if (entry_100Hz != NULL)
         {
@@ -104,7 +109,7 @@ void CANTX_BUS_A_SWI(void)
     }
     if (cantx.tx_100Hz_msg == VEH_packTable_10_length)
     {
-        counter_100Hz++;
+        cantx_counter.counter_100Hz++;
         cantx.tx_100Hz_msg++;
     }
 }
@@ -185,6 +190,7 @@ static void CANIO_tx_100Hz_PRD(void)
 static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
+    memset(&cantx_counter, 0x00, sizeof(cantx));
     HW_CAN_start();    // start CAN
 }
 

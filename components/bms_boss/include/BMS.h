@@ -40,6 +40,7 @@ typedef struct {
     float32_t pack_charge_limit; // [A] precision 1A
     float32_t pack_discharge_limit; // [A] precision 1A
     float32_t pack_voltage;
+    float32_t pack_current;
     float32_t max_temp; // [deg C] precision 1degC
     struct
     {

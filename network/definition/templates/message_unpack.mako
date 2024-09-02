@@ -54,7 +54,7 @@
     sigrx->${signal.name} = (float64_t)((m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
       %else:
     uint64_t tmp_${signal.name} = (m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}U;
-    tmp_${signal.name} = (tmp_${signal.name} & ~(${(2**signal.native_representation.bit_width) - 1}U)) | (tmp_${signal.name} & ${(2**signal.native_representation.bit_width) % 8}U);
+    tmp_${signal.name} = ((tmp_${signal.name} & (~${(2**(signal.native_representation.bit_width % 8) - 1)}U & ${(2**signal.native_representation.bit_width) - 1}U)) << ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U);
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)});
     sigrx->${signal.name} = (float64_t)(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
       %endif
@@ -62,8 +62,8 @@
       %if signal.native_representation.endianness.value == 1:
     sigrx->${signal.name} = (float32_t)((m->u${dtype}[${(signal.start_bit // dtype)}] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}U) * ${float(signal.scale)}f + (${float(signal.offset)}f);
       %else:
-    uint32_t tmp_${signal.name} = (m->u${dtype}[${(signal.start_bit // dtype)}] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1};
-    tmp_${signal.name} = ((tmp_${signal.name} & (~${(2**(signal.native_representation.bit_width % 8) - 1)}U & ${(2**signal.native_representation.bit_width)}U)) << ${(2**(signal.native_representation.bit_width % 8) - 1)}U) | (tmp_${signal.name} & ${(2**signal.native_representation.bit_width % 8)}U);
+    uint32_t tmp_${signal.name} = (m->u${dtype}[${(signal.start_bit // dtype)}] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    tmp_${signal.name} = ((tmp_${signal.name} & (~${(2**(signal.native_representation.bit_width % 8) - 1)}U & ${(2**signal.native_representation.bit_width) - 1}U)) << ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U);
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)});
     sigrx->${signal.name} = (float32_t)(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
       %endif
@@ -74,6 +74,7 @@
     sigrx->${signal.name} = ((m->u64 >> ${(signal.start_bit)}U) & ${(2**signal.native_representation.bit_width) - 1}U) * (${int(signal.scale)}) + (${int(signal.offset)});
         %else:
     uint64_t tmp_${signal.name} = (m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    tmp_${signal.name} = ((tmp_${signal.name} & (~${(2**(signal.native_representation.bit_width % 8) - 1)}U & ${(2**signal.native_representation.bit_width) - 1}U)) << ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U);
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width // 8)});
     sigrx->${signal.name} = (tmp_${signal.name}) * (${int(signal.scale)}) + (${int(signal.offset)});
         %endif
@@ -89,7 +90,8 @@
         %if signal.native_representation.endianness.value == 1:
     sigrx->${signal.name} = ((m->u32[${startIndex}] >> ${startBit}U) & ${(2**signal.native_representation.bit_width) - 1}U) * (${int(signal.scale)}) + (${int(signal.offset)});
         %else:
-            uint32_t tmp_${signal.name} = (m->u32[${startIndex}] >> ${(signal.start_bit % 32)}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    uint32_t tmp_${signal.name} = (m->u32[${(signal.start_bit // 32)}] >> ${signal.start_bit % 32}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    tmp_${signal.name} = ((tmp_${signal.name} & (~${(2**(signal.native_representation.bit_width % 8) - 1)}U & ${(2**signal.native_representation.bit_width) - 1}U)) << ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (tmp_${signal.name} & ${2**(signal.native_representation.bit_width % 8) - 1}U);
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)});
     sigrx->${signal.name} = (tmp_${signal.name}) * (${int(signal.scale)}) + (${int(signal.offset)});
         %endif
