@@ -461,18 +461,7 @@ static inline uint8_t reverse_byte(uint8_t x)
     return table[x];
 }
 
-static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
-{
-    for (uint8_t i = 0; i < (len / 2); i++)
-    {
-        uint8_t tmp = in[i];
-
-        in[i]           = in[len - i - 1];
-        in[len - i - 1] = tmp;
-    }
-
-    return in;
-}
+uint8_t* reverse_bytes(uint8_t* in, uint8_t len);
 
 /**
  * @brief  Simple fast accurate natural log approximation
@@ -486,4 +475,4 @@ static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
  *
  * @retval result of ln(x)
  */
-float ln(float32_t x);
+float32_t ln(float32_t x);

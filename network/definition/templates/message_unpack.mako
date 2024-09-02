@@ -1,3 +1,4 @@
+<%! import math %>
 <%def name="make_structdef_message(node, message)">\
     struct {
         uint32_t timestamp;
@@ -49,13 +50,33 @@
         idx_s = 1
 %>\
     %if dtype == 64:
-    sigrx->${signal.name} = (float64_t)((m->u64 >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+      %if signal.native_representation.endianness.value == 1:
+    sigrx->${signal.name} = (float64_t)((m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+      %else:
+    uint64_t tmp_${signal.name} = (m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    tmp_${signal.name} = (tmp_${signal.name} & ~(${(2**signal.native_representation.bit_width) - 1}U)) | (tmp_${signal.name} & ${(2**signal.native_representation.bit_width) % 8}U);
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)});
+    sigrx->${signal.name} = (float64_t)(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+      %endif
     %else:
-    sigrx->${signal.name} = (float32_t)((m->u${dtype}[${idx_s}] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+      %if signal.native_representation.endianness.value == 1:
+    sigrx->${signal.name} = (float32_t)((m->u${dtype}[${(signal.start_bit // dtype)}] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}U) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+      %else:
+    uint32_t tmp_${signal.name} = (m->u${dtype}[${(signal.start_bit // dtype)}] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1};
+    tmp_${signal.name} = ((tmp_${signal.name} & (~${(2**(signal.native_representation.bit_width % 8) - 1)}U & ${(2**signal.native_representation.bit_width)}U)) << ${(2**(signal.native_representation.bit_width % 8) - 1)}U) | (tmp_${signal.name} & ${(2**signal.native_representation.bit_width % 8)}U);
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)});
+    sigrx->${signal.name} = (float32_t)(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+      %endif
     %endif
 %elif "uint" in signal.datatype.value:
       %if signal.native_representation.bit_width > 32 or (signal.start_bit < 32 and (signal.start_bit +signal.native_representation.bit_width - 1) >= 32):
+        %if signal.native_representation.endianness.value == 1:
     sigrx->${signal.name} = ((m->u64 >> ${(signal.start_bit)}U) & ${(2**signal.native_representation.bit_width) - 1}U) * (${int(signal.scale)}) + (${int(signal.offset)});
+        %else:
+    uint64_t tmp_${signal.name} = (m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width // 8)});
+    sigrx->${signal.name} = (tmp_${signal.name}) * (${int(signal.scale)}) + (${int(signal.offset)});
+        %endif
       %else:
 <%
       startBit = signal.start_bit
@@ -65,7 +86,13 @@
         startBit = startBit - 32
         startIndex = 1
 %>\
+        %if signal.native_representation.endianness.value == 1:
     sigrx->${signal.name} = ((m->u32[${startIndex}] >> ${startBit}U) & ${(2**signal.native_representation.bit_width) - 1}U) * (${int(signal.scale)}) + (${int(signal.offset)});
+        %else:
+            uint32_t tmp_${signal.name} = (m->u32[${startIndex}] >> ${(signal.start_bit % 32)}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${math.ceil(signal.native_representation.bit_width / 8)});
+    sigrx->${signal.name} = (tmp_${signal.name}) * (${int(signal.scale)}) + (${int(signal.offset)});
+        %endif
       %endif
 %else:
     (void)m;

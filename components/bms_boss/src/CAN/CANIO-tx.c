@@ -136,11 +136,6 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
         }
     }
 
-    if (*index == packTableLength)
-    {
-        (*nextCounter)++;
-    }
-
     return NULL;
 }
 

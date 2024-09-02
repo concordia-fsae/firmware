@@ -62,7 +62,10 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
 %>\
 \
     %if dtype == 64:
-        atomicXorU64(&m->u64, ((uint64_t)val & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
+      %if signal.native_representation.endianness.value == 1:
+      atomicXorU64(&m->u64, ((uint64_t)val & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
+      %else:
+      %endif
     %else:
       atomicXorU${dtype}(&m->u${dtype}[${idx_s}], ((uint${dtype}_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f) & ${(2**signal.native_representation.bit_width) - 1}) << ${signal.start_bit % dtype}U);
     %endif

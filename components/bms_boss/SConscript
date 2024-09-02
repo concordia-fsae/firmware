@@ -158,6 +158,7 @@ project_source_files = [
     SRC_DIR.File("Sys.c"),
     SRC_DIR.File("IMD.c"),
     SRC_DIR.File("BMS.c"),
+    SRC_DIR.File("Utility.c"),
 ]
 
 project_hw_files = [

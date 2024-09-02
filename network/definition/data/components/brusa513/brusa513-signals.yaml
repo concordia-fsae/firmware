@@ -3,8 +3,8 @@ signals:
     cycleTimeMs: 100
     unit: 'V'
     description: Charger DC Bus Voltage
-    endianness: big
     nativeRepresentation:
+      endianness: 0
       bitWidth: 16
       resolution: 0.1
       range:

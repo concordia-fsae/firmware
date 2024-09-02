@@ -14,6 +14,7 @@
 #include "stdbool.h"
 #include "stdint.h"
 #include "FloatTypes.h"
+#include "Utility.h"
 
 #include "CAN/CANRX_config.h"
 
@@ -135,3 +136,5 @@ __attribute__((always_inline)) static inline CANRX_MESSAGE_health_E CANRX_${bus.
     %endfor
   %endfor
 %endfor
+
+
