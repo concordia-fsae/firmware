@@ -1,4 +1,5 @@
 <%namespace file="message_unpack.mako" import = "*"/>\
+<%! import classes.Types %>
 /*
  * SigRx.h
  * Signal unpacking function definitions
@@ -11,6 +12,7 @@
  ******************************************************************************/
 
 #include "MessageUnpack_generated.h"
+#include "CANTypes_generated.h"
 #include "stdbool.h"
 #include "stdint.h"
 #include "FloatTypes.h"

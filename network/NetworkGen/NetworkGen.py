@@ -24,7 +24,7 @@ ACCEPTED_YAML_FILES = [
 
 can_bus_defs = {}
 can_nodes = {}
-
+discrete_values = {}
 
 # if this gets set during the build, we will fail at the end
 ERROR = False
@@ -33,6 +33,7 @@ ERROR = False
 def generate_discrete_values(data_dir: Path) -> None:
     """Load discrete values from discrete-values.yaml"""
     global ERROR
+    global discrete_values
     discrete_values = DiscreteValues()
 
     with open(data_dir.joinpath("discrete_values.yaml"), "r") as fd:
@@ -292,7 +293,9 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessagePack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessagePack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
-            ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]], "ctypes": [e.value for e in CType], "discrete_values": []}],
+            ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],
             ["TemporaryStubbing.h.mako", {"nodes": [can_nodes[node]]}],
@@ -396,6 +399,7 @@ def main():
     global ERROR
     global can_nodes
     global can_bus_defs
+    global discrete_values
 
     # parse arguments
     args = parse_args()
@@ -410,10 +414,12 @@ def main():
         if args.cache_dir:
             pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
             pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))
+            pickle.dump(discrete_values, open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "wb"))
     elif args.cache_dir:
         try:
             can_nodes = pickle.load(open(args.cache_dir.joinpath("CachedNodes.pickle"), "rb"))
             can_bus_defs = pickle.load(open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "rb"))
+            discrete_values = pickle.load(open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "rb"))
         except Exception as e:
             print(f"Could not retreive cache files. Try building the network again...")
             ERROR = True

@@ -4,7 +4,6 @@
         uint32_t timestamp;
     %if node.received_msgs[message].checksum_sig is not None:
         bool checksumValid :1;
-    if (CANRX_${bus.upper()}_messages.${node.received_msgs[message].name}.checksumValid != true)
     %endif
     %if node.received_msgs[message].counter_sig is not None:
         bool counterValid :1;
@@ -13,8 +12,10 @@
 </%def>\
 
 <%def name="make_structdef_signal(node, sig)">\
-%if node.received_sigs[sig].native_representation.bit_width == 1:
-    bool  ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description} 
+%if node.received_sigs[sig].discrete_values:
+    CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+%elif node.received_sigs[sig].native_representation.bit_width == 1:
+    bool ${node.received_sigs[sig].name} :1; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description} 
 %else:
     ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description} 
 %endif

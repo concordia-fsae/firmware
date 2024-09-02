@@ -38,6 +38,7 @@ def emitBuild(target, source, env):
     target.append(env["NETWORK_OUTPUT_DIR"].File("veh.dbc"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
+    target.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
     return (target, source)
 
 def emitGen(target, source, env):
@@ -46,6 +47,7 @@ def emitGen(target, source, env):
     source.extend(recursive_glob(NETWORK_DATA_DIR, "*.mako"))
     source.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     source.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
+    source.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
     for _, dir in env["nodes"].items():
         target.extend(
             [
@@ -53,6 +55,7 @@ def emitGen(target, source, env):
                 dir.File("MessagePack_generated.h"),
                 dir.File("MessageUnpack_generated.c"),
                 dir.File("MessageUnpack_generated.h"),
+                dir.File("CANTypes_generated.h"),
                 dir.File("SigTx.c"),
                 dir.File("SigRx.h"),
             ]

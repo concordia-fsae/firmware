@@ -8,6 +8,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "CANTypes_generated.h"
 #include "CAN/CanTypes.h"
 #include "lib_atomic.h"
 #include "Utility.h"

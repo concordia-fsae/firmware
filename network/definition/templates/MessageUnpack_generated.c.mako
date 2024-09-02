@@ -59,7 +59,12 @@ void CANRX_${bus.upper()}_unpackMessage(const uint16_t id, const CAN_data_T *con
       %if bus in node.received_msgs[message].source_buses:
         %for signal in node.received_msgs[message].signals:
           %if signal in node.received_sigs:
-            %if node.received_sigs[signal].native_representation.bit_width == 1:
+            %if node.received_sigs[signal].discrete_values:
+
+CANRX_SIGNAL_${node.received_sigs[signal].discrete_values.name} CANRX_${bus.upper()}_get_${node.received_sigs[signal].name}(void)
+{
+    CANRX_SIGNAL_${node.received_sigs[signal].discrete_values.name} ret = {0U};
+            %elif node.received_sigs[signal].native_representation.bit_width == 1:
 
 CANRX_SIGNAL_bool CANRX_${bus.upper()}_get_${node.received_sigs[signal].name}(void)
 {
@@ -80,3 +85,5 @@ CANRX_SIGNAL_${node.received_sigs[signal].datatype.name} CANRX_${bus.upper()}_ge
     %endfor
   %endfor
 %endfor
+
+

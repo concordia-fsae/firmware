@@ -27,6 +27,7 @@
 #include "IO.h"
 
 #include "SigTx.c"
+#include "CANTypes_generated.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -103,9 +104,9 @@ typedef struct
 #define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[1])
 #define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[0])
 #define set_coolPct1(m, b, n, s)                 set(m,b,n,s, COOL.percentage[1])
-#define set_coolState1(m, b, n, s)               set(m,b,n,s, COOL.state[1])
+#define set_coolState1(m, b, n, s)               set(m,b,n,s, (COOL.state[1] != COOL_OFF) ? CAN_OUTPUTSTATE_ON : CAN_OUTPUTSTATE_OFF)
 #define set_coolPct0(m, b, n, s)                 set(m,b,n,s, COOL.percentage[0])
-#define set_coolState0(m,b,n,s)                  set(m,b,n,s, COOL.state[0])
+#define set_coolState0(m,b,n,s)                  set(m,b,n,s, (COOL.state[0] != COOL_OFF) ? CAN_OUTPUTSTATE_ON : CAN_OUTPUTSTATE_OFF)
 
 #include "TemporaryStubbing.h"
 #include "MessagePack_generated.c"

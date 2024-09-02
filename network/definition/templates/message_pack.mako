@@ -30,8 +30,13 @@ const packTable_S ${bus.upper()}_packTable_${cycle_time}ms [] = {
 </%def>
 
 <%def name="make_sigpack(bus, node, signal)">
+%if signal.discrete_values:
+__attribute__((always_inline)) static inline void set_${bus.upper()}_${node.upper()}_${signal.get_name_nodeless()}(CAN_data_T* m, CAN_${signal.discrete_values.name}_E val)
+{
+%else:
 __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.upper()}_${signal.get_name_nodeless()}(CAN_data_T* m, ${signal.datatype.value} val)
 {
+%endif
 %if signal.native_representation.bit_width == 1:
 <%
     idx = signal.start_bit // 8

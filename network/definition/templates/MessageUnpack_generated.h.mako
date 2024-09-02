@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+ #include "CANTypes_generated.h"
  #include "CAN/CanTypes.h"
- #include "FloatTypes.h"
  #include "Utility.h"
  
  /******************************************************************************
@@ -19,36 +19,6 @@
 
  #define CANRX_get_signal(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))()
  #define CANRX_get_signal_duplicateNode(bus, node, id, signal) (JOIN(JOIN(JOIN3(CANRX_,bus,_get),_),JOIN3(node,id,JOIN(_,signal))))()
-
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-typedef enum
-{
-    CANRX_MESSAGE_SNA = 0U,
-    CANRX_MESSAGE_VALID,
-    CANRX_MESSAGE_CHECKSUM_INVALID,
-    CANRX_MESSAGE_COUNTER_INVALID,
-    CANRX_MESSAGE_MIA,
-    CANRX_MESSAGE_MULTIPLE_FAILURES,
-} CANRX_MESSAGE_health_E;
-%for e in ctypes:
-
-typedef struct
-{
-    CANRX_MESSAGE_health_E health;
-    ${e} value;
-} CANRX_SIGNAL_${e};
-%endfor
-%for d in discrete_values:
-
-typedef struct
-{
-    CANRX_MESSAGE_health_E health;
-    ${d} value;
-} CANRX_SIGNAL_${d};
-%endfor
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -89,7 +59,9 @@ void CANRX_${bus.upper()}_unpackMessage(const uint16_t id, const CAN_data_T *con
       %if bus in node.received_msgs[message].source_buses:
         %for signal in node.received_msgs[message].signals:
           %if signal in node.received_sigs:
-            %if node.received_sigs[signal].native_representation.bit_width == 1:
+            %if node.received_sigs[signal].discrete_values:
+CANRX_SIGNAL_${node.received_sigs[signal].discrete_values.name} CANRX_${bus.upper()}_get_${node.received_sigs[signal].name}(void);
+            %elif node.received_sigs[signal].native_representation.bit_width == 1:
 CANRX_SIGNAL_bool CANRX_${bus.upper()}_get_${node.received_sigs[signal].name}(void);
             %else:
 CANRX_SIGNAL_${node.received_sigs[signal].datatype.name} CANRX_${bus.upper()}_get_${node.received_sigs[signal].name}(void);
