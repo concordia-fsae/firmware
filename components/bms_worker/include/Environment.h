@@ -71,7 +71,7 @@ typedef enum
 typedef struct
 {
     bool    therm_error;
-    int16_t temp;
+    float32_t temp;
 } ENV_temperature_S;
 
 typedef struct

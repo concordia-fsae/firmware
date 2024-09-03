@@ -268,7 +268,7 @@ void ENV_calcTempStats(void)
 
     for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
     {
-        if (ENV.values.temps[i].temp == 0)
+        if ((uint8_t)ENV.values.temps[i].temp == 0)
         {
             ENV.values.temps[i].therm_error = true;
             continue;

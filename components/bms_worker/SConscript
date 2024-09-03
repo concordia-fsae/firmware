@@ -96,11 +96,13 @@ c_flags = [
     "-Wpointer-arith",
     "-Wno-type-limits",
     "-Wno-unused-local-typedefs",
+    "-Wconversion",
 ]
 
 free_rtos_flags = [
     "-Wno-missing-prototypes",
     "-Wno-cast-align",
+    "-Wno-conversion",
 ]
 
 chip_config = env.ChipConfig(config_file="HW/mcuConfig.yaml")

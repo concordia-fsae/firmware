@@ -109,6 +109,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 
+    _Static_assert(CANRX_VEH_unpackList_length <= 32, "STM32F1 only has 32 filter id's when used in list mode");
     for (uint32_t i = 0; i < CANRX_VEH_unpackList_length; )
     {
         CAN_FilterTypeDef filt = { 0U };
@@ -280,7 +281,7 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
     rx->IDE              = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
     rx->RTR              = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id               = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
+    rx->id               = (uint16_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos);
     rx->lengthBytes      = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
@@ -427,7 +428,7 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
     if (canHandle == &hcan)
     {
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
-        CANRX_VEH_unpackMessage(header.StdId, &data);
+        CANRX_VEH_unpackMessage((uint16_t)header.StdId, &data);
     }
     //CANRX_BUS_A_notify(fifoId);
     //SWI_invokeFromISR(CANRX_BUS_A_swi);

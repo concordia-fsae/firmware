@@ -207,7 +207,7 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
     while (*index < packTableLength)
     {
         const packTable_S* entry = &packTable[*index];
-        uint16_t         counter = *nextCounter;
+        uint8_t            counter = *nextCounter;
 
         message->u64 = 0ULL;
         if ((*entry->pack)(message, counter))

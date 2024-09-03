@@ -106,7 +106,7 @@ static void Cooling10Hz_PRD(void)
         }
 
 
-        if (COOL.percentage[i] == 0)
+        if ((uint8_t)COOL.percentage[i] == 0)
         {
             COOL.state[i] = COOL_OFF;
         }

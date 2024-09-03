@@ -270,7 +270,7 @@ uint16_t HW_TIM1_getFreqCH1(void)
     {
         return 0;
     }
-    return (fan1_last_tick[1]) ? 4000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0;
+    return (uint16_t)((fan1_last_tick[1]) ? 4000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0);
 }
 
 /**
@@ -284,7 +284,7 @@ uint16_t HW_TIM1_getFreqCH2(void)
     {
         return 0;
     }
-    return (fan2_last_tick[1]) ? 4000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0;
+    return (uint16_t)((fan2_last_tick[1]) ? 4000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0);
 }
 
 

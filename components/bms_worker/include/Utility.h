@@ -116,7 +116,7 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
  */
 static inline void FLAG_setAll(uint16_t* name, uint16_t count)
 {
-    uint16_t numWords  = WORDS_FROM_COUNT(count);
+    uint16_t numWords  = (uint16_t)WORDS_FROM_COUNT(count);
     uint16_t extraBits = count % FLAG_bits_each;
 
     if (numWords > 1U)

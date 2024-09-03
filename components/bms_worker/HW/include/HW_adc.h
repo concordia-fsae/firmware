@@ -13,6 +13,7 @@
 
 #include "SystemConfig.h"
 #include "stdbool.h"
+#include "FloatTypes.h"
 
 
 /******************************************************************************
@@ -49,5 +50,5 @@ extern DMA_HandleTypeDef hdma_adc1;
 HW_StatusTypeDef_E HW_ADC_init(void);
 HW_StatusTypeDef_E HW_ADC_deInit(void);
 bool HW_ADC_calibrate(ADC_HandleTypeDef *hadc);
-bool HW_ADC_startDMA(ADC_HandleTypeDef*, uint32_t*, uint32_t); 
-uint16_t HW_ADC_getVFromCount(uint16_t cnt);
+bool HW_ADC_startDMA(ADC_HandleTypeDef*, uint32_t*, uint32_t);
+float32_t HW_ADC_getVFromCount(uint16_t cnt);

@@ -481,17 +481,17 @@ void BMS_measurementComplete(void)
         BMS.state = BMS_WAITING;
         if (CANRX_get_signal(VEH, TOOLING_targetBalancingVoltage).health == CANRX_MESSAGE_VALID)
         {
-            static uint8_t even = 0;
+            static bool even = false;
 
             max_chip.config.balancing = 0x00;
             max_chip.config.low_power_mode = false;
 
-            for (uint8_t i = even; i < BMS.connected_cells; i += 2)
+            for (uint8_t i = (even) ? 0 : 1; i < BMS.connected_cells; i += 2)
             {
                 max_chip.config.balancing |= (BMS.cells[i].voltage > (CANRX_get_signal(VEH, TOOLING_targetBalancingVoltage).value + BMS_CONFIGRED_BALANCING_MARGIN)) ? 1 << i : 0x00;
             }
 
-            even = (even + 1) % 2;
+            even = (even == false);
         }
         else
         {

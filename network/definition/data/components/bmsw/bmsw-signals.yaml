@@ -32,7 +32,7 @@ signals:
       range:
         min: 0
         max: 127
-      continuous:
+    continuous: true
 
   tempMax:
     cycleTimeMs: 10
@@ -43,7 +43,7 @@ signals:
       range:
         min: 0
         max: 127
-      continuous: true
+    continuous: true
 
   chargeLimit:
     cycleTimeMs: 10
@@ -54,7 +54,7 @@ signals:
       range:
         min: 0
         max: 32
-      continuous: true
+    continuous: true
 
   dischargeLimit:
     cycleTimeMs: 10
@@ -65,7 +65,7 @@ signals:
       range:
         min: 0
         max: 255
-      continuous: true
+    continuous: true
 
   errorFlag:
     cycleTimeMs: 10
@@ -506,6 +506,7 @@ signals:
         min: 0
         max: 100
       resolution: 1
+    continuous: true
 
   boardAmbientTemp:
     cycleTimeMs: 1000
@@ -516,6 +517,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   mcuTemp:
     cycleTimeMs: 1000
@@ -526,6 +528,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   boardTemp0:
     cycleTimeMs: 1000
@@ -536,6 +539,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   boardTemp1:
     cycleTimeMs: 1000
@@ -546,6 +550,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   fan1RPM:
     cycleTimeMs: 1000
@@ -556,6 +561,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   fan0RPM:
     cycleTimeMs: 1000
@@ -566,6 +572,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   coolPct1:
     cycleTimeMs: 1000
@@ -577,6 +584,7 @@ signals:
         min: 0
         max: 100
       resolution: 1
+    continuous: true
 
   coolState1:
     cycleTimeMs: 1000
@@ -593,6 +601,7 @@ signals:
         min: 0
         max: 100
       resolution: 1
+    continuous: true
 
   coolState0:
     cycleTimeMs: 1000
@@ -608,6 +617,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   cellTemp0:
     cycleTimeMs: 1000
@@ -618,6 +628,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   socMax:
     cycleTimeMs: 1000
@@ -629,6 +640,7 @@ signals:
         min: 0
         max: 100
       resolution: 0.1
+    continuous: true
 
   socAvg:
     cycleTimeMs: 1000
@@ -640,6 +652,7 @@ signals:
         min: 0
         max: 100
       resolution: 0.1
+    continuous: true
 
   socMin:
     cycleTimeMs: 1000
@@ -651,6 +664,7 @@ signals:
         min: 0
         max: 100
       resolution: 0.1
+    continuous: true
 
   tempAvg:
     cycleTimeMs: 1000
@@ -661,6 +675,7 @@ signals:
       range:
         min: 0
         max: 127
+    continuous: true
 
   cellVoltageAvg:
     cycleTimeMs: 1000
@@ -671,5 +686,6 @@ signals:
       range:
         min: 0
         max: 5.12
-      cesolution: 0.005
+      resolution: 0.005
+    continuous: true
 

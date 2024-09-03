@@ -99,6 +99,7 @@ void HW_CAN_init(void)
         Error_Handler();
     }
 
+    _Static_assert(CANRX_VEH_unpackList_length <= 32, "STM32F1 only has 32 filter id's when used in list mode");
     for (uint32_t i = 0; i < CANRX_VEH_unpackList_length; )
     {
         CAN_FilterTypeDef filt = { 0U };

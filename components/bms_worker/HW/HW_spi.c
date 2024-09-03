@@ -277,11 +277,11 @@ bool HW_SPI_transmit8(HW_SPI_Device_S* dev, uint8_t data)
  */
 bool HW_SPI_transmit16(HW_SPI_Device_S* dev, uint16_t data)
 {
-    if (!HW_SPI_transmit8(dev, data >> 8))
+    if (!HW_SPI_transmit8(dev, (uint8_t)(data >> 8)))
     {
         return false;
     }
-    HW_SPI_transmit8(dev, data);
+    HW_SPI_transmit8(dev, (uint8_t)data);
 
     return true;
 }
@@ -297,11 +297,11 @@ bool HW_SPI_transmit16(HW_SPI_Device_S* dev, uint16_t data)
  */
 bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data)
 {
-    if (!HW_SPI_transmit16(dev, data >> 16))
+    if (!HW_SPI_transmit16(dev, (uint16_t)(data >> 16)))
     {
         return false;
     }
-    HW_SPI_transmit16(dev, data);
+    HW_SPI_transmit16(dev, (uint16_t)data);
 
     return true;
 }

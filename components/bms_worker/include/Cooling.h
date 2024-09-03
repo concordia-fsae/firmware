@@ -11,6 +11,7 @@
 
 // System Includes
 #include "stdint.h"
+#include "FloatTypes.h"
 
 // Driver Includes
 #include "HW_Fans.h"
@@ -32,8 +33,8 @@ typedef enum
 typedef struct
 {
     COOL_state_E    state[FAN_COUNT];
-    uint8_t         percentage[FAN_COUNT];
-    uint16_t        rpm[FAN_COUNT];
+    float32_t       percentage[FAN_COUNT];
+    float32_t       rpm[FAN_COUNT];
 } COOL_S;
 
 
