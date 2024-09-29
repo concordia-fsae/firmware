@@ -50,6 +50,7 @@ def emitGen(target, source, env):
                 dir.File("MessagePack_generated.h"),
                 dir.File("MessageUnpack_generated.c"),
                 dir.File("MessageUnpack_generated.h"),
+                dir.File("NetworkDefines_generated.h"),
                 dir.File("CANTypes_generated.h"),
                 dir.File("SigTx.c"),
                 dir.File("SigRx.h"),

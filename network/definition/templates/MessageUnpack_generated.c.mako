@@ -102,7 +102,7 @@ CANRX_MESSAGE_health_E CANRX_${bus.upper()}_get_${node.received_sigs[signal].nam
 
 uint32_t CANRX_${bus.upper()}_get_${node.received_sigs[signal].name}_timeSinceLastMessageMS(void)
 {
-    return CANRX_${bus.upper()}_messages.${node.received_msgs[message].name}.timestamp - CANRX_getTimeMs();
+    return CANRX_getTimeMs() - CANRX_${bus.upper()}_messages.${node.received_msgs[message].name}.timestamp;
 }
           %endif
         %endfor

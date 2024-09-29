@@ -327,6 +327,7 @@ class CanMessage(CanObject):
         self.node_name = self.name.split("_")[0]
         self.id = get_if_exists(msg_def, "id", int, None)
         self.length_bytes = get_if_exists(msg_def, "lengthBytes", int, None)
+        self.unscheduled = get_if_exists(msg_def, "unscheduled", bool, False)
         self.signals = {
             f"{self.node_name}_{sig_name}": sig
             for sig_name, sig in msg_def["signals"].items()
@@ -502,10 +503,11 @@ class CanNode(CanObject):
     def messages_by_cycle_time(self) -> Dict[int, List[CanMessage]]:
         ret = {}
         for msg in self.messages.values():
-            if msg.cycle_time_ms in ret:
-                ret[msg.cycle_time_ms].append(msg)
-                continue
-            ret.update({msg.cycle_time_ms: [msg]})
+            if msg.unscheduled == False:
+                if msg.cycle_time_ms in ret:
+                    ret[msg.cycle_time_ms].append(msg)
+                    continue
+                ret.update({msg.cycle_time_ms: [msg]})
         for _, msgs in ret.items():
             msgs.sort(key=lambda entry: entry.id)
         return ret

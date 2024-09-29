@@ -1,4 +1,4 @@
-description: "BMS Worker 0"
+description: "BMS Worker"
 onBuses:
   - "veh"
 duplicateNode: 6

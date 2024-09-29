@@ -17,11 +17,14 @@
 #include "SystemConfig.h"
 #include "MessageUnpack_generated.h"
 #include "CAN/CANIO-rx_helper.h"
+#include "FeatureDefines_generated.h"
 
 #include "PACK.h"
 
+#if FEATURE_NOISY_CANBUS
 #define BMS_CONFIGURED_WORKER_TIMEOUT 500U
-#define CURRENT_SENSE_V_per_A 0.0025f
+#endif // FEATURE_NOISY_CANBUS
+#define CURRENT_SENSE_V_per_A 0.005f
 
 BMSB_S BMS;
 
@@ -58,15 +61,26 @@ static void BMS10Hz_PRD(void)
 
     for (uint8_t i = 0; i < CANRX_NODE_BMSW_COUNT; i++)
     {
+#if FEATURE_BMSW_FAULTS
         if ((CANRX_VEH_get_BMSW_faultFlag(i) == true) &&
-            (CANRX_VEH_get_BMSW_faultFlag_health(i) == CANRX_MESSAGE_VALID))
+#if FEATURE_NOISY_CANBUS
+            (CANRX_VEH_get_BMSW_voltageMin_timeSinceLastMessageMS(i) < BMS_CONFIGURED_WORKER_TIMEOUT))
+#else // FEATURE_NOISY_CANBUS
+            (CANRX_VEH_get_BMSW_faultFlag_health(i) != CANRX_MESSAGE_VALID))
+#endif // not FEATURE_NOISY_CANBUS
         {
             tmp.fault                = true;
             tmp.pack_discharge_limit = 0.0f;
             tmp.pack_charge_limit    = 0.0f;
         }
         else if (CANRX_VEH_get_BMSW_faultFlag_health(i) == CANRX_MESSAGE_SNA)
+        {
+#else // FEATURE_BMSW_FAULTS
+        if (CANRX_VEH_get_BMSW_faultFlag_health(i) == CANRX_MESSAGE_SNA)
+        {
+#endif
             continue;
+        }
 
         tmp.pack_charge_limit    = (CANRX_VEH_get_BMSW_chargeLimit(i) < tmp.pack_charge_limit) ? CANRX_VEH_get_BMSW_chargeLimit(i) : tmp.pack_charge_limit;
         tmp.pack_discharge_limit = (CANRX_VEH_get_BMSW_dischargeLimit(i) < tmp.pack_discharge_limit) ? CANRX_VEH_get_BMSW_dischargeLimit(i) : tmp.pack_discharge_limit;
@@ -133,9 +147,9 @@ static void BMS100Hz_PRD(void)
             else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
             {
                 if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage) > 0.95f * BMS.pack_voltage) &&
-                     (CANRX_get_signal_verbose(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_VALID)) ||
+                     (CANRX_get_signal_health(VEH, PM100DX_tractiveSystemVoltage) == CANRX_MESSAGE_VALID)) ||
 		            ((CANRX_get_signal(VEH, BRUSA513_dcBusVoltage) > 0.95f * BMS.pack_voltage) &&
-                     (CANRX_get_signal_verbose(VEH, BRUSA513_dcBusVoltage).health == CANRX_MESSAGE_VALID)))
+                     (CANRX_get_signal_health(VEH, BRUSA513_dcBusVoltage) == CANRX_MESSAGE_VALID)))
                 {
                     SYS_SFT_cycleContacts();
                 }
@@ -143,9 +157,9 @@ static void BMS100Hz_PRD(void)
             else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
             {
                 if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage) > 0.97f * BMS.pack_voltage) &&
-                     (CANRX_get_signal_verbose(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_VALID)) ||
+                     (CANRX_get_signal_health(VEH, PM100DX_tractiveSystemVoltage) == CANRX_MESSAGE_VALID)) ||
 		            ((CANRX_get_signal(VEH, BRUSA513_dcBusVoltage) > 0.97f * BMS.pack_voltage) &&
-                     (CANRX_get_signal_verbose(VEH, BRUSA513_dcBusVoltage).health == CANRX_MESSAGE_VALID)))
+                     (CANRX_get_signal_health(VEH, BRUSA513_dcBusVoltage) == CANRX_MESSAGE_VALID)))
                 {
                     SYS_SFT_cycleContacts();
                 }
@@ -165,15 +179,21 @@ void BMS_workerWatchdog(void)
     BMS.connected_segments = 0;
     for (uint8_t i = 0; i < BMS_CONFIGURED_SEGMENTS; i++)
     {
+#if FEATURE_NOISY_CANBUS
         if (CANRX_VEH_get_BMSW_voltageMin_timeSinceLastMessageMS(i) < BMS_CONFIGURED_WORKER_TIMEOUT)
+#else // FEATURE_NOISY_CANBUS
+        if (CANRX_VEH_get_BMSW_faultFlag_health(i) == CANRX_MESSAGE_VALID)
+#endif // not FEATURE_NOISY_CANBUS
             BMS.connected_segments++;
-        //if (!CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault)
-        //{
-        //    if (CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].max_temp > 60.0f || BMS.workers[i].voltages.max >= 4.2f ||
-        //        CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].voltages.min <= 2.5f)
-        //    {
-        //        CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault = true;
-        //    }
-        //}
+#if FEATURE_BMSW_FAULTS
+        if (!CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault)
+        {
+            if (CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].max_temp > 60.0f || BMS.workers[i].voltages.max >= 4.2f ||
+                CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].voltages.min <= 2.5f)
+            {
+                CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault = true;
+            }
+        }
+#endif // FEATURE_BMSW_FAULTS
     }
 }

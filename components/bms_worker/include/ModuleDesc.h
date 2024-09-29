@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "FeatureDefines_generated.h"
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -18,7 +20,9 @@
 typedef struct
 {
     void (*moduleInit)(void);           // Pointer to module init function
+#if FEATURE_10KHZ_TASK
     void (*periodic10kHz_CLK)(void);    // Pointer to module 10kHz periodic function
+#endif // FEATURE_10KHZ_TASK
     void (*periodic1kHz_CLK)(void);     // Pointer to module 1kHz periodic function
     void (*periodic100Hz_CLK)(void);    // Pointer to module 100Hz periodic function
     void (*periodic10Hz_CLK)(void);     // Pointer to module 10Hz periodic function

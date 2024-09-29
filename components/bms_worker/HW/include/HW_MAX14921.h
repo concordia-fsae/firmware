@@ -71,7 +71,7 @@ typedef struct
     bool     low_power_mode    : 1;
     bool     diagnostic_enabled: 1;
     bool     sampling          : 1;
-    uint32_t sampling_start_100us;
+    uint32_t sampling_start;
     uint16_t balancing;
     struct
     {

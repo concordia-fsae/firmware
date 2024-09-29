@@ -21,6 +21,8 @@
 #include "Sys.h"
 
 #include "MessageUnpack_generated.h"
+#include "uds.h"
+#include "uds_componentSpecific.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -427,6 +429,17 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
     {
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
         CANRX_VEH_unpackMessage(header.StdId, &data);
+
+#if FEATURE_UDS
+        if (header.StdId == UDS_REQUEST_ID)
+        {
+            // FIXME: there needs to be a queue here for received UDS messages
+            // which will then be processed in the periodic.
+            // Right now, a successfully received UDS message will overwritten by
+            // the next one, even if it hasn't been processed yet.
+            udsSrv_processMessage(data.u8, (uint8_t)header.DLC);
+        }
+#endif // FEATURE_UDS
     }
 }
 
@@ -586,9 +599,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(CAN_Port, &GPIO_InitStruct);
-        
+
         __HAL_AFIO_REMAP_CAN1_2();
-        
+
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN_TX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN_RX_IRQ_PRIO, 0U);

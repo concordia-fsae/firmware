@@ -21,10 +21,12 @@
 #include "HW_adc.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
+#include "HW_tim.h"
 
 /**< Other Includes */
 #include "ModuleDesc.h"
 #include "Utility.h"
+#include "FeatureDefines_generated.h"
 
 
 /******************************************************************************
@@ -189,10 +191,17 @@ static void IO10Hz_PRD(void)
     }
 }
 
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 /**
- * @brief  1kHz IO periodic function
+ * @brief  10kHz IO periodic function
  */
 static void IO10kHz_PRD(void)
+#else // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+/**
+ * @brief  10kHz IO periodic function
+ */
+void IO10kHz_CB(void)
+#endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 {
     if (io.adcState == ADC_STATE_RUNNING)
     {
@@ -229,6 +238,9 @@ static void IO10kHz_PRD(void)
             {
                 current_cell--;
                 BMS_setOutputCell(current_cell);
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+                HW_TIM_10kHz_timerStart();
+#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
             }
         }
         else if ((BMS.state == BMS_SAMPLING) || (BMS.state == BMS_PARASITIC))
@@ -270,7 +282,9 @@ static void IO10kHz_PRD(void)
 const ModuleDesc_S IO_desc = {
     .moduleInit       = &IO_init,
     .periodic10Hz_CLK = &IO10Hz_PRD,
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
     .periodic1kHz_CLK = &IO10kHz_PRD,
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 };
 
 /******************************************************************************

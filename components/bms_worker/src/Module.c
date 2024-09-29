@@ -21,6 +21,7 @@
 
 /**< Other Includes */
 #include "Utility.h"
+#include "FeatureDefines_generated.h"
 
 
 /******************************************************************************
@@ -36,7 +37,12 @@ static const ModuleDesc_S* modules[] = {
     &COOL_desc,
     &IO_desc,
     &SYS_desc,
+#if FEATURE_UDS
+    &UDS_desc,
+#endif // FEATURE_UDS
+#if FEATURE_CANRX_SWI
     &CANIO_rx,
+#endif // FEATURE_CANRX_SWI
     &CANIO_tx,
 };
 
@@ -72,6 +78,7 @@ void Module_Init(void)
     rtos_start = HW_TIM_getBaseTick();
 }
 
+#if FEATURE_10KHZ_TASK
 /**
  * @brief  10kHz periodic function
  */
@@ -94,7 +101,7 @@ void Module_10kHz_TSK(void)
     stats[MODULE_10kHz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_10kHz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
 }
-
+#endif // FEATURE_10KHZ_TASK
 /**
  * @brief  1kHz periodic function
  */

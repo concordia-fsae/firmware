@@ -28,6 +28,8 @@
 
 #include "SigTx.c"
 #include "CANTypes_generated.h"
+#include "FeatureDefines_generated.h"
+
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -137,17 +139,17 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
  * CANTX_BUS_A_1ms_SWI
  * send BUS_A messages
  */
-void CANTX_BUS_A_SWI(void)
+void CANTX_BUS_VEH_SWI(void)
 {
     static uint8_t   counter_100Hz = 0U;
     static uint8_t   counter_1Hz = 0U;
     CAN_data_T       message = { 0U };
 
-    if (cantx.tx_10Hz_msg != VEH_packTable_10_length)
+    if (cantx.tx_10Hz_msg != VEH_packTable_10ms_length)
     {
 
         const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&VEH_packTable_10ms,
-                                                         VEH_packTable_10_length,
+                                                         VEH_packTable_10ms_length,
                                                          &cantx.tx_10Hz_msg,
                                                          &message,
                                                          &counter_100Hz);
@@ -161,7 +163,7 @@ void CANTX_BUS_A_SWI(void)
             memset(&message, 0, sizeof(message));
         }
     }
-    if (cantx.tx_10Hz_msg == VEH_packTable_10_length)
+    if (cantx.tx_10Hz_msg == VEH_packTable_10ms_length)
     {
         if (counter_100Hz != 255U)
         {
@@ -174,11 +176,11 @@ void CANTX_BUS_A_SWI(void)
         cantx.tx_10Hz_msg++;
     }
 
-    if (cantx.tx_1Hz_msg != VEH_packTable_1000_length)
+    if (cantx.tx_1Hz_msg != VEH_packTable_1000ms_length)
     {
 
         const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&VEH_packTable_1000ms,
-                                                       VEH_packTable_1000_length,
+                                                       VEH_packTable_1000ms_length,
                                                        &cantx.tx_1Hz_msg,
                                                        &message,
                                                        &counter_1Hz);
@@ -192,7 +194,7 @@ void CANTX_BUS_A_SWI(void)
             memset(&message, 0, sizeof(message));
         }
     }
-    if (cantx.tx_10Hz_msg == VEH_packTable_10_length)
+    if (cantx.tx_10Hz_msg == VEH_packTable_10ms_length)
     {
         if (counter_100Hz != 255U)
         {
@@ -211,7 +213,6 @@ void CANTX_BUS_A_SWI(void)
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
-        \
 
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
@@ -241,8 +242,11 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static void CANIO_tx_1kHz_PRD(void)
 {
-    //SWI_invoke(CANTX_BUS_A_swi);
-    CANTX_BUS_A_SWI();
+#if FEATURE_CANTX_SWI
+    SWI_invoke(CANTX_BUS_VEH_swi);
+#else // FEATURE_CANTX_SWI
+    CANTX_BUS_VEH_SWI();
+#endif // not FEATURE_CANTX_SWI
 }
 
 /**
@@ -251,7 +255,7 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_10Hz_PRD(void)
 {
-    if (cantx.tx_10Hz_msg < VEH_packTable_10_length)
+    if (cantx.tx_10Hz_msg < VEH_packTable_10ms_length)
     {
         // all the message weren't sent. TO-DO: error handling
     }
@@ -264,7 +268,7 @@ static void CANIO_tx_10Hz_PRD(void)
  */
 static void CANIO_tx_1Hz_PRD(void)
 {
-    if (cantx.tx_1Hz_msg < VEH_packTable_1000_length)
+    if (cantx.tx_1Hz_msg < VEH_packTable_1000ms_length)
     {
         // all the message weren't sent. TO-DO: error handling
     }
@@ -278,8 +282,8 @@ static void CANIO_tx_1Hz_PRD(void)
 static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
-    cantx.tx_1Hz_msg   = VEH_packTable_1000_length;
-    cantx.tx_10Hz_msg = VEH_packTable_10_length;
+    cantx.tx_1Hz_msg   = VEH_packTable_1000ms_length;
+    cantx.tx_10Hz_msg = VEH_packTable_10ms_length;
     HW_CAN_start();    // start CAN
 }
 

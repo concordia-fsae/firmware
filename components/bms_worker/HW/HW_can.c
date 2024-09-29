@@ -17,6 +17,8 @@
 #include "stm32f1xx_hal_can.h"
 
 #include "MessageUnpack_generated.h"
+#include "uds.h"
+#include "uds_componentSpecific.h"
 #include "Cooling.h"
 
 /******************************************************************************
@@ -419,16 +421,32 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
  */
 static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
+#if FEATURE_CANRX_SWI == FEATURE_DISABLED
     CAN_data_T          data = {0U};
     CAN_RxHeaderTypeDef header = {0U};
+#endif // FEATURE_CANRX_SWI == FEATURE_DISABLED
 
     if (canHandle == &hcan)
     {
+#if FEATURE_CANRX_SWI == FEATURE_DISABLED
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
         CANRX_VEH_unpackMessage((uint16_t)header.StdId, &data);
+
+#if FEATURE_UDS
+        if (header.StdId == UDS_REQUEST_ID)
+        {
+            // FIXME: there needs to be a queue here for received UDS messages
+            // which will then be processed in the periodic.
+            // Right now, a successfully received UDS message will overwritten by
+            // the next one, even if it hasn't been processed yet.
+            udsSrv_processMessage(data.u8, (uint8_t)header.DLC);
+        }
+#endif // FEATURE_UDS
+#else // FEATURE_CANRX_SWI == FEATURE_DISABLED
+        CANRX_BUS_VEH_notify(fifoId);
+        SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+#endif // FEATURE_CANRX_SWI
     }
-    //CANRX_BUS_A_notify(fifoId);
-    //SWI_invokeFromISR(CANRX_BUS_A_swi);
 }
 
 

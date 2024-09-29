@@ -1,4 +1,22 @@
 messages:
+  UDSCLIENT_bmsw0UdsRequest:
+    unrecorded: true
+    node: 0
+  UDSCLIENT_bmsw1UdsRequest:
+    unrecorded: true
+    node: 1
+  UDSCLIENT_bmsw2UdsRequest:
+    unrecorded: true
+    node: 2
+  UDSCLIENT_bmsw3UdsRequest:
+    unrecorded: true
+    node: 3
+  UDSCLIENT_bmsw4UdsRequest:
+    unrecorded: true
+    node: 4
+  UDSCLIENT_bmsw5UdsRequest:
+    unrecorded: true
+    node: 5
 signals:
   TOOLING_commandedFansDutyCycle:
   TOOLING_targetBalancingVoltage:

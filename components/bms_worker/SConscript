@@ -17,6 +17,8 @@ FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
 CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
 CELLS_DIR = LIBS_DIR.Dir("cells")
 THERMS_DIR = Dir("thermistors")
+UDS_DIR = LIBS_DIR.Dir("uds")
+ISOTP_DIR = LIBS_DIR.Dir("isotp")
 
 ARTIFACT_NAME = "bms_worker"
 BUILDS_DIR = Dir(f"build")
@@ -125,31 +127,15 @@ LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("printf"),
     LIBS_DIR.Dir("atomic"),
     CELLS_DIR,
+    UDS_DIR.Dir("include"),
+    ISOTP_DIR.Dir("include"),
 ]
 
 INCLUDE_DIRS = [
     "include/",
     "HW/include/",
-    "generated/",
     "thermistors/",
 ]
-
-paths = (
-    RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + INCLUDE_DIRS + LIBS_INCLUDE_DIRS
-)
-
-env.Append(
-    ASFLAGS=as_flags,
-    CPPPATH=paths,
-    CCFLAGS=common_flags + c_flags,
-    LINKSCRIPT=chip_config["linker_file"],
-    LINKFLAGS=c_flags + link_flags + common_flags,
-)
-
-rtos_env.Append(
-    CPPPATH=paths,
-    CCFLAGS=common_flags + c_flags + free_rtos_flags,
-)
 
 # List of component C files
 
@@ -164,6 +150,7 @@ src_files = [
     SRC_DIR.File("BatteryMonitoring.c"),
     SRC_DIR.File("Sys.c"),
     SRC_DIR.File("Utility.c"),
+    SRC_DIR.File("UDS.c"),
     CELLS_DIR.File("P42A.c"),
     THERMS_DIR.File("THERMISTORS.c"),
     THERMS_DIR.File("NCP21XV103J03RA.c"),
@@ -211,10 +198,14 @@ platform_src_files.extend(
     [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
 )
 
+uds_srcs = [
+    ISOTP_DIR.File("isotp.c"),
+    UDS_DIR.File("src/udsServer.c"),
+]
 
-def render_generated_files(options, output_dir):
+def render_generated_files(options, renderer, output_dir):
     targets = []
-    for template in renderers:
+    for template in renderer:
         renderer = Template(filename=template.abspath)
         rendered = renderer.render(**options)
         if not isinstance(rendered, str):
@@ -275,7 +266,28 @@ def compile_objects(
         )
     return objs
 
+paths = (
+    RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + INCLUDE_DIRS + LIBS_INCLUDE_DIRS
+)
 
+env.Append(
+    ASFLAGS=as_flags,
+    CPPPATH=paths,
+    CCFLAGS=common_flags + c_flags,
+    LINKSCRIPT=chip_config["linker_file"],
+    LINKFLAGS=c_flags + link_flags + common_flags,
+)
+
+renderers = {
+    "buildDefs": [File("renderers/BuildDefines_generated.h.mako")],
+    "featureDefs": [File("#/shared/renderers/mako/FeatureDefines_generated.h.mako")],
+}
+# Order of list is important
+feature_definitions = [
+    File("#/shared/features/Vehicle_FeatureDefs.yaml"),
+    File("#/shared/features/Controller_FeatureDefs.yaml"),
+    File("FeatureDefs.yaml"),
+]
 configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
 elfs = []
 binaries = []
@@ -291,13 +303,37 @@ for config_id, config in configs.items():
 
     generated_sources = NETWORK_ENV.GenerateNodes({ f"bmsw_{config['options']['canIdOffset']}": generated_dir, })
 
-    renderers = [
-        File("renderers/BuildDefines_generated.h.mako"),
-    ]
+    if "features" in config:
+        features = {"features": env.GenerateFeatures(feature_definitions, config["features"]) }
+        generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
+    else:
+        generated_features = None
 
-    generated = render_generated_files(config["options"], generated_dir)
+    if "options" in config:
+        generated_defs = render_generated_files(config["options"], renderers["buildDefs"], generated_dir)
+    else:
+        generated_defs = None
 
     ## actually compile stuff
+    include_dirs = paths + [generated_dir]
+    env["CPPPATH"] = include_dirs
+
+    uds_env = env.Clone()
+    uds_env.Append(
+        CCFLAGS=[
+            "-Wno-missing-prototypes",
+            "-Wno-unused-parameter",
+            "-DBYTE_ORDER=_BYTE_ORDER",
+            "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+            "-Wno-inline",
+            "-Wno-conversion",
+        ]
+    )
+
+    rtos_env.Append(
+        CPPPATH=paths,
+        CCFLAGS=common_flags + c_flags + free_rtos_flags,
+    )
 
     objs = []  # store objects here
 
@@ -336,6 +372,9 @@ for config_id, config in configs.items():
             CPPPATH=paths + [generated_dir],
         )
     )
+
+    # compile UDS source files
+    objs.extend(compile_objects(uds_env, uds_srcs, variant_dir=variant_dir, target_dir="uds/"))
 
     objs.extend(
         compile_objects(

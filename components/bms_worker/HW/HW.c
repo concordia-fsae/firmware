@@ -17,6 +17,27 @@
 #include "include/HW_tim.h"
 #include "stm32f1xx.h"
 
+typedef struct
+{
+    volatile uint32_t const CPUID;
+    volatile uint32_t       ICSR;
+    volatile uint32_t       VTOR;
+    volatile uint32_t       AIRCR;
+    volatile uint32_t       SCR;
+    volatile uint32_t       CCR;
+    volatile uint32_t       SHPR[3];
+    volatile uint32_t       SHCSR;
+    volatile uint32_t       CFSR;
+    volatile uint32_t       HFSR;
+    volatile uint32_t       DFSR;
+    volatile uint32_t       MMFAR;
+    volatile uint32_t       BFAR;
+    volatile uint32_t       AFSR;
+} SCB_regMap;
+#define pSCB               ((SCB_regMap*)SCB_BASE)
+
+#define AIRCR_RESET        (0x05FA0000UL)
+#define AIRCR_RESET_REQ    (AIRCR_RESET | 0x04UL)
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -44,37 +65,7 @@ HW_StatusTypeDef_E HW_deInit(void)
     return HW_OK;
 }
 
-/**
- * @brief  Get the number of ticks since clock start
- *
- * @retval Number of ticks
- */
-uint32_t HW_getTick(void)
+void HW_systemHardReset(void)
 {
-    return HAL_GetTick();
-}
-
-/**
- * @brief  Delay the execution in blocking mode for amount of ticks
- *
- * @param delay Number of ticks to delay in blocking mode
- */
-void HW_delay(uint32_t delay)
-{
-    HAL_Delay(delay);
-}
-
-/**
- * @brief  This function is blocking and should be avoided
- *
- * @param us Microsecond blocking delay
- */
-void HW_usDelay(uint8_t us)
-{
-    uint64_t us_start = HW_TIM_getBaseTick();
-
-    while (HW_TIM_getBaseTick() < us_start + us)
-    {
-        ;
-    }
+    pSCB->AIRCR = AIRCR_RESET_REQ;
 }

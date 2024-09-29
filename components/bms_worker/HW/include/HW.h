@@ -31,6 +31,4 @@ typedef enum
 
 HW_StatusTypeDef_E HW_init(void);
 HW_StatusTypeDef_E HW_deInit(void);
-uint32_t HW_getTick(void);
-void     HW_delay(uint32_t delay);
-void     HW_usDelay(uint8_t us);
+void     HW_systemHardReset(void);

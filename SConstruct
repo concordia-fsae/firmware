@@ -58,7 +58,7 @@ if platform:
         if targets:
             # TODO: Handle
             pass
-        for parts in platforms[platform]:
+        for parts in platforms[platform]["ecu"]:
             for id in parts:
                 target_dict[id] = parts[id]
     else:

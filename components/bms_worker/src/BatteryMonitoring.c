@@ -13,6 +13,7 @@
 /**< Driver Includes */
 #include "HW.h"
 #include "HW_adc.h"
+#include "HW_tim.h"
 
 #include "FreeRTOS.h"
 
@@ -25,6 +26,7 @@
 #include "IO.h"
 
 #include "MessageUnpack_generated.h"
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -105,7 +107,7 @@ static void BMS1kHz_PRD()
 
     if (BMS.state == BMS_PARASITIC)
     {
-        if (max_chip.config.sampling_start_100us == UINT32_MAX)
+        if (max_chip.config.sampling_start == UINT32_MAX)
         {
             max_chip.config.sampling           = false;
             max_chip.config.diagnostic_enabled = false;
@@ -114,19 +116,25 @@ static void BMS1kHz_PRD()
             max_chip.config.output.state       = MAX_PARASITIC_ERROR_CALIBRATION;
 
             MAX_readWriteToChip();
-            max_chip.config.sampling_start_100us = HW_getTick();
+            max_chip.config.sampling_start = HW_TIM_getTimeMS();
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+            HW_TIM_10kHz_timerStart();
+#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
             return;
         }
-        else if (HW_getTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
+        else if (HW_TIM_getTimeMS() >= max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
-            max_chip.config.sampling_start_100us = UINT32_MAX;
+            max_chip.config.sampling_start = UINT32_MAX;
             BMS.state                            = BMS_PARASITIC_MEASUREMENT;
             BMS.pack_voltage                     = IO.segment * 16;
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+            HW_TIM_10kHz_timerStart();
+#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
         }
     }
     else if (BMS.state == BMS_SAMPLING)
     {
-        if (max_chip.config.sampling_start_100us == UINT32_MAX)
+        if (max_chip.config.sampling_start == UINT32_MAX)
         {
             max_chip.config.sampling           = true;
             max_chip.config.low_power_mode     = false;
@@ -135,16 +143,23 @@ static void BMS1kHz_PRD()
             max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
 
             MAX_readWriteToChip();
-            max_chip.config.sampling_start_100us = HW_getTick();
+            max_chip.config.sampling_start = HW_TIM_getTimeMS();
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+            HW_TIM_10kHz_timerStart();
+#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
             return;
         }
-        else if (HW_getTick() >= max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
+        else if (HW_TIM_getTimeMS() >= max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
-            max_chip.config.sampling_start_100us = UINT32_MAX;
+            max_chip.config.sampling_start = UINT32_MAX;
             max_chip.config.diagnostic_enabled   = false;
             BMS.pack_voltage                     = IO.segment * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
             BMS.state                            = BMS_HOLDING;
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+            HW_TIM_10kHz_timerStart();
+#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+
         }
     }
     else if (BMS.state == BMS_WAITING)
@@ -162,11 +177,11 @@ static void BMS1kHz_PRD()
         BMS.state                            = BMS_SAMPLING;
         max_chip.config.diagnostic_enabled   = false;
         max_chip.config.low_power_mode       = false;
-        max_chip.config.sampling_start_100us = UINT32_MAX;
+        max_chip.config.sampling_start = UINT32_MAX;
     }
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
-        if (max_chip.config.sampling_start_100us + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_getTick())
+        if (max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_TIM_getTimeMS())
         {
             max_chip.config.sampling             = false;
             max_chip.config.diagnostic_enabled   = false;
@@ -174,7 +189,7 @@ static void BMS1kHz_PRD()
             max_chip.config.balancing            = 0x00;
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell   = MAX_CELL1; /**< Prepare for next step */
-            max_chip.config.sampling_start_100us = UINT32_MAX;
+            max_chip.config.sampling_start = UINT32_MAX;
             MAX_readWriteToChip();
 
             BMS.state                          = BMS_SAMPLING;
@@ -219,10 +234,10 @@ static void BMS1Hz_PRD()
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
 
             MAX_readWriteToChip();
-            start_time = HW_getTick();
+            start_time = HW_TIM_getTimeMS();
             return;
         }
-        else if ((start_time + pdMS_TO_TICKS(100)) > HW_getTick())
+        else if ((start_time + pdMS_TO_TICKS(100)) > HW_TIM_getTimeMS())
         {
             return; /**< wait atleast 100ms to sample the voltages for the first time */
         }
@@ -299,16 +314,18 @@ static void BMS1Hz_PRD()
         return;
     }
 
-    //max_chip.config.diagnostic_enabled = true;
-    //max_chip.config.sampling           = true;
-    //max_chip.config.low_power_mode     = false;
-    //max_chip.config.balancing          = 0x00;
-    //max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    //max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    //MAX_readWriteToChip();
+#if FEATURE_MAX14921_CALIBRATE_1HZ
+    max_chip.config.diagnostic_enabled = true;
+    max_chip.config.sampling           = true;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    MAX_readWriteToChip();
 
-    //max_chip.config.sampling_start_100us = HW_getTick();
-    //BMS.state                            = BMS_DIAGNOSTIC;
+    max_chip.config.sampling_start = HW_TIM_getTimeMS();
+    BMS.state                            = BMS_DIAGNOSTIC;
+#endif // FEATURE_MAX14921_CALIBRATE_1Hz
 }
 
 void BMS_toSleep(void)
@@ -320,7 +337,7 @@ void BMS_toSleep(void)
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
     max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    max_chip.config.sampling_start_100us = UINT32_MAX;
+    max_chip.config.sampling_start = UINT32_MAX;
     MAX_readWriteToChip();
     MAX_readWriteToChip(); // Update value
 
@@ -367,16 +384,18 @@ void BMS_calcSegStats(void)
         BMS.cells[i].voltage = IO.cell[i] + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > 2.0f) && (BMS.cells[i].voltage < 4.5f))
         {
-            //if (BMS.cells[i].voltage < 2.5f)
-            //{
-            //    BMS.cells[i].state = BMS_CELL_FAULT_UV;
-            //    continue;
-            //}
-            //else if (BMS.cells[i].voltage > 4.2f)
-            //{
-            //    BMS.cells[i].state = BMS_CELL_FAULT_OV;
-            //    continue;
-            //}
+#if FEATURE_BMSW_FAULTS
+            if (BMS.cells[i].voltage < 2.5f)
+            {
+                BMS.cells[i].state = BMS_CELL_FAULT_UV;
+                continue;
+            }
+            else if (BMS.cells[i].voltage > 4.2f)
+            {
+                BMS.cells[i].state = BMS_CELL_FAULT_OV;
+                continue;
+            }
+#endif // FEATURE_BMSW_FAULTS
 
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
@@ -480,6 +499,7 @@ void BMS_measurementComplete(void)
     if (BMS.state == BMS_HOLDING)
     {
         BMS.state = BMS_WAITING;
+#if FEATURE_CELL_BALANCING
         if (CANRX_get_signal_timeSinceLastMessageMS(VEH, TOOLING_targetBalancingVoltage) < BMS_CONFIGURED_BALANCING_TIMEOUT)
         {
             static bool even = false;
@@ -495,6 +515,7 @@ void BMS_measurementComplete(void)
             even = (even == false);
         }
         else
+#endif // FEATURE_CELL_BALANCING
         {
             max_chip.config.low_power_mode = true;
             max_chip.config.balancing = 0x00;
@@ -556,9 +577,9 @@ void BMS_dischargeLimit()
     {
         if (start_derate == 0x00)
         {
-            start_derate = HW_getTick();
+            start_derate = HW_TIM_getTimeMS();
         }
-        else if ((start_derate + BMS_CONFIGURED_DERATING_DELAY) < HW_getTick())
+        else if ((start_derate + BMS_CONFIGURED_DERATING_DELAY) < HW_TIM_getTimeMS())
         {
             start_derate = 0x00;
             float32_t dis = BMS.discharge_limit;

@@ -20,7 +20,7 @@
   %for bus in node.on_buses:
     %for cycle_time, msgs in node.messages_by_cycle_time().items():
 
-#define ${bus.upper()}_packTable_${cycle_time}_length ${len(msgs)}U
+#define ${bus.upper()}_packTable_${cycle_time}ms_length ${len(msgs)}U
 extern const packTable_S ${bus.upper()}_packTable_${cycle_time}ms[];
     %endfor
   %endfor

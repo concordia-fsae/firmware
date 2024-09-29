@@ -26,3 +26,11 @@ messages:
       nlg513MaxMainsCurrent:
       nlg513MaxChargeVoltage:
       nlg513MaxChargeCurrent:
+
+  udsResponse:
+    description: UDS response message from the BMSB
+    unscheduled: true
+    id: 0x650
+    lengthBytes: 8
+    signals:
+      udsPayload:

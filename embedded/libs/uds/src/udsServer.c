@@ -11,8 +11,8 @@
 
 // module include
 #include "uds.h"
-#include "uds_componentSpecific.h"
 
+#if UDS_ENABLE_LIB
 #include "isotp.h"
 
 #include <stddef.h>    // NULL
@@ -481,3 +481,4 @@ __attribute__((weak)) udsNegativeResponse_E uds_cb_sessionChangeAllowed(udsSessi
 {
     return UDS_NRC_NONE;
 }
+#endif // UDS_ENABLE_LIB

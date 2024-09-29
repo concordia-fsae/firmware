@@ -60,21 +60,22 @@ typedef struct
 
 __attribute__((always_inline)) static inline void CANRX_${bus.upper()}_unpack_${node.received_msgs[message].name}(CANRX_${bus.upper()}_signals_S* sigrx, CANRX_${bus.upper()}_messages_S* msgrx, const CAN_data_T *const m)
 {
+    UNUSED(sigrx); UNUSED(msgrx); UNUSED(m); // For messages with unrecorded signals (Immediately processed at the CAN Layer)
           %for signal in node.received_msgs[message].signals:
             %if signal in node.received_sigs:
-          %if signal in node.received_sigs and node.received_msgs[message].checksum_sig is None and node.received_msgs[message].counter_sig is None:
+              %if signal in node.received_sigs and node.received_msgs[message].checksum_sig is None and node.received_msgs[message].counter_sig is None:
 <%make_sigunpack(bus, node, node.received_msgs[message].signal_objs[signal])%>\
-          %elif node.received_msgs[message].counter_sig != None:
-            %if node.received_msgs[message].counter_sig.name != signal:
+              %elif node.received_msgs[message].counter_sig != None:
+                %if node.received_msgs[message].counter_sig.name != signal:
 <%make_sigunpack(bus, node, node.received_msgs[message].signal_objs[signal])%>\
+                %endif
+              %elif node.received_msgs[message].checksum_sig != None:
+                %if node.received_msgs[message].checksum_sig.name != signal:
+<%make_sigunpack(bus, node, node.received_msgs[message].signal_objs[signal])%>\
+                %endif
+              %endif
             %endif
-          %elif node.received_msgs[message].checksum_sig != None:
-            %if node.received_msgs[message].checksum_sig.name != signal:
-<%make_sigunpack(bus, node, node.received_msgs[message].signal_objs[signal])%>\
-            %endif
-          %endif
-        %endif
-        %endfor
+          %endfor
     msgrx->${message}.timestamp = CANRX_getTimeMs();
         %if node.received_msgs[message].checksum_sig is not None:
 

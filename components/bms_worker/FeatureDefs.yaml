@@ -1,0 +1,12 @@
+features:
+  feature_max14921_calibrate_1hz:
+    enabled: true
+  feature_cell_balancing:
+  feature_high_frequency_cell_measurement_task:
+    enabled: false
+    requires: 
+      - feature_10kHz_task
+  feature_canrx_swi:
+    enabled: false
+  feature_cantx_swi: 
+    enabled: true

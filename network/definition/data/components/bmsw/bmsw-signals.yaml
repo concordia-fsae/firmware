@@ -690,3 +690,13 @@ signals:
       resolution: 0.005
     continuous: true
 
+  udsPayload:
+    cycleTimeMs: 10
+    unit: ''
+    description: UDS payload data
+    nativeRepresentation:
+      bitWidth: 64
+      resolution: 1
+      range:
+        min: 0
+        max: 18446744073709551615

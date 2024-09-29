@@ -117,3 +117,11 @@ messages:
       coolState1:
       coolPct0:
       coolState0:
+
+  udsResponse:
+    description: UDS response message from the BMSB
+    unscheduled: true
+    id: 0x640
+    lengthBytes: 8
+    signals:
+      udsPayload:

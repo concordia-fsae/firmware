@@ -94,12 +94,12 @@ static cantx_counter_S cantx_counter;
  */
 void CANTX_BUS_A_SWI(void)
 {
-    if (cantx.tx_100Hz_msg < VEH_packTable_10_length)
+    if (cantx.tx_100Hz_msg < VEH_packTable_10ms_length)
     {
         CAN_data_T     message_100Hz = {0};
 
         const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&VEH_packTable_10ms,
-                                                        VEH_packTable_10_length,
+                                                        VEH_packTable_10ms_length,
                                                         &cantx.tx_100Hz_msg,
                                                         &message_100Hz,
                                                         &cantx_counter.counter_100Hz);
@@ -113,7 +113,7 @@ void CANTX_BUS_A_SWI(void)
             memset(&message_100Hz, 0, sizeof(message_100Hz));
         }
     }
-    if (cantx.tx_100Hz_msg == VEH_packTable_10_length)
+    if (cantx.tx_100Hz_msg == VEH_packTable_10ms_length)
     {
         if (cantx_counter.counter_100Hz != 255U)
         {
@@ -216,7 +216,7 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_100Hz_PRD(void)
 {
-    if (cantx.tx_100Hz_msg < VEH_packTable_10_length) {
+    if (cantx.tx_100Hz_msg < VEH_packTable_10ms_length) {
         // all the message weren't sent. TO-DO: error handling
     }
     cantx.tx_100Hz_msg = 0U;

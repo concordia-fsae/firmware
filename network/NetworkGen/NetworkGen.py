@@ -173,6 +173,12 @@ def process_node(node: CanNode):
             msg_name = f"{node.name.upper()}_{name}"
 
         definition["id"] = definition["id"] + node.offset;
+        
+        for existing_node in can_nodes:
+            for msg in can_nodes[existing_node].messages:
+                if definition["id"] == can_nodes[existing_node].messages[msg].id:
+                    print(f"Message {msg_name} has the same ID as {msg}")
+                    ERROR = True
         msg_obj = CanMessage(node, msg_name, definition)
 
         if msg_obj.signals is None:
@@ -257,8 +263,19 @@ def process_receivers(bus: CanBus, node: CanNode):
             ERROR = True
             continue
 
+        if rx_msg_dict[msg_name] is not None:
+            if "node" in rx_msg_dict[msg_name]:
+                if node.duplicateNode is False:
+                    Exception(f"{msg_name} in file {rx_file} is for node {rx_msg_dict[msg_name]["node"]}, however {node.alias} is not a duplicate node.")
+                if rx_msg_dict[msg_name]["node"] is not node.offset:
+                    continue
+
         if msg_name not in node.received_msgs:
             node.received_msgs[msg_name] = bus.messages[msg_name]
+
+        if rx_msg_dict[msg_name] is not None:
+            if "unrecorded" in rx_msg_dict[msg_name]:
+                continue
 
         for sig_name in bus.messages[msg_name].signals:
             rxed_sig = bus.signals[sig_name]
@@ -295,6 +312,7 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["NetworkDefines_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],

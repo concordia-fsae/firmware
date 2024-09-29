@@ -9,18 +9,20 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
- #include "CANTypes_generated.h"
- #include "CAN/CanTypes.h"
- #include "Utility.h"
+#include "NetworkDefines_generated.h"
+#include "CANTypes_generated.h"
+#include "CAN/CanTypes.h"
+#include "Utility.h"
  
  /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
- #define CANRX_get_signal(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))()
- #define CANRX_get_signal_timeSinceLastMessageMS(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_timeSinceLastMessageMS)))()
- #define CANRX_get_signal_verbose(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_verbose)))()
- #define CANRX_get_signal_duplicateNode(bus, node, id, signal) (JOIN(JOIN(JOIN3(CANRX_,bus,_get),_),JOIN3(node,id,JOIN(_,signal))))()
+#define CANRX_get_signal(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))()
+#define CANRX_get_signal_timeSinceLastMessageMS(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_timeSinceLastMessageMS)))()
+#define CANRX_get_signal_health(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_health)))()
+#define CANRX_get_signal_verbose(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_verbose)))()
+#define CANRX_get_signal_duplicateNode(bus, node, id, signal) (JOIN(JOIN(JOIN3(CANRX_,bus,_get),_),JOIN3(node,id,JOIN(_,signal))))()
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -28,10 +30,10 @@
 %for node in nodes:
   %for bus in node.on_buses:
 
-static const uint16_t CANRX_${bus.upper()}_unpackList[] = { \
+static const uint16_t CANRX_${bus.upper()}_unpackList[] = {
     %for message in node.received_msgs:
       %if bus in node.received_msgs[message].source_buses:
-${node.received_msgs[message].id}U, \
+    CAN_${bus.upper()}_${message}_ID, 
       %endif
     %endfor
 };\

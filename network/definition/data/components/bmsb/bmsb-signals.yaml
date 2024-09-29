@@ -93,14 +93,23 @@ signals:
     description: BMS Boss Pack Current
     nativeRepresentation:
       bitWidth: 16
-      resolution: 0.03
       range:
         min: -100
         max: 400
-      signedness: '-'
     continuous: true
 
   packContactorState:
     cycleTimeMs: 10
     description: Pack Contactor Status
     discreteValues: prechargeContactorState
+
+  udsPayload:
+    cycleTimeMs: 10
+    unit: ''
+    description: UDS payload data
+    nativeRepresentation:
+      bitWidth: 64
+      resolution: 1
+      range:
+        min: 0
+        max: 18446744073709551615

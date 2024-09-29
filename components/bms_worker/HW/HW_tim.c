@@ -16,7 +16,11 @@
 // Firmware Includes
 #include "HW.h"
 #include "stm32f1xx.h"
+#include "FeatureDefines_generated.h"
 
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+#include "IO.h"
+#endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -24,6 +28,9 @@
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+TIM_HandleTypeDef htim3;
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
 TIM_HandleTypeDef htim4;
 
 static uint64_t   fan1_last_tick[2] = { 0 };
@@ -161,6 +168,38 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+    // Configure the TIM3 IRQ priority
+    HAL_NVIC_SetPriority(TIM3_IRQn, TIM_IRQ_PRIO, 0);
+    HAL_NVIC_EnableIRQ(TIM3_IRQn);
+    __HAL_RCC_TIM3_CLK_ENABLE();
+
+    // Get clock configuration
+    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
+
+    // Compute TIM2 clock
+    uwTimclock       = 1 * HAL_RCC_GetPCLK2Freq();
+    // Compute the prescaler value to have TIM4 counter clock equal to 1MHz
+    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
+
+    // Initialize TIM4
+    htim3.Instance   = TIM3;
+
+    // Initialize TIMx peripheral as follow:
+    // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.
+    // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
+    // ClockDivision = 0
+    // Counter direction = Up
+    htim3.Init.Period        = (1000000U / 10000) - 1U;
+    htim3.Init.Prescaler     = uwPrescalerValue;
+    htim3.Init.ClockDivision = 0;
+    htim3.Init.CounterMode   = TIM_COUNTERMODE_UP;
+    htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+    {
+        return HW_ERROR;
+    }
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
     return HW_OK;
 }
 
@@ -222,6 +261,28 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
 }
 
 /**
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM4 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+{
+    if (htim->Instance == TIM2)
+    {
+        HAL_IncTick();
+    }
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+    else if (htim->Instance == TIM3)
+    {
+        HAL_TIM_Base_Stop_IT(&htim3);
+        IO10kHz_CB();
+    }
+#endif
+}
+
+/**
  * @brief  RTOS callback to configure a more precise timebase for cpu profiling
  */
 void HW_TIM_configureRunTimeStatsTimer(void)
@@ -236,8 +297,55 @@ void HW_TIM_configureRunTimeStatsTimer(void)
 uint64_t HW_TIM_getBaseTick()
 {
     // return fast_clk;
+#if FEATURE_10KHZ_TASK
+    return (HW_TIM_getTick() * 100U) + htim4.Instance->CNT;
+#else
+    return (HW_TIM_getTick() * 1000U) + htim4.Instance->CNT;
+#endif
+}
 
-    return (HW_getTick() * 100) + htim4.Instance->CNT;
+uint32_t HW_TIM_getTimeMS()
+{
+#if FEATURE_10KHZ_TASK
+    return HW_TIM_getTick() / 10U;
+#else
+    return HW_TIM_getTick();
+#endif
+}
+
+/**
+ * @brief  Get the number of ticks since clock start
+ *
+ * @retval Number of ticks
+ */
+uint32_t HW_TIM_getTick(void)
+{
+    return HAL_GetTick();
+}
+
+/**
+ * @brief  Delay the execution in blocking mode for amount of ticks
+ *
+ * @param delay Number of ticks to delay in blocking mode
+ */
+void HW_TIM_delayMS(uint32_t delay)
+{
+    HAL_Delay(pdMS_TO_TICKS(delay));
+}
+
+/**
+ * @brief  This function is blocking and should be avoided
+ *
+ * @param us Microsecond blocking delay
+ */
+void HW_TIM_delayUS(uint8_t us)
+{
+    uint64_t us_start = HW_TIM_getBaseTick();
+
+    while (HW_TIM_getBaseTick() < us_start + us)
+    {
+        ;
+    }
 }
 
 /**
@@ -280,13 +388,19 @@ uint16_t HW_TIM1_getFreqCH1(void)
  */
 uint16_t HW_TIM1_getFreqCH2(void)
 {
-    if ((fan2_last_tick[1] + 1000000) < HW_TIM_getBaseTick()) 
+    if ((fan2_last_tick[1] + 1000000U) < HW_TIM_getBaseTick()) 
     {
         return 0;
     }
-    return (uint16_t)((fan2_last_tick[1]) ? 4000000 / (fan2_last_tick[1] - fan2_last_tick[0]) : 0);
+    return (uint16_t)((fan2_last_tick[1]) ? 4000000U / (fan2_last_tick[1] - fan2_last_tick[0]) : 0);
 }
 
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+void HW_TIM_10kHz_timerStart(void)
+{
+    HAL_TIM_Base_Start_IT(&htim3);
+}
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
 
 /**
  * HAL_InitTick
@@ -326,11 +440,15 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     htim2.Instance   = TIM2;
 
     // Initialize TIMx peripheral as follow:
-    // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.
+    // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000)s time base or (1/1000)s time base.
     // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
     // ClockDivision = 0
     // Counter direction = Up
-    htim2.Init.Period        = (1000000U / 10000) - 1U;
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+    htim2.Init.Period        = (1000000U / 10000U) - 1U;
+#elif FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+    htim2.Init.Period        = (1000000U / 1000U) - 1U;
+#endif
     htim2.Init.Prescaler     = uwPrescalerValue;
     htim2.Init.ClockDivision = 0;
     htim2.Init.CounterMode   = TIM_COUNTERMODE_UP;
