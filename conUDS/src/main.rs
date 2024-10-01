@@ -14,6 +14,7 @@ use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 use tokio::sync::mpsc;
 
+use conuds::SupportedResetTypes;
 use conuds::arguments::{ArgSubCommands, Arguments};
 use conuds::modules::canio::CANIO;
 use conuds::{CanioCmd, PrdCmd};
@@ -110,6 +111,7 @@ async fn main() -> Result<()> {
                 "Downloading binary at '{:#?}' to node `{}`",
                 dl.binary, args.node
             );
+            uds_client.ecu_reset(SupportedResetTypes::Hard).await;
             uds_client.start_persistent_tp().await?;
 
             info!("Waiting for the user to hit enter before continuing with download");
