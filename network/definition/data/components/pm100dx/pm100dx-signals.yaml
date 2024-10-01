@@ -1,4 +1,673 @@
 signals:
+
+  tempModuleA:
+    cycleTimeMs: 100
+    description: Module A Temperature 
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+  tempModuleB:
+    cycleTimeMs: 100
+    description: Module B Temperature 
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+  tempModuleC:
+    cycleTimeMs: 100
+    description: Module C Temperature
+    unit: degC 
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+  tempGateDriver:
+    cycleTimeMs: 100
+    description: Gate Driver Board Temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+
+  controlBoardTemp:
+    cycleTimeMs: 100
+    description: Temperature of Control Board
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+  rtdTemp1:
+    cycleTimeMs: 100
+    description: Temperature from RTD Input 1
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+  rtdTemp2:
+    cycleTimeMs: 100
+    description: Temperature from RTD Input 2
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+  rtdTemp3:
+    cycleTimeMs: 100
+    description: Temperature from RTD Input 3
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+
+  rtdTemp4:
+    cycleTimeMs: 100 
+    description: Temperature from RTD Input 4
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+  rtdTemp5:
+    cycleTimeMs: 100
+    description: Temperature from RTD Input 5
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+  motorTemp:
+    cycleTimeMs: 100
+    description: Motor Temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -327.68
+        max: 327.67
+      continuous: true
+  torqueShudder:
+    cycleTimeMs: 100
+    description: Torque Shudder Compensation
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -150
+        max: 150
+      continuous: true
+    
+  analogInputVoltage1:
+    cycleTimeMs: 10
+    description: Voltage on Analog Input Voltage 1
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -3.2768
+        max: 3.2767
+      continuous: true
+  analogInputVoltage2:
+    cycleTimeMs: 10
+    description: Voltage on Analog Input Voltage 2
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -3.2768
+        max: 3.2767
+      continuous: true
+  analogInputVoltage3:
+    cycleTimeMs: 10
+    description: Voltage on Analog Input Voltage 3
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -3.2768
+        max: 3.2767
+      continuous: true
+  analogInputVoltage4:
+    cycleTimeMs: 10
+    description: Voltage on Analog Input Voltage 4
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -3.2768
+        max: 3.2767
+      continuous: true
+  analogInputVoltage5:
+    cycleTimeMs: 10
+    description: Voltage on Analog Input Voltage 5
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -3.2768
+        max: 3.2767
+      continuous: true
+  analogInputVoltage6:
+    cycleTimeMs: 10
+    description: Voltage on Analog Input Voltage 6
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -3.2768
+        max: 3.2767
+      continuous: true
+
+  forwardSwitchStatus:
+    cycleTimeMs: 10
+    description: Forward Switch Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  reverseSwitchStatus:
+    cycleTimeMs: 10
+    description: Reverse Switch Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  brakeSwitchStatus:
+    cycleTimeMs: 10
+    description: Brake Switch Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  regenDisableSwitch:
+    cycleTimeMs: 10
+    description: Regen Disable Switch Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  ignitionSwitchStatus:
+    cycleTimeMs: 10
+    description: Ignition Switch Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  startSwitchStatus:
+    cycleTimeMs: 10
+    description: Start Switch Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  valetModeStatus:
+    cycleTimeMs: 10
+    description: Valet Mode Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+  digitalInput8Status:
+    cycleTimeMs: 10
+    description: Digital Input 8 Status
+    nativeRepresentation:
+      bitWidth: 8
+    discreteValues: switchStatus
+
+  electricalMotorAngle:
+    cycleTimeMs: 10
+    description: Electrical Motor Angle
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 359.9
+    continuous: true
+  motorSpeed:
+    cycleTimeMs: 10
+    description: Motor Speed
+    unit: rpm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -32768
+        max: 32767
+    continuous: true
+  electricalOutputFreq:
+    cycleTimeMs: 10
+    description: Electrical Output Frequency
+    unit: Hz
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+    continuous: true
+  deltaResolverFiltered:
+    cycleTimeMs: 10
+    description: Delta Resolver Filtered
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -180.0
+        max: 180.0
+    continuous: true
+  
+  currentPhaseA:
+    cycleTimeMs: 10
+    description: Measured Current of Phase A
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -225
+        max: 225
+    continuous: true
+  currentPhaseB:
+    cycleTimeMs: 10
+    description: Measured Current of Phase B
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -225
+        max: 225
+    continuous: true
+  currentPhaseC:
+    cycleTimeMs: 10
+    description: Measured Current of Phase C
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -225
+        max: 225
+    continuous: true
+  dcBusCurrent:
+    cycleTimeMs: 10
+    description: Calculated DC Bus Current
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -225
+        max: 225
+    continuous: true
+
+  dcBusVoltage: 
+    cycleTimeMs: 10
+    description: Measured DC Bus Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: 0
+        max: 352.8
+    continuous: true
+  outputVoltage:
+    cycleTimeMs: 10
+    description: Calculated Output Voltage (Peak-Neutral)
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: 0
+        max: 352.8
+    continuous: true
+  voltageVAB:
+    cycleTimeMs: 10
+    description: Phase A - Phase B Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: 0
+        max: 352.8
+    continuous: true
+  voltageVBC:
+    cycleTimeMs: 10
+    description: Phase B - Phase C Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: 0
+        max: 352.8
+    continuous: true
+
+  fluxCommand:
+    cycleTimeMs: 10
+    description: Commanded Flux
+    unit: Wb
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.001
+      range:
+        min: -32.768
+        max: 32.767
+    continuous: true
+  fluxFeedback:
+    cycleTimeMs: 10
+    description: Estimated Flux
+    unit: Wb
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.001
+      range:
+        min: -32.768
+        max: 32.767
+    continuous: true
+  idFeedback:
+    cycleTimeMs: 10
+    description: D-Axis Current Feedback
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+    continuous: true
+  iqFeedback:
+    cycleTimeMs: 10
+    description: Q-Axis Current Feedback
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+    continuous: true
+
+  refVoltage1.5V: 
+    cycleTimeMs: 100
+    description: 1.5V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+  refVoltage2.5V:
+    cycleTimeMs: 100
+      description: 2.5V Reference Voltage
+      unit: V
+      nativeRepresentation: 
+        bitWidth: 16
+        resolution: 0.01
+        range:
+          min: -327.68
+          max: 327.67
+      continuous: true
+  refVoltage5V:
+    cycleTimeMs: 100
+    description: 5V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+  systemVoltage12V:
+    cycleTimeMs: 100
+    description: 12V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+    continuous: true
+
+  vsmState:
+    cycleTimeMs: 10
+    description: VSM State
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0 
+        max: 15
+    discreteValues: vsmState
+  pwmFrequency:
+    cycleTimeMs: 10
+    description: PWM Frequency (=0 for PMxxx)
+    unit: Hz
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0 
+        max: 15
+    continuous: true
+  inverterState:
+    cycleTimeMs: 10
+    description: Inverter State
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0 
+        max: 12
+    continuous: true
+
+  # I'm not sure what to do for the resolution of this signal
+  relayState:
+    cycleTimeMs: 10
+    description: Relay State
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0 
+        max: 32
+    continuous: true
+  inverterRunMode:
+    cycleTimeMs: 10
+    description: Inverter Run Mode
+    discreteValues: outputState
+  selfSensingAssistEnable:  
+    cycleTimeMs: 10
+    description: Self-Sensing Assist Enable
+    discreteValues: outputState
+  inverterActiveDischargeState:
+    cycleTimeMs: 10
+    description: Inverter Active Discharge State
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 3
+      resolution: 1
+      range:
+        min: 0
+        max: 4
+    continuous: true
+  inverterCommandMode:
+    cycleTimeMs: 10
+    description: Inverter Command Mode
+    discreteValues: outputState
+  rollingCounter:
+    cycleTimeMs: 10
+    description: Only For Gen 5
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 4
+      resolution: 1
+      range:
+        min: 0
+        max: 15
+    continuous: true
+  inverterEnableState:  
+    cycleTimeMs: 10
+    description: Inverter Enable State
+    discreteValues: outputState
+  burstModelMode:
+    cycleTimeMs: 10
+    description: Only for Gen 5
+    discreteValues: outputState
+  startModeActive:
+    cycleTimeMs: 10
+    description: Start Mode Active
+    discreteValues: outputState
+  inverterEnableLockout:
+    cycleTimeMs: 10
+    description: Inverter Enable Lockout
+    discreteValues: outputState
+  directionCommand:
+  bmsActive:
+  bmsLimitingTorque:
+  limitMaxSpeed:
+  limitHotSpot:
+  lowSpeedLimiting:
+  coolantTemperatureLimiting:
+  limitStallBurstModel:
+
+
+  #POST Fault Lo
+  postHardwareGateFault:
+  postHWOverCurrentFault:
+  postAcceleratorShorted:
+  postAcceleratorOpen:
+  postCurrentSensorLo:
+  postCurrentSensorHi:
+  postModuleTempLo:
+  postModuleTempHi:
+
+  postControlPCBTempLo:
+  postControlPCBTempHi:
+  postGateDrivePCBTempLo:
+  postGateDrivePCBTempHi:
+  post5vSenseVoltageLo:
+  post5vSenseVoltageHi:
+  post12vSenseVoltageLo:
+  post12vSenseVoltageHi:
+
+  #POST Fault Hi
+  post2.5vSenseVoltageLo:
+  post2.5vSenseVoltageHi:
+  post1.5vSenseVoltageLo:
+  post1.5vSenseVoltageHi:
+  postDCBusVoltageHi:
+  postDCBusVoltageLo:
+  postPreChargeTimeOut:
+  postPreChargeVoltageFailure:
+
+  postEepromChecksumInvalid:
+  postEepromDataOutOfRange:
+  postEepromUpdateRequired:
+  postHWDCBusOverVoltageDuringInit:
+  #start bit = 30
+  postBrakeShorted:
+  postBrakeOpen:
+
+  #Run Fault Lo
+  runMotorOverSpeedFault:
+  runOverCurrentFault:
+  runOverVoltageFault:
+  runInverterOverTempFault:
+  runAcceleratorInputShortedFault:
+  runAcceleratorInputOpenFault:
+  runDirectionCommandFault:
+  runInverterResponseTimeOutFault:
+
+  runHWGateFault:
+  runHWOverCurrentFault:
+  runUnderVoltageFault:
+  runCanCommandMessageLostFault:
+  runMotorOverTempFault:
+
+  #Run Fault Hi
+  #start bit = 48
+  runBrakeInputShortedFault:
+  runBrakeInputOpenFault:
+  runModuleAOverTempFault:
+  runModuleBOverTempFault:
+  runModuleCOverTempFault:
+  runPcbOverTempFault:
+  runGateDriveBoard1OverTempFault:
+  runGateDriveBoard2OverTempFault:
+  runGateDriveBoard3OverTempFault:
+  runCurrentSensorFault:
+  #start bit = 59
+  runHwDCBusOverVoltageFault:
+  #start bit = 62
+  runResolverNotConnected:
+
+  commandedTorque:
+  feedbackTorque:
+  powerOnTimer:
+
+  modulationIndex:
+  fluxWeakeningOutput:
+  idCommand:
+  iqCommand:
+
+  eepromVersion:
+  softwareVersion:
+  dateCodeMMDD:
+  dateCodeYYYY:
+
+  torqueCommand:
+  torqueFeedback:
+  motorSpeed:
   tractiveSystemVoltage:
     cycleTimeMs: 10
     unit: 'V'
@@ -10,3 +679,6 @@ signals:
         min: 0
         max: 450
     continuous: true
+
+  torqueCapability:
+  

@@ -1,4 +1,145 @@
 messages:
+
+  temps1:
+    description: PM100DXR Temperatures 1
+    id: 0x01
+    lengthBytes: 8 
+    signals:
+      tempModuleA:
+      tempModuleB:
+      tempModuleC:
+      tempGateDriver:
+
+  temps2:
+    description: PM100DXR Temperatures 2
+    id: 0x02
+    lengthBytes: 8 
+    signals:
+      controlBoardTemp:
+      rtdTemp1:
+      rtdTemp2:
+      rtdTemp3:
+
+  temps3AndTorqueShudder:
+    description: PM100DXR Temperatures 3 & Torque Shudder
+    id: 0x03
+    lengthBytes: 8 
+    signals:
+      rtdTemp4:
+      rtdTemp5:
+      motorTemp:
+      torqueShudder:
+
+  analogInputVoltages:
+    description: PM100DXR Analog Input Voltages
+    id: 0x04
+    lengthBytes: 8
+    signals:
+      analogInputVoltage1:
+      analogInputVoltage2:
+      analogInputVoltage3:
+      analogInputVoltage4:
+      analogInputVoltage5:
+      analogInputVoltage6:
+
+  digitalInputStatus:
+    description: PM100DXR Digital Input Status
+    id: 0x05
+    lengthBytes: 8
+    signals:
+      forwardSwitchStatus:
+      reverseSwitchStatus:
+      brakeSwitchStatus:
+      regenDisableSwitchStatus:
+      ignitionSwitchStatus:
+      startSwitchStatus:
+      valetModeStatus:
+      digitalInput8Status:
+
+  motorPositionInfo:
+    description: PM100DXR Motor Position Information
+    id: 0x06
+    lengthBytes: 8
+    signals:
+      electricalMotorAngle:
+      motorSpeed:
+      electricalOutputFreq:
+      deltaResolverFiltered:
+
+  currentInfo:
+    description: PM100DXR Current Info
+    id: 0x07
+    lengthBytes: 8
+    signals:
+      currentPhaseA:
+      currentPhaseB:
+      currentPhaseC:
+      dcBusCurrent:
+
+  voltageInfo:
+    description: PM100DXR Voltage Info
+    id: 0x08
+    lengthBytes: 8
+    signals:
+      dcBusVoltage: 
+      outputVoltage:
+      voltageVAB:
+      voltageVBC:
+
+  fluxInfo:
+    description: PM100DXR Flux Info
+    id: 0x09
+    lengthBytes: 8
+    signals:
+      fluxCommand:
+      fluxFeedback:
+      idFeedback:
+      iqFeedback:
+
+  internalVoltages:
+    description: PM100DXR Internal Voltages
+    id: 0x0A
+    lengthBytes: 8
+    signals:
+      refVoltage1.5V: 
+      refVoltage2.5V:
+      refVoltage5V:
+      systemVoltage12V:
+
+  internalStates:
+    description: PM100DXR Internal States
+    id: 0x0B
+    lengthBytes: 8
+    signals: 
+      vsmStartState:
+      pwmFrequency:
+      inverterState:
+      relayState:
+      inverterRunMode:
+      selfSensingAssistEnable:
+      inverterActiveDischargeState:
+      inverterCommandMode:
+      rollingCounter:
+      inverterEnableState:
+      burstModelMode:
+      startModeActive:
+      inverterEnableLockout:
+      directionCommand:
+      bmsActive:
+      bmsLimitingTorque:
+      limitMaxSpeed:
+      limitHotSpot:
+      lowSpeedLimiting:
+      coolantTemperatureLimiting:
+      limitStallBurstModel:
+
+  faultCodes:
+    description: PM100DXR POST & Run Fault Codes
+    id: 0x0C
+    lengthBytes: 8
+    signals:
+      
+
   criticalData:
     description: PM100DXR Critical Data
     id: 0x11
