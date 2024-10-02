@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 // System Includes
+#include "FloatTypes.h"
 #include "Types.h"
 #include "stddef.h"
 #include "string.h"
@@ -459,18 +460,7 @@ static inline uint8_t reverse_byte(uint8_t x)
     return table[x];
 }
 
-static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
-{
-    for (uint8_t i = 0; i < (len / 2); i++)
-    {
-        uint8_t tmp = in[i];
-
-        in[i]           = in[len - i - 1];
-        in[len - i - 1] = tmp;
-    }
-
-    return in;
-}
+uint8_t* reverse_bytes(uint8_t* in, uint8_t len);
 
 /**
  * @brief  Simple fast accurate natural log approximation
@@ -484,13 +474,4 @@ static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
  *
  * @retval result of ln(x)
  */
-static inline float ln(float x)
-{
-    unsigned int bx = *(unsigned int*)(&x);
-    unsigned int ex = bx >> 23;
-    signed int   t  = (signed int)ex - (signed int)127;
-    // unsigned int s = (t < 0) ? (-t) : t;
-    bx              = 1065353216 | (bx & 8388607);
-    x               = *(float*)(&bx);
-    return -1.49278 + (2.11263 + (-0.729104 + 0.10969 * x) * x) * x + 0.6931471806 * t;
-}
+float ln(float x);

@@ -1,17 +1,18 @@
+outputState:
+  "OFF": 0
+  "ON": 1
+
 switchStatus:
   "OFF": 0
   "ON": 1
 
-ENG_gear:
-  "GEAR_UNKNOWN": 0
-  "GEAR_1": 1
-  "GEAR_2": 2
-  "GEAR_3": 3
-  "GEAR_4": 4
-  "GEAR_5": 5
-  "GEAR_N": 6
+flag:
+  "CLEARED": 0
+  "SET": 1
 
-ENG_state:
-  "ENGINE_STATE_STALL": 1
-  "ENGINE_STATE_CRANKING": 2
-  "ENGINE_STATE_RUNNING": 3
+prechargeContactorState:
+  "CONTACTORS_SNA": 0
+  "CONTACTORS_OPEN": 1
+  "CONTACTORS_PRECHARGE_CLOSED": 2
+  "CONTACTORS_PRECHARGE_HVP_CLOSED": 3
+  "CONTACTORS_HVP_CLOSED": 4

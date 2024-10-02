@@ -1,0 +1,3 @@
+description: "Cascadia Motion PM100DX/DXR Motor Controller"
+onBuses:
+  - "veh"

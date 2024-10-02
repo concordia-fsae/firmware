@@ -5,7 +5,7 @@ BS_:
 BU_: ${" ".join([node.upper() for node in bus.nodes])}\
 
 <%
-  for _, discrete_value in bus.discrete_values:
+  for _, discrete_value in bus.DISC:
     make_val_table(discrete_value)
 %>
 <%

@@ -1,0 +1,8 @@
+messages:
+  criticalData:
+    description: PM100DXR Critical Data
+    id: 0x11
+    lengthBytes: 8
+    signals:
+      tractiveSystemVoltage:
+        startBit: 48

@@ -17,6 +17,7 @@
 #include "Utility.h"
 #include "string.h"
 
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -139,6 +140,7 @@ static void CANIO_rx_init(void)
 {
     // initialize module struct to 0
     memset(&canrx, 0x00, sizeof(canrx));
+    CANRX_init();
 }
 
 

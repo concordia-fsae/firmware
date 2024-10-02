@@ -23,7 +23,7 @@
  */
 float32_t CELL_getSoCfromV(float32_t volt)
 {
-    
+
     float32_t ret = 0.0f;
 
     //if (volt <= 2.7f || volt >= 4.17f)
@@ -49,7 +49,7 @@ float32_t CELL_getSoCfromV(float32_t volt)
 
     //if (ret < 0.0f) ret = 0.0f;
     //if (ret > 100.0f) ret = 100.0f;
-    
+
     if (volt > 4.2f)
     {
         ret = 100.0;
@@ -72,16 +72,4 @@ float32_t CELL_getSoCfromV(float32_t volt)
     }
 
     return ret;
-}
-
-/**
- * @brief  Calculates cell voltage from capacity
- *
- * @param tenth_mah 0.1 mAh
- *
- * @retval unit: 0.1mv
- */
-uint16_t CELL_getVfromCapacity(uint32_t tenth_mah)
-{
-    return tenth_mah / 4.2 * 1.7 + 2.5;
 }

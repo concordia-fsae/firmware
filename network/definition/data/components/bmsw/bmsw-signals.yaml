@@ -1,0 +1,692 @@
+signals:
+  voltageMin:
+    cycleTimeMs: 10
+    description: Segment Minimum Cell Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5
+      resolution: 0.005
+    continuous: true
+
+  voltageMax:
+    cycleTimeMs: 10
+    description: Segment Maximum Cell Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5
+      resolution: 0.005
+    continuous: true
+
+  segmentVoltage:
+    cycleTimeMs: 10
+    description: Total Segment Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 6
+      range:
+        min: 0
+        max: 63
+      resolution: 1
+    continuous: true
+
+  tempMax:
+    cycleTimeMs: 10
+    description: Maximum temperature reading
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  chargeLimit:
+    cycleTimeMs: 10
+    description: Charge current limit
+    unit: A
+    nativeRepresentation:
+      bitWidth: 5
+      range:
+        min: 0
+        max: 32
+    continuous: true
+
+  dischargeLimit:
+    cycleTimeMs: 10
+    description: Discharge current limit
+    unit: A
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 255
+    continuous: true
+
+  errorFlag:
+    cycleTimeMs: 10
+    description: Error flag
+    discreteValues: flag
+
+  faultFlag:
+    cycleTimeMs: 10
+    description: Fault flag
+    discreteValues: flag
+
+  envErrorFlag:
+    cycleTimeMs: 10
+    description: Environment error flag
+    discreteValues: flag
+
+  envFaultFlag:
+    cycleTimeMs: 10
+    description: Environment fault flag
+    discreteValues: flag
+
+  criticalDataCounter:
+    cycleTimeMs: 10
+    description: Counter for critical data message
+    nativeRepresentation:
+      bitWidth: 8
+    validationRole: counter
+
+  cellTemp10:
+    cycleTimeMs: 1000
+    description: Temperature of cell 10
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp9:
+    cycleTimeMs: 1000
+    description: Temperature of cell 9
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp8:
+    cycleTimeMs: 1000
+    description: Temperature of cell 8
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp7:
+    cycleTimeMs: 1000
+    description: Temperature of cell 7
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp6:
+    cycleTimeMs: 1000
+    description: Temperature of cell 6
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp5:
+    cycleTimeMs: 1000
+    description: Temperature of cell 5
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp4:
+    cycleTimeMs: 1000
+    description: Temperature of cell 4
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp3:
+    cycleTimeMs: 1000
+    description: Temperature of cell 3
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp2:
+    cycleTimeMs: 1000
+    description: Temperature of cell 2
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp19:
+    cycleTimeMs: 1000
+    description: Temperature of cell 19
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp18:
+    cycleTimeMs: 1000
+    description: Temperature of cell 18
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp17:
+    cycleTimeMs: 1000
+    description: Temperature of cell 17
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp16:
+    cycleTimeMs: 1000
+    description: Temperature of cell 16
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp15:
+    cycleTimeMs: 1000
+    description: Temperature of cell 15
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp14:
+    cycleTimeMs: 1000
+    description: Temperature of cell 14
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp13:
+    cycleTimeMs: 1000
+    description: Temperature of cell 13
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp12:
+    cycleTimeMs: 1000
+    description: Temperature of cell 12
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp11:
+    cycleTimeMs: 1000
+    description: Temperature of cell 11
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellVoltage15:
+    cycleTimeMs: 1000
+    description: Voltage of cell 15
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage14:
+    cycleTimeMs: 1000
+    description: Voltage of cell 14
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage13:
+    cycleTimeMs: 1000
+    description: Voltage of cell 13
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage12:
+    cycleTimeMs: 1000
+    description: Voltage of cell 12
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage11:
+    cycleTimeMs: 1000
+    description: Voltage of cell 11
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage10:
+    cycleTimeMs: 1000
+    description: Voltage of cell 10
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage9:
+    cycleTimeMs: 1000
+    description: Voltage of cell 9
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage8:
+    cycleTimeMs: 1000
+    description: Voltage of cell 8
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage7:
+    cycleTimeMs: 1000
+    description: Voltage of cell 7
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage6:
+    cycleTimeMs: 1000
+    description: Voltage of cell 6
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage5:
+    cycleTimeMs: 1000
+    description: Voltage of cell 5
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage4:
+    cycleTimeMs: 1000
+    description: Voltage of cell 4
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage3:
+    cycleTimeMs: 1000
+    description: Voltage of cell 3
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage2:
+    cycleTimeMs: 1000
+    description: Voltage of cell 2
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage1:
+    cycleTimeMs: 1000
+    description: Voltage of cell 1
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  cellVoltage0:
+    cycleTimeMs: 1000
+    description: Voltage of cell 0
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+
+  segmentVoltageHighRes:
+    cycleTimeMs: 1000
+    description: Total Segment Voltage, higher resolution
+    unit: V
+    nativeRepresentation:
+      bitWidth: 13
+      range:
+        min: 0
+        max: 81.92
+      resolution: 0.010
+    continuous: true
+
+  boardRelativeHumidity:
+    cycleTimeMs: 1000
+    description: Segment worker board relative humidity
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 100
+      resolution: 1
+    continuous: true
+
+  boardAmbientTemp:
+    cycleTimeMs: 1000
+    description: Segment worker board ambient temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  mcuTemp:
+    cycleTimeMs: 1000
+    description: Segment worker microcontroller temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  boardTemp0:
+    cycleTimeMs: 1000
+    description: Segment worker board temperature 0
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  boardTemp1:
+    cycleTimeMs: 1000
+    description: Segment worker board temperature 1
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  fan1RPM:
+    cycleTimeMs: 1000
+    description: Fan 1 speed
+    unit: RPM
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 10000
+    continuous: true
+
+  fan0RPM:
+    cycleTimeMs: 1000
+    description: Fan 2 speed
+    unit: RPM
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 10000
+    continuous: true
+
+  coolPct1:
+    cycleTimeMs: 1000
+    description: Fan 1 Duty Cycle
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 100
+      resolution: 1
+    continuous: true
+
+  coolState1:
+    cycleTimeMs: 1000
+    description: Fan 1 cooling state
+    discreteValues: outputState
+
+  coolPct0:
+    cycleTimeMs: 1000
+    description: Fan 0 Duty Cycle
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 100
+      resolution: 1
+    continuous: true
+
+  coolState0:
+    cycleTimeMs: 1000
+    description: Fan 0 cooling state
+    discreteValues: outputState
+
+  cellTemp1:
+    cycleTimeMs: 1000
+    description: Temperature of cell 1
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellTemp0:
+    cycleTimeMs: 1000
+    description: Temperature of cell 0
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  socMax:
+    cycleTimeMs: 1000
+    description: Max cell SOC
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+      resolution: 0.1
+    continuous: true
+
+  socAvg:
+    cycleTimeMs: 1000
+    description: Avg cell SOC
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+      resolution: 0.1
+    continuous: true
+
+  socMin:
+    cycleTimeMs: 1000
+    description: Avg cell SOC
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+      resolution: 0.1
+    continuous: true
+
+  tempAvg:
+    cycleTimeMs: 1000
+    description: Average temperature of the segment
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  cellVoltageAvg:
+    cycleTimeMs: 1000
+    description: Average cell voltage????
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5.12
+      resolution: 0.005
+    continuous: true
+

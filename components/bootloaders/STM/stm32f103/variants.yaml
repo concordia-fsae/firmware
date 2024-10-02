@@ -1,36 +1,36 @@
 configs:
   0:
-    description: BMS Worker 0 Bootloader
+    description: BMS Worker Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
   1:
-    description: BMS Worker 1 Bootloader
+    description: BMS Worker Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x601
       udsResponseId: 0x641
   2:
-    description: BMS Worker 2 Bootloader
+    description: BMS Worker Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x602
       udsResponseId: 0x642
   3:
-    description: BMS Worker 3 Bootloader
+    description: BMS Worker Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x603
       udsResponseId: 0x643
   4:
-    description: BMS Worker 4 Bootloader
+    description: BMS Worker Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x604
       udsResponseId: 0x644
   5:
-    description: BMS Worker 5 Bootloader
+    description: BMS Worker Bootloader
     options:
       pcbId: 0
       udsRequestId: 0x605

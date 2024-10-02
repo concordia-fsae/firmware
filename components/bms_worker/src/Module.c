@@ -36,7 +36,7 @@ static const ModuleDesc_S* modules[] = {
     &COOL_desc,
     &IO_desc,
     &SYS_desc,
-    // &CANIO_rx,
+    &CANIO_rx,
     &CANIO_tx,
 };
 
@@ -44,8 +44,8 @@ static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
 
 static struct
 {
-    uint8_t total;
-    uint8_t timeslice;
+    float32_t total;
+    float32_t timeslice;
 } percentages;
 
 static uint64_t rtos_start;
@@ -191,8 +191,8 @@ void Module_1Hz_TSK(void)
 
     for (int8_t i = 0; i < MODULE_TASK_CNT; i++)
     {
-        stats[i].total_percentage     = (100 * stats[i].total_runtime) / (temp_tick - rtos_start);
-        stats[i].timeslice_percentage = (100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice);
+        stats[i].total_percentage     = (100 * (float32_t)stats[i].total_runtime) / (float32_t)(temp_tick - rtos_start);
+        stats[i].timeslice_percentage = (100 * (float32_t)stats[i].timeslice_runtime) / (float32_t)(temp_tick - last_timeslice);
         percentages.total += stats[i].total_percentage;
         percentages.timeslice += stats[i].timeslice_percentage;
         stats[i].timeslice_runtime = 0;

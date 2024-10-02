@@ -1,0 +1,20 @@
+cfr24:
+  - bmsw:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+  - bmsb:
+    - 0
+  - stw:
+  - bl:
+    - 0 # BMS Worker
+    - 1 # BMS Worker
+    - 2 # BMS Worker
+    - 3 # BMS Worker
+    - 4 # BMS Worker
+    - 5 # BMS Worker
+    - 10 # BMS Boss
+    - 20 # Steering Wheel

@@ -17,6 +17,8 @@
 #include "string.h"
 #include "Utility.h"
 
+#include "MessageUnpack_generated.h"
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -128,6 +130,7 @@ static void CANIO_rx_10Hz_PRD(void)
 static void CANIO_rx_init(void)
 {
     // initialize module struct to 0
+    CANRX_init();
     memset(&canrx, 0x00, sizeof(canrx));
 }
 

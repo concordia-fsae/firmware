@@ -1,0 +1,23 @@
+signals:
+  commandedFansDutyCycle:
+    cycleTimeMs: 1000
+    unit: '%'
+    description: Duty Cycle % for Fans to be run at
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 100
+
+  targetBalancingVoltage:
+    cycleTimeMs: 1000
+    unit: 'V'
+    description: Voltage to balance cells until
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.005
+      range:
+        min: 0
+        max: 5
+    continuous: true

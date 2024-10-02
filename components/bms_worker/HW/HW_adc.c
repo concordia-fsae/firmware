@@ -307,7 +307,7 @@ bool HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
  *
  * @retval unit:  0.01mV
  */
-uint16_t HW_ADC_getVFromCount(uint16_t cnt)
+float32_t HW_ADC_getVFromCount(uint16_t cnt)
 {
-    return ((uint32_t)cnt) * 10000 * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
+    return ((float32_t)cnt) * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }

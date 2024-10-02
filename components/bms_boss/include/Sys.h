@@ -13,9 +13,6 @@
 #include "HW_gpio.h"
 
 #include "FloatTypes.h"
-#include "stdbool.h"
-#include "stdint.h"
-
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -40,16 +37,6 @@ typedef struct
 {
     SYS_state_E  state;
     SYS_Contactors_E contacts;
-    struct
-    {
-        uint32_t last_message;
-        float32_t voltage;
-    }ts;
-    struct
-    {
-        uint32_t last_message;
-        float32_t voltage;
-    }charger;
 } SYS_S;
 
 extern SYS_S SYS;
@@ -63,9 +50,7 @@ void SYS_SFT_openShutdown(void);
 void SYS_SFT_closeShutdown(void);
 void SYS_SFT_openContactors(void);
 void SYS_SFT_cycleContacts(void);
-void SYS_SFT_setTSVoltage(float32_t v);
 bool SYS_SFT_checkMCTimeout(void);
-void SYS_SFT_setChargerVoltage(float32_t v);
 bool SYS_SFT_checkChargerTimeout(void);
 void SYS_stopCharging(void);
 void SYS_continueCharging(void);

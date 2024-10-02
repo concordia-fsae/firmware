@@ -1,0 +1,4 @@
+messages:
+signals:
+  TOOLING_commandedFansDutyCycle:
+  TOOLING_targetBalancingVoltage:

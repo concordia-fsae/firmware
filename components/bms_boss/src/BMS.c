@@ -15,12 +15,13 @@
 #include "Module.h"
 #include "Sys.h"
 #include "SystemConfig.h"
+#include "MessageUnpack_generated.h"
+#include "CAN/CANIO-rx_helper.h"
 
 #include "PACK.h"
 
-#ifndef BMS_WORKER_TIMEMOUT_MS
-# define BMS_WORKER_TIMEOUT_MS 1000
-#endif    // BMS_WORKER_TIMEOUT_MS
+#define BMS_CONFIGURED_WORKER_TIMEOUT 500U
+#define CURRENT_SENSE_V_per_A 0.0025f
 
 BMSB_S BMS;
 
@@ -55,25 +56,26 @@ static void BMS10Hz_PRD(void)
     tmp.pack_charge_limit    = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     tmp.pack_discharge_limit = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 
-    for (uint8_t i = 0; i < BMS_MAX_SEGMENTS; i++)
+    for (uint8_t i = 0; i < CANRX_NODE_BMSW_COUNT; i++)
     {
-        if (BMS.workers[i].fault && !BMS.workers[i].timeout)
+        if ((CANRX_VEH_get_BMSW_faultFlag(i) == true) &&
+            (CANRX_VEH_get_BMSW_faultFlag_health(i) == CANRX_MESSAGE_VALID))
         {
             tmp.fault                = true;
             tmp.pack_discharge_limit = 0.0f;
             tmp.pack_charge_limit    = 0.0f;
         }
-        else if (BMS.workers[i].timeout)
+        else if (CANRX_VEH_get_BMSW_faultFlag_health(i) == CANRX_MESSAGE_SNA)
             continue;
 
-        tmp.pack_charge_limit    = (BMS.workers[i].charge_limit < tmp.pack_charge_limit) ? BMS.workers[i].charge_limit : tmp.pack_charge_limit;
-        tmp.pack_discharge_limit = (BMS.workers[i].discharge_limit < tmp.pack_discharge_limit) ? BMS.workers[i].discharge_limit : tmp.pack_discharge_limit;
+        tmp.pack_charge_limit    = (CANRX_VEH_get_BMSW_chargeLimit(i) < tmp.pack_charge_limit) ? CANRX_VEH_get_BMSW_chargeLimit(i) : tmp.pack_charge_limit;
+        tmp.pack_discharge_limit = (CANRX_VEH_get_BMSW_dischargeLimit(i) < tmp.pack_discharge_limit) ? CANRX_VEH_get_BMSW_dischargeLimit(i) : tmp.pack_discharge_limit;
 
-        tmp.pack_voltage += BMS.workers[i].segment_voltage;
+        tmp.pack_voltage += CANRX_VEH_get_BMSW_segmentVoltage(i);
 
-        tmp.voltages.max = (BMS.workers[i].voltages.max > tmp.voltages.max) ? BMS.workers[i].voltages.max : tmp.voltages.max;
-        tmp.voltages.min = (BMS.workers[i].voltages.min < tmp.voltages.min) ? BMS.workers[i].voltages.min : tmp.voltages.min;
-        tmp.max_temp     = (BMS.workers[i].max_temp > tmp.max_temp) ? BMS.workers[i].max_temp : tmp.max_temp;
+        tmp.voltages.max = (CANRX_VEH_get_BMSW_voltageMax(i) > tmp.voltages.max) ? CANRX_VEH_get_BMSW_voltageMax(i) : tmp.voltages.max;
+        tmp.voltages.min = (CANRX_VEH_get_BMSW_voltageMin(i) < tmp.voltages.min) ? CANRX_VEH_get_BMSW_voltageMin(i) : tmp.voltages.min;
+        tmp.max_temp     = (CANRX_VEH_get_BMSW_tempMax(i) > tmp.max_temp) ? CANRX_VEH_get_BMSW_tempMax(i) : tmp.max_temp;
     }
 
     if (BMS.connected_segments != BMS_CONFIGURED_SEGMENTS)
@@ -96,6 +98,8 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
+    BMS.pack_current = IO.current / CURRENT_SENSE_V_per_A;
+
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkChargerTimeout()))
     {
         SYS_SFT_openShutdown();
@@ -128,16 +132,20 @@ static void BMS100Hz_PRD(void)
             }
             else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
             {
-                if ((SYS.ts.voltage > 0.95f * BMS.pack_voltage) ||
-		    (SYS.charger.voltage > 0.95f * BMS.pack_voltage))
+                if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage) > 0.95f * BMS.pack_voltage) &&
+                     (CANRX_get_signal_verbose(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_VALID)) ||
+		            ((CANRX_get_signal(VEH, BRUSA513_dcBusVoltage) > 0.95f * BMS.pack_voltage) &&
+                     (CANRX_get_signal_verbose(VEH, BRUSA513_dcBusVoltage).health == CANRX_MESSAGE_VALID)))
                 {
                     SYS_SFT_cycleContacts();
                 }
             }
             else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
             {
-                if ((SYS.ts.voltage > 0.97f * BMS.pack_voltage) ||
-		    (SYS.charger.voltage > 0.95f * BMS.pack_voltage))
+                if (((CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage) > 0.97f * BMS.pack_voltage) &&
+                     (CANRX_get_signal_verbose(VEH, PM100DX_tractiveSystemVoltage).health == CANRX_MESSAGE_VALID)) ||
+		            ((CANRX_get_signal(VEH, BRUSA513_dcBusVoltage) > 0.97f * BMS.pack_voltage) &&
+                     (CANRX_get_signal_verbose(VEH, BRUSA513_dcBusVoltage).health == CANRX_MESSAGE_VALID)))
                 {
                     SYS_SFT_cycleContacts();
                 }
@@ -155,25 +163,17 @@ const ModuleDesc_S BMS_desc = {
 void BMS_workerWatchdog(void)
 {
     BMS.connected_segments = 0;
-    for (uint8_t i = 0; i < BMS_MAX_SEGMENTS; i++)
+    for (uint8_t i = 0; i < BMS_CONFIGURED_SEGMENTS; i++)
     {
-        BMS.workers[i].timeout = (BMS.workers[i].last_message + BMS_WORKER_TIMEOUT_MS < HW_getTick()) ? true : false;
-
-
-        if (!BMS.workers[i].timeout)
+        if (CANRX_VEH_get_BMSW_voltageMin_timeSinceLastMessageMS(i) < BMS_CONFIGURED_WORKER_TIMEOUT)
             BMS.connected_segments++;
-        //if (!BMS.workers[i].fault)
+        //if (!CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault)
         //{
-        //    if (BMS.workers[i].max_temp > 60.0f || BMS.workers[i].voltages.max >= 4.2f ||
-        //        BMS.workers[i].voltages.min <= 2.5f)
+        //    if (CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].max_temp > 60.0f || BMS.workers[i].voltages.max >= 4.2f ||
+        //        CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].voltages.min <= 2.5f)
         //    {
-        //        BMS.workers[i].fault = true;
+        //        CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault = true;
         //    }
         //}
     }
-}
-
-void BMS_setSegmentStats(uint8_t seg_id, const BMSW_S* seg)
-{
-    BMS.workers[seg_id & 0x07] = *seg;
 }

@@ -11,6 +11,7 @@
 
 // System Includes
 #include "stdint.h"
+#include "FloatTypes.h"
 
 // Other Includes
 #include "ModuleDesc.h"
@@ -55,10 +56,10 @@ typedef enum
 
 typedef struct
 {
-    uint64_t total_runtime;
-    uint32_t timeslice_runtime;
-    uint8_t  total_percentage;
-    uint8_t  timeslice_percentage;
+    uint64_t  total_runtime;
+    uint64_t  timeslice_runtime;
+    float32_t  total_percentage;
+    float32_t  timeslice_percentage;
 } Module_taskStats_S;
 
 /******************************************************************************
