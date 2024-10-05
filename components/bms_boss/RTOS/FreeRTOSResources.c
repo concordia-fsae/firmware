@@ -264,7 +264,7 @@ void RTOS_createResources(void)
     // 1kHz timer drives all tasks
     // TODO: should this be faster and/or interrupt (i.e. hardware timer) driven?
     rtos_tick_timer = xTimerCreateStatic("Timer 10kHz",
-                                         pdUS_TO_TICKS(100),
+                                         pdMS_TO_TICKS(1U),
                                          pdTRUE,
                                          NULL,
                                          &rtosTickTimer,
