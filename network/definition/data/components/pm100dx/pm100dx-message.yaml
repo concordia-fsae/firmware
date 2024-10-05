@@ -138,12 +138,110 @@ messages:
     id: 0x0C
     lengthBytes: 8
     signals:
-      
+        postHWGateFault:
+        postHWOverCurrentFault:
+        postAcceleratorShorted:
+        postAcceleratorOpen:
+        postCurrentSensorLo:
+        postCurrentSensorHi:
+        postModuleTempLo:
+        postModuleTempHi:
+        postControlPCBTempLo:
+        postControlPCBTempHi:
+        postGateDrivePCBTempLo:
+        postGateDrivePCBTempHi:
+        post5vSenseVoltageLo:
+        post5vSenseVoltageHi:
+        post12vSenseVoltageLo:
+        post12vSenseVoltageHi:
+        post2.5vSenseVoltageLo:
+        post2.5vSenseVoltageHi:
+        post1.5vSenseVoltageLo:
+        post1.5vSenseVoltageHi:
+        postDCBusVoltageHi:
+        postDCBusVoltageLo:
+        postPreChargeTimeOut:
+        postPreChargeVoltageFailure:
+        postEepromChecksumInvalid:
+        postEepromDataOutOfRange:
+        postEepromUpdateRequired:
+        postHWDCBusOverVoltageDuringInit:
+        postBrakeShorted:
+        postBrakeOpen:
+        runMotorOverSpeedFault:
+        runOverCurrentFault:
+        runOverVoltageFault:
+        runInverterOverTempFault:
+        runAcceleratorInputShortedFault:
+        runAcceleratorInputOpenFault:
+        runDirectionCommandFault:
+        runInverterResponseTimeOutFault:
+        runHWGateFault:
+        runHWOverCurrentFault:
+        runUnderVoltageFault:
+        runCanCommandMessageLostFault:
+        runMotorOverTempFault:
+        runBrakeInputShortedFault:
+        runBrakeInputOpenFault:
+        runModuleAOverTempFault:
+        runModuleBOverTempFault:
+        runModuleCOverTempFault:
+        runPcbOverTempFault:
+        runGateDriveBoard1OverTempFault:
+        runGateDriveBoard2OverTempFault:
+        runGateDriveBoard3OverTempFault:
+        runCurrentSensorFault:
+        runHwDCBusOverVoltageFault:
+        runResolverNotConnected:
 
+  torqueAndTimerInfo:
+    description: Torque and Timer Info
+    id: 0x0D
+    lengthBytes: 8
+    signals:
+      commandedTorque:
+      feedbackTorque:
+      powerOnTimer:
+
+  modulationIndexAndFluxWeakeningOutputInfo:
+    description: Modulation Index and Flux Weakening Output Info
+    id: 0x0E
+    lengthBytes: 8
+    signals:
+      modulationIndex:
+      fluxWeakeningOutput:
+      idCommand:
+      iqCommand:
+
+  firmwareInformation:
+    description: Firmware Information
+    id: 0x0F
+    lengthBytes: 8
+    signals:
+      eepromVersion:
+      softwareVersion:
+      dateCodeMMDD:
+      dateCodeYYYY:
+
+  diagnosticData:
+    description: Diagnostic Data
+    id: 0x10
+    lengthBytes:
+    signals:
+      
   criticalData:
     description: PM100DXR Critical Data
     id: 0x11
     lengthBytes: 8
     signals:
+      torqueCommand:
+      torqueFeedback:
+      motorSpeed:
       tractiveSystemVoltage:
-        startBit: 48
+
+  torqueCapability:
+    description: Motor Controller Torque Capability
+    id: 0x12
+    lengthBytes: 8
+    signals:
+      torqueCapability:

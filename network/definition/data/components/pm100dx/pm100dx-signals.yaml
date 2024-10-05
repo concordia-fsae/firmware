@@ -508,19 +508,33 @@ signals:
       range:
         min: 0 
         max: 12
-    continuous: true
+    discreteValues: inverterState
 
-  # I'm not sure what to do for the resolution of this signal
-  relayState:
+
+  relayStatus1:
     cycleTimeMs: 10
-    description: Relay State
-    nativeRepresentation:
-      bitWidth: 8
-      resolution: 1
-      range:
-        min: 0 
-        max: 32
-    continuous: true
+    description: Relay 1 Status
+    discreteValues: activeStatus
+  relayStatus2:
+    cycleTimeMs: 10
+    description: Relay 2 Status
+    discreteValues: activeStatus
+  relayStatus3:
+    cycleTimeMs: 10
+    description: Relay 3 Status
+    discreteValues: activeStatus
+  relayStatus4:
+    cycleTimeMs: 10
+    description: Relay 4 Status
+    discreteValues: activeStatus
+  relayStatus5:
+    cycleTimeMs: 10
+    description: Relay 5 Status
+    discreteValues: activeStatus
+  relayStatus6:
+    cycleTimeMs: 10
+    description: Relay 6 Status
+    discreteValues: activeStatus
   inverterRunMode:
     cycleTimeMs: 10
     description: Inverter Run Mode
@@ -539,7 +553,7 @@ signals:
       range:
         min: 0
         max: 4
-    continuous: true
+    discreteValues: inverterActiveDischargeState
   inverterCommandMode:
     cycleTimeMs: 10
     description: Inverter Command Mode
@@ -572,93 +586,357 @@ signals:
     description: Inverter Enable Lockout
     discreteValues: outputState
   directionCommand:
+    cycleTimeMs: 10
+    description: Inverter Direction Command
+    discreteValues: directionCommand
   bmsActive:
+    cycleTimeMs: 10
+    description: BMS Active
+    discreteValues: bmsActive
   bmsLimitingTorque:
+    cycleTimeMs: 10
+    description: BMS Limiting Torque
+    discreteValues: bmsLimitingTorque
   limitMaxSpeed:
+    cycleTimeMs: 10
+    description: Only for Gen 5
+    discreteValues: limitMaxSpeed
   limitHotSpot:
+    cycleTimeMs: 10
+    description: Only for Gen 5
+    discreteValues: limitHotSpot
   lowSpeedLimiting:
+    cycleTimeMs: 10
+    description: Only for Gen 5
+    discreteValues: lowSpeedLimiting
   coolantTemperatureLimiting:
+    cycleTimeMs: 10
+    description: Only for Gen 5
+    discreteValues: coolantTempLimiting
   limitStallBurstModel:
+    cycleTimeMs: 10
+    description: Only for Gen 5
+    discreteValues: stallBurstModelLimiting
 
 
   #POST Fault Lo
-  postHardwareGateFault:
+  postHWGateFault:
+    cycleTimeMs: 10
+    description: POST HW Gate Fault
+    discreteValues: faultStatus
   postHWOverCurrentFault:
+    cycleTimeMs: 10
+    description: POST HW Overcurrent Fault
+    discreteValues: faultStatus
   postAcceleratorShorted:
+    cycleTimeMs: 10
+    description: POST HW Accelerator Shorted Fault
+    discreteValues: faultStatus
   postAcceleratorOpen:
+    cycleTimeMs: 10
+    description: POST HW Accelerator Open Fault
+    discreteValues: faultStatus
   postCurrentSensorLo:
+    cycleTimeMs: 10
+    description: POST Current Sensor Low Fault
+    discreteValues: faultStatus
   postCurrentSensorHi:
+    cycleTimeMs: 10
+    description: POST Current Sensor High Fault
+    discreteValues: faultStatus
   postModuleTempLo:
+    cycleTimeMs: 10
+    description: POST Module Temp Low Fault
+    discreteValues: faultStatus
   postModuleTempHi:
+    cycleTimeMs: 10
+    description: POST Module Temp High Fault
+    discreteValues: faultStatus
 
   postControlPCBTempLo:
+    cycleTimeMs: 10
+    description: POST Control PCB Temp Low Fault
+    discreteValues: faultStatus
   postControlPCBTempHi:
+    cycleTimeMs: 10
+    description: POST Control PCB Temp High Fault
+    discreteValues: faultStatus
   postGateDrivePCBTempLo:
+    cycleTimeMs: 10
+    description: POST Gate Drive PCB Temp Low Fault
+    discreteValues: faultStatus
   postGateDrivePCBTempHi:
+    cycleTimeMs: 10
+    description: POST Gate Drive PCB Temp High Fault
+    discreteValues: faultStatus
   post5vSenseVoltageLo:
+    cycleTimeMs: 10
+    description: POST 5V Sense Voltage Low Fault
+    discreteValues: faultStatus
   post5vSenseVoltageHi:
+    cycleTimeMs: 10
+    description: POST 5V Sense Voltage High Fault
+    discreteValues: faultStatus
   post12vSenseVoltageLo:
+    cycleTimeMs: 10
+    description: POST 12V Sense Voltage Low Fault
+    discreteValues: faultStatus
   post12vSenseVoltageHi:
+    cycleTimeMs: 10
+    description: POST 12V Sense Voltage High Fault
+    discreteValues: faultStatus
 
   #POST Fault Hi
   post2.5vSenseVoltageLo:
+    cycleTimeMs: 10
+    description: POST 2.5V Sense Voltage Low Fault
+    discreteValues: faultStatus
   post2.5vSenseVoltageHi:
+    cycleTimeMs: 10
+    description: POST 2.5V Sense Voltage High Fault
+    discreteValues: faultStatus
   post1.5vSenseVoltageLo:
+    cycleTimeMs: 10
+    description: POST 1.5V Sense Voltage Low Fault
+    discreteValues: faultStatus
   post1.5vSenseVoltageHi:
+    cycleTimeMs: 10
+    description: POST 1.5V Sense Voltage High Fault
+    discreteValues: faultStatus
   postDCBusVoltageHi:
+    cycleTimeMs: 10
+    description: POST DC Bus Votlage High Fault
+    discreteValues: faultStatus
   postDCBusVoltageLo:
+    cycleTimeMs: 10
+    description: POST DC Bus Voltage Low Fault
+    discreteValues: faultStatus
   postPreChargeTimeOut:
+    cycleTimeMs: 10
+    description: POST Precharge Timeout Fault
+    discreteValues: faultStatus
   postPreChargeVoltageFailure:
+    cycleTimeMs: 10
+    description: POST Precharge Voltage Failure Fault
+    discreteValues: faultStatus
 
   postEepromChecksumInvalid:
+    cycleTimeMs: 10
+    description: POST EEPROM Checksum Invalid Fault
+    discreteValues: faultStatus
   postEepromDataOutOfRange:
+    cycleTimeMs: 10
+    description: POST EEPROM Data Out of Range Fault
+    discreteValues: faultStatus
   postEepromUpdateRequired:
+    cycleTimeMs: 10
+    description: POST EEPROM Update Required Fault
+    discreteValues: faultStatus
   postHWDCBusOverVoltageDuringInit:
+    cycleTimeMs: 10
+    description: POST HW DC Bus Over Voltage During Init Fault
+    discreteValues: faultStatus
+
   #start bit = 30
   postBrakeShorted:
+    cycleTimeMs: 10
+    startBit: 30
+    description: POST Brake Shorted Fault
+    discreteValues: faultStatus
   postBrakeOpen:
+    cycleTimeMs: 10
+    description: POST Brake Open Fault
+    discreteValues: faultStatus
 
   #Run Fault Lo
   runMotorOverSpeedFault:
+    cycleTimeMs: 10
+    description: RUN Motor Over Speed Fault
+    discreteValues: faultStatus
   runOverCurrentFault:
+    cycleTimeMs: 10
+    description: RUN Over Current Fault
+    discreteValues: faultStatus
   runOverVoltageFault:
+    cycleTimeMs: 10
+    description: RUN Over Voltage Fault
+    discreteValues: faultStatus
   runInverterOverTempFault:
+    cycleTimeMs: 10
+    description: RUN Inverter Over Temperature Fault
+    discreteValues: faultStatus
   runAcceleratorInputShortedFault:
+    cycleTimeMs: 10
+    description: RUN Accelerator Input Shorted Fault
+    discreteValues: faultStatus
   runAcceleratorInputOpenFault:
+    cycleTimeMs: 10
+    description: RUN Accelerator Input Open Fault
+    discreteValues: faultStatus
   runDirectionCommandFault:
+    cycleTimeMs: 10
+    description: RUN Direction Command Fault
+    discreteValues: faultStatus
   runInverterResponseTimeOutFault:
+    cycleTimeMs: 10
+    description: RUN Inverter Response Timeout Fault
+    discreteValues: faultStatus
 
   runHWGateFault:
+    cycleTimeMs: 10
+    description: RUN HW Gate Fault
+    discreteValues: faultStatus
   runHWOverCurrentFault:
+    cycleTimeMs: 10
+    description: RUN HW Over Current Fault
+    discreteValues: faultStatus
   runUnderVoltageFault:
+    cycleTimeMs: 10
+    description: RUN Under Voltage Fault
+    discreteValues: faultStatus
   runCanCommandMessageLostFault:
+    cycleTimeMs: 10
+    description: RUN CAN Command Message Lost Fault
+    discreteValues: faultStatus
   runMotorOverTempFault:
+    cycleTimeMs: 10
+    description: RUN Motor Over Temp Fault
+    discreteValues: faultStatus
 
   #Run Fault Hi
   #start bit = 48
   runBrakeInputShortedFault:
+    cycleTimeMs: 10
+    startBit: 48
+    description: RUN Brake Input Shorted Fault
+    discreteValues: faultStatus
   runBrakeInputOpenFault:
+    cycleTimeMs: 10
+    description: RUN Brake Input Open Fault
+    discreteValues: faultStatus
   runModuleAOverTempFault:
+    cycleTimeMs: 10
+    description: RUN Module A Over Temp Fault
+    discreteValues: faultStatus
   runModuleBOverTempFault:
+    cycleTimeMs: 10
+    description: RUN Module B Over Temp Fault
+    discreteValues: faultStatus
   runModuleCOverTempFault:
+    cycleTimeMs: 10
+    description: RUN Module C Over Temp Fault
+    discreteValues: faultStatus
   runPcbOverTempFault:
+    cycleTimeMs: 10
+    description: RUN PCB Over Temp Fault
+    discreteValues: faultStatus
   runGateDriveBoard1OverTempFault:
+    cycleTimeMs: 10
+    description: RUN Gate Drive Board 1 Over Temp Fault
+    discreteValues: faultStatus
   runGateDriveBoard2OverTempFault:
+    cycleTimeMs: 10
+    description: RUN Gate Drive Board 2 Over Temp Fault
+    discreteValues: faultStatus
   runGateDriveBoard3OverTempFault:
+    cycleTimeMs: 10
+    description: RUN Gate Drive Board 3 Over Temp Fault
+    discreteValues: faultStatus
   runCurrentSensorFault:
+    cycleTimeMs: 10
+    description: RUN Current Sensor Fault
+    discreteValues: faultStatus
   #start bit = 59
   runHwDCBusOverVoltageFault:
+    cycleTimeMs: 10
+    startBit: 59
+    description: RUN HW DC Bus Over Voltage Fault
+    discreteValues: faultStatus
   #start bit = 62
   runResolverNotConnected:
+    cycleTimeMs: 10
+    startBit: 62
+    description: RUN Resolver Not Connected Fault
+    discreteValues: faultStatus
 
   commandedTorque:
+    cycleTimeMs: 10
+    description: Commanded Torque
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   feedbackTorque:
+    cycleTimeMs: 10
+    description: Torque Feedback
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   powerOnTimer:
+    cycleTimeMs: 10
+    description: Power On Timer
+    unit: "s"
+    nativeRepresentation:
+      bitWidth: 32
+      resolution: 3000
+      range:
+        min: 0
+        max: 4294967295
+    continuous: true
 
   modulationIndex:
+    cycleTimeMs: 10
+    description: Modulation Index
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: 0
+        max: 65535
+    continuous: true
   fluxWeakeningOutput:
+    cycleTimeMs: 10
+    description: Flux Weakening Output
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   idCommand:
+    cycleTimeMs: 10
+    description: Commanded D-Axis Current
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   iqCommand:
+    cycleTimeMs: 10
+    description: Commanded Q-Axis Current
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
 
   eepromVersion:
   softwareVersion:
@@ -666,11 +944,41 @@ signals:
   dateCodeYYYY:
 
   torqueCommand:
+    cycleTimeMs: 3
+    unit: Nm
+    description: Commanded Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   torqueFeedback:
+    cycleTimeMs: 3
+    unit: Nm
+    description: Estimated Motor Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   motorSpeed:
+    cycleTimeMs: 3
+    unit: rpm
+    description: Measured Motor Speed
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 3276.7
+    continuous: true
   tractiveSystemVoltage:
-    cycleTimeMs: 10
-    unit: 'V'
+    cycleTimeMs: 3
+    unit: V
     description: Motor Controller DC Bus Voltage
     nativeRepresentation:
       bitWidth: 16
@@ -681,4 +989,15 @@ signals:
     continuous: true
 
   torqueCapability:
+    cycleTimeMs: 10
+    unit: Nm
+    description: Inverter Available Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 3276.7
+    continuous: true
+
   
