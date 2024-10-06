@@ -1,11 +1,4 @@
 messages:
-
-  commandMessage:
-    description: PM100DXR Command Message
-    id: 0x21
-    lengthBytes: 8 
-    signals:
-
 signals:
   rxTorqueCommand:
   rxSpeedCommand:

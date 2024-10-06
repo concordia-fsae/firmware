@@ -1,4 +1,113 @@
 messages:
+
+# This is an Rx message
+  NLG513_Control:
+    description: 
+    id: 0x618
+    lengthBytes: 
+    signals:
+
+# these are Tx messages
+  NLG513_Status:
+    description: 
+    id: 0x610
+    lengthBytes: 4
+    signals:
+      powerEnable:
+      generalLatchError:
+      generalLimitWarning:
+      fanActive:
+      europeMains:
+      usaMainsLvl1:
+      usaMainsLvl2:
+      controlPilotDetected:
+      bypassDetection1:
+      bypassDetection2:
+      limitationByOutputVoltage:
+      limitationByOutputCurrent:
+      limitationByMainsCurrent:
+      limitationByPowerIndicator:
+      limitationByControlPilot:
+      limitationByChargerMaxPower:
+      limitationByChargerMaxMainsCurrent:
+      limitationByChargerMaxOutputCurrent:
+      limitationByChargerMaxOutputVoltage:
+      limitationByTempCapacitorsPrimary:
+      limitationByTempPowerStage:
+      limitationByTempDiodes:
+      limitationByTempTransformer:
+      limitationByBatteryTemp:
+
+  NLG513_ActualValues:
+    description: 
+    id: 0x611
+    lengthBytes: 
+    signals:
+      mainsCurrent:
+      mainsVoltage:
+      outputVoltage:
+      outputCurrent:
+
+  NLG513_ActualValues2:
+    description: 
+    id: 0x612
+    lengthBytes: 
+    signals:
+      mainsCurrentMaxByControlPilot:
+      mainsCurrentMaxByPowerIndicator:
+      auxiliaryBatteryVoltage:
+      ampHoursByExternalShunt:
+      boosterOutputCurrent:
+
+  NLG513_TempFeedback:
+    description: 
+    id: 0x613
+    lengthBytes: 
+    signals:
+      powerStageTemp:
+      tempExtern1:
+      tempExtern2:
+      tempExtern3:
+
+  NLG513_Errors:
+    description: 
+    id: 0x614
+    lengthBytes: 
+    signals:
+      outputOvervoltage:
+      mainsOvervoltage2:
+      mainsOvervoltage1:
+      powerStageShortCircuitCondition:
+      plausibilityOutputVoltageMeasurement:
+      plausibilityMainsVoltageMeasurement:
+      outputFuseDefect:
+      mainsFuseDefect:
+      batteryPolarity:
+      tempSensorCapacitorsPrimary:
+      tempSensorPowerStagePrimary:
+      tempSensorDiodes:
+      tempSensorTransformer:
+      tempSensorExtern1:
+      tempSensorExtern2:
+      tempSensorExtern3:
+      flashChecksumFailure:
+      eepromSysChecksumFailure:
+      eepromPowChecksumFailure:
+      watchdogInternal:
+      initialization:
+      canTimeout:
+      canOff:
+      canTransmit:
+      canReceive:
+      shutdownThresholdBatteryTemp:
+      shutdownThresholdBatteryVoltage:
+      shutdownThresholdBatteryAmpHours:
+      shutdownThresholdChargingTime:
+      powerLimitationByLowMainsVoltage:
+      powerLimitationByLowBatteryVoltage:
+      powerLimitationByInternalOverTemp:
+      commandValueOutOfRange:
+
   criticalData:
     description: Brusa NLG513 Critical Data
     id: 0x611
