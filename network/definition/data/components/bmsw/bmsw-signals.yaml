@@ -490,11 +490,23 @@ signals:
     description: Total Segment Voltage, higher resolution
     unit: V
     nativeRepresentation:
-      bitWidth: 13
+      bitWidth: 12
       range:
         min: 0
         max: 81.92
-      resolution: 0.010
+      resolution: 0.020
+    continuous: true
+  
+  segmentVoltageHighResCalculated:
+    cycleTimeMs: 1000
+    description: Total Segment Voltage, higher resolution
+    unit: V
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 81.92
+      resolution: 0.020
     continuous: true
 
   boardRelativeHumidity:

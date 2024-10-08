@@ -190,7 +190,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
     // ClockDivision = 0
     // Counter direction = Up
-    htim3.Init.Period        = (1000000U / 10000) - 1U;
+    htim3.Init.Period        = (1000000U / 5000) - 1U;
     htim3.Init.Prescaler     = uwPrescalerValue;
     htim3.Init.ClockDivision = 0;
     htim3.Init.CounterMode   = TIM_COUNTERMODE_UP;

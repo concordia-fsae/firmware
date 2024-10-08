@@ -40,15 +40,23 @@
 typedef enum
 {
     BMS_INIT = 0x00,
+#if FEATURE_MAX14921_CALIBRATE
     BMS_CALIBRATING,
+#endif // FEATURE_MAX14921_CALIBRATE
     BMS_PARASITIC,
     BMS_PARASITIC_MEASUREMENT,
     BMS_HOLDING,
     BMS_WAITING,
     BMS_SAMPLING,
+#if FEATURE_CELL_DIAGNOSTICS
     BMS_DIAGNOSTIC,
+#endif // FEATURE_CELL_DIAGNOSTICS
+#if FEATURE_CELL_BALANCING
     BMS_BALANCING,
+#endif // FEATURE_CELL_BALANCING
+#if FEATURE_CELL_SLEEP
     BMS_SLEEPING,
+#endif // FEATURE_CELL_SLEEP
     BMS_ERROR,
 } BMS_State_E;
 
@@ -56,8 +64,10 @@ typedef enum
 {
     BMS_CELL_DISCONNECTED = 0x00,
     BMS_CELL_CONNECTED,
+#if FEATURE_BMSW_FAULTS
     BMS_CELL_FAULT_UV,
     BMS_CELL_FAULT_OV,
+#endif // FEATURE_BMSW_FAULTS
     BMS_CELL_ERROR,
 } BMS_Cell_E;
 
@@ -111,4 +121,5 @@ extern BMS_S BMS;
 void BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_toSleep(void);
 void BMS_wakeUp(void);
+MAX_selectedCell_E BMS_getCurrentOutputCell(void);
 void BMS_measurementComplete(void);

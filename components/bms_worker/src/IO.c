@@ -143,7 +143,19 @@ static void IO_init(void)
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
 
-
+    if (io.adcState == ADC_STATE_INIT)
+    {
+        io.adcState = ADC_STATE_CALIBRATION;
+        if (HW_ADC_calibrate(&hadc1) && HW_ADC_calibrate(&hadc2))
+        {
+            HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
+            io.adcState = ADC_STATE_RUNNING;
+        }
+        else
+        {
+            io.adcState = ADC_STATE_CALIBRATION_FAILED;
+        }
+    }
 
 #if defined(BMSW_BOARD_VA1)
     IO.addr |= ((HW_GPIO_readPin(&A0)) ? 0x01 : 0x00) << 0;
@@ -164,7 +176,15 @@ static void IO10Hz_PRD(void)
 {
     static NX3L_MUXChannel_E current_sel = NX3L_MUX1;
 
-    if (io.adcState == ADC_STATE_RUNNING)
+    if (io.adcState != ADC_STATE_RUNNING)
+    {
+        if (io.adcState == ADC_STATE_CALIBRATION_FAILED)
+        {
+            // adc calibration failed
+            // what do now?
+        }
+    }
+    else
     {
         IO_Temps_unpackADCBuffer();
 
@@ -207,21 +227,8 @@ void IO10kHz_CB(void)
     {
         if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
         {
-            static MAX_selectedCell_E current_cell = MAX_CELL_COUNT;
-            static bool started = false;
+            const MAX_selectedCell_E current_cell = BMS_getCurrentOutputCell();
 
-            if (current_cell == MAX_CELL_COUNT)
-            {
-                current_cell = BMS.connected_cells - 1;
-            }
-
-            if (!started)
-            {
-                started = true;
-                return;
-            }
-
-            started = false;
             IO_Cells_unpackADCBuffer();
 
             io.bmsData.value      = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
@@ -232,45 +239,25 @@ void IO10kHz_CB(void)
             if (current_cell == MAX_CELL1)
             {
                 BMS_measurementComplete();
-                current_cell = BMS.connected_cells - 1;
             }
             else
             {
-                current_cell--;
-                BMS_setOutputCell(current_cell);
+                BMS_setOutputCell(current_cell - 1);
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
                 HW_TIM_10kHz_timerStart();
 #endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
             }
         }
-        else if ((BMS.state == BMS_SAMPLING) || (BMS.state == BMS_PARASITIC))
+        else if (BMS.state == BMS_SAMPLING)
         {
             IO_Cells_unpackADCBuffer();
-            io.bmsData.value  = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
-            io.bmsData.value *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
+            if (io.bmsData.count != 0)
+            {
+                io.bmsData.value  = ((float32_t)io.bmsData.raw / io.bmsData.count);
+                io.bmsData.value *= (ADC_VOLTAGE_DIVISION * VREF) / ADC_MAX_VAL;
+            }
 
             IO.segment        = io.bmsData.value;
-        }
-    }
-    else
-    {
-        if (io.adcState == ADC_STATE_INIT)
-        {
-            io.adcState = ADC_STATE_CALIBRATION;
-            if (HW_ADC_calibrate(&hadc1) && HW_ADC_calibrate(&hadc2))
-            {
-                HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
-                io.adcState = ADC_STATE_RUNNING;
-            }
-            else
-            {
-                io.adcState = ADC_STATE_CALIBRATION_FAILED;
-            }
-        }
-        else if (io.adcState == ADC_STATE_CALIBRATION_FAILED)
-        {
-            // adc calibration failed
-            // what do now?
         }
     }
 }
@@ -283,7 +270,7 @@ const ModuleDesc_S IO_desc = {
     .moduleInit       = &IO_init,
     .periodic10Hz_CLK = &IO10Hz_PRD,
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-    .periodic1kHz_CLK = &IO10kHz_PRD,
+    .periodic10kHz_CLK = &IO10kHz_PRD,
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 };
 

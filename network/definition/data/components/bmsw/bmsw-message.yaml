@@ -87,9 +87,10 @@ messages:
   cellVoltages2:
     description: Third set of cell voltages
     id: 0x750
-    lengthBytes: 7
+    lengthBytes: 8
     signals:
       segmentVoltageHighRes:
+      segmentVoltageHighResCalculated:
       cellVoltage15:
       cellVoltage14:
       cellVoltage13:
