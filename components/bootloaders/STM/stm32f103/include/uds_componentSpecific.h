@@ -10,10 +10,11 @@
 
 #include "BuildDefines_generated.h"
 
-
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
+
+#define UDS_ENABLE_LIB 1
 
 #define ISOTP_TX_BUF_SIZE              128U  // [bytes] mostly arbitrary
 #define ISOTP_RX_BUF_SIZE              128U  // [bytes] maximum size of a multi-frame ISOTP transaction (mostly arbitrary, increase if necessary)

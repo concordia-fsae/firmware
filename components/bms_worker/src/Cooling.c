@@ -16,6 +16,8 @@
 #include "Environment.h"
 #include "Module.h"
 
+#include "MessageUnpack_generated.h"
+
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -85,12 +87,12 @@ static void Cooling10Hz_PRD(void)
                 else
                 {
                     COOL.state[i]      = COOL_ON;
-                    COOL.percentage[i] = ((float32_t)(ENV.values.max_temp - 40) * 100 / 20);
+                    COOL.percentage[i] = (uint8_t)(((ENV.values.max_temp - 40) * 100) / 20);
                 }
                 break;
 
             case COOL_FULL:
-                if (ENV.values.max_temp < 525 && ENV.state == ENV_RUNNING)
+                if (ENV.values.max_temp < 52 && ENV.state == ENV_RUNNING)
                 {
                     COOL.state[i] = COOL_ON;
                 }
@@ -104,15 +106,19 @@ static void Cooling10Hz_PRD(void)
         }
 
 
-        if (COOL.percentage[i] == 0)
+        if ((uint8_t)COOL.percentage[i] == 0)
         {
             COOL.state[i] = COOL_OFF;
+        }
+
+        if (COOL.percentage[i] < CANRX_get_signal(VEH, TOOLING_commandedFansDutyCycle))
+        {
+            COOL.percentage[i] = CANRX_get_signal(VEH, TOOLING_commandedFansDutyCycle);
         }
     }
 
     FANS_setPower((uint8_t*)&COOL.percentage);
 }
-
 
 /**
  * @brief  Cooling Module descriptor

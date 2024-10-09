@@ -19,6 +19,7 @@ void DebugMon_Handler(void);
 void DMA1_Channel1_IRQHandler(void);
 void ADC1_2_IRQHandler(void);
 void TIM4_IRQHandler(void);
+void TIM3_IRQHandler(void);
 void TIM1_TRG_COM_IRQHandler(void);
 void TIM2_IRQHandler(void);
 void TIM1_CC_IRQHandler(void);

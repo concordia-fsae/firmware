@@ -21,7 +21,7 @@
 
 /**< Other Includes */
 #include "Utility.h"
-
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -35,7 +35,10 @@ static const ModuleDesc_S* modules[] = {
     &IO_desc,
     &BMS_desc,
     &SYS_desc,
-    //    &CANIO_rx,
+#if FEATURE_UDS
+    &UDS_desc,
+#endif
+    &CANIO_rx,
     &CANIO_tx,
 };
 

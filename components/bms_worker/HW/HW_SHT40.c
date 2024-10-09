@@ -12,7 +12,7 @@
  ******************************************************************************/
 
 // Firmware Includes
-#include "HW.h"
+#include "HW_tim.h"
 #include "HW_SHT40.h"
 
 #include "Utility.h"
@@ -66,7 +66,7 @@ bool SHT_init(void)
 
     HW_I2C_masterWrite(sht_chip.dev, &wdat, 1, 1);
 
-    HW_delay(10);
+    HW_TIM_delayMS(10);
 
     wdat    = READ_SENSOR_ID;
     

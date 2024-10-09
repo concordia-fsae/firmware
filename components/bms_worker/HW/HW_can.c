@@ -16,6 +16,11 @@
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal_can.h"
 
+#include "MessageUnpack_generated.h"
+#include "uds.h"
+#include "uds_componentSpecific.h"
+#include "Cooling.h"
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -37,8 +42,6 @@
 #define CAN_ENABLED_INTERRUPTS    (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
                                    CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
                                    CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
- #undef CAN_ENABLED_INTERRUPTS
- #define CAN_ENABLED_INTERRUPTS CAN_IER_ERRIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -92,7 +95,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     hcan.Init.TimeSeg1             = CAN_BS1_6TQ;
     hcan.Init.TimeSeg2             = CAN_BS2_1TQ;
     hcan.Init.TimeTriggeredMode    = DISABLE;
-    hcan.Init.AutoBusOff           = DISABLE;
+    hcan.Init.AutoBusOff           = ENABLE;
     hcan.Init.AutoWakeUp           = DISABLE;
     hcan.Init.AutoRetransmission   = ENABLE;
     hcan.Init.ReceiveFifoLocked    = DISABLE;
@@ -103,19 +106,26 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         Error_Handler();
     }
 
+    _Static_assert(CANRX_VEH_unpackList_length <= 32, "STM32F1 only has 32 filter id's when used in list mode");
+    for (uint32_t i = 0; i < CANRX_VEH_unpackList_length; )
+    {
+        CAN_FilterTypeDef filt = { 0U };
+        filt.FilterBank           = i / 4;
+        filt.FilterMode           = CAN_FILTERMODE_IDLIST;
+        filt.FilterScale          = CAN_FILTERSCALE_16BIT;
+        // All filters are shifted left 5 bits
+        filt.FilterIdHigh = CANRX_VEH_unpackList[i + 0] << 5;
+        if ((i + 1) < CANRX_VEH_unpackList_length) { filt.FilterIdLow = CANRX_VEH_unpackList[i + 1] << 5; }
+        if ((i + 2) < CANRX_VEH_unpackList_length) { filt.FilterMaskIdHigh = CANRX_VEH_unpackList[i + 2] << 5; }
+        if ((i + 3) < CANRX_VEH_unpackList_length) { filt.FilterMaskIdLow = CANRX_VEH_unpackList[i + 3] << 5; }
+        filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
+        filt.FilterActivation     = ENABLE;
+        HAL_CAN_ConfigFilter(&hcan, &filt);
+
+        i += 4;
+    }
     // activate selected CAN interrupts
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
-
-    CAN_FilterTypeDef filt = { 0U };
-    filt.FilterBank           = 0;
-    filt.FilterMode           = CAN_FILTERMODE_IDMASK;
-    filt.FilterScale          = CAN_FILTERSCALE_16BIT;
-    // All filters are shifted left 5 bits
-    filt.FilterIdHigh = 0x200;
-    filt.FilterIdHigh = 0x201;
-    filt.FilterFIFOAssignment = 0;
-    filt.FilterActivation     = ENABLE;
-    HAL_CAN_ConfigFilter(&hcan, &filt);
 
     return HW_OK;
 }
@@ -270,7 +280,7 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
     rx->IDE              = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
     rx->RTR              = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id               = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
+    rx->id               = (uint16_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos);
     rx->lengthBytes      = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
@@ -278,7 +288,7 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
 
     // Get the data
     rx->data.u64         = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
-    
+
     // Release the FIFO
     switch (rxFifo)
     {
@@ -411,24 +421,32 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
  */
 static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
-    uint8_t data[8];
-    CAN_RxHeaderTypeDef header;
+#if FEATURE_CANRX_SWI == FEATURE_DISABLED
+    CAN_data_T          data = {0U};
+    CAN_RxHeaderTypeDef header = {0U};
+#endif // FEATURE_CANRX_SWI == FEATURE_DISABLED
 
     if (canHandle == &hcan)
     {
-        HAL_CAN_GetRxMessage(canHandle, fifoId, &header, &data[0]);
-    }
+#if FEATURE_CANRX_SWI == FEATURE_DISABLED
+        HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
+        CANRX_VEH_unpackMessage((uint16_t)header.StdId, &data);
 
-    if (header.StdId == 0x200)
-    {
-        if (data[0] == 0x00) BMS_toSleep();
+#if FEATURE_UDS
+        if (header.StdId == UDS_REQUEST_ID)
+        {
+            // FIXME: there needs to be a queue here for received UDS messages
+            // which will then be processed in the periodic.
+            // Right now, a successfully received UDS message will overwritten by
+            // the next one, even if it hasn't been processed yet.
+            udsSrv_processMessage(data.u8, (uint8_t)header.DLC);
+        }
+#endif // FEATURE_UDS
+#else // FEATURE_CANRX_SWI == FEATURE_DISABLED
+        CANRX_BUS_VEH_notify(fifoId);
+        SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+#endif // FEATURE_CANRX_SWI
     }
-    else if (header.StdId == 0x201)
-    {
-        if (data[0] == 0x00) BMS_wakeUp();
-    }
-    //CANRX_BUS_A_notify(fifoId);
-    //SWI_invokeFromISR(CANRX_BUS_A_swi);
 }
 
 
@@ -575,7 +593,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         __HAL_RCC_CAN1_CLK_ENABLE();
 
         __HAL_RCC_GPIOB_CLK_ENABLE();
-        
+
         /**CAN GPIO Configuration
          * PB8     ------> CAN_RX
          * PB9     ------> CAN_TX
@@ -591,7 +609,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(CAN_Port, &GPIO_InitStruct);
-        
+
         __HAL_AFIO_REMAP_CAN1_2();
 
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);

@@ -21,6 +21,7 @@
 
 /**< Other Includes */
 #include "Utility.h"
+#include "FeatureDefines_generated.h"
 
 
 /******************************************************************************
@@ -36,7 +37,12 @@ static const ModuleDesc_S* modules[] = {
     &COOL_desc,
     &IO_desc,
     &SYS_desc,
-    // &CANIO_rx,
+#if FEATURE_UDS
+    &UDS_desc,
+#endif // FEATURE_UDS
+#if FEATURE_CANRX_SWI
+    &CANIO_rx,
+#endif // FEATURE_CANRX_SWI
     &CANIO_tx,
 };
 
@@ -44,8 +50,8 @@ static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
 
 static struct
 {
-    uint8_t total;
-    uint8_t timeslice;
+    float32_t total;
+    float32_t timeslice;
 } percentages;
 
 static uint64_t rtos_start;
@@ -72,6 +78,7 @@ void Module_Init(void)
     rtos_start = HW_TIM_getBaseTick();
 }
 
+#if FEATURE_10KHZ_TASK
 /**
  * @brief  10kHz periodic function
  */
@@ -94,7 +101,7 @@ void Module_10kHz_TSK(void)
     stats[MODULE_10kHz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
     stats[MODULE_10kHz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
 }
-
+#endif // FEATURE_10KHZ_TASK
 /**
  * @brief  1kHz periodic function
  */
@@ -191,8 +198,8 @@ void Module_1Hz_TSK(void)
 
     for (int8_t i = 0; i < MODULE_TASK_CNT; i++)
     {
-        stats[i].total_percentage     = (100 * stats[i].total_runtime) / (temp_tick - rtos_start);
-        stats[i].timeslice_percentage = (100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice);
+        stats[i].total_percentage     = (100 * (float32_t)stats[i].total_runtime) / (float32_t)(temp_tick - rtos_start);
+        stats[i].timeslice_percentage = (100 * (float32_t)stats[i].timeslice_runtime) / (float32_t)(temp_tick - last_timeslice);
         percentages.total += stats[i].total_percentage;
         percentages.timeslice += stats[i].timeslice_percentage;
         stats[i].timeslice_runtime = 0;

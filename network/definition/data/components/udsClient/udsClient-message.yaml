@@ -1,0 +1,56 @@
+messages:
+  bmsw0UdsRequest:
+    description: UDS request message for the BMS Worker 0
+    id: 0x600
+    lengthBytes: 8
+    signals:
+      udsPayload:
+
+  bmsw1UdsRequest:
+    description: UDS request message for the BMS Worker 1
+    id: 0x601
+    lengthBytes: 8
+    signals:
+      udsPayload:
+
+  bmsw2UdsRequest:
+    description: UDS request message for the BMS Worker 2
+    id: 0x602
+    lengthBytes: 8
+    signals:
+      udsPayload:
+
+  bmsw3UdsRequest:
+    description: UDS request message for the BMS Worker 3
+    id: 0x603
+    lengthBytes: 8
+    signals:
+      udsPayload:
+
+  bmsw4UdsRequest:
+    description: UDS request message for the BMS Worker 4
+    id: 0x604
+    lengthBytes: 8
+    signals:
+      udsPayload:
+
+  bmsw5UdsRequest:
+    description: UDS request message for the BMS Worker 5
+    id: 0x605
+    lengthBytes: 8
+    signals:
+      udsPayload:
+
+        #  bmsbUdsRequest:
+        #    description: UDS request message for the BMS Boss
+        #    id: 0x610
+        #    lengthBytes: 8
+        #    signals:
+        #      udsPayload:
+
+  stwUdsRequest:
+    description: UDS request message for the Steering Wheel
+    id: 0x620
+    lengthBytes: 8
+    signals:
+      udsPayload:

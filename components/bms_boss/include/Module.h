@@ -25,6 +25,7 @@ extern const ModuleDesc_S BMS_desc;
 extern const ModuleDesc_S ENV_desc;
 extern const ModuleDesc_S SYS_desc;
 extern const ModuleDesc_S IO_desc;
+extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;
 

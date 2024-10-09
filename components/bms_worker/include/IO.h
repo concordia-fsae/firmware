@@ -66,3 +66,7 @@ typedef struct
  ******************************************************************************/
 
 extern IO_S IO;
+
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+void IO10kHz_CB(void);
+#endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK

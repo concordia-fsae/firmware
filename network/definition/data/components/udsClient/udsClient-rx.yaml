@@ -1,0 +1,10 @@
+messages:
+#  BMSB_udsResponse:
+  BMSW0_udsResponse:
+  BMSW1_udsResponse:
+  BMSW2_udsResponse:
+  BMSW3_udsResponse:
+  BMSW4_udsResponse:
+  BMSW5_udsResponse:
+  STW_udsResponse:
+signals:

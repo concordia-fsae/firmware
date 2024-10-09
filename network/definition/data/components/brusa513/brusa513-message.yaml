@@ -1,0 +1,40 @@
+messages:
+  status:
+    description: Brusa NLG513 Status
+    id: 0x610
+    lengthBytes: 8
+    signals:
+      payload:
+  criticalData:
+    description: Brusa NLG513 Critical Data
+    id: 0x611
+    lengthBytes: 8
+    signals:
+      mainsCurrent:
+      mainsVoltage:
+      dcBusVoltage:
+      dcBusCurrent:
+  actualValues1:
+    description: Brusa NLG513 Actual Values I
+    id: 0x612
+    lengthBytes: 8
+    signals:
+      payload:
+  actualValues2:
+    description: Brusa NLG513 Actual Values II
+    id: 0x613
+    lengthBytes: 8
+    signals:
+      payload:
+  tempFeedback:
+    description: Brusa NLG513 Temp Feedback
+    id: 0x614
+    lengthBytes: 8
+    signals:
+      payload:
+  errorsWarnings:
+    description: Brusa NLG513 Error Warnings
+    id: 0x615
+    lengthBytes: 8
+    signals:
+      payload:

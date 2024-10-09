@@ -1,8 +1,9 @@
 messages:
   switchStatus:
     description: "Status of the Steering Wheel switches"
-    id: 0x600
+    id: 0x500
     lengthBytes: 1
+    sourceBuses: veh
     signals:
       switch0Status:
         startBit: 0
@@ -12,3 +13,10 @@ messages:
       button0Status:
       button1Status:
 
+  udsResponse:
+    description: UDS response message from the Steering Wheel
+    unscheduled: true
+    id: 0x660
+    lengthBytes: 8
+    signals:
+      udsPayload:

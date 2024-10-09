@@ -2,6 +2,7 @@ configs:
   0:
     description: BMS Boss
     options:
-      udsRequestId: 0x610
-      udsResponseId: 0x650
-
+      test:
+    features:
+      feature_bmsw_faults: false
+      feature_uds: false #False because of CAN ID clash with charger

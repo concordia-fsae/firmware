@@ -40,7 +40,7 @@
  *----------------------------------------------------------*/
 
 // Section where include file can be added
-
+#include "FeatureDefines_generated.h"
 // #if (defined(__ARMCC_VERSION) || defined(GNUC) || defined(ICCARM))
 // # include "RTE_Components.h"
 // # include CMSIS_device_header
@@ -48,6 +48,7 @@
 
 // Ensure definitions are only used by the compiler, and not by the assembler.
 #if defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__)
+#include "stm32f103xb.h"
 # include <stdint.h>
 extern uint32_t SystemCoreClock;
 #endif
@@ -57,7 +58,11 @@ extern uint32_t SystemCoreClock;
 #define configUSE_IDLE_HOOK                     (0)
 #define configUSE_TICK_HOOK                     (0)
 #define configCPU_CLOCK_HZ                      (SystemCoreClock)
-#define configTICK_RATE_HZ                      ((TickType_t)10000)
+#if FEATURE_10KHZ_TASK
+#define configTICK_RATE_HZ                      (10000U)
+#elif FEATURE_10KHZ_TASK == FEATURE_DISABLED
+#define configTICK_RATE_HZ                      (1000U)
+#endif
 #define configMAX_PRIORITIES                    (16)
 #define configMAX_TASK_NAME_LEN                 (16)
 #define configUSE_16_BIT_TICKS                  (0)
@@ -135,8 +140,10 @@ extern uint64_t HW_TIM_getBaseTick(void);
  * See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 
-/**< Define conversion from us to ticks */
-#define pdUS_TO_TICKS(xTimeInUs) ((TickType_t)(((TickType_t)(xTimeInUs) * (TickType_t)configTICK_RATE_HZ) / (TickType_t)1000000U))
+#define pdMS_TO_TICKS(xTime) (xTime * (configTICK_RATE_HZ / 1000U))
+#if FEATURE_10KHZ_TASK
+#define pdUS_TO_TICKS(xTime) (uint32_t)((float32_t)xTime * ((float32_t)configTICK_RATE_HZ / (float32_t)1000000U))
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 
 /* Normal assert() semantics without relying on the provision of an assert.h
  * header file. */

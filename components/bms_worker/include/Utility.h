@@ -88,8 +88,8 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
 #define FLAG_GET_MASK(flag)       (1U << ((uint16_t)flag % FLAG_bits_each))
 
 #define FLAG_create(name, size) uint16_t(name)[WORDS_FROM_COUNT(size)]
-#define FLAG_set(name, pos)     FLAG_GET_WORD(name, pos) |= FLAG_GET_MASK(pos)
-#define FLAG_clear(name, pos)   FLAG_GET_WORD(name, pos) &= ~FLAG_GET_MASK(pos)
+#define FLAG_set(name, pos)     FLAG_GET_WORD(name, pos) |= (uint16_t)FLAG_GET_MASK(pos)
+#define FLAG_clear(name, pos)   FLAG_GET_WORD(name, pos) &= (uint16_t)~FLAG_GET_MASK(pos)
 #define FLAG_get(name, pos)     ((bool)((FLAG_GET_WORD(name, pos) & FLAG_GET_MASK(pos)) == FLAG_GET_MASK(pos)))
 #define FLAG_assign(name, pos, value) \
  do {                                 \
@@ -116,7 +116,7 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
  */
 static inline void FLAG_setAll(uint16_t* name, uint16_t count)
 {
-    uint16_t numWords  = WORDS_FROM_COUNT(count);
+    uint16_t numWords  = (uint16_t)WORDS_FROM_COUNT(count);
     uint16_t extraBits = count % FLAG_bits_each;
 
     if (numWords > 1U)
@@ -461,18 +461,7 @@ static inline uint8_t reverse_byte(uint8_t x)
     return table[x];
 }
 
-static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
-{
-    for (uint8_t i = 0; i < (len / 2); i++)
-    {
-        uint8_t tmp = in[i];
-
-        in[i]           = in[len - i - 1];
-        in[len - i - 1] = tmp;
-    }
-
-    return in;
-}
+uint8_t* reverse_bytes(uint8_t* in, uint8_t len);
 
 /**
  * @brief  Simple fast accurate natural log approximation
@@ -486,4 +475,4 @@ static inline uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
  *
  * @retval result of ln(x)
  */
-float ln(float32_t x);
+float32_t ln(float32_t x);

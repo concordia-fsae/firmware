@@ -1,0 +1,12 @@
+signals:
+  tractiveSystemVoltage:
+    cycleTimeMs: 10
+    unit: 'V'
+    description: Motor Controller DC Bus Voltage
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true

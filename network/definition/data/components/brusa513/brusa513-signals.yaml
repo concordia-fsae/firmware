@@ -1,0 +1,59 @@
+signals:
+  mainsCurrent:
+    cycleTimeMs: 100
+    unit: 'A'
+    description: Charger Mains Current
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: 0
+        max: 50
+    continuous: true
+  mainsVoltage:
+    cycleTimeMs: 100
+    unit: 'V'
+    description: Charger Mains Voltage
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 500
+    continuous: true
+  dcBusVoltage:
+    cycleTimeMs: 100
+    unit: 'V'
+    description: Charger DC Bus Voltage
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 1000
+    continuous: true
+  dcBusCurrent:
+    cycleTimeMs: 100
+    unit: 'A'
+    description: Charger Mains Current
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: 0
+        max: 150
+    continuous: true
+  payload:
+    cycleTimeMs: 10
+    unit: ''
+    description: UDS payload data
+    nativeRepresentation:
+      bitWidth: 64
+      resolution: 1
+      range:
+        min: 0
+        max: 18446744073709551615

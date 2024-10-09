@@ -75,7 +75,7 @@ bool MAX_init(void)
     max_chip.config.low_power_mode       = false;
     max_chip.config.diagnostic_enabled   = false;
     max_chip.config.sampling             = false;
-    max_chip.config.sampling_start_100us = UINT32_MAX;
+    max_chip.config.sampling_start       = UINT32_MAX;
     max_chip.config.balancing            = 0x00;
     max_chip.config.output.state         = MAX_AMPLIFIER_SELF_CALIBRATION;
     max_chip.config.output.output.cell   = MAX_CELL1;

@@ -1,0 +1,115 @@
+signals:
+  nlg513ControlByte:
+    cycleTimeMs: 10
+    description: Brusa NLG513 Control Byte
+    nativeRepresentation:
+      bitWidth: 8
+
+  nlg513MaxMainsCurrent:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: Brusa NLG513 Max Mains Current During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 32
+    continuous: true
+
+  nlg513MaxChargeVoltage:
+    cycleTimeMs: 10
+    unit: 'V'
+    description: Brusa NLG513 Max Battery Voltage During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true
+
+  nlg513MaxChargeCurrent:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: Brusa NLG513 Max Battery Voltage During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 25
+    continuous: true
+
+  criticalDataCounter:
+    cycleTimeMs: 10
+    description: BMS Boss Critical Message Counter
+    nativeRepresentation:
+      bitWidth: 8
+    validationRole: counter
+
+  packChargeLimit:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: BMS Boss Pack Charge Limit
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 25
+    continuous: true
+
+  packDischargeLimit:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: BMS Boss Pack Disharge Limit
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 255
+    continuous: true
+
+  packVoltage:
+    cycleTimeMs: 10
+    unit: 'V'
+    description: BMS Boss Pack Voltage
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true
+
+  packCurrent:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: BMS Boss Pack Current
+    nativeRepresentation:
+      bitWidth: 16
+      range:
+        min: -100
+        max: 400
+    continuous: true
+
+  packContactorState:
+    cycleTimeMs: 10
+    description: Pack Contactor Status
+    discreteValues: prechargeContactorState
+
+  udsPayload:
+    cycleTimeMs: 10
+    unit: ''
+    description: UDS payload data
+    nativeRepresentation:
+      bitWidth: 64
+      resolution: 1
+      range:
+        min: 0
+        max: 18446744073709551615

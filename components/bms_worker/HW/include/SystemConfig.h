@@ -21,6 +21,7 @@
 
 // Other Includes
 #include "FloatTypes.h"
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -37,6 +38,9 @@ _Static_assert(true, "Cannot have both VA1 and VA3 defined simultaneously");
 // tick interrupt is highest priority
 #define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
 #define ADC_IRQ_PRIO    DMA_IRQ_PRIO + 1U
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
+#define TIM_IRQ_PRIO    ADC_IRQ_PRIO + 1U
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
 #define CAN_RX_IRQ_PRIO configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 6U
 #define CAN_TX_IRQ_PRIO configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 8U
 

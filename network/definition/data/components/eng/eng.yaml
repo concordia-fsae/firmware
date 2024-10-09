@@ -1,3 +1,0 @@
-description: "Engine node, represents engine data sent my Motec"
-onBuses:
-  - "veh"

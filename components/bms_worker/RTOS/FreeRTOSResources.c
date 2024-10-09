@@ -24,6 +24,7 @@
 // Other Includes
 #include "CAN/CAN.h"
 #include "Utility.h"
+#include "FeatureDefines_generated.h"
 
 
 /******************************************************************************
@@ -31,11 +32,18 @@
  ******************************************************************************/
 
 // which bit in the event group corresponds to each task
+#if FEATURE_10KHZ_TASK
 #define PERIODIC_TASK_10kHz    (1U) << (0U)
 #define PERIODIC_TASK_1kHz     (1U) << (1U)
 #define PERIODIC_TASK_100Hz    (1U) << (2U)
 #define PERIODIC_TASK_10Hz     (1U) << (3U)
 #define PERIODIC_TASK_1Hz      (1U) << (4U)
+#else // FEATURE_10KHZ_TASK
+#define PERIODIC_TASK_1kHz     (1U) << (0U)
+#define PERIODIC_TASK_100Hz    (1U) << (1U)
+#define PERIODIC_TASK_10Hz     (1U) << (2U)
+#define PERIODIC_TASK_1Hz      (1U) << (3U)
+#endif // not FEATURE_10KHZ_TASK
 
 
 /******************************************************************************
@@ -57,8 +65,10 @@ EventGroupHandle_t  PeriodicEvent;
 TimerHandle_t       rtos_tick_timer;
 
 // task handle and stack definitions
+#if FEATURE_10KHZ_TASK
 static StaticTask_t Task10kHz;
 static StackType_t  task10kHzStack[configMINIMAL_STACK_SIZE];
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 static StaticTask_t Task1kHz;
 static StackType_t  task1kHzStack[configMINIMAL_STACK_SIZE];
 static StaticTask_t Task100Hz;
@@ -69,7 +79,9 @@ static StaticTask_t Task1Hz;
 static StackType_t  task1HzStack[configMINIMAL_STACK_SIZE];
 
 // module periodic tasks, defined in Module.h
+#if FEATURE_10KHZ_TASK
 extern void Module_10kHz_TSK(void);
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
@@ -77,10 +89,15 @@ extern void Module_1Hz_TSK(void);
 extern void Module_ApplicationIdleHook(void);
 
 // SWIs
-RTOS_swiHandle_T* CANTX_BUS_A_swi;
-
+#if FEATURE_CANTX_SWI
+RTOS_swiHandle_T* CANTX_BUS_VEH_swi;
+#endif // FEATURE_CANRX_SWI
+#if FEATURE_CANRX_SWI
+RTOS_swiHandle_T* CANRX_BUS_VEH_swi;
+#endif //FEATURE_CANRX_SWI
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
+#if FEATURE_10KHZ_TASK
     /**< 10kHz is too fast of a frequency with 50kHz TIM2 */
     {
         .function    = &Module_10kHz_TSK,
@@ -96,6 +113,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
         },
         .periodMs = pdUS_TO_TICKS(100U),
     },
+#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
     {
         .function    = &Module_1kHz_TSK,
         .name        = "Task 1kHz",
@@ -256,7 +274,12 @@ void RTOS_createResources(void)
     /*
      * create SWI handles
      */
-    CANTX_BUS_A_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_BUS_A_SWI);
+#if FEATURE_CANRX_SWI
+    CANRX_BUS_VEH_swi = SWI_create(RTOS_SWI_PRI_1, &CANRX_BUS_VEH_SWI);
+#endif // FEATURE_CANRX_SWI
+#if FEATURE_CANTX_SWI
+    CANTX_BUS_VEH_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_BUS_VEH_SWI);
+#endif // FEATURE_CANTX_SWI
 
     /*
      * Create tasks
@@ -281,13 +304,21 @@ void RTOS_createResources(void)
 
     // 1kHz timer drives all tasks
     // TODO: should this be faster and/or interrupt (i.e. hardware timer) driven?
+#if FEATURE_10KHZ_TASK
     rtos_tick_timer = xTimerCreateStatic("Timer 10kHz",
                                          pdUS_TO_TICKS(100),
                                          pdTRUE,
                                          NULL,
                                          &rtosTickTimer,
                                          &rtosTickTimerState);
-
+#elif FEATURE_10KHZ_TASK == FEATURE_DISABLED // FEATURE_10KHZ_TASK
+    rtos_tick_timer = xTimerCreateStatic("Timer 1kHz",
+                                         pdMS_TO_TICKS(1),
+                                         pdTRUE,
+                                         NULL,
+                                         &rtosTickTimer,
+                                         &rtosTickTimerState);
+#endif // FEATURE_10KHZ_TASK == FEATURE_DISABLED
     // start the timer (it will only start once the scheduler starts)
     (void)xTimerStart(rtos_tick_timer, 0U);
 

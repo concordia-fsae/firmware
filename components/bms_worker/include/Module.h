@@ -11,10 +11,11 @@
 
 // System Includes
 #include "stdint.h"
+#include "FloatTypes.h"
 
 // Other Includes
 #include "ModuleDesc.h"
-
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -26,12 +27,15 @@ extern const ModuleDesc_S COOL_desc;
 extern const ModuleDesc_S ENV_desc;
 extern const ModuleDesc_S SYS_desc;
 extern const ModuleDesc_S IO_desc;
+extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;
 
 /**< Module tasks to get called by the RTOS */
 extern void Module_Init(void);
+#if FEATURE_10KHZ_TASK
 extern void Module_10kHz_TSK(void);
+#endif // FEATURE_10KHZ_MEASUREMENT
 extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
@@ -48,17 +52,19 @@ typedef enum
     MODULE_10Hz_TASK,
     MODULE_100Hz_TASK,
     MODULE_1kHz_TASK,
+#if FEATURE_10KHZ_TASK
     MODULE_10kHz_TASK,
+#endif // FEATURE_10KHZ_TASK
     MODULE_IDLE_TASK,
     MODULE_TASK_CNT
 } Module_taskSpeeds_E;
 
 typedef struct
 {
-    uint64_t total_runtime;
-    uint32_t timeslice_runtime;
-    uint8_t  total_percentage;
-    uint8_t  timeslice_percentage;
+    uint64_t  total_runtime;
+    uint64_t  timeslice_runtime;
+    float32_t  total_percentage;
+    float32_t  timeslice_percentage;
 } Module_taskStats_S;
 
 /******************************************************************************

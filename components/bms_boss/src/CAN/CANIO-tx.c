@@ -22,15 +22,11 @@
 #include "BMS.h"
 #include "PACK.h"
 #include "Sys.h"
+#include "IMD.h"
+#include "ENV.h"
 
-
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
-#define MSG_packTable_100Hz_SIZE (sizeof(MSG_packTable_100Hz) / sizeof(packTable_S))
-#define MSG_packTable_10Hz_SIZE  (sizeof(MSG_packTable_10Hz) / sizeof(packTable_S))
-#define MSG_packTable_1Hz_SIZE   (sizeof(MSG_packTable_1Hz) / sizeof(packTable_S))
+#include "SigTx.c"
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -42,35 +38,51 @@
 
 typedef struct
 {
-    uint8_t tx_1Hz_msg;
-    uint8_t tx_10Hz_msg;
     uint8_t tx_100Hz_msg;
 } cantx_S;
 
+typedef struct
+{
+    uint8_t counter_100Hz;
+} cantx_counter_S;
+
+/******************************************************************************
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+static const packTable_S* packNextMessage(const packTable_S* packTable,
+                                          const uint8_t      packTableLength,
+                                          uint8_t*           index,
+                                          CAN_data_T*        message,
+                                          uint8_t*           nextCounter);
+static uint8_t CANIO_tx_getNLG513ControlByte(void);
+static CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
 static cantx_S cantx;
+static cantx_counter_S cantx_counter;
 
-static const packTable_S* packNextMessage(const packTable_S* packTable,
-                                          const uint8_t      packTableLength,
-                                          uint8_t*     index,
-                                          CAN_data_T*        message,
-                                          uint8_t*           nextCounter);
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
-static bool MSG_pack_BMS_100Hz_Critical(CAN_data_T* message, const uint8_t counter);
-static bool MSG_pack_BMS_100Hz_Critical_Charger(CAN_data_T* message, const uint8_t counter);
+#define set_criticalDataCounter(m,b,n,s) set(m,b,n,s, cantx_counter.counter_100Hz)
+#define set_packChargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
+#define set_packDischargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit)
+#define set_packVoltage(m,b,n,s) set(m,b,n,s, BMS.pack_voltage)
+#define set_packCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_current)
+#define set_packContactorState(m,b,n,s) set(m,b,n,s, CANIO_tx_getContactorState())
+#define set_nlg513ControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getNLG513ControlByte())
+#define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
+#define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_PACK_VOLTAGE_MAX)
+#define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
+#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout())
 
-static const packTable_S MSG_packTable_100Hz[] = {
-    { &MSG_pack_BMS_100Hz_Critical, 0x99, 5U },
-    { &MSG_pack_BMS_100Hz_Critical_Charger, 0x618, 7U },
-};
-static const packTable_S MSG_packTable_10Hz[] = {
-};
-static const packTable_S MSG_packTable_1Hz[] = {
-};
+#include "TemporaryStubbing.h"
+#include "MessagePack_generated.c"
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -82,16 +94,15 @@ static const packTable_S MSG_packTable_1Hz[] = {
  */
 void CANTX_BUS_A_SWI(void)
 {
-    if (cantx.tx_100Hz_msg != MSG_packTable_100Hz_SIZE)
+    if (cantx.tx_100Hz_msg < VEH_packTable_10ms_length)
     {
-        static uint8_t counter_100Hz = 0U;
         CAN_data_T     message_100Hz = {0};
 
-        const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&MSG_packTable_100Hz,
-                                                        MSG_packTable_100Hz_SIZE,
+        const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&VEH_packTable_10ms,
+                                                        VEH_packTable_10ms_length,
                                                         &cantx.tx_100Hz_msg,
                                                         &message_100Hz,
-                                                        &counter_100Hz);
+                                                        &cantx_counter.counter_100Hz);
 
         if (entry_100Hz != NULL)
         {
@@ -99,62 +110,20 @@ void CANTX_BUS_A_SWI(void)
             {
                 cantx.tx_100Hz_msg++;
             }
-        }
-        
-        if (cantx.tx_100Hz_msg == MSG_packTable_100Hz_SIZE)
-        {
-            counter_100Hz++;
+            memset(&message_100Hz, 0, sizeof(message_100Hz));
         }
     }
-
-    if (cantx.tx_10Hz_msg != MSG_packTable_10Hz_SIZE)
+    if (cantx.tx_100Hz_msg == VEH_packTable_10ms_length)
     {
-        static uint8_t counter_10Hz = 0U;
-        CAN_data_T     message_10Hz = {0};
-
-        const packTable_S* entry_10Hz = packNextMessage((const packTable_S*)&MSG_packTable_10Hz,
-                                                        MSG_packTable_10Hz_SIZE,
-                                                        &cantx.tx_10Hz_msg,
-                                                        &message_10Hz,
-                                                        &counter_10Hz);
-
-        if (entry_10Hz != NULL)
+        if (cantx_counter.counter_100Hz != 255U)
         {
-            if (CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_10Hz, entry_10Hz->id, entry_10Hz->len))
-            {
-                cantx.tx_10Hz_msg++;
-            }
+            cantx_counter.counter_100Hz++;
         }
-        
-        if (cantx.tx_10Hz_msg == MSG_packTable_10Hz_SIZE)
+        else
         {
-            counter_10Hz++;
+            cantx_counter.counter_100Hz = 0U;
         }
-    }
-    
-    if (cantx.tx_1Hz_msg != MSG_packTable_1Hz_SIZE)
-    {
-        static uint8_t counter_1Hz = 0U;
-        CAN_data_T     message_1Hz = {0};
-
-        const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&MSG_packTable_1Hz,
-                                                    MSG_packTable_1Hz_SIZE,
-                                                    &cantx.tx_1Hz_msg,
-                                                    &message_1Hz,
-                                                    &counter_1Hz);
-
-        if (entry_1Hz != NULL)
-        {
-            if (CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message_1Hz, entry_1Hz->id, entry_1Hz->len))
-            {
-                cantx.tx_1Hz_msg++;
-            }
-        }
-        
-        if (cantx.tx_1Hz_msg == MSG_packTable_1Hz_SIZE)
-        {
-            counter_1Hz++;
-        }
+        cantx.tx_100Hz_msg++;
     }
 }
 
@@ -165,7 +134,7 @@ void CANTX_BUS_A_SWI(void)
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
                                           const uint8_t      packTableLength,
-                                          uint8_t*     index,
+                                          uint8_t*           index,
                                           CAN_data_T*        message,
                                           uint8_t*           nextCounter)
 {
@@ -185,52 +154,54 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
         }
     }
 
-    if (*index == packTableLength)
-    {
-        (*nextCounter)++;
-    }
-
     return NULL;
 }
 
-static bool MSG_pack_BMS_100Hz_Critical(CAN_data_T* message, const uint8_t counter)
+static uint8_t CANIO_tx_getNLG513ControlByte(void)
 {
-    message->u64 = 0x00;
-    message->u8[0] = counter;
-    message->u8[1] = BMS.pack_charge_limit;
-    message->u8[2] = BMS.pack_discharge_limit;
-    message->u8[3] = BMS.pack_voltage * 10;
-    message->u8[4] = (uint16_t)(BMS.pack_voltage * 10) >> 8;
-    return true;
+    uint8_t ret = 0x00;
+    switch (SYS.contacts)
+    {
+        case SYS_CONTACTORS_CLOSED:
+            ret = 0x40;
+            break;
+
+        case SYS_CONTACTORS_HVP_CLOSED:
+            ret = 0x80;
+            break;
+
+        default:
+            ret = 0x00;
+            break;
+    }
+
+    return ret;
 }
 
-static bool MSG_pack_BMS_100Hz_Critical_Charger(CAN_data_T* message, const uint8_t counter)
+static CAN_prechargeContactorState_E CANIO_tx_getContactorState(void)
 {
-    UNUSED(counter);
-    message->u64 = 0x00;
-
-    if (SYS_SFT_checkChargerTimeout())
-    {
-	return false;
-    }
+    CAN_prechargeContactorState_E ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_SNA;
 
     switch (SYS.contacts)
     {
-	case SYS_CONTACTORS_CLOSED:
-	    message->u8[0] = 0x40;
-	    return true;
-	case SYS_CONTACTORS_HVP_CLOSED:
-	    message->u8[0] = 0x80;
-	    message->u8[1] = (uint16_t)(160) >> 8;
-	    message->u8[2] = (uint16_t)(160);
-	    message->u8[3] = (uint16_t)(BMS_PACK_VOLTAGE_MAX * 10) >> 8;
-	    message->u8[4] = (uint16_t)(BMS_PACK_VOLTAGE_MAX * 10) & 0xff;
-	    message->u8[5] = (uint16_t)(BMS.pack_charge_limit * 10) >> 8;
-	    message->u8[6] = (uint16_t)(BMS.pack_charge_limit * 10) & 0xff;
-	    return true;
-	default:
-	    return false;
+        case SYS_CONTACTORS_OPEN:
+            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_OPEN;
+            break;
+
+        case SYS_CONTACTORS_PRECHARGE:
+            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_PRECHARGE_CLOSED;
+            break;
+
+        case SYS_CONTACTORS_CLOSED:
+            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_PRECHARGE_HVP_CLOSED;
+            break;
+
+        case SYS_CONTACTORS_HVP_CLOSED:
+            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_HVP_CLOSED;
+            break;
     }
+
+    return ret;
 }
 
 static void CANIO_tx_1kHz_PRD(void)
@@ -245,30 +216,10 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_100Hz_PRD(void)
 {
-    if (cantx.tx_100Hz_msg < MSG_packTable_100Hz_SIZE) {
+    if (cantx.tx_100Hz_msg < VEH_packTable_10ms_length) {
         // all the message weren't sent. TO-DO: error handling
     }
     cantx.tx_100Hz_msg = 0U;
-}
-
-/**
- * CANIO_tx_10Hz_PRD
- *
- */
-static void CANIO_tx_10Hz_PRD(void)
-{
-    if (cantx.tx_10Hz_msg < MSG_packTable_10Hz_SIZE) {
-        // all the message weren't sent. TO-DO: error handling
-    }
-    cantx.tx_10Hz_msg = 0U;
-}
-
-static void CANIO_tx_1Hz_PRD(void)
-{
-    if (cantx.tx_1Hz_msg < MSG_packTable_1Hz_SIZE) {
-        // all the message weren't sent. TO-DO: error handling
-    }
-    cantx.tx_1Hz_msg = 0U;
 }
 
 /**
@@ -278,6 +229,7 @@ static void CANIO_tx_1Hz_PRD(void)
 static void CANIO_tx_init(void)
 {
     memset(&cantx, 0x00, sizeof(cantx));
+    memset(&cantx_counter, 0x00, sizeof(cantx));
     HW_CAN_start();    // start CAN
 }
 
@@ -286,7 +238,5 @@ const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
     .periodic100Hz_CLK = &CANIO_tx_100Hz_PRD,
-    .periodic10Hz_CLK  = &CANIO_tx_10Hz_PRD,
-    .periodic1Hz_CLK   = &CANIO_tx_1Hz_PRD,
 };
 

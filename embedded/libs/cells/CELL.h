@@ -21,4 +21,3 @@
  ******************************************************************************/
 
 float32_t CELL_getSoCfromV(float32_t volt);
-uint16_t CELL_getVfromCapacity(uint32_t tenth_mah);
