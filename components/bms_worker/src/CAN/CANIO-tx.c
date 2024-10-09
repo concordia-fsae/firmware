@@ -94,6 +94,7 @@ typedef struct
 #define set_cellVoltage7(m, b, n, s)             set(m,b,n,s, BMS.cells[7].voltage)
 #define set_cellVoltage6(m, b, n, s)             set(m,b,n,s, BMS.cells[6].voltage)
 #define set_segmentVoltageHighRes(m, b, n, s)    set(m,b,n,s, BMS.pack_voltage)
+#define set_segmentVoltageHighResCalculated(m, b, n, s)    set(m,b,n,s, BMS.calculated_pack_voltage)
 #define set_cellVoltage15(m, b, n, s)            set(m,b,n,s, BMS.cells[15].voltage)
 #define set_cellVoltage14(m, b, n, s)            set(m,b,n,s, BMS.cells[14].voltage)
 #define set_cellVoltage13(m, b, n, s)            set(m,b,n,s, BMS.cells[13].voltage)

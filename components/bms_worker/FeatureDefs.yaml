@@ -1,5 +1,5 @@
 features:
-  feature_max14921_calibrate_1hz:
+  feature_max14921_calibrate:
     enabled: true
   feature_cell_balancing:
   feature_high_frequency_cell_measurement_task:
@@ -10,3 +10,6 @@ features:
     enabled: false
   feature_cantx_swi: 
     enabled: true
+  feature_cell_diagnostics:
+    enabled: true
+  feature_cell_sleep:
