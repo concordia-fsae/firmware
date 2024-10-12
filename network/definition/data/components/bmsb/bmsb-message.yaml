@@ -12,10 +12,13 @@ messages:
   information:
     description: BMS Boss Information
     id: 0x98
-    lengthBytes: 3
+    lengthBytes: 4
     signals:
       packCurrent:
       packContactorState:
+      bmsIMDReset:
+      bmsStatusMem:
+      imdStatusMem:
 
   brusaChargeCommand:
     description: Brusa Charge Command

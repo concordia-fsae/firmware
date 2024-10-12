@@ -27,6 +27,7 @@
 
 #include "SigTx.c"
 #include "MessageUnpack_generated.h"
+#include "CANTypes_generated.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -75,6 +76,9 @@ static cantx_counter_S cantx_counter;
 #define set_packVoltage(m,b,n,s) set(m,b,n,s, BMS.pack_voltage)
 #define set_packCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_current)
 #define set_packContactorState(m,b,n,s) set(m,b,n,s, CANIO_tx_getContactorState())
+#define set_bmsIMDResetState(m,b,n,s) set(m,b,n,s, (IO.bms_imd_reset ? CAN_SWITCHSTATUS_ON : CAN_SWITCHSTATUS_OFF))
+#define set_bmsStatusMem(m,b,n,s) set(m,b,n,s, (IO.bms_status_mem ? CAN_FAULTSTATUS_OK : CAN_FAULTSTATUS_FAULT))
+#define set_imdStatusMem(m,b,n,s) set(m,b,n,s, (IO.imd_status_mem ? CAN_FAULTSTATUS_OK : CAN_FAULTSTATUS_FAULT))
 #define set_nlg513ControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getNLG513ControlByte())
 #define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_PACK_VOLTAGE_MAX)
@@ -141,7 +145,7 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
     while (*index < packTableLength)
     {
         const packTable_S* entry   = &packTable[*index];
-        uint16_t           counter = *nextCounter;
+        uint8_t           counter = *nextCounter;
 
         message->u64 = 0ULL;
         if ((*entry->pack)(message, counter))
