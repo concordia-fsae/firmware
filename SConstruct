@@ -58,9 +58,8 @@ if platform:
         if targets:
             # TODO: Handle
             pass
-        for parts in platforms[platform]["ecu"]:
-            for id in parts:
-                target_dict[id] = parts[id]
+        for part in platforms[platform]["ecu"]:
+            target_dict[part] = platforms[platform]["ecu"][part]
     else:
         print(
                 f"Platform string '{platform}' does not match any platform in 'site_scons/platforms.yaml'"
