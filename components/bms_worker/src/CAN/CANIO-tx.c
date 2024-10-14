@@ -20,7 +20,6 @@
 #include "string.h"
 
 // imports for data access
-#include "BuildDefines_generated.h"
 #include "BatteryMonitoring.h"
 #include "Cooling.h"
 #include "Environment.h"
