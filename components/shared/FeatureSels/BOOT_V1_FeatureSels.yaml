@@ -2,4 +2,6 @@ featureDefs: "#/components/shared/FeatureDefs/Application_FeatureDefs.yaml"
 features:
   app_lib_enabled: true
   app_start_addr: 0x08000000
+  app_function_id: bl
   app_uds: true
+  app_validation_enabled: true

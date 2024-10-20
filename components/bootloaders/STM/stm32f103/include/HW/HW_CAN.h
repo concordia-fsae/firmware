@@ -181,8 +181,8 @@ _Static_assert((uint32_t)(CAN_BRP(2U) | CAN_TS1(13U) | CAN_TS2(4U) | CAN_SJW(1U)
 #define CAN_IT_ERROR                   CAN_IER_ERRIE  // Error Interrupt
 
 #define CAN_ENABLED_INTERRUPTS         (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
-                                        CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_WKUIE | \
-                                        CAN_IER_SLKIE | CAN_IER_EWGIE | CAN_IER_EPVIE | CAN_IER_BOFIE |   \
+                                        CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | \
+                                        CAN_IER_EWGIE | CAN_IER_EPVIE | CAN_IER_BOFIE |   \
                                         CAN_IER_LECIE | CAN_IER_ERRIE)
 
 

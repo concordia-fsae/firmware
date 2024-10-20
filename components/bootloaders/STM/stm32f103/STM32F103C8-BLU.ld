@@ -15,6 +15,7 @@ __HEAP_SIZE = 0x200;
 __RAM_SIZE = 20K;
 __FLASH_SIZE = 64K;
 __BOOT_FLASH_SIZE = 8K;
+__APP_FLASH_SIZE = __FLASH_SIZE - __BOOT_FLASH_SIZE;
 
 __RAM_ORIGIN = 0x20000000;     /* don't change */
 __FLASH_ORIGIN = 0x8000000;    /* don't change */
@@ -27,11 +28,16 @@ __BOOT_FLASH_END = __FLASH_ORIGIN + __BOOT_FLASH_SIZE;
 MEMORY
 {
     RAM      (rwx)    : ORIGIN = __RAM_ORIGIN,       LENGTH = __RAM_SIZE
-    FLASH    (rx)     : ORIGIN = __FLASH_ORIGIN,     LENGTH = __BOOT_FLASH_SIZE
+    FLASH    (rx)     : ORIGIN = __APP_FLASH_ORIGIN,     LENGTH = __APP_FLASH_SIZE
 }
 
 SECTIONS
 {
+  .appDescriptor :
+  {
+    . = ALIGN(4);
+    KEEP(*(.appDescriptor))
+  } > FLASH
   .isr_vector : ALIGN(0x100)
   {
     __app_start_addr = .;
@@ -95,22 +101,15 @@ SECTIONS
     _edata = .;               /* define a global symbol at end of section */
 
   } > RAM AT> FLASH
-  /* Used by the startup to initialize data */
-  _sidata = LOADADDR(.relocate);
-  __appdesc_addr = LOADADDR(.relocate) + SIZEOF(.relocate);
-  __appcrc_addr = __appdesc_addr + SIZEOF(.appDescriptor);
-  .appDescriptor __appdesc_addr :
-  {
-    __app_desc_addr = .;
-    . = ALIGN(4);
-    KEEP(*(.appDescriptor))
-  } > FLASH
-  __app_end_addr = LOADADDR(.appDescriptor) + SIZEOF(.appDescriptor);
-  .crc __appcrc_addr :
+  __app_end_addr = LOADADDR(.relocate) + SIZEOF(.relocate);
+  .crc __app_end_addr :
   {
     __app_crc_addr = .;
     KEEP(*(.appCrc))
   } > FLASH
+
+  /* Used by the startup to initialize data */
+  _sidata = LOADADDR(.relocate);
 
 
   /* Uninitialized data section into "RAM" Ram type memory */

@@ -204,11 +204,47 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
 
     switch (did.u16)
     {
+        case 0x00:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appStart, sizeof(appDesc.appStart));
+            break;
+        }
+        case 0x01:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appEnd, sizeof(appDesc.appEnd));
+            break;
+        }
+        case 0x02:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appCrcLocation, sizeof(appDesc.appCrcLocation));
+            break;
+        }
+        case 0x03:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&(*((uint32_t*)appDesc.appCrcLocation)), sizeof(*((uint32_t*)appDesc.appCrcLocation)));
+            break;
+        }
+        case 0x04:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appComponentId, sizeof(appDesc.appComponentId));
+            break;
+        }
+        case 0x05:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appPcbaId, sizeof(appDesc.appPcbaId));
+            break;
+        }
         case 0x101:
         {
             // always respond with 0x01 since we're in the app
             uint8_t data = 0x01;
-            uds_sendPositiveResponse(UDS_SID_READ_DID, 0x00, &data, 1);
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, &data, 1);
             break;
         }
 

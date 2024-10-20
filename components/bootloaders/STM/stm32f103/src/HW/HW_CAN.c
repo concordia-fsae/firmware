@@ -129,18 +129,6 @@ static void CAN_hwInit(void)
     // set AFIO for CAN pins
     SET_REG(AFIO_MAPR, GET_REG(AFIO_MAPR) | (1U << 14U));
 #endif
-
-    // set interrupt priorities
-    NVIC_SetPriority(CAN1_SCE_IRQn, 5U, 0U);
-    NVIC_SetPriority(CAN1_RX0_IRQn, 5U, 1U);
-    NVIC_SetPriority(CAN1_RX1_IRQn, 5U, 2U);
-    NVIC_SetPriority(CAN1_TX_IRQn,  5U, 3U);
-
-    // enable interrupts for rx, tx, and errors
-    NVIC_EnableIRQ(CAN1_SCE_IRQn);
-    NVIC_EnableIRQ(CAN1_RX0_IRQn);
-    NVIC_EnableIRQ(CAN1_RX1_IRQn);
-    NVIC_EnableIRQ(CAN1_TX_IRQn);
 }
 
 
@@ -163,19 +151,19 @@ bool CAN_sendMsg(CAN_TxMessage_S msg)
     for (uint16_t retries = 0; retries < 1000; retries++)
     {
         // check that the specified mailbox is free
-        if (checkMbFree(msg.mailbox))
+        if (checkMbFree(retries % CAN_TX_MAILBOX_COUNT))
         {
             // set CAN ID
-            pCAN->sTxMailBox[msg.mailbox].TIR  = ((msg.id << CAN_TI0R_STID_Pos) | msg.RTR);
+            pCAN->sTxMailBox[retries % CAN_TX_MAILBOX_COUNT].TIR  = ((msg.id << CAN_TI0R_STID_Pos) | msg.RTR);
             // set message length
-            pCAN->sTxMailBox[msg.mailbox].TDTR = msg.lengthBytes;
+            pCAN->sTxMailBox[retries % CAN_TX_MAILBOX_COUNT].TDTR = msg.lengthBytes;
 
             // set message data
-            pCAN->sTxMailBox[msg.mailbox].TDHR = msg.data.u32[1];
-            pCAN->sTxMailBox[msg.mailbox].TDLR = msg.data.u32[0];
+            pCAN->sTxMailBox[retries % CAN_TX_MAILBOX_COUNT].TDHR = msg.data.u32[1];
+            pCAN->sTxMailBox[retries % CAN_TX_MAILBOX_COUNT].TDLR = msg.data.u32[0];
 
             // request message transmission
-            SET_BIT(pCAN->sTxMailBox[msg.mailbox].TIR, CAN_TI0R_TXRQ);
+            SET_BIT(pCAN->sTxMailBox[retries % CAN_TX_MAILBOX_COUNT].TIR, CAN_TI0R_TXRQ);
 
             // Return function status
             return true;
@@ -326,6 +314,18 @@ CAN_exitCode_E CAN_init(void)
 
         tick++;
     }
+
+    // set interrupt priorities
+    NVIC_SetPriority(CAN1_SCE_IRQn, 5U, 0U);
+    NVIC_SetPriority(CAN1_RX0_IRQn, 5U, 1U);
+    NVIC_SetPriority(CAN1_RX1_IRQn, 5U, 2U);
+    NVIC_SetPriority(CAN1_TX_IRQn,  5U, 3U);
+
+    // enable interrupts for rx, tx, and errors
+    NVIC_EnableIRQ(CAN1_SCE_IRQn);
+    NVIC_EnableIRQ(CAN1_RX0_IRQn);
+    NVIC_EnableIRQ(CAN1_RX1_IRQn);
+    NVIC_EnableIRQ(CAN1_TX_IRQn);
 
     return HAL_CAN_ERROR_NONE;
 }

@@ -7,6 +7,7 @@ defs:
       - app_start_addr
       - app_pcba_id
       - app_component_id
+      - app_function_id
   start_addr:
     requires: 
       - app_lib_enabled
@@ -20,12 +21,25 @@ defs:
   node_id:
     requires: 
       - app_lib_enabled
+  function_id:
+    discreteValue: function_id
+    requires:
+      - app_lib_enabled
   uds:
+  validation_enabled:
+    requires:
+      - app_lib_enabled
+  validate_crc_enabled:
+    requires:
+      - app_validation_enabled
   10kHz_task:
 discreteValues:
   component_id:
-    - bl
-    - blu
+    - debug
     - bmsw
     - bmsb
     - stw
+  function_id:
+    - bl
+    - app
+    - blu

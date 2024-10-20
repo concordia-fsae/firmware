@@ -38,6 +38,8 @@
 
 # define CAN_TX_PORT       GPIOA
 # define CAN_TX_PIN        12U
+#else
+#error "Invalid configuration"
 #endif // if PCB_ID == 0
 
 // Use Boot1 (PB2)
@@ -52,6 +54,8 @@
 # define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
 #elif APP_PCBA_ID == 10
 # define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
+#else
+#error "Invalid configuration"
 #endif
 
 

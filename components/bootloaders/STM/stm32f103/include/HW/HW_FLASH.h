@@ -10,7 +10,8 @@
  ******************************************************************************/
 
 #include "Types.h"
-
+#include "LIB_app.h"
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -43,16 +44,28 @@
 
 // Address where the application code starts
 // The app descriptor is expected at this address
-#define APP_FLASH_START    (0x08002000UL)
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BL
+#define APP_FLASH_START    ((const uint32_t)__APP_FLASH_ORIGIN)
 #define APP_FLASH_END      ((const uint32_t)__FLASH_END)
-
+#define APP_DESC_ADDR      ((lib_app_appDesc_S * const)APP_FLASH_START)
+#elif APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+#define APP_FLASH_START    ((const uint32_t)__FLASH_ORIGIN)
+#define APP_FLASH_END      ((const uint32_t)__BOOT_FLASH_END)
+#define APP_DESC_ADDR      ((lib_app_appDesc_S * const)(APP_FLASH_END - sizeof(lib_app_crc_t) - sizeof(lib_app_appDesc_S)))
+#endif
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
 // defined in the linker script
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BL
 extern const uint8_t __FLASH_END[];
+extern const uint8_t __APP_FLASH_ORIGIN[];
+#elif APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+extern const uint8_t __BOOT_FLASH_END[];
+extern const uint8_t __FLASH_ORIGIN[];
+#endif
 
 
 /******************************************************************************
@@ -77,6 +90,7 @@ void               FLASH_init(void);
 void               FLASH_lock(void);
 void               FLASH_unlock(void);
 
+bool               FLASH_updaterHasErasedFlash(void);
 FLASH_eraseState_S FLASH_getEraseState(void);
 bool               FLASH_erasePages(uint32_t pageAddr, uint16_t pages);
 static inline bool FLASH_erasePage(uint32_t pageAddr) { return FLASH_erasePages(pageAddr, 1U); }
