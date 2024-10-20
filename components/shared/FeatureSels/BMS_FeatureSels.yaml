@@ -1,0 +1,10 @@
+featureDefs: "#/components/shared/FeatureDefs/BMS_FeatureDefs.yaml"
+features:
+  bms_faults: false
+  bms_configured_series_cells: 14
+  bms_configured_parallel_cells: 5
+  bms_configured_segment_max_voltage: 58.8
+  bms_configured_series_segments: 6
+  bms_configured_pack_max_voltage: 352.8
+  bms_max_cont_discharge_current: 45
+  bms_max_cont_charge_current: 3.5

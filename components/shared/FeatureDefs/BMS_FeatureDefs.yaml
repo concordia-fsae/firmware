@@ -1,0 +1,12 @@
+config:
+  prefix: bms
+  description: General definitions for the battery management system
+defs:
+  faults:
+  configured_series_cells:
+  configured_parallel_cells:
+  configured_segment_max_voltage:
+  configured_series_segments:
+  configured_pack_max_voltage:
+  max_cont_discharge_current:
+  max_cont_charge_current:

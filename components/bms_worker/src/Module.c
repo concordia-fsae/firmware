@@ -37,10 +37,10 @@ static const ModuleDesc_S* modules[] = {
     &COOL_desc,
     &IO_desc,
     &SYS_desc,
-#if FEATURE_UDS
+#if FEATURE_IS_ENABLED(APP_UDS)
     &UDS_desc,
 #endif // FEATURE_UDS
-#if FEATURE_CANRX_SWI
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     &CANIO_rx,
 #endif // FEATURE_CANRX_SWI
     &CANIO_tx,
@@ -78,7 +78,7 @@ void Module_Init(void)
     rtos_start = HW_TIM_getBaseTick();
 }
 
-#if FEATURE_10KHZ_TASK
+#if FEATURE_IS_ENABLED(APP_10KHZ_TASK)
 /**
  * @brief  10kHz periodic function
  */

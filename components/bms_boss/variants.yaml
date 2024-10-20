@@ -2,7 +2,13 @@ configs:
   0:
     description: BMS Boss
     options:
-      test:
     features:
-      feature_bmsw_faults: false
-      feature_uds: false #False because of CAN ID clash with charger
+      selections:
+        - "#/components/shared/FeatureSels/BMS_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_uds: false #False because of CAN ID clash with charger
+        app_component_id: bmsw
+        app_pcba_id: 10

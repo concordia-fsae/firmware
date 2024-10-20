@@ -62,6 +62,7 @@ def generate(env):
         BINCOMSTR="Generating binary file '$TARGET'",
         HEXCOMSTR="Generating hex file '$TARGET'",
         OBJDUMPSTR="Disassembling $SOURCE > $TARGET",
+        PRELINKCOMSTR=f"$CPP -P -undef $LINKFLAGS $LINKSCRIPT | sed -e '/^#.\\+$/d' > $__LINKSCRIPT",
     )
 
     if not GetOption("verbose"):
@@ -70,6 +71,7 @@ def generate(env):
             ASPPCOMSTR="Assembling $SOURCE > $TARGET",
             CCCOMSTR="Compiling $SOURCE > $TARGET",
             LINKCOMSTR="Linking into '$TARGET'",
+            PRELINKCOMSTR="Running c preprocessor on provided linkscript"
         )
 
     # default values
@@ -206,7 +208,7 @@ def prog_generator(target, source, env, for_signature):
 
     prep_ldfile = Action(
         f"$CPP -P -undef $LINKFLAGS $LINKSCRIPT | sed -e '/^#.\\+$/d' > $__LINKSCRIPT",
-        cmdstr="Running c preprocessor on provided linkscript",
+        cmdstr="$PRELINKCOMSTR",
     )
 
     link = Action(

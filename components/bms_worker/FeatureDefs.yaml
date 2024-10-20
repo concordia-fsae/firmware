@@ -1,15 +1,13 @@
-features:
-  feature_max14921_calibrate:
-    enabled: true
-  feature_cell_balancing:
-  feature_high_frequency_cell_measurement_task:
-    enabled: false
+config:
+  prefix: feature
+  description: Feature definitions for the BMS Worker
+defs:
+  max14921_calibrate:
+  cell_balancing:
+  high_frequency_cell_measurement_task:
     requires: 
-      - feature_10kHz_task
-  feature_canrx_swi:
-    enabled: false
-  feature_cantx_swi: 
-    enabled: true
-  feature_cell_diagnostics:
-    enabled: true
-  feature_cell_sleep:
+      - app_10kHz_task
+  canrx_swi:
+  cantx_swi: 
+  cell_diagnostics:
+  cell_sleep:

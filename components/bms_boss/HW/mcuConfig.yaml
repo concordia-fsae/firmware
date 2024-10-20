@@ -1,4 +1,8 @@
 mcu: STM32F103
+features:
+  controller:
+    definition: "#/shared/FeatureDefs/Controller_FeatureDefs.yaml"
+    selection: ""
 linker:
   useDefault: true
 drivers:

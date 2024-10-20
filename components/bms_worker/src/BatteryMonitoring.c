@@ -36,21 +36,9 @@
 #define BMS_CONFIGURED_BALANCING_MARGIN 0.050f // [V], precision 1mV
 #define BMS_CONFIGURED_DERATING_DELAY 1000 // [ms]
 
-#ifndef BMS_CONFIGURED_SAMPLING_TIME_MS
 # define BMS_CONFIGURED_SAMPLING_TIME_MS 20
-#endif
-
-#ifndef BMS_CONFIGURED_BALANCING_TIME_MS
 # define BMS_CONFIGURED_BALANCING_TIME_MS 500
-#endif
-
-#ifndef STANDARD_CHARGE_CURRENT
-# define STANDARD_CHARGE_CURRENT 4.2f
-#endif
-
-#ifndef MAX_CONTINOUS_DISCHARGE_CURRENT
-# define MAX_CONTINOUS_DISCHARGE_CURRENT 45
-#endif
+# define STANDARD_CHARGE_CURRENT BMS_MAX_CONT_CHARGE_CURRENT
 
 
 /******************************************************************************
@@ -376,7 +364,7 @@ void BMS_calcSegStats(void)
         BMS.cells[i].voltage = IO.cell[i] + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > 2.0f) && (BMS.cells[i].voltage < 4.5f))
         {
-#if FEATURE_BMSW_FAULTS
+#if BMS_FAULTS
             if (BMS.cells[i].voltage < 2.5f)
             {
                 BMS.cells[i].state = BMS_CELL_FAULT_UV;
@@ -387,7 +375,7 @@ void BMS_calcSegStats(void)
                 BMS.cells[i].state = BMS_CELL_FAULT_OV;
                 continue;
             }
-#endif // FEATURE_BMSW_FAULTS
+#endif // BMS_FAULTS
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
@@ -569,7 +557,7 @@ void BMS_dischargeLimit()
 
     if (BMS.relative_soc.min > 20.0f)
     {
-        BMS.discharge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+        BMS.discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
         start_derate = 0x00;
     }
     else
@@ -585,15 +573,15 @@ void BMS_dischargeLimit()
 
             dis -= 1.0f;
 
-            BMS.discharge_limit =  (dis > ((BMS.relative_soc.avg / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)) ? dis : (BMS.relative_soc.avg / 20.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+            BMS.discharge_limit =  (dis > ((BMS.relative_soc.avg / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)) ? dis : (BMS.relative_soc.avg / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
         }
     }
 
     if (ENV.values.max_temp >= 48.0f)
     {
-        BMS.discharge_limit += -((ENV.values.max_temp - 48.0f) / 12.0f) * MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+        BMS.discharge_limit += -((ENV.values.max_temp - 48.0f) / 12.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
 
     if (BMS.discharge_limit < 0.0f) BMS.discharge_limit = 0.0f;
-    if (BMS.discharge_limit > MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = MAX_CONTINOUS_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    if (BMS.discharge_limit > BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 }

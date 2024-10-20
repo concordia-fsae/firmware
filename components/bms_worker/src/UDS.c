@@ -9,7 +9,12 @@
  ******************************************************************************/
 
 #include "FeatureDefines_generated.h"
-#if FEATURE_UDS
+#if FEATURE_IS_ENABLED(APP_UDS)
+
+#ifndef ISO_TP_USER_DEBUG_ENABLED
+#define ISO_TP_USER_DEBUG_ENABLED 0U
+#endif
+
 // module include
 #include "UDS.h"
 
