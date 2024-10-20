@@ -8,11 +8,11 @@
 #define FEATURE_ENABLED 1U
 #define FEATURE_IS_ENABLED(x) ((x) == FEATURE_ENABLED)
 #define FEATURE_IS_DISABLED(x) ((x) == FEATURE_DISABLED)
+// Bring to a secondary file
+%for values in features["discreteValues"]:
 <%
   i = 2 # Must start at 2 so no definition can be equal to FEATURE_ENABLED
 %>
-// Bring to a secondary file
-%for values in features["discreteValues"]:
   %for value in features["discreteValues"][values]:
 #define FDEFS_${values.upper()}_${value.upper()} ${i}U
 <%

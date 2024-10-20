@@ -12,3 +12,4 @@ configs:
         app_pcba_id: 0
         app_component_id: bmsw
         app_uds: true
+        app_node_id: true

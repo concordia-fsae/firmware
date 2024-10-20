@@ -22,6 +22,8 @@ ARTIFACT_NAME = "bms_boss"
 BUILDS_DIR = Dir(f"build")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
+SHARED_CODE = Dir("#/components/shared/code")
+SHARED_LIBS = SHARED_CODE.Dir("libs")
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -125,6 +127,7 @@ LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("pack"),
     UDS_DIR.Dir("include"),
     ISOTP_DIR.Dir("include"),
+    SHARED_LIBS,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -145,6 +148,7 @@ project_source_files = [
     SRC_DIR.File("BMS.c"),
     SRC_DIR.File("Utility.c"),
     SRC_DIR.File("UDS.c"),
+    SHARED_LIBS.File("LIB_app.c"),
 ]
 
 project_hw_files = [
