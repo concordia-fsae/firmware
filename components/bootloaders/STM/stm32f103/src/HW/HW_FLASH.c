@@ -24,6 +24,9 @@ typedef struct
     FLASH_eraseState_S eraseState;
     const uint16_t     pageSize;
     const uint16_t     appPageCount;
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+    bool updaterHasErased;
+#endif
 } flash_S;
 
 flash_S flash;
@@ -61,6 +64,9 @@ void FLASH_init(void)
         .eraseState   = { 0U },
         .pageSize     = pageSize,
         .appPageCount = (APP_FLASH_END - APP_FLASH_START) / pageSize,
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+        .updaterHasErased = false,
+#endif
     };
 
     memcpy(&flash, &fl, sizeof(flash_S));
@@ -145,6 +151,13 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
     return ret;
 }
 
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+bool FLASH_updaterHasErasedFlash(void)
+{
+    return flash.updaterHasErased;
+}
+#endif
+
 /*
  * FLASH_eraseAppStart
  * @brief start erasing the app a few pages at a time, so we don't block
@@ -152,6 +165,9 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
  */
 bool FLASH_eraseAppStart(void)
 {
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+    flash.updaterHasErased = true;
+#endif
     // reset the state
     setBitAtomic(flash.eraseState.started);
     clearBitAtomic(flash.eraseState.completed);
