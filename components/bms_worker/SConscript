@@ -19,6 +19,8 @@ CELLS_DIR = LIBS_DIR.Dir("cells")
 THERMS_DIR = Dir("thermistors")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
+SHARED_CODE = Dir("#/components/shared/code")
+SHARED_LIBS = SHARED_CODE.Dir("libs")
 
 ARTIFACT_NAME = "bms_worker"
 BUILDS_DIR = Dir(f"build")
@@ -125,6 +127,7 @@ LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("atomic"),
     CELLS_DIR,
     UDS_DIR.Dir("include"),
+    SHARED_LIBS,
     ISOTP_DIR.Dir("include"),
 ]
 
@@ -152,6 +155,7 @@ src_files = [
     THERMS_DIR.File("THERMISTORS.c"),
     THERMS_DIR.File("NCP21XV103J03RA.c"),
     THERMS_DIR.File("MF52C1103F3380.c"),
+    SHARED_LIBS.File("LIB_app.c"),
 ]
 
 hw_files = [

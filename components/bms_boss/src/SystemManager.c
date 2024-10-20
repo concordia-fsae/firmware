@@ -31,37 +31,22 @@
 
 #include "IMD.h"
 
+#include "LIB_app.h"
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
-// this needs to be defined for __libc_init_array() from newlib_nano to be happy
-extern void _init(void);
-void _init(void){}
-
 extern void RTOS_createResources(void);
-
-// defined by linker
-extern const uint32_t __app_start_addr;
-extern const uint32_t __app_end_addr;
-
-
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-typedef struct
-{
-    const uint32_t appStart;
-    const uint32_t appEnd;
-    const uint32_t appCrcLocation;
-} appDesc_S;
-
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
+
+// defined by linker
+extern const uint32_t __app_start_addr;
+extern const uint32_t __app_end_addr;
+extern const uint32_t __app_crc_addr;
 
 __attribute__((section(".appDescriptor")))
 const appDesc_S appDesc = {
@@ -69,8 +54,9 @@ const appDesc_S appDesc = {
     .appEnd         = (const uint32_t)&__app_end_addr,
     // .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appCrcLocation = (const uint32_t)&__app_end_addr,
+    .appComponentId = APP_COMPONENT_ID,
+    .appPcbaId = APP_PCBA_ID,
 };
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
