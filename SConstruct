@@ -54,15 +54,30 @@ NetworkEnv["NETWORK_DATA_DIR"] = NetworkEnv["NETWORK_PATH"].Dir("definition")
 NetworkEnv["NETWORK_ARTIFACTS"] = GlobalEnv["REPO_ROOT_DIR"].Dir(f"platform-artifacts/network")
 
 if platform:
-    if platform in platforms:
+    if platform in platforms["configs"]:
         PlatformEnv["PLATFORM_ID"] = platform
         PlatformEnv["PLATFORM_ARTIFACTS"] = GlobalEnv["REPO_ROOT_DIR"].Dir(f"platform-artifacts/{platform.upper()}")
-
+        PlatformEnv["FEATURE_SELECTIONS"] = platforms["configs"][platform]["options"]["feature-selections"]
         if targets:
-            # TODO: Handle
-            pass
-        for part in platforms[platform]["ecu"]:
-            target_dict[part] = platforms[platform]["ecu"][part]
+            for target in targets.split("+"):
+                component = search(COMPONENT_REGEX, target).group()
+                config_ids = [int(id) for id in findall(CONFIG_ID_REGEX, target)]
+                if component in platforms["configs"][platform]["ecu"]:
+                    if len(config_ids) == 0:
+                        target_dict[component] = platforms["configs"][platform]["ecu"][component]
+                    else:
+                        target_dict[component] = []
+                        for config in platforms["configs"][platform]["ecu"][component].keys():
+                            if config in config_ids:
+                                target_dict[component].append(config)
+                else:
+                    print(
+                            f"Platform string '{platform}' does not contain any ecu named '{component}'"
+                    )
+                    Exit(1)
+        else:
+            for part in platforms["configs"][platform]["ecu"]:
+                target_dict[part] = platforms["configs"][platform]["ecu"][part]
     else:
         print(
                 f"Platform string '{platform}' does not match any platform in 'site_scons/platforms.yaml'"

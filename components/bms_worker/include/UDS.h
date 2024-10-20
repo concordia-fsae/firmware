@@ -11,7 +11,7 @@
 
 // component-specific UDS configuration
 #include "uds_componentSpecific.h"
-#if FEATURE_UDS
+#if APP_UDS
 // other includes
 #include "Types.h"
 #endif

@@ -58,9 +58,9 @@ extern uint32_t SystemCoreClock;
 #define configUSE_IDLE_HOOK                     (0)
 #define configUSE_TICK_HOOK                     (0)
 #define configCPU_CLOCK_HZ                      (SystemCoreClock)
-#if FEATURE_10KHZ_TASK
+#if FEATURE_IS_ENABLED(APP_10KHZ_TASK)
 #define configTICK_RATE_HZ                      (10000U)
-#elif FEATURE_10KHZ_TASK == FEATURE_DISABLED
+#else
 #define configTICK_RATE_HZ                      (1000U)
 #endif
 #define configMAX_PRIORITIES                    (16)
@@ -141,7 +141,7 @@ extern uint64_t HW_TIM_getBaseTick(void);
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 
 #define pdMS_TO_TICKS(xTime) (xTime * (configTICK_RATE_HZ / 1000U))
-#if FEATURE_10KHZ_TASK
+#if FEATURE_IS_ENABLED(APP_10KHZ_TASK)
 #define pdUS_TO_TICKS(xTime) (uint32_t)((float32_t)xTime * ((float32_t)configTICK_RATE_HZ / (float32_t)1000000U))
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 

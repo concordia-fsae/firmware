@@ -1,7 +1,0 @@
-features:
-  feature_noisy_canbus: 
-    enabled: true
-  feature_bmsw_faults: 
-    enabled: false
-  feature_uds: 
-    enabled: false

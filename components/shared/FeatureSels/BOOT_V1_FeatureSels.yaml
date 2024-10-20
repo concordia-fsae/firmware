@@ -1,0 +1,6 @@
+featureDefs: "#/components/shared/FeatureDefs/Application_FeatureDefs.yaml"
+features:
+  app_lib_enabled: true
+  app_start_addr: 0x08000200
+  app_usage_id: false
+  app_uds: true

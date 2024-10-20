@@ -8,10 +8,8 @@
 
 #include "FloatTypes.h"
 
-#include "PACK.h"
-
 #define BMS_MAX_SEGMENTS 8U
-_Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SEGMENTS);
+_Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
 
 typedef enum {
     BMS_INIT = 0x00,

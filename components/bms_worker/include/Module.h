@@ -33,9 +33,9 @@ extern const ModuleDesc_S CANIO_tx;
 
 /**< Module tasks to get called by the RTOS */
 extern void Module_Init(void);
-#if FEATURE_10KHZ_TASK
+#if FEATURE_IS_ENABLED(APP_10KHZ_TASK)
 extern void Module_10kHz_TSK(void);
-#endif // FEATURE_10KHZ_MEASUREMENT
+#endif // APP_10KHZ_TASK
 extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
@@ -52,9 +52,9 @@ typedef enum
     MODULE_10Hz_TASK,
     MODULE_100Hz_TASK,
     MODULE_1kHz_TASK,
-#if FEATURE_10KHZ_TASK
+#if FEATURE_IS_ENABLED(APP_10KHZ_TASK)
     MODULE_10kHz_TASK,
-#endif // FEATURE_10KHZ_TASK
+#endif // APP_10KHZ_TASK
     MODULE_IDLE_TASK,
     MODULE_TASK_CNT
 } Module_taskSpeeds_E;
