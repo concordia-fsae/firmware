@@ -19,6 +19,19 @@
 #include "UDS.h"
 #include "Utilities.h"
 
+#include "BuildDefines.h"
+
+__attribute__((section(".appDescriptor")))
+const appDesc_S hwDesc = {
+    .appStart = (const uint32_t)&__app_start_addr,
+    .appEnd = (const uint32_t)&__app_end_addr,
+    .appCrcLocation = (const uint32_t)&__app_end_addr,
+    .appComponentId = APP_COMPONENT_ID,
+    .appPcbaId = APP_PCBA_ID,
+#if FEATURE_IS_ENABLED(APP_NODE_ID)
+    .appNodeId = APP_NODE_ID,
+#endif // APP_NODE_ID
+};
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -59,21 +72,21 @@ void bootApp(uint32_t appAddr)
 static bool checkAppDescValid(appDesc_S *appDesc)
 {
     // TODO: clean this up
-    uint8_t valid = 0b111;
+    uint8_t valid = 0b11111;
 
     if (appDesc->appStart < APP_FLASH_START)
     {
-        valid &= 0b110;
+        valid &= 0b11110;
     }
 
     if (appDesc->appEnd >= APP_FLASH_END)
     {
-        valid &= 0b101;
+        valid &= 0b11101;
     }
 
     if ((appDesc->appCrcLocation & 0x0FF00000) != 0x08000000)
     {
-        valid &= 0b011;
+        valid &= 0b11011;
     }
 
     CAN_TxMessage_S msg = {

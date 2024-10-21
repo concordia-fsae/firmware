@@ -11,18 +11,11 @@
 
 #include "Types.h"
 
+#include "LIB_app.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef struct
-{
-    uint32_t appStart;
-    uint32_t appEnd;
-    uint32_t appCrcLocation;
-} appDesc_S;
-
 
 typedef enum
 {

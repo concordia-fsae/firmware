@@ -25,6 +25,8 @@ SRC_DIR = Dir("src")
 LIBS_DIR = Dir("#/embedded/libs")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
+SHARED_CODE = Dir("#/components/shared/code")
+SHARED_LIBS = SHARED_CODE.Dir("libs")
 
 ARTIFACT_NAME = "bootloader"
 BUILDS_DIR = Dir(f"build")
@@ -68,6 +70,7 @@ c_flags = [
     "-Wreturn-type",
     "-Wshadow",
     "-Wunused",
+    "-Wundef",
 ]
 
 if not GetOption("release"):
@@ -92,6 +95,7 @@ inc_paths = [
     UDS_DIR.Dir("include"),
     ISOTP_DIR.Dir("include"),
     LIBS_DIR.Dir("libcrc"),
+    SHARED_LIBS,
 ]
 
 src_files = [
@@ -109,6 +113,7 @@ src_files = [
     SRC_DIR.File("HW/HW_TIM.c"),
     SRC_DIR.File("c_only_startup.S"),
     SRC_DIR.File("cortexm3_macro.S"),
+    SHARED_LIBS.File("LIB_app.c"),
 ]
 
 uds_srcs = [
@@ -133,17 +138,19 @@ uds_env.Append(
         "-Wno-unused-parameter",
         "-DBYTE_ORDER=_BYTE_ORDER",
         "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+        "-Wno-undef",
     ]
 )
 
-renderers = [
-    File("renderers/BuildDefines_generated.h.mako"),
-]
+renderers = {
+    "buildDefs": [File("renderers/BuildDefines_generated.h.mako")],
+    "featureDefs": [File("#/shared/renderers/mako/FeatureDefines_generated.h.mako")],
+}
 
 
-def render_generated_files(options, output_dir):
+def render_generated_files(options, renderer, output_dir):
     targets = []
-    for template in renderers:
+    for template in renderer:
         renderer = Template(filename=template.abspath)
         rendered = renderer.render(**options)
         if not isinstance(rendered, str):
@@ -177,18 +184,27 @@ binaries = []
 asms = []
 
 for config_id, config in configs.items():
+    config_env = env.Clone()
+    feature_selections = config_env["FEATURE_SELECTIONS"]
+    feature_selections += config["features"]["selections"]
+    feature_selections_files = []
+    for file in feature_selections:
+        feature_selections_files += [ File(file) ]
+
     variant_dir = BUILDS_DIR.Dir(
         "_".join(config["description"].split(" ")) + f"_{config_id}"
     )
     generated_dir = variant_dir.Dir("generated")
     makedirs(generated_dir.abspath, exist_ok=True)
 
-    generated = render_generated_files(config["options"], generated_dir)
+    features = {"features": config_env.GenerateFeatures(feature_selections_files, config["features"]["overrides"]) }
+    generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
+    generated = render_generated_files(config["options"], renderers["buildDefs"], generated_dir)
 
     objs = []
     objs.extend(
         [
-            env.Object(
+            config_env.Object(
                 target=make_build_target(variant_dir, src, ".obj"),
                 source=src,
                 CPPPATH=inc_paths + [generated_dir],
@@ -208,7 +224,7 @@ for config_id, config in configs.items():
     )
 
     # link all the compiled objects into an elf
-    elf, map = env.Program(
+    elf, map = config_env.Program(
         variant_dir.File(ARTIFACT_NAME + ".elf"),
         objs,
         MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
@@ -218,18 +234,18 @@ for config_id, config in configs.items():
     Clean(elf, generated)
 
     # generate a binary
-    binaries.append(env.Bin(source=elf))
+    binaries.append(config_env.Bin(source=elf))
 
     # asms target generates disassembled binaries
-    asms.append(env.Asm(source=objs + [elf]))
+    asms.append(config_env.Asm(source=objs + [elf]))
 
     # build compilation database
-    compile_db = env.CompilationDatabase(variant_dir.File("compile_commands.json"))
+    compile_db = config_env.CompilationDatabase(variant_dir.File("compile_commands.json"))
     Depends(compile_db, objs)
     # always generate compilation database
     Default(compile_db)
     # use compiledb alias to _only_ build the compiledb
-    env.Alias("compiledb", compile_db)
+    config_env.Alias("compiledb", compile_db)
 
 
 Default(binaries)

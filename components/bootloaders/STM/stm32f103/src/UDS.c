@@ -22,6 +22,9 @@
 // system includes
 #include <string.h>
 
+#ifndef ISO_TP_USER_DEBUG_ENABLED
+#define ISO_TP_USER_DEBUG_ENABLED 0U
+#endif
 
 /******************************************************************************
  *                              E X T E R N S

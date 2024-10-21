@@ -2,54 +2,131 @@ configs:
   0:
     description: BMS Worker Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsw
+        app_node_id: 0
+        app_uds: true
   1:
     description: BMS Worker Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x601
       udsResponseId: 0x641
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsw
+        app_node_id: 1
+        app_uds: true
   2:
     description: BMS Worker Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x602
       udsResponseId: 0x642
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsw
+        app_node_id: 2
+        app_uds: true
   3:
     description: BMS Worker Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x603
       udsResponseId: 0x643
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsw
+        app_node_id: 3
+        app_uds: true
   4:
     description: BMS Worker Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x604
       udsResponseId: 0x644
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsw
+        app_node_id: 4
+        app_uds: true
   5:
     description: BMS Worker Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x605
       udsResponseId: 0x645
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsw
+        app_node_id: 5
+        app_uds: true
   10:
     description: BMS Boss Bootloader
     options:
-      pcbId: 0
       udsRequestId: 0x610
       udsResponseId: 0x650
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 10
+        app_component_id: bmsb
+        app_uds: true
   20:
     description: Steering Wheel Bootloader
     options:
-      pcbId: 10
       udsRequestId: 0x650
       udsResponseId: 0x690
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 10
+        app_component_id: stw
+        app_uds: true
   100:
     description: Debug Board Bootloader
     options:
-      pcbId: 10
       udsRequestId: 0x6BF
       udsResponseId: 0x6FF
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 10
+        app_uds: true

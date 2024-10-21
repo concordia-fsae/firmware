@@ -79,13 +79,13 @@ def GenerateFeatures(env, selection_files: List[FS.File], features_dict: List[di
                 else:
                     feature_values[requested_feature] = False
             elif type(features_dict[requested_feature]) is str:
-                valid = False
+ #               requested_enum_valid = False
                 for values in discreteValues:
                     if features_dict[requested_feature] in discreteValues[values]:
-                        valid = True
+#                        requested_enum_valid = True
                         features_dict[requested_feature] = values + "_" + features_dict[requested_feature]
-                if not valid:
-                    raise Exception(f"FeatureDefs: Requested value {features_dict[requested_feature]} not defined.")
+#                if not requested_enum_valid:
+#                    raise Exception(f"FeatureDefs: Requested value {features_dict[requested_feature]} not defined.")
                 feature_values[requested_feature] = features_dict[requested_feature]
             else:
                 feature_values[requested_feature] = True

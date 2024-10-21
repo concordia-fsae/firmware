@@ -1,0 +1,5 @@
+config:
+  prefix: feature
+  description: Feature definitions for the Bootloader
+defs:
+  can_debug:
