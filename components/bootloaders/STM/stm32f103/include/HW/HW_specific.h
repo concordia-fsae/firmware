@@ -11,7 +11,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "BuildDefines_generated.h"
+#include "BuildDefines.h"
 #include "Types.h"
 
 
@@ -21,7 +21,7 @@
 
 #define HSE_STARTUP_TIMEOUT    0x0500UL  // Time out for HSE start up
 
-#if PCB_ID == 0
+#if APP_PCBA_ID == 0
 
 # define CAN_AFIO_REMAP    true
 # define CAN_RX_PORT       GPIOB
@@ -30,7 +30,7 @@
 # define CAN_TX_PORT       GPIOB
 # define CAN_TX_PIN        9U
 
-#elif PCB_ID == 10
+#elif APP_PCBA_ID == 10
 
 # define CAN_AFIO_REMAP    false
 # define CAN_RX_PORT       GPIOA
@@ -48,9 +48,9 @@
 #define LED_PORT                GPIOC
 #define LED_PIN                 13U
 #define LED_ON_STATE            0U // this can probably be refactored
-#if PCB_ID == 0
+#if APP_PCBA_ID == 0
 # define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
-#elif PCB_ID == 10
+#elif APP_PCBA_ID == 10
 # define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
 #endif
 

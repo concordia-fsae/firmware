@@ -249,9 +249,15 @@ CAN_exitCode_E CAN_init(void)
     CAN.instance = pCAN;
     CAN.TSR      = (CAN_TSR_regMap*)&CAN.instance->TSR;
 
-    uint32_t tick = 0U;
-
     CAN_hwInit();
+    uint32_t tick = 0U;
+    // Request peripheral initialisation
+    SET_BIT(pCAN->MCR, CAN_MCR_INRQ);
+
+    // Wait for initialisation req ack
+    while ((pCAN->MSR & CAN_MSR_INAK) == 0U);
+    SET_BIT(pCAN->MCR, CAN_MCR_RESET);
+    while(pCAN->MCR & CAN_MCR_RESET);
 
     // Request peripheral initialisation
     SET_BIT(pCAN->MCR, CAN_MCR_INRQ);

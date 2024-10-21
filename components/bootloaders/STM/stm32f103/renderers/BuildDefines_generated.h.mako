@@ -5,6 +5,8 @@
 
 #pragma once
 
-#define PCB_ID           ${pcbId}
-#define UDS_REQUEST_ID   ${udsRequestId}
-#define UDS_RESPONSE_ID  ${udsResponseId}
+%if nodeId is not UNDEFINED:
+#define NODE_ID          ${nodeId}U
+%endif
+#define UDS_REQUEST_ID   ${udsRequestId}U
+#define UDS_RESPONSE_ID  ${udsResponseId}U
