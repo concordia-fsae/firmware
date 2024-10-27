@@ -25,5 +25,5 @@ nodes:
     request_id: 0x605
     response_id: 0x645
   bmsb:
-    request_id: 0x610
-    response_id: 0x650
+    request_id: 0x609
+    response_id: 0x649

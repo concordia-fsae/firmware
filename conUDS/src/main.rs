@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
                 "Performing {:#?} reset for node `{}`",
                 reset.reset_type, args.node
             );
-            uds_client.ecu_reset(reset.reset_type).await?;
+            uds_client.ecu_reset(reset.reset_type).await;
         }
         ArgSubCommands::Download(dl) => {
             debug!(
@@ -130,7 +130,6 @@ async fn main() -> Result<()> {
                 "Downloading binary at '{:#?}' to node `{}`",
                 dl.binary, args.node
             );
-            let _ = uds_client.ecu_reset(SupportedResetTypes::Hard).await;
             uds_client.start_persistent_tp().await?;
 
             info!("Waiting for the user to hit enter before continuing with download");
@@ -143,6 +142,14 @@ async fn main() -> Result<()> {
             if let Err(e) = uds_client.app_download(dl.binary, 0x08000000).await {
                 error!("While downloading app: {}", e);
             }
+        }
+        ArgSubCommands::ReadDID(did) => {
+            debug!(
+                "Performing DID read on {:#?} for node `{}`",
+                did, args.node
+            );
+            let id = u16::from_str_radix(&did.id, 16).unwrap();
+            let _ = uds_client.did_read(id).await;
         }
     }
 

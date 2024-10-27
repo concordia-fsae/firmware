@@ -29,6 +29,7 @@ pub enum ArgSubCommands {
     Download(SubArgDownload),
     Reset(SubArgReset),
     BootloaderDownload(SubArgBootloaderDownload),
+    ReadDID(SubArgReadDID),
 }
 
 /// Download an application to an ECU
@@ -56,4 +57,12 @@ pub struct SubArgReset {
     /// reset type. `soft` or `hard`
     #[argh(option, short = 't', default = "SupportedResetTypes::Hard")]
     pub reset_type: SupportedResetTypes,
+}
+
+/// Read a DID from an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "readDID")]
+pub struct SubArgReadDID {
+    #[argh(positional)]
+    pub id: String,
 }

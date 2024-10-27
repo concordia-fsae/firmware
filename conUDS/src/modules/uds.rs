@@ -52,6 +52,47 @@ impl UdsClient {
             .await?)
     }
 
+    pub async fn did_read(&mut self, did: u16) -> Result<()> {
+        let id: [u8; 2] = [
+            (did & 0xff).try_into().unwrap(),
+            (did >> 8).try_into().unwrap(),
+        ];
+        let buf: [u8; 3] = [
+            UdsCommand::ReadDataByIdentifier.into(),
+            id[0],
+            id[1],
+        ];
+
+        info!("Sending ECU read DID command: {:02x?}", buf);
+
+        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
+            .await?
+            .await
+        {
+            Ok(resp) => {
+                if resp.len() == 2 {
+                    let nrc = UdsErrorByte::from(*resp.last().unwrap());
+                    if nrc == ecu_diagnostics::Standard(UdsError::ServiceNotSupported) {
+                        error!("Read DID not supported by ECU.");
+                    }
+                    else {
+                        info!("ECU Read DID results: {:02x?}", resp);
+                    }
+                }
+                else {
+                    let app_id = u8::from(*resp.last().unwrap());
+                    info!("ECU Read DID results: {:02x?}", resp);
+                    info!("App ID: {:01x?}", app_id);
+                }
+            },
+            Err(e) => {
+                error!("When waiting for response from ECU: {}", e);
+                return Err(e.into());
+            }
+        }
+        Ok(())
+    }
+
     pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
         let buf = [
             UdsCommand::ECUReset.into(),
