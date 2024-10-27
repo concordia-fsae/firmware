@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use automotive_diag::uds::UdsCommand;
 use automotive_diag::uds::UdsErrorByte;
+use automotive_diag::uds::UdsError;
 use automotive_diag::uds::{ResetType, RoutineControlType};
 use ecu_diagnostics::dynamic_diag::EcuNRC;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -63,7 +64,10 @@ impl UdsClient {
             .await?
             .await?;
         info!("ECU Reset results: {:02x?}", resp);
-
+        let nrc = UdsErrorByte::from(*resp.last().unwrap());
+        if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
+            error!("ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex.");
+        }
         Ok(())
     }
 
@@ -297,7 +301,7 @@ impl UdsClient {
     ///
     /// Starts by telling the device to erase the current app, then starts the app download, and lastly
     /// starts actually transferring the app
-    pub async fn app_download(&mut self, file: PathBuf) -> Result<()> {
+    pub async fn app_download(&mut self, file: PathBuf, address: u32) -> Result<()> {
         // disable tester present. bootloader is not currently robust to having tester present enabled
         // during an app download
         self.send_cmd(PrdCmd::PersistentTesterPresent(false))
@@ -312,7 +316,7 @@ impl UdsClient {
         // start the download, which returns the parameters to use for the subsequent transmissions
         let mut dl_params = self
             .download_start(UdsDownloadStart::default(
-                0x08002000,
+                address,
                 file_len_bytes.try_into()?,
             ))
             .await?;

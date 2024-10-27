@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
                 "Downloading binary at '{:#?}' to node `{}`",
                 dl.binary, args.node
             );
-            uds_client.ecu_reset(SupportedResetTypes::Hard).await;
+            let _ = uds_client.ecu_reset(SupportedResetTypes::Hard).await;
             uds_client.start_persistent_tp().await?;
 
             info!("Waiting for the user to hit enter before continuing with download");
@@ -121,7 +121,26 @@ async fn main() -> Result<()> {
             }
             info!("Enter key detected, proceeding with download");
 
-            if let Err(e) = uds_client.app_download(dl.binary).await {
+            if let Err(e) = uds_client.app_download(dl.binary, 0x08002000).await {
+                error!("While downloading app: {}", e);
+            }
+        }
+        ArgSubCommands::BootloaderDownload(dl) => {
+            debug!(
+                "Downloading binary at '{:#?}' to node `{}`",
+                dl.binary, args.node
+            );
+            let _ = uds_client.ecu_reset(SupportedResetTypes::Hard).await;
+            uds_client.start_persistent_tp().await?;
+
+            info!("Waiting for the user to hit enter before continuing with download");
+            let mut garbage = String::new();
+            while stdin().read_line(&mut garbage).is_err() {
+                // wait for user to hit enter
+            }
+            info!("Enter key detected, proceeding with download");
+
+            if let Err(e) = uds_client.app_download(dl.binary, 0x08000000).await {
                 error!("While downloading app: {}", e);
             }
         }

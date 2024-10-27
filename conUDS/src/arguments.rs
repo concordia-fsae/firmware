@@ -28,12 +28,22 @@ pub struct Arguments {
 pub enum ArgSubCommands {
     Download(SubArgDownload),
     Reset(SubArgReset),
+    BootloaderDownload(SubArgBootloaderDownload),
 }
 
 /// Download an application to an ECU
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "download")]
 pub struct SubArgDownload {
+    /// path to the binary file to flash
+    #[argh(positional)]
+    pub binary: PathBuf,
+}
+
+/// Download a bootloader to an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "bootloader-download")]
+pub struct SubArgBootloaderDownload {
     /// path to the binary file to flash
     #[argh(positional)]
     pub binary: PathBuf,
