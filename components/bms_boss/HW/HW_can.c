@@ -21,7 +21,9 @@
 #include "Sys.h"
 
 #include "MessageUnpack_generated.h"
+#include "uds.h"
 #include "uds_componentSpecific.h"
+#include "LIB_app.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -206,7 +208,7 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
  */
 bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len)
 {
-    CAN_TxMessage_T msg;
+    CAN_TxMessage_T msg = {0};
 
     msg.id          = id;
     msg.data        = data;
