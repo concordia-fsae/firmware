@@ -7,6 +7,6 @@ messages:
   BMSW5_criticalData:
   BRUSA513_criticalData:
   PM100DX_criticalData:
-    #  UDSCLIENT_bmsbUdsRequest:
-    #    unrecorded: true
+  UDSCLIENT_bmsbUdsRequest:
+    unrecorded: true
 signals:

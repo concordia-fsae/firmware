@@ -9,6 +9,6 @@ configs:
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_uds: false #False because of CAN ID clash with charger
+        app_uds: true
         app_component_id: bmsb
         app_pcba_id: 0

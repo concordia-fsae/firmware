@@ -22,15 +22,15 @@ bool lib_app_validateAppDesc(const lib_app_appDesc_S * const appDesc, const lib_
     switch(validation)
     {
         case APPDESC_VALID_START:
-            ret = appDesc->appStart >= LIB_APP_START_FLASH;
+            ret = appDesc->appStart >= LIB_APP_FLASH_START;
             break;
 
         case APPDESC_VALID_END:
-            ret = appDesc->appEnd <= (LIB_APP_END_FLASH - sizeof(lib_app_crc_t));
+            ret = appDesc->appEnd <= (LIB_APP_FLASH_END - sizeof(lib_app_crc_t));
             break;
 
         case APPDESC_VALID_CRCLOCATION:
-            ret = (appDesc->appCrcLocation <= (LIB_APP_END_FLASH - sizeof(lib_app_crc_t))) && (appDesc->appCrcLocation >= LIB_APP_START_FLASH);
+            ret = (appDesc->appCrcLocation <= (LIB_APP_FLASH_END - sizeof(lib_app_crc_t))) && (appDesc->appCrcLocation >= LIB_APP_FLASH_START);
             break;
 
         case APPDESC_VALID_COUNT:

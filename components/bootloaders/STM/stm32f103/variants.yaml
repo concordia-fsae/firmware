@@ -206,8 +206,8 @@ configs:
   10:
     description: BMS Boss Bootloader
     options:
-      udsRequestId: 0x610
-      udsResponseId: 0x650
+      udsRequestId: 0x609
+      udsResponseId: 0x649
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -221,8 +221,8 @@ configs:
   1010:
     description: BMS Boss Bootloader Updater
     options:
-      udsRequestId: 0x610
-      udsResponseId: 0x650
+      udsRequestId: 0x609
+      udsResponseId: 0x649
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"

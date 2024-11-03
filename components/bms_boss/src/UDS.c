@@ -26,11 +26,11 @@
 #include "ModuleDesc.h"
 #include "task.h"
 #include "uds.h"
+#include "LIB_app.h"
 #include "Utility.h"
 
 // system includes
 #include <string.h>
-
 
 /******************************************************************************
  *                              E X T E R N S
