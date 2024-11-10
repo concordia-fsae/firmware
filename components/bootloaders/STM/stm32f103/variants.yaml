@@ -208,6 +208,8 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -223,6 +225,8 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
