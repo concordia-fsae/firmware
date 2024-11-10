@@ -18,6 +18,7 @@
 #include "Environment.h"
 #include "BatteryMonitoring.h"
 #include "Module.h"
+#include "LIB_nvm.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -95,5 +96,13 @@
 #define set_taskUsage10Hz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
 #define set_taskUsage1Hz(m,b,n,s)                set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
 #define set_taskUsageIdle(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+#define set_nvmBootCycles(m,b,n,s)               set(m,b,n,s, (uint16_t)lib_nvm_getTotalCycles())
+#define set_nvmRecordWrites(m,b,n,s)             set(m,b,n,s, (uint16_t)lib_nvm_getTotalRecordWrites())
+#define set_nvmBlockErases(m,b,n,s)              set(m,b,n,s, (uint16_t)lib_nvm_getTotalBlockErases())
+#define set_nvmFailedCrc(m,b,n,s)                set(m,b,n,s, (uint16_t)lib_nvm_getTotalFailedCrc())
+#else
+#define transmit_BMSW_nvmInformation false
+#endif
 
 #include "TemporaryStubbing.h"

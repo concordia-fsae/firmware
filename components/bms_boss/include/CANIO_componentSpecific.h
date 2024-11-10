@@ -23,6 +23,8 @@
 #include "IMD.h"
 #include "ENV.h"
 #include "Module.h"
+#include "LIB_nvm.h"
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -59,5 +61,14 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_elconMaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define set_elconControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getElconControlByte())
 #define transmit_BMSB_elconChargeCommand (SYS_SFT_checkElconChargerTimeout() == false)
+#define set_mcuTemp(m,b,n,s) set(m,b,n,s, ENV.board.mcu_temp)
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+#define set_nvmBootCycles(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalCycles())
+#define set_nvmRecordWrites(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalRecordWrites())
+#define set_nvmBlockErases(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalBlockErases())
+#define set_nvmFailedCrc(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalFailedCrc())
+#else
+#define transmit_BMSB_nvmInformation false
+#endif
 
 #include "TemporaryStubbing.h"

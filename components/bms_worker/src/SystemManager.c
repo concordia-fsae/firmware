@@ -20,6 +20,7 @@
 #include "HW_i2c.h"
 #include "HW_spi.h"
 #include "HW_tim.h"
+#include "HW_flash.h"
 
 /**< Driver Includes */
 #include "HW_Fans.h"
@@ -37,6 +38,7 @@
 #include "Module.h"
 
 #include "LIB_app.h"
+#include "LIB_nvm.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -91,6 +93,10 @@ int main(void)
     HW_DMA_init();
     HW_ADC_init();
     HW_SPI_init();
+    FLASH_init();
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    lib_nvm_init();
+#endif
     HW_GPIO_init();
 
     /**< Crate RTOS Tasks, Timers, etc... */

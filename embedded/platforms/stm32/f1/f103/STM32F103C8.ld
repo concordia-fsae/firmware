@@ -28,23 +28,46 @@ __STACK_SIZE = 0;
 __HEAP_SIZE = 0x200;
 #endif
 
+#ifndef NVM_LIB_ENABLED
+#define NVM_LIB_ENABLED 0U
+#endif
+
+#if NVM_LIB_ENABLED
+# ifndef NVM_BLOCK_SIZE
+#  define NVM_BLOCK_SIZE 2k
+# endif
+#else
+# ifndef NVM_BLOCK_SIZE
+#  define NVM_SIZE 0k
+# endif
+#endif
+
+#define NVM_SIZE (2*NVM_BLOCK_SIZE)
+
+#if NVM_LIB_ENABLED
+__FLASH_NVM_ORIGIN = FLASH_ORIGIN + FLASH_SIZE - NVM_SIZE;
+__FLASH_NVM_END = __FLASH_NVM_ORIGIN + NVM_SIZE;
+#endif
 
 /* determine app start address and size */
 #if defined(APP_START_ADDR)
 # if APP_START_ADDR < FLASH_ORIGIN
 #  error "App flash cannot start earlier than the flash origin address"
 # endif
-__APP_SIZE = FLASH_SIZE - (APP_START_ADDR - FLASH_ORIGIN);
+__APP_SIZE = FLASH_SIZE - (APP_START_ADDR - FLASH_ORIGIN) - NVM_SIZE;
 #else
-__APP_SIZE = FLASH_SIZE;
-#define APP_START_ADDR  FLASH_ORIGIN
+  __APP_SIZE = FLASH_SIZE;
+# define APP_START_ADDR  FLASH_ORIGIN
 #endif
 
 /* Memory definition */
 MEMORY
 {
-    RAM      (rwx)    : ORIGIN = RAM_ORIGIN,         LENGTH = RAM_SIZE
-    FLASH    (rx)     : ORIGIN = APP_START_ADDR,     LENGTH = __APP_SIZE
+    RAM         (rwx)    : ORIGIN = RAM_ORIGIN,                          LENGTH = RAM_SIZE
+    FLASH       (rx)     : ORIGIN = APP_START_ADDR,                      LENGTH = __APP_SIZE
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    NVM_BLOCK   (rw)     : ORIGIN = __FLASH_NVM_ORIGIN,                  LENGTH = NVM_BLOCK_SIZE
+#endif
 }
 
 SECTIONS
@@ -154,6 +177,15 @@ SECTIONS
   /*   *(.ARM.attributes) */
   /* } */
 
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+  .nvm(NOLOAD) :
+  {
+    . = ALIGN(4);
+    KEEP(*(.nvm))
+    . = ALIGN(4);
+  } > NVM_BLOCK
+  ASSERT(SIZEOF(".nvm") < NVM_BLOCK_SIZE / 2, "NVM size should be more than twice the size of all members.")
+#endif
   /* Initialized data sections into "RAM" Ram type memory */
   .relocate :
   {
@@ -177,10 +209,11 @@ SECTIONS
   /* CRC goes at the very end of the app */
   .crc __app_end_addr :
   {
+    . = ALIGN(4);
     __app_crc_addr = .;
     KEEP(*(.appCrc))
+    . = ALIGN(4);
   } > FLASH
-
 
   /* Uninitialized data section into "RAM" Ram type memory */
   .bss(NOLOAD) :
@@ -225,6 +258,7 @@ SECTIONS
 #if defined(LD_USE_HEAP) && defined(LD_USE_STACK)
   ASSERT(__HeapTop < __StackLimit, "RAM overflowed stack")
 #endif
+
 
   /* Remove information from the compiler libraries */
   /DISCARD/ :

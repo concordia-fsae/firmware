@@ -55,4 +55,10 @@ messages:
     signals:
       elconMaxChargeVoltage:
       elconMaxChargeCurrent:
-      elconControlByte:      
+      elconControlByte:
+
+  nvmInformation:
+    description: Information relating to the NVM manager
+    id: 0x7f9
+    sourceBuses: veh
+    template: nvmInformation

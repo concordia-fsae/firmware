@@ -9,49 +9,50 @@
  ******************************************************************************/
 
 // module include
-#include "HW_FLASH.h"
-#include "UDS.h"
-
-#include "Utilities.h"
+#include "HW_flash.h"
+#include "LIB_utility.h"
 
 #include "string.h"
+#include "stdbool.h"
+
+#if FEATURE_IS_DISABLED(MCU_STM32_USE_HAL)
+#define FLASH_R_BASE         (0x40022000UL)        // base address of flash registers
+
+#define FLASH_KEY1         (0x45670123UL)        // first key to be written to unlock flash
+#define FLASH_KEY2         (0xCDEF89ABUL)        // second key to be written to unlock flash
+#define FLASH_SR_BSY       (0x00000001UL)        // flash busy bit
+#define FLASH_CR_PG        (0x00000001UL)        // flash program enable bit
+#define FLASH_CR_PER       (0x00000002UL)        // flash page erase enable bit
+#define FLASH_CR_LOCK      (0x00000080UL)        // flash page erase start bit
+#endif
+
+#define FLASH_ACR          (FLASH_R_BASE + 0x00UL) // flash access control register
+#define FLASH_KEYR         (FLASH_R_BASE + 0x04UL) // flash key register for unlocking flash
+#define FLASH_OPTKEYR      (FLASH_R_BASE + 0x08UL) // flash key register for unlocking option bytes
+#define FLASH_SR           (FLASH_R_BASE + 0x0CUL) // flash status register
+#define FLASH_CR           (FLASH_R_BASE + 0x10UL) // flash control register
+#define FLASH_AR           (FLASH_R_BASE + 0x14UL) // flash access register
+#define FLASH_OBR          (FLASH_R_BASE + 0x1CUL) // flash option byte register
+#define FLASH_WRPR         (FLASH_R_BASE + 0x20UL) // flash write protection register
+
+#define FLASH_CR_START     (0x00000040UL)        // flash page erase start bit
+#define FLASH_RDPRT        (0x000000A5UL)        // flash read protection key
+
+#define FLASH_PAGE_LAST    (0x08007C00UL)        // address of the last flash page
+#define FLASH_SIZE_REG     (0x1FFFF7E0UL)        // register whose 4 least significant bits
+                                                 // contains the size of the flash for this chip
+
+#define FLASH_BUSY()       ((bool)(GET_REG(FLASH_SR) &FLASH_SR_BSY))  // returns true if flash is busy
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 typedef struct
 {
-    FLASH_eraseState_S eraseState;
     const uint16_t     pageSize;
-    const uint16_t     appPageCount;
-#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
-    bool updaterHasErased;
-#endif
 } flash_S;
 
 flash_S flash;
-
-
-/******************************************************************************
- *                     P R I V A T E  F U N C T I O N S
- ******************************************************************************/
-
-static uint16_t getPageSize(void)
-{
-    uint16_t *flashSize = (uint16_t *)(FLASH_SIZE_REG);
-
-    // chips with more than 128 pages of flash have pages of size 2k
-    // otherwise, pages are of size 1k
-    if ((*flashSize & 0xFFFF) > 128U)
-    {
-        return 2048U;
-    }
-    else
-    {
-        return 1024U;
-    }
-}
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -59,14 +60,9 @@ static uint16_t getPageSize(void)
 
 void FLASH_init(void)
 {
-    const uint16_t pageSize = getPageSize();
+    const uint16_t pageSize = (uint16_t)FLASH_getPageSize();
     flash_S        fl       = {
-        .eraseState   = { 0U },
         .pageSize     = pageSize,
-        .appPageCount = (APP_FLASH_END - APP_FLASH_START) / pageSize,
-#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
-        .updaterHasErased = false,
-#endif
     };
 
     memcpy(&flash, &fl, sizeof(flash_S));
@@ -80,7 +76,7 @@ void FLASH_init(void)
 void FLASH_lock(void)
 {
     // should we take down the HSI as well?
-    SET_REG(FLASH_CR, 0x00000080);
+    SET_REG(FLASH_CR, FLASH_CR_LOCK);
 }
 
 
@@ -94,12 +90,7 @@ void FLASH_unlock(void)
     if (READ_BIT(FLASH_CR, FLASH_CR_LOCK)) return;
     SET_REG(FLASH_KEYR, FLASH_KEY1);
     SET_REG(FLASH_KEYR, FLASH_KEY2);
-}
-
-
-FLASH_eraseState_S FLASH_getEraseState(void)
-{
-    return flash.eraseState;
+    while (READ_BIT(FLASH_CR, FLASH_CR_LOCK));
 }
 
 /*
@@ -151,100 +142,6 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
     FLASH_lock();
     return ret;
 }
-
-#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
-bool FLASH_updaterHasErasedFlash(void)
-{
-    return flash.updaterHasErased;
-}
-#endif
-
-/*
- * FLASH_eraseAppStart
- * @brief start erasing the app a few pages at a time, so we don't block
- *        for the whole duration of the erase
- */
-bool FLASH_eraseAppStart(void)
-{
-#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
-    flash.updaterHasErased = true;
-#endif
-    // reset the state
-    setBitAtomic(flash.eraseState.started);
-    clearBitAtomic(flash.eraseState.completed);
-    clearBitAtomic(flash.eraseState.status);
-    flash.eraseState.currPage = 0U;
-
-    // trigger the first erase
-    return FLASH_eraseAppContinue();
-}
-
-
-/*
- * FLASH_eraseAppContinue
- * @brief continue erasing the app once started
- */
-bool FLASH_eraseAppContinue(void)
-{
-    // only continue if erase has been started and not completed
-    if (!flash.eraseState.started || flash.eraseState.completed)
-    {
-        return false;
-    }
-
-    // if we've erased the last page of flash, we're done
-    if (flash.eraseState.currPage == flash.appPageCount)
-    {
-        flash.eraseState.status    = true;
-        flash.eraseState.completed = true;
-        return true;
-    }
-
-    // otherwise, we should erase the page
-
-    // make sure we don't boot in the middle of erasing
-    UDS_extendBootTimeout(10);
-
-    // erase the page
-    FLASH_erasePage(APP_FLASH_START + (flash.eraseState.currPage * flash.pageSize));
-
-    flash.eraseState.currPage++;
-    return true;
-}
-
-/*
- * FLASH_eraseCompleteAck
- * @brief clear the flash erase state when requested, typically after
- *        UDS routine control request results
- */
-void FLASH_eraseCompleteAck(void)
-{
-    if (flash.eraseState.completed)
-    {
-        clearBitAtomic(flash.eraseState.started);
-        clearBitAtomic(flash.eraseState.completed);
-        clearBitAtomic(flash.eraseState.status);
-        flash.eraseState.currPage = 0U;
-    }
-}
-
-
-/*
- * FLASH_eraseAppBlocking
- * @brief erase the application's flash, blocks for the whole duration
- */
-bool FLASH_eraseAppBlocking(void)
-{
-    bool result = false;
-
-    if (flash.appPageCount > 0U)
-    {
-        result = FLASH_erasePages(APP_FLASH_START, flash.appPageCount);
-    }
-
-    return result;
-}
-
 
 /*
  * FLASH_writeWords
@@ -321,14 +218,15 @@ bool FLASH_writeHalfwords(uint32_t addr, uint16_t *data, uint16_t dataLen)
     {
         while (FLASH_BUSY())
         {}
-        addr = data[dataIdx];
+        volatile uint16_t* addr_16 = (volatile uint16_t*)(addr + dataIdx * sizeof(uint16_t));
+        *addr_16 = data[dataIdx];
 
         while (FLASH_BUSY())
         {}
 
         // verify the data in flash,
         // compare as halfwords
-        if (*(volatile uint32_t *)(addr + (dataIdx * 2U)) != data[dataIdx])
+        if (*addr_16 != data[dataIdx])
         {
             ret = false;
             break;
@@ -341,3 +239,20 @@ bool FLASH_writeHalfwords(uint32_t addr, uint16_t *data, uint16_t dataLen)
 
     return ret;
 }
+
+uint32_t FLASH_getPageSize(void)
+{
+    uint16_t *flashSize = (uint16_t *)(FLASH_SIZE_REG);
+
+    // chips with more than 128 pages of flash have pages of size 2k
+    // otherwise, pages are of size 1k
+    if ((*flashSize & 0xFFFF) > 128U)
+    {
+        return 2048U;
+    }
+    else
+    {
+        return 1024U;
+    }
+}
+
