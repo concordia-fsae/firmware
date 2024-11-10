@@ -1,6 +1,11 @@
-featureDefs: "#/components/bms_worker/FeatureDefs.yaml"
+featureDefs: 
+  - "#/components/bms_worker/FeatureDefs.yaml"
+  - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
 features:
   feature_max14921_calibrate:
   feature_cantx_swi:
   feature_canrx_swi:
   feature_cell_diagnostics:
+  nvm_lib_enabled: false  # true Disabled due to RTOS bug with NVM manager
+  nvm_flash_backed: false # true
+  nvm_block_size: 2048

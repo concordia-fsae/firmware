@@ -139,3 +139,8 @@ messages:
     id: 0x560
     sourceBuses: veh
     template: rtosTaskInfo
+
+  nvmInformation:
+    description: Information relating to the NVM manager
+    id: 0x7fa
+    template: nvmInformation

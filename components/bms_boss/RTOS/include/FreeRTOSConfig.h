@@ -48,7 +48,12 @@
 
 // Ensure definitions are only used by the compiler, and not by the assembler.
 #if defined(__ICCARM__) || defined(__CC_ARM) || defined(__GNUC__)
-# include <stdint.h>
+
+#if FEATURE_IS_ENABLED(MCU_STM32_USE_HAL)
+#include "stm32f1xx.h"
+#endif
+
+#include <stdint.h>
 extern uint32_t SystemCoreClock;
 #endif
 #define configUSE_PREEMPTION                    (1)

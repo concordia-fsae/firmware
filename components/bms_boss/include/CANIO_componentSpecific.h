@@ -23,6 +23,8 @@
 #include "IMD.h"
 #include "ENV.h"
 #include "Module.h"
+#include "LIB_nvm.h"
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -50,11 +52,11 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
 #define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkBrusaChargerTimeout() == false)
-#define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
-#define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
-#define set_taskUsage10Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
-#define set_taskUsage1Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
-#define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
+#define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, (uint16_t)Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
+#define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, (uint16_t)Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
+#define set_taskUsage10Hz(m,b,n,s) set(m,b,n,s, (uint16_t)Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
+#define set_taskUsage1Hz(m,b,n,s) set(m,b,n,s, (uint16_t)Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
+#define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, (uint16_t)Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 #define set_elconMaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
 #define set_elconMaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define set_elconControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getElconControlByte())
@@ -62,4 +64,14 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define transmit_BMSB_currentLimit (SYS_SFT_checkMCTimeout() == false)
 #define set_maxCharge(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit);
 #define set_maxDischarge(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit);
+#define set_mcuTemp(m,b,n,s) set(m,b,n,s, ENV.board.mcu_temp)
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+#define set_nvmBootCycles(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalCycles())
+#define set_nvmRecordWrites(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalRecordWrites())
+#define set_nvmBlockErases(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalBlockErases())
+#define set_nvmFailedCrc(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalFailedCrc())
+#else
+#define transmit_BMSB_nvmInformation false
+#endif
+
 #include "TemporaryStubbing.h"

@@ -3,7 +3,7 @@
 <%def name="make_packfn(bus, msg)">
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
-    if (transmit_${msg.name} == false)
+    if (transmit_${msg.node_ref.name.upper() + "_" + msg.name.split('_')[1]} == false)
     {
         return false;
     }
@@ -112,8 +112,8 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
 </%def>
 \
 <%def name="make_transmitstub(message)">
-#ifndef transmit_${message.name}
-#define transmit_${message.name} true
+#ifndef transmit_${message.node_ref.name.upper() + "_" + message.name.split('_')[1]}
+#define transmit_${message.node_ref.name.upper() + "_" + message.name.split('_')[1]} true
 #endif
 </%def>
 \

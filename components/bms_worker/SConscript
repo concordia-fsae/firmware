@@ -160,6 +160,9 @@ src_files = [
     THERMS_DIR.File("NCP21XV103J03RA.c"),
     THERMS_DIR.File("MF52C1103F3380.c"),
     SHARED_LIBS.File("LIB_app.c"),
+    SHARED_LIBS.File("LIB_nvm.c"),
+    SRC_DIR.File("LIB_nvm_componentSpecific.c"),
+    SHARED_LIBS.File("libcrc.c"),
     SRC_DIR.File("CANIO_componentSpecific.c"),
 ]
 
@@ -185,6 +188,7 @@ hw_files = [
     HW_DIR.File("HW_NX3L4051PW.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
+    SHARED_HW.File("HW_flash.c"),
 ]
 
 src_files += hw_files

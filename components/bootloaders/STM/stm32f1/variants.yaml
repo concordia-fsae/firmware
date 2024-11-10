@@ -5,6 +5,8 @@ configs:
       nodeId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -22,6 +24,8 @@ configs:
       nodeId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -39,6 +43,8 @@ configs:
       nodeId: 1
       udsRequestId: 0x601
       udsResponseId: 0x641
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -56,6 +62,8 @@ configs:
       nodeId: 1
       udsRequestId: 0x601
       udsResponseId: 0x641
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -73,6 +81,8 @@ configs:
       nodeId: 2
       udsRequestId: 0x602
       udsResponseId: 0x642
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -90,6 +100,8 @@ configs:
       nodeId: 2
       udsRequestId: 0x602
       udsResponseId: 0x642
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -107,6 +119,8 @@ configs:
       nodeId: 3
       udsRequestId: 0x603
       udsResponseId: 0x643
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -124,6 +138,8 @@ configs:
       nodeId: 3
       udsRequestId: 0x603
       udsResponseId: 0x643
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -141,6 +157,8 @@ configs:
       nodeId: 4
       udsRequestId: 0x604
       udsResponseId: 0x644
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -158,6 +176,8 @@ configs:
       nodeId: 4
       udsRequestId: 0x604
       udsResponseId: 0x644
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -175,6 +195,8 @@ configs:
       nodeId: 5
       udsRequestId: 0x605
       udsResponseId: 0x645
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -192,6 +214,8 @@ configs:
       nodeId: 5
       udsRequestId: 0x605
       udsResponseId: 0x645
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -208,6 +232,8 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -223,6 +249,8 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -238,6 +266,8 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -253,6 +283,8 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
+      nvmLibEnabled:
+      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"

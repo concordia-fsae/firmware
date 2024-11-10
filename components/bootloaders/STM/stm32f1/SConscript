@@ -116,12 +116,12 @@ src_files = [
     SRC_DIR.File("c_only_startup.S"),
     SRC_DIR.File("cortexm3_macro.S"),
     SHARED_LIBS.File("LIB_app.c"),
+    SHARED_LIBS.File("libcrc.c"),
 ]
 
 uds_srcs = [
     ISOTP_DIR.File("isotp.c"),
     UDS_DIR.File("src/udsServer.c"),
-    LIBS_DIR.File("libcrc/libcrc.c"),
 ]
 
 env.Append(
@@ -201,6 +201,9 @@ for config_id, config in configs.items():
         LINKFLAGS=f"-I{generated_dir.abspath}",
     )
     makedirs(generated_dir.abspath, exist_ok=True)
+    config_env.Append(
+        LINKFLAGS=f"-I{generated_dir.abspath}",
+    )
 
     features = {"features": config_env.GenerateFeatures(feature_selections_files, config["features"]["overrides"]) }
     if features["features"]["defs"]["app_function_id"] == "function_id_bl":
