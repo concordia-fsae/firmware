@@ -30,6 +30,7 @@ pub enum ArgSubCommands {
     Reset(SubArgReset),
     BootloaderDownload(SubArgBootloaderDownload),
     ReadDID(SubArgReadDID),
+    NVMHardReset(SubArgNVMHardReset),
 }
 
 /// Download an application to an ECU
@@ -65,4 +66,10 @@ pub struct SubArgReset {
 pub struct SubArgReadDID {
     #[argh(positional)]
     pub id: String,
+}
+
+/// Hard reset entire NVM including internal values
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "nvmHardReset")]
+pub struct SubArgNVMHardReset {
 }

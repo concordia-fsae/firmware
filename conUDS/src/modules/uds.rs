@@ -131,7 +131,7 @@ impl UdsClient {
             .await?
             .await
         {
-            Ok(resp) => debug!("Start routine response: {:02x?}", resp),
+            Ok(resp) => info!("Start routine response: {:02x?}", resp),
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
                 return Err(e.into());

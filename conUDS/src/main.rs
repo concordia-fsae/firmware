@@ -144,12 +144,23 @@ async fn main() -> Result<()> {
             }
         }
         ArgSubCommands::ReadDID(did) => {
-            debug!(
-                "Performing DID read on {:#?} for node `{}`",
-                did, args.node
-            );
+            info!("Performing DID read on id {:#?} for node `{}`", did.id, args.node);
             let id = u16::from_str_radix(&did.id, 16).unwrap();
             let _ = uds_client.did_read(id).await;
+        }
+        ArgSubCommands::NVMHardReset(_) => {
+            info!(
+                "Performing NVM hard reset for node `{}`",
+                args.node
+            );
+            if let Err(e) = uds_client.routine_start(0xf0f0, None).await {
+                error!("While downloading app: {}", e);
+            }
+            else {
+                let result = uds_client.routine_get_results(0xf0f0).await;
+                /// TODO: Implement error checking
+                info!("Successful NVM erase");
+            }
         }
     }
 
