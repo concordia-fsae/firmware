@@ -86,7 +86,7 @@ static cantx_counter_S cantx_counter;
 #define set_nvmBlockErases(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalBlockErases())
 #define set_nvmFailedCrc(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalFailedCrc())
 
-#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout())
+#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout() == false)
 
 #include "TemporaryStubbing.h"
 #include "MessagePack_generated.c"
