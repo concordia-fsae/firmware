@@ -111,9 +111,10 @@ static void Cooling10Hz_PRD(void)
             COOL.state[i] = COOL_OFF;
         }
 
-        if (COOL.percentage[i] < CANRX_get_signal(VEH, TOOLING_commandedFansDutyCycle))
+        uint8_t percent_beans = 0;
+        if (CANRX_get_signal(VEH, TOOLING_commandedFansDutyCycle, &percent_beans) == CANRX_MESSAGE_VALID)
         {
-            COOL.percentage[i] = CANRX_get_signal(VEH, TOOLING_commandedFansDutyCycle);
+            COOL.percentage[i] = percent_beans;
         }
     }
 
