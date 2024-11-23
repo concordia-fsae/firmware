@@ -16,7 +16,10 @@ from oyaml import safe_load
 
 # create a global environment which all targets can start from
 GlobalEnv = Environment(REPO_ROOT_DIR=Dir("#"), tools=[])
-GlobalEnv["ENV"]["TERM"] = environ["TERM"]
+try:
+    GlobalEnv["ENV"]["TERM"] = environ["TERM"]
+except Exception:
+    print("No terminal environment specified...")
 
 # add option to choose target or platforam
 AddOption("--targets", dest="targets", type="string", action="store")

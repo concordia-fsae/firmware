@@ -1,0 +1,21 @@
+name: 'Build entire platform: CFR24'
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  cfr24:
+    runs-on: self-hosted
+    container: 
+      image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
+    steps:
+      - name: Pull Branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          show-progress: 'true'
+          submodules: 'recursive'
+      - name: Execute build for CFR24
+        run: |
+          scons --platform=cfr24 -j32
