@@ -35,7 +35,7 @@ static const ModuleDesc_S* modules[] = {
     &IO_desc,
     &BMS_desc,
     &SYS_desc,
-#if FEATURE_UDS
+#if APP_UDS
     &UDS_desc,
 #endif
     &CANIO_rx,

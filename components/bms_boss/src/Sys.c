@@ -24,10 +24,10 @@
 #include "stdint.h"
 #include "FeatureDefines_generated.h"
 
-#if FEATURE_NOISY_CANBUS
+#if PLATFORM_NOISY_CANBUS
 #define SYS_CONFIGURED_MC_TIMEOUT 500U
 #define SYS_CONFIGURED_CHARGER_TIMEOUT 500U
-#endif // FEATURE_NOISY_CANBUS
+#endif // PLATFORM_NOISY_CANBUS
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -166,20 +166,20 @@ void SYS_SFT_cycleContacts(void)
 
 bool SYS_SFT_checkMCTimeout(void)
 {
-#if FEATURE_NOISY_CANBUS
+#if PLATFORM_NOISY_CANBUS
     return (CANRX_get_signal_timeSinceLastMessageMS(VEH, PM100DX_tractiveSystemVoltage) > SYS_CONFIGURED_MC_TIMEOUT);
-#else // FEATURE_NOISY_CANBUS
+#else // PLATFORM_NOISY_CANBUS
     return (CANRX_VEH_get_PM100DX_tractiveSystemVoltage_health() == CANRX_MESSAGE_MIA);
-#endif // not FEATURE_NOISY_CANBUS
+#endif // not PLATFORM_NOISY_CANBUS
 }
 
 bool SYS_SFT_checkChargerTimeout(void)
 {
-#if FEATURE_NOISY_CANBUS
+#if PLATFORM_NOISY_CANBUS
     return (CANRX_get_signal_timeSinceLastMessageMS(VEH, BRUSA513_dcBusVoltage) > SYS_CONFIGURED_CHARGER_TIMEOUT);
-#else // FEATURE_NOISY_CANBUS
+#else // PLATFORM_NOISY_CANBUS
     return (CANRX_VEH_get_BRUSA513_dcBusVoltage_health() == CANRX_MESSAGE_MIA);
-#endif // not FEATURE_NOISY_CANBUS
+#endif // not PLATFORM_NOISY_CANBUS
 }
 
 void SYS_stopCharging(void)

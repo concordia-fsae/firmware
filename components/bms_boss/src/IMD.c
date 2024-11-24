@@ -22,7 +22,7 @@
 #endif                                  // ifndef IMD_MEASUREMENT_TIMEOUT
 
 #ifndef IMD_ISOLATION_MIN
-# define IMD_ISOLATION_MIN ((BMS_PACK_VOLTAGE_MAX * IMD_OHMS_PER_VOLT) / 1000)
+# define IMD_ISOLATION_MIN ((BMS_CONFIGURED_PACK_MAX_VOLTAGE * IMD_OHMS_PER_VOLT) / 1000)
 #endif    // ifndef IMD_ISOLATION_MIN
 
 

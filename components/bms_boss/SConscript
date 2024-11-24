@@ -22,8 +22,8 @@ ARTIFACT_NAME = "bms_boss"
 BUILDS_DIR = Dir(f"build")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
-
-APP_START_ADDR = 0x08002000
+SHARED_CODE = Dir("#/components/shared/code")
+SHARED_LIBS = SHARED_CODE.Dir("libs")
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -67,6 +67,7 @@ link_flags = [
     "-Wl,--print-memory-usage",
     # "-Wl,--print-gc-sections",
     "--specs=nano.specs",
+    "-Icomponents/bms_boss/HW/include"
 ]
 
 as_flags = ["-xassembler-with-cpp"]
@@ -80,10 +81,6 @@ c_flags = [
     "-fstack-usage",
     "-nostdlib",
     "-msoft-float",
-    f"-DAPP_START_ADDR={APP_START_ADDR}",
-    "-DSTM32F1",
-    "-DSTM32F103xB",
-    "-DUSE_HAL_DRIVER",
     "-Wall",
     "-Wextra",
     "-Werror",
@@ -98,6 +95,9 @@ c_flags = [
     "-Wpointer-arith",
     "-Wno-type-limits",
     "-Wno-unused-local-typedefs",
+    "-Wundef",
+    # FIXME: When in single quotes outputs to cmdline with ""
+    "-include", "BuildDefines.h", # Executed one after eachother
 ]
 
 free_rtos_flags = [
@@ -127,6 +127,7 @@ LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("pack"),
     UDS_DIR.Dir("include"),
     ISOTP_DIR.Dir("include"),
+    SHARED_LIBS,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -147,6 +148,7 @@ project_source_files = [
     SRC_DIR.File("BMS.c"),
     SRC_DIR.File("Utility.c"),
     SRC_DIR.File("UDS.c"),
+    SHARED_LIBS.File("LIB_app.c"),
 ]
 
 project_hw_files = [
@@ -258,12 +260,6 @@ renderers = {
     "buildDefs": [File("renderers/BuildDefines_generated.h.mako")],
     "featureDefs": [File("#/shared/renderers/mako/FeatureDefines_generated.h.mako")],
 }
-# Order of list is important
-feature_definitions = [
-    File("#/shared/features/Vehicle_FeatureDefs.yaml"),
-    File("#/shared/features/Controller_FeatureDefs.yaml"),
-    File("FeatureDefs.yaml"),
-]
 configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
 elfs = []
 binaries = []
@@ -271,24 +267,31 @@ binaries_crced = []
 asms = []
 
 for config_id, config in configs.items():
+    config_env = env.Clone()
+    feature_selections = config_env["FEATURE_SELECTIONS"]
+    feature_selections += config["features"]["selections"]
+    feature_selections_files = []
+    for file in feature_selections:
+        feature_selections_files += [ File(file) ]
+
     variant_dir = BUILDS_DIR.Dir(
         "_".join(config["description"].split(" ")) + f"_{config_id}"
     )
     generated_dir = variant_dir.Dir("generated")
+    config_env.Append(
+        LINKFLAGS=f"-I{generated_dir.abspath}",
+    )
     makedirs(generated_dir.abspath, exist_ok=True)
 
     generated_sources = NETWORK_ENV.GenerateNodes({ f"bmsb": generated_dir, })
 
-    if "features" in config:
-        features = {"features": env.GenerateFeatures(feature_definitions, config["features"]) }
-        generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
-    else:
-        generated_features = None
+    features = {"features": config_env.GenerateFeatures(feature_selections_files, config["features"]["overrides"]) }
+    generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
 
-    if "options" in config:
-        generated_defs = render_generated_files(config["options"], renderers["buildDefs"], generated_dir)
-    else:
-        generated_defs = None
+    build_options = {}
+    build_options["config"] = config["options"]
+    build_options["configId"] = config_id
+    generated_defs = render_generated_files(build_options, renderers["buildDefs"], generated_dir)
 
     ## actually compile stuff
     proj_include_dirs = PROJECT_INCLUDE_DIRS + [generated_dir]
@@ -297,7 +300,7 @@ for config_id, config in configs.items():
         RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + proj_include_dirs + LIBS_INCLUDE_DIRS
     )
 
-    env.Append(
+    config_env.Append(
         ASFLAGS=as_flags,
         CPPPATH=paths,
         CCFLAGS=common_flags + c_flags,
@@ -305,7 +308,7 @@ for config_id, config in configs.items():
         LINKFLAGS=c_flags + link_flags + common_flags,
     )
 
-    uds_env = env.Clone()
+    uds_env = config_env.Clone()
     uds_env.Append(
         CCFLAGS=[
             "-Wno-missing-prototypes",
@@ -313,6 +316,7 @@ for config_id, config in configs.items():
             "-DBYTE_ORDER=_BYTE_ORDER",
             "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
             "-Wno-inline",
+            "-Wno-undef",
         ]
     )
 
@@ -326,7 +330,7 @@ for config_id, config in configs.items():
     # compile platform files
     objs.extend(
         compile_objects(
-            env,
+            config_env,
             platform_source_files,
             variant_dir=variant_dir,
             target_dir="embedded/",
@@ -348,7 +352,7 @@ for config_id, config in configs.items():
     # compile project source files
     objs.extend(
             compile_objects(
-            env,
+            config_env,
             project_source_files,
             variant_dir=variant_dir,
             CPPPATH=paths + [generated_dir]
@@ -363,7 +367,7 @@ for config_id, config in configs.items():
         gen_srcs += [generated_dir.File(generated_source)]
     objs.extend(
         compile_objects(
-            env,
+            config_env,
             gen_srcs,
             variant_dir=variant_dir,
             target_dir=variant_dir.Dir("generated/obj"),
@@ -372,33 +376,35 @@ for config_id, config in configs.items():
     )
 
     # link all the compiled objects into an elf
-    elf, map = env.Program(
+    elf, map = config_env.Program(
         variant_dir.File(ARTIFACT_NAME + ".elf"),
         objs,
         MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
     )
     elfs.append(elf)
-    Depends(elf, env["LINKSCRIPT"])
+    Depends(elf, config_env["LINKSCRIPT"])
     Clean(elf, generated_defs)
 
     # generate a binary for flashing
-    binary = env.Bin(source=elf)
+    binary = config_env.Bin(source=elf)
     binaries.append(binary)
 
     crc_env = PLATFORM_ENV.Clone(tools=["hextools"])
 
     # generate the CRCd binary
+    if "app_start_addr" not in env:
+        env["app_start_addr"] = features["features"]["defs"]["app_start_addr"]
     binaries_crced.append(
-        crc_env.InjectMpeg2CRC(source=binary, start_addr=APP_START_ADDR)
+        crc_env.InjectMpeg2CRC(source=binary, start_addr=env["app_start_addr"])
     )
 
     # Generate compile_commands.json
-    compile_db = env.CompilationDatabase(variant_dir.File("compile_commands.json"))
+    compile_db = config_env.CompilationDatabase(variant_dir.File("compile_commands.json"))
     Depends(compile_db, objs)
     # generate it by default
     Default(compile_db)
     # add an alias to _only_ generate the compilation database
-    env.Alias("compiledb", compile_db)
+    config_env.Alias("compiledb", compile_db)
 
 Default(binaries_crced)
 
@@ -412,7 +418,7 @@ artifacts = {}
 if len(binaries) == 1:
     artifacts["FLASHABLE_ARTIFACT"] = {
         "artifact": binaries_crced[0],
-        "addr": APP_START_ADDR,
+        "addr": env["app_start_addr"],
         "tools": ["st-flash"],
     }
 

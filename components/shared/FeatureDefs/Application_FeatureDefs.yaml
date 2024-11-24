@@ -1,0 +1,31 @@
+config:
+  prefix: app
+  description: General definitions for applications and bootloaders
+defs:
+  lib_enabled:
+    requires: 
+      - app_start_addr
+      - app_pcba_id
+      - app_component_id
+  start_addr:
+    requires: 
+      - app_lib_enabled
+  pcba_id:
+    requires: 
+      - app_lib_enabled
+  component_id:
+    discreteValue: component_id
+    requires: 
+      - app_lib_enabled
+  node_id:
+    requires: 
+      - app_lib_enabled
+  uds:
+  10kHz_task:
+discreteValues:
+  component_id:
+    - bl
+    - blu
+    - bmsw
+    - bmsb
+    - stw

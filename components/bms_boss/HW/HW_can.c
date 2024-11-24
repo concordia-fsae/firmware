@@ -21,7 +21,6 @@
 #include "Sys.h"
 
 #include "MessageUnpack_generated.h"
-#include "uds.h"
 #include "uds_componentSpecific.h"
 
 /******************************************************************************
@@ -430,7 +429,7 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
         CANRX_VEH_unpackMessage(header.StdId, &data);
 
-#if FEATURE_UDS
+#if APP_UDS
         if (header.StdId == UDS_REQUEST_ID)
         {
             // FIXME: there needs to be a queue here for received UDS messages

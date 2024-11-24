@@ -19,11 +19,11 @@ CELLS_DIR = LIBS_DIR.Dir("cells")
 THERMS_DIR = Dir("thermistors")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
+SHARED_CODE = Dir("#/components/shared/code")
+SHARED_LIBS = SHARED_CODE.Dir("libs")
 
 ARTIFACT_NAME = "bms_worker"
 BUILDS_DIR = Dir(f"build")
-
-APP_START_ADDR = 0x08002000
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -67,6 +67,7 @@ link_flags = [
     "-Wl,--print-memory-usage",
     # "-Wl,--print-gc-sections",
     "--specs=nano.specs",
+    "-Icomponents/bms_worker/HW/include"
 ]
 
 as_flags = ["-xassembler-with-cpp"]
@@ -79,11 +80,6 @@ c_flags = [
     "-funsigned-char",
     "-nostdlib",
     "-msoft-float",
-    "-DSTM32F1",
-    "-DSTM32F103xB",
-    "-DUSE_HAL_DRIVER",
-    "-DBMSW_BOARD_VA3",
-    f"-DAPP_START_ADDR={APP_START_ADDR}",
     "-Wall",
     "-Wextra",
     "-Werror",
@@ -99,6 +95,9 @@ c_flags = [
     "-Wno-type-limits",
     "-Wno-unused-local-typedefs",
     "-Wconversion",
+    "-Wundef",
+    # FIXME: When in single quotes outputs to cmdline with ""
+    "-include", "BuildDefines.h", # Executed one after eachother
 ]
 
 free_rtos_flags = [
@@ -128,6 +127,7 @@ LIBS_INCLUDE_DIRS = [
     LIBS_DIR.Dir("atomic"),
     CELLS_DIR,
     UDS_DIR.Dir("include"),
+    SHARED_LIBS,
     ISOTP_DIR.Dir("include"),
 ]
 
@@ -155,6 +155,7 @@ src_files = [
     THERMS_DIR.File("THERMISTORS.c"),
     THERMS_DIR.File("NCP21XV103J03RA.c"),
     THERMS_DIR.File("MF52C1103F3380.c"),
+    SHARED_LIBS.File("LIB_app.c"),
 ]
 
 hw_files = [
@@ -237,6 +238,8 @@ def create_output_file_path(
 
     return variant_dir.Dir("/".join(file.path.split("/")[2:-1]) + "/").File(fn)
 
+def parseConfigList(option, opt, value, parser):
+    setattr(parser.values, option.dest, value.split(","))
 
 def compile_objects(
     env,
@@ -282,139 +285,165 @@ renderers = {
     "buildDefs": [File("renderers/BuildDefines_generated.h.mako")],
     "featureDefs": [File("#/shared/renderers/mako/FeatureDefines_generated.h.mako")],
 }
-# Order of list is important
-feature_definitions = [
-    File("#/shared/features/Vehicle_FeatureDefs.yaml"),
-    File("#/shared/features/Controller_FeatureDefs.yaml"),
-    File("FeatureDefs.yaml"),
-]
 configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
 elfs = []
 binaries = []
 binaries_crced = []
 asms = []
 
+
 for config_id, config in configs.items():
-    variant_dir = BUILDS_DIR.Dir(
-        "_".join(config["description"].split(" ")) + f"_{config_id}"
-    )
-    generated_dir = variant_dir.Dir("generated")
-    makedirs(generated_dir.abspath, exist_ok=True)
+    config_env = env.Clone()
+    feature_selections = config_env["FEATURE_SELECTIONS"]
+    feature_selections += config["features"]["selections"]
+    feature_selections_files = []
 
-    generated_sources = NETWORK_ENV.GenerateNodes({ f"bmsw_{config['options']['canIdOffset']}": generated_dir, })
+    for file in feature_selections:
+        feature_selections_files += [ File(file) ]
 
-    if "features" in config:
-        features = {"features": env.GenerateFeatures(feature_definitions, config["features"]) }
+    nodes = []
+    try:
+        AddOption("--bmsw-nodes", dest="bmsw-nodes", type="string", action="callback", callback=parseConfigList)
+    except Exception:
+        pass
+
+    user_defined_nodes = GetOption("bmsw-nodes")
+    if user_defined_nodes is not None:
+        nodes = user_defined_nodes
+    else:
+        try:
+            nodes = list(range(0, CONFIG_IDS[config_id]["nodes"]))
+        except Exception as e:
+            print("No nodeId specified, assuming Network Node 0.")
+            nodes = [ 0 ]
+
+
+    for nodeId in nodes:
+        node_env = config_env.Clone()
+        variant_dir = BUILDS_DIR.Dir(
+            "_".join(config["description"].split(" ")) + f"_{config_id}/Node{nodeId}"
+        )
+        generated_dir = variant_dir.Dir("generated")
+        node_env.Append(
+            LINKFLAGS=f"-I{generated_dir.abspath}",
+        )
+        makedirs(generated_dir.abspath, exist_ok=True)
+
+        generated_sources = NETWORK_ENV.GenerateNodes({ f"bmsw_{nodeId}": generated_dir, })
+
+        features = {"features": node_env.GenerateFeatures(feature_selections_files, config["features"]["overrides"]) }
         generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
-    else:
-        generated_features = None
 
-    if "options" in config:
-        generated_defs = render_generated_files(config["options"], renderers["buildDefs"], generated_dir)
-    else:
-        generated_defs = None
+        build_options = {}
+        build_options["config"] = config["options"]
+        build_options["configId"] = config_id
+        build_options["nodeId"] = nodeId
+        generated_defs = render_generated_files(build_options, renderers["buildDefs"], generated_dir)
 
-    ## actually compile stuff
-    include_dirs = paths + [generated_dir]
-    env["CPPPATH"] = include_dirs
+        ## actually compile stuff
+        include_dirs = paths + [generated_dir]
+        node_env["CPPPATH"] = include_dirs
 
-    uds_env = env.Clone()
-    uds_env.Append(
-        CCFLAGS=[
-            "-Wno-missing-prototypes",
-            "-Wno-unused-parameter",
-            "-DBYTE_ORDER=_BYTE_ORDER",
-            "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
-            "-Wno-inline",
-            "-Wno-conversion",
-        ]
-    )
-
-    rtos_env.Append(
-        CPPPATH=paths,
-        CCFLAGS=common_flags + c_flags + free_rtos_flags,
-    )
-
-    objs = []  # store objects here
-
-    # compile platform files
-    objs.extend(
-        compile_objects(
-            env,
-            platform_src_files,
-            variant_dir=variant_dir,
-            target_dir="embedded/",
-            CPPPATH=paths + [generated_dir],
+        uds_env = node_env.Clone()
+        uds_env.Append(
+            CCFLAGS=[
+                "-Wno-missing-prototypes",
+                "-Wno-unused-parameter",
+                "-DBYTE_ORDER=_BYTE_ORDER",
+                "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+                "-Wno-inline",
+                "-Wno-conversion",
+                "-Wno-undef",
+            ]
         )
-    )
 
-    # compile rtos source files
-    objs.extend(
-        compile_objects(
-            rtos_env,
-            rtos_src_files,
-            variant_dir=variant_dir,
-            target_dir="FreeRTOS/",
-            CPPPATH=paths + [generated_dir],
+        rtos_env.Append(
+            CPPPATH=paths,
+            CCFLAGS=common_flags + c_flags + free_rtos_flags,
         )
-    )
 
-    gen_srcs = []
-    for generated_source in generated_sources:
-        gen_srcs += [generated_dir.File(generated_source)]
+        objs = []  # store objects here
 
-    # compile project source files
-    objs.extend(
-        compile_objects(
-            env,
-            src_files,
-            variant_dir=variant_dir,
-            CPPPATH=paths + [generated_dir],
+        # compile platform files
+        objs.extend(
+            compile_objects(
+                node_env,
+                platform_src_files,
+                variant_dir=variant_dir,
+                target_dir="embedded/",
+                CPPPATH=paths + [generated_dir],
+            )
         )
-    )
 
-    # compile UDS source files
-    objs.extend(compile_objects(uds_env, uds_srcs, variant_dir=variant_dir, target_dir="uds/"))
-
-    objs.extend(
-        compile_objects(
-            env,
-            gen_srcs,
-            variant_dir=variant_dir,
-            target_dir=variant_dir.Dir("generated/obj"),
-            CPPPATH=paths + [generated_dir],
+        # compile rtos source files
+        objs.extend(
+            compile_objects(
+                rtos_env,
+                rtos_src_files,
+                variant_dir=variant_dir,
+                target_dir="FreeRTOS/",
+                CPPPATH=paths + [generated_dir],
+            )
         )
-    )
+
+        gen_srcs = []
+        for generated_source in generated_sources:
+            gen_srcs += [generated_dir.File(generated_source)]
+
+        # compile project source files
+        objs.extend(
+            compile_objects(
+                node_env,
+                src_files,
+                variant_dir=variant_dir,
+                CPPPATH=paths + [generated_dir],
+            )
+        )
+
+        # compile UDS source files
+        objs.extend(compile_objects(uds_env, uds_srcs, variant_dir=variant_dir, target_dir="uds/"))
+
+        objs.extend(
+            compile_objects(
+                node_env,
+                gen_srcs,
+                variant_dir=variant_dir,
+                target_dir=variant_dir.Dir("generated/obj"),
+                CPPPATH=paths + [generated_dir],
+            )
+        )
 
 
-    # link all the compiled objects into an elf
-    elf, map = env.Program(
-        variant_dir.File(ARTIFACT_NAME + ".elf"),
-        objs,
-        MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
-    )
-    elfs.append(elf)
-    Depends(elf, env["LINKSCRIPT"])
-    Clean(elf, variant_dir)
+        # link all the compiled objects into an elf
+        elf, map = node_env.Program(
+            variant_dir.File(ARTIFACT_NAME + ".elf"),
+            objs,
+            MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
+        )
+        elfs.append(elf)
+        Depends(elf, config_env["LINKSCRIPT"])
+        Clean(elf, variant_dir)
 
-    # generate a binary for flashing
-    binary = env.Bin(source=elf)
-    binaries.append(binary)
+        # generate a binary for flashing
+        binary = node_env.Bin(source=elf)
+        binaries.append(binary)
 
-    crc_env = PLATFORM_ENV.Clone(tools=["hextools"])
+        crc_env = PLATFORM_ENV.Clone(tools=["hextools"])
 
-    # generate the CRCd binary
-    binaries_crced.append(
-        crc_env.InjectMpeg2CRC(source=binary, start_addr=APP_START_ADDR)
-    )
+        # generate the CRCd binary
+        if "app_start_addr" not in env:
+            env["app_start_addr"] = features["features"]["defs"]["app_start_addr"]
+        binaries_crced.append(
+            crc_env.InjectMpeg2CRC(source=binary, start_addr=env["app_start_addr"])
+        )
 
-    # Generate compile_commands.json
-    compile_db = env.CompilationDatabase(variant_dir.File("compile_commands.json"))
-    Depends(compile_db, objs)
-    # generate it by default
-    Default(compile_db)
-    # add an alias to _only_ generate the compilation database
-    env.Alias("compiledb", compile_db)
+        # Generate compile_commands.json
+        compile_db = node_env.CompilationDatabase(variant_dir.File("compile_commands.json"))
+        Depends(compile_db, objs)
+        # generate it by default
+        Default(compile_db)
+        # add an alias to _only_ generate the compilation database
+        node_env.Alias("compiledb", compile_db)
 
 Default(binaries_crced)
 
@@ -427,7 +456,7 @@ Default(binaries_crced)
 artifacts = {}
 artifacts["FLASHABLE_ARTIFACT"] = {
         "artifact": binaries_crced,
-    "addr": APP_START_ADDR,
+    "addr": env["app_start_addr"],
     "tools": ["st-flash"],
 }
 

@@ -11,8 +11,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#if FEATURE_UDS
-#define UDS_ENABLE_LIB  FEATURE_UDS
+#if APP_UDS
+#define UDS_ENABLE_LIB  APP_UDS
 
 #define UDS_REQUEST_ID  CAN_VEH_UDSCLIENT_bmsbUdsRequest_ID
 #define UDS_RESPONSE_ID CAN_VEH_BMSB_udsResponse_ID

@@ -1,0 +1,4 @@
+featureDefs: "#/components/shared/FeatureDefs/Controller_FeatureDefs.yaml"
+features:
+  mcu_stm32_pn: stm32f103xb
+  mcu_stm32_use_hal: true

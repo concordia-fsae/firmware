@@ -24,15 +24,6 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#ifndef BMS_CONFIGURED_SERIES_CELLS
-# define BMS_CONFIGURED_SERIES_CELLS 14
-#endif
-
-#ifndef BMS_CONFIGURED_PARALLEL_CELLS
-# define BMS_CONFIGURED_PARALLEL_CELLS 5
-#endif
-
-
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -40,7 +31,7 @@
 typedef enum
 {
     BMS_INIT = 0x00,
-#if FEATURE_MAX14921_CALIBRATE
+#if FEATURE_IS_ENABLED(FEATURE_MAX14921_CALIBRATE)
     BMS_CALIBRATING,
 #endif // FEATURE_MAX14921_CALIBRATE
     BMS_PARASITIC,
@@ -48,13 +39,13 @@ typedef enum
     BMS_HOLDING,
     BMS_WAITING,
     BMS_SAMPLING,
-#if FEATURE_CELL_DIAGNOSTICS
+#if FEATURE_IS_ENABLED(FEATURE_CELL_DIAGNOSTICS)
     BMS_DIAGNOSTIC,
 #endif // FEATURE_CELL_DIAGNOSTICS
-#if FEATURE_CELL_BALANCING
+#if FEATURE_IS_ENABLED(FEATURE_CELL_BALANCING)
     BMS_BALANCING,
 #endif // FEATURE_CELL_BALANCING
-#if FEATURE_CELL_SLEEP
+#if FEATURE_IS_ENABLED(FEATURE_CELL_SLEEP)
     BMS_SLEEPING,
 #endif // FEATURE_CELL_SLEEP
     BMS_ERROR,
@@ -64,7 +55,7 @@ typedef enum
 {
     BMS_CELL_DISCONNECTED = 0x00,
     BMS_CELL_CONNECTED,
-#if FEATURE_BMSW_FAULTS
+#if FEATURE_IS_ENABLED(BMS_FAULTS)
     BMS_CELL_FAULT_UV,
     BMS_CELL_FAULT_OV,
 #endif // FEATURE_BMSW_FAULTS

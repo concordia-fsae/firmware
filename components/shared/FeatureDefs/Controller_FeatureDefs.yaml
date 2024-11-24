@@ -1,0 +1,12 @@
+config:
+  prefix: mcu
+  description: General definitions for microcontrollers
+defs:
+  stm32_pn:
+    discreteValue: stm32_pn
+  stm32_use_hal:
+    requires: 
+      - mcu_stm32_pn
+discreteValues:
+  stm32_pn:
+    - stm32f103xb

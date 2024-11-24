@@ -297,7 +297,7 @@ void HW_TIM_configureRunTimeStatsTimer(void)
 uint64_t HW_TIM_getBaseTick()
 {
     // return fast_clk;
-#if FEATURE_10KHZ_TASK
+#if APP_10KHZ_TASK
     return (HW_TIM_getTick() * 100U) + htim4.Instance->CNT;
 #else
     return (HW_TIM_getTick() * 1000U) + htim4.Instance->CNT;
@@ -306,7 +306,7 @@ uint64_t HW_TIM_getBaseTick()
 
 uint32_t HW_TIM_getTimeMS()
 {
-#if FEATURE_10KHZ_TASK
+#if APP_10KHZ_TASK
     return HW_TIM_getTick() / 10U;
 #else
     return HW_TIM_getTick();

@@ -20,7 +20,6 @@
 #include "string.h"
 
 // imports for data access
-#include "BuildDefines_generated.h"
 #include "BatteryMonitoring.h"
 #include "Cooling.h"
 #include "Environment.h"
@@ -243,7 +242,7 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static void CANIO_tx_1kHz_PRD(void)
 {
-#if FEATURE_CANTX_SWI
+#if FEATURE_IS_ENABLED(FEATURE_CANTX_SWI)
     SWI_invoke(CANTX_BUS_VEH_swi);
 #else // FEATURE_CANTX_SWI
     CANTX_BUS_VEH_SWI();
