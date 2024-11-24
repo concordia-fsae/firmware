@@ -80,7 +80,7 @@ def GenerateVariants(env, variants_file: FS.File, config_ids: List[int] = list()
     if config_ids:
         return dict(filter(lambda item: item[0] in config_ids, variants["configs"].items()))
 
-    return  variants["configs"]
+    return variants["configs"]
 
 
 def generate(env):
