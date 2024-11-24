@@ -16,7 +16,7 @@
 #include "Sys.h"
 #include "SystemConfig.h"
 #include "MessageUnpack_generated.h"
-#include "CAN/CANIO-rx_helper.h"
+#include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
 
 #define CURRENT_SENSE_V_per_A 0.005f
@@ -52,7 +52,7 @@ static void BMS10Hz_PRD(void)
     tmp.pack_charge_limit    = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     tmp.pack_discharge_limit = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 
-    for (uint8_t i = 0; i < CANRX_NODE_BMSW_COUNT; i++)
+    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
     {
         CAN_flag_E seg_faultFlag = 0U;
         const bool worker_valid = CANRX_get_signalDuplicate(VEH, BMSW_faultFlag, &seg_faultFlag, i) == CANRX_MESSAGE_VALID;
@@ -165,7 +165,7 @@ const ModuleDesc_S BMS_desc = {
 void BMS_workerWatchdog(void)
 {
     BMS.connected_segments = 0;
-    for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_SEGMENTS; i++)
+    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
     {
         if (CANRX_validateDuplicate(VEH, BMSW_criticalData, i) == CANRX_MESSAGE_VALID)
         {
