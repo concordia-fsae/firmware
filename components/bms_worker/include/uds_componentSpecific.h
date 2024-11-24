@@ -14,32 +14,9 @@
 #if FEATURE_IS_ENABLED(APP_UDS)
 #define UDS_ENABLE_LIB  APP_UDS
 
-#ifdef CAN_VEH_UDSCLIENT_bmsw0UdsRequest_ID
-#define UDS_REQUEST_ID CAN_VEH_UDSCLIENT_bmsw0UdsRequest_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw1UdsRequest_ID)
-#define UDS_REQUEST_ID CAN_VEH_UDSCLIENT_bmsw1UdsRequest_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw2UdsRequest_ID)
-#define UDS_REQUEST_ID CAN_VEH_UDSCLIENT_bmsw2UdsRequest_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw3UdsRequest_ID)
-#define UDS_REQUEST_ID CAN_VEH_UDSCLIENT_bmsw3UdsRequest_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw4UdsRequest_ID)
-#define UDS_REQUEST_ID CAN_VEH_UDSCLIENT_bmsw4UdsRequest_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw5UdsRequest_ID)
-#define UDS_REQUEST_ID CAN_VEH_UDSCLIENT_bmsw5UdsRequest_ID
-#endif
-#ifdef CAN_VEH_UDSCLIENT_bmsw0UdsRequest_ID
-#define UDS_RESPONSE_ID CAN_VEH_BMSW0_udsResponse_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw1UdsRequest_ID)
-#define UDS_RESPONSE_ID CAN_VEH_BMSW1_udsResponse_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw2UdsRequest_ID)
-#define UDS_RESPONSE_ID CAN_VEH_BMSW2_udsResponse_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw3UdsRequest_ID)
-#define UDS_RESPONSE_ID CAN_VEH_BMSW3_udsResponse_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw4UdsRequest_ID)
-#define UDS_RESPONSE_ID CAN_VEH_BMSW4_udsResponse_ID
-#elif defined(CAN_VEH_UDSCLIENT_bmsw5UdsRequest_ID)
-#define UDS_RESPONSE_ID CAN_VEH_BMSW5_udsResponse_ID
-#endif
+#define CAN_requestIdHelper(nodeId) (JOIN3(CAN_VEH_UDSCLIENT_bmsw, nodeId, UdsRequest_ID))
+#define UDS_REQUEST_ID CAN_requestIdHelper(CAN_NODE_OFFSET)
+#define UDS_RESPONSE_ID CAN_VEH_BMSW_udsResponse_ID
 
 #define ISOTP_TX_BUF_SIZE              128U  // [bytes] mostly arbitrary
 #define ISOTP_RX_BUF_SIZE              128U  // [bytes] maximum size of a multi-frame ISOTP transaction (mostly arbitrary, increase if necessary)
