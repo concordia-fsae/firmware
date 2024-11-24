@@ -1,6 +1,48 @@
 configs:
   0:
     description: BMS Worker
+    options:
+      canIdOffset: 0
+    features:
+      feature_bmsw_faults: false
+      feature_uds: true
+
+  1:
+    description: BMS Worker
+    options:
+      canIdOffset: 1
+    features:
+      feature_bmsw_faults: false
+      feature_uds: true
+
+  2:
+    description: BMS Worker
+    options:
+      canIdOffset: 2
+    features:
+      feature_bmsw_faults: false
+      feature_uds: true
+
+  3:
+    description: BMS Worker
+    options:
+      canIdOffset: 3
+    features:
+      feature_bmsw_faults: false
+      feature_uds: true
+
+  4:
+    description: BMS Worker
+    options:
+      canIdOffset: 4
+    features:
+      feature_bmsw_faults: false
+      feature_uds: true
+
+  5:
+    description: BMS Worker
+    options:
+      canIdOffset: 5
     features:
       feature_bmsw_faults: false
       feature_uds: true
