@@ -87,6 +87,21 @@ signals:
         max: 450
     continuous: true
 
+  bmsIMDReset:
+    cycleTimeMs: 10
+    description: State of the Master Reset
+    discreteValues: switchStatus
+
+  bmsStatusMem:
+    cycleTimeMs: 10
+    description: BMS Latch State
+    discreteValues: faultStatus
+
+  imdStatusMem:
+    cycleTimeMs: 10
+    description: IMD Latch State
+    discreteValues: faultStatus 
+
   packCurrent:
     cycleTimeMs: 10
     unit: 'A'

@@ -165,8 +165,8 @@ void Module_1Hz_TSK(void)
 
     for (int8_t i = 0; i < MODULE_TASK_CNT; i++)
     {
-        stats[i].total_percentage     = (100 * stats[i].total_runtime) / (temp_tick - rtos_start);
-        stats[i].timeslice_percentage = (100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice);
+        stats[i].total_percentage     = (uint8_t)((100 * stats[i].total_runtime) / (temp_tick - rtos_start));
+        stats[i].timeslice_percentage = (uint8_t)((100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice));
         total_percentage += stats[i].total_percentage;
         timeslice_percentage += stats[i].timeslice_percentage;
         stats[i].timeslice_runtime = 0;

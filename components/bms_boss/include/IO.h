@@ -42,6 +42,9 @@ typedef struct
     bool imd_ok :1;
     bool feedback_sfty_bms :1;
     bool feedback_sfty_imd :1;
+    bool bms_imd_reset :1;
+    bool bms_status_mem :1;
+    bool imd_status_mem :1;
 } IO_S;
 
 

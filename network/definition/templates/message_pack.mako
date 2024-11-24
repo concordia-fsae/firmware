@@ -88,7 +88,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
     tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((val - ${int(signal.offset)}) / ${int(signal.scale)});
     %endif
     %if signal.native_representation.signedness == Signedness.signed:
-    tmp_${signal.name} = (tmp_${signal.name} & ${2**(signal.native_representation.bit_width - 1) - 1}U) | ((tmp_${signal.name} < 0) ? 1 << ${(signal.native_representation.bit_width - 1)}U : 0U);
+    tmp_${signal.name} = (int${dtype}_t)((tmp_${signal.name} & ${2**(signal.native_representation.bit_width - 1) - 1}U) | ((tmp_${signal.name} < 0) ? 1 << ${(signal.native_representation.bit_width - 1)}U : 0U));
     %endif
     %if signal.native_representation.endianness.value == 0 and signal.native_representation.bit_width > 8:
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${int(signal.native_representation.bit_width / 8)}U);
@@ -97,7 +97,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
     %if dtype == 64:
     atomicXorU64(&m->u64, (uint64_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit}U);
     %else: 
-    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], (uint${dtype}_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
+    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], ((uint${dtype}_t)tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
     %endif 
 %else:
     (void)m;

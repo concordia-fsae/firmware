@@ -6,6 +6,10 @@ switchStatus:
   "OFF": 0
   "ON": 1
 
+faultStatus:
+  "OK": 0
+  "FAULT": 1
+
 flag:
   "CLEARED": 0
   "SET": 1

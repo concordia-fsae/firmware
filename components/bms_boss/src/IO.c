@@ -88,6 +88,23 @@ HW_GPIO_S bms_feedback = {
     .port = BMS_STATUS_Port,
 };
 
+HW_GPIO_S bms_imd_reset = {
+    .pin = BMS_IMD_Reset_Pin,
+    .port = BMS_IMD_Reset_Port,
+};
+
+HW_GPIO_S bms_status_mem = {
+    .pin = BMS_STATUS_MEM_Pin,
+    .port = BMS_STATUS_MEM_Port,
+};
+
+
+HW_GPIO_S imd_status_mem = {
+    .pin = IMD_STATUS_MEM_Pin,
+    .port = IMD_STATUS_MEM_Port,
+};
+
+
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -119,7 +136,7 @@ static void IO_init(void)
     memset(&IO, 0x00, sizeof(IO));
 }
 
-static void IO10Hz_PRD(void)
+static void IO100Hz_PRD(void)
 {
     if (io.adcState == ADC_STATE_INIT)
     {
@@ -150,6 +167,9 @@ static void IO10Hz_PRD(void)
     IO.imd_ok = (HW_GPIO_readPin(&IMD_OK)) ? true : false;
     IO.feedback_sfty_bms = (HW_GPIO_readPin(&bms_feedback)) ? true : false;
     IO.feedback_sfty_imd = (HW_GPIO_readPin(&imd_feedback)) ? true : false;
+    IO.bms_imd_reset = (HW_GPIO_readPin(&bms_imd_reset)) ? true : false;
+    IO.bms_status_mem = (HW_GPIO_readPin(&bms_status_mem)) ? true : false;
+    IO.imd_status_mem = (HW_GPIO_readPin(&imd_status_mem)) ? true : false;
 }
 
 /**
@@ -157,7 +177,7 @@ static void IO10Hz_PRD(void)
  */
 const ModuleDesc_S IO_desc = {
     .moduleInit       = &IO_init,
-    .periodic10Hz_CLK = &IO10Hz_PRD,
+    .periodic100Hz_CLK = &IO100Hz_PRD,
 };
 
 /******************************************************************************
