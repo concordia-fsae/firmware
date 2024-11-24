@@ -10,6 +10,7 @@
 
 #include "CAN/CanTypes.h"
 #include "MessagePack_generated.h"
+#include "NetworkDefines_generated.h"
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S

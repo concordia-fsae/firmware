@@ -25,7 +25,10 @@ static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t c
 <%def name="make_packtable(bus, msgs, cycle_time)">
 const packTable_S ${bus.upper()}_packTable_${cycle_time}ms [] = {
   %for msg in msgs:
-    { &pack_${bus.upper()}_${msg.name}, ${hex(msg.id)}, ${msg.length_bytes}U },
+    <%
+      msg_name = msg.node_ref.name.upper() + '_' + msg.name.split('_')[1] if msg.node_ref.duplicateNode else msg.name
+    %>\
+    { &pack_${bus.upper()}_${msg.name}, CAN_${bus.upper()}_${msg_name}_ID, ${msg.length_bytes}U },
   %endfor
 };
 </%def>

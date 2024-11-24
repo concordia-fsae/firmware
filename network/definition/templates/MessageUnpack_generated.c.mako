@@ -44,9 +44,9 @@ void CANRX_${bus.upper()}_unpackMessage(const uint16_t id, const CAN_data_T *con
     {
     %for message in node.received_msgs:
       %if bus in node.received_msgs[message].source_buses:
-        case ${node.received_msgs[message].id}U:
+        case CAN_${bus.upper()}_${message}_ID:
         %if node.received_msgs[message].node_ref.duplicateNode:
-          CANRX_${bus.upper()}_unpack_${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}(&CANRX_${bus.upper()}_signals, &CANRX_${bus.upper()}_messages, m, ${node.received_msgs[message].node_ref.offset});
+            CANRX_${bus.upper()}_unpack_${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}(&CANRX_${bus.upper()}_signals, &CANRX_${bus.upper()}_messages, m, ${node.received_msgs[message].node_ref.offset});
         %else:
             CANRX_${bus.upper()}_unpack_${node.received_msgs[message].name}(&CANRX_${bus.upper()}_signals, &CANRX_${bus.upper()}_messages, m);
         %endif
@@ -135,3 +135,5 @@ CANRX_MESSAGE_health_E CANRX_${bus.upper()}_validate_${msg_name}(${arg})
     %endfor
   %endfor
 %endfor
+
+
