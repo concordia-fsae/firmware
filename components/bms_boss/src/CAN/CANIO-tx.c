@@ -23,6 +23,7 @@
 #include "Sys.h"
 #include "IMD.h"
 #include "ENV.h"
+#include "LIB_nvm.h"
 
 #include "SigTx.c"
 #include "MessageUnpack_generated.h"
@@ -38,11 +39,13 @@
 typedef struct
 {
     uint8_t tx_100Hz_msg;
+    uint8_t tx_1Hz_msg;
 } cantx_S;
 
 typedef struct
 {
     uint8_t counter_100Hz;
+    uint8_t counter_1Hz;
 } cantx_counter_S;
 
 /******************************************************************************
@@ -78,7 +81,12 @@ static cantx_counter_S cantx_counter;
 #define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
 #define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
-#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout())
+#define set_nvmBootCycles(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalCycles())
+#define set_nvmRecordWrites(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalRecordWrites())
+#define set_nvmBlockErases(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalBlockErases())
+#define set_nvmFailedCrc(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalFailedCrc())
+
+#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout() == false)
 
 #include "TemporaryStubbing.h"
 #include "MessagePack_generated.c"
@@ -123,6 +131,38 @@ void CANTX_BUS_A_SWI(void)
             cantx_counter.counter_100Hz = 0U;
         }
         cantx.tx_100Hz_msg++;
+    }
+
+    if (cantx.tx_1Hz_msg < VEH_packTable_1000ms_length)
+    {
+        CAN_data_T     message_1Hz = {0};
+
+        const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&VEH_packTable_1000ms,
+                                                        VEH_packTable_1000ms_length,
+                                                        &cantx.tx_1Hz_msg,
+                                                        &message_1Hz,
+                                                        &cantx_counter.counter_1Hz);
+
+        if (entry_1Hz != NULL)
+        {
+            if (CAN_sendMsgBus0(CAN_TX_PRIO_10HZ, message_1Hz, entry_1Hz->id, entry_1Hz->len))
+            {
+                cantx.tx_1Hz_msg++;
+            }
+            memset(&message_1Hz, 0, sizeof(message_1Hz));
+        }
+    }
+    if (cantx.tx_1Hz_msg == VEH_packTable_1000ms_length)
+    {
+        if (cantx_counter.counter_1Hz != 255U)
+        {
+            cantx_counter.counter_1Hz++;
+        }
+        else
+        {
+            cantx_counter.counter_1Hz = 0U;
+        }
+        cantx.tx_1Hz_msg++;
     }
 }
 
@@ -222,6 +262,18 @@ static void CANIO_tx_100Hz_PRD(void)
 }
 
 /**
+ * CANIO_tx_1Hz_PRD
+ * module 1Hz periodic function
+ */
+static void CANIO_tx_1Hz_PRD(void)
+{
+    if (cantx.tx_1Hz_msg < VEH_packTable_1000ms_length) {
+        // all the message weren't sent. TO-DO: error handling
+    }
+    cantx.tx_1Hz_msg = 0U;
+}
+
+/**
  * CANIO_tx_init
  * initialize module
  */
@@ -237,5 +289,6 @@ const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
     .periodic100Hz_CLK = &CANIO_tx_100Hz_PRD,
+    .periodic1Hz_CLK   = &CANIO_tx_1Hz_PRD,
 };
 
