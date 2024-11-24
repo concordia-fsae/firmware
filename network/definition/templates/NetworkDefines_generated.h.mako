@@ -10,6 +10,25 @@
  *                              D E F I N E S
  ******************************************************************************/
 
+// Network Properties
+<%
+  evaluated_nodes = []
+%>\
+%for node in nodes:
+  %for msg in node.received_msgs.values():
+      %if msg.node_ref.duplicateNode and node.name not in evaluated_nodes:
+<%evaluated_nodes.append(node.name)%>\
+typedef enum
+{
+      %for i in range(0, msg.node_ref.total_duplicates):
+    CAN_DUPLICATENODE_${msg.node_ref.name.upper() + str(i)},
+      %endfor
+    CAN_DUPLICATENODE_${msg.node_ref.name.upper()}_COUNT,
+} CAN_DUPLICATENODE_${msg.node_ref.name.upper()}_E;
+    %endif
+  %endfor
+%endfor
+
 %for node in nodes:
 // Node Properties
   %if node.duplicateNode:
