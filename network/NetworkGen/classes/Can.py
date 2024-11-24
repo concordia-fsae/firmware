@@ -349,6 +349,8 @@ class CanMessage(CanObject):
         else:
             self.source_buses = node.on_buses
 
+        # Assigned later
+        self.node_ref = None
         self.is_valid = False
 
     def __repr__(self):
@@ -470,6 +472,7 @@ class CanNode(CanObject):
             self.offset = int(name.split('_')[1])
             self.duplicateNode = True
             self.alias = self.name + str(self.offset)
+            self.total_duplicates = get_if_exists(node_def, "duplicateNode", int, 1)
 
         self.def_files = node_def["def_files"]
         self.description: str = get_if_exists(node_def, "description", str, "")

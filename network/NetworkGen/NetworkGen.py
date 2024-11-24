@@ -186,6 +186,7 @@ def process_node(node: CanNode):
             ERROR = True
             continue
 
+        msg_obj.node_ref = node
         for msg_signal in msg_obj.signals:
             if msg_signal in signals:
                 if not signals[msg_signal].is_valid:

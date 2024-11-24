@@ -1,3 +1,2 @@
 featureDefs: "#/shared/FeatureDefs/Platform_FeatureDefs.yaml"
 features:
-  platform_noisy_canbus: true
