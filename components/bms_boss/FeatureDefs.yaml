@@ -2,3 +2,5 @@ config:
   prefix: feature
   description: Feature definitions for the BMS Boss
 defs:
+  canrx_swi:
+  cantx_swi: 

@@ -30,13 +30,13 @@
  *                              E X T E R N S
  ******************************************************************************/
 
+#if FEATURE_CANRX_SWI
 extern CAN_HandleTypeDef hcan;
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
-#if FEATURE_CANRX_SWI
 typedef struct
 {
     FLAG_create(fifoNotify, CAN_RX_FIFO_COUNT);
@@ -81,8 +81,7 @@ void CANRX_BUS_VEH_SWI(void)
 
             if (rxSuccess)
             {
-                CANRX_VEH_unpackMessage((uint16_t)msg.id, &msg.data);
-#if FEATURE_UDS
+#if APP_UDS
                 if (msg.id == UDS_REQUEST_ID)
                 {
                     // FIXME: there needs to be a queue here for received UDS messages
@@ -91,17 +90,18 @@ void CANRX_BUS_VEH_SWI(void)
                     // the next one, even if it hasn't been processed yet.
                     udsSrv_processMessage((uint8_t*)&msg.data, (uint8_t)msg.lengthBytes);
                 }
-#endif // FEATURE_UDS
+                else
+#endif // APP_UDS
+                {
+                    CANRX_VEH_unpackMessage((uint16_t)msg.id, &msg.data);
+                }
             }
             else
             {
                 // TODO: handle errors
             }
         }
-
-        // FIXME: notification should be reactivated in the hardware layer
-        uint32_t it = (rxFifo == CAN_RX_FIFO_0) ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
-        HAL_CAN_ActivateNotification(&hcan, it);
+        HW_CAN_activateFifoNotifications(rxFifo);
     }
 }
 
@@ -114,6 +114,7 @@ void CANRX_BUS_VEH_notify(CAN_RxFifo_E rxFifo)
 {
     FLAG_set(canrx.fifoNotify, rxFifo);
 }
+#endif // FEATURE_CANRX_SWI
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -134,4 +135,3 @@ static void CANIO_rx_init(void)
 const ModuleDesc_S CANIO_rx = {
     .moduleInit        = &CANIO_rx_init,
 };
-#endif // FEATURE_CANRX_SWI

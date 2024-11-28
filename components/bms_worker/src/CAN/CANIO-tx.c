@@ -34,13 +34,6 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef struct
-{
-    uint8_t tx_1Hz_msg;
-    uint8_t tx_10Hz_msg;
-} cantx_S;
-
-
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -117,9 +110,7 @@ typedef struct
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static cantx_S            cantx;
 extern Module_taskStats_S swi_stats;
-
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -141,71 +132,49 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
  */
 void CANTX_BUS_VEH_SWI(void)
 {
-    static uint8_t   counter_100Hz = 0U;
-    static uint8_t   counter_1Hz = 0U;
-    CAN_data_T       message = { 0U };
+    CAN_bus_E bus = CAN_BUS_VEH;
 
-    if (cantx.tx_10Hz_msg != VEH_packTable_10ms_length)
+    for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
     {
-
-        const packTable_S* entry_100Hz = packNextMessage((const packTable_S*)&VEH_packTable_10ms,
-                                                         VEH_packTable_10ms_length,
-                                                         &cantx.tx_10Hz_msg,
-                                                         &message,
-                                                         &counter_100Hz);
-
-        if (entry_100Hz != NULL)
+        for (uint8_t pack = CAN_table[bus].busTable[table].index; pack < CAN_table[bus].busTable[table].packTableLength; pack++)
         {
-            if (CAN_sendMsgBus0(CAN_TX_PRIO_100HZ, message, entry_100Hz->id, entry_100Hz->len))
-            {
-                cantx.tx_10Hz_msg++;
-            }
-            memset(&message, 0, sizeof(message));
-        }
-    }
-    if (cantx.tx_10Hz_msg == VEH_packTable_10ms_length)
-    {
-        if (counter_100Hz != 255U)
-        {
-            counter_100Hz++;
-        }
-        else
-        {
-            counter_100Hz = 0U;
-        }
-        cantx.tx_10Hz_msg++;
-    }
+            CAN_data_T     message = {0};
 
-    if (cantx.tx_1Hz_msg != VEH_packTable_1000ms_length)
-    {
-
-        const packTable_S* entry_1Hz = packNextMessage((const packTable_S*)&VEH_packTable_1000ms,
-                                                       VEH_packTable_1000ms_length,
-                                                       &cantx.tx_1Hz_msg,
+            const packTable_S* entry = packNextMessage((const packTable_S*)CAN_table[bus].busTable[table].packTable,
+                                                       CAN_table[bus].busTable[table].packTableLength,
+                                                       &CAN_table[bus].busTable[table].index,
                                                        &message,
-                                                       &counter_1Hz);
-
-        if (entry_1Hz != NULL)
-        {
-            if (CAN_sendMsgBus0(CAN_TX_PRIO_1HZ, message, entry_1Hz->id, entry_1Hz->len))
+                                                       &CAN_table[bus].busTable[table].counter);
+            if (entry != NULL)
             {
-                cantx.tx_1Hz_msg++;
+                bool transmitFailed = true;
+                uint8_t mailbox = CAN_TX_MAILBOX_0;
+                for (; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
+                {
+                    if (CAN_sendMsgBus0(mailbox, message, entry->id, entry->len))
+                    {
+                        CAN_table[bus].busTable[table].index++;
+                        transmitFailed = false;
+                        break;
+                    }
+                }
+                if (transmitFailed)
+                {
+                    return;
+                }
             }
-            memset(&message, 0, sizeof(message));
+            if (CAN_table[bus].busTable[table].index == CAN_table[bus].busTable[table].packTableLength)
+            {
+                if (CAN_table[bus].busTable[table].counter != 255U)
+                {
+                    CAN_table[bus].busTable[table].counter++;
+                }
+                else
+                {
+                    CAN_table[bus].busTable[table].counter = 0U;
+                }
+            }
         }
-    }
-    if (cantx.tx_10Hz_msg == VEH_packTable_10ms_length)
-    {
-        if (counter_100Hz != 255U)
-        {
-            counter_1Hz++;
-        }
-        else
-        {
-            counter_1Hz = 0U;
-        }
-        counter_1Hz++;
-        cantx.tx_1Hz_msg++;
     }
 }
 
@@ -242,6 +211,23 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static void CANIO_tx_1kHz_PRD(void)
 {
+    for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
+    {
+        for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
+        {
+            if (HW_TIM_getTimeMS() - CAN_table[bus].busTable[table].lastTimestamp < CAN_table[bus].busTable[table].period)
+            {
+                continue;
+            }
+
+            CAN_table[bus].busTable[table].lastTimestamp = HW_TIM_getTimeMS();
+
+            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
+                // all the message weren't sent. TO-DO: error handling
+            }
+            CAN_table[bus].busTable[table].index = 0U;
+        }
+    }
 #if FEATURE_IS_ENABLED(FEATURE_CANTX_SWI)
     SWI_invoke(CANTX_BUS_VEH_swi);
 #else // FEATURE_CANTX_SWI
@@ -250,48 +236,16 @@ static void CANIO_tx_1kHz_PRD(void)
 }
 
 /**
- * CANIO_tx_100Hz_PRD
- * module 100Hz periodic function
- */
-static void CANIO_tx_10Hz_PRD(void)
-{
-    if (cantx.tx_10Hz_msg < VEH_packTable_10ms_length)
-    {
-        // all the message weren't sent. TO-DO: error handling
-    }
-    cantx.tx_10Hz_msg = 0U;
-}
-
-/**
- * CANIO_tx_1Hz_PRD
- *
- */
-static void CANIO_tx_1Hz_PRD(void)
-{
-    if (cantx.tx_1Hz_msg < VEH_packTable_1000ms_length)
-    {
-        // all the message weren't sent. TO-DO: error handling
-    }
-    cantx.tx_1Hz_msg = 0U;
-}
-
-/**
  * CANIO_tx_init
  * initialize module
  */
 static void CANIO_tx_init(void)
 {
-    memset(&cantx, 0x00, sizeof(cantx));
-    cantx.tx_1Hz_msg   = VEH_packTable_1000ms_length;
-    cantx.tx_10Hz_msg = VEH_packTable_10ms_length;
     HW_CAN_start();    // start CAN
 }
 
 
 const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,
- // .periodic10kHz_CLK = &CANIO_tx_10kHz_PRD,
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
-    .periodic10Hz_CLK = &CANIO_tx_10Hz_PRD,
-    .periodic1Hz_CLK   = &CANIO_tx_1Hz_PRD,
 };

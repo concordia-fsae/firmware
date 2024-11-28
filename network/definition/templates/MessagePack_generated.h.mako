@@ -12,16 +12,12 @@
 #include "CAN/CanTypes.h"
 #include "FloatTypes.h"
 #include "Utility.h"
+#include "NetworkDefines_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
-%for node in nodes:
-  %for bus in node.on_buses:
-    %for cycle_time, msgs in node.messages_by_cycle_time().items():
-
-#define ${bus.upper()}_packTable_${cycle_time}ms_length ${len(msgs)}U
-extern const packTable_S ${bus.upper()}_packTable_${cycle_time}ms[];
-    %endfor
-  %endfor
+ 
+ %for node in nodes:
+extern canTable_S CAN_table[CAN_BUS_COUNT];
 %endfor
