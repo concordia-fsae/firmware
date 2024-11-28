@@ -130,6 +130,13 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     return HW_OK;
 }
 
+void HW_CAN_activateFifoNotifications(CAN_RxFifo_E rxFifo)
+{
+    uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
+    uint32_t itFull = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FFIE0 : CAN_IER_FFIE1;
+    HAL_CAN_ActivateNotification(&hcan, it);
+    HAL_CAN_ActivateNotification(&hcan, itFull);
+}
 
 /**
  * @brief Deinitializes the CAN peripheral
@@ -280,14 +287,15 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
     rx->IDE              = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
     rx->RTR              = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id               = (uint16_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos);
+    rx->id = (uint16_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> (rx->IDE == CAN_IDENTIFIER_STD ? CAN_RI0R_STID_Pos : CAN_RI0R_EXID_Pos));
     rx->lengthBytes      = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
     rx->filterMatchIndex = (CAN_RDT0R_FMI & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_FMI_Pos;
 
     // Get the data
-    rx->data.u64         = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
+    rx->data.u32[0U] = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
+    rx->data.u32[1U] = hcan.Instance->sFIFOMailBox[rxFifo].RDHR;
 
     // Release the FIFO
     switch (rxFifo)
@@ -444,7 +452,6 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
 #endif // FEATURE_UDS
 #else // FEATURE_CANRX_SWI == FEATURE_DISABLED
         CANRX_BUS_VEH_notify(fifoId);
-        SWI_invokeFromISR(CANRX_BUS_VEH_swi);
 #endif // FEATURE_CANRX_SWI
     }
 }
@@ -529,7 +536,9 @@ void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 {
-    //HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE0);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE0);
+#endif // FEATURE_CANRX_SWI
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 }
 
@@ -540,7 +549,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 {
-    //HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE1);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE1);
+#endif // FEATURE_CANRX_SWI
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 }
 
@@ -551,9 +562,11 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 {
-    UNUSED(canHandle);
-    // HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE0);
+    SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+#endif // FEATURE_CANRX_SWI
 }
 
 
@@ -563,9 +576,11 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
 {
-    UNUSED(canHandle);
-    // HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
+    SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+#endif // FEATURE_CANRX_SWI
 }
 
 /**

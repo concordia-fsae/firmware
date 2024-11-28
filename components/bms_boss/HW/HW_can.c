@@ -123,6 +123,13 @@ void HW_CAN_init(void)
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 }
 
+void HW_CAN_activateFifoNotifications(CAN_RxFifo_E rxFifo)
+{
+    uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
+    uint32_t itFull = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FFIE0 : CAN_IER_FFIE1;
+    HAL_CAN_ActivateNotification(&hcan, it);
+    HAL_CAN_ActivateNotification(&hcan, itFull);
+}
 
 /**
  * CAN_checkMbFree
@@ -206,13 +213,13 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
  * @param len TODO
  * @return TODO
  */
-bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len)
+bool CAN_sendMsgBus0(CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint8_t len)
 {
     CAN_TxMessage_T msg = {0};
 
     msg.id          = id;
     msg.data        = data;
-    msg.mailbox     = (CAN_TxMailbox_E)priority;
+    msg.mailbox     = mailbox;
     msg.lengthBytes = len;
 
     return CAN_sendMsg(&hcan, msg) == HAL_OK;
@@ -271,14 +278,15 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
     rx->IDE = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
     rx->RTR = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id          = ((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> CAN_RI0R_EXID_Pos;
+    rx->id = (uint16_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> (rx->IDE == CAN_IDENTIFIER_STD ? CAN_RI0R_STID_Pos : CAN_RI0R_EXID_Pos));
     rx->lengthBytes = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
     rx->filterMatchIndex = (CAN_RDT0R_FMI & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_FMI_Pos;
 
     // Get the data
-    rx->data.u64 = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
+    rx->data.u32[0U] = hcan.Instance->sFIFOMailBox[rxFifo].RDLR;
+    rx->data.u32[1U] = hcan.Instance->sFIFOMailBox[rxFifo].RDHR;
     // aData[0] = (uint8_t)((CAN_RDL0R_DATA0 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA0_Pos);
     // aData[1] = (uint8_t)((CAN_RDL0R_DATA1 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA1_Pos);
     // aData[2] = (uint8_t)((CAN_RDL0R_DATA2 & hcan.Instance->sFIFOMailBox[RxFifo].RDLR) >> CAN_RDL0R_DATA2_Pos);
@@ -392,26 +400,8 @@ bool CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo)
 static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
 {
     UNUSED(canHandle);
-    switch ((CAN_TX_Priorities_E)mailbox)
-    {
-        case CAN_TX_PRIO_1HZ:
-            // not yet implemented
-            // SWI_invokeFromISR(CANTX_BUS_A_1ms_swi);
-            break;
-
-        case CAN_TX_PRIO_100HZ:
-            // SWI_invokeFromISR(CANTX_BUS_A_10ms_swi);
-            break;
-
-        case CAN_TX_PRIO_10HZ:
-            // not yet implemented
-            // SWI_invokeFromISR(CANTX_BUS_A_100ms_swi);
-            break;
-
-        default:
-            // should never reach here
-            break;
-    }
+    UNUSED(mailbox);
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_TMEIE);
 }
 
 
@@ -423,11 +413,14 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
  */
 static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
+#if FEATURE_IS_DISABLED(FEATURE_CANRX_SWI)
     CAN_data_T          data = {0U};
     CAN_RxHeaderTypeDef header = {0U};
+#endif // FEATURE_CANRX_SWI == FEATURE_DISABLED
 
     if (canHandle == &hcan)
     {
+#if FEATURE_CANRX_SWI == FEATURE_DISABLED
         HAL_CAN_GetRxMessage(canHandle, fifoId, &header, (uint8_t*)&data);
         CANRX_VEH_unpackMessage(header.StdId, &data);
 
@@ -441,6 +434,9 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
             udsSrv_processMessage(data.u8, (uint8_t)header.DLC);
         }
 #endif // FEATURE_UDS
+#else // FEATURE_CANRX_SWI == FEATURE_DISABLED
+        CANRX_BUS_VEH_notify(fifoId);
+#endif // FEATURE_CANRX_SWI
     }
 }
 
@@ -524,6 +520,9 @@ void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 {
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE0);
+#endif // FEATURE_CANRX_SWI
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 }
 
@@ -534,6 +533,9 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 {
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE1);
+#endif // FEATURE_CANRX_SWI
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 }
 
@@ -544,9 +546,11 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 {
-    UNUSED(canHandle);
-    /* HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1); */
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE0);
+    SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+#endif // FEATURE_CANRX_SWI
 }
 
 
@@ -556,9 +560,11 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
 {
-    UNUSED(canHandle);
-    /* HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1); */
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+    HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
+    SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+#endif // FEATURE_CANRX_SWI
 }
 
 /**

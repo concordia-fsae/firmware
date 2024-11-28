@@ -88,7 +88,7 @@ signals:
     continuous: true
 
   packCurrent:
-    cycleTimeMs: 10
+    cycleTimeMs: 100
     unit: 'A'
     description: BMS Boss Pack Current
     nativeRepresentation:
@@ -99,7 +99,7 @@ signals:
     continuous: true
 
   packContactorState:
-    cycleTimeMs: 10
+    cycleTimeMs: 100
     description: Pack Contactor Status
     discreteValues: prechargeContactorState
 

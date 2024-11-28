@@ -20,10 +20,10 @@
  ******************************************************************************/
 
 // Receiver
-extern RTOS_swiHandle_T *CANRX_BUS_A_swi;
-extern void CANRX_BUS_A_SWI(void); // Prototype for SWI function
-extern void CANRX_BUS_A_notify(CAN_RxFifo_E rxFifo);
+extern RTOS_swiHandle_T *CANRX_BUS_VEH_swi;
+extern void CANRX_BUS_VEH_SWI(void); // Prototype for SWI function
+extern void CANRX_BUS_VEH_notify(CAN_RxFifo_E rxFifo);
 
 // Transmitter
-extern RTOS_swiHandle_T *CANTX_BUS_A_swi;
-extern void CANTX_BUS_A_SWI(void);  // Prototype for SWI function
+extern RTOS_swiHandle_T *CANTX_BUS_VEH_swi;
+extern void CANTX_BUS_VEH_SWI(void);  // Prototype for SWI function

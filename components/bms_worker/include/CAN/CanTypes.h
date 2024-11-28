@@ -92,7 +92,23 @@ typedef bool (*packFn)(CAN_data_T *messsage, const uint8_t counter);
 
 typedef struct
 {
-    packFn   pack;
-    uint16_t id;
-    uint8_t  len;
+    const packFn   pack;
+    const uint16_t id;
+    const uint8_t  len;
 } packTable_S;
+
+typedef struct
+{
+    const packTable_S* const packTable;
+    const uint8_t      packTableLength;
+    const uint16_t     period;
+    uint8_t            counter;
+    uint8_t            index;
+    uint32_t           lastTimestamp;
+} busTable_S;
+
+typedef struct
+{
+    busTable_S* const busTable;
+    const uint8_t     busTableLength;
+} canTable_S;
