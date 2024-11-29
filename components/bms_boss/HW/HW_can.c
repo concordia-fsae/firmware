@@ -123,8 +123,9 @@ void HW_CAN_init(void)
     HAL_CAN_ActivateNotification(&hcan, CAN_ENABLED_INTERRUPTS);
 }
 
-void HW_CAN_activateFifoNotifications(CAN_RxFifo_E rxFifo)
+void HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
+    UNUSED(bus);
     uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
     uint32_t itFull = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FFIE0 : CAN_IER_FFIE1;
     HAL_CAN_ActivateNotification(&hcan, it);
@@ -151,7 +152,7 @@ static bool CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbo
  * @param msg message data
  * @return exit code
  */
-static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage_T msg)
+static HAL_StatusTypeDef CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, CAN_TxMessage_T msg)
 {
     HAL_CAN_StateTypeDef state = canHandle->State;
 
@@ -213,8 +214,9 @@ static HAL_StatusTypeDef CAN_sendMsg(CAN_HandleTypeDef* canHandle, CAN_TxMessage
  * @param len TODO
  * @return TODO
  */
-bool CAN_sendMsgBus0(CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint8_t len)
+bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint8_t len)
 {
+    UNUSED(bus);
     CAN_TxMessage_T msg = {0};
 
     msg.id          = id;
@@ -222,7 +224,7 @@ bool CAN_sendMsgBus0(CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint
     msg.mailbox     = mailbox;
     msg.lengthBytes = len;
 
-    return CAN_sendMsg(&hcan, msg) == HAL_OK;
+    return CAN_sendMsgOnPeripheral(&hcan, msg) == HAL_OK;
 }
 
 
@@ -234,8 +236,9 @@ bool CAN_sendMsgBus0(CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint
  * @param  rx pointer to a CAN_RxMessage_T where the message will be stored
  * @retval HAL status
  */
-bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
+bool CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
 {
+    UNUSED(bus);
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
     {
         // Update error code
@@ -326,8 +329,9 @@ bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
  *         This parameter can be a value of @arg CAN_receive_FIFO_number.
  * @retval Number of messages available in Rx FIFO.
  */
-uint8_t CAN_getRxFifoFillLevelBus0(CAN_RxFifo_E rxFifo)
+uint8_t CAN_getRxFifoFillLevel(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
+    UNUSED(bus);
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
     {
         // CAN peripheral is not ready
@@ -361,8 +365,9 @@ uint8_t CAN_getRxFifoFillLevelBus0(CAN_RxFifo_E rxFifo)
  *         This parameter can be a value of @arg CAN_receive_FIFO_number.
  * @retval Number of messages available in Rx FIFO.
  */
-bool CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo)
+bool CAN_getRxFifoEmpty(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
+    UNUSED(bus);
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
     {
         // CAN peripheral is not ready
@@ -435,7 +440,7 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
         }
 #endif // FEATURE_UDS
 #else // FEATURE_CANRX_SWI == FEATURE_DISABLED
-        CANRX_BUS_VEH_notify(fifoId);
+        CANRX_notify(CAN_BUS_VEH, fifoId);
 #endif // FEATURE_CANRX_SWI
     }
 }
@@ -549,7 +554,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE0);
-    SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+    SWI_invokeFromISR(CANRX_swi);
 #endif // FEATURE_CANRX_SWI
 }
 
@@ -563,7 +568,7 @@ void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
     CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
-    SWI_invokeFromISR(CANRX_BUS_VEH_swi);
+    SWI_invokeFromISR(CANRX_swi);
 #endif // FEATURE_CANRX_SWI
 }
 

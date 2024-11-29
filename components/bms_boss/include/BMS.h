@@ -3,6 +3,8 @@
  * @brief  Header file for BMS manager
  */
 
+#pragma once
+
 #include "stdbool.h"
 #include "stdint.h"
 

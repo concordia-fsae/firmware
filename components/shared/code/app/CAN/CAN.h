@@ -13,20 +13,17 @@
 #include "CAN/CanTypes.h"
 
 #include "FreeRTOS_SWI.h"
-#include "FeatureDefines_generated.h"
+
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
-#if FEATURE_CANRX_SWI
 // Receiver
-extern RTOS_swiHandle_T* CANRX_BUS_VEH_swi;
-extern void CANRX_BUS_VEH_SWI(void);  // Prototype for SWI function
-extern void CANRX_BUS_VEH_notify(CAN_RxFifo_E rxFifo);
-#endif // FEATURE_CANRX_SWI
-#if FEATURE_CANTX_SWI
+extern RTOS_swiHandle_T *CANRX_swi;
+extern void CANRX_SWI(void); // Prototype for SWI function
+extern void CANRX_notify(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
+
 // Transmitter
-extern RTOS_swiHandle_T* CANTX_BUS_VEH_swi;
-#endif // FEATURE_CANTX_SWI
-extern void CANTX_BUS_VEH_SWI(void);  // Prototype for SWI function
+extern RTOS_swiHandle_T *CANTX_swi;
+extern void CANTX_SWI(void);  // Prototype for SWI function

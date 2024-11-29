@@ -21,6 +21,7 @@ UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
 SHARED_CODE = Dir("#/components/shared/code")
 SHARED_LIBS = SHARED_CODE.Dir("libs")
+SHARED_APP = SHARED_CODE.Dir("app")
 
 ARTIFACT_NAME = "bms_worker"
 BUILDS_DIR = Dir(f"build")
@@ -129,6 +130,7 @@ LIBS_INCLUDE_DIRS = [
     UDS_DIR.Dir("include"),
     SHARED_LIBS,
     ISOTP_DIR.Dir("include"),
+    SHARED_APP,
 ]
 
 INCLUDE_DIRS = [
@@ -142,8 +144,8 @@ INCLUDE_DIRS = [
 src_files = [
     SRC_DIR.File("SystemManager.c"),
     SRC_DIR.File("Module.c"),
-    SRC_DIR.File("CAN/CANIO-tx.c"),
-    SRC_DIR.File("CAN/CANIO-rx.c"),
+    SHARED_APP.File("CAN/CANIO-tx.c"),
+    SHARED_APP.File("CAN/CANIO-rx.c"),
     SRC_DIR.File("IO.c"),
     SRC_DIR.File("Cooling.c"),
     SRC_DIR.File("Environment.c"),
