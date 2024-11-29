@@ -90,10 +90,10 @@ extern void Module_ApplicationIdleHook(void);
 
 // SWIs
 #if FEATURE_CANTX_SWI
-RTOS_swiHandle_T* CANTX_BUS_VEH_swi;
+RTOS_swiHandle_T* CANTX_swi;
 #endif // FEATURE_CANRX_SWI
 #if FEATURE_CANRX_SWI
-RTOS_swiHandle_T* CANRX_BUS_VEH_swi;
+RTOS_swiHandle_T* CANRX_swi;
 #endif //FEATURE_CANRX_SWI
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
@@ -275,10 +275,10 @@ void RTOS_createResources(void)
      * create SWI handles
      */
 #if FEATURE_CANRX_SWI
-    CANRX_BUS_VEH_swi = SWI_create(RTOS_SWI_PRI_1, &CANRX_BUS_VEH_SWI);
+    CANRX_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_SWI);
 #endif // FEATURE_CANRX_SWI
 #if FEATURE_CANTX_SWI
-    CANTX_BUS_VEH_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_BUS_VEH_SWI);
+    CANTX_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_SWI);
 #endif // FEATURE_CANTX_SWI
 
     /*

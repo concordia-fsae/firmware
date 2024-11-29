@@ -18,7 +18,7 @@
 #include "FloatTypes.h"
 #include "Utility.h"
 
-#include "CAN/CANRX_config.h"
+#include "CAN/CANIO_componentSpecific.h"
 
 /******************************************************************************
  *                             T Y P E D E F S

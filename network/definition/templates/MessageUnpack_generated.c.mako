@@ -121,7 +121,7 @@ CANRX_MESSAGE_health_E CANRX_${bus.upper()}_validate_${msg_name}(${arg})
     {
         // Stays SNA
     }
-    if (CANRX_${bus.upper()}_messages.${msg_name}${index}.timestamp < (CANRX_getTimeMs() - ${int(node.received_msgs[message].cycle_time_ms * 10)}U))
+    if (CANRX_${bus.upper()}_messages.${msg_name}${index}.timestamp < (CANIO_getTimeMs() - ${int(node.received_msgs[message].cycle_time_ms * 10)}U))
     {
         ret = CANRX_MESSAGE_MIA;
     }
@@ -163,7 +163,7 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
             %endif
             %if node.received_msgs[message].counter_sig is not None:
 
-                uint8_t oldCount = sigrx->${node.received_msgs[message].counter_sig.message_ref.node_ref.name.upper()}_${node.received_msgs[message].counter_sig.name.split('_')[1]}${index};
+    uint8_t oldCount = sigrx->${node.received_msgs[message].counter_sig.message_ref.node_ref.name.upper()}_${node.received_msgs[message].counter_sig.name.split('_')[1]}${index};
 <%make_sigunpack(bus, node, node.received_msgs[message].counter_sig, True)%>\
     if ((sigrx->${node.received_msgs[message].counter_sig.message_ref.node_ref.name.upper()}_${node.received_msgs[message].counter_sig.name.split('_')[1]}${index} == oldCount + 1) ||
         ((oldCount == ${2**(node.received_msgs[message].counter_sig.native_representation.bit_width) - 1}U) &&
@@ -197,10 +197,12 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
                 %endif
               %endif
             %endfor
-    msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.timestamp = CANRX_getTimeMs();
+    msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.timestamp = CANIO_getTimeMs();
 }
       %endif
     %endfor
   %endfor
 %endfor
+
+
 

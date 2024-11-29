@@ -73,8 +73,8 @@ extern void Module_1Hz_TSK(void);
 extern void Module_ApplicationIdleHook(void);
 
 // SWIs
-RTOS_swiHandle_T* CANRX_BUS_VEH_swi;
-RTOS_swiHandle_T* CANTX_BUS_VEH_swi;
+RTOS_swiHandle_T* CANRX_swi;
+RTOS_swiHandle_T* CANTX_swi;
 
 // task definitions
 RTOS_taskDesc_t ModuleTasks[] = {
@@ -238,8 +238,8 @@ void RTOS_createResources(void)
     /*
      * create SWI handles
      */
-    CANTX_BUS_VEH_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_BUS_VEH_SWI);
-    CANRX_BUS_VEH_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_BUS_VEH_SWI);
+    CANTX_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_SWI);
+    CANRX_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_SWI);
 
     /*
      * Create tasks

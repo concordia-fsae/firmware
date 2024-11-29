@@ -22,12 +22,6 @@
 #include "FeatureDefines_generated.h"
 
 /******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
-#define UDS_BUFFER_LENGTH 8U
-
-/******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
@@ -41,7 +35,7 @@ typedef struct
 {
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     FLAG_create(fifoNotify[CAN_BUS_COUNT], CAN_RX_FIFO_COUNT);
-    CAN_RxMessage_T udsBuffer[UDS_BUFFER_LENGTH];
+    CAN_RxMessage_T udsBuffer[CANIO_UDS_BUFFER_LENGTH];
     uint8_t bufferStartIndex;
     uint8_t bufferEndIndex;
 #endif // FEATURE_CANRX_SWI
@@ -61,7 +55,7 @@ static void CANIO_rx_addMsgToBuffer(CAN_RxMessage_T* const msg)
 {
     canrx.udsBuffer[canrx.bufferEndIndex++] = *msg;
 
-    if (canrx.bufferEndIndex == UDS_BUFFER_LENGTH)
+    if (canrx.bufferEndIndex == CANIO_UDS_BUFFER_LENGTH)
     {
         canrx.bufferEndIndex = 0U;
     }
@@ -84,7 +78,7 @@ static void CANIO_rx_1kHz_PRD(void)
 
         if (result == UDS_RESULT_SUCCESS)
         {
-            if (++canrx.bufferStartIndex == UDS_BUFFER_LENGTH)
+            if (++canrx.bufferStartIndex == CANIO_UDS_BUFFER_LENGTH)
             {
                 canrx.bufferStartIndex = 0U;
             }
@@ -94,31 +88,10 @@ static void CANIO_rx_1kHz_PRD(void)
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     if (FLAG_any((uint16_t*)&canrx.fifoNotify[CAN_BUS_VEH], CAN_RX_FIFO_COUNT))
     {
-        SWI_invoke(CANRX_BUS_VEH_swi);
+        SWI_invoke(CANRX_swi);
     }
 #endif // FEATURE_CANRX_SWI
 }
-
-
-/**
- * CANIO_rx_100Hz_PRD
- *
- */
-static void CANIO_rx_100Hz_PRD(void)
-{
-    // TODO Implement this
-}
-
-
-/**
- * CANIO_rx_10Hz_PRD
- *
- */
-static void CANIO_rx_10Hz_PRD(void)
-{
-    // TODO Implement this
-}
-
 
 /**
  * CANIO_rx_init
@@ -131,12 +104,9 @@ static void CANIO_rx_init(void)
     CANRX_init();
 }
 
-
 const ModuleDesc_S CANIO_rx = {
     .moduleInit        = &CANIO_rx_init,
     .periodic1kHz_CLK  = &CANIO_rx_1kHz_PRD,
-    .periodic100Hz_CLK = &CANIO_rx_100Hz_PRD,
-    .periodic10Hz_CLK  = &CANIO_rx_10Hz_PRD,
 };
 
 /******************************************************************************
@@ -151,52 +121,53 @@ const ModuleDesc_S CANIO_rx = {
  * further calling the correct message processing function
  * for each received message
  */
-void CANRX_BUS_VEH_SWI(void)
+void CANRX_SWI(void)
 {
-    CAN_bus_E bus = CAN_BUS_VEH;
-
-    for (CAN_RxFifo_E rxFifo = CAN_RX_FIFO_0; rxFifo < CAN_RX_FIFO_COUNT; rxFifo++)
+    for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
     {
-        if (!FLAG_get(canrx.fifoNotify[bus], rxFifo))
+        for (CAN_RxFifo_E rxFifo = CAN_RX_FIFO_0; rxFifo < CAN_RX_FIFO_COUNT; rxFifo++)
         {
-            continue;
-        }
-
-        while (CAN_getRxFifoEmptyBus0(rxFifo) == false)
-        {
-            CAN_RxMessage_T msg       = { 0U };
-            bool            rxSuccess = CAN_getRxMessageBus0(rxFifo, &msg);
-
-            if (rxSuccess)
+            if (!FLAG_get(canrx.fifoNotify[bus], rxFifo))
             {
-#if APP_UDS
-                if (msg.id == UDS_REQUEST_ID)
-                {
-                    udsResult_E result = udsSrv_processMessage((uint8_t*)&msg.data, (uint8_t)msg.lengthBytes);
-                    switch (result)
-                    {
-                        case UDS_RESULT_NOT_READY:
-                            CANIO_rx_addMsgToBuffer(&msg);
-                            break;
+                continue;
+            }
 
-                        default:
-                            break;
+            while (CAN_getRxFifoEmpty(bus, rxFifo) == false)
+            {
+                CAN_RxMessage_T msg       = { 0U };
+                bool            rxSuccess = CAN_getRxMessage(bus, rxFifo, &msg);
+
+                if (rxSuccess)
+                {
+#if APP_UDS
+                    if (msg.id == UDS_REQUEST_ID)
+                    {
+                        udsResult_E result = udsSrv_processMessage((uint8_t*)&msg.data, (uint8_t)msg.lengthBytes);
+                        switch (result)
+                        {
+                            case UDS_RESULT_NOT_READY:
+                                CANIO_rx_addMsgToBuffer(&msg);
+                                break;
+
+                            default:
+                                break;
+                        }
+                    }
+                    else
+#endif // APP_UDS
+                    {
+                        CANRX_VEH_unpackMessage((uint16_t)msg.id, &msg.data);
                     }
                 }
                 else
-#endif // APP_UDS
                 {
-                    CANRX_VEH_unpackMessage((uint16_t)msg.id, &msg.data);
+                    // TODO: handle errors
                 }
             }
-            else
-            {
-                // TODO: handle errors
-            }
-        }
 
-        FLAG_clear(canrx.fifoNotify[bus], rxFifo);
-        HW_CAN_activateFifoNotifications(rxFifo);
+            FLAG_clear(canrx.fifoNotify[bus], rxFifo);
+            HW_CAN_activateFifoNotifications(bus, rxFifo);
+        }
     }
 }
 
@@ -205,8 +176,8 @@ void CANRX_BUS_VEH_SWI(void)
  * @brief Notification from HW layer that an RX FIFO has messages waiting
  * @param rxFifo which fifo notified
  */
-void CANRX_BUS_VEH_notify(CAN_RxFifo_E rxFifo)
+void CANRX_notify(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
-    FLAG_set(canrx.fifoNotify[CAN_BUS_VEH], rxFifo);
+    FLAG_set(canrx.fifoNotify[bus], rxFifo);
 }
 #endif // FEATURE_CANRX_SWI

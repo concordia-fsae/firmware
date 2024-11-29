@@ -270,10 +270,18 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
 uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len)
 {
     CAN_data_T d;
+    bool sent = false;
 
     memcpy(&d, data, len);
 
-    return CAN_sendMsgBus0(0, d, (uint16_t)id, len);
+    for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
+    {
+        if (CAN_sendMsg(CAN_BUS_VEH, mailbox, d, (uint16_t)id, len))
+        {
+            sent = true;
+        }
+    }
+    return sent;
 }
 
 

@@ -10,7 +10,7 @@
  ******************************************************************************/
 
 #include "Types.h"
-
+#include "NetworkDefines_generated.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -42,7 +42,6 @@ typedef enum
     CAN_REMOTE_TRANSMISSION_REQUEST_DATA = 0U,
     CAN_REMOTE_TRANSMISSION_REQUEST_REMOTE,
 } CAN_RemoteTransmission_E;
-
 
 typedef union
 {
