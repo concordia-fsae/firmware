@@ -86,7 +86,7 @@ typedef struct
  ******************************************************************************/
 
 static uds_S uds;
-
+extern const lib_app_appDesc_S hwDesc;
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -112,6 +112,20 @@ static void checkTimeoutExpired_1kHz(void)
 }
 
 /*
+ * stopDownload
+ * @brief reset internal variables tracking download state
+ */
+static void stopDownload(void)
+{
+    uds.bit.downloadStarted   = false;
+    uds.downloadCounter       = 0U;
+    uds.downloadAddrCurr      = 0U;
+    uds.downloadBuffer.u32[0] = 0xFF;
+    uds.downloadedBytes       = 0U;
+    memset(&uds.downloadDesc, 0x00, sizeof(udsDownloadDesc_S));
+}
+
+/*
  * routine_0xf00f
  * @brief called when UDS routine 0xf00f is requested. Erases the app
  * @param routineControlType whether to start, stop, or get results of routine
@@ -128,6 +142,7 @@ static void routine_0xf00f(udsRoutineControlType_E routineControlType, uint8_t *
         case UDS_ROUTINE_CONTROL_START:
             if (FLASH_eraseAppStart())
             {
+                stopDownload();
                 uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
             }
             else
@@ -169,9 +184,8 @@ static void routine_0xf00f(udsRoutineControlType_E routineControlType, uint8_t *
                 // clear the state once queried if completed
                 FLASH_eraseCompleteAck();
             }
-
-            break;
         }
+            break;
 
         case UDS_ROUTINE_CONTROL_STOP:
         case UDS_ROUTINE_CONTROL_NONE:
@@ -179,21 +193,6 @@ static void routine_0xf00f(udsRoutineControlType_E routineControlType, uint8_t *
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
             break;
     }
-}
-
-
-/*
- * stopDownload
- * @brief reset internal variables tracking download state
- */
-static void stopDownload(void)
-{
-    uds.bit.downloadStarted   = false;
-    uds.downloadCounter       = 0U;
-    uds.downloadAddrCurr      = 0U;
-    uds.downloadBuffer.u32[0] = 0xFF;
-    uds.downloadedBytes       = 0U;
-    memset(&uds.downloadDesc, 0x00, sizeof(udsDownloadDesc_S));
 }
 
 
@@ -257,14 +256,25 @@ void uds_cb_ecuReset(udsResetType_E resetType)
     switch (resetType)
     {
         case UDS_RESET_TYPE_HARD:
-            // have to send positive response from here since this function
-            // won't return in this case
-            uds_sendPositiveResponse(UDS_SID_ECU_RESET, resetType, NULL, 0U);
+            {
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
+                if (SYS_checkAppValid(APP_DESC_ADDR) == false)
+                {
+                    uds_sendNegativeResponse(UDS_SID_ECU_RESET, UDS_NRC_CONDITIONS_NOT_CORRECT);
+                }
+                else
+#endif
+                {
+                    // have to send positive response from here since this function
+                    // won't return in this case
+                    uds_sendPositiveResponse(UDS_SID_ECU_RESET, resetType, NULL, 0U);
 
-            // one day we can have an actual check here to see if the ecu is ready to reset
-            // i.e. check eeprom writes finished, etc.
-            BLOCKING_DELAY(1000);
-            SYS_resetHard();
+                    // one day we can have an actual check here to see if the ecu is ready to reset
+                    // i.e. check eeprom writes finished, etc.
+                    BLOCKING_DELAY(1000);
+                    SYS_resetHard();
+                }
+            }
             break;
 
         case UDS_RESET_TYPE_KEY:
@@ -368,16 +378,16 @@ void uds_cb_transferStart(udsTransferType_E transferType, uint8_t* payload, uint
     }
 
     // ensure download address is actually in the app's flash region
-    if ((downloadDesc.addr < APP_FLASH_START) || (downloadDesc.addr >= APP_FLASH_END))
+    if ((downloadDesc.addr < APP_FLASH_START) || (downloadDesc.addr > APP_FLASH_END))
     {
         uds_sendNegativeResponse(UDS_SID_DOWNLOAD_START, UDS_NRC_REQUEST_OUT_OF_RANGE);
         return;
     }
 
     // ensure requested download size doesn't exceed app's flash
-    if ((APP_FLASH_START + downloadDesc.size) >= APP_FLASH_END)
+    if ((APP_FLASH_START + downloadDesc.size) > APP_FLASH_END)
     {
-        uds_sendNegativeResponse(UDS_SID_DOWNLOAD_START, UDS_NRC_REQUEST_OUT_OF_RANGE);
+        uds_sendNegativeResponse(UDS_SID_DOWNLOAD_START, UDS_NRC_RESPONSE_TOO_LONG);
         return;
     }
 
@@ -617,11 +627,89 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
 
     switch (did.u16)
     {
+        case 0x00:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appStart, sizeof(APP_DESC_ADDR->appStart));
+            break;
+        }
+        case 0x01:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appEnd, sizeof(APP_DESC_ADDR->appEnd));
+            break;
+        }
+        case 0x02:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appCrcLocation, sizeof(APP_DESC_ADDR->appCrcLocation));
+            break;
+        }
+        case 0x03:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&(*((uint32_t*)APP_DESC_ADDR->appCrcLocation)), sizeof(*((uint32_t*)APP_DESC_ADDR->appCrcLocation)));
+            break;
+        }
+        case 0x04:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appComponentId, sizeof(APP_DESC_ADDR->appComponentId));
+            break;
+        }
+        case 0x05:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appPcbaId, sizeof(APP_DESC_ADDR->appPcbaId));
+            break;
+        }
+        case 0x06:
+        {
+#if FEATURE_IS_ENABLED(APP_NODE_ID)
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appNodeId, sizeof(APP_DESC_ADDR->appNodeId));
+#else
+            uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_GENERAL_REJECT);
+#endif
+            break;
+        }
         case 0x101:
         {
             // always respond with 0x00 since we're in the bootloader
-            uint8_t data = 0x00;
-            uds_sendPositiveResponse(UDS_SID_READ_DID, 0x00, &data, 1);
+            uint8_t data = FDEF_TO_DID_RESPONSE(APP_FUNCTION_ID);
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, &data, 1);
+            break;
+        }
+        case 0x200:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appStart, sizeof(hwDesc.appStart));
+            break;
+        }
+        case 0x201:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appEnd, sizeof(APP_DESC_ADDR->appEnd));
+            break;
+        }
+        case 0x202:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appCrcLocation, sizeof(APP_DESC_ADDR->appCrcLocation));
+            break;
+        }
+        case 0x203:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&(*((uint32_t*)hwDesc.appCrcLocation)), sizeof(*((uint32_t*)APP_DESC_ADDR->appCrcLocation)));
+            break;
+        }
+        case 0x204:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appComponentId, sizeof(APP_DESC_ADDR->appComponentId));
+            break;
+        }
+        case 0x205:
+        {
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appPcbaId, sizeof(APP_DESC_ADDR->appPcbaId));
+            break;
+        }
+        case 0x206:
+        {
+#if FEATURE_IS_ENABLED(APP_NODE_ID)
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appNodeId, sizeof(hwDesc.appNodeId));
+#else
+            uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_GENERAL_REJECT);
+#endif
             break;
         }
 
@@ -639,11 +727,9 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
 
 uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len)
 {
-    CAN_TxMessage_S msg = {
-        .id          = id,
-        .lengthBytes = len,
-        .data        = { 0U },
-    };
+    CAN_TxMessage_S msg = { 0 };
+    msg.id          = id,
+    msg.lengthBytes = len,
 
     memcpy(&msg.data, data, len);
 

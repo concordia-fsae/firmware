@@ -14,14 +14,10 @@
 #include "Utilities.h"
 
 #include <string.h>    // memset
-
+#include "FeatureDefines_generated.h"
 #include "LIB_app.h"
+#include "HW_FLASH.h"
 
-/******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-appDesc_S *appDesc;
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -32,13 +28,14 @@ appDesc_S *appDesc;
  */
 static void periodic_1kHz(void)
 {
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
     CAN_TxMessage_S msg = { 0U };
     msg.id          = 0x200;
     msg.lengthBytes = 8;
     msg.data.u64    = 0x8000000000000001ULL;
     msg.mailbox     = 0U;
     CAN_sendMsg(msg);
-
+#endif // FEATURE_CAN_DEBUG
     UDS_periodic_1kHz();
 }
 
@@ -48,12 +45,14 @@ static void periodic_1kHz(void)
  */
 static void periodic_100Hz(void)
 {
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
     CAN_TxMessage_S msg = { 0U };
     msg.id          = 0x201;
     msg.lengthBytes = 8;
     msg.data.u64    = 0x8000000000000001ULL;
     msg.mailbox     = 1U;
     CAN_sendMsg(msg);
+#endif // FEATURE_CAN_DEBUG
 }
 
 
@@ -62,12 +61,27 @@ static void periodic_100Hz(void)
  */
 static void periodic_10Hz(void)
 {
+    extern lib_app_appDesc_S hwDesc;
     CAN_TxMessage_S msg = { 0U };
+    msg.id          = 0x299;
+    msg.lengthBytes = 8U;
+    msg.data.u16[0] = hwDesc.appComponentId;
+    msg.data.u16[1] = hwDesc.appPcbaId;
+    msg.data.u8[4]  = APP_FUNCTION_ID;
+    msg.data.u8[5]  = SYS_checkAppValid(APP_DESC_ADDR);
+#if FEATURE_IS_ENABLED(APP_NODE_ID)
+    msg.data.u8[6]  = hwDesc.appNodeId;
+#endif // APP_NODE_ID
+    msg.mailbox     = 2U;
+    CAN_sendMsg(msg);
+
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
     msg.id          = 0x202;
-    msg.lengthBytes = 8;
+    msg.lengthBytes = 8U;
     msg.data.u64    = 0x8000000000000001ULL;
     msg.mailbox     = 2U;
     CAN_sendMsg(msg);
+#endif // FEATURE_CAN_DEBUG
 }
 
 
@@ -76,12 +90,14 @@ static void periodic_10Hz(void)
  */
 static void periodic_1Hz(void)
 {
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
     CAN_TxMessage_S msg = { 0U };
     msg.id          = 0x203;
     msg.lengthBytes = 8;
     msg.data.u64    = 0x8000000000000001ULL;
     msg.mailbox     = 2U;
     CAN_sendMsg(msg);
+#endif // FEATURE_CAN_DEBUG
 
     static bool led = true;
     GPIO_assignPin(LED_PORT, LED_PIN, led);
@@ -89,6 +105,7 @@ static void periodic_1Hz(void)
 }
 
 
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BL
 /*
  * tryBoot
  * @brief try to boot the app, return to periodic loop if it fails
@@ -112,13 +129,14 @@ static void tryBoot(void)
 
     if (doBoot)
     {
-        bool appValid = SYS_checkAppValid(appDesc);
+        bool appValid = SYS_checkAppValid(APP_DESC_ADDR);
         if (appValid)
         {
-            SYS_bootApp(appDesc->appStart);
+            SYS_bootApp(APP_DESC_ADDR->appStart);
         }
         else
         {
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
             CAN_TxMessage_S msg = { 0U };
             msg.id          = 0x401;
             msg.lengthBytes = 2;
@@ -129,20 +147,16 @@ static void tryBoot(void)
             msg.data.u8[1] |= appValid ? 1U : 0U;
 
             CAN_sendMsg(msg);
-
-            // NO valid app to execute
-            GPIO_strobePin(LED_PORT, LED_PIN, 5, BLINK_SLOW, LED_ON_STATE);
-            SYS_resetHard();
+#endif // FEATURE_CAN_DEBUG
         }
     }
 }
+#endif // FUNCTION_ID_BL
 
 
 int main(void)
 {
     SYS_init();
-
-    appDesc = (appDesc_S*)(APP_FLASH_START);
 
     for (;;)
     {
@@ -175,12 +189,13 @@ int main(void)
             {
                 timerMs = 1U;
             }
-
+#if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BL
             // try to boot if UDS is not inhibiting it
             if (!UDS_shouldInhibitBoot())
             {
                 tryBoot();
             }
+#endif // FUNCTION_ID_BL
         }
 
         // handle continuing the flash erase here for now since there's no rtos
@@ -190,7 +205,6 @@ int main(void)
         {
             FLASH_eraseAppContinue();
         }
-
     }
 
     return 0;
