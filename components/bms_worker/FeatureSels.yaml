@@ -2,5 +2,5 @@ featureDefs: "#/components/bms_worker/FeatureDefs.yaml"
 features:
   feature_max14921_calibrate:
   feature_cantx_swi:
-  feature_canrx_swi: false # Software bug?
+  feature_canrx_swi:
   feature_cell_diagnostics:

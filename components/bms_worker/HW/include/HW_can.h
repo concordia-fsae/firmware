@@ -29,13 +29,14 @@
 
 HW_StatusTypeDef_E HW_CAN_start(void);
 HW_StatusTypeDef_E HW_CAN_stop(void);
-bool HW_CAN_checkMbFree(CAN_TxMailbox_E mailbox);
+void    HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
+bool HW_CAN_checkMbFree(CAN_bus_E bus, CAN_TxMailbox_E mailbox);
 
 HW_StatusTypeDef_E HW_CAN_init(void);
 HW_StatusTypeDef_E HW_CAN_deInit(void);
 
-bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len);
+bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint8_t len);
 
-bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx);
-uint8_t CAN_getRxFifoFillLevelBus0(CAN_RxFifo_E rxFifo);
-bool    CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo);
+bool CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx);
+uint8_t CAN_getRxFifoFillLevel(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
+bool    CAN_getRxFifoEmpty(CAN_bus_E bus, CAN_RxFifo_E rxFifo);

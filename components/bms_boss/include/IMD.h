@@ -3,6 +3,8 @@
  * @brief  Header file for IMD manager
  */
 
+#pragma once
+
 #include <stdbool.h>
 
 #include "FloatTypes.h"

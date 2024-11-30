@@ -3,27 +3,41 @@
 <%def name="make_structdef_message(node, message)">\
     struct {
         uint32_t timestamp;
-    %if node.received_msgs[message].checksum_sig is not None:
-        bool checksumValid :1;
-    %endif
-    %if node.received_msgs[message].counter_sig is not None:
-        bool counterValid :1;
-    %endif
     } ${node.received_msgs[message].name};
 </%def>\
 
+<%def name="make_structdef_messageDuplicates(node, message, total)">\
+    struct {
+        uint32_t timestamp;
+    } ${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}[${total}U];
+</%def>\
+
 <%def name="make_structdef_signal(node, sig)">\
-%if node.received_sigs[sig].discrete_values:
+  %if node.received_sigs[sig].discrete_values:
     CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
 %elif node.received_sigs[sig].native_representation.bit_width == 1:
-    bool ${node.received_sigs[sig].name} :1; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description} 
+    bool ${node.received_sigs[sig].name} :1; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description};
 %else:
-    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description} 
+    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+%endif
+</%def>\
+<%def name="make_structdef_signalDuplicates(node, sig, total)">\
+  %if node.received_sigs[sig].discrete_values:
+    CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+%elif node.received_sigs[sig].native_representation.bit_width == 1:
+    bool ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+%else:
+    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
 %endif
 </%def>\
 
-<%def name="make_sigunpack(bus, node, signal)">\
+<%def name="make_sigunpack(bus, node, signal, is_duplicate :bool)">\
 <%
+      if is_duplicate:
+        sig_name = signal.message_ref.node_ref.name.upper() + '_' + signal.name.split('_')[1] + '[nodeId]'
+      else:
+        sig_name = signal.name
+
       sb = signal.start_bit
       eb = signal.start_bit + (signal.native_representation.bit_width - 1)
 
@@ -60,7 +74,7 @@
         idx_s = int(idx_s/2)
 %>\
 %if signal.native_representation.bit_width == 1:
-    sigrx->${signal.name} = (m->u8[${int(signal.start_bit / 8)}U] & (1U << ${signal.start_bit % 8}U)) != 0U;
+    sigrx->${sig_name} = (m->u8[${int(signal.start_bit / 8)}U] & (1U << ${signal.start_bit % 8}U)) != 0U;
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
         %if dtype == 64:
@@ -83,9 +97,9 @@
     tmp_${signal.name} = (tmp_${signal.name} & ${(2**(signal.native_representation.bit_width - 1) - 1)}U) * (((tmp_${signal.name} & (1U << ${(signal.native_representation.bit_width - 1)})) != 0U) ? -1.0f : 1.0f);
     %endif
     %if "float" in signal.datatype.value:
-    sigrx->${signal.name} = (${signal.datatype.value})(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+    sigrx->${sig_name} = (${signal.datatype.value})(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
     %elif "int" in signal.datatype.value:
-    sigrx->${signal.name} = (tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)});
+    sigrx->${sig_name} = (tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)});
     %endif
 %else:
     (void)m;

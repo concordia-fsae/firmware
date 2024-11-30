@@ -10,19 +10,11 @@
  ******************************************************************************/
 
 #include "Types.h"
-
+#include "NetworkDefines_generated.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    CAN_TX_PRIO_100HZ = 0U,
-    CAN_TX_PRIO_10HZ,
-    CAN_TX_PRIO_1HZ,
-    CAN_TX_PRIO_COUNT,
-} CAN_TX_Priorities_E;
 
 typedef enum
 {
@@ -31,8 +23,6 @@ typedef enum
     CAN_TX_MAILBOX_2,
     CAN_TX_MAILBOX_COUNT,
 } CAN_TxMailbox_E;
-
-_Static_assert((uint8_t)CAN_TX_PRIO_COUNT == (uint8_t)CAN_TX_MAILBOX_COUNT, "Number of TX priorities should equal the number of TX mailboxes");
 
 typedef enum
 {
@@ -52,7 +42,6 @@ typedef enum
     CAN_REMOTE_TRANSMISSION_REQUEST_DATA = 0U,
     CAN_REMOTE_TRANSMISSION_REQUEST_REMOTE,
 } CAN_RemoteTransmission_E;
-
 
 typedef union
 {
@@ -92,7 +81,23 @@ typedef bool (*packFn)(CAN_data_T *messsage, const uint8_t counter);
 
 typedef struct
 {
-    packFn   pack;
-    uint16_t id;
-    uint8_t  len;
+    const packFn   pack;
+    const uint16_t id;
+    const uint8_t  len;
 } packTable_S;
+
+typedef struct
+{
+    const packTable_S* const packTable;
+    const uint8_t      packTableLength;
+    const uint16_t     period;
+    uint8_t            counter;
+    uint8_t            index;
+    uint32_t           lastTimestamp;
+} busTable_S;
+
+typedef struct
+{
+    busTable_S* const busTable;
+    const uint8_t     busTableLength;
+} canTable_S;

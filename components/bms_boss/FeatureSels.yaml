@@ -1,2 +1,4 @@
 featureDefs: "#/components/bms_boss/FeatureDefs.yaml"
 features:
+  feature_cantx_swi:
+  feature_canrx_swi:

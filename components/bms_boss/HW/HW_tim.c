@@ -215,6 +215,21 @@ uint64_t HW_TIM_getBaseTick()
 }
 
 /**
+ * @brief  Get the number of ticks since clock start
+ *
+ * @retval Number of ticks
+ */
+uint32_t HW_TIM_getTick(void)
+{
+    return HAL_GetTick();
+}
+
+uint32_t HW_TIM_getTimeMS()
+{
+    return HW_TIM_getTick();
+}
+
+/**
  * HAL_InitTick
  * This function configures the TIM4 as a time base source.
  * The time source is configured  to have 1ms time base with a dedicated
