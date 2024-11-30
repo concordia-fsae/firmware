@@ -34,3 +34,13 @@ messages:
     lengthBytes: 8
     signals:
       udsPayload:
+
+  nvmInformation:
+    description: Information relating to the NVM manager
+    id: 0x7f9
+    lengthBytes: 8
+    signals:
+      nvmBootCycles:
+      nvmRecordWrites:
+      nvmBlockErases:
+      nvmFailedCrc:
