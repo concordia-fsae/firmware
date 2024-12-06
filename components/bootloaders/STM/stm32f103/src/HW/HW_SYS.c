@@ -24,16 +24,17 @@
 // defined by linker
 extern const uint32_t __app_start_addr;
 extern const uint32_t __app_end_addr;
+extern const uint32_t __app_crc_addr;
 
 __attribute__((section(".appDescriptor")))
-const appDesc_S hwDesc = {
+const lib_app_appDesc_S hwDesc = {
     .appStart = (const uint32_t)&__app_start_addr,
     .appEnd = (const uint32_t)&__app_end_addr,
-    .appCrcLocation = (const uint32_t)&__app_end_addr,
+    .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appComponentId = APP_COMPONENT_ID,
     .appPcbaId = APP_PCBA_ID,
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
-    .appNodeId = APP_NODE_ID,
+    .appNodeId = NODE_ID,
 #endif // APP_NODE_ID
 };
 
@@ -73,60 +74,52 @@ void bootApp(uint32_t appAddr)
  * @brief check if the app descriptor at the start of the app's flash
  *        contains valid records
  */
-static bool checkAppDescValid(appDesc_S *appDesc)
+static bool checkAppDescValid(lib_app_appDesc_S *appDesc)
 {
-    // TODO: clean this up
-    uint8_t valid = 0b11111;
+    uint8_t valid = 0U;
 
-    if (appDesc->appStart < APP_FLASH_START)
+    for (uint8_t i = 0U; i < APPDESC_VALID_COUNT; i++)
     {
-        valid &= 0b11110;
+        if (lib_app_validateAppDesc(appDesc, i) == false)
+        {
+            valid |= 0x01 << i;
+        }
     }
 
-    if (appDesc->appEnd >= APP_FLASH_END)
-    {
-        valid &= 0b11101;
-    }
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
+    CAN_TxMessage_S msg = { 0U };
+    msg.id          = 0x400;
+    msg.lengthBytes = 2;
+    msg.mailbox     = 2;
+    msg.data.u64    = 0ULL;
 
-    if ((appDesc->appCrcLocation & 0x0FF00000) != 0x08000000)
-    {
-        valid &= 0b11011;
-    }
+    msg.data.u16[0] = valid;
 
-    CAN_TxMessage_S msg = {
-        .id          = 0x400,
-        .lengthBytes =    1U,
-        .mailbox     =    2U,
-        .data.u8     = {
-            [0] = valid,
-        },
-    };
     CAN_sendMsg(msg);
+#endif // FEATURE_CAN_DEBUG
 
-    return(valid == 0b111);
+    return(valid == 0U);
 }
 
 
-static bool checkAppCrc(appDesc_S *appDesc)
+static bool checkAppCrc(lib_app_appDesc_S *appDesc)
 {
     const uint16_t appLength        = ((appDesc->appEnd - appDesc->appStart) / 4U);
     const uint32_t calculatedAppCrc = CRC_mpeg2Calculate((uint32_t*)appDesc->appStart, appLength);
     const uint32_t appDescCrc       = *(uint32_t*)appDesc->appCrcLocation;
 
-
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
     // send result on CAN
-    CAN_TxMessage_S msg = {
-        .id          = 0x402,
-        .lengthBytes =    8U,
-        .mailbox     =    2U,
-        .data.u32    = {
-            [0] = appDescCrc,
-            [1] = calculatedAppCrc,
-        }
-    };
+    CAN_TxMessage_S msg = { 0U };
+    msg.id          = 0x402;
+    msg.lengthBytes = 8;
+    msg.mailbox     = 2;
+    msg.data.u64    = 0ULL;
 
+    msg.data.u32[0] = appDescCrc;
+    msg.data.u32[0] = calculatedAppCrc;
     CAN_sendMsg(msg);
-
+#endif // FEATURE_CAN_DEBUG
     return (appDescCrc != 0xFFFFFFFF)
            && (appDescCrc != 0x00000000)
            && (calculatedAppCrc != 0xFFFFFFFF)
@@ -250,16 +243,45 @@ resetType_E SYS_getResetType(void)
  * @brief checks to see if it looks like there's a valid app at
  *        the relevant start address
  */
-bool SYS_checkAppValid(appDesc_S *appDesc)
+bool SYS_checkAppValid(lib_app_appDesc_S *appDesc)
 {
     if (!checkAppDescValid(appDesc))
     {
         return false;
     }
 
-    bool     appCrcValid = checkAppCrc(appDesc);
+    uint8_t valid = (checkAppCrc(appDesc)) ? 0U : 1U;
+
+    for (uint8_t i = 1U; i < APP_VALID_COUNT; i++)
+    {
+        if (lib_app_validateApp(&hwDesc, appDesc, i) == false)
+        {
+            valid |= 0x01 << i;
+        }
+    }
+
+#if FEATURE_IS_ENABLED(FEATURE_ERASE_INVALID_APP)
+    if (valid != 0U)
+    {
+        FLASH_erasePage(APP_FLASH_START);
+        valid |= (*((uint32_t*)APP_FLASH_START) == 0xffffffff) ? 0x80 : 0x00;
+    }
+#endif
+
+#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
+    // send result on CAN
+    CAN_TxMessage_S msg = { 0U };
+    msg.id          = 0x403;
+    msg.lengthBytes = 2;
+    msg.mailbox     = 2;
+    msg.data.u64    = 0ULL;
+
+    msg.data.u16[0] = valid;
+    CAN_sendMsg(msg);
+#endif // FEATURE_CAN_DEBUG
+
     uint32_t appStackPtr = *(volatile uint32_t *)(appDesc->appStart);
 
     // check that app stack pointer points somewhere in sram
-    return(appCrcValid && ((appStackPtr & 0x2FFE0000) == 0x20000000));
+    return((valid == 0U) && ((appStackPtr & 0x2FFE0000) == 0x20000000));
 }

@@ -97,15 +97,15 @@ SECTIONS
   } > RAM AT> FLASH
   /* Used by the startup to initialize data */
   _sidata = LOADADDR(.relocate);
-  __appdesc_addr = LOADADDR(.relocate) + SIZEOF(.relocate);
-  __appcrc_addr = __appdesc_addr + SIZEOF(.appDescriptor);
+  __appcrc_addr = __BOOT_FLASH_END - 4;
+  __appdesc_addr = __appcrc_addr - SIZEOF(.appDescriptor);
   .appDescriptor __appdesc_addr :
   {
     __app_desc_addr = .;
     . = ALIGN(4);
     KEEP(*(.appDescriptor))
   } > FLASH
-  __app_end_addr = LOADADDR(.appDescriptor) + SIZEOF(.appDescriptor);
+  __app_end_addr = __APP_FLASH_ORIGIN - 4;
   .crc __appcrc_addr :
   {
     __app_crc_addr = .;

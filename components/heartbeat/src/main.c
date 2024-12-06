@@ -19,7 +19,7 @@ extern const uint8_t __app_crc_addr[];
 #pragma GCC diagnostic ignored "-Wcast-align"
 
 __attribute__((section(".appDescriptor")))
-const appDesc_S appDesc = {
+const lib_app_appDesc_S appDesc = {
     .appStart       = (const uint32_t)__app_start_addr,
     .appEnd         = (const uint32_t)__app_end_addr,
     .appCrcLocation = (const uint32_t)__app_crc_addr,

@@ -6,13 +6,17 @@ from fastcrc import crc32
 
 # move the following builder to a tool
 def inject_mpeg2(env, target, source):
-    if not "start_addr" in env:
+    if "start_addr" not in env:
         return Exception("start_addr has not been provided")
 
     with open(source[0].abspath, "rb") as fd:
-        # get the app start address from the first word of the binary
-        app_start = struct.unpack("<L", fd.read(4))[0] - env["start_addr"]
+        first_word = struct.unpack("<L", fd.read(4))[0]
         fd.seek(0)
+        # get the app start address from the first word of the binary
+        if first_word > 0x08002000 and first_word < 0x20000000:
+            app_start = first_word - env["start_addr"]
+        else:
+            app_start = 0
 
         # extract the app header since we don't want to crc it
         app_header = fd.read(app_start)
@@ -29,8 +33,11 @@ def inject_mpeg2(env, target, source):
     app_crc_packed = struct.pack("<L", app_crc)
 
     print("=" * 10 + " CRC INFO " + "=" * 10)
+    print("first word: " + hex(first_word))
+    print(f"app addr: {env["start_addr"]} bytes")
+    print(f"app start: {len(app_header)} bytes")
     print(f"app len: {len(app_bytes)} bytes")
-    print(f"last word: 0x{app_bytes[-4:].hex()}")
+    print(f"last 4 word: 0x{app_bytes[-16:].hex()}")
     print(f"app crc: {hex(app_crc)}")
     print(f"app crc packed: 0x{app_crc_packed.hex()}")
     print("=" * 30)

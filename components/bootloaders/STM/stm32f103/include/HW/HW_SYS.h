@@ -34,5 +34,5 @@ void        SYS_init(void);
 void        SYS_resetSoft(void);
 void        SYS_resetHard(void);
 resetType_E SYS_getResetType(void);
-bool        SYS_checkAppValid(appDesc_S *appDesc);
+bool        SYS_checkAppValid(lib_app_appDesc_S *appDesc);
 void        SYS_bootApp(uint32_t appAddr);

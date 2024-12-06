@@ -41,12 +41,12 @@ messages:
     signals:
       udsPayload:
 
-        #  bmsbUdsRequest:
-        #    description: UDS request message for the BMS Boss
-        #    id: 0x610
-        #    lengthBytes: 8
-        #    signals:
-        #      udsPayload:
+  bmsbUdsRequest:
+    description: UDS request message for the BMS Boss
+    id: 0x609
+    lengthBytes: 8
+    signals:
+      udsPayload:
 
   stwUdsRequest:
     description: UDS request message for the Steering Wheel
