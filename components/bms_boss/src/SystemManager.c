@@ -19,6 +19,7 @@
 #include "HW_gpio.h"
 #include "HW_i2c.h"
 #include "HW_tim.h"
+#include "HW_flash.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -83,6 +84,7 @@ int main(void)
     HW_CAN_init();
     HW_DMA_init();
     HW_ADC_init();
+    FLASH_init();
 
     ///**< Create RTOS Tasks, Timers, etc... */
     RTOS_SWI_Init();

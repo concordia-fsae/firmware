@@ -113,3 +113,47 @@ signals:
       range:
         min: 0
         max: 18446744073709551615
+
+  nvmBootCycles:
+    cycleTimeMs: 1000
+    unit: ''
+    description: Count of NVM lifetime boot cycles
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
+
+  nvmRecordWrites:
+    cycleTimeMs: 1000
+    unit: ''
+    description: Count of NVM lifetime record writes
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
+
+  nvmBlockErases:
+    cycleTimeMs: 1000
+    unit: ''
+    description: Count of NVM lifetime block erases
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
+
+  nvmFailedCrc:
+    cycleTimeMs: 1000
+    unit: ''
+    description: Count of NVM failed CRC's
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
