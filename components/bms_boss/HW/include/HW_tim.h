@@ -19,6 +19,8 @@
 
 HAL_StatusTypeDef HW_TIM_init(void);
 void              HW_TIM_configureRunTimeStatsTimer(void);
+uint32_t          HW_TIM_getTick(void);
+uint32_t          HW_TIM_getTimeMS(void);
 void              HW_TIM_incBaseTick(void);
 uint64_t          HW_TIM_getBaseTick(void);
 

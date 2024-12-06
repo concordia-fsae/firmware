@@ -40,9 +40,7 @@ static const ModuleDesc_S* modules[] = {
 #if FEATURE_IS_ENABLED(APP_UDS)
     &UDS_desc,
 #endif // FEATURE_UDS
-#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     &CANIO_rx,
-#endif // FEATURE_CANRX_SWI
     &CANIO_tx,
 };
 

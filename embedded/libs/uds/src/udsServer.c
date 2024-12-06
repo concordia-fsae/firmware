@@ -42,6 +42,7 @@ typedef struct
     struct
     {
         bool initialized: 1;    // true if the uds module has been initialized
+        bool unprocessed_message: 1; // true if a message was received 
     } bit;
 } udsSrv_S;
 
@@ -321,6 +322,7 @@ void udsSrv_init(void)
                     ISOTP_RX_BUF_SIZE);
 
     udsSrv.bit.initialized = true;
+    udsSrv.bit.unprocessed_message = false;
 }
 
 
@@ -337,6 +339,7 @@ udsResult_E udsSrv_processMessage(uint8_t data[], uint8_t dlc)
         return UDS_RESULT_NOT_INITIALIZED;
     }
 
+    udsSrv.bit.unprocessed_message = true;
     isotp_on_can_message(&udsSrv.isoTpLink, data, dlc);    // process the isotp frame
     return UDS_RESULT_SUCCESS;
 }
@@ -396,6 +399,7 @@ udsResult_E udsSrv_periodic(void)
             .payload            = &payload[1U],
         };
         ret = udsSrv_handleReceive(&req);
+        udsSrv.bit.unprocessed_message = false;
     }
 
     manageSession(0U);
