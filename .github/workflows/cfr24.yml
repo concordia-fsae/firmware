@@ -10,6 +10,8 @@ jobs:
     container: 
       image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
     steps:
+      - name: Clean
+        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
       - name: Pull Branch
         uses: actions/checkout@v4
         with:
@@ -24,6 +26,8 @@ jobs:
     container: 
       image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
     steps:
+      - name: Clean
+        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
       - name: Pull Branch
         uses: actions/checkout@v4
         with:
