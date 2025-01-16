@@ -18,6 +18,7 @@
 #include "Sys.h"
 #include "IMD.h"
 #include "ENV.h"
+#include "LIB_nvm.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -43,6 +44,11 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
 #define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
+#define set_nvmBootCycles(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalCycles())
+#define set_nvmRecordWrites(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalRecordWrites())
+#define set_nvmBlockErases(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalBlockErases())
+#define set_nvmFailedCrc(m,b,n,s) set(m,b,n,s, lib_nvm_getTotalFailedCrc())
+
 #define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout() == false)
 
 #include "TemporaryStubbing.h"

@@ -22,6 +22,7 @@
 /**< Other Includes */
 #include "Utility.h"
 #include "FeatureDefines_generated.h"
+#include "LIB_nvm.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -57,6 +58,7 @@ static uint64_t           rtos_start;
  */
 void Module_Init(void)
 {
+    lib_nvm_init();
     /**< Run each of the modules Init function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -109,6 +111,7 @@ void Module_100Hz_TSK(void)
             (*modules[i]->periodic100Hz_CLK)();
         }
     }
+    lib_nvm_run();
     vTaskGetInfo(NULL, &finish, pdFALSE, 0);
 
     stats[MODULE_100Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;

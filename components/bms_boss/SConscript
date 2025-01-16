@@ -152,6 +152,9 @@ project_source_files = [
     SRC_DIR.File("Utility.c"),
     SRC_DIR.File("UDS.c"),
     SHARED_LIBS.File("LIB_app.c"),
+    SHARED_LIBS.File("LIB_nvm.c"),
+    SHARED_LIBS.File("libcrc.c"),
+    SRC_DIR.File("NVM.c"),
 ]
 
 project_hw_files = [
@@ -165,6 +168,7 @@ project_hw_files = [
     HW_DIR.File("HW_msp.c"),
     HW_DIR.File("HW_tim.c"),
     HW_DIR.File("HW_HIH.c"),
+    HW_DIR.File("HW_flash.c"),
 ]
 
 project_source_files += project_hw_files
