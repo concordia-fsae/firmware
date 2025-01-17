@@ -9,12 +9,12 @@
  ******************************************************************************/
 
 #include "CAN/CAN.h"
-#include "CanTypes.h"
+#include "CAN/CanTypes.h"
 #include "HW_can.h"
 #include "FreeRTOS_SWI.h"
 #include "ModuleDesc.h"
 #include "FeatureDefines_generated.h"
-#include "CAN/CANIO_componentSpecific.h"
+#include "CANIO_componentSpecific.h"
 #include "MessagePack_generated.c"
 
 /******************************************************************************
@@ -52,17 +52,12 @@ void CANTX_SWI(void)
                                                                 &CAN_table[bus].busTable[table].counter);
                 if (entry != NULL)
                 {
-                    bool transmitFailed = true;
-                    for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
+                    if (HW_CAN_sendMsg(bus, message, entry->id, entry->len))
                     {
-                        if (HW_CAN_sendMsg(bus, mailbox, message, entry->id, entry->len))
-                        {
-                            CAN_table[bus].busTable[table].index++;
-                            transmitFailed = false;
-                            break;
-                        }
+                        CAN_table[bus].busTable[table].index++;
+                        break;
                     }
-                    if (transmitFailed)
+                    else
                     {
                         return;
                     }
@@ -145,7 +140,10 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_init(void)
 {
-    HW_CAN_start();    // start CAN
+    for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
+    {
+        HW_CAN_start(bus);    // start CAN peripheral
+    }
 }
 
 

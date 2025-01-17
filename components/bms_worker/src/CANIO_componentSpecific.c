@@ -1,17 +1,23 @@
 /**
- * Types.h
- * General Typedefs
+ RX_config* CAN.h
+ * Header file for CANRX configuration
  */
-
-#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include <stdbool.h>
-#include <stdint.h>
+#include "CAN/CAN.h"
+#include "CANIO_componentSpecific.h"
+#include "Utility.h"
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
- *                             T Y P E D E F S
+ *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
+{
+    UNUSED(bus);
+    CANRX_VEH_unpackMessage(id, data);
+}

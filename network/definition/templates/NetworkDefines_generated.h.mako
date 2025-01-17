@@ -6,6 +6,12 @@
 
  #pragma once
 
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
+#include "CAN/CanTypes.h"
+
 /*****************************************************V*************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -41,6 +47,27 @@ typedef enum
   %endfor
     CAN_BUS_COUNT,
 } CAN_bus_E;
+
+<%
+  evaluated_buses = []
+%>\
+static const CAN_busConfig_T CAN_busConfig[CAN_BUS_COUNT] = {
+  %for node in nodes:
+      %for bus in node.on_buses:
+          %if bus not in evaluated_buses:
+<%
+  if buses[bus].baudrate == 1000000:
+    baudrate = 'CAN_BAUDRATE_1MBIT'
+  elif buses[bus].baudrate == 500000:
+    baudrate = 'CAN_BAUDRATE_500KBIT'
+  else:
+    raise Exception("Unsupported baudrate")
+%>\
+    [CAN_BUS_${bus.upper()}] = { .baudrate = ${baudrate}, },
+          %endif
+    %endfor
+  %endfor
+};
   %for bus in node.on_buses:
 
 // ${bus.upper()}

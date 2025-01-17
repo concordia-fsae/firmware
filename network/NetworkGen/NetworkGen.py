@@ -177,11 +177,12 @@ def process_node(node: CanNode):
         for existing_node in can_nodes:
             for msg in can_nodes[existing_node].messages:
                 if definition["id"] == can_nodes[existing_node].messages[msg].id:
-                    if "sourceBuses" in definition:
-                        for bus in definition["sourceBuses"]:
-                            if bus in can_nodes[existing_node].messages[msg].source_buses:
+                    #if "sourceBuses" in definition:
+                        #for bus in definition["sourceBuses"]:
+                            #if bus in can_nodes[existing_node].messages[msg].source_buses:
                                 print(f"Message {msg_name} has the same ID as {msg}")
                                 ERROR = True
+                                break
         msg_obj = CanMessage(node, msg_name, definition)
 
         if msg_obj.signals is None:
@@ -327,7 +328,7 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
-            ["NetworkDefines_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["NetworkDefines_generated.h.mako", {"nodes": [can_nodes[node]], "buses": can_bus_defs}],
             ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],

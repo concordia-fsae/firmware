@@ -7,8 +7,50 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "CAN/CANIO_componentSpecific.h"
+#include "CAN/CAN.h"
+#include "CANIO_componentSpecific.h"
+#include "Utility.h"
+#include "MessageUnpack_generated.h"
 
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
+{
+#if BMSB_CONFIG_ID == 0U
+    for (uint8_t i = 0U; i < COUNTOF(CANRX_PRIVBMS_unpackList); i++)
+    {
+        if (id == CANRX_PRIVBMS_unpackList[i])
+        {
+            CANRX_PRIVBMS_unpackMessage(id, data);
+            return;
+        }
+    }
+    for (uint8_t i = 0U; i < COUNTOF(CANRX_PRIVBMS_unpackListExtID); i++)
+    {
+        if (id == CANRX_PRIVBMS_unpackListExtID[i])
+        {
+            CANRX_PRIVBMS_unpackMessage(id, data);
+            return;
+        }
+    }
+#endif
+
+    switch (bus)
+    {
+#if BMSB_CONFIG_ID > 0U
+        case CAN_BUS_PRIVBMS:
+            CANRX_PRIVBMS_unpackMessage(id, data);
+            break;
+#endif
+        case CAN_BUS_VEH:
+            CANRX_VEH_unpackMessage(id, data);
+            break;
+        default:
+            break;
+    }
+}
 
 uint8_t CANIO_tx_getNLG513ControlByte(void)
 {

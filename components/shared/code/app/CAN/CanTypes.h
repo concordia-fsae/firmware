@@ -10,26 +10,10 @@
  ******************************************************************************/
 
 #include "Types.h"
-#include "NetworkDefines_generated.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    CAN_TX_MAILBOX_0 = 0U,
-    CAN_TX_MAILBOX_1,
-    CAN_TX_MAILBOX_2,
-    CAN_TX_MAILBOX_COUNT,
-} CAN_TxMailbox_E;
-
-typedef enum
-{
-    CAN_RX_FIFO_0 = 0U,
-    CAN_RX_FIFO_1,
-    CAN_RX_FIFO_COUNT,
-} CAN_RxFifo_E;
 
 typedef enum
 {
@@ -43,6 +27,12 @@ typedef enum
     CAN_REMOTE_TRANSMISSION_REQUEST_REMOTE,
 } CAN_RemoteTransmission_E;
 
+typedef enum
+{
+    CAN_BAUDRATE_1MBIT = 0U,
+    CAN_BAUDRATE_500KBIT,
+} CAN_baudrate_E;
+
 typedef union
 {
     uint64_t u64;
@@ -53,6 +43,11 @@ typedef union
 
 typedef struct
 {
+    CAN_baudrate_E baudrate;
+} CAN_busConfig_T;
+
+typedef struct
+{
     uint32_t                 id;
 
     CAN_IdentifierLen_E      IDE;
@@ -60,7 +55,6 @@ typedef struct
 
     uint8_t                  lengthBytes;
     CAN_data_T               data;
-    CAN_TxMailbox_E          mailbox;
 } CAN_TxMessage_T;
 
 typedef struct

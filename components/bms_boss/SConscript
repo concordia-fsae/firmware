@@ -25,6 +25,7 @@ ISOTP_DIR = LIBS_DIR.Dir("isotp")
 SHARED_CODE = Dir("#/components/shared/code")
 SHARED_LIBS = SHARED_CODE.Dir("libs")
 SHARED_APP = SHARED_CODE.Dir("app")
+SHARED_HW = SHARED_CODE.Dir("HW")
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -130,6 +131,7 @@ LIBS_INCLUDE_DIRS = [
     ISOTP_DIR.Dir("include"),
     SHARED_LIBS,
     SHARED_APP,
+    SHARED_HW,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -141,7 +143,7 @@ PROJECT_INCLUDE_DIRS = [
 project_source_files = [
     SRC_DIR.File("SystemManager.c"),
     SRC_DIR.File("Module.c"),
-    SRC_DIR.File("CAN/CANIO_componentSpecific.c"),
+    SRC_DIR.File("CANIO_componentSpecific.c"),
     SHARED_APP.File("CAN/CANIO-tx.c"),
     SHARED_APP.File("CAN/CANIO-rx.c"),
     SRC_DIR.File("IO.c"),
@@ -157,7 +159,7 @@ project_source_files = [
 project_hw_files = [
     HW_DIR.File("HW.c"),
     HW_DIR.File("HW_adc.c"),
-    HW_DIR.File("HW_can.c"),
+    HW_DIR.File("HW_can_componentSpecific.c"),
     HW_DIR.File("HW_dma.c"),
     HW_DIR.File("HW_gpio.c"),
     HW_DIR.File("HW_i2c.c"),
@@ -165,6 +167,7 @@ project_hw_files = [
     HW_DIR.File("HW_msp.c"),
     HW_DIR.File("HW_tim.c"),
     HW_DIR.File("HW_HIH.c"),
+    SHARED_HW.File("HW_can.c"),
 ]
 
 project_source_files += project_hw_files

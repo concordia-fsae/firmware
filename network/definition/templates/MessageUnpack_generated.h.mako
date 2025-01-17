@@ -34,18 +34,24 @@
 
 static const uint16_t CANRX_${bus.upper()}_unpackList[] = {
     %for message in node.received_msgs:
-      %if bus in node.received_msgs[message].source_buses:
+      %if bus in node.received_msgs[message].source_buses and node.received_msgs[message].id <= 0x7ff:
     CAN_${bus.upper()}_${message}_ID,
       %endif
     %endfor
-};\
+};
+static const uint32_t CANRX_${bus.upper()}_unpackListExtID[] = {
+    %for message in node.received_msgs:
+      %if bus in node.received_msgs[message].source_buses and node.received_msgs[message].id > 0x7ff:
+    CAN_${bus.upper()}_${message}_ID,
+      %endif
+    %endfor
+};
 <%
   length = 0
   for message in node.received_msgs:
     if bus in node.received_msgs[message].source_buses:
       length += 1
 %>
-#define CANRX_${bus.upper()}_unpackList_length ${length}U
   %endfor
 %endfor
 
