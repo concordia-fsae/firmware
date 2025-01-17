@@ -38,3 +38,13 @@ messages:
     sourceBuses: veh
     signals:
       udsPayload:
+
+  elconChargeCommand:
+    description: Elcon Charge Command
+    sourceBuses: privbms
+    id: 0x1806E5F4
+    lengthBytes: 8
+    signals:
+      elconControlByte:
+      elconMaxChargeVoltage:
+      elconMaxChargeCurrent:

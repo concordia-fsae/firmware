@@ -113,3 +113,36 @@ signals:
       range:
         min: 0
         max: 18446744073709551615
+
+  elconControlByte:
+    cycleTimeMs: 10
+    description: Elcon Control Byte
+    nativeRepresentation:
+      bitWidth: 8
+
+  elconMaxChargeVoltage:
+    cycleTimeMs: 10
+    unit: 'V'
+    description: Elcon Max Battery Voltage During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true
+
+  elconMaxChargeCurrent:
+    cycleTimeMs: 10
+    unit: 'A'
+    description: Elcon Max Battery Voltage During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 25
+    continuous: true
+
