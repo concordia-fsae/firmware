@@ -41,9 +41,10 @@ typedef enum
   %endfor
     CAN_BUS_COUNT,
 } CAN_bus_E;
- 
-// Transmission ID's
   %for bus in node.on_buses:
+
+// ${bus.upper()}
+// Transmission ID's
     %for msg in node.messages.values():
       %if bus in msg.source_buses:
 <%
@@ -52,7 +53,6 @@ typedef enum
 #define CAN_${bus.upper()}_${msg_name}_ID ${hex(msg.id)}U
       %endif
     %endfor
-
 // Reception ID's
     %for msg in node.received_msgs.values():
       %if bus in msg.source_buses:
@@ -61,5 +61,3 @@ typedef enum
     %endfor
   %endfor
 %endfor
-
-
