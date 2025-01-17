@@ -53,7 +53,7 @@ typedef union
 
 typedef struct
 {
-    uint16_t                 id;
+    uint32_t                 id;
 
     CAN_IdentifierLen_E      IDE;
     CAN_RemoteTransmission_E RTR;
@@ -65,7 +65,7 @@ typedef struct
 
 typedef struct
 {
-    uint16_t                 id;
+    uint32_t                 id;
 
     CAN_IdentifierLen_E      IDE;
     CAN_RemoteTransmission_E RTR;
@@ -82,7 +82,7 @@ typedef bool (*packFn)(CAN_data_T *messsage, const uint8_t counter);
 typedef struct
 {
     const packFn   pack;
-    const uint16_t id;
+    const uint32_t id;
     const uint8_t  len;
 } packTable_S;
 

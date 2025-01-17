@@ -30,7 +30,7 @@
 void    HW_CAN_start(void);
 void    HW_CAN_init(void);
 void    HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
-bool    CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint8_t len);
+bool    CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint32_t id, uint8_t len);
 bool    CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx);
 uint8_t CAN_getRxFifoFillLevel(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
 bool    CAN_getRxFifoEmpty(CAN_bus_E bus, CAN_RxFifo_E rxFifo);

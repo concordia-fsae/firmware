@@ -162,7 +162,10 @@ static HAL_StatusTypeDef CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, C
         if (CAN_checkMbFree(canHandle, msg.mailbox))
         {
             // set CAN ID
-            canHandle->Instance->sTxMailBox[msg.mailbox].TIR  = ((msg.id << CAN_TI0R_STID_Pos) | msg.RTR);
+            canHandle->Instance->sTxMailBox[msg.mailbox].TIR  = ((msg.IDE == CAN_IDENTIFIER_STD) ?
+                                                                 msg.id << CAN_TI0R_STID_Pos :
+                                                                 msg.id << CAN_TI0R_EXID_Pos)
+                                                                | msg.RTR << CAN_TI0R_RTR_Pos;
             // set message length
             canHandle->Instance->sTxMailBox[msg.mailbox].TDTR = msg.lengthBytes;
 
@@ -214,7 +217,7 @@ static HAL_StatusTypeDef CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, C
  * @param len TODO
  * @return TODO
  */
-bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint16_t id, uint8_t len)
+bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint32_t id, uint8_t len)
 {
     UNUSED(bus);
     CAN_TxMessage_T msg = {0};
@@ -223,6 +226,7 @@ bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint16
     msg.data        = data;
     msg.mailbox     = mailbox;
     msg.lengthBytes = len;
+    msg.IDE         = (id <= 0x7ff) ? CAN_IDENTIFIER_STD : CAN_IDENTIFIER_EXT;
 
     return CAN_sendMsgOnPeripheral(&hcan, msg) == HAL_OK;
 }
@@ -281,7 +285,7 @@ bool CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
     rx->IDE = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
     rx->RTR = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan.Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id = (uint16_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> (rx->IDE == CAN_IDENTIFIER_STD ? CAN_RI0R_STID_Pos : CAN_RI0R_EXID_Pos));
+    rx->id = (uint32_t)(((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan.Instance->sFIFOMailBox[rxFifo].RIR) >> (rx->IDE == CAN_IDENTIFIER_STD ? CAN_RI0R_STID_Pos : CAN_RI0R_EXID_Pos));
     rx->lengthBytes = (CAN_RDT0R_DLC & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan.Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
