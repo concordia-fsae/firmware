@@ -133,12 +133,12 @@ void HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 }
 
 /**
- * CAN_checkMbFree
+ * HW_CAN_checkMbFree
  * @param canHandle which CAN handle to check
  * @param mailbox which mailbox to check
  * @return true if free
  */
-static bool CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
+static bool HW_CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
 {
     uint32_t tsr = READ_REG(canHandle->Instance->TSR);
 
@@ -147,19 +147,19 @@ static bool CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbo
 
 
 /**
- * CAN_sendMsg
+ * HW_CAN_sendMsg
  * @param canHandle which CAN handle to operate on
  * @param msg message data
  * @return exit code
  */
-static HAL_StatusTypeDef CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, CAN_TxMessage_T msg)
+static HAL_StatusTypeDef HW_CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, CAN_TxMessage_T msg)
 {
     HAL_CAN_StateTypeDef state = canHandle->State;
 
     if ((state == HAL_CAN_STATE_READY) || (state == HAL_CAN_STATE_LISTENING))
     {
         // check that the specified mailbox is free
-        if (CAN_checkMbFree(canHandle, msg.mailbox))
+        if (HW_CAN_checkMbFree(canHandle, msg.mailbox))
         {
             // set CAN ID
             canHandle->Instance->sTxMailBox[msg.mailbox].TIR  = ((msg.IDE == CAN_IDENTIFIER_STD) ?
@@ -210,14 +210,14 @@ static HAL_StatusTypeDef CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, C
 
 
 /**
- * CAN_sendMsgBus0
+ * HW_CAN_sendMsgBus0
  * @param priority TODO
  * @param data TODO
  * @param id TODO
  * @param len TODO
  * @return TODO
  */
-bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint32_t id, uint8_t len)
+bool HW_CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint32_t id, uint8_t len)
 {
     UNUSED(bus);
     CAN_TxMessage_T msg = {0};
@@ -228,19 +228,19 @@ bool CAN_sendMsg(CAN_bus_E bus, CAN_TxMailbox_E mailbox, CAN_data_T data, uint32
     msg.lengthBytes = len;
     msg.IDE         = (id <= 0x7ff) ? CAN_IDENTIFIER_STD : CAN_IDENTIFIER_EXT;
 
-    return CAN_sendMsgOnPeripheral(&hcan, msg) == HAL_OK;
+    return HW_CAN_sendMsgOnPeripheral(&hcan, msg) == HAL_OK;
 }
 
 
 /**
- * CAN_getRxMessageBus0
+ * HW_CAN_getRxMessageBus0
  * @brief  Get an CAN frame from the Rx FIFO zone into the message RAM.
  * @param  rxFifo Fifo number of the received message to be read.
  *         This parameter can be a value of @arg CAN_receive_FIFO_number.
  * @param  rx pointer to a CAN_RxMessage_T where the message will be stored
  * @retval HAL status
  */
-bool CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
+bool HW_CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
 {
     UNUSED(bus);
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
@@ -327,13 +327,13 @@ bool CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx)
 
 
 /**
- * CAN_getRxFifoFillLevelBus0
+ * HW_CAN_getRxFifoFillLevelBus0
  * @brief  Return Bus0 Rx FIFO fill level.
  * @param  rxFifo Rx FIFO.
  *         This parameter can be a value of @arg CAN_receive_FIFO_number.
  * @retval Number of messages available in Rx FIFO.
  */
-uint8_t CAN_getRxFifoFillLevel(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
+uint8_t HW_CAN_getRxFifoFillLevel(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
     UNUSED(bus);
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
@@ -363,13 +363,13 @@ uint8_t CAN_getRxFifoFillLevel(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 
 
 /**
- * CAN_getRxFifoEmpty
+ * HW_CAN_getRxFifoEmpty
  * @brief  Return whether the RX FIFO is empty
  * @param  rxFifo Rx FIFO.
  *         This parameter can be a value of @arg CAN_receive_FIFO_number.
  * @retval Number of messages available in Rx FIFO.
  */
-bool CAN_getRxFifoEmpty(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
+bool HW_CAN_getRxFifoEmpty(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
     UNUSED(bus);
     if ((hcan.State != HAL_CAN_STATE_READY) && (hcan.State != HAL_CAN_STATE_LISTENING))
@@ -401,12 +401,12 @@ bool CAN_getRxFifoEmpty(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 // define interrupt handlers
 
 /**
- * CAN_TxComplete_ISR
+ * HW_CAN_TxComplete_ISR
  * This ISR is called whenever a CAN mailbox is free. It should then call the tx thread
  * associated with the mailbox that became free
  * @param mailbox CAN mailbox which has become free
  */
-static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
+static void HW_CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
 {
     UNUSED(canHandle);
     UNUSED(mailbox);
@@ -415,12 +415,12 @@ static void CAN_TxComplete_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
 
 
 /**
- * CAN_RxMsgPending_ISR
+ * HW_CAN_RxMsgPending_ISR
  * This ISR is called whenever a CAN message is received. It should then move
  * the RXd message into the RX queue to free up the rxFifo
  * @param fifoId RX Fifo with a pending message
  */
-static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
+static void HW_CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifoId)
 {
 #if FEATURE_IS_DISABLED(FEATURE_CANRX_SWI)
     CAN_data_T          data = {0U};
@@ -451,10 +451,10 @@ static void CAN_RxMsgPending_ISR(CAN_HandleTypeDef* canHandle, CAN_RxFifo_E fifo
 
 
 /**
- * CAN_TxError_ISR
+ * HW_CAN_TxError_ISR
  * @param canHandle which CAN handle to operate on
  */
-static void CAN_TxError_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
+static void HW_CAN_TxError_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbox)
 {
     UNUSED(canHandle);
     UNUSED(mailbox);
@@ -469,7 +469,7 @@ static void CAN_TxError_ISR(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mailbo
  */
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_TxComplete_ISR(canHandle, CAN_TX_MAILBOX_0);
+    HW_CAN_TxComplete_ISR(canHandle, CAN_TX_MAILBOX_0);
 }
 
 
@@ -479,7 +479,7 @@ void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_TxComplete_ISR(canHandle, CAN_TX_MAILBOX_1);
+    HW_CAN_TxComplete_ISR(canHandle, CAN_TX_MAILBOX_1);
 }
 
 
@@ -489,7 +489,7 @@ void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_TxComplete_ISR(canHandle, CAN_TX_MAILBOX_2);
+    HW_CAN_TxComplete_ISR(canHandle, CAN_TX_MAILBOX_2);
 }
 
 
@@ -499,7 +499,7 @@ void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_TxMailbox0AbortCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_TxError_ISR(canHandle, CAN_TX_MAILBOX_0);
+    HW_CAN_TxError_ISR(canHandle, CAN_TX_MAILBOX_0);
 }
 
 
@@ -509,7 +509,7 @@ void HAL_CAN_TxMailbox0AbortCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_TxMailbox1AbortCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_TxError_ISR(canHandle, CAN_TX_MAILBOX_1);
+    HW_CAN_TxError_ISR(canHandle, CAN_TX_MAILBOX_1);
 }
 
 
@@ -519,7 +519,7 @@ void HAL_CAN_TxMailbox1AbortCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_TxMailbox2AbortCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_TxError_ISR(canHandle, CAN_TX_MAILBOX_2);
+    HW_CAN_TxError_ISR(canHandle, CAN_TX_MAILBOX_2);
 }
 
 
@@ -532,7 +532,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE0);
 #endif // FEATURE_CANRX_SWI
-    CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
+    HW_CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 }
 
 
@@ -545,7 +545,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FMPIE1);
 #endif // FEATURE_CANRX_SWI
-    CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
+    HW_CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 }
 
 
@@ -555,7 +555,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
+    HW_CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_0);
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE0);
     SWI_invokeFromISR(CANRX_swi);
@@ -569,7 +569,7 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef* canHandle)
  */
 void HAL_CAN_RxFifo1FullCallback(CAN_HandleTypeDef* canHandle)
 {
-    CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
+    HW_CAN_RxMsgPending_ISR(canHandle, CAN_RX_FIFO_1);
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     HAL_CAN_DeactivateNotification(canHandle, CAN_IER_FFIE1);
     SWI_invokeFromISR(CANRX_swi);

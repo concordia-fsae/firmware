@@ -55,7 +55,7 @@ void CANTX_SWI(void)
                     bool transmitFailed = true;
                     for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
                     {
-                        if (CAN_sendMsg(bus, mailbox, message, entry->id, entry->len))
+                        if (HW_CAN_sendMsg(bus, mailbox, message, entry->id, entry->len))
                         {
                             CAN_table[bus].busTable[table].index++;
                             transmitFailed = false;

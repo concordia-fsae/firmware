@@ -132,10 +132,10 @@ void CANRX_SWI(void)
                 continue;
             }
 
-            while (CAN_getRxFifoEmpty(bus, rxFifo) == false)
+            while (HW_CAN_getRxFifoEmpty(bus, rxFifo) == false)
             {
                 CAN_RxMessage_T msg       = { 0U };
-                bool            rxSuccess = CAN_getRxMessage(bus, rxFifo, &msg);
+                bool            rxSuccess = HW_CAN_getRxMessage(bus, rxFifo, &msg);
 
                 if (rxSuccess)
                 {
