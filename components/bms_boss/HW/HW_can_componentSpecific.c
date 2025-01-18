@@ -177,7 +177,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         filt.FilterScale          = CAN_FILTERSCALE_32BIT;
         // All filters are fucky - lookup RM0008 information
         filt.FilterIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] >> 13U);
-        filt.FilterIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] & 0xffff) << 3U | (0x01 << 2U);
+        filt.FilterIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] << 3U) | (0x01 << 2U);
         if ((i + 1U) < COUNTOF(CANRX_VEH_unpackListExtID)) {
             filt.FilterMaskIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] >> 13U);
             filt.FilterMaskIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] << 3U) | (0x01 << 2U);
@@ -219,7 +219,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         filt.FilterScale          = CAN_FILTERSCALE_32BIT;
         // All filters are fucky - lookup RM0008 information
         filt.FilterIdHigh = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 0U] >> 13U);
-        filt.FilterIdLow = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 0U] & 0xffff) << 3U | (0x01 << 2U);
+        filt.FilterIdLow = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 0U] << 3U) | (0x01 << 2U);
         if ((i + 1U) < COUNTOF(CANRX_PRIVBMS_unpackListExtID)) {
             filt.FilterMaskIdHigh = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 1U] >> 13U);
             filt.FilterMaskIdLow = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 1U] << 3U) | (0x01 << 2U);
