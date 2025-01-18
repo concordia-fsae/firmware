@@ -64,60 +64,6 @@ static bool HW_CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
     return (tsr & (CAN_TSR_TME0 << mailbox));
 }
 
-/**
- * HW_CAN_sendMsg
- * @param canHandle which CAN handle to operate on
- * @param msg message data
- * @return exit code
- */
-static HAL_StatusTypeDef HW_CAN_sendMsgOnPeripheral(CAN_HandleTypeDef* canHandle, CAN_TxMessage_T msg)
-{
-    HAL_CAN_StateTypeDef state = canHandle->State;
-    HAL_StatusTypeDef ret = HAL_ERROR;
-
-    if ((state == HAL_CAN_STATE_READY) || (state == HAL_CAN_STATE_LISTENING))
-    {
-        bool no_mailbox_empty = true;
-        // check that a mailbox is free
-        for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
-        {
-            if (HW_CAN_checkMbFree(canHandle, mailbox))
-            {
-                // set CAN ID
-                canHandle->Instance->sTxMailBox[mailbox].TIR  = ((msg.IDE == CAN_IDENTIFIER_STD) ?
-                                                                 msg.id << CAN_TI0R_STID_Pos :
-                                                                 msg.id << CAN_TI0R_EXID_Pos) |
-                                                                ((msg.IDE == CAN_IDENTIFIER_EXT) ? 0x01 << 2U : 0x00);
-                // set message length
-                canHandle->Instance->sTxMailBox[mailbox].TDTR = msg.lengthBytes;
-
-                // set message data
-                canHandle->Instance->sTxMailBox[mailbox].TDHR = msg.data.u32[1];
-                canHandle->Instance->sTxMailBox[mailbox].TDLR = msg.data.u32[0];
-
-                // request message transmission
-                SET_BIT(canHandle->Instance->sTxMailBox[mailbox].TIR, CAN_TI0R_TXRQ);
-
-                // Return function status
-                ret = HAL_OK;
-                no_mailbox_empty = false;
-            }
-        }
-        if (no_mailbox_empty)
-        {
-            // update error to show that no mailbox was free
-            canHandle->ErrorCode |= HAL_CAN_ERROR_PARAM;
-        }
-    }
-    else
-    {
-        // update error to show that peripheral was in the wrong state for transmission
-        canHandle->ErrorCode |= HAL_CAN_ERROR_NOT_INITIALIZED;
-    }
-
-    return ret;
-}
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -160,6 +106,61 @@ HW_StatusTypeDef_E HW_CAN_stop(CAN_bus_E bus)
     return HW_OK;
 }
 
+/**
+ * HW_CAN_sendMsgOnPeripheral
+ * @param canHandle which CAN handle to operate on
+ * @param msg message data
+ * @return exit code
+ */
+HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg)
+{
+    CAN_HandleTypeDef* canHandle = &hcan[bus];
+    HAL_CAN_StateTypeDef state = canHandle->State;
+    HW_StatusTypeDef_E ret = HW_ERROR;
+
+    if ((state == HAL_CAN_STATE_READY) || (state == HAL_CAN_STATE_LISTENING))
+    {
+        bool no_mailbox_empty = true;
+        // check that a mailbox is free
+        for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
+        {
+            if (HW_CAN_checkMbFree(canHandle, mailbox))
+            {
+                // set CAN ID
+                canHandle->Instance->sTxMailBox[mailbox].TIR  = ((msg.IDE == CAN_IDENTIFIER_STD) ?
+                                                                 msg.id << CAN_TI0R_STID_Pos :
+                                                                 msg.id << CAN_TI0R_EXID_Pos) |
+                                                                ((msg.IDE == CAN_IDENTIFIER_EXT) ? 0x01 << 2U : 0x00);
+                // set message length
+                canHandle->Instance->sTxMailBox[mailbox].TDTR = msg.lengthBytes;
+
+                // set message data
+                canHandle->Instance->sTxMailBox[mailbox].TDHR = msg.data.u32[1];
+                canHandle->Instance->sTxMailBox[mailbox].TDLR = msg.data.u32[0];
+
+                // request message transmission
+                SET_BIT(canHandle->Instance->sTxMailBox[mailbox].TIR, CAN_TI0R_TXRQ);
+
+                // Return function status
+                ret = HW_OK;
+                no_mailbox_empty = false;
+            }
+        }
+        if (no_mailbox_empty)
+        {
+            // update error to show that no mailbox was free
+            canHandle->ErrorCode |= HAL_CAN_ERROR_PARAM;
+        }
+    }
+    else
+    {
+        // update error to show that peripheral was in the wrong state for transmission
+        canHandle->ErrorCode |= HAL_CAN_ERROR_NOT_INITIALIZED;
+    }
+
+    return ret;
+}
+
 void HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
     uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
@@ -167,28 +168,6 @@ void HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
     HAL_CAN_ActivateNotification(&hcan[bus], it);
     HAL_CAN_ActivateNotification(&hcan[bus], itFull);
 }
-
-/**
- * HW_CAN_sendMsgBus0
- * @param priority TODO
- * @param data TODO
- * @param id TODO
- * @param len TODO
- * @return TODO
- */
-bool HW_CAN_sendMsg(CAN_bus_E bus, CAN_data_T data, uint32_t id, uint8_t len)
-{
-    UNUSED(bus);
-    CAN_TxMessage_T msg = {0};
-
-    msg.id          = id;
-    msg.data        = data;
-    msg.lengthBytes = len;
-    msg.IDE         = (id <= 0x7ff) ? CAN_IDENTIFIER_STD : CAN_IDENTIFIER_EXT;
-
-    return HW_CAN_sendMsgOnPeripheral(&hcan[bus], msg) == HAL_OK;
-}
-
 
 /**
  * HW_CAN_getRxMessageBus0

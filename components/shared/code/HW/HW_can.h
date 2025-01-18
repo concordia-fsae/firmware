@@ -30,6 +30,7 @@ HW_StatusTypeDef_E HW_CAN_init(void);
 HW_StatusTypeDef_E HW_CAN_deInit(void);
 HW_StatusTypeDef_E HW_CAN_start(CAN_bus_E bus);
 HW_StatusTypeDef_E HW_CAN_stop(CAN_bus_E bus);
+HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg);
 void               HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
 bool               HW_CAN_sendMsg(CAN_bus_E bus, CAN_data_T data, uint32_t id, uint8_t len);
 bool               HW_CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx);

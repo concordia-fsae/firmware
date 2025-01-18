@@ -74,6 +74,26 @@ static inline CAN_bus_E HW_CAN_getBusFromPeripheral(CAN_HandleTypeDef* canHandle
  ******************************************************************************/
 
 /**
+ * HW_CAN_sendMsgBus0
+ * @param priority TODO
+ * @param data TODO
+ * @param id TODO
+ * @param len TODO
+ * @return TODO
+ */
+bool HW_CAN_sendMsg(CAN_bus_E bus, CAN_data_T data, uint32_t id, uint8_t len)
+{
+    CAN_TxMessage_T msg = {0};
+
+    msg.id          = id;
+    msg.data        = data;
+    msg.lengthBytes = len;
+    msg.IDE         = (id <= 0x7ff) ? CAN_IDENTIFIER_STD : CAN_IDENTIFIER_EXT;
+
+    return HW_CAN_sendMsgOnPeripheral(bus, msg) == HW_OK;
+}
+
+/**
  * @brief Initializes the CAN peripheral
  *
  * @retval HW_OK
