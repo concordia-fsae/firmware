@@ -51,6 +51,7 @@ void SYS_SFT_closeShutdown(void);
 void SYS_SFT_openContactors(void);
 void SYS_SFT_cycleContacts(void);
 bool SYS_SFT_checkMCTimeout(void);
-bool SYS_SFT_checkChargerTimeout(void);
+bool SYS_SFT_checkBrusaChargerTimeout(void);
+bool SYS_SFT_checkElconChargerTimeout(void);
 void SYS_stopCharging(void);
 void SYS_continueCharging(void);

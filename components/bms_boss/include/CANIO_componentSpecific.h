@@ -28,6 +28,7 @@
  ******************************************************************************/
 
 uint8_t CANIO_tx_getNLG513ControlByte(void);
+uint8_t CANIO_tx_getElconControlByte(void);
 CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 
 /******************************************************************************
@@ -47,6 +48,11 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
 #define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
-#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkChargerTimeout() == false)
+#define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkBrusaChargerTimeout() == false)
+#define set_elconMaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
+#define set_elconMaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
+#define set_elconControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getElconControlByte())
+#define transmit_BMSB_elconChargeCommand (SYS_SFT_checkElconChargerTimeout() == false)
+
 
 #include "TemporaryStubbing.h"

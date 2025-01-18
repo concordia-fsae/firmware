@@ -1,0 +1,11 @@
+messages:
+ criticalData:
+    description: Elcon Critical Data
+    id: 0x18FF50E5
+    lengthBytes: 8
+    signals:
+      busVoltage:
+      busCurrent:
+      busStatusFlags:
+      
+  

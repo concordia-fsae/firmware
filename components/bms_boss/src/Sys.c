@@ -163,7 +163,7 @@ bool SYS_SFT_checkMCTimeout(void)
     return (CANRX_validate(VEH, PM100DX_criticalData) != CANRX_MESSAGE_VALID);
 }
 
-bool SYS_SFT_checkChargerTimeout(void)
+bool SYS_SFT_checkBrusaChargerTimeout(void)
 {
     return (CANRX_validate(VEH, BRUSA513_criticalData) != CANRX_MESSAGE_VALID);
 }
@@ -176,4 +176,9 @@ void SYS_stopCharging(void)
 void SYS_continueCharging(void)
 {
     BMS.charging_paused = false;
+}
+
+bool SYS_SFT_checkElconChargerTimeout(void)
+{
+    return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
 }
