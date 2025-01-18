@@ -112,10 +112,11 @@ HW_StatusTypeDef_E HW_CAN_init(void)
 #if BMSB_CONFIG_ID > 0U
     hcan[CAN_BUS_PRIVBMS].Instance = CAN2;
     for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
-#else
-    for (CAN_bus_E bus = 0U; bus < CAN_BUS_VEH; bus++)
-#endif
     {
+#else
+    {
+        CAN_bus_E bus = CAN_BUS_VEH;
+#endif
         hcan[bus].Init.Mode                 = CAN_MODE_NORMAL;
         hcan[bus].Init.TimeTriggeredMode    = DISABLE;
         hcan[bus].Init.AutoBusOff           = ENABLE;
@@ -175,10 +176,10 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         filt.FilterMode           = CAN_FILTERMODE_IDLIST;
         filt.FilterScale          = CAN_FILTERSCALE_32BIT;
         // All filters are fucky - lookup RM0008 information
-        filt.FilterIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] << 5U) | (CANRX_VEH_unpackListExtID[i + 0U] >> 24U);
-        filt.FilterIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] << 3U) | (0x01 << 2U);
+        filt.FilterIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] >> 13U);
+        filt.FilterIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] & 0xffff) << 3U | (0x01 << 2U);
         if ((i + 1U) < COUNTOF(CANRX_VEH_unpackListExtID)) {
-            filt.FilterMaskIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] << 5U) | (CANRX_VEH_unpackListExtID[i + 1U] >> 24U);
+            filt.FilterMaskIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] >> 13U);
             filt.FilterMaskIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] << 3U) | (0x01 << 2U);
         }
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
@@ -190,42 +191,42 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     HAL_CAN_ActivateNotification(&hcan[CAN_BUS_VEH], CAN_ENABLED_INTERRUPTS);
 #endif
 
-    for (uint32_t i = 0U; i < COUNTOF(CANRX_VEH_unpackList); i += 4U)
+    for (uint32_t i = 0U; i < COUNTOF(CANRX_PRIVBMS_unpackList); i += 4U)
     {
         CAN_FilterTypeDef filt = { 0U };
         filt.FilterBank           = filterBank++;
         filt.FilterMode           = CAN_FILTERMODE_IDLIST;
         filt.FilterScale          = CAN_FILTERSCALE_16BIT;
         // All filters are shifted left 5 bits
-        filt.FilterIdHigh = CANRX_VEH_unpackList[i + 0U] << 5U;
-        if ((i + 1U) < COUNTOF(CANRX_VEH_unpackList)) { filt.FilterIdLow = CANRX_VEH_unpackList[i + 1U] << 5U; }
-        if ((i + 2U) < COUNTOF(CANRX_VEH_unpackList)) { filt.FilterMaskIdHigh = CANRX_VEH_unpackList[i + 2U] << 5U; }
-        if ((i + 3U) < COUNTOF(CANRX_VEH_unpackList)) { filt.FilterMaskIdLow = CANRX_VEH_unpackList[i + 3U] << 5U; }
+        filt.FilterIdHigh = CANRX_PRIVBMS_unpackList[i + 0U] << 5U;
+        if ((i + 1U) < COUNTOF(CANRX_PRIVBMS_unpackList)) { filt.FilterIdLow = CANRX_PRIVBMS_unpackList[i + 1U] << 5U; }
+        if ((i + 2U) < COUNTOF(CANRX_PRIVBMS_unpackList)) { filt.FilterMaskIdHigh = CANRX_PRIVBMS_unpackList[i + 2U] << 5U; }
+        if ((i + 3U) < COUNTOF(CANRX_PRIVBMS_unpackList)) { filt.FilterMaskIdLow = CANRX_PRIVBMS_unpackList[i + 3U] << 5U; }
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
         filt.FilterActivation     = ENABLE;
-        filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
+        filt.SlaveStartFilterBank = (COUNTOF(CANRX_PRIVBMS_unpackList) + ((4U - COUNTOF(CANRX_PRIVBMS_unpackList) % 4U) % 4U)) / 4U;
 #if BMSB_CONFIG_ID > 0U
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_PRIVBMS], &filt);
 #else
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_VEH], &filt);
 #endif
     }
-    for (uint32_t i = 0U; i < COUNTOF(CANRX_VEH_unpackListExtID); i+= 2U)
+    for (uint32_t i = 0U; i < COUNTOF(CANRX_PRIVBMS_unpackListExtID); i+= 2U)
     {
         CAN_FilterTypeDef filt = { 0U };
         filt.FilterBank           = filterBank++;
         filt.FilterMode           = CAN_FILTERMODE_IDLIST;
         filt.FilterScale          = CAN_FILTERSCALE_32BIT;
         // All filters are fucky - lookup RM0008 information
-        filt.FilterIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] << 5U) | (CANRX_VEH_unpackListExtID[i + 0U] >> 24U);
-        filt.FilterIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 0U] << 3U) | (0x01 << 2U);
-        if ((i + 1U) < COUNTOF(CANRX_VEH_unpackListExtID)) {
-            filt.FilterMaskIdHigh = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] << 5U) | (CANRX_VEH_unpackListExtID[i + 1U] >> 24U);
-            filt.FilterMaskIdLow = (uint16_t)(CANRX_VEH_unpackListExtID[i + 1U] << 3U) | (0x01 << 2U);
+        filt.FilterIdHigh = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 0U] >> 13U);
+        filt.FilterIdLow = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 0U] & 0xffff) << 3U | (0x01 << 2U);
+        if ((i + 1U) < COUNTOF(CANRX_PRIVBMS_unpackListExtID)) {
+            filt.FilterMaskIdHigh = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 1U] >> 13U);
+            filt.FilterMaskIdLow = (uint16_t)(CANRX_PRIVBMS_unpackListExtID[i + 1U] << 3U) | (0x01 << 2U);
         }
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
         filt.FilterActivation     = ENABLE;
-        filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
+        filt.SlaveStartFilterBank = (COUNTOF(CANRX_PRIVBMS_unpackList) + ((4U - COUNTOF(CANRX_PRIVBMS_unpackList) % 4U) % 4U)) / 4U;
 #if BMSB_CONFIG_ID > 0U
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_PRIVBMS], &filt);
 #else

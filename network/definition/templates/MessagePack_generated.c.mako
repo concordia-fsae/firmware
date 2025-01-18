@@ -29,7 +29,8 @@
     %endfor
   %endfor
   %for bus in node.on_buses:
-busTable_S ${bus.upper()}_table[${len(node.messages_by_cycle_time())}U] = {
+
+busTable_S ${bus.upper()}_table[] = {
     %for cycle_time, msgs in node.messages_by_cycle_time().items():
     {
         .packTable = ${bus.upper()}_packTable_${cycle_time}ms,

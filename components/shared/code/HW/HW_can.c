@@ -142,7 +142,7 @@ HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg
                 SET_BIT(canHandle->Instance->sTxMailBox[mailbox].TIR, CAN_TI0R_TXRQ);
 
                 // Return function status
-                ret = HW_OK;
+                return HW_OK;
                 no_mailbox_empty = false;
             }
         }
@@ -282,9 +282,9 @@ void HW_CAN_RxMsgPending_ISR(CAN_bus_E bus, CAN_RxFifo_E fifoId)
     CAN_RxHeaderTypeDef header = {0U};
 #endif // FEATURE_CANRX_SWI == FEATURE_DISABLED
 
+#if FEATURE_CANRX_SWI == FEATURE_DISABLED
     if (CAN_BUS_VEH)
     {
-#if FEATURE_CANRX_SWI == FEATURE_DISABLED
         HAL_CAN_GetRxMessage(&hcan[bus], fifoId, &header, (uint8_t*)&data);
         CANRX_VEH_unpackMessage(header.StdId, &data);
 
@@ -298,10 +298,10 @@ void HW_CAN_RxMsgPending_ISR(CAN_bus_E bus, CAN_RxFifo_E fifoId)
             udsSrv_processMessage(data.u8, (uint8_t)header.DLC);
         }
 #endif // FEATURE_UDS
-#else // FEATURE_CANRX_SWI == FEATURE_DISABLED
-        CANRX_notify(bus, fifoId);
-#endif // FEATURE_CANRX_SWI
     }
+#else // FEATURE_CANRX_SWI == FEATURE_DISABLED
+    CANRX_notify(bus, fifoId);
+#endif // FEATURE_CANRX_SWI
 }
 
 /**

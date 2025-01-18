@@ -51,7 +51,7 @@ static const uint32_t CANRX_${bus.upper()}_unpackListExtID[] = {
   for message in node.received_msgs:
     if bus in node.received_msgs[message].source_buses:
       length += 1
-%>
+%>\
   %endfor
 %endfor
 
