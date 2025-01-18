@@ -39,8 +39,21 @@ void CANRX_init(void)
 %for node in nodes:
   %for bus in node.on_buses:
 
-void CANRX_${bus.upper()}_unpackMessage(const uint16_t id, const CAN_data_T *const m)
+void CANRX_${bus.upper()}_unpackMessage(const uint32_t id, const CAN_data_T *const m)
 {
+<%
+  contains_message = False
+%>\
+    %for message in node.received_msgs:
+      %if bus in node.received_msgs[message].source_buses:
+<% 
+contains_message = True 
+%>\
+      %endif
+    %endfor
+    %if not contains_message:
+    UNUSED(m);
+    %endif
     switch(id)
     {
     %for message in node.received_msgs:

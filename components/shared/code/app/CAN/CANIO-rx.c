@@ -127,15 +127,17 @@ void CANRX_SWI(void)
     {
         for (CAN_RxFifo_E rxFifo = CAN_RX_FIFO_0; rxFifo < CAN_RX_FIFO_COUNT; rxFifo++)
         {
+            bool rxSuccess;
+
             if (!FLAG_get(canrx.fifoNotify[bus], rxFifo))
             {
                 continue;
             }
 
-            while (CAN_getRxFifoEmpty(bus, rxFifo) == false)
+            do
             {
                 CAN_RxMessage_T msg       = { 0U };
-                bool            rxSuccess = CAN_getRxMessage(bus, rxFifo, &msg);
+                rxSuccess = HW_CAN_getRxMessage(bus, rxFifo, &msg);
 
                 if (rxSuccess)
                 {
@@ -156,14 +158,14 @@ void CANRX_SWI(void)
                     else
 #endif // APP_UDS
                     {
-                        CANRX_VEH_unpackMessage((uint16_t)msg.id, &msg.data);
+                        CANRX_unpackMessage(bus, msg.id, &msg.data);
                     }
                 }
                 else
                 {
                     // TODO: handle errors
                 }
-            }
+            } while (rxSuccess);
 
             FLAG_clear(canrx.fifoNotify[bus], rxFifo);
             HW_CAN_activateFifoNotifications(bus, rxFifo);

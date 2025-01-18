@@ -1,12 +1,21 @@
 messages:
   BMSW0_criticalData:
+    sourceBuses: veh
   BMSW1_criticalData:
+    sourceBuses: veh
   BMSW2_criticalData:
+    sourceBuses: veh
   BMSW3_criticalData:
+    sourceBuses: veh
   BMSW4_criticalData:
+    sourceBuses: veh
   BMSW5_criticalData:
+    sourceBuses: veh
   BRUSA513_criticalData:
+    sourceBuses: veh
   PM100DX_criticalData:
+    sourceBuses: veh
   UDSCLIENT_bmsbUdsRequest:
+    sourceBuses: veh
     unrecorded: true
 signals:

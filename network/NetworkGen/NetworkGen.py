@@ -173,12 +173,16 @@ def process_node(node: CanNode):
             msg_name = f"{node.name.upper()}_{name}"
 
         definition["id"] = definition["id"] + node.offset;
-        
+
         for existing_node in can_nodes:
             for msg in can_nodes[existing_node].messages:
                 if definition["id"] == can_nodes[existing_node].messages[msg].id:
-                    print(f"Message {msg_name} has the same ID as {msg}")
-                    ERROR = True
+                    #if "sourceBuses" in definition:
+                        #for bus in definition["sourceBuses"]:
+                            #if bus in can_nodes[existing_node].messages[msg].source_buses:
+                                print(f"Message {msg_name} has the same ID as {msg}")
+                                ERROR = True
+                                break
         msg_obj = CanMessage(node, msg_name, definition)
 
         if msg_obj.signals is None:
@@ -256,7 +260,18 @@ def process_receivers(bus: CanBus, node: CanNode):
         rxed_msg.add_receiver(node, rxed_sig.name)
 
     for msg_name in rx_msg_dict.keys():
-        if msg_name not in bus.messages.keys():
+        if rx_msg_dict[msg_name] is not None and "sourceBuses" in rx_msg_dict[msg_name]:
+            if bus.name not in rx_msg_dict[msg_name]["sourceBuses"]:
+                continue
+        if bus.name not in node.on_buses:
+            print(
+                f"Node '{node.alias}' attempted to RX message '{msg_name}' "
+                f"on bus {bus.name}, but '{node.alias}' is not present on that bus"
+            )
+            ERROR = True
+            continue
+
+        if msg_name not in bus.messages.keys() or bus.name not in bus.messages[msg_name].source_buses:
             print(
                 f"Node '{node.alias}' attempted to RX message '{msg_name}' "
                 f"on bus {bus.name}, but that message is not present on that bus"
@@ -313,7 +328,7 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
-            ["NetworkDefines_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["NetworkDefines_generated.h.mako", {"nodes": [can_nodes[node]], "buses": can_bus_defs}],
             ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],

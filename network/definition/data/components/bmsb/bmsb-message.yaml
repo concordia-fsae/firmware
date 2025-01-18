@@ -3,6 +3,7 @@ messages:
     description: BMS Boss Critical Data
     id: 0x99
     lengthBytes: 8
+    sourceBuses: veh
     signals:
       criticalDataCounter:
       packChargeLimit:
@@ -13,6 +14,7 @@ messages:
     description: BMS Boss Information
     id: 0x98
     lengthBytes: 3
+    sourceBuses: veh
     signals:
       packCurrent:
       packContactorState:
@@ -21,6 +23,7 @@ messages:
     description: Brusa Charge Command
     id: 0x618
     lengthBytes: 7
+    sourceBuses: veh
     signals:
       nlg513ControlByte:
       nlg513MaxMainsCurrent:
@@ -32,5 +35,6 @@ messages:
     unscheduled: true
     id: 0x649
     lengthBytes: 8
+    sourceBuses: veh
     signals:
       udsPayload:

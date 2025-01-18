@@ -267,12 +267,9 @@ uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint
 
     memcpy(&d, data, len);
 
-    for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
+    if (HW_CAN_sendMsg(CAN_BUS_VEH, d, id, len))
     {
-        if (CAN_sendMsg(CAN_BUS_VEH, mailbox, d, (uint16_t)id, len))
-        {
-            sent = true;
-        }
+        sent = true;
     }
     return sent;
 }

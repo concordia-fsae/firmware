@@ -10,8 +10,9 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+// imports for time base
 #include "HW_tim.h"
-#include "SigTx.c"
+
 // imports for data access
 #include "Cooling.h"
 #include "Environment.h"

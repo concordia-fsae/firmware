@@ -22,6 +22,7 @@ ISOTP_DIR = LIBS_DIR.Dir("isotp")
 SHARED_CODE = Dir("#/components/shared/code")
 SHARED_LIBS = SHARED_CODE.Dir("libs")
 SHARED_APP = SHARED_CODE.Dir("app")
+SHARED_HW = SHARED_CODE.Dir("HW")
 
 ARTIFACT_NAME = "bms_worker"
 BUILDS_DIR = Dir(f"build")
@@ -131,6 +132,7 @@ LIBS_INCLUDE_DIRS = [
     SHARED_LIBS,
     ISOTP_DIR.Dir("include"),
     SHARED_APP,
+    SHARED_HW,
 ]
 
 INCLUDE_DIRS = [
@@ -158,12 +160,13 @@ src_files = [
     THERMS_DIR.File("NCP21XV103J03RA.c"),
     THERMS_DIR.File("MF52C1103F3380.c"),
     SHARED_LIBS.File("LIB_app.c"),
+    SRC_DIR.File("CANIO_componentSpecific.c"),
 ]
 
 hw_files = [
     HW_DIR.File("HW.c"),
     HW_DIR.File("HW_adc.c"),
-    HW_DIR.File("HW_can.c"),
+    HW_DIR.File("HW_can_componentSpecific.c"),
     HW_DIR.File("HW_dma.c"),
     HW_DIR.File("HW_gpio.c"),
     HW_DIR.File("HW_i2c.c"),
@@ -177,6 +180,7 @@ hw_files = [
     HW_DIR.File("HW_LTC2983.c"),
     HW_DIR.File("HW_SHT40.c"),
     HW_DIR.File("HW_NX3L4051PW.c"),
+    SHARED_HW.File("HW_can.c"),
 ]
 
 src_files += hw_files

@@ -11,6 +11,7 @@
 #include "CAN/CanTypes.h"
 #include "MessagePack_generated.h"
 #include "NetworkDefines_generated.h"
+#include "SigTx.c"
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -28,7 +29,8 @@
     %endfor
   %endfor
   %for bus in node.on_buses:
-busTable_S ${bus.upper()}_table[${len(node.messages_by_cycle_time())}U] = {
+
+busTable_S ${bus.upper()}_table[] = {
     %for cycle_time, msgs in node.messages_by_cycle_time().items():
     {
         .packTable = ${bus.upper()}_packTable_${cycle_time}ms,

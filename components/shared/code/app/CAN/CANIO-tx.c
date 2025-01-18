@@ -9,12 +9,12 @@
  ******************************************************************************/
 
 #include "CAN/CAN.h"
-#include "CanTypes.h"
+#include "CAN/CanTypes.h"
 #include "HW_can.h"
 #include "FreeRTOS_SWI.h"
 #include "ModuleDesc.h"
 #include "FeatureDefines_generated.h"
-#include "CAN/CANIO_componentSpecific.h"
+#include "CANIO_componentSpecific.h"
 #include "MessagePack_generated.c"
 
 /******************************************************************************
@@ -47,23 +47,19 @@ void CANTX_SWI(void)
 
                 const packTable_S* entry = packNextMessage((const packTable_S*)CAN_table[bus].busTable[table].packTable,
                                                                 CAN_table[bus].busTable[table].packTableLength,
-                                                                &CAN_table[bus].busTable[table].index,
+                                                                &pack,
                                                                 &message,
                                                                 &CAN_table[bus].busTable[table].counter);
                 if (entry != NULL)
                 {
-                    bool transmitFailed = true;
-                    for (CAN_TxMailbox_E mailbox = 0U; mailbox < CAN_TX_MAILBOX_COUNT; mailbox++)
+                    if (HW_CAN_sendMsg(bus, message, entry->id, entry->len))
                     {
-                        if (CAN_sendMsg(bus, mailbox, message, entry->id, entry->len))
-                        {
-                            CAN_table[bus].busTable[table].index++;
-                            transmitFailed = false;
-                            break;
-                        }
+                        CAN_table[bus].busTable[table].index = pack + 1;
+                        continue;
                     }
-                    if (transmitFailed)
+                    else
                     {
+                        CAN_table[bus].busTable[table].index = pack;
                         return;
                     }
                 }
@@ -115,28 +111,45 @@ static const packTable_S* packNextMessage(const packTable_S* packTable,
 
 static void CANIO_tx_1kHz_PRD(void)
 {
+    bool txRequest = false;
+
     for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
     {
         for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
         {
-            if (CANIO_getTimeMs() - CAN_table[bus].busTable[table].lastTimestamp < CAN_table[bus].busTable[table].period)
+            if ((CAN_table[bus].busTable[table].packTableLength == 0U) ||
+                (CANIO_getTimeMs() - CAN_table[bus].busTable[table].lastTimestamp < CAN_table[bus].busTable[table].period))
             {
                 continue;
             }
 
-            CAN_table[bus].busTable[table].lastTimestamp = CANIO_getTimeMs();
-
             if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
                 // all the message weren't sent. TO-DO: error handling
             }
+
             CAN_table[bus].busTable[table].index = 0U;
+            CAN_table[bus].busTable[table].lastTimestamp = CANIO_getTimeMs();
         }
     }
+    for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
+    {
+        for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
+        {
+            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
+                // all the message haven't been sent yet
+                txRequest = true;
+            }
+        }
+    }
+
+    if (txRequest)
+    {
 #if FEATURE_IS_ENABLED(FEATURE_CANTX_SWI)
-    SWI_invoke(CANTX_swi);
+        SWI_invoke(CANTX_swi);
 #else // FEATURE_CANTX_SWI
-    CANTX_SWI();
+        CANTX_SWI();
 #endif // not FEATURE_CANTX_SWI
+    }
 }
 
 /**
@@ -145,7 +158,10 @@ static void CANIO_tx_1kHz_PRD(void)
  */
 static void CANIO_tx_init(void)
 {
-    HW_CAN_start();    // start CAN
+    for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
+    {
+        HW_CAN_start(bus);    // start CAN peripheral
+    }
 }
 
 

@@ -238,8 +238,12 @@ void RTOS_createResources(void)
     /*
      * create SWI handles
      */
-    CANTX_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_SWI);
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     CANRX_swi = SWI_create(RTOS_SWI_PRI_0, &CANRX_SWI);
+#endif // FEATURE_CANRX_SWI
+#if FEATURE_IS_ENABLED(FEATURE_CANTX_SWI)
+    CANTX_swi = SWI_create(RTOS_SWI_PRI_0, &CANTX_SWI);
+#endif // FEATURE_CANTX_SWI
 
     /*
      * Create tasks

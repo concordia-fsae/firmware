@@ -10,8 +10,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+// imports for timebase
 #include "HW_tim.h"
-#include "SigTx.c"
+
+// imports for CAN generated types
+#include "CANTypes_generated.h"
+
 // imports for data access
 #include "IO.h"
 #include "BMS.h"
