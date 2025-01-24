@@ -77,12 +77,12 @@ int main(void)
 
     /**< Initiate Firmware */
     /**< Order is important, don't change without checking */
-    HW_GPIO_init();
     HW_TIM_init();
     HW_I2C_init();
     HW_CAN_init();
     HW_DMA_init();
     HW_ADC_init();
+    HW_GPIO_init();
 
     ///**< Create RTOS Tasks, Timers, etc... */
     RTOS_SWI_Init();
@@ -104,22 +104,11 @@ void Error_Handler(void)
 {
     __disable_irq();
 
-    /**< Configure LED if not already done */
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-
-    GPIO_InitStruct.Pin   = LED_Pin;
-    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull  = GPIO_PULLDOWN;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(LED_Port, &GPIO_InitStruct);
-
     /**< Fast Toggle LED */
     while (1)
     {
         uint32_t cnt = 6400000;
-        HAL_GPIO_TogglePin(LED_Port, LED_Pin);
+        HW_GPIO_togglePin(HW_GPIO_LED);
         while (cnt--)
             ;
     }

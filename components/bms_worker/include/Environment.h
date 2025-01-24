@@ -25,15 +25,12 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-#if defined(BMSW_BOARD_VA3)
 typedef enum
 {
     BRD1 = 0x00,
     BRD2,
     BRD_COUNT,
 } ENV_BRDChannels_E;
-#endif /**< BMSW_BOARD_VA3 */
-
 
 typedef enum
 {

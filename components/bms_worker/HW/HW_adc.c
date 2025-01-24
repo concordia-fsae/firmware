@@ -19,7 +19,6 @@
 
 // Other Includes
 #include "BatteryMonitoring.h"
-#include "IO.h"
 #include "SystemConfig.h"
 
 
@@ -27,15 +26,14 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES    2U
-#define ADC_CALIBRATION_TIMEOUT                    10U
-
-#define ADC_MAX_COUNT                              4095
-#if defined(BMSW_BOARD_VA1)
-# define ADC_REF_VOLTAGE                           3.3F
-#elif defined(BMSW_BOARD_VA3)
-# define ADC_REF_VOLTAGE                           3.0F
-#endif
+#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
+#define ADC_CALIBRATION_TIMEOUT                 10U
+#define ADC_CHANNEL_CELL_MEASUREMENT            ADC_CHANNEL_0
+#define ADC_CHANNEL_MUX1                        ADC_CHANNEL_1
+#define ADC_CHANNEL_MUX2                        ADC_CHANNEL_2
+#define ADC_CHANNEL_MUX3                        ADC_CHANNEL_3
+#define ADC_CHANNEL_BRD1                        ADC_CHANNEL_4
+#define ADC_CHANNEL_BRD2                        ADC_CHANNEL_5
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -74,11 +72,7 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-#if defined(BMSW_BOARD_VA1)
-    hadc1.Init.NbrOfConversion       = 1;
-#elif defined(BMSW_BOARD_VA3)    // BMSW_BOARD_VA1
     hadc1.Init.NbrOfConversion       = 6;
-#endif // BMSW_BOARD_VA3
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -99,7 +93,6 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     {
         Error_Handler();
     }
-#if defined(BMSW_BOARD_VA3)
     sConfig.Channel      = ADC_CHANNEL_MUX1;
     sConfig.Rank         = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
@@ -135,7 +128,6 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     {
         Error_Handler();
     }
-#endif // BMSW_BOARD_VA3
 
     // Common config
     hadc2.Instance                   = ADC2;
@@ -183,15 +175,10 @@ HW_StatusTypeDef_E HW_ADC_deInit()
  */
 void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
-    UNUSED(adcHandle);
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
     if (adcHandle->Instance == ADC1)
     {
         // ADC1 clock enable
         __HAL_RCC_ADC1_CLK_ENABLE();
-
-        __HAL_RCC_GPIOA_CLK_ENABLE();
 
         // ADC1 DMA Init
         // ADC1 Init
@@ -217,11 +204,6 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
     {
         // ADC1 clock enable
         __HAL_RCC_ADC2_CLK_ENABLE();
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-
-        GPIO_InitStruct.Pin  = CELL_VOLTAGE_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        HAL_GPIO_Init(CELL_VOLTAGE_Port, &GPIO_InitStruct);
     }
 }
 
@@ -243,8 +225,6 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     {
         // Peripheral clock disable
         __HAL_RCC_ADC2_CLK_DISABLE();
-
-        HAL_GPIO_DeInit(CELL_VOLTAGE_Port, CELL_VOLTAGE_Pin);
     }
 }
 

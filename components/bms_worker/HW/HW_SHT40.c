@@ -5,8 +5,6 @@
  * @note Not used in Release A.1
  */
 
-#if defined(BMSW_BOARD_VA3)
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -168,5 +166,3 @@ bool SHT_startHeater(SHT_Heat_E heat)
 
     return true;
 }
-
-#endif // if defined(BMSW_BOARD_VA3)

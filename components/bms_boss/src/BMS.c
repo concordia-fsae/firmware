@@ -23,16 +23,6 @@
 
 BMSB_S BMS;
 
-HW_GPIO_S imd_status = {
-    .pin  = IMD_STATUS_Pin,
-    .port = IMD_STATUS_Port,
-};
-
-HW_GPIO_S bms_status = {
-    .pin  = BMS_STATUS_Pin,
-    .port = BMS_STATUS_Port,
-};
-
 void BMS_workerWatchdog(void);
 
 static void BMS_init(void)
@@ -121,11 +111,11 @@ static void BMS100Hz_PRD(void)
 
     if (IMD_getState() == IMD_HEALTHY)
     {
-        HW_GPIO_writePin(&imd_status, true);
+        HW_GPIO_writePin(HW_GPIO_IMD_STATUS, true);
     }
     else
     {
-        HW_GPIO_writePin(&imd_status, false);
+        HW_GPIO_writePin(HW_GPIO_IMD_STATUS, false);
     }
 
     if (BMS.fault || !IO.imd_ok || !IO.master_switch)

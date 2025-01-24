@@ -168,7 +168,7 @@ hw_files = [
     HW_DIR.File("HW_adc.c"),
     HW_DIR.File("HW_can_componentSpecific.c"),
     HW_DIR.File("HW_dma.c"),
-    HW_DIR.File("HW_gpio.c"),
+    HW_DIR.File("HW_gpio_componentSpecific.c"),
     HW_DIR.File("HW_i2c.c"),
     HW_DIR.File("HW_intc.c"),
     HW_DIR.File("HW_msp.c"),
@@ -181,6 +181,7 @@ hw_files = [
     HW_DIR.File("HW_SHT40.c"),
     HW_DIR.File("HW_NX3L4051PW.c"),
     SHARED_HW.File("HW_can.c"),
+    SHARED_HW.File("HW_gpio.c"),
 ]
 
 src_files += hw_files

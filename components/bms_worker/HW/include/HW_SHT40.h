@@ -5,8 +5,6 @@
  * @note Not used in Release A.1
  */
 
-#if defined(BMSW_BOARD_VA3)
-
 # pragma once
 
 /******************************************************************************
@@ -65,5 +63,3 @@ bool SHT_init(void);
 bool SHT_startConversion(void);
 bool SHT_getData(void);
 bool SHT_startHeater(SHT_Heat_E heat);
-
-#endif    // BMSW_BOARD_VA3

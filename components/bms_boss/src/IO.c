@@ -68,27 +68,6 @@ typedef struct
 
 static io_S io;
 
-HW_GPIO_S TSMS = {
-    .pin  = TSMS_CHG_Pin,
-    .port = TSMS_CHG_Port,
-};
-
-HW_GPIO_S IMD_OK = {
-    .pin  = OK_HS_Pin,
-    .port = OK_HS_Port,
-};
-
-HW_GPIO_S imd_feedback = {
-    .pin  = IMD_STATUS_Pin,
-    .port = IMD_STATUS_Port,
-};
-
-HW_GPIO_S bms_feedback = {
-    .pin  = BMS_STATUS_Pin,
-    .port = BMS_STATUS_Port,
-};
-
-
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -146,10 +125,10 @@ static void IO10Hz_PRD(void)
         IO.mcu_temp = (io.adcData[ADC_MCU_TEMP].value / ADC_MAX_VAL) * VREF;
     }
 
-    IO.master_switch = (HW_GPIO_readPin(&TSMS)) ? true : false;
-    IO.imd_ok = (HW_GPIO_readPin(&IMD_OK)) ? true : false;
-    IO.feedback_sfty_bms = (HW_GPIO_readPin(&bms_feedback)) ? true : false;
-    IO.feedback_sfty_imd = (HW_GPIO_readPin(&imd_feedback)) ? true : false;
+    IO.master_switch = (HW_GPIO_readPin(HW_GPIO_TSMS_CHG)) ? true : false;
+    IO.imd_ok = (HW_GPIO_readPin(HW_GPIO_OK_HS)) ? true : false;
+    IO.feedback_sfty_bms = (HW_GPIO_readPin(HW_GPIO_BMS_STATUS_MEM)) ? true : false;
+    IO.feedback_sfty_imd = (HW_GPIO_readPin(HW_GPIO_IMD_STATUS_MEM)) ? true : false;
 }
 
 /**

@@ -30,7 +30,7 @@ typedef SPI_TypeDef HW_SPI_Handle_T;
 typedef struct
 {
     HW_SPI_Handle_T* handle;
-    HW_GPIO_S        ncs_pin;
+    HW_GPIO_pinmux_E ncs_pin;
 } HW_SPI_Device_S;
 
 
