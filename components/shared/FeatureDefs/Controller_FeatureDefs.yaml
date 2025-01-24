@@ -10,3 +10,4 @@ defs:
 discreteValues:
   stm32_pn:
     - stm32f103xb
+    - stm32f105
