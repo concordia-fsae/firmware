@@ -301,7 +301,7 @@ asms = []
 
 for config_id, config in configs.items():
     config_env = env.Clone()
-    feature_selections = config_env["FEATURE_SELECTIONS"]
+    feature_selections = []
     feature_selections += config["features"]["selections"]
     feature_selections_files = []
 

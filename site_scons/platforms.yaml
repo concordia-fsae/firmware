@@ -1,8 +1,5 @@
 configs:
   cfr24:
-    options:
-      feature-selections:
-        - "#/shared/FeatureSels/CFR24_FeatureSels.yaml"
     ecu:
       bmsw:
         0:
@@ -18,9 +15,6 @@ configs:
         5: # BMS Worker
         10: # BMS Boss
   cfr25:
-    options:
-      feature-selections:
-        - "#/shared/FeatureSels/CFR24_FeatureSels.yaml"
     ecu:
       bmsw:
         0:
