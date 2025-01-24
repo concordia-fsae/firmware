@@ -1,4 +1,0 @@
-config:
-  prefix: platform
-  description: General definitions for vehicles
-defs:

@@ -272,11 +272,7 @@ for config_id, config in configs.items():
     platform_source_files.extend(
         [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
     )
-    try:
-        feature_selections = config_env["FEATURE_SELECTIONS"]
-    except:
-        feature_selections = []
-        print(f"No platform feature selections for component {ARTIFACT_NAME.upper()}")
+    feature_selections = []
     feature_selections += config["features"]["selections"]
     feature_selections_files = []
     for file in feature_selections:
