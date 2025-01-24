@@ -2,6 +2,7 @@ configs:
   0:
     description: BMS Boss
     options:
+      chipset: stm32f103xb
     features:
       selections:
         - "#/components/shared/FeatureSels/BMS_FeatureSels.yaml"
@@ -12,3 +13,17 @@ configs:
         app_uds: true
         app_component_id: bmsb
         app_pcba_id: 0
+  1:
+    description: BMS Boss
+    options:
+      chipset: stm32f105
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/BMS_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_uds: true
+        app_component_id: bmsb
+        app_pcba_id: 1

@@ -1,10 +1,10 @@
-name: stm32f103
+name: stm32f105
 defines:
-  NUM_CAN_BUSES: 1U
+  NUM_CAN_BUSES: 2U
 extraSources:
-  - "f103/startup_stm32f103xb.S"
-  - "f103/system_stm32f1xx.c"
-defaultLinkerFile: "f103/STM32F103C8.ld"
+  - "f105/startup_stm32f105vc.S"
+  - "system_stm32f1xx.c"
+defaultLinkerFile: "f105/STM32F105VC.ld"
 drivers:
   hal:
     required: true

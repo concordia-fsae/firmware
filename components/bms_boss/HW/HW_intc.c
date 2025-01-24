@@ -9,8 +9,6 @@
 
 // Firmware Includes
 #include "HW_intc.h"
-#include "stm32f1xx.h"
-
 
 /******************************************************************************
  *                              E X T E R N S

@@ -21,7 +21,8 @@
 
 #define HSE_STARTUP_TIMEOUT    0x0500UL  // Time out for HSE start up
 
-#if APP_PCBA_ID == 0
+#if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 0U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSW) && (APP_PCBA_ID == 0U))
 
 # define CAN_AFIO_REMAP    true
 # define CAN_RX_PORT       GPIOB
@@ -30,7 +31,7 @@
 # define CAN_TX_PORT       GPIOB
 # define CAN_TX_PIN        9U
 
-#elif APP_PCBA_ID == 10
+#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 1U)) || (APP_PCBA_ID == 10U)
 
 # define CAN_AFIO_REMAP    false
 # define CAN_RX_PORT       GPIOA
@@ -38,6 +39,7 @@
 
 # define CAN_TX_PORT       GPIOA
 # define CAN_TX_PIN        12U
+
 #else
 #error "Invalid configuration"
 #endif // if PCB_ID == 0
@@ -52,7 +54,7 @@
 #define LED_ON_STATE            0U // this can probably be refactored
 #if APP_PCBA_ID == 0
 # define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
-#elif APP_PCBA_ID == 10
+#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 1U)) || (APP_PCBA_ID == 10U)
 # define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
 #else
 #error "Invalid configuration"

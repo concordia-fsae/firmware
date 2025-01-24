@@ -16,12 +16,15 @@
 // Firmware Includes
 #include "CAN/CanTypes.h"
 #include "NetworkDefines_generated.h"
+#include "FeatureDefines_generated.h"
 
-#if MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB
+#if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB) || \
+    (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105)
 #define CAN_FILTERBANK_LENGTH 28U
 #else
 #error "No other MCU supported."
 #endif
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
