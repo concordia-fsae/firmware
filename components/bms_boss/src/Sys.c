@@ -31,31 +31,6 @@
 SYS_S SYS;
 
 /******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-HW_GPIO_S led = {
-    .port = LED_Port,
-    .pin  = LED_Pin,
-};
-
-HW_GPIO_S shtdn = {
-    .pin = BMS_STATUS_Pin,
-    .port = BMS_STATUS_Port,
-};
-
-HW_GPIO_S hvp = {
-    .pin = AIR_Pin,
-    .port = AIR_Port,
-};
-
-HW_GPIO_S pchg = {
-    .pin = PCHG_Pin,
-    .port = PCHG_Port
-};
-
-
-/******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
@@ -89,7 +64,7 @@ static void SYS10Hz_PRD()
         case SYS_INIT:
             break;
         case SYS_ERROR:
-            HW_GPIO_togglePin(&led);
+            HW_GPIO_togglePin(HW_GPIO_LED);
             break;
     }
 }
@@ -103,7 +78,7 @@ static void SYS1Hz_PRD()
     switch (SYS.state)
     {
         case SYS_RUNNING:
-            HW_GPIO_togglePin(&led);
+            HW_GPIO_togglePin(HW_GPIO_LED);
             break;
         case SYS_INIT:
             break;
@@ -124,18 +99,18 @@ const ModuleDesc_S SYS_desc = {
 
 void SYS_SFT_openShutdown(void)
 {
-    HW_GPIO_writePin(&shtdn, false);
+    HW_GPIO_writePin(HW_GPIO_BMS_STATUS, false);
 }
 
 void SYS_SFT_closeShutdown(void)
 {
-    HW_GPIO_writePin(&shtdn, true);
+    HW_GPIO_writePin(HW_GPIO_BMS_STATUS, true);
 }
 
 void SYS_SFT_openContactors(void)
 {
-    HW_GPIO_writePin(&hvp, false);
-    HW_GPIO_writePin(&pchg, false);
+    HW_GPIO_writePin(HW_GPIO_AIR, false);
+    HW_GPIO_writePin(HW_GPIO_PCHG, false);
     SYS.contacts = SYS_CONTACTORS_OPEN;
 }
 
@@ -143,17 +118,17 @@ void SYS_SFT_cycleContacts(void)
 {
     if (SYS.contacts == SYS_CONTACTORS_OPEN)
     {
-        HW_GPIO_writePin(&pchg, true);
+        HW_GPIO_writePin(HW_GPIO_PCHG, true);
         SYS.contacts = SYS_CONTACTORS_PRECHARGE;
     }
     else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
     {
-        HW_GPIO_writePin(&hvp, true);        
+        HW_GPIO_writePin(HW_GPIO_AIR, true);        
         SYS.contacts = SYS_CONTACTORS_CLOSED;
     }
     else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
     {
-        HW_GPIO_writePin(&pchg, false);        
+        HW_GPIO_writePin(HW_GPIO_PCHG, false);        
         SYS.contacts = SYS_CONTACTORS_HVP_CLOSED;
     }
 }

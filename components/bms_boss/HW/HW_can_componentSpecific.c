@@ -254,22 +254,6 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         __HAL_RCC_CAN1_CLK_ENABLE();
 
         __HAL_RCC_GPIOB_CLK_ENABLE();
-        /**CAN GPIO Configuration
-         * PA11     ------> CAN_RX
-         * PA12     ------> CAN_TX
-         */
-        GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
-        GPIO_InitStruct.Pin   = CAN_R_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull  = GPIO_NOPULL;
-        HAL_GPIO_Init(CAN_Port, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin   = CAN_T_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(CAN_Port, &GPIO_InitStruct);
-
         __HAL_AFIO_REMAP_CAN1_2();
 
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
@@ -294,12 +278,6 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     {
         // Peripheral clock disable
         __HAL_RCC_CAN1_CLK_DISABLE();
-
-        /**CAN GPIO Configuration
-         * PA11     ------> CAN_RX
-         * PA12     ------> CAN_TX
-         */
-        HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
 
         HAL_NVIC_DisableIRQ(CAN1_SCE_IRQn);
         HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);

@@ -13,13 +13,11 @@
 // Firmware Includes
 #include "HW_i2c.h"
 
-
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
 I2C_HandleTypeDef i2c2;
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -68,19 +66,8 @@ HW_StatusTypeDef_E HW_I2C_deInit(void)
  */
 void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 {
-    /**< Activate clocks */
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-
     if (hi2c->Instance == I2C2)
     {
-        GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
-        /**< Initialize I2C1 */
-        GPIO_InitStruct.Pin   = I2C2_SCL_Pin | I2C2_SDA_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_AF_OD;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(I2C2_GPIO_Port, &GPIO_InitStruct);
-        
         __HAL_RCC_I2C2_CLK_ENABLE();
     }
 }

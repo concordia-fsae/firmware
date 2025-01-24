@@ -3,8 +3,6 @@
  * @brief  Header file for NX3L4051PW Driver
  */
 
-#if defined(BMSW_BOARD_VA3)
-
 # pragma once
 
 /******************************************************************************
@@ -41,5 +39,3 @@ bool NX3L_init(void);
 bool NX3L_setMux(NX3L_MUXChannel_E chn);
 bool NX3L_enableMux(void);
 bool NX3L_disableMux(void);
-
-#endif    // BMSW_BOARD_VA3

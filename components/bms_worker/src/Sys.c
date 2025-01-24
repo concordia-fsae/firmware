@@ -24,17 +24,6 @@
 
 SYS_S SYS;
 
-
-/******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-HW_GPIO_S led = {
-    .port = LED_GPIO_Port,
-    .pin  = LED_Pin,
-};
-
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -80,7 +69,7 @@ static void SYS10Hz_PRD()
             break;
 
         case SYS_ERROR:
-            HW_GPIO_togglePin(&led);
+            HW_GPIO_togglePin(HW_GPIO_LED);
             break;
     }
 }
@@ -94,7 +83,7 @@ static void SYS1Hz_PRD()
     switch (SYS.state)
     {
         case SYS_RUNNING:
-            HW_GPIO_togglePin(&led);
+            HW_GPIO_togglePin(HW_GPIO_LED);
             break;
 
         case SYS_INIT:

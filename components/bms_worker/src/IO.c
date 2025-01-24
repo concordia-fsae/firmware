@@ -42,19 +42,6 @@
 
 typedef enum
 {
-#if defined(BMSW_BOARD_VA3)
-    A1_INDEX = 0x00,
-    A2_INDEX,
-    A3_INDEX,
-#elif defined(BMSW_BOARD_VA1)    /**< BMSW_BOARD_VA3 */
-    A0_INDEX = 0x00,
-    A1_INDEX,
-    A2_INDEX,
-#endif
-} addressIndex_E;
-
-typedef enum
-{
     ADC_STATE_INIT = 0,
     ADC_STATE_CALIBRATION,
     ADC_STATE_RUNNING,
@@ -89,29 +76,6 @@ typedef struct
  ******************************************************************************/
 
 static io_S io;
-
-/**< GPIO descriptors */
-#if defined(BMSW_BOARD_VA1)
-HW_GPIO_S A0 = {
-    .port = A0_GPIO_Port,
-    .pin  = A0_Pin,
-};
-#endif /**< BMSW_BOARD_VA1 */
-HW_GPIO_S A1 = {
-    .port = A1_GPIO_Port,
-    .pin  = A1_Pin,
-};
-
-HW_GPIO_S A2 = {
-    .port = A2_GPIO_Port,
-    .pin  = A2_Pin,
-};
-#if defined(BMSW_BOARD_VA3)
-HW_GPIO_S A3 = {
-    .port = A3_GPIO_Port,
-    .pin  = A3_Pin,
-};
-#endif /**< BMSW_BOARD_VA3 */
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -157,19 +121,9 @@ static void IO_init(void)
         }
     }
 
-#if defined(BMSW_BOARD_VA1)
-    IO.addr |= ((HW_GPIO_readPin(&A0)) ? 0x01 : 0x00) << 0;
-    IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x01 : 0x00) << 1;
-    IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x01 : 0x00) << 2;
-#elif defined(BMSW_BOARD_VA3)
-    IO.addr |= ((HW_GPIO_readPin(&A1)) ? 0x00 : 0x01) << 0;
-    IO.addr |= ((HW_GPIO_readPin(&A2)) ? 0x00 : 0x01) << 1;
-    IO.addr |= ((HW_GPIO_readPin(&A3)) ? 0x00 : 0x01) << 2;
-
     NX3L_init();
     NX3L_enableMux();
     NX3L_setMux(NX3L_MUX1);
-#endif /**< BMSW_BOARD_VA3 */
 }
 
 static void IO10Hz_PRD(void)
@@ -191,7 +145,7 @@ static void IO10Hz_PRD(void)
         for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
         {
             io.adcData[i].value  = (io.adcData[i].count != 0) ? ((float32_t)io.adcData[i].raw) / io.adcData[i].count : 0;
-            io.adcData[i].value *= VREF / ADC_MAX_VAL;
+            io.adcData[i].value *= ADC_REF_VOLTAGE / ADC_MAX_VAL;
         }
 
         IO.temp.mcu               = io.adcData[ADC_CHANNEL_TEMP_MCU].value;
@@ -232,7 +186,7 @@ void IO10kHz_CB(void)
             IO_Cells_unpackADCBuffer();
 
             io.bmsData.value      = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
-            io.bmsData.value     *= ADC_VOLTAGE_DIVISION * VREF / ADC_MAX_VAL;
+            io.bmsData.value     *= ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE / ADC_MAX_VAL;
 
             IO.cell[current_cell] = io.bmsData.value;
 
@@ -254,7 +208,7 @@ void IO10kHz_CB(void)
             if (io.bmsData.count != 0)
             {
                 io.bmsData.value  = ((float32_t)io.bmsData.raw / io.bmsData.count);
-                io.bmsData.value *= (ADC_VOLTAGE_DIVISION * VREF) / ADC_MAX_VAL;
+                io.bmsData.value *= (ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE) / ADC_MAX_VAL;
             }
 
             IO.segment        = io.bmsData.value;
