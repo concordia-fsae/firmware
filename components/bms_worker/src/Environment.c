@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 /**< Driver Includes */
-#include "HW_HS4011.h"
+#include "HW_adc.h"
 #include "HW_SHT40.h"
 #include "IO.h"
 #include "THERMISTORS.h"
@@ -34,19 +34,14 @@
 #define TEMP_CHIP_FROM_V(v)   (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
 
 #define THERM_PULLUP  10000
-#define RES_FROM_V(v) (THERM_PULLUP * ((v / VREF) / (1 - (v / VREF))))
+#define RES_FROM_V(v) (THERM_PULLUP * ((v / ADC_REF_VOLTAGE) / (1 - (v / ADC_REF_VOLTAGE))))
 
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
-#if defined(BMSW_BOARD_VA1)
-extern LTC2983_S ltc_chip;
-extern HS4011_S  hs_chip;
-#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
 extern SHT_S sht_chip;
-#endif                        /**< BMSW_BOARD_VA3 */
 extern IO_S IO;
 
 
@@ -68,17 +63,6 @@ typedef enum
 
 ENV_S ENV;
 
-
-/******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-#if defined(BMSW_BOARD_VA1)
-static Sensor_State_E ltc_state;
-static Sensor_State_E hs_state;
-#endif // BMSW_BOARD_VA3
-
-
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -97,19 +81,6 @@ static void Environment_Init()
 {
     ENV.state = ENV_INIT;
 
-#if defined(BMSW_BOARD_VA1)
-    if (!LTC_init())
-    {
-        ENV.state = ENV_ERROR;
-    }
-    if (!HS4011_init())
-    {
-        ENV.state = ENV_ERROR;
-    }
-#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-    (void)SHT_init();
-#endif                        /**< BMSW_BOARD_VA3 */
-
     if (ENV.state != ENV_ERROR)
     {
         ENV.state = ENV_RUNNING;
@@ -121,50 +92,6 @@ static void Environment_Init()
  */
 static void Environment10Hz_PRD()
 {
-#if defined(BMSW_BOARD_VA1)
-    if (ltc_state == MEASURING)
-    {
-        if (LTC_getMeasurement())
-        {
-            ltc_state = DONE;
-
-            uint16_t tmp_min = UINT16_MAX;
-            uint16_t tmp_max = 0x00;
-            uint32_t tmp_avg = 0x00;
-
-            for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
-            {
-                ENV.values.cells.cell_temps[i] = ltc_chip.temps[i];
-                if (ltc_chip.temps[i] < tmp_min)
-                {
-                    tmp_min = ltc_chip.temps[i];
-                }
-                if (ltc_chip.temps[i] > tmp_max)
-                {
-                    tmp_max = ltc_chip.temps[i];
-                }
-                tmp_avg += ltc_chip.temps[i];
-            }
-
-            tmp_avg /= CHANNEL_COUNT;
-
-            ENV.values.cells.avg_temp = (uint16_t)tmp_avg;
-            ENV.values.cells.max_temp = tmp_max;
-            ENV.values.cells.min_temp = tmp_min;
-        }
-    }
-
-    if (hs_state == MEASURING)
-    {
-        if (HS4011_getData())
-        {
-            hs_state = DONE;
-
-            ENV.values.board.ambient_temp = hs_chip.data.temp / 10;
-            ENV.values.board.rh           = hs_chip.data.rh / 100;
-        }
-    }
-#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
     if (sht_chip.state == SHT_MEASURING || sht_chip.state == SHT_HEATING)
     {
         if (SHT_getData())
@@ -193,7 +120,6 @@ static void Environment10Hz_PRD()
     }
 
     ENV_calcTempStats();
-#endif                        // if defined(BMSW_BOARD_VA1)
 }
 
 /**
@@ -205,23 +131,16 @@ static void Environment1Hz_PRD()
     {
         case ENV_INIT:
             break;
-        
+
         case ENV_FAULT:
         case ENV_RUNNING:
-#if defined(BMSW_BOARD_VA1)
-            ltc_state = MEASURING;
-            hs_state  = MEASURING;
-
-            LTC_startMeasurement();
-            HS4011_startConversion();
-#elif defined(BMSW_BOARD_VA3) /**< BMSW_BOARD_VA1 */
-            if (sht_chip.state == SHT_WAITING) 
+            if (sht_chip.state == SHT_WAITING)
             {
                 if (ENV.values.board.rh > 90.0f)
                 {
                     SHT_startHeater(SHT_HEAT_MED);
                 }
-                else 
+                else
                 {
                     SHT_startConversion();
                 }
@@ -230,7 +149,6 @@ static void Environment1Hz_PRD()
             {
                 // TODO: Implement error handling
             }
-#endif
             break;
 
         case ENV_ERROR:
@@ -280,8 +198,8 @@ void ENV_calcTempStats(void)
         ENV.values.max_temp = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
-    
-    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F) 
+
+    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F)
     {
         ENV.state = ENV_ERROR;
     }
@@ -292,7 +210,7 @@ void ENV_calcTempStats(void)
 
     ENV.values.avg_temp /= connected_channels;
 
-    if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) || 
+    if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) ||
         connected_channels == 0 || ENV.values.max_temp >= 60)
     {
         ENV.state = ENV_FAULT;

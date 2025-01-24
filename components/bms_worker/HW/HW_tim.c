@@ -49,7 +49,6 @@ static uint64_t   fan2_last_tick[2] = { 0 };
 HW_StatusTypeDef_E HW_TIM_init(void)
 {
     RCC_ClkInitTypeDef      clkconfig;
-    GPIO_InitTypeDef        GPIO_InitStruct    = { 0 };
     TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
     TIM_OC_InitTypeDef      sConfigOC          = { 0 };
     TIM_MasterConfigTypeDef sMasterConfig      = { 0 };
@@ -153,18 +152,6 @@ HW_StatusTypeDef_E HW_TIM_init(void)
         Error_Handler();
     }
 
-    // Configure FAN PWM pin. Open-drain for sinking optoisolator
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-
-    GPIO_InitStruct.Pin   = FAN1_PWM_Pin;
-    GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(FAN1_PWM_GPIO_Port, &GPIO_InitStruct);
-    GPIO_InitStruct.Pin   = FAN2_PWM_Pin;
-    GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(FAN2_PWM_GPIO_Port, &GPIO_InitStruct);
-
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
 
@@ -223,18 +210,9 @@ HW_StatusTypeDef_E HW_TIM_deInit(void)
  */
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
     if (htim_base->Instance == TIM1)
     {
         __HAL_RCC_TIM1_CLK_ENABLE();
-
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-
-        GPIO_InitStruct.Pin  = FAN1_PWM_Pin | FAN2_PWM_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
         HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
         HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);

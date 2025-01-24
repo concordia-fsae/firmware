@@ -57,14 +57,6 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
 
     if (hi2c->Instance == I2C1)
     {
-        GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
-        /**< Initialize I2C1 */
-        GPIO_InitStruct.Pin   = I2C_SCL_Pin | I2C_SDA_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_AF_OD;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(I2C_Port, &GPIO_InitStruct);
-
         __HAL_RCC_I2C1_CLK_ENABLE();
     }
 }

@@ -11,6 +11,7 @@
 #include "string.h"
 
 // Firmware Includes
+#include "HW_gpio.h"
 #include "HW_spi.h"
 #include "stm32f1xx_ll_bus.h"
 #include "stm32f1xx_ll_gpio.h"
@@ -95,52 +96,13 @@ HW_StatusTypeDef_E HW_SPI_deInit(void)
  */
 static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
     if (SPIx == SPI1)
     {
         // __HAL_RCC_SPI1_CLK_ENABLE();
         LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
         LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
 
-        GPIO_InitStruct.Pin   = SPI1_CLK_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin   = SPI1_MOSI_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull  = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
-
-        GPIO_InitStruct.Pin   = SPI1_MISO_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull  = GPIO_NOPULL;
-        HAL_GPIO_Init(SPI1_GPIO_Port, &GPIO_InitStruct);
-
         LL_GPIO_AF_EnableRemap_SPI1();
-
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-
-        GPIO_InitStruct.Pin   = SPI1_MAX_NCS_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStruct.Pull  = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(SPI1_MAX_NCS_Port, &GPIO_InitStruct);
-
-#if defined(BMSW_BOARD_VA1)
-        GPIO_InitStruct.Pin   = SPI1_LTC_NCS_Pin;
-        GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStruct.Pull  = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(SPI1_LTC_NCS_Port, &GPIO_InitStruct);
-#endif /**< BMSW_BOARD_VA1 */
-        // set NSS pin high (disable slaves)
-        HAL_GPIO_WritePin(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin, GPIO_PIN_SET);
-#if defined(BMSW_BOARD_VA1)
-        HAL_GPIO_WritePin(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin, GPIO_PIN_SET);
-#endif /**< BMSW_BOARD_VA1 */
     }
 }
 
@@ -155,16 +117,7 @@ static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
     {
         // Peripheral clock disable
         LL_SPI_Disable(SPI1);
-
-        HAL_GPIO_DeInit(SPI1_GPIO_Port,    SPI1_CLK_Pin | SPI1_MISO_Pin | SPI1_MOSI_Pin);
-        HAL_GPIO_DeInit(SPI1_MAX_NCS_Port, SPI1_MAX_NCS_Pin);
-#if defined(BMSW_BOARD_VA1)
-        HAL_GPIO_DeInit(SPI1_LTC_NCS_Port, SPI1_LTC_NCS_Pin);
-#endif /**, BMSW_BOARD_VA1 */
-	
 	    LL_GPIO_AF_DisableRemap_SPI1();
-
-        HAL_GPIO_DeInit(SPI1_GPIO_Port, SPI1_CLK_Pin | SPI1_MISO_Pin |SPI1_MOSI_Pin);
 
 	    LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_SPI1);
     }
@@ -187,7 +140,7 @@ bool HW_SPI_lock(HW_SPI_Device_S* dev)
     lock.locked = true;
     lock.owner  = dev;
 
-    HAL_GPIO_WritePin(dev->ncs_pin.port, dev->ncs_pin.pin, GPIO_PIN_RESET);
+    HW_GPIO_writePin(dev->ncs_pin, false);
 
     return true;
 }
@@ -209,7 +162,7 @@ bool HW_SPI_release(HW_SPI_Device_S* dev)
     lock.locked = false;
     lock.owner  = 0x00;
 
-    HAL_GPIO_WritePin(dev->ncs_pin.port, dev->ncs_pin.pin, GPIO_PIN_SET);
+    HW_GPIO_writePin(dev->ncs_pin, true);
 
     return true;
 }

@@ -20,13 +20,11 @@
 // Other Includes
 #include "Utility.h"
 
-
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
 MAX_S max_chip;
-
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -34,12 +32,8 @@ MAX_S max_chip;
 
 HW_SPI_Device_S SPI_MAX = {
     .handle  = SPI1,
-    .ncs_pin = {
-        .pin  = SPI1_MAX_NCS_Pin,
-        .port = SPI1_MAX_NCS_Port,
-    }
+    .ncs_pin = HW_GPIO_SPI1_MAX_NCS,
 };
-
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -60,16 +54,6 @@ void MAX_decodeResponse(MAX_response_S* chip, uint8_t* data);
 bool MAX_init(void)
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
-
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
-    GPIO_InitStruct.Pin   = MAX_SAMPLE_Pin;
-    GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull  = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(MAX_SAMPLE_GPIO_Port, &GPIO_InitStruct);
-
-    HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, GPIO_PIN_RESET);
 
     max_chip.dev                         = &SPI_MAX;
     max_chip.config.low_power_mode       = false;
@@ -121,7 +105,6 @@ bool MAX_readWriteToChip(void)
 
     return true;
 }
-
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -183,7 +166,7 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
     }
 
     /**< Device always SAMPL IO controlled */    // data[2] |= (config->sampling) ? 0 : 1 << 5;
-    HAL_GPIO_WritePin(MAX_SAMPLE_GPIO_Port, MAX_SAMPLE_Pin, (config->sampling) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HW_GPIO_writePin(HW_GPIO_MAX_SAMPLE, config->sampling);
     if (config->sampling)
     {
         data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
