@@ -233,6 +233,36 @@ configs:
         app_component_id: bmsb
         app_validation_enabled: true
         feature_erase_invalid_app: false
+  11:
+    description: BMS Boss Bootloader
+    options:
+      udsRequestId: 0x609
+      udsResponseId: 0x649
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsb
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  1011:
+    description: BMS Boss Bootloader Updater
+    options:
+      udsRequestId: 0x609
+      udsResponseId: 0x649
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: bmsb
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
   20:
     description: Steering Wheel Bootloader
     options:

@@ -107,20 +107,12 @@ free_rtos_flags = [
     "-Wno-cast-align",
 ]
 
-chip_config = env.ChipConfig(config_file="HW/mcuConfig.yaml")
-c_flags.extend(chip_config.get("defines", []))
-
 
 RTOS_INCLUDE_DIRS = [
     RTOS_DIR.Dir("include"),
     FREERTOS_DIR.Dir("Source/include/"),
     FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
     CMSIS_DIR.Dir("CMSIS/Core/Include/"),
-]
-
-DRIVERS_INCLUDE_DIRS = [
-    chip_config["cmsis_includes"],
-    chip_config["hal_includes"],
 ]
 
 LIBS_INCLUDE_DIRS = [
@@ -185,12 +177,6 @@ rtos_source_files = [
     # FREERTOS_DIR.File("Source/stream_buffer.c"),
     # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
 ]
-
-platform_source_files = []
-# add driver source files
-platform_source_files.extend(
-    [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
-)
 
 uds_srcs = [
     ISOTP_DIR.File("isotp.c"),
@@ -274,7 +260,22 @@ asms = []
 
 for config_id, config in configs.items():
     config_env = env.Clone()
-    feature_selections = config_env["FEATURE_SELECTIONS"]
+    chip_config = env.ChipConfig(config_file=f"HW/{config['options']['chipset']}.yaml")
+    c_flags.extend(chip_config.get("defines", []))
+    DRIVERS_INCLUDE_DIRS = [
+        chip_config["cmsis_includes"],
+        chip_config["hal_includes"],
+    ]
+    platform_source_files = []
+    # add driver source files
+    platform_source_files.extend(
+        [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
+    )
+    try:
+        feature_selections = config_env["FEATURE_SELECTIONS"]
+    except:
+        feature_selections = []
+        print(f"No platform feature selections for component {ARTIFACT_NAME.upper()}")
     feature_selections += config["features"]["selections"]
     feature_selections_files = []
     for file in feature_selections:
