@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Iterator, Tuple
 import pickle
 
+from mako import template
 from mako.lookup import TemplateLookup
 from oyaml import safe_load
 
@@ -25,6 +26,7 @@ ACCEPTED_YAML_FILES = [
 can_bus_defs = {}
 can_nodes = {}
 discrete_values = {}
+templates = {}
 
 # if this gets set during the build, we will fail at the end
 ERROR = False
@@ -47,6 +49,13 @@ def generate_discrete_values(data_dir: Path) -> None:
             print(e)
             ERROR = True
 
+def generate_templates(data_dir: Path) -> None:
+    """Load discrete values from signals.yaml"""
+    global ERROR
+    global templates
+
+    with open(data_dir.joinpath("signals.yaml"), "r") as fd:
+        templates["signals"] = safe_load(fd)["signals"]
 
 def generate_can_buses(data_dir: Path) -> None:
     """Generate CAN buses based on yaml files"""
@@ -132,6 +141,7 @@ def generate_can_nodes(data_dir: Path) -> None:
 def process_node(node: CanNode):
     """Process the signals and messages associated with a given CAN node"""
     global ERROR
+    global templates
 
     sig_file = SIG_FILE.format(name=node.name)
     msg_file = MESSAGE_FILE.format(name=node.name)
@@ -192,6 +202,10 @@ def process_node(node: CanNode):
 
         msg_obj.node_ref = node
         for msg_signal in msg_obj.signals:
+            sig = msg_signal.split('_')[1]
+            if definition['signals'][sig] is not None and "template" in definition["signals"][sig]:
+                sig_obj = CanSignal(msg_signal, templates["signals"][definition['signals'][sig]['template']])
+                signals[msg_signal] = sig_obj
             if msg_signal in signals:
                 if not signals[msg_signal].is_valid:
                     print(
@@ -414,6 +428,7 @@ def parse_args() -> Namespace:
 
 def parseNetwork(args, lookup):
     generate_discrete_values(args.data_dir)
+    generate_templates(args.data_dir.joinpath("data/templates"))
     generate_can_buses(args.data_dir)
     generate_can_nodes(args.data_dir)
 
@@ -434,6 +449,7 @@ def main():
     global can_nodes
     global can_bus_defs
     global discrete_values
+    global templates
 
     # parse arguments
     args = parse_args()
@@ -449,11 +465,13 @@ def main():
             pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
             pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))
             pickle.dump(discrete_values, open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "wb"))
+            pickle.dump(templates, open(args.cache_dir.joinpath("CachedTemplates.pickle"), "wb"))
     elif args.cache_dir:
         try:
             can_nodes = pickle.load(open(args.cache_dir.joinpath("CachedNodes.pickle"), "rb"))
             can_bus_defs = pickle.load(open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "rb"))
             discrete_values = pickle.load(open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "rb"))
+            templates = pickle.load(open(args.cache_dir.joinpath("CachedTemplates.pickle"), "rb"))
         except Exception as e:
             print(f"Could not retreive cache files. Try building the network again...")
             ERROR = True

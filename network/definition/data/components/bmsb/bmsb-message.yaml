@@ -1,6 +1,7 @@
 messages:
   criticalData:
     description: BMS Boss Critical Data
+    cycleTimeMs: 10
     id: 0x99
     lengthBytes: 8
     sourceBuses: veh
@@ -12,6 +13,7 @@ messages:
 
   information:
     description: BMS Boss Information
+    cycleTimeMs: 100
     id: 0x98
     lengthBytes: 3
     sourceBuses: veh
@@ -21,6 +23,7 @@ messages:
 
   brusaChargeCommand:
     description: Brusa Charge Command
+    cycleTimeMs: 100
     id: 0x618
     lengthBytes: 7
     sourceBuses: veh
@@ -38,3 +41,18 @@ messages:
     sourceBuses: veh
     signals:
       udsPayload:
+
+  rtosTaskInfo:
+    description: BMSB rtos task information
+    cycleTimeMs: 1000
+    id: 0x550
+    sourceBuses: veh
+    signals:
+      taskUsage1kHz:
+        template: percentage
+      taskUsage100Hz:
+        template: percentage
+      taskUsage10Hz:
+        template: percentage
+      taskUsage1Hz:
+        template: percentage

@@ -1,6 +1,5 @@
 signals:
   voltageMin:
-    cycleTimeMs: 10
     description: Segment Minimum Cell Voltage
     unit: V
     nativeRepresentation:
@@ -12,7 +11,6 @@ signals:
     continuous: true
 
   voltageMax:
-    cycleTimeMs: 10
     description: Segment Maximum Cell Voltage
     unit: V
     nativeRepresentation:
@@ -24,7 +22,6 @@ signals:
     continuous: true
 
   segmentVoltage:
-    cycleTimeMs: 10
     description: Total Segment Voltage
     unit: V
     nativeRepresentation:
@@ -36,7 +33,6 @@ signals:
     continuous: true
 
   tempMax:
-    cycleTimeMs: 10
     description: Maximum temperature reading
     unit: degC
     nativeRepresentation:
@@ -47,7 +43,6 @@ signals:
     continuous: true
 
   chargeLimit:
-    cycleTimeMs: 10
     description: Charge current limit
     unit: A
     nativeRepresentation:
@@ -58,7 +53,6 @@ signals:
     continuous: true
 
   dischargeLimit:
-    cycleTimeMs: 10
     description: Discharge current limit
     unit: A
     nativeRepresentation:
@@ -69,34 +63,28 @@ signals:
     continuous: true
 
   errorFlag:
-    cycleTimeMs: 10
     description: Error flag
     discreteValues: flag
 
   faultFlag:
-    cycleTimeMs: 10
     description: Fault flag
     discreteValues: flag
 
   envErrorFlag:
-    cycleTimeMs: 10
     description: Environment error flag
     discreteValues: flag
 
   envFaultFlag:
-    cycleTimeMs: 10
     description: Environment fault flag
     discreteValues: flag
 
   criticalDataCounter:
-    cycleTimeMs: 10
     description: Counter for critical data message
     nativeRepresentation:
       bitWidth: 8
     validationRole: counter
 
   cellTemp10:
-    cycleTimeMs: 1000
     description: Temperature of cell 10
     unit: degC
     nativeRepresentation:
@@ -107,7 +95,6 @@ signals:
     continuous: true
 
   cellTemp9:
-    cycleTimeMs: 1000
     description: Temperature of cell 9
     unit: degC
     nativeRepresentation:
@@ -118,7 +105,6 @@ signals:
     continuous: true
 
   cellTemp8:
-    cycleTimeMs: 1000
     description: Temperature of cell 8
     unit: degC
     nativeRepresentation:
@@ -129,7 +115,6 @@ signals:
     continuous: true
 
   cellTemp7:
-    cycleTimeMs: 1000
     description: Temperature of cell 7
     unit: degC
     nativeRepresentation:
@@ -140,7 +125,6 @@ signals:
     continuous: true
 
   cellTemp6:
-    cycleTimeMs: 1000
     description: Temperature of cell 6
     unit: degC
     nativeRepresentation:
@@ -151,7 +135,6 @@ signals:
     continuous: true
 
   cellTemp5:
-    cycleTimeMs: 1000
     description: Temperature of cell 5
     unit: degC
     nativeRepresentation:
@@ -162,7 +145,6 @@ signals:
     continuous: true
 
   cellTemp4:
-    cycleTimeMs: 1000
     description: Temperature of cell 4
     unit: degC
     nativeRepresentation:
@@ -173,7 +155,6 @@ signals:
     continuous: true
 
   cellTemp3:
-    cycleTimeMs: 1000
     description: Temperature of cell 3
     unit: degC
     nativeRepresentation:
@@ -184,7 +165,6 @@ signals:
     continuous: true
 
   cellTemp2:
-    cycleTimeMs: 1000
     description: Temperature of cell 2
     unit: degC
     nativeRepresentation:
@@ -195,7 +175,6 @@ signals:
     continuous: true
 
   cellTemp19:
-    cycleTimeMs: 1000
     description: Temperature of cell 19
     unit: degC
     nativeRepresentation:
@@ -206,7 +185,6 @@ signals:
     continuous: true
 
   cellTemp18:
-    cycleTimeMs: 1000
     description: Temperature of cell 18
     unit: degC
     nativeRepresentation:
@@ -217,7 +195,6 @@ signals:
     continuous: true
 
   cellTemp17:
-    cycleTimeMs: 1000
     description: Temperature of cell 17
     unit: degC
     nativeRepresentation:
@@ -228,7 +205,6 @@ signals:
     continuous: true
 
   cellTemp16:
-    cycleTimeMs: 1000
     description: Temperature of cell 16
     unit: degC
     nativeRepresentation:
@@ -239,7 +215,6 @@ signals:
     continuous: true
 
   cellTemp15:
-    cycleTimeMs: 1000
     description: Temperature of cell 15
     unit: degC
     nativeRepresentation:
@@ -250,7 +225,6 @@ signals:
     continuous: true
 
   cellTemp14:
-    cycleTimeMs: 1000
     description: Temperature of cell 14
     unit: degC
     nativeRepresentation:
@@ -261,7 +235,6 @@ signals:
     continuous: true
 
   cellTemp13:
-    cycleTimeMs: 1000
     description: Temperature of cell 13
     unit: degC
     nativeRepresentation:
@@ -272,7 +245,6 @@ signals:
     continuous: true
 
   cellTemp12:
-    cycleTimeMs: 1000
     description: Temperature of cell 12
     unit: degC
     nativeRepresentation:
@@ -283,7 +255,6 @@ signals:
     continuous: true
 
   cellTemp11:
-    cycleTimeMs: 1000
     description: Temperature of cell 11
     unit: degC
     nativeRepresentation:
@@ -294,7 +265,6 @@ signals:
     continuous: true
 
   cellVoltage15:
-    cycleTimeMs: 1000
     description: Voltage of cell 15
     unit: V
     nativeRepresentation:
@@ -306,7 +276,6 @@ signals:
     continuous: true
 
   cellVoltage14:
-    cycleTimeMs: 1000
     description: Voltage of cell 14
     unit: V
     nativeRepresentation:
@@ -318,7 +287,6 @@ signals:
     continuous: true
 
   cellVoltage13:
-    cycleTimeMs: 1000
     description: Voltage of cell 13
     unit: V
     nativeRepresentation:
@@ -330,7 +298,6 @@ signals:
     continuous: true
 
   cellVoltage12:
-    cycleTimeMs: 1000
     description: Voltage of cell 12
     unit: V
     nativeRepresentation:
@@ -342,7 +309,6 @@ signals:
     continuous: true
 
   cellVoltage11:
-    cycleTimeMs: 1000
     description: Voltage of cell 11
     unit: V
     nativeRepresentation:
@@ -354,7 +320,6 @@ signals:
     continuous: true
 
   cellVoltage10:
-    cycleTimeMs: 1000
     description: Voltage of cell 10
     unit: V
     nativeRepresentation:
@@ -366,7 +331,6 @@ signals:
     continuous: true
 
   cellVoltage9:
-    cycleTimeMs: 1000
     description: Voltage of cell 9
     unit: V
     nativeRepresentation:
@@ -378,7 +342,6 @@ signals:
     continuous: true
 
   cellVoltage8:
-    cycleTimeMs: 1000
     description: Voltage of cell 8
     unit: V
     nativeRepresentation:
@@ -390,7 +353,6 @@ signals:
     continuous: true
 
   cellVoltage7:
-    cycleTimeMs: 1000
     description: Voltage of cell 7
     unit: V
     nativeRepresentation:
@@ -402,7 +364,6 @@ signals:
     continuous: true
 
   cellVoltage6:
-    cycleTimeMs: 1000
     description: Voltage of cell 6
     unit: V
     nativeRepresentation:
@@ -414,7 +375,6 @@ signals:
     continuous: true
 
   cellVoltage5:
-    cycleTimeMs: 1000
     description: Voltage of cell 5
     unit: V
     nativeRepresentation:
@@ -426,7 +386,6 @@ signals:
     continuous: true
 
   cellVoltage4:
-    cycleTimeMs: 1000
     description: Voltage of cell 4
     unit: V
     nativeRepresentation:
@@ -438,7 +397,6 @@ signals:
     continuous: true
 
   cellVoltage3:
-    cycleTimeMs: 1000
     description: Voltage of cell 3
     unit: V
     nativeRepresentation:
@@ -450,7 +408,6 @@ signals:
     continuous: true
 
   cellVoltage2:
-    cycleTimeMs: 1000
     description: Voltage of cell 2
     unit: V
     nativeRepresentation:
@@ -462,7 +419,6 @@ signals:
     continuous: true
 
   cellVoltage1:
-    cycleTimeMs: 1000
     description: Voltage of cell 1
     unit: V
     nativeRepresentation:
@@ -474,7 +430,6 @@ signals:
     continuous: true
 
   cellVoltage0:
-    cycleTimeMs: 1000
     description: Voltage of cell 0
     unit: V
     nativeRepresentation:
@@ -486,7 +441,6 @@ signals:
     continuous: true
 
   segmentVoltageHighRes:
-    cycleTimeMs: 1000
     description: Total Segment Voltage, higher resolution
     unit: V
     nativeRepresentation:
@@ -498,7 +452,6 @@ signals:
     continuous: true
   
   segmentVoltageHighResCalculated:
-    cycleTimeMs: 1000
     description: Total Segment Voltage, higher resolution
     unit: V
     nativeRepresentation:
@@ -510,7 +463,6 @@ signals:
     continuous: true
 
   boardRelativeHumidity:
-    cycleTimeMs: 1000
     description: Segment worker board relative humidity
     unit: "%"
     nativeRepresentation:
@@ -522,7 +474,6 @@ signals:
     continuous: true
 
   boardAmbientTemp:
-    cycleTimeMs: 1000
     description: Segment worker board ambient temperature
     unit: degC
     nativeRepresentation:
@@ -533,7 +484,6 @@ signals:
     continuous: true
 
   mcuTemp:
-    cycleTimeMs: 1000
     description: Segment worker microcontroller temperature
     unit: degC
     nativeRepresentation:
@@ -544,7 +494,6 @@ signals:
     continuous: true
 
   boardTemp0:
-    cycleTimeMs: 1000
     description: Segment worker board temperature 0
     unit: degC
     nativeRepresentation:
@@ -555,7 +504,6 @@ signals:
     continuous: true
 
   boardTemp1:
-    cycleTimeMs: 1000
     description: Segment worker board temperature 1
     unit: degC
     nativeRepresentation:
@@ -566,7 +514,6 @@ signals:
     continuous: true
 
   fan1RPM:
-    cycleTimeMs: 1000
     description: Fan 1 speed
     unit: RPM
     nativeRepresentation:
@@ -577,7 +524,6 @@ signals:
     continuous: true
 
   fan0RPM:
-    cycleTimeMs: 1000
     description: Fan 2 speed
     unit: RPM
     nativeRepresentation:
@@ -588,7 +534,6 @@ signals:
     continuous: true
 
   coolPct1:
-    cycleTimeMs: 1000
     description: Fan 1 Duty Cycle
     unit: "%"
     nativeRepresentation:
@@ -600,12 +545,10 @@ signals:
     continuous: true
 
   coolState1:
-    cycleTimeMs: 1000
     description: Fan 1 cooling state
     discreteValues: outputState
 
   coolPct0:
-    cycleTimeMs: 1000
     description: Fan 0 Duty Cycle
     unit: "%"
     nativeRepresentation:
@@ -617,12 +560,10 @@ signals:
     continuous: true
 
   coolState0:
-    cycleTimeMs: 1000
     description: Fan 0 cooling state
     discreteValues: outputState
 
   cellTemp1:
-    cycleTimeMs: 1000
     description: Temperature of cell 1
     unit: degC
     nativeRepresentation:
@@ -633,7 +574,6 @@ signals:
     continuous: true
 
   cellTemp0:
-    cycleTimeMs: 1000
     description: Temperature of cell 0
     unit: degC
     nativeRepresentation:
@@ -644,7 +584,6 @@ signals:
     continuous: true
 
   socMax:
-    cycleTimeMs: 1000
     description: Max cell SOC
     unit: "%"
     nativeRepresentation:
@@ -656,7 +595,6 @@ signals:
     continuous: true
 
   socAvg:
-    cycleTimeMs: 1000
     description: Avg cell SOC
     unit: "%"
     nativeRepresentation:
@@ -668,7 +606,6 @@ signals:
     continuous: true
 
   socMin:
-    cycleTimeMs: 1000
     description: Avg cell SOC
     unit: "%"
     nativeRepresentation:
@@ -680,7 +617,6 @@ signals:
     continuous: true
 
   tempAvg:
-    cycleTimeMs: 1000
     description: Average temperature of the segment
     unit: degC
     nativeRepresentation:
@@ -691,7 +627,6 @@ signals:
     continuous: true
 
   cellVoltageAvg:
-    cycleTimeMs: 1000
     description: Average cell voltage????
     unit: V
     nativeRepresentation:
@@ -703,7 +638,6 @@ signals:
     continuous: true
 
   udsPayload:
-    cycleTimeMs: 10
     unit: ''
     description: UDS payload data
     nativeRepresentation:

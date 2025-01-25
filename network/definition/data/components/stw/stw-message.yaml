@@ -1,6 +1,7 @@
 messages:
   switchStatus:
     description: "Status of the Steering Wheel switches"
+    cycleTimeMs: 10
     id: 0x500
     lengthBytes: 1
     sourceBuses: veh

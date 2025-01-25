@@ -1,6 +1,5 @@
 signals:
   commandedFansDutyCycle:
-    cycleTimeMs: 1000
     unit: '%'
     description: Duty Cycle % for Fans to be run at
     nativeRepresentation:
@@ -11,7 +10,6 @@ signals:
         max: 100
 
   targetBalancingVoltage:
-    cycleTimeMs: 1000
     unit: 'V'
     description: Voltage to balance cells until
     nativeRepresentation:

@@ -17,6 +17,7 @@
 #include "Cooling.h"
 #include "Environment.h"
 #include "BatteryMonitoring.h"
+#include "Module.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -89,5 +90,10 @@
 #define set_coolState1(m, b, n, s)               set(m,b,n,s, (COOL.state[1] != COOL_OFF) ? CAN_OUTPUTSTATE_ON : CAN_OUTPUTSTATE_OFF)
 #define set_coolPct0(m, b, n, s)                 set(m,b,n,s, COOL.percentage[0])
 #define set_coolState0(m,b,n,s)                  set(m,b,n,s, (COOL.state[0] != COOL_OFF) ? CAN_OUTPUTSTATE_ON : CAN_OUTPUTSTATE_OFF)
+#define set_taskUsage1kHz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
+#define set_taskUsage100Hz(m,b,n,s)              set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
+#define set_taskUsage10Hz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
+#define set_taskUsage1Hz(m,b,n,s)                set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
+#define set_taskUsageIdle(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 
 #include "TemporaryStubbing.h"

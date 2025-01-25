@@ -1,6 +1,5 @@
 signals:
   tractiveSystemVoltage:
-    cycleTimeMs: 10
     unit: 'V'
     description: Motor Controller DC Bus Voltage
     nativeRepresentation:

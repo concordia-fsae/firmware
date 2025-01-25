@@ -1,6 +1,7 @@
 messages:
   criticalData:
     description: PM100DXR Critical Data
+    cycleTimeMs: 10
     id: 0x11
     lengthBytes: 8
     signals:

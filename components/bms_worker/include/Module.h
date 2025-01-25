@@ -61,14 +61,12 @@ typedef enum
 
 typedef struct
 {
-    uint64_t  total_runtime;
-    uint64_t  timeslice_runtime;
     float32_t  total_percentage;
-    float32_t  timeslice_percentage;
 } Module_taskStats_S;
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task);
 void Module_ApplicationIdleHook(void);

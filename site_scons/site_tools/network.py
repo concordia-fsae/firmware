@@ -36,6 +36,7 @@ def emitBuild(target, source, env):
     target.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
+    target.append(env["NETWORK_CACHE_DIR"].File("CachedTemplates.pickle"))
     return (target, source)
 
 def emitGen(target, source, env):
@@ -43,6 +44,7 @@ def emitGen(target, source, env):
     source.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     source.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
     source.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
+    source.append(env["NETWORK_CACHE_DIR"].File("CachedTemplates.pickle"))
     for _, dir in env["nodes"].items():
         target.extend(
             [

@@ -116,7 +116,6 @@ class CanSignal(CanObject):
         self.continuous = Continuous(
             get_if_exists(signal_def, "continuous", bool, Continuous.discrete)
         )
-        self.cycle_time_ms = get_if_exists(signal_def, "cycleTimeMs", int, None)
         self.description = get_if_exists(signal_def, "description", str, None)
         self.discrete_values = getattr(
             self.DISC, get_if_exists(signal_def, "discreteValues", str, ""), None
@@ -163,7 +162,6 @@ class CanSignal(CanObject):
         return (
             f"\nCAN Signal: {self.name}, "
             f"Description: {self.description}, "
-            f"cycleTimeMs: {self.cycle_time_ms}, "
             f"bitWidth: {self.native_representation.bit_width or 'TBD'}, "
             f"offset: {self.offset}, "
             f"scale: {self.scale}, "
@@ -322,7 +320,7 @@ class CanMessage(CanObject):
 
     def __init__(self, node: "CanNode", name: str, msg_def: dict):
         self.name = name
-        self.cycle_time_ms = 0
+        self.cycle_time_ms = get_if_exists(msg_def, "cycleTimeMs", int, None)
         self.description = get_if_exists(msg_def, "description", str, "")
         self.node_name = self.name.split("_")[0]
         self.id = get_if_exists(msg_def, "id", int, None)
@@ -349,6 +347,10 @@ class CanMessage(CanObject):
         else:
             self.source_buses = node.on_buses
 
+        if self.cycle_time_ms is None and not self.unscheduled:
+            raise Exception(
+                    f"Message '{self.name}' has no specified cycle time"
+            )
         # Assigned later
         self.node_ref = None
         self.is_valid = False
@@ -358,7 +360,10 @@ class CanMessage(CanObject):
 
     def add_signal(self, msg_signal: dict, signal_obj: CanSignal):
         """Add the given signal to this message"""
-        signal_obj.start_bit = msg_signal["startBit"] if msg_signal else 0
+        try:
+            signal_obj.start_bit = msg_signal["startBit"]
+        except Exception:
+            signal_obj.start_bit =  0
         if signal_obj.validation_role == ValidationRole.checksum:
             self.checksum_sig = signal_obj
         if signal_obj.validation_role == ValidationRole.counter:
@@ -376,12 +381,10 @@ class CanMessage(CanObject):
         # this works because dictionaries are ordered now
         first_signal_loc = list(self.signal_objs.values())[0].start_bit
         bit_count = first_signal_loc
-        self.cycle_time_ms = list(self.signal_objs.values())[0].cycle_time_ms
 
         sig_objs = self.signal_objs.values()
         first = True
         for signal in sig_objs:
-            self.cycle_time_ms = min(self.cycle_time_ms, signal.cycle_time_ms)
             if first:
                 signal.start_bit = bit_count
                 bit_count += signal.native_representation.bit_width
@@ -420,12 +423,11 @@ class CanMessage(CanObject):
             return
 
         if self.length_bytes is None:
-            print(f"Message {self.name} is missing a lengthBytes")
-            valid = False
+            self.length_bytes = ceil(bit_count / 8)
         else:
             if ceil(bit_count / 8) > self.length_bytes:
                 print(
-                    f"Message {self.name} has lengthBytes greater than the sum "
+                    f"Message {self.name} has lengthBytes less than the sum "
                     "of the bitWidths of each of its signals"
                 )
                 valid = False

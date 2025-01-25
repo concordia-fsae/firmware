@@ -1,6 +1,5 @@
 signals:
   mainsCurrent:
-    cycleTimeMs: 100
     unit: 'A'
     description: Charger Mains Current
     nativeRepresentation:
@@ -12,7 +11,6 @@ signals:
         max: 50
     continuous: true
   mainsVoltage:
-    cycleTimeMs: 100
     unit: 'V'
     description: Charger Mains Voltage
     nativeRepresentation:
@@ -24,7 +22,6 @@ signals:
         max: 500
     continuous: true
   dcBusVoltage:
-    cycleTimeMs: 100
     unit: 'V'
     description: Charger DC Bus Voltage
     nativeRepresentation:
@@ -36,7 +33,6 @@ signals:
         max: 1000
     continuous: true
   dcBusCurrent:
-    cycleTimeMs: 100
     unit: 'A'
     description: Charger Mains Current
     nativeRepresentation:
@@ -48,9 +44,8 @@ signals:
         max: 150
     continuous: true
   payload:
-    cycleTimeMs: 10
     unit: ''
-    description: UDS payload data
+    description: Payload data
     nativeRepresentation:
       bitWidth: 64
       resolution: 1

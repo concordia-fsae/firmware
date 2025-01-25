@@ -1,12 +1,10 @@
 signals:
   nlg513ControlByte:
-    cycleTimeMs: 10
     description: Brusa NLG513 Control Byte
     nativeRepresentation:
       bitWidth: 8
 
   nlg513MaxMainsCurrent:
-    cycleTimeMs: 10
     unit: 'A'
     description: Brusa NLG513 Max Mains Current During Charging
     nativeRepresentation:
@@ -19,7 +17,6 @@ signals:
     continuous: true
 
   nlg513MaxChargeVoltage:
-    cycleTimeMs: 10
     unit: 'V'
     description: Brusa NLG513 Max Battery Voltage During Charging
     nativeRepresentation:
@@ -32,7 +29,6 @@ signals:
     continuous: true
 
   nlg513MaxChargeCurrent:
-    cycleTimeMs: 10
     unit: 'A'
     description: Brusa NLG513 Max Battery Voltage During Charging
     nativeRepresentation:
@@ -45,14 +41,12 @@ signals:
     continuous: true
 
   criticalDataCounter:
-    cycleTimeMs: 10
     description: BMS Boss Critical Message Counter
     nativeRepresentation:
       bitWidth: 8
     validationRole: counter
 
   packChargeLimit:
-    cycleTimeMs: 10
     unit: 'A'
     description: BMS Boss Pack Charge Limit
     nativeRepresentation:
@@ -64,7 +58,6 @@ signals:
     continuous: true
 
   packDischargeLimit:
-    cycleTimeMs: 10
     unit: 'A'
     description: BMS Boss Pack Disharge Limit
     nativeRepresentation:
@@ -76,7 +69,6 @@ signals:
     continuous: true
 
   packVoltage:
-    cycleTimeMs: 10
     unit: 'V'
     description: BMS Boss Pack Voltage
     nativeRepresentation:
@@ -88,7 +80,6 @@ signals:
     continuous: true
 
   packCurrent:
-    cycleTimeMs: 100
     unit: 'A'
     description: BMS Boss Pack Current
     nativeRepresentation:
@@ -99,12 +90,10 @@ signals:
     continuous: true
 
   packContactorState:
-    cycleTimeMs: 100
     description: Pack Contactor Status
     discreteValues: prechargeContactorState
 
   udsPayload:
-    cycleTimeMs: 10
     unit: ''
     description: UDS payload data
     nativeRepresentation:
