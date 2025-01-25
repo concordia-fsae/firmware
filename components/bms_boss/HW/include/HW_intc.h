@@ -28,3 +28,10 @@ void CAN1_SCE_IRQHandler(void);
 void CAN1_TX_IRQHandler(void);
 void CAN1_RX0_IRQHandler(void);
 void CAN1_RX1_IRQHandler(void);
+
+#if BMSB_CONFIG_ID == 1U
+void CAN2_SCE_IRQHandler(void);
+void CAN2_TX_IRQHandler(void);
+void CAN2_RX0_IRQHandler(void);
+void CAN2_RX1_IRQHandler(void);
+#endif
