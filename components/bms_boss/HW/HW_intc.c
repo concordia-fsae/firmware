@@ -9,6 +9,7 @@
 
 // Firmware Includes
 #include "HW_intc.h"
+#include "NetworkDefines_generated.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -20,7 +21,7 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim2;
-extern CAN_HandleTypeDef hcan;
+extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 
 
 /******************************************************************************
@@ -120,7 +121,7 @@ void TIM1_CC_IRQHandler(void)
 // CAN interrupts
 void CAN1_SCE_IRQHandler(void)
 {
-    HAL_CAN_IRQHandler(&hcan);
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
 }
 
 /**
@@ -129,7 +130,7 @@ void CAN1_SCE_IRQHandler(void)
  */
 void CAN1_TX_IRQHandler(void)
 {
-    HAL_CAN_IRQHandler(&hcan);
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
 }
 
 /**
@@ -138,7 +139,7 @@ void CAN1_TX_IRQHandler(void)
  */
 void CAN1_RX0_IRQHandler(void)
 {
-    HAL_CAN_IRQHandler(&hcan);
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
 }
 
 /**
@@ -147,5 +148,27 @@ void CAN1_RX0_IRQHandler(void)
  */
 void CAN1_RX1_IRQHandler(void)
 {
-    HAL_CAN_IRQHandler(&hcan);
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
 }
+
+#if BMSB_CONFIG_ID == 1U
+void CAN2_SCE_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_PRIVBMS]);
+}
+
+void CAN2_TX_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_PRIVBMS]);
+}
+
+void CAN2_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_PRIVBMS]);
+}
+
+void CAN2_RX1_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan[CAN_BUS_PRIVBMS]);
+}
+#endif
