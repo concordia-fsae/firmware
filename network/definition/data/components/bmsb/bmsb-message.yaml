@@ -45,3 +45,14 @@ messages:
     id: 0x550
     sourceBuses: veh
     template: rtosTaskInfo
+
+  elconChargeCommand:
+    description: Elcon Charge Command
+    cycleTimeMs: 1000
+    sourceBuses: privbms
+    id: 0x1806E5F4
+    lengthBytes: 8
+    signals:
+      elconMaxChargeVoltage:
+      elconMaxChargeCurrent:
+      elconControlByte:      

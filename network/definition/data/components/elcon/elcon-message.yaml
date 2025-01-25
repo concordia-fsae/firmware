@@ -1,0 +1,10 @@
+messages:
+ criticalData:
+    description: Elcon Critical Data
+    cycleTimeMs: 1000
+    id: 0x18FF50E5
+    lengthBytes: 8
+    signals:
+      busVoltage:
+      busCurrent:
+      busStatusFlags:

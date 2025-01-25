@@ -92,3 +92,42 @@ signals:
   packContactorState:
     description: Pack Contactor Status
     discreteValues: prechargeContactorState
+
+  udsPayload:
+    unit: ''
+    description: UDS payload data
+    nativeRepresentation:
+      bitWidth: 64
+      resolution: 1
+      range:
+        min: 0
+        max: 18446744073709551615
+
+  elconControlByte:
+    description: Elcon Control Byte
+    nativeRepresentation:
+      bitWidth: 8
+
+  elconMaxChargeVoltage:
+    unit: 'V'
+    description: Elcon Max Battery Voltage During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true
+
+  elconMaxChargeCurrent:
+    unit: 'A'
+    description: Elcon Max Battery Voltage During Charging
+    nativeRepresentation:
+      endianness: 0
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 25
+    continuous: true
