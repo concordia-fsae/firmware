@@ -100,7 +100,7 @@ static void BMS100Hz_PRD(void)
 {
     BMS.pack_current = IO.current / CURRENT_SENSE_V_per_A;
 
-    if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkChargerTimeout()))
+    if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {
         SYS_SFT_openShutdown();
     }

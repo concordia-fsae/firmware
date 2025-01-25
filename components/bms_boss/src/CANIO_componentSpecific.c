@@ -98,3 +98,14 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void)
 
     return ret;
 }
+
+uint8_t CANIO_tx_getElconControlByte(void)
+{
+    uint8_t ret = 0x01;
+    if (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED)
+    {
+        ret = 0x00;
+    }
+
+    return ret;
+}
