@@ -15,9 +15,3 @@
 #define USE_HAL_DRIVER
 #endif // MCU_STM32_USE_HAL
 #endif // stm32f103xb
-
-#if BMSW_CONFIG_ID == 0
-#define BMSW_BOARD_VA3
-#else
-#define BMSW_BOARD_VA0
-#endif

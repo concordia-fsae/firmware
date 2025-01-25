@@ -1,8 +1,12 @@
 translation:
-  stm32f103:
+  stm32f103xb:
     line: stm32
     family: f1
-    chip: stm32f103
+    chip: stm32f103xb
+  stm32f105:
+    line: stm32
+    family: f1
+    chip: stm32f105
 
 line:
   stm32:
@@ -14,5 +18,7 @@ line:
           src: "f1/hal/Src/"
           include: "f1/hal/Inc/"
         chips:
-          stm32f103: "f1/stm32f103.yaml"
-        standardFilesDir: "f103"
+          stm32f103xb: 
+            chipDefinition: "f1/stm32f103xb.yaml"
+          stm32f105: 
+            chipDefinition: "f1/stm32f105.yaml"

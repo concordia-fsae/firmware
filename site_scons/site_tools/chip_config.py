@@ -35,12 +35,12 @@ def _configure_chip(env, config_file):
         chip = known_chips["translation"][chip_name]
     except KeyError as e:
         raise Exception(
-            "Chip specified in mcuConfig.yaml does not have a translation. See site_scons/chips.yaml"
+            f"{chip_name} specified in {config_file} does not have a translation. See site_scons/chips.yaml"
         )
 
     chip_line = known_chips["line"][chip["line"]]
     chip_family = chip_line["families"][chip["family"]]
-    chip_file = chip_family["chips"][chip["chip"]]
+    chip_file = chip_family["chips"][chip["chip"]]["chipDefinition"]
     base_path = chip_line["basePath"]
     chip_config_file = join(base_path, chip_file)
     hal_src_path = join(base_path, chip_line["families"][chip["family"]]["hal"]["src"])

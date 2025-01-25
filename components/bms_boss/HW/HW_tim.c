@@ -130,21 +130,9 @@ HAL_StatusTypeDef HW_TIM_init(void)
  */
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
     if (tim->Instance == TIM1)
     {
         __HAL_RCC_TIM1_CLK_ENABLE();
-
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-        /**TIM1 GPIO Configuration
-        PA9     ------> TIM1_CH2
-        */
-        GPIO_InitStruct.Pin  = M_HLS1_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(M_HLS1_Port, &GPIO_InitStruct);
     }
 }
 

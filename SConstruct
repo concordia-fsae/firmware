@@ -57,7 +57,6 @@ if platform:
     if platform in platforms["configs"]:
         PlatformEnv["PLATFORM_ID"] = platform
         PlatformEnv["PLATFORM_ARTIFACTS"] = GlobalEnv["REPO_ROOT_DIR"].Dir(f"platform-artifacts/{platform.upper()}")
-        PlatformEnv["FEATURE_SELECTIONS"] = platforms["configs"][platform]["options"]["feature-selections"]
         if targets:
             for target in targets.split("+"):
                 component = search(COMPONENT_REGEX, target).group()

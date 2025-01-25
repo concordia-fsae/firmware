@@ -32,6 +32,9 @@
 #define ADC_MAX_COUNT 4095
 #define ADC_REF_VOLTAGE 3.0F
 
+#define ADC_N_CHANNEL ADC_CHANNEL_0
+#define ADC_P_CHANNEL ADC_CHANNEL_1
+
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -135,15 +138,10 @@ void HW_ADC_init(void)
  */
 void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
-    UNUSED(adcHandle);
-    GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
     if (adcHandle->Instance == ADC1)
     {
         // ADC1 clock enable
         __HAL_RCC_ADC1_CLK_ENABLE();
-
-        __HAL_RCC_GPIOA_CLK_ENABLE();
 
         // ADC1 DMA Init
         // ADC1 Init
@@ -161,20 +159,11 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         }
 
         __HAL_LINKDMA(adcHandle, DMA_Handle, hdma_adc1);
-        
-        GPIO_InitStruct.Pin  = ADC_N_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        HAL_GPIO_Init(ADC_N_Port, &GPIO_InitStruct);
     }
     else if (adcHandle->Instance == ADC2)
     {
         // ADC1 clock enable
         __HAL_RCC_ADC2_CLK_ENABLE();
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-
-        GPIO_InitStruct.Pin  = ADC_P_Pin;
-        GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-        HAL_GPIO_Init(ADC_P_Port, &GPIO_InitStruct);
     }
 }
 
@@ -190,15 +179,12 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
         __HAL_RCC_ADC1_CLK_DISABLE();
 
         // ADC1 DMA DeInit
-        HAL_GPIO_DeInit(ADC_N_Port, ADC_N_Pin);
         HAL_DMA_DeInit(adcHandle->DMA_Handle);
     }
     if (adcHandle->Instance == ADC2)
     {
         // Peripheral clock disable
         __HAL_RCC_ADC2_CLK_DISABLE();
-
-        HAL_GPIO_DeInit(ADC_P_Port, ADC_P_Pin);
     }
 }
 
