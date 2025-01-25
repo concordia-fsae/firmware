@@ -1,6 +1,7 @@
 messages:
   criticalData:
     description: Critical data from segment
+    cycleTimeMs: 10
     id: 0x100
     lengthBytes: 8
     signals:
@@ -19,6 +20,7 @@ messages:
 
   miscData:
     description: Segment average temps, SOC, and cell temps 0 and 1
+    cycleTimeMs: 1000
     id: 0x700
     lengthBytes: 8
     signals:
@@ -32,6 +34,7 @@ messages:
 
   cellTemps0:
     description: First set of cell temperatures
+    cycleTimeMs: 1000
     id: 0x710
     lengthBytes: 8
     signals:
@@ -47,6 +50,7 @@ messages:
 
   cellTemps1:
     description: Second set of cell temperatures
+    cycleTimeMs: 1000
     id: 0x720
     lengthBytes: 8
     signals:
@@ -62,6 +66,7 @@ messages:
 
   cellVoltages0:
     description: First set of cell voltages
+    cycleTimeMs: 1000
     id: 0x730
     lengthBytes: 8
     signals:
@@ -74,6 +79,7 @@ messages:
 
   cellVoltages1:
     description: Second set of cell voltages
+    cycleTimeMs: 1000
     id: 0x740
     lengthBytes: 8
     signals:
@@ -86,6 +92,7 @@ messages:
 
   cellVoltages2:
     description: Third set of cell voltages
+    cycleTimeMs: 1000
     id: 0x750
     lengthBytes: 8
     signals:
@@ -98,6 +105,7 @@ messages:
 
   environment:
     description: Segment temperature and humidity data
+    cycleTimeMs: 1000
     id: 0x760
     lengthBytes: 5
     signals:
@@ -109,6 +117,7 @@ messages:
 
   fans:
     description: Segment fan data
+    cycleTimeMs: 1000
     id: 0x770
     lengthBytes: 6
     signals:
@@ -126,3 +135,9 @@ messages:
     lengthBytes: 8
     signals:
       udsPayload:
+
+  rtosTaskInfo:
+    description: BMSW rtos task information
+    id: 0x560
+    sourceBuses: veh
+    template: rtosTaskInfo

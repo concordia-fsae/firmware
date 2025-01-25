@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 // System Includes
+#include "FloatTypes.h"
 #include "stdint.h"
 
 // Other Includes
@@ -53,14 +54,12 @@ typedef enum
 
 typedef struct
 {
-    uint64_t total_runtime;
-    uint32_t timeslice_runtime;
     uint8_t  total_percentage;
-    uint8_t  timeslice_percentage;
 } Module_taskStats_S;
 
 /******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task);
 void Module_ApplicationIdleHook(void);

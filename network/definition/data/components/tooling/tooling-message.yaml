@@ -1,6 +1,7 @@
 messages:
   balancingCommand:
     description: Command to balance to a target voltage
+    cycleTimeMs: 1000
     id: 0x300
     lengthBytes: 2
     signals:
@@ -8,6 +9,7 @@ messages:
 
   fanSetDutyCycleCommand:
     description: Commanded fan duty cycle
+    cycleTimeMs: 1000
     id: 0x301
     lengthBytes: 1
     signals:

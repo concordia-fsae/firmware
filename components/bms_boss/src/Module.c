@@ -43,10 +43,6 @@ static const ModuleDesc_S* modules[] = {
 };
 
 static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
-static uint8_t            total_percentage;
-static uint8_t            timeslice_percentage;
-static uint64_t           rtos_start;
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -65,8 +61,6 @@ void Module_Init(void)
             (*modules[i]->moduleInit)();
         }
     }
-
-    rtos_start = HW_TIM_getBaseTick();
 }
 
 /**
@@ -74,10 +68,6 @@ void Module_Init(void)
  */
 void Module_1kHz_TSK(void)
 {
-    TaskStatus_t start, finish;
-
-    vTaskGetInfo(NULL, &start, pdFALSE, 0);
-
     /**< Run each of the modules 1kHz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -86,10 +76,8 @@ void Module_1kHz_TSK(void)
             (*modules[i]->periodic1kHz_CLK)();
         }
     }
-    vTaskGetInfo(NULL, &finish, pdFALSE, 0);
 
-    stats[MODULE_1kHz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
-    stats[MODULE_1kHz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
+    stats[MODULE_1kHz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -97,10 +85,6 @@ void Module_1kHz_TSK(void)
  */
 void Module_100Hz_TSK(void)
 {
-    TaskStatus_t start, finish;
-
-    vTaskGetInfo(NULL, &start, pdFALSE, 0);
-
     /**< Run each of the modules 100Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -109,10 +93,8 @@ void Module_100Hz_TSK(void)
             (*modules[i]->periodic100Hz_CLK)();
         }
     }
-    vTaskGetInfo(NULL, &finish, pdFALSE, 0);
 
-    stats[MODULE_100Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
-    stats[MODULE_100Hz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
+    stats[MODULE_100Hz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -120,10 +102,6 @@ void Module_100Hz_TSK(void)
  */
 void Module_10Hz_TSK(void)
 {
-    TaskStatus_t start, finish;
-
-    vTaskGetInfo(NULL, &start, pdFALSE, 0);
-
     /**< Run each of the modules 10Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -132,10 +110,8 @@ void Module_10Hz_TSK(void)
             (*modules[i]->periodic10Hz_CLK)();
         }
     }
-    vTaskGetInfo(NULL, &finish, pdFALSE, 0);
 
-    stats[MODULE_10Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
-    stats[MODULE_10Hz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
+    stats[MODULE_10Hz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -143,12 +119,6 @@ void Module_10Hz_TSK(void)
  */
 void Module_1Hz_TSK(void)
 {
-    static uint64_t last_timeslice = 0;
-    uint64_t        temp_tick;
-    TaskStatus_t    start, finish;
-
-    vTaskGetInfo(NULL, &start, pdFALSE, 0);
-
     /**< Run each of the modules 1Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -158,26 +128,7 @@ void Module_1Hz_TSK(void)
         }
     }
 
-    total_percentage     = 0x00;
-    timeslice_percentage = 0x00;
-
-    temp_tick = HW_TIM_getBaseTick();
-
-    for (int8_t i = 0; i < MODULE_TASK_CNT; i++)
-    {
-        stats[i].total_percentage     = (100 * stats[i].total_runtime) / (temp_tick - rtos_start);
-        stats[i].timeslice_percentage = (100 * stats[i].timeslice_runtime) / (temp_tick - last_timeslice);
-        total_percentage += stats[i].total_percentage;
-        timeslice_percentage += stats[i].timeslice_percentage;
-        stats[i].timeslice_runtime = 0;
-    }
-
-    last_timeslice = temp_tick;
-
-    vTaskGetInfo(NULL, &finish, pdFALSE, 0);
-
-    stats[MODULE_1Hz_TASK].total_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
-    stats[MODULE_1Hz_TASK].timeslice_runtime += finish.ulRunTimeCounter - start.ulRunTimeCounter;
+    stats[MODULE_1Hz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -185,4 +136,15 @@ void Module_1Hz_TSK(void)
  */
 void Module_ApplicationIdleHook()
 {
+    stats[MODULE_IDLE_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
+}
+
+/**
+ * @brief Returns the total cpu usage of a task in percentage
+ * @param task Task to get the total runtime percentage of
+ * @returns The total runtime percentage of the task
+ */
+float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task)
+{
+    return stats[task].total_percentage;
 }
