@@ -150,7 +150,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
     }
 
     _Static_assert(((COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4) + (COUNTOF(CANRX_VEH_unpackListExtID) / 2U) +
-                   ((COUNTOF(CANRX_PRIVBMS_unpackList) + ((4U - COUNTOF(CANRX_PRIVBMS_unpackList) % 4U) % 4U)) / 4) + (COUNTOF(CANRX_PRIVBMS_unpackListExtID) / 2U) 
+                   ((COUNTOF(CANRX_PRIVBMS_unpackList) + ((4U - COUNTOF(CANRX_PRIVBMS_unpackList) % 4U) % 4U)) / 4) + (COUNTOF(CANRX_PRIVBMS_unpackListExtID) / 2U)
                    <= CAN_FILTERBANK_LENGTH, "Too many CAN filter bank's used");
     uint8_t filterBank = 0U;
     for (uint32_t i = 0U; i < COUNTOF(CANRX_VEH_unpackList); i += 4U)
@@ -204,7 +204,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         if ((i + 3U) < COUNTOF(CANRX_PRIVBMS_unpackList)) { filt.FilterMaskIdLow = CANRX_PRIVBMS_unpackList[i + 3U] << 5U; }
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
         filt.FilterActivation     = ENABLE;
-        filt.SlaveStartFilterBank = (COUNTOF(CANRX_PRIVBMS_unpackList) + ((4U - COUNTOF(CANRX_PRIVBMS_unpackList) % 4U) % 4U)) / 4U;
+        filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
 #if BMSB_CONFIG_ID > 0U
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_PRIVBMS], &filt);
 #else
@@ -226,7 +226,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         }
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
         filt.FilterActivation     = ENABLE;
-        filt.SlaveStartFilterBank = (COUNTOF(CANRX_PRIVBMS_unpackList) + ((4U - COUNTOF(CANRX_PRIVBMS_unpackList) % 4U) % 4U)) / 4U;
+        filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
 #if BMSB_CONFIG_ID > 0U
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_PRIVBMS], &filt);
 #else
@@ -253,9 +253,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         // CAN1 clock enable
         __HAL_RCC_CAN1_CLK_ENABLE();
 
-        __HAL_RCC_GPIOB_CLK_ENABLE();
+#if BMSB_CONFIG_ID == 0U
         __HAL_AFIO_REMAP_CAN1_2();
-
+#endif
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_TX_IRQn, CAN_TX_IRQ_PRIO, 0U);
         HAL_NVIC_SetPriority(CAN1_RX0_IRQn, CAN_RX_IRQ_PRIO, 0U);
@@ -265,7 +265,24 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         HAL_NVIC_EnableIRQ(CAN1_TX_IRQn);
         HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
         HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
+
     }
+#if BMSB_CONFIG_ID > 0U
+    else if (canHandle->Instance == hcan[CAN_BUS_PRIVBMS].Instance)
+    {
+        __HAL_RCC_CAN2_CLK_ENABLE();
+
+        HAL_NVIC_SetPriority(CAN2_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN2_TX_IRQn, CAN_TX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN2_RX0_IRQn, CAN_RX_IRQ_PRIO, 0U);
+        HAL_NVIC_SetPriority(CAN2_RX1_IRQn, CAN_RX_IRQ_PRIO, 0U);
+
+        HAL_NVIC_EnableIRQ(CAN2_SCE_IRQn);
+        HAL_NVIC_EnableIRQ(CAN2_TX_IRQn);
+        HAL_NVIC_EnableIRQ(CAN2_RX0_IRQn);
+        HAL_NVIC_EnableIRQ(CAN2_RX1_IRQn);
+    }
+#endif
 }
 
 /**
@@ -284,6 +301,18 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
         HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
         HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
     }
+#if BMSB_CONFIG_ID > 0U
+    else if (canHandle->Instance == hcan[CAN_BUS_VEH].Instance)
+    {
+        // Peripheral clock disable
+        __HAL_RCC_CAN2_CLK_DISABLE();
+
+        HAL_NVIC_DisableIRQ(CAN2_SCE_IRQn);
+        HAL_NVIC_DisableIRQ(CAN2_TX_IRQn);
+        HAL_NVIC_DisableIRQ(CAN2_RX0_IRQn);
+        HAL_NVIC_DisableIRQ(CAN2_RX1_IRQn);
+    }
+#endif
 }
 
 // overload default interrupt callback functions provided by HAL
