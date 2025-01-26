@@ -12,7 +12,7 @@ def recursive_glob(dir, glob):
 
 def build_network(env):
     env._networkBuilder()
-    return [env["NETWORK_OUTPUT_DIR"].File("veh.dbc")]
+    return [env["NETWORK_OUTPUT_DIR"].File(f"{file.name.split('.')[0]}.dbc") for file in recursive_glob(env["NETWORK_DATA_DIR"].Dir("buses"), "*.yaml")]
 
 
 def generate_nodes(env, nodes: Optional[Dict[str, Dir]], ):
@@ -29,10 +29,11 @@ def generate_nodes(env, nodes: Optional[Dict[str, Dir]], ):
 
 
 def emitBuild(target, source, env):
+    buses = [file.name.split('.')[0] for file in recursive_glob(env["NETWORK_DATA_DIR"].Dir("buses"), "*.yaml")]
     source.extend(recursive_glob(env["NETWORK_PATH"], "*.py"))
     source.extend(recursive_glob(env["NETWORK_DATA_DIR"], "*.yaml"))
     source.extend(recursive_glob(env["NETWORK_DATA_DIR"], "*.mako"))
-    target.append(env["NETWORK_OUTPUT_DIR"].File("veh.dbc"))
+    target.append([ env["NETWORK_OUTPUT_DIR"].File(f"{bus}.dbc") for bus in buses ])
     target.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
