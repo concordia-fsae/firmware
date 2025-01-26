@@ -3,6 +3,7 @@ from os import makedirs
 from pathlib import Path
 from typing import Dict, Iterator, Tuple
 import pickle
+import copy
 
 from mako import template
 from mako.lookup import TemplateLookup
@@ -56,6 +57,24 @@ def generate_templates(data_dir: Path) -> None:
 
     with open(data_dir.joinpath("signals.yaml"), "r") as fd:
         templates["signals"] = safe_load(fd)["signals"]
+    with open(data_dir.joinpath("messages.yaml"), "r") as fd:
+        messages = safe_load(fd)["messages"]
+        templates["messages"] = {}
+        for message, definition in messages.items():
+            if "sourceBuses" in definition:
+                ERROR = True
+                print(f"Template message '{message}' cannot define the source buses of a message")
+                break
+            elif "id" in definition:
+                ERROR = True
+                print(f"Template message '{message}' cannot define the id of a message")
+                break
+            elif "signals" not in definition:
+                ERROR = True
+                print(f"Template message '{message}' must define the signals of a message")
+                break
+            else:
+                templates["messages"][message] = definition
 
 def generate_can_buses(data_dir: Path) -> None:
     """Generate CAN buses based on yaml files"""
@@ -155,17 +174,16 @@ def process_node(node: CanNode):
     signals = {}
 
     if not signals_dict:
-        print(f"No signals found in signal file for node '{node.name}'")
-        ERROR = True
-        return
+        print(f"Warning: No signals found in signal file for node '{node.name}'")
 
-    for signal in signals_dict:
-        if node.duplicateNode:
-            sig_name = f"{node.name.upper()}{node.offset}_{signal}"
-        else:
-            sig_name = f"{node.name.upper()}_{signal}"
-        sig_obj = CanSignal(sig_name, signals_dict[signal])
-        signals[sig_obj.name] = sig_obj
+    if signals_dict is not None:
+        for signal in signals_dict:
+            if node.duplicateNode:
+                sig_name = f"{node.name.upper()}{node.offset}_{signal}"
+            else:
+                sig_name = f"{node.name.upper()}_{signal}"
+            sig_obj = CanSignal(sig_name, signals_dict[signal])
+            signals[sig_obj.name] = sig_obj
 
     with open(node.def_files[msg_file], "r") as messages_file:
         messages_dict = safe_load(messages_file).get("messages", None)
@@ -181,6 +199,13 @@ def process_node(node: CanNode):
             msg_name = f"{node.name.upper()}{node.offset}_{name}"
         else:
             msg_name = f"{node.name.upper()}_{name}"
+
+        if "template" in definition:
+            if definition["template"] not in templates["messages"]:
+                print(f"Message '{name}' has template message '{definition["template"]}' which can not be found in the template messages")
+                ERROR = True
+                break
+            definition.update(templates["messages"][definition["template"]])
 
         definition["id"] = definition["id"] + node.offset;
 
@@ -204,7 +229,38 @@ def process_node(node: CanNode):
         for msg_signal in msg_obj.signals:
             sig = msg_signal.split('_')[1]
             if definition['signals'][sig] is not None and "template" in definition["signals"][sig]:
-                sig_obj = CanSignal(msg_signal, templates["signals"][definition['signals'][sig]['template']])
+                if "unit" in definition["signals"][sig]:
+                    ERROR = True
+                    print(f"Templated signal '{msg_signal}' cannot override template unit")
+                    break
+                elif "nativeRepresentation" in definition["signals"][sig]:
+                    ERROR = True
+                    print(f"Templated signal '{msg_signal}' cannot override template native representation")
+                    break
+                elif "nativeRepresentation" in definition["signals"][sig]:
+                    ERROR = True
+                    print(f"Templated signal '{msg_signal}' cannot override template native representation")
+                    break
+                elif "continuous" in definition["signals"][sig]:
+                    ERROR = True
+                    print(f"Templated signal '{msg_signal}' cannot override template continuity")
+                    break
+                elif "validationRole" in definition["signals"][sig]:
+                    ERROR = True
+                    print(f"Templated signal '{msg_signal}' cannot override template validation role")
+                    break
+                elif "discreteValues" in definition["signals"][sig]:
+                    ERROR = True
+                    print(f"Templated signal '{msg_signal}' cannot override template discrete value")
+                    break
+                elif definition['signals'][sig]['template'] not in templates["signals"]:
+                    ERROR = True
+                    print(f"Templated signal '{definition['signals'][sig]['template']}' in message '{msg_signal}' cannot be found")
+                    break
+
+                new_sig = copy.deepcopy(templates["signals"][definition['signals'][sig]['template']])
+                new_sig.update(definition['signals'][sig])
+                sig_obj = CanSignal(msg_signal, new_sig)
                 signals[msg_signal] = sig_obj
             if msg_signal in signals:
                 if not signals[msg_signal].is_valid:

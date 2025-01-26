@@ -1,0 +1,21 @@
+messages:
+  rtosTaskInfo:
+    cycleTimeMs: 1000
+    signals:
+      taskUsage1kHz:
+        template: percentage
+        description: 1kHz total runtime cpu usage
+      taskUsage100Hz:
+        template: percentage
+        description: 100Hz total runtime cpu usage
+      taskUsage10Hz:
+        template: percentage
+        description: 10Hz total runtime cpu usage
+      taskUsage1Hz:
+        template: percentage
+        description: 1Hz total runtime cpu usage
+  uds:
+    unscheduled: true
+    signals:
+      udsPayload:
+        template: udsPayload
