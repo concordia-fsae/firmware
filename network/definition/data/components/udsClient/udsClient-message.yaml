@@ -3,62 +3,46 @@ messages:
     description: UDS request message for the BMS Worker 0
     cycleTimeMs: 10
     id: 0x600
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   bmsw1UdsRequest:
     description: UDS request message for the BMS Worker 1
     cycleTimeMs: 10
     id: 0x601
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   bmsw2UdsRequest:
     description: UDS request message for the BMS Worker 2
     cycleTimeMs: 10
     id: 0x602
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   bmsw3UdsRequest:
     description: UDS request message for the BMS Worker 3
     cycleTimeMs: 10
     id: 0x603
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   bmsw4UdsRequest:
     description: UDS request message for the BMS Worker 4
     cycleTimeMs: 10
     id: 0x604
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   bmsw5UdsRequest:
     description: UDS request message for the BMS Worker 5
     cycleTimeMs: 10
     id: 0x605
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   bmsbUdsRequest:
     description: UDS request message for the BMS Boss
     cycleTimeMs: 10
     id: 0x609
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
 
   stwUdsRequest:
     description: UDS request message for the Steering Wheel
     cycleTimeMs: 10
     id: 0x620
-    lengthBytes: 8
-    signals:
-      udsPayload:
+    template: uds
