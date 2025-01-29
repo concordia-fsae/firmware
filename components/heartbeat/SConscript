@@ -123,6 +123,7 @@ env.Alias("asms", asms)
 
 
 # build compilation database
+env["COMPILATIONDB_PATH_FILTER"] = "*/" + BUILD_DIR.name + "/*"
 compile_db = env.CompilationDatabase(BUILD_DIR.File("compile_commands.json"))
 Depends(compile_db, objs)
 # always generate compilation database

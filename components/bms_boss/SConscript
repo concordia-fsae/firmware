@@ -403,6 +403,7 @@ for config_id, config in configs.items():
     )
 
     # Generate compile_commands.json
+    config_env["COMPILATIONDB_PATH_FILTER"] = "*/" + variant_dir.name + "/*"
     compile_db = config_env.CompilationDatabase(variant_dir.File("compile_commands.json"))
     Depends(compile_db, objs)
     # generate it by default

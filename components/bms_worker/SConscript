@@ -445,6 +445,7 @@ for config_id, config in configs.items():
         )
 
         # Generate compile_commands.json
+        node_env["COMPILATIONDB_PATH_FILTER"] = "*/" + variant_dir.name + "/*"
         compile_db = node_env.CompilationDatabase(variant_dir.File("compile_commands.json"))
         Depends(compile_db, objs)
         # generate it by default
