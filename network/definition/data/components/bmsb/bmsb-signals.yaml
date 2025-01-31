@@ -131,3 +131,29 @@ signals:
         min: 0
         max: 25
     continuous: true
+
+  maxDischarge:
+    unit: 'A'
+    description: BMS Limit Discharge Current
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 1000
+      signedness: unsigned
+    continuous: true
+
+  maxCharge:
+    unit: 'A'
+    description: BMS Limit Charge Current
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 75
+      signedness: unsigned
+    continuous: true

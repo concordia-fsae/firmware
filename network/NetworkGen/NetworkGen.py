@@ -42,6 +42,7 @@ NODE_SCHEMA = Schema({
     "description": str,
     "onBuses": Or(str, list[str]),
     Optional("duplicateNode"): int,
+    Optional("baseId"): int,
 })
 
 SIGNAL_SCHEMA = Schema({
@@ -58,6 +59,7 @@ MESSAGE_SCHEMA = Schema({
     Optional("description"): str,
     Optional("cycleTimeMs"): int,
     Optional("id"): int,
+    Optional("idOffset"): int,
     Optional("lengthBytes"): int,
     Optional("sourceBuses"): Or(str, list[str]),
     Optional("signals"): dict,
@@ -357,30 +359,25 @@ def process_node(node: CanNode):
             MESSAGE_SCHEMA.validate(definition)
             if "lengthBytes" in definition and (definition["lengthBytes"] < 1 or definition["lengthBytes"] > 8):
                 raise Exception("Message length must be greater than 0 and less than or equal to 8")
-            if "id" not in definition:
-                raise Exception("Message must have a specified 'id'")
+            if "id" not in definition and "idOffset" not in definition:
+                raise Exception("Message must have a specified 'id' or 'idOffset'")
+            elif "id" in definition and "idOffset" in definition:
+                raise Exception("Message cannot have an 'id' and 'idOffset' at the same time")
         except Exception as e:
             print(f"CAN message definition for '{name}' in node '{node.name}' is invalid.")
             print(f"Message Schema Error: {e}")
             error = True
             continue
 
-        definition["id"] = definition["id"] + node.offset;
-        if "sourceBuses" in definition:
-            ls = []
-            if type(definition["sourceBuses"]) is str:
-                ls.append(definition["sourceBuses"])
-            else: 
-                ls = definition["sourceBuses"]
-            for bus in ls:
-                if bus not in can_bus_defs:
-                    print(f"Message '{msg_name}' has an undefined bus '{bus}'.")
-                    ERROR = True
-                    break
-                if bus not in node.on_buses:
-                    print(f"Message '{msg_name}' is on bus '{bus}' but node '{node.name}' is not on that bus.")
-                    ERROR = True
-                    break
+        if "idOffset" in definition:
+            if node.baseId is None:
+                print(f"Message '{name}' has a 'idOffset' specified and {node.name} does not have a 'baseId' specified")
+                ERROR = True
+                break
+            else:
+                definition["id"] = definition["idOffset"] + node.baseId + node.offset
+        else:
+            definition["id"] = definition["id"] + node.offset
 
         for existing_node in can_nodes:
             for msg in can_nodes[existing_node].messages:
