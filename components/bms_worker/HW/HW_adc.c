@@ -88,42 +88,42 @@ HW_StatusTypeDef_E HW_ADC_init(void)
 
     sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
     sConfig.Channel      = ADC_CHANNEL_MUX1;
     sConfig.Rank         = ADC_REGULAR_RANK_2;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
     sConfig.Channel      = ADC_CHANNEL_MUX2;
     sConfig.Rank         = ADC_REGULAR_RANK_3;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
     sConfig.Channel      = ADC_CHANNEL_MUX3;
     sConfig.Rank         = ADC_REGULAR_RANK_4;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
     sConfig.Channel      = ADC_CHANNEL_BRD1;
     sConfig.Rank         = ADC_REGULAR_RANK_5;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
     sConfig.Channel      = ADC_CHANNEL_BRD2;
     sConfig.Rank         = ADC_REGULAR_RANK_6;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
@@ -144,7 +144,7 @@ HW_StatusTypeDef_E HW_ADC_init(void)
 
     sConfig.Channel      = ADC_CHANNEL_CELL_MEASUREMENT;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     {
         Error_Handler();
