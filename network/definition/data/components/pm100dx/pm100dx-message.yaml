@@ -1,9 +1,281 @@
 messages:
-  criticalData:
-    description: PM100DXR Critical Data
+
+  temps1:
+    cycleTimeMs: 100
+    description: PM100DXR Temperatures 1
+    idOffset: 0x00
+    lengthBytes: 8 
+    signals:
+      tempModuleA:
+      tempModuleB:
+      tempModuleC:
+      tempGateDriver:
+
+  temps2:
+    cycleTimeMs: 100
+    description: PM100DXR Temperatures 2
+    idOffset: 0x01
+    lengthBytes: 8 
+    signals:
+      controlBoardTemp:
+      rtdTemp1:
+      rtdTemp2:
+      rtdTemp3:
+
+  temps3AndTorqueShudder:
+    cycleTimeMs: 100
+    description: PM100DXR Temperatures 3 & Torque Shudder 
+    idOffset: 0x02
+    lengthBytes: 8 
+    signals:
+      rtdTemp4:
+      rtdTemp5:
+      motorTemp:
+      torqueShudder:
+
+  analogInputVoltages:
     cycleTimeMs: 10
-    id: 0x11
+    description: PM100DXR Analog Input Voltages 
+    idOffset: 0x03
     lengthBytes: 8
     signals:
-      tractiveSystemVoltage:
+      analogInputVoltage1:
+      analogInputVoltage2:
+      analogInputVoltage3:
+      analogInputVoltage4:
+           startBit: 32
+      analogInputVoltage5:
+      analogInputVoltage6:
+
+  digitalInputStatus:
+    cycleTimeMs: 10
+    description: PM100DXR Digital Input Status
+    idOffset: 0x04
+    lengthBytes: 8
+    signals:
+      forwardSwitchStatus:
+        startBit: 0
+      reverseSwitchStatus:
+        startBit: 8
+      brakeSwitchStatus:
+        startBit: 16
+      regenDisableSwitchStatus:
+        startBit: 24
+      ignitionSwitchStatus:
+        startBit: 32
+      startSwitchStatus:
+        startBit: 40
+      valetModeStatus:
         startBit: 48
+      digitalInput8Status:
+        startBit: 56
+
+  motorPositionInfo:
+    cycleTimeMs: 10
+    description: PM100DXR Motor Position Information
+    idOffset: 0x05
+    lengthBytes: 8
+    signals:
+      electricalMotorAngle:
+      motorSpeed:
+      electricalOutputFreq:
+      deltaResolverFiltered:
+
+  currentInfo:
+    cycleTimeMs: 10
+    description: PM100DXR Current Info
+    idOffset: 0x06
+    lengthBytes: 8
+    signals:
+      currentPhaseA:
+      currentPhaseB:
+      currentPhaseC:
+      dcBusCurrent:
+
+  voltageInfo:
+    cycleTimeMs: 10
+    description: PM100DXR Voltage Info
+    idOffset: 0x07
+    lengthBytes: 8
+    signals:
+      dcBusVoltage: 
+      outputVoltage:
+      voltageVAB:
+      voltageVBC:
+
+  fluxInfo:
+    cycleTimeMs: 10
+    description: PM100DXR Flux Info
+    idOffset: 0x08
+    lengthBytes: 8
+    signals:
+      fluxCommand:
+      fluxFeedback:
+      idFeedback:
+      iqFeedback:
+
+  internalVoltages:
+    cycleTimeMs: 100
+    description: PM100DXR Internal Voltages
+    idOffset: 0x09
+    lengthBytes: 8
+    signals:
+      refVoltage1V5:
+      refVoltage2V5:
+      refVoltage5V:
+      systemVoltage12V:
+
+  internalStates:
+    cycleTimeMs: 10
+    description: PM100DXR Internal States
+    idOffset: 0x0A
+    lengthBytes: 8
+    signals: 
+      vsmState:
+        startBit: 0
+      pwmFrequency:
+        startBit: 8
+      inverterState:
+        startBit: 16
+      relayStatus1:
+        startBit: 24
+      inverterRunMode:
+        startBit: 32
+      selfSensingAssistEnable:
+        startBit: 33
+      inverterActiveDischargeState:
+        startBit: 37
+      inverterCommandMode:
+        startBit: 40
+      rollingCounter:
+        startBit: 43
+      inverterEnableState:
+        startBit: 48
+      burstModelMode:
+        startbit: 49
+      startModeActive:
+        startBit: 54
+      inverterEnableLockout:
+        startBit: 55
+      directionCommand:
+        startBit: 56
+      bmsActive:
+        startBit: 57
+      bmsLimitingTorque:
+        startBit: 58
+      limitMaxSpeed:
+        startBit: 59
+      limitHotSpot:
+        startBit: 60
+      lowSpeedLimiting:
+        startBit: 61
+      coolantTemperatureLimiting:
+        startBit: 62
+      limitStallBurstModel:
+        startBit: 63
+
+  faultCodes:
+    cycleTimeMs: 10
+    description: PM100DXR POST & Run Fault Codes
+    idOffset: 0x0B
+    lengthBytes: 8
+    signals:
+        postHWGateFault:
+        postHWOverCurrentFault:
+        postAcceleratorShorted:
+        postAcceleratorOpen:
+        postCurrentSensorLo:
+        postCurrentSensorHi:
+        postModuleTempLo:
+        postModuleTempHi:
+        postControlPCBTempLo:
+        postControlPCBTempHi:
+        postGateDrivePCBTempLo:
+        postGateDrivePCBTempHi:
+        post5VSenseVoltageLo:
+        post5VSenseVoltageHi:
+        post12VSenseVoltageLo:
+        post12VSenseVoltageHi:
+        post2V5SenseVoltageLo:
+        post2V5SenseVoltageHi:
+        post1V5SenseVoltageLo:
+        post1V5SenseVoltageHi:
+        postDCBusVoltageHi:
+        postDCBusVoltageLo:
+        postPreChargeTimeOut:
+        postPreChargeVoltageFailure:
+        postEepromChecksumInvalid:
+        postEepromDataOutOfRange:
+        postEepromUpdateRequired:
+        postHWDCBusOverVoltageDuringInit: 
+        postBrakeShorted:
+          startBit: 30
+        postBrakeOpen:
+        runMotorOverSpeedFault:
+        runOverCurrentFault:
+        runOverVoltageFault:
+        runInverterOverTempFault:
+        runAcceleratorInputShortedFault:
+        runAcceleratorInputOpenFault:
+        runDirectionCommandFault:
+        runInverterResponseTimeOutFault:
+        runHWGateFault:
+        runHWOverCurrentFault:
+        runUnderVoltageFault:
+        runCanCommandMessageLostFault:
+        runMotorOverTempFault:
+        runBrakeInputShortedFault:
+          startBit: 48
+        runBrakeInputOpenFault:
+        runModuleAOverTempFault:
+        runModuleBOverTempFault:
+        runModuleCOverTempFault:
+        runPcbOverTempFault:
+        runGateDriveBoard1OverTempFault:
+        runGateDriveBoard2OverTempFault:
+        runGateDriveBoard3OverTempFault:
+        runCurrentSensorFault: 
+        runHwDCBusOverVoltageFault:
+          startBit: 59
+        runResolverNotConnected:
+          startBit: 62
+
+  torqueAndTimerInfo:
+    cycleTimeMs: 10
+    description: Torque and Timer Info
+    idOffset: 0x0C
+    lengthBytes: 8
+    signals:
+      commandedTorque:
+      feedbackTorque:
+      powerOnTimer:
+
+  modulationAndFluxInfo:
+    cycleTimeMs: 10
+    description: Modulation Index and Flux Weakening Output Info
+    idOffset: 0x0D
+    lengthBytes: 8
+    signals:
+      modulationIndex:
+      fluxWeakeningOutput:
+      idCommand:
+      iqCommand:
+
+  criticalData:
+    cycleTimeMs: 3
+    description: PM100DXR Critical Data
+    idOffset: 0x10
+    lengthBytes: 8
+    signals:
+      torqueCommand:
+      torqueFeedback:
+      motorSpeedCritical:
+      tractiveSystemVoltage: #DC bus voltage
+
+  torqueCapability:
+    cycleTimeMs: 10
+    description: Motor Controller Torque Capability
+    idOffset: 0x11
+    lengthBytes: 8
+    signals:
+      torqueCapability:
