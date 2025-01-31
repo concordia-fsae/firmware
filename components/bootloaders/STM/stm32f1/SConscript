@@ -71,6 +71,7 @@ c_flags = [
     "-Wshadow",
     "-Wunused",
     "-Wundef",
+    "-include", "BuildDefines.h", # Executed one after eachother
 ]
 
 if not GetOption("release"):
@@ -81,6 +82,7 @@ link_flags = [
     # "-Wl,--print-gc-sections",
     "-Wl,--relax",
     "-Wl,--print-memory-usage",
+    "-Icomponents/bootloaders/STM/stm32f1/include/HW/",
 ]
 
 as_flags = [
@@ -126,7 +128,7 @@ env.Append(
     ASFLAGS=as_flags,
     CPPPATH=inc_paths,
     CCFLAGS=c_flags,
-    LINKSCRIPT=File("STM32F103C8.ld"),
+    LINKSCRIPT=File("STM32F1.ld"),
     LINKFLAGS=c_flags + link_flags,
 )
 
@@ -195,9 +197,19 @@ for config_id, config in configs.items():
         "_".join(config["description"].split(" ")) + f"_{config_id}"
     )
     generated_dir = variant_dir.Dir("generated")
+    config_env.Append(
+        LINKFLAGS=f"-I{generated_dir.abspath}",
+    )
     makedirs(generated_dir.abspath, exist_ok=True)
 
     features = {"features": config_env.GenerateFeatures(feature_selections_files, config["features"]["overrides"]) }
+    if features["features"]["defs"]["app_function_id"] == "function_id_bl":
+        try:
+            AddOption("--flashable-bootloader", dest="flashable-bootloader", action="store_true")
+        except Exception:
+            pass
+        if GetOption("flashable-bootloader"):
+            features["features"]["defs"]["feature_flashable_bootloader"] = True
     generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
     generated = render_generated_files(config["options"], renderers["buildDefs"], generated_dir)
 
@@ -222,15 +234,6 @@ for config_id, config in configs.items():
             for src in uds_srcs
         ]
     )
-    if features["features"]["defs"]["app_function_id"] == "function_id_blu":
-        config_env["LINKSCRIPT"]=File("STM32F103C8-BLU.ld")
-    elif features["features"]["defs"]["app_function_id"] == "function_id_bl":
-        try:
-            AddOption("--flashable-bootloader", dest="flashable-bootloader", action="store_true")
-        except Exception:
-            pass
-        if GetOption("flashable-bootloader"):
-            config_env["LINKSCRIPT"]=File("STM32F103C8-BLFLASHABLE.ld")
 
     # link all the compiled objects into an elf
     elf, map = config_env.Program(

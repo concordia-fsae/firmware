@@ -3,6 +3,6 @@ from SCons.Script import Import, Return
 
 Import("*")
 
-artifacts = SConscript("STM/stm32f103/SConscript", exports=["CONFIG_IDS", "PLATFORM_ENV"])
+artifacts = SConscript("STM/stm32f1/SConscript", exports=["CONFIG_IDS", "PLATFORM_ENV"])
 
 Return('artifacts')

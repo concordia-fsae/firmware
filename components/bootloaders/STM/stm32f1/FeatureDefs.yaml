@@ -4,3 +4,4 @@ config:
 defs:
   can_debug:
   erase_invalid_app:
+  flashable_bootloader:

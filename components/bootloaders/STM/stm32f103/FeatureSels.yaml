@@ -1,4 +1,0 @@
-featureDefs: "#/components/bootloaders/STM/stm32f103/FeatureDefs.yaml"
-features:
-  feature_erase_invalid_app: false
-  feature_can_debug: false
