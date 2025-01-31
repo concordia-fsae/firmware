@@ -55,23 +55,11 @@ void CANTX_SWI(void)
                     if (HW_CAN_sendMsg(bus, message, entry->id, entry->len))
                     {
                         CAN_table[bus].busTable[table].index = pack + 1;
-                        continue;
                     }
                     else
                     {
                         CAN_table[bus].busTable[table].index = pack;
                         return;
-                    }
-                }
-                if (CAN_table[bus].busTable[table].index == CAN_table[bus].busTable[table].packTableLength)
-                {
-                    if (CAN_table[bus].busTable[table].counter != 255U)
-                    {
-                        CAN_table[bus].busTable[table].counter++;
-                    }
-                    else
-                    {
-                        CAN_table[bus].busTable[table].counter = 0U;
                     }
                 }
             }
@@ -128,6 +116,14 @@ static void CANIO_tx_1kHz_PRD(void)
             }
 
             CAN_table[bus].busTable[table].index = 0U;
+            if (CAN_table[bus].busTable[table].counter != 255U)
+            {
+                CAN_table[bus].busTable[table].counter++;
+            }
+            else
+            {
+                CAN_table[bus].busTable[table].counter = 0U;
+            }
             CAN_table[bus].busTable[table].lastTimestamp = CANIO_getTimeMs();
         }
     }
