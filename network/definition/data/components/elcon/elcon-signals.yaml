@@ -3,7 +3,7 @@ signals:
     unit: 'V'
     description: Charger DC Bus Voltage
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -14,7 +14,7 @@ signals:
     unit: 'A'
     description: Charger DC BUS Current
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -24,7 +24,7 @@ signals:
   busStatusFlags:
     description: Charger Bus Status Flags
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 8
       range:
         min: 0

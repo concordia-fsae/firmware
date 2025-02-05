@@ -8,7 +8,7 @@ signals:
     unit: 'A'
     description: Brusa NLG513 Max Mains Current During Charging
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -20,7 +20,7 @@ signals:
     unit: 'V'
     description: Brusa NLG513 Max Battery Voltage During Charging
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -32,7 +32,7 @@ signals:
     unit: 'A'
     description: Brusa NLG513 Max Battery Voltage During Charging
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -112,7 +112,7 @@ signals:
     unit: 'V'
     description: Elcon Max Battery Voltage During Charging
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -124,7 +124,7 @@ signals:
     unit: 'A'
     description: Elcon Max Battery Voltage During Charging
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
