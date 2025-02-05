@@ -304,13 +304,12 @@ class CanSignal(CanObject):
                     self.is_valid = False
                     return
 
-                if nat_rep.range.min >= 0:
+                if nat_rep.signedness == Signedness.unsigned:
                     self.offset = nat_rep.range.min
-                    nat_rep.signedness = Signedness.unsigned
-                elif nat_rep.range.min < 0:
-                    self.offset = -nat_rep.range.min
-                    nat_rep.signedness = Signedness.signed
-                sig_range = nat_rep.range.max - nat_rep.range.min
+                    sig_range = nat_rep.range.max - nat_rep.range.min
+                elif nat_rep.signedness == Signedness.signed:
+                    self.offset = 0
+                    sig_range = 2* max(nat_rep.range.max, nat_rep.range.min)
 
                 if nat_rep.resolution:
                     self.scale = nat_rep.resolution
