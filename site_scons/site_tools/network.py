@@ -34,6 +34,7 @@ def emitBuild(target, source, env):
     source.extend(recursive_glob(env["NETWORK_DATA_DIR"], "*.yaml"))
     source.extend(recursive_glob(env["NETWORK_DATA_DIR"], "*.mako"))
     target.append([ env["NETWORK_OUTPUT_DIR"].File(f"{bus}.dbc") for bus in buses ])
+    target.append([ env["NETWORK_OUTPUT_DIR"].File(f"{bus}-stats.txt") for bus in buses ])
     target.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
     target.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))

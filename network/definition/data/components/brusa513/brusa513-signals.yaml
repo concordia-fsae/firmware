@@ -3,7 +3,7 @@ signals:
     unit: 'A'
     description: Charger Mains Current
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.01
       range:
@@ -14,7 +14,7 @@ signals:
     unit: 'V'
     description: Charger Mains Voltage
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -25,7 +25,7 @@ signals:
     unit: 'V'
     description: Charger DC Bus Voltage
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.1
       range:
@@ -36,7 +36,7 @@ signals:
     unit: 'A'
     description: Charger Mains Current
     nativeRepresentation:
-      endianness: 0
+      endianness: big
       bitWidth: 16
       resolution: 0.01
       range:

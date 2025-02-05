@@ -1,4 +1,4 @@
 name: "privbms"
 description: "Private BMS bus"
-defaultEndianess: "little"
+defaultEndianness: "little"
 baudrate: 500000 # kbps

@@ -1,8 +1,19 @@
 from math import ceil, log
 from typing import List, Optional
+from schema import Schema, Or, Optional, And
 
 from .Types import *
 
+NATREP_SCHEMA = Schema({
+    Optional("endianness"): str,
+    Optional("bitWidth"): int,
+    Optional("resolution"): Or(int, float),
+    Optional("range"): {
+        "min": Or(int, float),
+        "max": Or(int, float),
+    },
+    Optional("signedness"): str,
+})
 
 def get_if_exists(src: dict, key: str, conversion_type: type, default, **kwargs):
     """
@@ -64,15 +75,32 @@ class NativeRepresentation:
     """
 
     def __init__(self, signal_def=dict()):
+        NATREP_SCHEMA.validate(signal_def)
+        if "endianness" in signal_def:
+            try:
+                Endianess[signal_def["endianness"]]
+            except:
+                raise Exception(f"Invalid endianness '{signal_def["endianness"]}. Endianness can be any of { [ e.name for e in Endianess ] }.'")
+        if "signedness" in signal_def:
+            try:
+                Signedness[signal_def["signedness"]]
+            except:
+                raise Exception(f"Invalid signedness '{signal_def["signedness"]}. Signedness can be any of { [ e.name for e in Signedness ] }.")
+
         self.bit_width = get_if_exists(signal_def, "bitWidth", int, None)
         self.range = get_if_exists(signal_def, "range", Range, None)
-        self.signedness = get_if_exists(
-            signal_def, "signedness", Signedness, Signedness.unsigned
-        )
-        self.endianness = get_if_exists(
-            signal_def, "endianness", Endianess, Endianess.little
-        )
+        if "signedness" in signal_def:
+            self.signedness = Signedness[signal_def["signedness"]]
+        else:
+            self.signedness = Signedness.unsigned
+        if "endianness" in signal_def:
+            self.endianness = Endianess[signal_def["endianness"]]
+        else:
+            self.endianness = Endianess.little
         self.resolution = get_if_exists(signal_def, "resolution", float, None)
+
+        if self.bit_width is not None and (self.bit_width < 1 or self.bit_width > 64):
+            raise Exception(f"Native representation bit width must be between 1 and 64 bits")
 
 
 class SnaParams:
@@ -120,12 +148,17 @@ class CanSignal(CanObject):
         self.discrete_values = getattr(
             self.DISC, get_if_exists(signal_def, "discreteValues", str, ""), None
         )
-        self.native_representation = get_if_exists(
-            signal_def,
-            "nativeRepresentation",
-            NativeRepresentation,
-            None,
-        )
+        try:
+            self.native_representation = get_if_exists(
+                signal_def,
+                "nativeRepresentation",
+                NativeRepresentation,
+                None,
+            )
+        except Exception as e:
+            print(f"Invalid native representation in signal '{name}'.")
+            print(f"Native Representation Schema Error: {e}")
+            raise e
         self.sna_params = get_if_exists(
             signal_def, "sna", SnaParams, SnaParams(), extra_params=self.name
         )
@@ -527,9 +560,7 @@ class CanBus(CanObject):
         self.name = get_if_exists(bus_def, "name", str, "")
         self.baudrate = get_if_exists(bus_def, "baudrate", int, 500000)
         self.description = get_if_exists(bus_def, "description", str, "")
-        self.default_endianess = Endianess[
-            get_if_exists(bus_def, "defaultEndianess", str, "str")
-        ]
+        self.default_endianess = Endianess[bus_def["defaultEndianness"]]
         self.nodes = {}
         self.messages = {}
         self.signals = {}

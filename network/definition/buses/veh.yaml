@@ -1,4 +1,4 @@
 name: "veh"
 description: "Vehicle Bus (general)"
-defaultEndianess: "little"
+defaultEndianness: little
 baudrate: 1000000 # kbps
