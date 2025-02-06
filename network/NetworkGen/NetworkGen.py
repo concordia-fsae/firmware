@@ -5,6 +5,7 @@ from typing import Dict, Iterator, Tuple
 import pickle
 import copy
 from schema import Schema, Or, Optional, And
+import sys
 
 from mako import template
 from mako.lookup import TemplateLookup
@@ -726,6 +727,43 @@ def parseNetwork(args, lookup):
             if not node.processed:
                 process_receivers(bus, node)
 
+def calculate_bus_load(bus, output_dir):
+    total_bits_per_s = 0
+    total_messages_per_s = 0
+    total_unscheduled_bits = 0
+    total_unscheduled_messages = 0
+
+    output = [ open(str(output_dir) + f"/{bus.name}-stats.txt", 'w'), sys.stdout ]
+
+    for _, message in bus.messages.items():
+        # SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
+        # DEL(1), ACK(1), DEL(1), EOF(7), ITM(11)
+        bit_length = 43
+        bit_length += message.length_bytes * 8
+        bit_length += 11 if message.id <= 0x7ff else 29
+
+        if message.unscheduled:
+            total_unscheduled_bits += bit_length
+            total_unscheduled_messages += 1
+            continue
+        messages_per_s = 1000 / message.cycle_time_ms
+
+        total_bits_per_s += bit_length * messages_per_s
+        total_messages_per_s += messages_per_s
+
+    usage = total_bits_per_s / bus.baudrate
+    for out in output:
+        print(f"CAN Bus Statistics for '{bus.name.upper()}'; Baudrate: {bus.baudrate}; Usage: {usage * 100}%", file=out)
+        print(f"Total Bits Transmitted/s: {int(total_bits_per_s)}; Total Messages Transmitted/s: {int(total_messages_per_s)}", file=out)
+        if total_unscheduled_messages > 0:
+            print(f"Total Bits Unscheduled: {int(total_unscheduled_bits)}; Total Messages Unscheduled: {int(total_unscheduled_messages)}", file=out)
+        print(f"Total Nodes: {len(bus.nodes)}; Count Messages: {len(bus.messages)}", file=out)
+
+    if usage > 0.8:
+        print(f"Warning: CANBus '{bus.name.upper()}' has high bus load")
+    if usage > 1:
+        raise Exception(f"CAN Bus '{bus.name.upper()}' has total bus usage of {usage}")
+
 def main():
     """Main function"""
     global ERROR
@@ -742,6 +780,7 @@ def main():
         print(f"Parsing network...")
         parseNetwork(args, lookup)
         for bus in can_bus_defs.values():
+            calculate_bus_load(bus, args.output_dir)
             generate_dbcs(lookup, bus, args.output_dir)
         if args.cache_dir:
             pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
