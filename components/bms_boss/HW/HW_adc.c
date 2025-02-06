@@ -159,6 +159,9 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
         }
 
         __HAL_LINKDMA(adcHandle, DMA_Handle, hdma_adc1);
+
+        HAL_NVIC_SetPriority(ADC1_2_IRQn, ADC_IRQ_PRIO, 0U);
+        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
     }
     else if (adcHandle->Instance == ADC2)
     {
