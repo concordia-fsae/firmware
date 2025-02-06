@@ -201,9 +201,7 @@ void lib_nvm_init(void)
             (getBlockBaseAddress((uint32_t)data.currentPtr) == getBlockBaseAddress((uint32_t)data.currentPtr + sizeof(lib_nvm_recordHeader_S))))
         {
             storage_t* record = data.currentPtr + sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t);
-            lib_nvm_entry_t id = (((lib_nvm_recordHeader_S*)data.currentPtr)->entryId <= NVM_LAST_USED_INTERNAL_ENTRYID) ?
-                                ((lib_nvm_recordHeader_S*)data.currentPtr)->entryId :
-                                ((lib_nvm_recordHeader_S*)data.currentPtr)->entryId - NVM_ENTRYID_INTERNAL_COUNT;
+            lib_nvm_entry_t id = ((lib_nvm_recordHeader_S*)data.currentPtr)->entryId;
             if (((lib_nvm_recordHeader_S*)data.currentPtr)->discarded != SET_STATE)
             {
                 lib_nvm_crc_t crc = 0xff;
@@ -361,9 +359,8 @@ static void initializeEmptyRecords(void)
         if (records[entry].currentNonVolatileAddress_Ptr == NULL)
         {
             recordPopulateDefault(entry);
+            requestWritePrivate(entry);
         }
-
-        requestWritePrivate(entry);
     }
 
     for (lib_nvm_entry_t entry = 0U; entry < NVM_ENTRYID_COUNT; entry++)
@@ -371,9 +368,8 @@ static void initializeEmptyRecords(void)
         if (records[entry + NVM_ENTRYID_INTERNAL_COUNT].currentNonVolatileAddress_Ptr == NULL)
         {
             recordPopulateDefault(entry + NVM_ENTRYID_INTERNAL_COUNT);
+            lib_nvm_requestWrite(entry);
         }
-
-        lib_nvm_requestWrite(entry);
     }
 }
 
@@ -392,6 +388,20 @@ static void evaluateWriteRequiredPrivate(lib_nvm_entry_t entryId)
             if (memcmp((storage_t*)&recordLog, records[NVM_ENTRYID_INTERNAL_LOG].currentNonVolatileAddress_Ptr + sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t), sizeof(lib_nvm_nvmRecordLog_S)))
             {
                 records[NVM_ENTRYID_INTERNAL_LOG].writeRequired = true;
+            }
+        }
+            break;
+        case NVM_ENTRYID_INTERNAL_CYCLE:
+        {
+            if (records[NVM_ENTRYID_INTERNAL_CYCLE].currentNonVolatileAddress_Ptr == NULL)
+            {
+                records[NVM_ENTRYID_INTERNAL_CYCLE].writeRequired = true;
+                break;
+            }
+
+            if (memcmp((storage_t*)&cycleLog, records[NVM_ENTRYID_INTERNAL_CYCLE].currentNonVolatileAddress_Ptr + sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t), sizeof(lib_nvm_nvmCycleLog_S)))
+            {
+                records[NVM_ENTRYID_INTERNAL_CYCLE].writeRequired = true;
             }
         }
             break;
