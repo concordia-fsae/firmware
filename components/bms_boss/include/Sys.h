@@ -13,6 +13,7 @@
 #include "HW_gpio.h"
 
 #include "FloatTypes.h"
+#include "LIB_utility.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -32,11 +33,17 @@ typedef enum {
     SYS_CONTACTORS_HVP_CLOSED,
 } SYS_Contactors_E;
 
+typedef enum {
+    SYS_LOCKOUTREASON_ADC_CALIBRATING = 0U,
+    SYS_LOCKOUTREASON_COUNT,
+} SYS_LockoutReason_E;
+
 
 typedef struct
 {
     SYS_state_E  state;
     SYS_Contactors_E contacts;
+    FLAG_create(lockout_reason, SYS_LOCKOUTREASON_COUNT);
 } SYS_S;
 
 extern SYS_S SYS;
@@ -55,3 +62,5 @@ bool SYS_SFT_checkBrusaChargerTimeout(void);
 bool SYS_SFT_checkElconChargerTimeout(void);
 void SYS_stopCharging(void);
 void SYS_continueCharging(void);
+void SYS_setLockoutState(SYS_LockoutReason_E reason, bool enable);
+bool SYS_getLockoutState(SYS_LockoutReason_E reason);

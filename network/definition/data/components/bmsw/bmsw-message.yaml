@@ -112,6 +112,7 @@ messages:
       boardRelativeHumidity:
       boardAmbientTemp:
       mcuTemp:
+        template: componentTemp
       boardTemp0:
       boardTemp1:
 

@@ -20,5 +20,6 @@
 
 typedef enum
 {
-    NVM_ENTRYID_COUNT = 0U,
+    NVM_ENTRYID_IO_CALIBRATION = 0U,
+    NVM_ENTRYID_COUNT,
 } lib_nvm_entryId_E;

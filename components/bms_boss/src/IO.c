@@ -77,6 +77,11 @@ static io_S io;
  */
 IO_S IO;
 
+IO_calibrationValues_V0_S IO_calibrationValues;
+
+const IO_calibrationValues_V0_S IO_calibrationValues_default = {
+    .current_sense_differential = 0.0f,
+};
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -121,7 +126,7 @@ static void IO10Hz_PRD(void)
     else if (io.adcState == ADC_STATE_RUNNING)
     {
         IO_unpackADCBuffer();
-        IO.current  = (io.adcData[ADC_CURRENT_P].value - io.adcData[ADC_CURRENT_N].value) / ADC_MAX_VAL * VREF;
+        IO.current  = ((io.adcData[ADC_CURRENT_P].value - io.adcData[ADC_CURRENT_N].value) / (float32_t)ADC_MAX_VAL) * VREF - IO_calibrationValues.current_sense_differential;
         IO.mcu_temp = (io.adcData[ADC_MCU_TEMP].value / ADC_MAX_VAL) * VREF;
     }
 
@@ -138,6 +143,12 @@ const ModuleDesc_S IO_desc = {
     .moduleInit       = &IO_init,
     .periodic10Hz_CLK = &IO10Hz_PRD,
 };
+
+void IO_stopCalibration_currentSense(void)
+{
+    IO_calibrationValues.current_sense_differential = IO.current;
+    lib_nvm_requestWrite(NVM_ENTRYID_IO_CALIBRATION);
+}
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S

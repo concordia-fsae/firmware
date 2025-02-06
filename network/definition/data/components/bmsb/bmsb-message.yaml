@@ -15,11 +15,12 @@ messages:
     description: BMS Boss Information
     cycleTimeMs: 100
     id: 0x98
-    lengthBytes: 3
     sourceBuses: veh
     signals:
       packCurrent:
       packContactorState:
+      mcuTemp:
+        template: componentTemp
 
   brusaChargeCommand:
     description: Brusa Charge Command
