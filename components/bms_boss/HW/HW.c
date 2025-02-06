@@ -16,6 +16,7 @@
 // Firmware Includes
 #include "stm32f1xx.h"
 #include "include/HW_tim.h"
+#include "LIB_nvm.h"
 
 typedef struct
 {
@@ -87,5 +88,8 @@ void HW_usDelay(uint8_t us)
 
 void HW_systemHardReset(void)
 {
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    lib_nvm_cleanUp();
+#endif
     pSCB->AIRCR = AIRCR_RESET_REQ;
 }
