@@ -1,11 +1,1018 @@
 signals:
-  tractiveSystemVoltage:
-    unit: 'V'
-    description: Motor Controller DC Bus Voltage
+
+  tempModuleA:
+    description: Module A Temperature 
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+  tempModuleB:
+    description: Module B Temperature 
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  tempModuleC:
+    description: Module C Temperature
+    unit: degC 
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  tempGateDriver:
+    description: Gate Driver Board Temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  controlBoardTemp:
+    description: Temperature of Control Board
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  rtdTemp1:
+    description: Temperature from RTD Input 1
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  rtdTemp2:
+    description: Temperature from RTD Input 2
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  rtdTemp3:
+    description: Temperature from RTD Input 3
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  rtdTemp4:
+    description: Temperature from RTD Input 4
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  rtdTemp5:
+    description: Temperature from RTD Input 5
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  motorTemp:
+    description: Motor Temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  torqueShudder:
+    description: Torque Shudder Compensation
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  analogInputVoltage1:
+    description: Voltage on Analog Input Voltage 1
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  analogInputVoltage2:
+    description: Voltage on Analog Input Voltage 2
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+
+  analogInputVoltage3:
+    description: Voltage on Analog Input Voltage 3
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+
+  analogInputVoltage4:
+    description: Voltage on Analog Input Voltage 4
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  analogInputVoltage5:
+    description: Voltage on Analog Input Voltage 5
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  analogInputVoltage6:
+    description: Voltage on Analog Input Voltage 6
+    unit: V
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  forwardSwitchStatus:
+    description: Forward Switch Status
+    discreteValues: inputStatus
+
+  reverseSwitchStatus:
+    description: Reverse Switch Status
+    discreteValues: inputStatus
+
+  brakeSwitchStatus:
+    description: Brake Switch Status
+    discreteValues: inputStatus
+
+  regenDisableSwitchStatus:
+    description: Regen Disable Switch Status
+    discreteValues: inputStatus
+
+  ignitionSwitchStatus:
+    description: Ignition Switch Status
+    discreteValues: inputStatus
+
+  startSwitchStatus:
+    description: Start Switch Status
+    discreteValues: inputStatus
+
+  valetModeStatus:
+    description: Valet Mode Status
+    discreteValues: inputStatus
+
+  digitalInput8Status:
+    description: Digital Input 8 Status
+    discreteValues: inputStatus
+
+  electricalMotorAngle:
+    description: Electrical Motor Angle
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0.0
+        max: 359.9
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  motorSpeed:
+    description: Motor Speed
+    unit: RPM
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: -32768
+        max: 32767
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  electricalOutputFreq:
+    description: Electrical Output Frequency
+    unit: Hz
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  deltaResolverFiltered:
+    description: Delta Resolver Filtered
+    unit: deg
     nativeRepresentation:
       bitWidth: 16
       resolution: 0.1
       range:
         min: 0
-        max: 450
+        max: 359.9
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  currentPhaseA:
+    description: Measured Current of Phase A
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  currentPhaseB:
+    description: Measured Current of Phase B
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  currentPhaseC:
+    description: Measured Current of Phase C
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+
+  dcBusCurrent:
+    description: Calculated DC Bus Current
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  dcBusVoltage: 
+    description: Measured DC Bus Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  outputVoltage:
+    description: Calculated Output Voltage (Peak-Neutral)
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+  voltageVAB:
+    description: Phase A - Phase B Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+  voltageVBC:
+    description: Phase B - Phase C Voltage
+    unit: V
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range: 
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+  fluxCommand:
+    description: Commanded Flux
+    unit: Wb
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.001
+      range:
+        min: -32.768
+        max: 32.767
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+  fluxFeedback:
+    description: Estimated Flux
+    unit: Wb
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.001
+      range:
+        min: -32.768
+        max: 32.767
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+
+  idFeedback:
+    description: D-Axis Current Feedback
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+ 
+  iqFeedback:
+    description: Q-Axis Current Feedback
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+ 
+  refVoltage1v5V:
+    description: 1V5V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  refVoltage2V5V:
+    description: 2V5V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  refVoltage5V:
+    description: 5V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  systemVoltage12V:
+    description: 12V Reference Voltage
+    unit: V
+    nativeRepresentation: 
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -327.68
+        max: 327.67
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  vsmState: 
+    description: VSM State
+    unit: ""
+    discreteValues: vsmState
+
+  pwmFrequency:
+    description: PWM Frequency (=0 for PMxxx)
+    unit: Hz
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  inverterState:
+    description: Inverter State 
+    unit: ""
+    discreteValues: inverterState
+
+  relayStatus1:
+    description: Relay 1 Status
+    discreteValues: activeStatus
+
+  inverterRunMode:
+    description: Inverter Run Mode
+    discreteValues: outputState
+
+  selfSensingAssistEnable:  
+    description: Self-Sensing Assist Enable
+    discreteValues: outputState
+
+  inverterActiveDischargeState:
+    description: Inverter Active Discharge State
+    unit: ""
+    discreteValues: inverterActiveDischargeState
+
+  inverterCommandMode:
+    description: Inverter Command Mode
+    discreteValues: outputState
+
+  rollingCounter:
+    description: Only For Gen 5
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 8 
+      resolution: 1
+      range:
+        min: 0
+        max: 15
+      endianness: big
+      signedness: unsigned
+    continuous: true
+
+
+  inverterEnableState:  
+    description: Inverter Enable State
+    discreteValues: outputState
+
+  burstModelMode:
+    description: Only for Gen 5
+    discreteValues: outputState
+
+  startModeActive:
+    description: Start Mode Active
+    discreteValues: outputState
+
+  inverterEnableLockout:
+    description: Inverter Enable Lockout
+    discreteValues: outputState
+
+  directionCommand:
+    description: Inverter Direction Command
+    discreteValues: directionCommand
+
+  bmsActive:
+    description: BMS Active
+    discreteValues: bmsActive
+
+  bmsLimitingTorque:
+    description: BMS Limiting Torque
+    discreteValues: isLimited
+
+  limitMaxSpeed:
+    description: Only for Gen 5
+    discreteValues: isLimited
+
+  limitHotSpot:
+    description: Only for Gen 5
+    discreteValues: isLimited
+
+  lowSpeedLimiting:
+    description: Only for Gen 5
+    discreteValues: isLimited
+
+  coolantTemperatureLimiting:
+    description: Only for Gen 5
+    discreteValues: isLimited
+
+  limitStallBurstModel:
+    description: Only for Gen 5
+    discreteValues: isLimited
+
+
+  #POST Fault Lo
+  postHWGateFault:
+    description: POST HW Gate Fault
+    discreteValues: faultStatus
+
+  postHWOverCurrentFault:
+    description: POST HW Overcurrent Fault
+    discreteValues: faultStatus
+
+  postAcceleratorShorted:
+    description: POST HW Accelerator Shorted Fault
+    discreteValues: faultStatus
+
+  postAcceleratorOpen:
+    description: POST HW Accelerator Open Fault
+    discreteValues: faultStatus
+
+  postCurrentSensorLo:
+    description: POST Current Sensor Low Fault
+    discreteValues: faultStatus
+
+  postCurrentSensorHi:
+    description: POST Current Sensor High Fault
+    discreteValues: faultStatus
+
+  postModuleTempLo:
+    description: POST Module Temp Low Fault
+    discreteValues: faultStatus
+
+  postModuleTempHi:
+    description: POST Module Temp High Fault
+    discreteValues: faultStatus
+
+  postControlPCBTempLo:
+    description: POST Control PCB Temp Low Fault
+    discreteValues: faultStatus
+
+  postControlPCBTempHi:
+    description: POST Control PCB Temp High Fault
+    discreteValues: faultStatus
+
+  postGateDrivePCBTempLo:
+    description: POST Gate Drive PCB Temp Low Fault
+    discreteValues: faultStatus
+
+  postGateDrivePCBTempHi:
+    description: POST Gate Drive PCB Temp High Fault
+    discreteValues: faultStatus
+
+  post5vSenseVoltageLo:
+    description: POST 5V Sense Voltage Low Fault
+    discreteValues: faultStatus
+
+  post5vSenseVoltageHi:
+    description: POST 5V Sense Voltage High Fault
+    discreteValues: faultStatus
+
+  post12vSenseVoltageLo:
+    description: POST 12V Sense Voltage Low Fault
+    discreteValues: faultStatus
+
+  post12vSenseVoltageHi:
+    description: POST 12V Sense Voltage High Fault
+    discreteValues: faultStatus
+
+  #POST Fault Hi
+  post2V5vSenseVoltageLo:
+    description: POST 2V5V Sense Voltage Low Fault
+    discreteValues: faultStatus
+
+  post2V5vSenseVoltageHi:
+    description: POST 2V5V Sense Voltage High Fault
+    discreteValues: faultStatus
+
+  post1V5vSenseVoltageLo:
+    description: POST 1V5V Sense Voltage Low Fault
+    discreteValues: faultStatus
+
+  post1V5vSenseVoltageHi:
+    description: POST 1V5V Sense Voltage High Fault
+    discreteValues: faultStatus
+
+  postDCBusVoltageHi:
+    description: POST DC Bus Votlage High Fault
+    discreteValues: faultStatus
+
+  postDCBusVoltageLo:
+    description: POST DC Bus Voltage Low Fault
+    discreteValues: faultStatus
+
+  postPreChargeTimeOut:
+    description: POST Precharge Timeout Fault
+    discreteValues: faultStatus
+
+  postPreChargeVoltageFailure:
+    description: POST Precharge Voltage Failure Fault
+    discreteValues: faultStatus
+
+  postEepromChecksumInvalid:
+    description: POST EEPROM Checksum Invalid Fault
+    discreteValues: faultStatus
+
+  postEepromDataOutOfRange:
+    description: POST EEPROM Data Out of Range Fault
+    discreteValues: faultStatus
+
+  postEepromUpdateRequired:
+    description: POST EEPROM Update Required Fault
+    discreteValues: faultStatus
+
+  postHWDCBusOverVoltageDuringInit:
+    description: POST HW DC Bus Over Voltage During Init Fault
+    discreteValues: faultStatus
+
+  postBrakeShorted:
+    description: POST Brake Shorted Fault
+    discreteValues: faultStatus
+
+  postBrakeOpen:
+    description: POST Brake Open Fault
+    discreteValues: faultStatus
+
+  runMotorOverSpeedFault:
+    description: RUN Motor Over Speed Fault
+    discreteValues: faultStatus
+
+  runOverCurrentFault:
+    description: RUN Over Current Fault
+    discreteValues: faultStatus
+
+  runOverVoltageFault:
+    description: RUN Over Voltage Fault
+    discreteValues: faultStatus
+
+  runInverterOverTempFault:
+    description: RUN Inverter Over Temperature Fault
+    discreteValues: faultStatus
+
+  runAcceleratorInputShortedFault:
+    description: RUN Accelerator Input Shorted Fault
+    discreteValues: faultStatus
+
+  runAcceleratorInputOpenFault:
+    description: RUN Accelerator Input Open Fault
+    discreteValues: faultStatus
+
+  runDirectionCommandFault:
+    description: RUN Direction Command Fault
+    discreteValues: faultStatus
+
+  runInverterResponseTimeOutFault:
+    description: RUN Inverter Response Timeout Fault
+    discreteValues: faultStatus
+
+  runHWGateFault:
+    description: RUN HW Gate Fault
+    discreteValues: faultStatus
+
+  runHWOverCurrentFault:
+    description: RUN HW Over Current Fault
+    discreteValues: faultStatus
+
+  runUnderVoltageFault:
+    description: RUN Under Voltage Fault
+    discreteValues: faultStatus
+
+  runCanCommandMessageLostFault:
+    description: RUN CAN Command Message Lost Fault
+    discreteValues: faultStatus
+
+  runMotorOverTempFault:
+    description: RUN Motor Over Temp Fault
+    discreteValues: faultStatus
+
+  runBrakeInputShortedFault:
+    description: RUN Brake Input Shorted Fault
+    discreteValues: faultStatus
+
+  runBrakeInputOpenFault:
+    description: RUN Brake Input Open Fault
+    discreteValues: faultStatus
+
+  runModuleAOverTempFault:
+    description: RUN Module A Over Temp Fault
+    discreteValues: faultStatus
+
+  runModuleBOverTempFault:
+    description: RUN Module B Over Temp Fault
+    discreteValues: faultStatus
+
+  runModuleCOverTempFault:
+    description: RUN Module C Over Temp Fault
+    discreteValues: faultStatus
+
+  runPcbOverTempFault:
+    description: RUN PCB Over Temp Fault
+    discreteValues: faultStatus
+
+  runGateDriveBoard1OverTempFault:
+    description: RUN Gate Drive Board 1 Over Temp Fault
+    discreteValues: faultStatus
+
+  runGateDriveBoard2OverTempFault:
+    description: RUN Gate Drive Board 2 Over Temp Fault
+    discreteValues: faultStatus
+
+  runGateDriveBoard3OverTempFault:
+    description: RUN Gate Drive Board 3 Over Temp Fault
+    discreteValues: faultStatus
+
+  runCurrentSensorFault:
+    description: RUN Current Sensor Fault
+    discreteValues: faultStatus
+
+  runHwDCBusOverVoltageFault:
+    description: RUN HW DC Bus Over Voltage Fault
+    discreteValues: faultStatus
+ 
+  runResolverNotConnected:
+    description: RUN Resolver Not Connected Fault
+    discreteValues: faultStatus
+
+  commandedTorque:
+    description: Commanded Torque
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  feedbackTorque:
+    description: Torque Feedback
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+    
+  powerOnTimer:
+    description: Power On Timer
+    unit: "s"
+    nativeRepresentation:
+      bitWidth: 32
+      resolution: 3000
+      range:
+        min: 0
+        max: 4294967295
+      endianness: big
+      signedness: unsigned
+    continuous: true
+    
+
+  modulationIndex:
+    description: Modulation Index
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: 0
+        max: 65535
+      endianness: big
+      signedness: signed
+    continuous: true
+
+
+  fluxWeakeningOutput:
+    description: Flux Weakening Output
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  idCommand:
+    description: Commanded D-Axis Current
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  iqCommand:
+    description: Commanded Q-Axis Current
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  torqueCommand:
+    unit: Nm
+    description: Commanded Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  torqueFeedback:
+    unit: Nm
+    description: Estimated Motor Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  motorSpeed:
+    unit: RPM
+    description: Measured Motor Speed
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: -32768
+        max: 32767
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  tractiveSystemVoltage:
+    unit: V
+    description: Motor Controller DC Bus Voltage
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: big
+      signedness: signed
+    continuous: true
+
+  torqueCapability:
+    unit: Nm
+    description: Inverter Available Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -32768
+        max: 32767
+      endianness: big
+      signedness: signed
     continuous: true

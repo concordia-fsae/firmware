@@ -6,6 +6,10 @@ switchStatus:
   "OFF": 0
   "ON": 1
 
+inputStatus:
+  "FALSE": 0
+  "TRUE": 1
+
 flag:
   "CLEARED": 0
   "SET": 1
@@ -16,3 +20,73 @@ prechargeContactorState:
   "CONTACTORS_PRECHARGE_CLOSED": 2
   "CONTACTORS_PRECHARGE_HVP_CLOSED": 3
   "CONTACTORS_HVP_CLOSED": 4
+
+vsmState:
+  "VSM_START": 0
+  "PRECHARGE_INIT": 1
+  "PRECHARGE_ACTIVE": 2
+  "PRECHARGE_COMPLETE": 3
+  "VSM_WAIT": 4
+  "VSM_READY": 5
+  "MOTOR_RUNNING": 6
+  "BLINK_FAULT": 7
+  "SHUTDOWN_IN_PROCESS": 14
+  "RECYCLE_POWER_STATE": 15
+
+inverterState:
+  "POWER_ON": 0
+  "STOP": 1
+  "OPEN_LOOP": 2
+  "CLOSED_LOOP": 3
+  "WAIT": 4
+  "IDLE_RUN": 8
+  "IDLE_STOP": 9
+  
+activeStatus:
+  "ACTIVE": 1
+  "INACTIVE": 0
+
+inverterRunMode:
+  "TORQUE_MODE": 0
+  "SPEED_MODE": 1
+
+enableState:
+  "DISABLED": 0
+  "ENABLED": 1
+
+inverterActiveDischargeState:
+  "DISCHARGE_DISABLED": 0
+  "DISCHARGE_ENABLED_WAITING": 1
+  "SPEED_CHECK": 2
+  "DISCHARGE_OCCURRING": 3
+  "DISCHARGE_COMPLETED": 4
+  
+inverterCommandMode:
+  "CAN_MODE": 0
+  "VSM_MODE": 1
+
+burstModelMode:
+  "STALL": 0
+  "HIGH_SPEED": 1
+
+inverterLockoutState:
+  "CAN_BE_ENABLED": 0
+  "CANNOT_BE_ENABLED": 1
+
+# 0= Reverse if inverter enabled & 0= stopped if inverter disabled.
+# I'm not sure how to implement that condition in yaml
+directionCommand:
+  "FORWARD": 1
+  "REVERSE": 0
+
+bmsActive:
+  "BMS_NOT_RECEIVED": 0
+  "BMS_RECEIVED": 1
+
+isLimited:
+  "NOT_LIMITED": 0
+  "LIMITED": 1
+
+faultStatus:
+  "OK": 0
+  "FAULT": 1
