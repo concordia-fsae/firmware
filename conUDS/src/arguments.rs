@@ -28,12 +28,24 @@ pub struct Arguments {
 pub enum ArgSubCommands {
     Download(SubArgDownload),
     Reset(SubArgReset),
+    BootloaderDownload(SubArgBootloaderDownload),
+    ReadDID(SubArgReadDID),
+    NVMHardReset(SubArgNVMHardReset),
 }
 
 /// Download an application to an ECU
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "download")]
 pub struct SubArgDownload {
+    /// path to the binary file to flash
+    #[argh(positional)]
+    pub binary: PathBuf,
+}
+
+/// Download a bootloader to an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "bootloader-download")]
+pub struct SubArgBootloaderDownload {
     /// path to the binary file to flash
     #[argh(positional)]
     pub binary: PathBuf,
@@ -46,4 +58,18 @@ pub struct SubArgReset {
     /// reset type. `soft` or `hard`
     #[argh(option, short = 't', default = "SupportedResetTypes::Hard")]
     pub reset_type: SupportedResetTypes,
+}
+
+/// Read a DID from an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "readDID")]
+pub struct SubArgReadDID {
+    #[argh(positional)]
+    pub id: String,
+}
+
+/// Hard reset entire NVM including internal values
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "nvmHardReset")]
+pub struct SubArgNVMHardReset {
 }

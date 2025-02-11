@@ -14,6 +14,7 @@ use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 use tokio::sync::mpsc;
 
+use conuds::SupportedResetTypes;
 use conuds::arguments::{ArgSubCommands, Arguments};
 use conuds::modules::canio::CANIO;
 use conuds::{CanioCmd, PrdCmd};
@@ -103,9 +104,28 @@ async fn main() -> Result<()> {
                 "Performing {:#?} reset for node `{}`",
                 reset.reset_type, args.node
             );
-            uds_client.ecu_reset(reset.reset_type).await?;
+            uds_client.ecu_reset(reset.reset_type).await;
         }
         ArgSubCommands::Download(dl) => {
+            debug!(
+                "Downloading binary at '{:#?}' to node `{}`",
+                dl.binary, args.node
+            );
+            let _ = uds_client.ecu_reset(SupportedResetTypes::Hard).await;
+            uds_client.start_persistent_tp().await?;
+
+            info!("Waiting for the user to hit enter before continuing with download");
+            let mut garbage = String::new();
+            while stdin().read_line(&mut garbage).is_err() {
+                // wait for user to hit enter
+            }
+            info!("Enter key detected, proceeding with download");
+
+            if let Err(e) = uds_client.app_download(dl.binary, 0x08002000).await {
+                error!("While downloading app: {}", e);
+            }
+        }
+        ArgSubCommands::BootloaderDownload(dl) => {
             debug!(
                 "Downloading binary at '{:#?}' to node `{}`",
                 dl.binary, args.node
@@ -119,8 +139,27 @@ async fn main() -> Result<()> {
             }
             info!("Enter key detected, proceeding with download");
 
-            if let Err(e) = uds_client.app_download(dl.binary).await {
+            if let Err(e) = uds_client.app_download(dl.binary, 0x08000000).await {
                 error!("While downloading app: {}", e);
+            }
+        }
+        ArgSubCommands::ReadDID(did) => {
+            info!("Performing DID read on id {:#?} for node `{}`", did.id, args.node);
+            let id = u16::from_str_radix(&did.id, 16).unwrap();
+            let _ = uds_client.did_read(id).await;
+        }
+        ArgSubCommands::NVMHardReset(_) => {
+            info!(
+                "Performing NVM hard reset for node `{}`",
+                args.node
+            );
+            if let Err(e) = uds_client.routine_start(0xf0f0, None).await {
+                error!("While downloading app: {}", e);
+            }
+            else {
+                let result = uds_client.routine_get_results(0xf0f0).await;
+                /// TODO: Implement error checking
+                info!("Successful NVM erase");
             }
         }
     }

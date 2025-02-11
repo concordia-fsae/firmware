@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use anyhow::Result;
 use automotive_diag::uds::UdsCommand;
 use automotive_diag::uds::UdsErrorByte;
+use automotive_diag::uds::UdsError;
 use automotive_diag::uds::{ResetType, RoutineControlType};
 use ecu_diagnostics::dynamic_diag::EcuNRC;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -51,6 +52,47 @@ impl UdsClient {
             .await?)
     }
 
+    pub async fn did_read(&mut self, did: u16) -> Result<()> {
+        let id: [u8; 2] = [
+            (did & 0xff).try_into().unwrap(),
+            (did >> 8).try_into().unwrap(),
+        ];
+        let buf: [u8; 3] = [
+            UdsCommand::ReadDataByIdentifier.into(),
+            id[0],
+            id[1],
+        ];
+
+        info!("Sending ECU read DID command: {:02x?}", buf);
+
+        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
+            .await?
+            .await
+        {
+            Ok(resp) => {
+                if resp.len() == 2 {
+                    let nrc = UdsErrorByte::from(*resp.last().unwrap());
+                    if nrc == ecu_diagnostics::Standard(UdsError::ServiceNotSupported) {
+                        error!("Read DID not supported by ECU.");
+                    }
+                    else {
+                        info!("ECU Read DID results: {:02x?}", resp);
+                    }
+                }
+                else {
+                    let app_id = u8::from(*resp.last().unwrap());
+                    info!("ECU Read DID results: {:02x?}", resp);
+                    info!("App ID: {:01x?}", app_id);
+                }
+            },
+            Err(e) => {
+                error!("When waiting for response from ECU: {}", e);
+                return Err(e.into());
+            }
+        }
+        Ok(())
+    }
+
     pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
         let buf = [
             UdsCommand::ECUReset.into(),
@@ -63,7 +105,10 @@ impl UdsClient {
             .await?
             .await?;
         info!("ECU Reset results: {:02x?}", resp);
-
+        let nrc = UdsErrorByte::from(*resp.last().unwrap());
+        if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
+            error!("ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex.");
+        }
         Ok(())
     }
 
@@ -86,7 +131,7 @@ impl UdsClient {
             .await?
             .await
         {
-            Ok(resp) => debug!("Start routine response: {:02x?}", resp),
+            Ok(resp) => info!("Start routine response: {:02x?}", resp),
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
                 return Err(e.into());
@@ -297,7 +342,7 @@ impl UdsClient {
     ///
     /// Starts by telling the device to erase the current app, then starts the app download, and lastly
     /// starts actually transferring the app
-    pub async fn app_download(&mut self, file: PathBuf) -> Result<()> {
+    pub async fn app_download(&mut self, file: PathBuf, address: u32) -> Result<()> {
         // disable tester present. bootloader is not currently robust to having tester present enabled
         // during an app download
         self.send_cmd(PrdCmd::PersistentTesterPresent(false))
@@ -312,7 +357,7 @@ impl UdsClient {
         // start the download, which returns the parameters to use for the subsequent transmissions
         let mut dl_params = self
             .download_start(UdsDownloadStart::default(
-                0x08002000,
+                address,
                 file_len_bytes.try_into()?,
             ))
             .await?;
