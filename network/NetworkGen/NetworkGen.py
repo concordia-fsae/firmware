@@ -1,4 +1,5 @@
 from argparse import ArgumentParser, Namespace
+from importlib.abc import Loader
 from os import makedirs, path
 from pathlib import Path
 from typing import Dict, Iterator, Tuple
@@ -9,7 +10,7 @@ import sys
 
 from mako import template
 from mako.lookup import TemplateLookup
-from oyaml import safe_load
+import yaml
 
 from classes.Can import CanBus, CanMessage, CanNode, CanSignal, DiscreteValues
 from classes.Types import *
@@ -42,6 +43,7 @@ NODE_SCHEMA = Schema({
     "description": str,
     "onBuses": Or(str, list[str]),
     Optional("duplicateNode"): int,
+    Optional("baseId"): int,
 })
 
 SIGNAL_SCHEMA = Schema({
@@ -58,6 +60,7 @@ MESSAGE_SCHEMA = Schema({
     Optional("description"): str,
     Optional("cycleTimeMs"): int,
     Optional("id"): int,
+    Optional("idOffset"): int,
     Optional("lengthBytes"): int,
     Optional("sourceBuses"): Or(str, list[str]),
     Optional("signals"): dict,
@@ -79,6 +82,18 @@ RX_ITEM_SCHEMA = Schema({
 # if this gets set during the build, we will fail at the end
 ERROR = False
 
+class UniqueKeyLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        mapping = set()
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise ValueError(f"Duplicate {key!r} key found in YAML.")
+            mapping.add(key)
+        return super().construct_mapping(node, deep)
+
+def safe_load(file):
+    return yaml.load(file, Loader=UniqueKeyLoader)
 
 def generate_discrete_values(definition_dir: Path) -> None:
     """Load discrete values from discrete-values.yaml"""
@@ -283,8 +298,15 @@ def process_node(node: CanNode):
     if sig_file not in node.def_files:
         return
 
+    signals_dict = {}
     with open(node.def_files[sig_file], "r") as signals_file:
-        signals_dict = safe_load(signals_file)["signals"]
+        try:
+            signals_dict = safe_load(signals_file)["signals"] or {}
+            for key in signals_dict.keys():
+                if not key.isalnum():
+                    raise Exception(f"Signal name '{key}' can contain only alpha-numeric characters.")
+        except Exception as e:
+            raise Exception(f"Error in signal file {sig_file}: {e}")
 
     if signals_dict is not None:
         for sig, definition in signals_dict.items():
@@ -325,7 +347,8 @@ def process_node(node: CanNode):
             try:
                 sig_obj = CanSignal(sig_name, signals_dict[signal])
                 signals[sig_obj.name] = sig_obj
-            except:
+            except Exception as e:
+                print(e)
                 error = True
                 continue
     if error:
@@ -333,7 +356,13 @@ def process_node(node: CanNode):
         raise Exception(f"Error processing node '{node.name}' signals, see previous errors...")
 
     with open(node.def_files[msg_file], "r") as messages_file:
-        messages_dict = safe_load(messages_file).get("messages", None)
+        try:
+            messages_dict = safe_load(messages_file).get("messages", {})
+            for key in messages_dict.keys():
+                if not key.isalnum():
+                    raise Exception(f"Message name '{key}' can contain only alpha-numeric characters.")
+        except Exception as e:
+            raise Exception(f"Error in message file {msg_file}: {e}")
 
     if not messages_dict:
         print(f"No messages found in message file for node '{node.name}'")
@@ -357,30 +386,25 @@ def process_node(node: CanNode):
             MESSAGE_SCHEMA.validate(definition)
             if "lengthBytes" in definition and (definition["lengthBytes"] < 1 or definition["lengthBytes"] > 8):
                 raise Exception("Message length must be greater than 0 and less than or equal to 8")
-            if "id" not in definition:
-                raise Exception("Message must have a specified 'id'")
+            if "id" not in definition and "idOffset" not in definition:
+                raise Exception("Message must have a specified 'id' or 'idOffset'")
+            elif "id" in definition and "idOffset" in definition:
+                raise Exception("Message cannot have an 'id' and 'idOffset' at the same time")
         except Exception as e:
             print(f"CAN message definition for '{name}' in node '{node.name}' is invalid.")
             print(f"Message Schema Error: {e}")
             error = True
             continue
 
-        definition["id"] = definition["id"] + node.offset;
-        if "sourceBuses" in definition:
-            ls = []
-            if type(definition["sourceBuses"]) is str:
-                ls.append(definition["sourceBuses"])
-            else: 
-                ls = definition["sourceBuses"]
-            for bus in ls:
-                if bus not in can_bus_defs:
-                    print(f"Message '{msg_name}' has an undefined bus '{bus}'.")
-                    ERROR = True
-                    break
-                if bus not in node.on_buses:
-                    print(f"Message '{msg_name}' is on bus '{bus}' but node '{node.name}' is not on that bus.")
-                    ERROR = True
-                    break
+        if "idOffset" in definition:
+            if node.baseId is None:
+                print(f"Message '{name}' has a 'idOffset' specified and {node.name} does not have a 'baseId' specified")
+                ERROR = True
+                break
+            else:
+                definition["id"] = definition["idOffset"] + node.baseId + node.offset
+        else:
+            definition["id"] = definition["id"] + node.offset
 
         for existing_node in can_nodes:
             for msg in can_nodes[existing_node].messages:
@@ -779,9 +803,10 @@ def main():
     if args.build:
         print(f"Parsing network...")
         parseNetwork(args, lookup)
-        for bus in can_bus_defs.values():
-            calculate_bus_load(bus, args.output_dir)
-            generate_dbcs(lookup, bus, args.output_dir)
+        if not ERROR:
+            for bus in can_bus_defs.values():
+                calculate_bus_load(bus, args.output_dir)
+                generate_dbcs(lookup, bus, args.output_dir)
         if args.cache_dir:
             pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
             pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))

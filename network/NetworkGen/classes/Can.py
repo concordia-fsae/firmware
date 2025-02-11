@@ -145,8 +145,11 @@ class CanSignal(CanObject):
             get_if_exists(signal_def, "continuous", bool, Continuous.discrete)
         )
         self.description = get_if_exists(signal_def, "description", str, None)
+        dv = get_if_exists(signal_def, "discreteValues", str, "")
+        if dv != "" and not any([ dv in key for key, _ in self.DISC ]):
+            raise Exception(f"Invalid discrete value '{dv}' in signal '{name}'")
         self.discrete_values = getattr(
-            self.DISC, get_if_exists(signal_def, "discreteValues", str, ""), None
+            self.DISC, dv, None
         )
         try:
             self.native_representation = get_if_exists(
@@ -430,7 +433,6 @@ class CanMessage(CanObject):
                         signal.start_bit + signal.native_representation.bit_width
                     )
                 except Exception as e:
-                    breakpoint()
                     raise Exception(e)
 
         # validate validationRoles of signals
@@ -507,7 +509,7 @@ class CanNode(CanObject):
             self.duplicateNode = True
             self.alias = self.name + str(self.offset)
             self.total_duplicates = get_if_exists(node_def, "duplicateNode", int, 1)
-
+        self.baseId = get_if_exists(node_def, "baseId", int, None)
         self.def_files = node_def["def_files"]
         self.description: str = get_if_exists(node_def, "description", str, "")
         self.messages: Dict[str, CanMessage] = {}

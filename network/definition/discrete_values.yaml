@@ -1,18 +1,98 @@
-outputState:
-  "OFF": 0
-  "ON": 1
-
-switchStatus:
-  "OFF": 0
-  "ON": 1
+digitalStatus:
+  "SNA": 0
+  "OFF": 1
+  "ON": 2
 
 flag:
-  "CLEARED": 0
-  "SET": 1
+  "SNA": 0
+  "CLEARED": 1
+  "SET": 2
 
 prechargeContactorState:
-  "CONTACTORS_SNA": 0
-  "CONTACTORS_OPEN": 1
-  "CONTACTORS_PRECHARGE_CLOSED": 2
-  "CONTACTORS_PRECHARGE_HVP_CLOSED": 3
-  "CONTACTORS_HVP_CLOSED": 4
+  "SNA": 0
+  "OPEN": 1
+  "PRECHARGE_CLOSED": 2
+  "PRECHARGE_HVP_CLOSED": 3
+  "HVP_CLOSED": 4
+
+pm100dxSwitchStatus:
+  "OFF": 0
+  "ON": 1
+
+pm100dxInputStatus:
+  "FALSE": 0
+  "TRUE": 1
+
+pm100dxOutputState:
+  "OFF": 0
+  "ON": 1
+
+pm100dxVsmState:
+  "VSM_START": 0
+  "PRECHARGE_INIT": 1
+  "PRECHARGE_ACTIVE": 2
+  "PRECHARGE_COMPLETE": 3
+  "VSM_WAIT": 4
+  "VSM_READY": 5
+  "MOTOR_RUNNING": 6
+  "BLINK_FAULT": 7
+  "SHUTDOWN_IN_PROCESS": 14
+  "RECYCLE_POWER_STATE": 15
+
+pm100dxInverterState:
+  "POWER_ON": 0
+  "STOP": 1
+  "OPEN_LOOP": 2
+  "CLOSED_LOOP": 3
+  "WAIT": 4
+  "IDLE_RUN": 8
+  "IDLE_STOP": 9
+  
+pm100dxActiveStatus:
+  "ACTIVE": 1
+  "INACTIVE": 0
+
+pm100dxInverterRunMode:
+  "TORQUE_MODE": 0
+  "SPEED_MODE": 1
+
+pm100dxEnableState:
+  "DISABLED": 0
+  "ENABLED": 1
+
+pm100dxInverterActiveDischargeState:
+  "DISCHARGE_DISABLED": 0
+  "DISCHARGE_ENABLED_WAITING": 1
+  "SPEED_CHECK": 2
+  "DISCHARGE_OCCURRING": 3
+  "DISCHARGE_COMPLETED": 4
+  
+pm100dxInverterCommandMode:
+  "CAN_MODE": 0
+  "VSM_MODE": 1
+
+pm100dxBurstModelMode:
+  "STALL": 0
+  "HIGH_SPEED": 1
+
+pm100dxInverterLockoutState:
+  "CAN_BE_ENABLED": 0
+  "CANNOT_BE_ENABLED": 1
+
+# 0= Reverse if inverter enabled & 0= stopped if inverter disabled.
+# I'm not sure how to implement that condition in yaml
+pm100dxDirectionCommand:
+  "FORWARD": 1
+  "REVERSE": 0
+
+pm100dxBmsActive:
+  "BMS_NOT_RECEIVED": 0
+  "BMS_RECEIVED": 1
+
+pm100dxIsLimited:
+  "NOT_LIMITED": 0
+  "LIMITED": 1
+
+pm100dxFaultStatus:
+  "OK": 0
+  "FAULT": 1

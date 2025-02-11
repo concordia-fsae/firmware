@@ -74,7 +74,7 @@ extern uint32_t SystemCoreClock;
 extern void     HW_TIM_configureRunTimeStatsTimer(void);
 extern uint64_t HW_TIM_getBaseTick(void);
 #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() HW_TIM_configureRunTimeStatsTimer()
-#define portGET_RUN_TIME_COUNTER_VALUE()         HW_TIM_getBaseTick()
+#define portGET_RUN_TIME_COUNTER_VALUE()         (uint32_t)HW_TIM_getBaseTick()
 
 #define configSTACK_DEPTH_TYPE      UBaseType_t
 #define configMINIMAL_STACK_SIZE    (256)

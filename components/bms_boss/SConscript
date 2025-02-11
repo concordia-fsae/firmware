@@ -98,6 +98,7 @@ c_flags = [
     "-Wno-type-limits",
     "-Wno-unused-local-typedefs",
     "-Wundef",
+    "-Wconversion",
     # FIXME: When in single quotes outputs to cmdline with ""
     "-include", "BuildDefines.h", # Executed one after eachother
 ]
@@ -105,6 +106,7 @@ c_flags = [
 free_rtos_flags = [
     "-Wno-missing-prototypes",
     "-Wno-cast-align",
+    "-Wno-conversion",
 ]
 
 
@@ -320,6 +322,7 @@ for config_id, config in configs.items():
             "-DBYTE_ORDER=_BYTE_ORDER",
             "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
             "-Wno-inline",
+            "-Wno-conversion",
             "-Wno-undef",
         ]
     )
@@ -366,12 +369,19 @@ for config_id, config in configs.items():
     # compile UDS source files
     objs.extend(compile_objects(uds_env, uds_srcs, variant_dir=variant_dir, target_dir="uds/"))
 
+    gen_env = config_env.Clone()
+    gen_env.Append(
+        CCFLAGS=[
+            "-Wno-inline",
+            "-Wno-conversion",
+        ]
+    )
     gen_srcs = []
     for generated_source in generated_sources:
         gen_srcs += [generated_dir.File(generated_source)]
     objs.extend(
         compile_objects(
-            config_env,
+            gen_env,
             gen_srcs,
             variant_dir=variant_dir,
             target_dir=variant_dir.Dir("generated/obj"),

@@ -20,7 +20,12 @@ jobs:
           submodules: 'recursive'
       - name: Execute build for CFR24
         run: |
-          scons --platform=cfr24 -j32 --flashable-bootloader
+          scons --platform=cfr24 -j32 --flashable-bootloader --package
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-cfr24
+          path: platform-artifacts/
   cfr25:
     runs-on: self-hosted
     container: 
@@ -36,7 +41,12 @@ jobs:
           submodules: 'recursive'
       - name: Execute build for CFR25
         run: |
-          scons --platform=cfr25 -j32 --flashable-bootloader
+          scons --platform=cfr25 -j32 --flashable-bootloader --package
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-cfr25
+          path: platform-artifacts/
   updaters:
     runs-on: self-hosted
     container: 
@@ -52,4 +62,9 @@ jobs:
           submodules: 'recursive'
       - name: Execute build for all bootloader updaters
         run: |
-          scons --targets=bl:1000,1001,1002,1003,1004,1005,1010,1011 -j32
+          scons --targets=bl:1000,1001,1002,1003,1004,1005,1010,1011 -j32 --package
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-bootloader_updater
+          path: platform-artifacts/

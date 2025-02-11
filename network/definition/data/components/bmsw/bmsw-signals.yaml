@@ -546,7 +546,7 @@ signals:
 
   coolState1:
     description: Fan 1 cooling state
-    discreteValues: outputState
+    discreteValues: digitalStatus
 
   coolPct0:
     description: Fan 0 Duty Cycle
@@ -561,7 +561,7 @@ signals:
 
   coolState0:
     description: Fan 0 cooling state
-    discreteValues: outputState
+    discreteValues: digitalStatus
 
   cellTemp1:
     description: Temperature of cell 1

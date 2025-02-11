@@ -75,24 +75,24 @@ uint8_t CANIO_tx_getNLG513ControlByte(void)
 
 CAN_prechargeContactorState_E CANIO_tx_getContactorState(void)
 {
-    CAN_prechargeContactorState_E ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_SNA;
+    CAN_prechargeContactorState_E ret = CAN_PRECHARGECONTACTORSTATE_SNA;
 
     switch (SYS.contacts)
     {
         case SYS_CONTACTORS_OPEN:
-            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_OPEN;
+            ret = CAN_PRECHARGECONTACTORSTATE_OPEN;
             break;
 
         case SYS_CONTACTORS_PRECHARGE:
-            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_PRECHARGE_CLOSED;
+            ret = CAN_PRECHARGECONTACTORSTATE_PRECHARGE_CLOSED;
             break;
 
         case SYS_CONTACTORS_CLOSED:
-            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_PRECHARGE_HVP_CLOSED;
+            ret = CAN_PRECHARGECONTACTORSTATE_PRECHARGE_HVP_CLOSED;
             break;
 
         case SYS_CONTACTORS_HVP_CLOSED:
-            ret = CAN_PRECHARGECONTACTORSTATE_CONTACTORS_HVP_CLOSED;
+            ret = CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED;
             break;
     }
 

@@ -9,7 +9,7 @@ float32_t ln(float32_t x)
     // unsigned int s = (t < 0) ? (-t) : t;
     bx = 1065353216 | (bx & 8388607);
     x  = *(float32_t*)(&bx);
-    return -1.49278 + (2.11263 + (-0.729104 + 0.10969 * x) * x) * x + 0.6931471806 * t;
+    return (float32_t)(-1.49278f + (2.11263f + (-0.729104f + 0.10969f * x) * x) * x + 0.6931471806f * (float32_t)t);
 }
 
 uint8_t* reverse_bytes(uint8_t* in, uint8_t len)
