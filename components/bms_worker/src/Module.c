@@ -22,6 +22,7 @@
 /**< Other Includes */
 #include "Utility.h"
 #include "FeatureDefines_generated.h"
+#include "LIB_nvm.h"
 
 
 /******************************************************************************
@@ -114,6 +115,9 @@ void Module_100Hz_TSK(void)
             (*modules[i]->periodic100Hz_CLK)();
         }
     }
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    lib_nvm_run();
+#endif
 
     stats[MODULE_100Hz_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
 }
