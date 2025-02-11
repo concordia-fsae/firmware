@@ -3,6 +3,7 @@
 from os import environ
 from re import compile, findall, search
 
+from SCons.Node import NodeList
 from SCons.Script import (
     AddOption,
     Default,
@@ -11,11 +12,12 @@ from SCons.Script import (
     Exit,
     GetOption,
     SConscript,
+    File
 )
 from oyaml import safe_load
 
 # create a global environment which all targets can start from
-GlobalEnv = Environment(REPO_ROOT_DIR=Dir("#"), tools=[])
+GlobalEnv = Environment(REPO_ROOT_DIR=Dir("#"), tools=[ "tar" ])
 try:
     GlobalEnv["ENV"]["TERM"] = environ["TERM"]
 except Exception:
@@ -169,3 +171,31 @@ if PlatformEnv["ARTIFACTS"]:
 
                 openocd_gdb = debug_env.openocd_gdb(artifact, *args)
                 Default(openocd_gdb)
+
+PlatformEnv.Append(
+    TARFLAGS = '-c -z',
+)
+
+def flatten(sequence: list) -> list:
+    new_list = []
+    for item in sequence:
+        if type(item) != list and type(item) != NodeList:
+            new_list.append(item)
+        else:
+            new_list.extend(flatten(item))
+    return new_list
+
+AddOption("--package", dest="package", action="store_true")
+
+artifacts = []
+for key, value in PlatformEnv["ARTIFACTS"].items():
+    if type(value) is dict:
+        for name, val in value.items():
+            if "ARTIFACT" in name:
+                artifacts.append(val["artifact"])
+plat_name = GetOption("platform") or "artifacts"
+package = PlatformEnv.Tar(f"platform-artifacts/{plat_name}.tgz", [ file.abspath for file in flatten(artifacts) ])
+Depends(package, artifacts)
+
+if GetOption("package"):
+    Default(package)

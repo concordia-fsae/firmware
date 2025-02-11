@@ -274,22 +274,20 @@ Alias("asms", asms)
 # Return artifacts to the caller
 artifacts = {}
 
-if len(binaries) == 1:
-    artifacts["FLASHABLE_ARTIFACT"] = {
-        "artifact": binaries[0],
-        "addr": APP_START_ADDR,
-        "tools": ["st-flash"],
-    }
+artifacts["FLASHABLE_ARTIFACT"] = {
+    "artifact": binaries_crced,
+    "addr": APP_START_ADDR,
+    "tools": ["st-flash"],
+}
 
-if len(elfs) == 1:
-    artifacts["DEBUG_ARTIFACT"] = {
-        "artifact": elfs[0],
-        "args": [],
-        "tools": ["gcc-arm-none-eabi", "openocd"],
-        "env": {
-            "OPENOCD_INTERFACE": "stlink",
-            "OPENOCD_MCU": "stm32f103c8",
-        },
-    }
+artifacts["DEBUG_ARTIFACT"] = {
+    "artifact": elfs,
+    "args": [],
+    "tools": ["gcc-arm-none-eabi", "openocd"],
+    "env": {
+        "OPENOCD_INTERFACE": "stlink",
+        "OPENOCD_MCU": "stm32f103c8",
+    },
+}
 
 Return("artifacts")
