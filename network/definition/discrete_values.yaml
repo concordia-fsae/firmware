@@ -1,14 +1,19 @@
-outputState:
-  "OFF": 0
-  "ON": 1
+digitalStatus:
+  "SNA": 0
+  "OFF": 1
+  "ON": 2
 
-pm100dxOutputState:
-  "OFF": 0
-  "ON": 1
+flag:
+  "SNA": 0
+  "CLEARED": 1
+  "SET": 2
 
-switchStatus:
-  "OFF": 0
-  "ON": 1
+prechargeContactorState:
+  "SNA": 0
+  "OPEN": 1
+  "PRECHARGE_CLOSED": 2
+  "PRECHARGE_HVP_CLOSED": 3
+  "HVP_CLOSED": 4
 
 pm100dxSwitchStatus:
   "OFF": 0
@@ -18,16 +23,9 @@ pm100dxInputStatus:
   "FALSE": 0
   "TRUE": 1
 
-flag:
-  "CLEARED": 0
-  "SET": 1
-
-prechargeContactorState:
-  "CONTACTORS_SNA": 0
-  "CONTACTORS_OPEN": 1
-  "CONTACTORS_PRECHARGE_CLOSED": 2
-  "CONTACTORS_PRECHARGE_HVP_CLOSED": 3
-  "CONTACTORS_HVP_CLOSED": 4
+pm100dxOutputState:
+  "OFF": 0
+  "ON": 1
 
 pm100dxVsmState:
   "VSM_START": 0

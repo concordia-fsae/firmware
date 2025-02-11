@@ -26,10 +26,10 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_envFaultFlag(m,b,n,s)                set(m,b,n,s, ENV.state == ENV_FAULT)
-#define set_envErrorFlag(m, b, n, s)             set(m,b,n,s, ENV.state == ENV_ERROR)
-#define set_faultFlag(m, b, n, s)                set(m,b,n,s, BMS.fault)
-#define set_errorFlag(m, b, n, s)                set(m,b,n,s, BMS.state == BMS_ERROR)
+#define set_envFaultFlag(m,b,n,s)                set(m,b,n,s, (ENV.state == ENV_FAULT) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_envErrorFlag(m, b, n, s)             set(m,b,n,s, (ENV.state == ENV_ERROR) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_faultFlag(m, b, n, s)                set(m,b,n,s, (BMS.fault) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_errorFlag(m, b, n, s)                set(m,b,n,s, (BMS.state == BMS_ERROR) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_dischargeLimit(m, b, n, s)           set(m,b,n,s, BMS.discharge_limit)
 #define set_chargeLimit(m, b, n, s)              set(m,b,n,s, BMS.charge_limit)
 #define set_tempMax(m, b, n, s)                  set(m,b,n,s, ENV.values.max_temp)
@@ -87,9 +87,9 @@
 #define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[1])
 #define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[0])
 #define set_coolPct1(m, b, n, s)                 set(m,b,n,s, COOL.percentage[1])
-#define set_coolState1(m, b, n, s)               set(m,b,n,s, (COOL.state[1] != COOL_OFF) ? CAN_OUTPUTSTATE_ON : CAN_OUTPUTSTATE_OFF)
+#define set_coolState1(m, b, n, s)               set(m,b,n,s, (COOL.state[1] != COOL_OFF) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_coolPct0(m, b, n, s)                 set(m,b,n,s, COOL.percentage[0])
-#define set_coolState0(m,b,n,s)                  set(m,b,n,s, (COOL.state[0] != COOL_OFF) ? CAN_OUTPUTSTATE_ON : CAN_OUTPUTSTATE_OFF)
+#define set_coolState0(m,b,n,s)                  set(m,b,n,s, (COOL.state[0] != COOL_OFF) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_taskUsage1kHz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
 #define set_taskUsage100Hz(m,b,n,s)              set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
 #define set_taskUsage10Hz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
