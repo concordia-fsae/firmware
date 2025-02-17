@@ -1,0 +1,24 @@
+mcu: STM32F105
+features:
+  controller:
+    definition: "#/shared/FeatureDefs/Controller_FeatureDefs.yaml"
+    selection: ""
+linker:
+  useDefault: true
+drivers:
+  hal: # required
+  adc:
+  adc_ex:
+  can:
+  cortex: # required
+  dma:
+  flash:
+  gpio:
+  i2c:
+  pwr:
+  rcc:
+  rcc_ex: # required
+  spi:
+    use_ll: true
+  tim:
+  tim_ex: # required with tim

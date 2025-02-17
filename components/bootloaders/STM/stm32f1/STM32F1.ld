@@ -57,7 +57,13 @@ SECTIONS
 #error "Function not supported"
 #endif
 
+#if MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB
   .isr_vector : ALIGN(0x100)
+#elif MCU_STM32_PN == FDEFS_STM32_PN_STM32F105
+  .isr_vector : ALIGN(0x400)
+#else
+#error "Chipset not supported"
+#endif
   {
     __app_start_addr = .;
     KEEP(*(.isr_vector))    /* interrupt vector table */
