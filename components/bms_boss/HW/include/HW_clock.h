@@ -66,18 +66,3 @@ void HW_systemClockConfig(void)
         Error_Handler();
     }
 }
-
-/**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM4 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
-{
-    if (htim->Instance == TIM2)
-    {
-        HAL_IncTick();
-    }
-}

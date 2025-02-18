@@ -19,33 +19,17 @@
  ******************************************************************************/
 
 TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim2;
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called TIMx interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
-{
-    if (htim->Instance == TIM2)
-    {
-        HAL_IncTick();
-    }
-}
-
-/**
  * @brief  Initializes TIM peripherals
  *
  * @retval true = Success, false = Failure
  */
-HAL_StatusTypeDef HW_TIM_init(void)
+HW_StatusTypeDef_E HW_TIM_init(void)
 {
     TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
     TIM_SlaveConfigTypeDef  sSlaveConfig       = { 0 };
@@ -128,7 +112,7 @@ HAL_StatusTypeDef HW_TIM_init(void)
     HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_2);    // main channel
     HAL_TIM_IC_Start(&htim1, TIM_CHANNEL_1);       // indirect channel
 
-    return HAL_OK;
+    return HW_OK;
 }
 
 /**
@@ -154,111 +138,4 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
     if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
     {
     }
-}
-
-/**
- * @brief  RTOS callback to configure a more precise timebase for cpu profiling
- */
-void HW_TIM_configureRunTimeStatsTimer(void)
-{
-}
-
-/**
- * @brief  RTOS Profiling has a ~1us accuracy by using the OS CLK and internal counter
- *
- * @retval Elapsed time in us from clock start
- */
-uint64_t HW_TIM_getBaseTick()
-{
-    // return fast_clk;
-
-    return ((uint64_t)HW_getTick() * 1000) + htim2.Instance->CNT;
-}
-
-/**
- * @brief  Get the number of ticks since clock start
- *
- * @retval Number of ticks
- */
-uint32_t HW_TIM_getTick(void)
-{
-    return HAL_GetTick();
-}
-
-uint32_t HW_TIM_getTimeMS()
-{
-    return HW_TIM_getTick();
-}
-
-/**
- * HAL_InitTick
- * This function configures the TIM4 as a time base source.
- * The time source is configured  to have 1ms time base with a dedicated
- * Tick interrupt priority.
- * @note   This function is called  automatically at the beginning of program after
- *         reset by HAL_Init() or at any time when clock is configured, by HAL_RCC_ClockConfig().
- * @param  TickPriority Tick interrupt priority.
- * @return exit status
- */
-HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
-{
-    RCC_ClkInitTypeDef clkconfig;
-    uint32_t           uwTimclock       = 0;
-    uint32_t           uwPrescalerValue = 0;
-    uint32_t           pFLatency;
-
-    // Configure the TIM4 IRQ priority
-    HAL_NVIC_SetPriority(TIM2_IRQn, TickPriority, 0);
-
-    // Enable the TIM4 global Interrupt
-    HAL_NVIC_EnableIRQ(TIM2_IRQn);
-
-    // Enable TIM4 clock
-    __HAL_RCC_TIM2_CLK_ENABLE();
-
-    // Get clock configuration
-    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
-
-    // Compute TIM2 clock
-    uwTimclock       = 1 * HAL_RCC_GetPCLK2Freq();
-    // Compute the prescaler value to have TIM4 counter clock equal to 1MHz
-    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
-
-    // Initialize TIM4
-    htim2.Instance = TIM2;
-
-    // Initialize TIMx peripheral as follow:
-    // Period = [(TIM4CLK/1000) - 1]. to have a (1/1000) s time base.
-    // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
-    // ClockDivision = 0
-    // Counter direction = Up
-    htim2.Init.Period        = (1000000U / 1000) - 1U;
-    htim2.Init.Prescaler     = uwPrescalerValue;
-    htim2.Init.ClockDivision = 0;
-    htim2.Init.CounterMode   = TIM_COUNTERMODE_UP;
-
-    if (HAL_TIM_Base_Init(&htim2) == HAL_OK)
-    {
-        // Start the TIM time Base generation in interrupt mode
-        return HAL_TIM_Base_Start_IT(&htim2);
-    }
-
-    return HAL_ERROR;
-}
-
-/**
- * @brief  Suspends the tick interrupt
- */
-void HAL_SuspendTick(void)
-{
-    __HAL_TIM_DISABLE_IT(&htim2, TIM_IT_UPDATE);
-}
-
-
-/**
- * @brief  Resumes tick interrupt
- */
-void HAL_ResumeTick(void)
-{
-    __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
 }

@@ -69,7 +69,7 @@ link_flags = [
     "-Wl,--print-memory-usage",
     # "-Wl,--print-gc-sections",
     "--specs=nano.specs",
-    "-Icomponents/vc/pdu/include/HW"
+    "-Icomponents/vc/rear/include/HW"
 ]
 
 as_flags = ["-xassembler-with-cpp"]
@@ -149,14 +149,15 @@ project_source_files = [
 ]
 
 project_hw_files = [
-    HW_DIR.File("HW.c"),
+    SHARED_HW.File("HW.c"),
     HW_DIR.File("HW_adc.c"),
     HW_DIR.File("HW_can_componentSpecific.c"),
     HW_DIR.File("HW_gpio_componentSpecific.c"),
-    HW_DIR.File("HW_dma.c"),
+    HW_DIR.File("HW_dma_componentSpecific.c"),
     HW_DIR.File("HW_intc.c"),
     HW_DIR.File("HW_msp.c"),
-    HW_DIR.File("HW_tim.c"),
+    SHARED_HW.File("HW_tim.c"),
+    HW_DIR.File("HW_tim_componentSpecific.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
 ]
