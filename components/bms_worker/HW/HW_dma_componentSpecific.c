@@ -19,7 +19,7 @@
  *
  * @retval HW_OK
  */
-HW_StatusTypeDef_E HW_DMA_init(void)
+void HW_DMA_init(void)
 {
     // DMA controller clock enable
     __HAL_RCC_DMA1_CLK_ENABLE();
@@ -28,8 +28,6 @@ HW_StatusTypeDef_E HW_DMA_init(void)
     // DMA1_Channel1_IRQn interrupt configuration
     HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIO, 0U);
     HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-
-    return HW_OK;
 }
 
 /**
@@ -37,13 +35,11 @@ HW_StatusTypeDef_E HW_DMA_init(void)
  *
  * @retval HW_OK
  */
-HW_StatusTypeDef_E HW_DMA_deInit(void)
+void HW_DMA_deInit(void)
 {
 
     HAL_NVIC_DisableIRQ(DMA1_Channel2_IRQn);
     HAL_NVIC_DisableIRQ(DMA1_Channel1_IRQn);
 
     __HAL_RCC_DMA1_CLK_DISABLE();
-
-    return HW_OK;
 }

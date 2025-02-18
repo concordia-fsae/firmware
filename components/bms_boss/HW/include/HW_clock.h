@@ -9,13 +9,9 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "ErrorHandler.h"
-
 // Firmware Includes
 #include "HW_tim.h"
 #include "stm32f1xx_hal.h"
-
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -68,20 +64,5 @@ void HW_systemClockConfig(void)
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
     {
         Error_Handler();
-    }
-}
-
-/**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM4 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
-{
-    if (htim->Instance == TIM2)
-    {
-        HAL_IncTick();
     }
 }

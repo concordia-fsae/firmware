@@ -28,9 +28,9 @@ typedef enum
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool     HW_init(void);
-uint32_t HW_getTick(void);
-void     HW_delay(uint32_t delay);
-void     HW_usDelay(uint8_t us);
-void     HW_systemHardReset(void);
-void     Error_Handler(void);
+HW_StatusTypeDef_E HW_init(void);
+uint32_t           HW_getTick(void);
+void               HW_delay(uint32_t delay);
+void               HW_usDelay(uint8_t us);
+void               HW_systemHardReset(void);
+void               Error_Handler(void);

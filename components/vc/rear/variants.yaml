@@ -1,6 +1,6 @@
 configs:
   0:
-    description: Front Vehicle Control Unit
+    description: Rear Vehicle Control Unit
     options:
     features:
       selections:

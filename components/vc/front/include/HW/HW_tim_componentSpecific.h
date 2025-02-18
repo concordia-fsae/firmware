@@ -10,16 +10,13 @@
  ******************************************************************************/
 
 // Firmware Includes
-#include "stm32f1xx_hal.h"
+#include "HW.h"
 
+#define HW_TIM_TICK TIM2
+#define HW_TIM_TICK_IRQN TIM2_IRQn
+#define HW_TIM_TICK_ENABLECLK __HAL_RCC_TIM2_CLK_ENABLE
+#define HW_TIM_TICK_GETCLKFREQ 2*HAL_RCC_GetPCLK1Freq
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
-
-HAL_StatusTypeDef HW_TIM_init(void);
-void              HW_TIM_configureRunTimeStatsTimer(void);
-uint32_t          HW_TIM_getTick(void);
-uint32_t          HW_TIM_getTimeMS(void);
-void              HW_TIM_incBaseTick(void);
-uint64_t          HW_TIM_getBaseTick(void);

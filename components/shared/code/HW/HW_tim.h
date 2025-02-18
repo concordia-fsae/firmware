@@ -10,16 +10,21 @@
  ******************************************************************************/
 
 // Firmware Includes
-#include "stm32f1xx_hal.h"
-
+#include "HW.h"
+#include "HW_tim_componentSpecific.h"
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-HAL_StatusTypeDef HW_TIM_init(void);
-void              HW_TIM_configureRunTimeStatsTimer(void);
-uint32_t          HW_TIM_getTick(void);
-uint32_t          HW_TIM_getTimeMS(void);
-void              HW_TIM_incBaseTick(void);
-uint64_t          HW_TIM_getBaseTick(void);
+HW_StatusTypeDef_E HW_TIM_init(void);
+HW_StatusTypeDef_E HW_TIM_deInit(void);
+void               HW_TIM_configureRunTimeStatsTimer(void);
+uint32_t           HW_TIM_getTick(void);
+uint32_t           HW_TIM_getTimeMS(void);
+void               HW_TIM_incBaseTick(void);
+uint64_t           HW_TIM_getBaseTick(void);
+void               HW_TIM_delayMS(uint32_t delay);
+void               HW_TIM_delayUS(uint8_t us);
+
+void               HW_TIM_periodElapsedCb(TIM_HandleTypeDef* htim);

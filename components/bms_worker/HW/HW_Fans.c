@@ -8,7 +8,7 @@
  ******************************************************************************/
 
 // System Inlcudes
-#include "ErrorHandler.h"
+#include "HW.h"
 
 // Firmware Includes
 #include "HW_Fans.h"
