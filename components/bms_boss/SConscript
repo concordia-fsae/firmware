@@ -26,6 +26,7 @@ SHARED_CODE = Dir("#/components/shared/code")
 SHARED_LIBS = SHARED_CODE.Dir("libs")
 SHARED_APP = SHARED_CODE.Dir("app")
 SHARED_HW = SHARED_CODE.Dir("HW")
+SHARED_DRV = SHARED_CODE.Dir("DRV")
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -126,6 +127,7 @@ LIBS_INCLUDE_DIRS = [
     SHARED_LIBS,
     SHARED_APP,
     SHARED_HW,
+    SHARED_DRV,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -162,7 +164,8 @@ project_hw_files = [
     HW_DIR.File("HW_msp.c"),
     SHARED_HW.File("HW_tim.c"),
     HW_DIR.File("HW_tim_componentSpecific.c"),
-    HW_DIR.File("HW_HIH.c"),
+    SHARED_DRV.File("DRV_HIH.c"),
+    HW_DIR.File("DRV_HIH_componentSpecific.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
 ]

@@ -17,7 +17,7 @@
 #include <string.h>
 
 /**< Driver Includes */
-#include "HW_HIH.h"
+#include "DRV_HIH.h"
 #include "IO.h"
 
 
@@ -54,7 +54,7 @@ static void ENV_init()
     memset(&ENV, 0x00, sizeof(ENV));
     ENV.state = ENV_INIT;
 
-    if (!HIH_init())
+    if (!DRV_HIH_init())
     {
         // ENV.state = ENV_ERROR;
     }
@@ -68,9 +68,9 @@ static void ENV_init()
  */
 static void ENV10Hz_PRD()
 {
-    if (hih_chip.data.state == HIH_MEASURING)
+    if (hih_chip.data.state == DRV_HIH_MEASURING)
     {
-        if (HIH_getData())
+        if (DRV_HIH_getData())
         {
             ENV.board.ambient_temp = ((float32_t)hih_chip.data.temp)/16382*165-40;
             ENV.board.rh           = ((float32_t)hih_chip.data.rh)/16382*100;
@@ -90,7 +90,7 @@ static void ENV1Hz_PRD()
         case ENV_INIT:
             break;
         case ENV_RUNNING:
-            HIH_startConversion();
+            DRV_HIH_startConversion();
             break;
         case ENV_ERROR:
             break;
