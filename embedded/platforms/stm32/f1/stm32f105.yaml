@@ -1,6 +1,4 @@
 name: stm32f105
-defines:
-  NUM_CAN_BUSES: 2U
 extraSources:
   - "f105/startup_stm32f105vc.S"
   - "system_stm32f1xx.c"
