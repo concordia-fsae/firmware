@@ -19,10 +19,33 @@
  ******************************************************************************/
 
 TIM_HandleTypeDef htim_tick;
+extern TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+/* @brief  Set duty cycle of TIM4 CH2 output
+ * @param percentage2 Duty cycle percentage. Unit: 1%
+ */
+void HW_TIM_setDuty(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t percentage)
+{
+    switch (channel)
+    {
+        case HW_TIM_CHANNEL_1:
+            htim[port].Instance->CCR1 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
+            break;
+        case HW_TIM_CHANNEL_2:
+            htim[port].Instance->CCR2 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
+            break;
+        case HW_TIM_CHANNEL_3:
+            htim[port].Instance->CCR3 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
+            break;
+        case HW_TIM_CHANNEL_4:
+            htim[port].Instance->CCR4 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
+            break;
+    }
+}
 
 /**
  * @brief  Period elapsed callback in non blocking mode
@@ -31,9 +54,9 @@ TIM_HandleTypeDef htim_tick;
  * a global variable "uwTick" used as application time base.
  * @param  htim : TIM handle
  */
-__weak void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* htim)
+__weak void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
 {
-    UNUSED(htim);
+    UNUSED(tim);
 }
 
 /**
@@ -43,15 +66,15 @@ __weak void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* htim)
  * a global variable "uwTick" used as application time base.
  * @param  htim : TIM handle
  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* tim)
 {
-    if (htim->Instance == HW_TIM_TICK)
+    if (tim->Instance == HW_TIM_TICK)
     {
         HAL_IncTick();
     }
     else
     {
-        HW_TIM_periodElapsedCb(htim);
+        HW_TIM_periodElapsedCb(tim);
     }
 }
 
