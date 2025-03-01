@@ -116,21 +116,25 @@ void SYS_SFT_openContactors(void)
 
 void SYS_SFT_cycleContacts(void)
 {
-    if (SYS.contacts == SYS_CONTACTORS_OPEN)
+    if (FLAG_any((uint16_t*)&SYS.lockout_reason, SYS_LOCKOUTREASON_COUNT) == false)
     {
-        HW_GPIO_writePin(HW_GPIO_PCHG, true);
-        SYS.contacts = SYS_CONTACTORS_PRECHARGE;
+        if (SYS.contacts == SYS_CONTACTORS_OPEN)
+        {
+            HW_GPIO_writePin(HW_GPIO_PCHG, true);
+            SYS.contacts = SYS_CONTACTORS_PRECHARGE;
+        }
+        else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
+        {
+            HW_GPIO_writePin(HW_GPIO_AIR, true);
+            SYS.contacts = SYS_CONTACTORS_CLOSED;
+        }
+        else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
+        {
+            HW_GPIO_writePin(HW_GPIO_PCHG, false);
+            SYS.contacts = SYS_CONTACTORS_HVP_CLOSED;
+        }
     }
-    else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
-    {
-        HW_GPIO_writePin(HW_GPIO_AIR, true);        
-        SYS.contacts = SYS_CONTACTORS_CLOSED;
-    }
-    else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
-    {
-        HW_GPIO_writePin(HW_GPIO_PCHG, false);        
-        SYS.contacts = SYS_CONTACTORS_HVP_CLOSED;
-    }
+
 }
 
 bool SYS_SFT_checkMCTimeout(void)
@@ -156,4 +160,15 @@ void SYS_continueCharging(void)
 bool SYS_SFT_checkElconChargerTimeout(void)
 {
     return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
+}
+
+void SYS_setLockoutState(SYS_LockoutReason_E reason, bool enable)
+{
+    SYS_SFT_openContactors();
+    FLAG_assign(SYS.lockout_reason, reason, enable);
+}
+
+bool SYS_getLockoutState(SYS_LockoutReason_E reason)
+{
+    return FLAG_get(SYS.lockout_reason, reason);
 }

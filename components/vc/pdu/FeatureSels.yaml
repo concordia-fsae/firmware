@@ -1,6 +1,11 @@
-featureDefs: "#/components/bms_boss/FeatureDefs.yaml"
+featureDefs: 
+  - "#/components/vc/pdu/FeatureDefs.yaml"
+  - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
   feature_canrx_swi: true
   app_component_id: vcpdu
   app_uds: true
+  nvm_lib_enabled: false
+  nvm_flash_backed: false
+  nvm_block_size: 2048

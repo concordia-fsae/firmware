@@ -19,3 +19,14 @@ messages:
     signals:
       udsPayload:
         template: udsPayload
+  nvmInformation:
+    cycleTimeMs: 1000
+    signals:
+      nvmBootCycles:
+        template: nvmBootCycles
+      nvmRecordWrites:
+        template: nvmRecordWrites
+      nvmBlockErases:
+        template: nvmBlockErases
+      nvmFailedCrc:
+        template: nvmFailedCrc

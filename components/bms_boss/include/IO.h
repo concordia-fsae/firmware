@@ -12,6 +12,7 @@
 // System Includes
 #include "FloatTypes.h"
 #include "Types.h"
+#include "LIB_nvm.h"
 
 // Firmware Includes
 #include "HW_adc.h"
@@ -44,9 +45,23 @@ typedef struct
     bool feedback_sfty_imd :1;
 } IO_S;
 
+#define IO_CALIBRATIONVALUES_VERSION_0 0U
+typedef struct
+{
+    float32_t current_sense_differential;
+    float32_t spare[4];
+} LIB_NVM_STORAGE(IO_calibrationValues_V0_S);
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
 extern IO_S IO;
+extern IO_calibrationValues_V0_S IO_calibrationValues;
+extern const IO_calibrationValues_V0_S IO_calibrationValues_default;
+
+/******************************************************************************
+ *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+void IO_stopCalibration_currentSense(void);
