@@ -30,20 +30,20 @@ void HW_SPI_Init(void)
     LL_SPI_InitTypeDef SPI_Init        = { 0 };
     GPIO_InitTypeDef   GPIO_InitStruct = { 0 };
 
+    /**< Enable Clock */
+    __HAL_RCC_SPI2_CLK_ENABLE();
+
     spi2                       = SPI2;
     SPI_Init.Mode              = LL_SPI_MODE_MASTER;
     SPI_Init.TransferDirection = LL_SPI_FULL_DUPLEX;
     SPI_Init.DataWidth         = LL_SPI_DATAWIDTH_8BIT;
-    SPI_Init.ClockPolarity     = LL_SPI_POLARITY_LOW;
-    SPI_Init.ClockPhase        = LL_SPI_PHASE_1EDGE;
+    SPI_Init.ClockPolarity     = LL_SPI_POLARITY_HIGH;
+    SPI_Init.ClockPhase        = LL_SPI_PHASE_2EDGE;
     SPI_Init.NSS               = LL_SPI_NSS_SOFT;
-    SPI_Init.BaudRate          = LL_SPI_BAUDRATEPRESCALER_DIV8;
+    SPI_Init.BaudRate          = LL_SPI_BAUDRATEPRESCALER_DIV8; //LL_SPI_BAUDRATEPRESCALER_DIV64; //
     SPI_Init.BitOrder          = LL_SPI_MSB_FIRST;
     SPI_Init.CRCCalculation    = LL_SPI_CRCCALCULATION_DISABLE;
     SPI_Init.CRCPoly           = 0x00;
-
-    /**< Enable Clock */
-    __HAL_RCC_SPI2_CLK_ENABLE();
 
     /**
      * SPI2 GPIO Configuration
@@ -67,15 +67,18 @@ void HW_SPI_Init(void)
     {
         Error_Handler();
     }
+
+    LL_SPI_Enable(SPI2);
+
 }
 
-inline void HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data)
+inline uint8_t HW_SPI_Transmit8(SPI_TypeDef *hspi, uint8_t data)
 {
     while (!LL_SPI_IsActiveFlag_TXE(hspi));
     LL_SPI_TransmitData8(hspi, data);
     while(!LL_SPI_IsActiveFlag_TXE(hspi));
     while(!LL_SPI_IsActiveFlag_RXNE(hspi));
-    LL_SPI_ReceiveData8(hspi); /**< Dummy read to clear RXNE and prevent OVR */
+    return LL_SPI_ReceiveData8(hspi); /**< Dummy read to clear RXNE and prevent OVR */
 }
 
 inline void HW_SPI_Transmit16(SPI_TypeDef *hspi, uint16_t data)
@@ -92,8 +95,6 @@ inline void HW_SPI_Transmit32(SPI_TypeDef *hspi, uint32_t data)
 
 inline uint8_t HW_SPI_TransmitReceive8(SPI_TypeDef *hspi, uint8_t data)
 {
-    HW_SPI_Transmit8(hspi, data);
-    while(!LL_SPI_IsActiveFlag_TXE(hspi));
-    while(!LL_SPI_IsActiveFlag_RXNE(hspi));
-    return LL_SPI_ReceiveData8(hspi);
+    return HW_SPI_Transmit8(hspi, data);
+
 }

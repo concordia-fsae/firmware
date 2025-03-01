@@ -60,3 +60,7 @@ void HW_I2C_Master_Write_DMA(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size
 void HW_I2C_Master_Read_DMA(HW_I2C_Device_S *dev, uint8_t* pData, uint16_t Size);
 void HW_I2C_Mem_Read_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
 void HW_I2C_Mem_Write_DMA(HW_I2C_Device_S *dev, uint16_t MemAddress, uint16_t MemAddSize, uint8_t* pData, uint16_t Size);
+#if defined(I2C2_TEST) || defined(I2C1_TEST)
+void HW_I2C_Test();
+#endif /**< I2C1_TEST || I2C2_TEST */
+
