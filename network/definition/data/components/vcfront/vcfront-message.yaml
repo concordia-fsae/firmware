@@ -1,0 +1,13 @@
+messages:
+  udsResponse:
+    description: UDS response message from the VCFRONT
+    id: 0x670
+    lengthBytes: 8
+    sourceBuses: veh
+    template: uds
+
+  rtosTaskInfo:
+    description: VCFRONT rtos task information
+    id: 0x551
+    sourceBuses: veh
+    template: rtosTaskInfo

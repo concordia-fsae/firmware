@@ -119,7 +119,7 @@ for target in target_dict:
         config_ids = [int(id) for id in findall(CONFIG_ID_REGEX, target)]
 
     target_sconscript = f"{components[component["component"]]['path']}SConscript"
-    PlatformEnv["ARTIFACTS"][f"{target.upper()}"] = SConscript(target_sconscript, exports={"CONFIG_IDS": config_ids, "PLATFORM_ENV": PlatformEnv, "NETWORK_ENV": NetworkEnv })
+    PlatformEnv["ARTIFACTS"][f"{target.upper()}"] = SConscript(target_sconscript, exports={"TARGET": target, "CONFIG_IDS": config_ids, "PLATFORM_ENV": PlatformEnv, "NETWORK_ENV": NetworkEnv })
 
 if PlatformEnv["ARTIFACTS"]:
     AddOption("--upload", dest="upload", action="store_true")

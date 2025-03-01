@@ -1,0 +1,448 @@
+#!/usr/bin/python3
+
+from os import makedirs
+from typing import List, Optional, Tuple, Union
+
+from mako.template import Template
+from SCons.Node import FS
+from SCons.Script import Clean, Default, Depends, Dir, GetOption, Import, Return
+
+from site_scons.site_tools.variants import generate
+
+Import("PLATFORM_ENV", "NETWORK_ENV", "CONFIG_IDS")
+
+SRC_DIR = Dir("src")
+HW_DIR= Dir("src/HW")
+LIBS_DIR = Dir("#/embedded/libs")
+FREERTOS_DIR = LIBS_DIR.Dir("FreeRTOS")
+CMSIS_DIR = LIBS_DIR.Dir("CMSIS")
+
+ARTIFACT_NAME = "vcfront"
+BUILDS_DIR = Dir(f"build")
+UDS_DIR = LIBS_DIR.Dir("uds")
+ISOTP_DIR = LIBS_DIR.Dir("isotp")
+SHARED_CODE = Dir("#/components/shared/code")
+SHARED_LIBS = SHARED_CODE.Dir("libs")
+SHARED_APP = SHARED_CODE.Dir("app")
+SHARED_HW = SHARED_CODE.Dir("HW")
+SHARED_RTOS = SHARED_CODE.Dir("RTOS")
+
+env = PLATFORM_ENV.Clone(
+    tools=[
+        "gcc-arm-none-eabi",
+        "chip_config",
+        "st-flash",
+        "openocd",
+        "compilation_db",
+        "variants",
+        # "doxygen",
+    ]
+)
+rtos_env = PLATFORM_ENV.Clone(tools=["gcc-arm-none-eabi"])
+
+env["OPENOCD_INTERFACE"] = "stlink"
+env["OPENOCD_MCU"] = "stm32f103c8"
+
+common_flags = [
+    "-mthumb",
+    "-mcpu=cortex-m3",
+]
+
+debug_flags = [
+    "-ggdb3",
+    "-g3",
+    "-Og",
+]
+
+release_flags = [
+    "-O2",
+]
+
+if GetOption("release"):
+    common_flags += release_flags
+else:
+    common_flags += debug_flags
+
+link_flags = [
+    "-Wl,--gc-sections",
+    "-Wl,--relax",
+    "-Wl,--print-memory-usage",
+    # "-Wl,--print-gc-sections",
+    "--specs=nano.specs",
+    "-Icomponents/vc/pdu/include/HW"
+]
+
+as_flags = ["-xassembler-with-cpp"]
+
+c_flags = [
+    "-std=c11",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    "-fstack-usage",
+    "-nostdlib",
+    "-msoft-float",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wfloat-equal",
+    "-Wcast-align",
+    "-Wlogical-op",
+    "-Winline",
+    "-Wshadow",
+    "-Winit-self",
+    "-Wmissing-prototypes",
+    "-Wunused-function",
+    "-Wpointer-arith",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+    "-Wundef",
+    "-Wconversion",
+    # FIXME: When in single quotes outputs to cmdline with ""
+    "-include", "BuildDefines.h", # Executed one after eachother
+]
+
+free_rtos_flags = [
+    "-Wno-missing-prototypes",
+    "-Wno-cast-align",
+    "-Wno-conversion",
+]
+
+
+RTOS_INCLUDE_DIRS = [
+    SHARED_RTOS,
+    FREERTOS_DIR.Dir("Source/include/"),
+    FREERTOS_DIR.Dir("Source/portable/GCC/ARM_CM3/"),
+    CMSIS_DIR.Dir("CMSIS/Core/Include/"),
+]
+
+LIBS_INCLUDE_DIRS = [
+    LIBS_DIR.Dir("printf"),
+    LIBS_DIR.Dir("atomic"),
+    LIBS_DIR.Dir("pack"),
+    UDS_DIR.Dir("include"),
+    ISOTP_DIR.Dir("include"),
+    SHARED_LIBS,
+    SHARED_APP,
+    SHARED_HW,
+    SHARED_RTOS,
+]
+
+PROJECT_INCLUDE_DIRS = [
+    "include/",
+    "include/HW/",
+]
+# List of component C files
+
+project_source_files = [
+    SRC_DIR.File("SystemManager.c"),
+    SRC_DIR.File("Module_componentSpecific.c"),
+    SHARED_RTOS.File("Module.c"),
+    SRC_DIR.File("CANIO_componentSpecific.c"),
+    SHARED_APP.File("CAN/CANIO-tx.c"),
+    SHARED_APP.File("CAN/CANIO-rx.c"),
+    SRC_DIR.File("IO.c"),
+    SRC_DIR.File("Utility.c"),
+    SRC_DIR.File("UDS.c"),
+    SHARED_LIBS.File("LIB_app.c"),
+]
+
+project_hw_files = [
+    HW_DIR.File("HW.c"),
+    HW_DIR.File("HW_adc.c"),
+    HW_DIR.File("HW_can_componentSpecific.c"),
+    HW_DIR.File("HW_gpio_componentSpecific.c"),
+    HW_DIR.File("HW_dma.c"),
+    HW_DIR.File("HW_intc.c"),
+    HW_DIR.File("HW_msp.c"),
+    HW_DIR.File("HW_tim.c"),
+    SHARED_HW.File("HW_can.c"),
+    SHARED_HW.File("HW_gpio.c"),
+]
+
+project_source_files += project_hw_files
+
+rtos_source_files = [
+    SHARED_RTOS.File("FreeRTOSResources.c"),
+    SHARED_RTOS.File("FreeRTOS_SWI.c"),
+    FREERTOS_DIR.File("Source/croutine.c"),
+    FREERTOS_DIR.File("Source/event_groups.c"),
+    FREERTOS_DIR.File("Source/list.c"),
+    FREERTOS_DIR.File("Source/queue.c"),
+    FREERTOS_DIR.File("Source/tasks.c"),
+    FREERTOS_DIR.File("Source/timers.c"),
+    FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
+    # FREERTOS_DIR.File("Source/stream_buffer.c"),
+    # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
+]
+
+uds_srcs = [
+    ISOTP_DIR.File("isotp.c"),
+    UDS_DIR.File("src/udsServer.c"),
+]
+
+def render_generated_files(options, renderer, output_dir):
+    targets = []
+    if options is None:
+        return
+
+    for template in renderer:
+        renderer = Template(filename=template.abspath)
+        rendered = renderer.render(**options)
+        if not isinstance(rendered, str):
+            raise Exception("Mako rendering didn't produce a str to write to the file")
+
+        file = (
+            output_dir.File(template.name)
+            .target_from_source(prefix="", suffix="")
+            .abspath
+        )
+
+        with open(file, "w") as out_fd:
+            out_fd.write(rendered)
+
+        targets.append(file)
+    return targets
+
+def create_output_file_path(
+    variant_dir: FS.Dir,
+    file: FS.File,
+    new_ext: str,
+    target_dir: Optional[str] = None,
+) -> str:
+    fn = file.target_from_source(prefix="", suffix=new_ext).name
+
+    if target_dir:
+        return variant_dir.Dir(target_dir).File(fn)
+
+    return variant_dir.Dir("/".join(file.path.split("/")[2:-1]) + "/").File(fn)
+
+
+def compile_objects(
+    env,
+    files: List[Union[FS.File, Tuple[FS.File, List[str]]]],
+    variant_dir: FS.Dir,
+    target_dir: Optional[str] = None,
+    **kwargs,
+) -> List[FS.File]:
+    objs = []
+    flags = env["CCFLAGS"]
+    for src in files:
+        if isinstance(src, tuple):
+            src_file = src[0]
+            these_flags = flags + src[1]
+        elif isinstance(src, FS.File):
+            src_file = src
+            these_flags = flags
+        else:
+            raise Exception(
+                "Source file should either be a 'File' \
+                object or a tuple of a 'File' and a list of extra flags to compile with"
+            )
+
+        target = create_output_file_path(variant_dir, src_file, ".obj", target_dir)
+        objs.append(
+            env.Object(target=target, source=src_file, CCFLAGS=these_flags, **kwargs)
+        )
+    return objs
+
+renderers = {
+    "buildDefs": [File("renderers/BuildDefines_generated.h.mako")],
+    "featureDefs": [File("#/shared/renderers/mako/FeatureDefines_generated.h.mako")],
+}
+
+chip_config = env.ChipConfig(config_file="include/HW/stm32f105.yaml")
+configs = env.GenerateVariants(File("variants.yaml"), CONFIG_IDS)
+elfs = []
+binaries = []
+binaries_crced = []
+asms = []
+
+for config_id, config in configs.items():
+    config_env = env.Clone()
+    c_flags.extend(chip_config.get("defines", []))
+    DRIVERS_INCLUDE_DIRS = [
+        chip_config["cmsis_includes"],
+        chip_config["hal_includes"],
+    ]
+    platform_source_files = []
+    # add driver source files
+    platform_source_files.extend(
+        [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
+    )
+    feature_selections = []
+    feature_selections += config["features"]["selections"]
+    feature_selections_files = []
+    for file in feature_selections:
+        feature_selections_files += [ File(file) ]
+
+    variant_dir = BUILDS_DIR.Dir(
+        "_".join(config["description"].split(" ")) + f"_{config_id}"
+    )
+    generated_dir = variant_dir.Dir("generated")
+    config_env.Append(
+        LINKFLAGS=f"-I{generated_dir.abspath}",
+    )
+    makedirs(generated_dir.abspath, exist_ok=True)
+
+    generated_sources = NETWORK_ENV.GenerateNodes({ f"{ARTIFACT_NAME}": generated_dir, })
+
+    features = {"features": config_env.GenerateFeatures(feature_selections_files, config["features"]["overrides"]) }
+    generated_features = render_generated_files(features, renderers["featureDefs"], generated_dir)
+
+    build_options = {}
+    build_options["config"] = config["options"]
+    build_options["configId"] = config_id
+    generated_defs = render_generated_files(build_options, renderers["buildDefs"], generated_dir)
+
+    ## actually compile stuff
+    proj_include_dirs = PROJECT_INCLUDE_DIRS + [generated_dir]
+
+    paths = (
+        RTOS_INCLUDE_DIRS + DRIVERS_INCLUDE_DIRS + proj_include_dirs + LIBS_INCLUDE_DIRS
+    )
+
+    config_env.Append(
+        ASFLAGS=as_flags,
+        CPPPATH=paths,
+        CCFLAGS=common_flags + c_flags,
+        LINKSCRIPT=chip_config["linker_file"],
+        LINKFLAGS=c_flags + link_flags + common_flags,
+    )
+
+    uds_env = config_env.Clone()
+    uds_env.Append(
+        CCFLAGS=[
+            "-Wno-missing-prototypes",
+            "-Wno-unused-parameter",
+            "-DBYTE_ORDER=_BYTE_ORDER",
+            "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+            "-Wno-inline",
+            "-Wno-conversion",
+            "-Wno-undef",
+        ]
+    )
+
+    rtos_env.Append(
+        CPPPATH=paths,
+        CCFLAGS=common_flags + c_flags + free_rtos_flags,
+    )
+
+    objs = []  # store objects here
+
+    # compile platform files
+    objs.extend(
+        compile_objects(
+            config_env,
+            platform_source_files,
+            variant_dir=variant_dir,
+            target_dir="embedded/",
+            CPPPATH=paths + [generated_dir],
+        )
+    )
+
+    # compile rtos source files
+    objs.extend(
+        compile_objects(
+            rtos_env,
+            rtos_source_files,
+            variant_dir=variant_dir,
+            target_dir="FreeRTOS/",
+            CPPPATH=paths + [generated_dir],
+        )
+    )
+
+    # compile project source files
+    objs.extend(
+            compile_objects(
+            config_env,
+            project_source_files,
+            variant_dir=variant_dir,
+            CPPPATH=paths + [generated_dir]
+        )
+    )
+
+    # compile UDS source files
+    objs.extend(compile_objects(uds_env, uds_srcs, variant_dir=variant_dir, target_dir="uds/"))
+
+    gen_env = config_env.Clone()
+    gen_env.Append(
+        CCFLAGS=[
+            "-Wno-inline",
+            "-Wno-conversion",
+        ]
+    )
+    gen_srcs = []
+    for generated_source in generated_sources:
+        gen_srcs += [generated_dir.File(generated_source)]
+    objs.extend(
+        compile_objects(
+            gen_env,
+            gen_srcs,
+            variant_dir=variant_dir,
+            target_dir=variant_dir.Dir("generated/obj"),
+            CPPPATH=paths + [generated_dir],
+        )
+    )
+
+    # link all the compiled objects into an elf
+    elf, map = config_env.Program(
+        variant_dir.File(ARTIFACT_NAME + ".elf"),
+        objs,
+        MAPFILE=variant_dir.File(ARTIFACT_NAME + ".map"),
+    )
+    elfs.append(elf)
+    Depends(elf, config_env["LINKSCRIPT"])
+    Clean(elf, generated_defs)
+
+    # generate a binary for flashing
+    binary = config_env.Bin(source=elf)
+    binaries.append(binary)
+
+    crc_env = PLATFORM_ENV.Clone(tools=["hextools"])
+
+    # generate the CRCd binary
+    if "app_start_addr" not in env:
+        env["app_start_addr"] = features["features"]["defs"]["app_start_addr"]
+    binaries_crced.append(
+        crc_env.InjectMpeg2CRC(source=binary, start_addr=env["app_start_addr"])
+    )
+
+    # Generate compile_commands.json
+    config_env["COMPILATIONDB_PATH_FILTER"] = "*/" + variant_dir.name + "/*"
+    compile_db = config_env.CompilationDatabase(variant_dir.File("compile_commands.json"))
+    Depends(compile_db, objs)
+    # generate it by default
+    Default(compile_db)
+    # add an alias to _only_ generate the compilation database
+    config_env.Alias("compiledb", compile_db)
+
+Default(binaries_crced)
+
+# build doxygen files for this component
+#env.Alias("docs", env.Doxygen("doxygen_stw.conf"))
+#env.Depends("docs", project_source_files)
+#env.Clean("docs", Dir("docs"))
+
+# Return artifacts to the caller
+artifacts = {}
+if len(binaries) == 1:
+    artifacts["FLASHABLE_ARTIFACT"] = {
+        "artifact": binaries_crced[0],
+        "addr": env["app_start_addr"],
+        "tools": ["st-flash"],
+    }
+
+if len(elfs) == 1:
+    artifacts["DEBUG_ARTIFACT"] = {
+        "artifact": elfs[0],
+        "args": [],
+        "tools": ["gcc-arm-none-eabi", "openocd"],
+        "env": {
+            "OPENOCD_INTERFACE": "stlink",
+            "OPENOCD_MCU": "stm32f103c8",
+        },
+    }
+
+Return("artifacts")

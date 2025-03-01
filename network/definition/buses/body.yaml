@@ -1,0 +1,4 @@
+name: "body"
+description: "CANBus for the center of the vehicle"
+defaultEndianness: "little"
+baudrate: 500000 # kbps
