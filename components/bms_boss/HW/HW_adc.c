@@ -15,6 +15,7 @@
 #include "string.h"
 
 // Firmware Includes
+#include "HW.h"
 #include "HW_adc.h"
 
 // Other Includes

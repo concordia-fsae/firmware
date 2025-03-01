@@ -18,9 +18,8 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
-extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim4;
-extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 
 
@@ -105,17 +104,7 @@ void ADC1_2_IRQHandler(void)
 
 void TIM2_IRQHandler(void)
 {
-    HAL_TIM_IRQHandler(&htim2);
-}
-
-void TIM1_TRG_COM_IRQHandler(void)
-{
-    HAL_TIM_IRQHandler(&htim1);
-}
-
-void TIM1_CC_IRQHandler(void)
-{
-    HAL_TIM_IRQHandler(&htim1);
+    HAL_TIM_IRQHandler(&htim_tick);
 }
 
 // CAN interrupts

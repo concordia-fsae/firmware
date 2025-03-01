@@ -10,7 +10,6 @@
  ******************************************************************************/
 
 // System Includes
-#include "ErrorHandler.h"
 #include "stdbool.h"
 
 // Firmware Includes
