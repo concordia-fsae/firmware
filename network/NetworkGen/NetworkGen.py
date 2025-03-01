@@ -756,12 +756,16 @@ def calculate_bus_load(bus, output_dir):
     total_messages_per_s = 0
     total_unscheduled_bits = 0
     total_unscheduled_messages = 0
+    total_messages = 0
 
     output = [ open(str(output_dir) + f"/{bus.name}-stats.txt", 'w'), sys.stdout ]
 
     for _, message in bus.messages.items():
         # SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
         # DEL(1), ACK(1), DEL(1), EOF(7), ITM(11)
+        if bus.name not in message.source_buses:
+            continue
+
         bit_length = 43
         bit_length += message.length_bytes * 8
         bit_length += 11 if message.id <= 0x7ff else 29
@@ -770,6 +774,7 @@ def calculate_bus_load(bus, output_dir):
             total_unscheduled_bits += bit_length
             total_unscheduled_messages += 1
             continue
+        total_messages += 1
         messages_per_s = 1000 / message.cycle_time_ms
 
         total_bits_per_s += bit_length * messages_per_s
@@ -781,7 +786,7 @@ def calculate_bus_load(bus, output_dir):
         print(f"Total Bits Transmitted/s: {int(total_bits_per_s)}; Total Messages Transmitted/s: {int(total_messages_per_s)}", file=out)
         if total_unscheduled_messages > 0:
             print(f"Total Bits Unscheduled: {int(total_unscheduled_bits)}; Total Messages Unscheduled: {int(total_unscheduled_messages)}", file=out)
-        print(f"Total Nodes: {len(bus.nodes)}; Count Messages: {len(bus.messages)}", file=out)
+        print(f"Total Nodes: {len(bus.nodes)}; Count Messages: {total_messages}", file=out)
 
     if usage > 0.8:
         print(f"Warning: CANBus '{bus.name.upper()}' has high bus load")
