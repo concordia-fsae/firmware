@@ -25,7 +25,7 @@
 /**< Other Includes */
 #include "ModuleDesc.h"
 #include "Utility.h"
-
+#include "LIB_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -56,9 +56,9 @@ _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length
 
 typedef struct
 {
-    adcState_E     adcState;
-    uint32_t       adcBuffer[IO_ADC_BUF_LEN];
-    simpleFilter_S adcData[ADC_CHANNEL_COUNT];
+    adcState_E         adcState;
+    uint32_t           adcBuffer[IO_ADC_BUF_LEN];
+    LIB_simpleFilter_S adcData[ADC_CHANNEL_COUNT];
 } io_S;
 
 
@@ -150,27 +150,23 @@ void IO_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
     {
-        io.adcData[i].raw   = 0;
-        io.adcData[i].count = 0;
+        LIB_simpleFilter_clear(&io.adcData[i]);
     }
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
         if (i % 2 == 0)
         {
-            io.adcData[ADC_CURRENT_N].raw += io.adcBuffer[i] & 0xffff;
-            io.adcData[ADC_CURRENT_P].raw += (io.adcBuffer[i]) >> 16;
-            io.adcData[ADC_CURRENT_N].count++;
-            io.adcData[ADC_CURRENT_P].count++;
+            LIB_simpleFilter_increment(&io.adcData[ADC_CURRENT_N], (float32_t)(io.adcBuffer[i] & 0xffff));
+            LIB_simpleFilter_increment(&io.adcData[ADC_CURRENT_P], (float32_t)(io.adcBuffer[i] >> 16U));
         }
         else
         {
-            io.adcData[ADC_MCU_TEMP].raw += io.adcBuffer[i] & 0xffff;
-            io.adcData[ADC_MCU_TEMP].count++;
+            LIB_simpleFilter_increment(&io.adcData[ADC_MCU_TEMP], (float32_t)(io.adcBuffer[i] & 0xffff));
         }
     }
 
-    io.adcData[ADC_CURRENT_N].value = (float32_t)io.adcData[ADC_CURRENT_N].raw / io.adcData[ADC_CURRENT_N].count;
-    io.adcData[ADC_CURRENT_P].value = (float32_t)io.adcData[ADC_CURRENT_P].raw / io.adcData[ADC_CURRENT_P].count;
-    io.adcData[ADC_MCU_TEMP].value  = (float32_t)io.adcData[ADC_MCU_TEMP].raw / io.adcData[ADC_MCU_TEMP].count;
+    LIB_simpleFilter_average(&io.adcData[ADC_CURRENT_N]);
+    LIB_simpleFilter_average(&io.adcData[ADC_CURRENT_P]);
+    LIB_simpleFilter_average(&io.adcData[ADC_MCU_TEMP]);
 }

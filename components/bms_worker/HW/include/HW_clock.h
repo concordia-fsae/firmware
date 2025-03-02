@@ -10,12 +10,7 @@
  ******************************************************************************/
 
 // System Includes
-#include "ErrorHandler.h"
-
-// Firmware Includes
-#include "HW_tim.h"
-#include "stm32f1xx_hal.h"
-
+#include "HW.h"
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
