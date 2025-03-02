@@ -9,17 +9,15 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "SystemConfig.h"
-#include "stdbool.h"
+#include "HW.h"
 #include "LIB_Types.h"
+#include "HW_adc_componentSpecific.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_MAX_VAL    4095U    // Max integer value of ADC reading (2^12 for this chip)
-#define ADC_REF_VOLTAGE 2.5F
+#define ADC_MAX_COUNT 4095U // Max integer value of ADC reading (2^12 for this chip)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -29,30 +27,14 @@ typedef enum
 {
     BUFFER_HALF_LOWER = 0U,
     BUFFER_HALF_UPPER,
-} bufferHalf_E;
-
-typedef struct
-{
-    uint32_t  raw;
-    float32_t value;
-    uint16_t  count;
-} simpleFilter_S;
-
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
-extern DMA_HandleTypeDef hdma_adc1;
-
+} HW_adc_bufferHalf_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void     HW_ADC_init(void);
-bool     HW_ADC_calibrate(ADC_HandleTypeDef* hadc);
-bool     HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
-uint16_t HW_ADC_getVFromCount(uint16_t cnt);
+HW_StatusTypeDef_E HW_ADC_init(void);
+HW_StatusTypeDef_E HW_ADC_deInit(void);
+HW_StatusTypeDef_E HW_ADC_calibrate(ADC_HandleTypeDef* hadc);
+HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
+float32_t          HW_ADC_getVFromCount(uint16_t cnt);

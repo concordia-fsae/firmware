@@ -1,5 +1,5 @@
 /**
- * @file HW_adc.c
+ * @file HW_adc_componentSpecific.c
  * @brief  Source code for ADC firmware
  */
 
@@ -43,13 +43,11 @@ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
 
-
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_ADC_unpackBuffer(bufferHalf_E half);
-
+void HW_ADC_unpackBuffer(HW_adc_bufferHalf_E half);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -248,46 +246,4 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
     {}
-}
-
-/******************************************************************************
- *                       P U B L I C  F U N C T I O N S
- ******************************************************************************/
-
-/**
- * @brief Firmware function to initiate ADC calibration.
- *
- * @param hadc Pointer to ADC peripheral
- *
- * @retval true = Success, false = Failure
- */
-bool HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
-{
-    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK;
-}
-
-/**
- * @brief  Firmware function to start DMA transfer
- *
- * @param hadc Pointer to ADC peripheral
- * @param data Pointer to memory start address
- * @param size Size of buffer
- *
- * @retval true = Success, false = Failure
- */
-bool HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
-{
-    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK;
-}
-
-/**
- * @brief  Get analog input voltage in 0.1mV from ADC count
- *
- * @param cnt ADC count
- *
- * @retval unit:  0.01mV
- */
-float32_t HW_ADC_getVFromCount(uint16_t cnt)
-{
-    return ((float32_t)cnt) * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }

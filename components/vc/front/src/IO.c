@@ -23,7 +23,7 @@
 /**< Other Includes */
 #include "ModuleDesc.h"
 #include "Utility.h"
-
+#include "LIB_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -53,9 +53,9 @@ _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length
 
 typedef struct
 {
-    adcState_E     adcState;
-    uint32_t       adcBuffer[IO_ADC_BUF_LEN];
-    simpleFilter_S adcData[ADC_CHANNEL_COUNT];
+    adcState_E         adcState;
+    uint32_t           adcBuffer[IO_ADC_BUF_LEN];
+    LIB_simpleFilter_S adcData[ADC_CHANNEL_COUNT];
 } io_S;
 
 
@@ -118,7 +118,7 @@ static void IO10Hz_PRD(void)
     else if (io.adcState == ADC_STATE_RUNNING)
     {
         IO_unpackADCBuffer();
-        IO.mcu_temp = (io.adcData[ADC_MCU_TEMP].value / ADC_MAX_VAL) * VREF;
+        IO.mcu_temp = HW_ADC_getVFromCount((uint16_t)io.adcData[ADC_MCU_TEMP].value);
     }
 }
 
@@ -141,21 +141,16 @@ void IO_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
     {
-        io.adcData[i].raw   = 0;
-        io.adcData[i].count = 0;
+        LIB_simpleFilter_clear(&io.adcData[i]);
     }
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
-        if (i % 2 == 0)
-        {
-        }
-        else
-        {
-            io.adcData[ADC_MCU_TEMP].raw += io.adcBuffer[i] & 0xffff;
-            io.adcData[ADC_MCU_TEMP].count++;
-        }
+        LIB_simpleFilter_increment(&io.adcData[i % ADC_CHANNEL_COUNT], (float32_t)(io.adcBuffer[i] & 0xffff));
     }
 
-    io.adcData[ADC_MCU_TEMP].value  = (float32_t)io.adcData[ADC_MCU_TEMP].raw / io.adcData[ADC_MCU_TEMP].count;
+    for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
+    {
+        LIB_simpleFilter_average(&io.adcData[i]);
+    }
 }

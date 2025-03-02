@@ -27,14 +27,13 @@
 #include "ModuleDesc.h"
 #include "Utility.h"
 #include "FeatureDefines_generated.h"
-
+#include "LIB_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #define ADC_VOLTAGE_DIVISION    2U /**< Voltage division for cell voltage output */
-
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -64,10 +63,10 @@ _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length
 
 typedef struct
 {
-    adcState_E     adcState;
-    uint32_t       adcBuffer[IO_ADC_BUF_LEN];
-    simpleFilter_S adcData[ADC_CHANNEL_COUNT];
-    simpleFilter_S bmsData;
+    adcState_E         adcState;
+    uint32_t           adcBuffer[IO_ADC_BUF_LEN];
+    LIB_simpleFilter_S adcData[ADC_CHANNEL_COUNT];
+    LIB_simpleFilter_S bmsData;
 } io_S;
 
 
@@ -239,14 +238,12 @@ void IO_Temps_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
     {
-        io.adcData[i].raw   = 0;
-        io.adcData[i].count = 0;
+        LIB_simpleFilter_clear(&io.adcData[i]);
     }
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
-        io.adcData[i % ADC_CHANNEL_COUNT].raw += io.adcBuffer[i] & 0xffff;
-        io.adcData[i % ADC_CHANNEL_COUNT].count++;
+        LIB_simpleFilter_increment(&io.adcData[i % ADC_CHANNEL_COUNT], (float32_t)(io.adcBuffer[i] & 0xffff));
     }
 }
 
@@ -255,12 +252,10 @@ void IO_Temps_unpackADCBuffer(void)
  */
 void IO_Cells_unpackADCBuffer(void)
 {
-    io.bmsData.raw   = 0;
-    io.bmsData.count = 0;
+    LIB_simpleFilter_clear(&io.bmsData);
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
-        io.bmsData.raw += io.adcBuffer[i] >> 16;
-        io.bmsData.count++;
+        LIB_simpleFilter_increment(&io.bmsData, (float32_t)(io.adcBuffer[i] >> 16U));
     }
 }

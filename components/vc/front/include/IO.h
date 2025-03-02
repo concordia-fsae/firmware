@@ -20,8 +20,6 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define VREF ADC_REF_VOLTAGE /**< Shunt Diode reference voltage */
-
 #define IO_ADC_BUF_LEN 192U      /**< To fit the number of measurements into a time less than 100us  \
                                    the buffer length must be less than 100us / (ADC clock freq *    \
                                    cycles per conversion). For this firmware, there is 14 cycles    \
