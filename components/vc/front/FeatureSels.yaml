@@ -1,4 +1,4 @@
-featureDefs: "#/components/bms_boss/FeatureDefs.yaml"
+featureDefs: "#/components/vc/front/FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
   feature_canrx_swi: true

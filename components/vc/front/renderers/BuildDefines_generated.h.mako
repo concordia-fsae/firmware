@@ -5,4 +5,4 @@
 
 #pragma once
 
-#define VCPDU_CONFIG_ID ${configId}U
+#define VCFRONT_CONFIG_ID ${configId}U
