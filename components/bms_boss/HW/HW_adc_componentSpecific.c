@@ -23,7 +23,6 @@
 #include "IO.h"
 #include "SystemConfig.h"
 
-
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -42,13 +41,11 @@ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
 
-
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
 void HW_ADC_unpackBuffer(HW_dma_bufferHalf_E half);
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -190,35 +187,4 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
         // Peripheral clock disable
         __HAL_RCC_ADC2_CLK_DISABLE();
     }
-}
-
-
-/******************************************************************************
- *                       P U B L I C  F U N C T I O N S
- ******************************************************************************/
-
-/**
- * @brief Firmware function to initiate ADC calibration.
- *
- * @param hadc Pointer to ADC peripheral
- *
- * @retval true = Success, false = Failure
- */
-HW_StatusTypeDef_E HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
-{
-    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK ? HW_OK : HW_ERROR;
-}
-
-/**
- * @brief  Firmware function to start DMA transfer
- *
- * @param hadc Pointer to ADC peripheral
- * @param data Pointer to memory start address
- * @param size Size of buffer
- *
- * @retval true = Success, false = Failure
- */
-HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
-{
-    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK ? HW_OK : HW_ERROR;
 }

@@ -155,7 +155,8 @@ project_source_files = [
 
 project_hw_files = [
     SHARED_HW.File("HW.c"),
-    HW_DIR.File("HW_adc.c"),
+    SHARED_HW.File("HW_adc.c"),
+    HW_DIR.File("HW_adc_componentSpecific.c"),
     HW_DIR.File("HW_can_componentSpecific.c"),
     HW_DIR.File("HW_gpio_componentSpecific.c"),
     HW_DIR.File("HW_dma_componentSpecific.c"),
