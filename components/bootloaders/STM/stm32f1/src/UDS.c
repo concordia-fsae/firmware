@@ -16,7 +16,7 @@
 #include "HW_FLASH.h"
 #include "libcrc.h"
 #include "Types.h"
-#include "uds.h"
+#include "lib_uds.h"
 #include "Utilities.h"
 
 // system includes
