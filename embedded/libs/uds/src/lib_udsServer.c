@@ -10,7 +10,7 @@
  ******************************************************************************/
 
 // module include
-#include "uds.h"
+#include "lib_uds.h"
 
 #if UDS_ENABLE_LIB
 #include "isotp.h"
