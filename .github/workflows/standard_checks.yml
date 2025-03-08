@@ -49,6 +49,7 @@ jobs:
           path: platform-artifacts/
   updaters:
     runs-on: self-hosted
+    needs: [ cfr24, cfr25 ]
     container: 
       image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
     steps:
