@@ -1,7 +1,7 @@
 name: Clean Working dir, Pull Current Branch, and Retrive Branch Metadata
 
 on:
-  workflow_dispatch:
+  workflow_call:
     outputs:
       sha:
         description: "The current branch's SHA"

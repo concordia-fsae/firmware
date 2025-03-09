@@ -1,7 +1,7 @@
 name: Build and Archive
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       build-targets:
         required: true
@@ -37,7 +37,7 @@ jobs:
     steps:
       - name: Get Clean Branch
         id: pull
-        uses: concordia-fsae/firmware/.github/workflows/reusable/clean_pull.yml@master
+        uses: ./.github/workflows/reusable/clean_pull.yml@master
       - name: Build Targets
         id: build
         run: |
