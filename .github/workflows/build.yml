@@ -50,22 +50,14 @@ jobs:
       - name: Clean
         uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
       - name: Pull Branch
-        uses: actions/checkout@v4
-        with:
-          repository: concordia-fsae/firmware
-          ref: ${{ inputs.ref }}
-          fetch-depth: 0
-          show-progress: 'true'
-          submodules: 'recursive'
-      - name: Pull Branch
         id: pull
-        uses: ./.github/actions/pull/
+        uses: concordia-fsae/firmware/.github/actions/pull/@master
         with:
           repo: concordia-fsae/firmware
           ref: ${{ inputs.ref }}
       - name: Build Targets
         id: build
-        uses: ./.github/actions/build/
+        uses: concordia-fsae/firmware/.github/actions/build/@master
         with:
           build-targets: ${{ inputs.build-targets }}
           flags: ${{ inputs.flags }}
