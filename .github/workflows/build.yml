@@ -13,7 +13,11 @@ on:
         type: string
       build-type:
         description: "'platform' or 'targets' build"
-        required: true
+        default: "-j32"
+        type: string
+      artifact-name:
+        description: "Artifact name"
+        default: "artifact"
         type: string
     outputs:
       build-artifacts-link:
@@ -57,6 +61,6 @@ jobs:
         id: archive
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: ${{ inputs.artifact-name }}
           path: platform-artifacts/
 
