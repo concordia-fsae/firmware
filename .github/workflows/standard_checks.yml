@@ -6,24 +6,24 @@ on:
 
 jobs:
   cfr24:
-    uses: concordia-fsae/firmware/.github/workflows/build.yml@master
+    uses: ./.github/workflows/build.yml
     with:
+      build-type: platform
       build-targets: cfr24
       flags: -j32 --flashable-bootloader --package
-      build-type: platform
       artifact-name: artifact-cfr24
   cfr25:
-    uses: concordia-fsae/firmware/.github/workflows/build.yml@master
+    uses: ./.github/workflows/build.yml
     with:
+      build-type: platform
       build-targets: cfr25
       flags: -j32 --flashable-bootloader --package
-      build-type: platform
       artifact-name: artifact-cfr25
   updaters:
     needs: [ cfr24, cfr25 ]
-    uses: concordia-fsae/firmware/.github/workflows/build.yml@master
+    uses: ./.github/workflows/build.yml
     with:
+      build-type: targets
       build-targets: bl:1000,1001,1002,1003,1004,1005,1010,1011,1030,1031,1032
       flags: -j32 --package
-      build-type: targets
       artifact-name: artifact-bootloader-updaters
