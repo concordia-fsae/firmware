@@ -37,7 +37,7 @@ jobs:
     steps:
       - name: Get Clean Branch
         id: pull
-        uses: concordia-fsae/firmware/.github/workflows/reusable/clean_pull.yml@main
+        uses: concordia-fsae/firmware/.github/workflows/reusable/clean_pull.yml@master
       - name: Build Platform ${{ inputs.platform }}
         id: build
         run: |
