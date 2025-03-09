@@ -1,0 +1,51 @@
+name: Build Platform and Archive
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        required: true
+        type: string
+      flags:
+        default: "-j32"
+        type: string
+      build-type:
+        required: true
+        options:
+        - platform
+        - targets
+    outputs:
+      build-artifacts-link:
+        description: "The link to the github archive of the build artifacts"
+        value: ${{ jobs.run.outputs.archive-url }}
+      sha:
+        description: "The current branch's SHA"
+        value: ${{ jobs.run.outputs.sha }}
+      short-sha:
+        description: "The current branch's short (7) SHA"
+        value: ${{ jobs.run.outputs.short-sha }}
+
+jobs:
+  run:
+    runs-on: self-hosted
+    container: 
+      image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
+    outputs:
+      archive-url: ${{ steps.archive.outputs.archive-url }}
+      sha: ${{ steps.pull.outputs.sha }}
+      short-sha: ${{ steps.pull.outputs.short-sha }}
+    steps:
+      - name: Get Clean Branch
+        id: pull
+        uses: concordia-fsae/firmware/.github/workflows/reusable/clean_pull.yml@main
+      - name: Build Platform ${{ inputs.platform }}
+        id: build
+        run: |
+          scons --${{ inputs.build-type }}=${{ inputs.platform }} ${{ inputs.flags }}
+      - name: Archive Artifacts
+        id: archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: platform-artifacts/
+
