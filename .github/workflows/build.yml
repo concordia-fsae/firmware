@@ -4,12 +4,15 @@ on:
   workflow_call:
     inputs:
       build-targets:
+        description: "The build targets to send scons"
         required: true
         type: string
       flags:
+        description: "Build flags"
         default: "-j32"
         type: string
       build-type:
+        description: "'platform' or 'targets' build"
         required: true
         type: string
     outputs:
@@ -30,12 +33,22 @@ jobs:
       image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
     outputs:
       archive-url: ${{ steps.archive.outputs.archive-url }}
-      sha: ${{ steps.pull.outputs.sha }}
-      short-sha: ${{ steps.pull.outputs.short-sha }}
+      sha: ${{ steps.sha.outputs.sha }}
+      short-sha: ${{ steps.sha.outputs.short-sha }}
     steps:
-      - name: Get Clean Branch
-        id: pull
-        uses: concordia-fsae/firmware/.github/workflows/clean_pull.yml@master
+      - name: Clean
+        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
+      - name: Pull Branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          show-progress: 'true'
+          submodules: 'recursive'
+      - name: Get SHA and SHA7
+        id: sha
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT && \
+          echo "short-sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Build Targets
         id: build
         run: |
