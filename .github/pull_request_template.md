@@ -8,4 +8,4 @@
 
 ### Test Plan
 
-1. Describe tests needed to validate the software changes
+- [ ] Describe tests needed to validate the software changes

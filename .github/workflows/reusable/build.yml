@@ -1,9 +1,9 @@
-name: Build Platform and Archive
+name: Build and Archive
 
 on:
   workflow_dispatch:
     inputs:
-      platform:
+      build-targets:
         required: true
         type: string
       flags:
@@ -38,10 +38,10 @@ jobs:
       - name: Get Clean Branch
         id: pull
         uses: concordia-fsae/firmware/.github/workflows/reusable/clean_pull.yml@master
-      - name: Build Platform ${{ inputs.platform }}
+      - name: Build Targets
         id: build
         run: |
-          scons --${{ inputs.build-type }}=${{ inputs.platform }} ${{ inputs.flags }}
+          scons --${{ inputs.build-type }}=${{ inputs.build-targets }} ${{ inputs.flags }}
       - name: Archive Artifacts
         id: archive
         uses: actions/upload-artifact@v4
