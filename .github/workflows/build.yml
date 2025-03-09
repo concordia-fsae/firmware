@@ -11,9 +11,7 @@ on:
         type: string
       build-type:
         required: true
-        options:
-        - platform
-        - targets
+        type: string
     outputs:
       build-artifacts-link:
         description: "The link to the github archive of the build artifacts"
@@ -37,7 +35,7 @@ jobs:
     steps:
       - name: Get Clean Branch
         id: pull
-        uses: ./.github/workflows/clean_pull.yml@master
+        uses: concordia-fsae/firmware/.github/workflows/clean_pull.yml@master
       - name: Build Targets
         id: build
         run: |
