@@ -1,6 +1,6 @@
 services:
-  buildroot: &buildroot
-    image: ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
+  buildroot:
+    image: ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:${IMAGE_TAG:-latest}
     container_name: buildroot
     hostname: builder
     volumes: # mount pts
@@ -12,6 +12,3 @@ services:
     devices:
       # map host's usb buses to container's buses for st-link programmer
       - "/dev/bus/usb/:/dev/bus/usb/"
-  buildroot-latest:
-    <<: *buildroot
-    image: ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:latest

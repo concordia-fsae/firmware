@@ -27,3 +27,16 @@ jobs:
       build-targets: bl:1000,1001,1002,1003,1004,1005,1010,1011,1030,1031,1032
       flags: -j32 --package
       artifact-name: artifact-bootloader-updaters
+  validate-workflow: # TODO: Missing macos coverage, we would likely eed our own self
+                     # hosted macos runner todo this however
+    runs-on: self-hosted
+    needs: updaters
+    steps:
+      - name: Clean
+        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
+      - name: Pull Branch
+        id: pull
+        uses: concordia-fsae/firmware/.github/actions/pull/@master
+      - name: Enter Buildroot and Run Build
+        run: |
+          ./buildroot.sh -r "scons --targets=bmsb -j32"
