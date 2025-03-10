@@ -6,7 +6,7 @@ IMAGE_TAG=$CURRENT_TAG
 RUN_COMMAND=""
 
 print_help () {
-    echo "Usage 'buildroot.sh [OPTIONS] COMMAND"
+    echo "Usage 'buildroot.sh [OPTIONS]'"
     echo "Buildroot help..."
     echo "Options:"
     echo "  -h --help            Displays this help message"
@@ -16,7 +16,7 @@ print_help () {
 }
 
 validate_tag_change () {
-    if [ $IMAGE_TAG != $CURRENT_TAG ]; then \
+    if test "$IMAGE_TAG" != "$CURRENT_TAG" ; then \
         echo "Cannot specify tag and latest in the same command. Exiting..." && \
         exit 1;
     fi
@@ -38,12 +38,10 @@ do
             validate_tag_change
             shift
             IMAGE_TAG="$1"
-            shift
             ;;
         -r|--run)
             shift
             RUN_COMMAND="$1"
-            shift
             ;;
         -*|--*) # catch any unknown args and exit
             echo "Unknown option $1"
@@ -54,6 +52,7 @@ do
             break
             ;;
     esac
+    shift
 done
 
 for var in "$@"
