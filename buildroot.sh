@@ -77,5 +77,4 @@ IMAGE_TAG=${IMAGE_TAG} docker-compose run --rm buildroot $RUN_COMMAND
 EXIT_CODE=$?
 if [ $EXIT_CODE != 0 ]; then
     echo "Container exited with error code $EXIT_CODE..."
-    exit $EXIT_CODE;
 fi
