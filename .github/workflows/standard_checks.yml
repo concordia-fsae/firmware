@@ -5,22 +5,18 @@ on:
     branches: [ master ]
 
 jobs:
-  cfr24:
+  cfr:
+    strategy:
+      matrix:
+        car: [ cfr24, cfr25 ]
     uses: ./.github/workflows/build.yml
     with:
       build-type: platform
-      build-targets: cfr24
+      build-targets: ${{ matrix.car }}
       flags: -j32 --flashable-bootloader --package
-      artifact-name: artifact-cfr24
-  cfr25:
-    uses: ./.github/workflows/build.yml
-    with:
-      build-type: platform
-      build-targets: cfr25
-      flags: -j32 --flashable-bootloader --package
-      artifact-name: artifact-cfr25
+      artifact-name: artifact-${{ matrix.car }}
   updaters:
-    needs: [ cfr24, cfr25 ]
+    needs: cfr
     uses: ./.github/workflows/build.yml
     with:
       build-type: targets
