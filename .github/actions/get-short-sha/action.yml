@@ -17,9 +17,7 @@ runs:
       id: sha
       shell: bash
       run: |
-          echo "${{ inputs.sha }}" | \
-          export SHA7=$(awk '{ print substr($0,0,7) }') && \
-          echo "short-sha=$SHA7" >> $GITHUB_OUTPUT && \
-          echo "SHA: ${{ inputs.sha }}" && \
-          echo "SHA7: $SHA7"
-
+        export SHA7=$(echo "${{ inputs.sha }}" | cut -c1-7) && \
+        echo "short-sha=$SHA7" >> $GITHUB_OUTPUT && \
+        echo "SHA: ${{ inputs.sha }}" && \
+        echo "SHA7: $SHA7"
