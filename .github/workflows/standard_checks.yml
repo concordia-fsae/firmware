@@ -1,4 +1,4 @@
-name: 'Build entire platform'
+name: 'Build All Firmware'
 
 on:
   pull_request:
@@ -29,8 +29,13 @@ jobs:
       - name: Clean
         uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
       - name: Pull Branch
-        id: pull
-        uses: concordia-fsae/firmware/.github/actions/pull/@master
+        uses: actions/checkout@v4
+        with:
+          repository: concordia-fsae/firmware
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          show-progress: 'true'
+          submodules: 'recursive'
       - name: Enter Buildroot and Run Build
         run: |
           ./buildroot.sh -r "scons --targets=bmsb -j32"
