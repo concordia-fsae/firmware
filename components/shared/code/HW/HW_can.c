@@ -13,7 +13,7 @@
 
 #include "CAN/CAN.h"
 #include "CAN/CanTypes.h"
-#include "uds.h"
+#include "lib_uds.h"
 #include "uds_componentSpecific.h"
 
 #include "NetworkDefines_generated.h"

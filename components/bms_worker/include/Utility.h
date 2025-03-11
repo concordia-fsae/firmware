@@ -83,7 +83,7 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
 // FLAGS
 // This should get moved elsewhere at some point
 #define FLAG_bits_each            16
-#define WORDS_FROM_COUNT(count)   (((uint16_t)count + (FLAG_bits_each - 1)) / FLAG_bits_each)
+#define WORDS_FROM_COUNT(count)   (uint16_t)((count + (FLAG_bits_each - 1)) / FLAG_bits_each)
 #define FLAG_GET_WORD(name, flag) (name[(uint16_t)flag / FLAG_bits_each])
 #define FLAG_GET_MASK(flag)       (1U << ((uint16_t)flag % FLAG_bits_each))
 

@@ -92,6 +92,11 @@ class Units(Enum):
     amps = "A"
     rpm = "RPM"
     pct = "%"
+    Nm = "Nm"
+    deg = "deg"
+    Hz = "Hz"
+    Wb = "Wb"
+    
 
 
 class ValidationRole(Enum):

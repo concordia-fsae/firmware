@@ -8,3 +8,9 @@ heartbeat:
   path: components/heartbeat/
 stw:
   path: components/steering_wheel/
+vcfront:
+  path: components/vc/
+vcrear:
+  path: components/vc/
+vcpdu:
+  path: components/vc/

@@ -1,0 +1,11 @@
+configs:
+  0:
+    description: Front Vehicle Control Unit
+    options:
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0

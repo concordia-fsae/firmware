@@ -9,8 +9,7 @@
 
 // module include
 #include "CAN.h"
-#include "uds.h"
-#include "uds_componentSpecific.h"
+#include "lib_uds.h"
 
 #include "HW_NVIC.h"
 #include "Utilities.h"

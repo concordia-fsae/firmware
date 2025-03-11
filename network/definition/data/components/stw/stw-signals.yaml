@@ -1,27 +1,27 @@
 signals:
   switch0Status:
     description: "Status of leftmost Steering Wheel switch"
-    discreteValues: "switchStatus"
+    discreteValues: "digitalStatus"
 
   switch1Status:
     description: "Status of second from leftmost Steering Wheel switch"
-    discreteValues: "switchStatus"
+    discreteValues: "digitalStatus"
 
   switch3Status:
     description: "Status of second from rightmost Steering Wheel switch"
-    discreteValues: "switchStatus"
+    discreteValues: "digitalStatus"
 
   switch4Status:
     description: "Status of rightmost Steering Wheel switch"
-    discreteValues: "switchStatus"
+    discreteValues: "digitalStatus"
 
   button0Status:
     description: "Status of the leftmost Steering Wheel button"
-    discreteValues: "switchStatus"
+    discreteValues: "digitalStatus"
 
   button1Status:
     description: "Status of the rightmost Steering Wheel button"
-    discreteValues: "switchStatus"
+    discreteValues: "digitalStatus"
 
   udsPayload:
     unit: ''

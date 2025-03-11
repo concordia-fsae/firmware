@@ -1,0 +1,6 @@
+featureDefs: "#/components/bms_boss/FeatureDefs.yaml"
+features:
+  feature_cantx_swi: true
+  feature_canrx_swi: true
+  app_component_id: vcrear
+  app_uds: true

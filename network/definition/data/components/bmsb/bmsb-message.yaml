@@ -55,4 +55,13 @@ messages:
     signals:
       elconMaxChargeVoltage:
       elconMaxChargeCurrent:
-      elconControlByte:      
+      elconControlByte:
+
+  currentLimit:
+    description: BMS Torque limit
+    id: 0x202
+    cycleTimeMs: 100
+    sourceBuses: veh
+    signals:
+      maxDischarge:
+      maxCharge:

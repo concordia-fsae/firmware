@@ -1,0 +1,4 @@
+name: "nose"
+description: "CANBus for the front of the vehicle"
+defaultEndianness: "little"
+baudrate: 500000 # kbps

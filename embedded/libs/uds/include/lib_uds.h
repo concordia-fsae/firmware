@@ -1,5 +1,5 @@
 /*
- * uds.h
+ * lib_uds.h
  * UDS implementation header
  */
 
@@ -11,7 +11,6 @@
 
 #include "uds_componentSpecific.h"
 
-#if UDS_ENABLE_LIB
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -277,4 +276,3 @@ void uds_cb_transferPayload(uint8_t *payload, uint8_t payloadLengthBytes);
  * @brief callback for a data ID read
  */
 void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes);
-#endif // UDS_ENABLE_LIB

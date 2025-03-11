@@ -31,7 +31,11 @@
 # define CAN_TX_PORT       GPIOB
 # define CAN_TX_PIN        9U
 
-#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 1U)) || (APP_PCBA_ID == 10U)
+#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 1U)) || \
+      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_PCBA_ID == 0U)) || \
+      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_PCBA_ID == 0U)) || \
+      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_PCBA_ID == 0U)) || \
+      (APP_PCBA_ID == 10U)
 
 # define CAN_AFIO_REMAP    false
 # define CAN_RX_PORT       GPIOA
@@ -49,13 +53,23 @@
 #define BUTTON_PIN              2U
 #define BUTTON_PRESSED_STATE    1U
 
-#define LED_PORT                GPIOC
-#define LED_PIN                 13U
-#define LED_ON_STATE            0U // this can probably be refactored
-#if APP_PCBA_ID == 0
-# define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
-#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 1U)) || (APP_PCBA_ID == 10U)
+#if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_PCBA_ID == 0U))
+# define LED_PORT GPIOB
+# define LED_PIN  8U
+#else
+# define LED_PORT GPIOC
+# define LED_PIN  13U
+#endif
+# define LED_ON_STATE 0U // this can probably be refactored
+
+#if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_PCBA_ID == 1U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_PCBA_ID == 0U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_PCBA_ID == 0U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_PCBA_ID == 0U)) || \
+    (APP_PCBA_ID == 10U)
 # define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
+#elif APP_PCBA_ID == 0
+# define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
 #else
 #error "Invalid configuration"
 #endif

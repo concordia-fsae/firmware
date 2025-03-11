@@ -13,9 +13,8 @@
 
 #include "MessageUnpack_generated.h"
 #include "CANTypes_generated.h"
-#include "stdbool.h"
-#include "stdint.h"
-#include "FloatTypes.h"
+#include "LIB_FloatTypes.h"
+#include "LIB_Types.h"
 #include "Utility.h"
 
 #include "CANIO_componentSpecific.h"

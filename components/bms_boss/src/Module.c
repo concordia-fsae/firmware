@@ -77,7 +77,7 @@ void Module_1kHz_TSK(void)
         }
     }
 
-    stats[MODULE_1kHz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_1kHz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -94,7 +94,7 @@ void Module_100Hz_TSK(void)
         }
     }
 
-    stats[MODULE_100Hz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_100Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -111,7 +111,7 @@ void Module_10Hz_TSK(void)
         }
     }
 
-    stats[MODULE_10Hz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_10Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -128,7 +128,7 @@ void Module_1Hz_TSK(void)
         }
     }
 
-    stats[MODULE_1Hz_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_1Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
 }
 
 /**
@@ -136,7 +136,7 @@ void Module_1Hz_TSK(void)
  */
 void Module_ApplicationIdleHook()
 {
-    stats[MODULE_IDLE_TASK].total_percentage = ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_IDLE_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
 }
 
 /**

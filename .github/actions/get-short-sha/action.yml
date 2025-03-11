@@ -1,0 +1,25 @@
+name: Get Short SHA
+
+inputs:
+  sha:
+    description: SHA to reduce
+    required: true
+    type: string
+outputs:
+  short-sha:
+    description: Short SHA (7)
+    value: ${{ steps.sha.outputs.short-sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get short SHA (7)
+      id: sha
+      shell: bash
+      run: |
+          echo "${{ inputs.sha }}" | \
+          export SHA7=$(awk '{ print substr($0,0,7) }') && \
+          echo "short-sha=$SHA7" >> $GITHUB_OUTPUT && \
+          echo "SHA: ${{ inputs.sha }}" && \
+          echo "SHA7: $SHA7"
+

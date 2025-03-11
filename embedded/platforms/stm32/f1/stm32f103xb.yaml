@@ -1,6 +1,4 @@
 name: stm32f103
-defines:
-  NUM_CAN_BUSES: 1U
 extraSources:
   - "f103/startup_stm32f103xb.S"
   - "system_stm32f1xx.c"

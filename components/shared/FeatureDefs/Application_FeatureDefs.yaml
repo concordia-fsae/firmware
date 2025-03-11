@@ -39,6 +39,9 @@ discreteValues:
     - bmsw
     - bmsb
     - stw
+    - vcpdu
+    - vcfront
+    - vcrear
   function_id:
     - bl
     - app

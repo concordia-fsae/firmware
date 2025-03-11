@@ -1,0 +1,5 @@
+messages:
+  UDSCLIENT_vcpduUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+signals:

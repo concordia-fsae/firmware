@@ -1,0 +1,4 @@
+description: "Power Distribution Unit Controller"
+onBuses:
+  - "veh"
+  - "body"

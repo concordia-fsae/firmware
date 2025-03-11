@@ -1,0 +1,5 @@
+messages:
+  UDSCLIENT_vcfrontUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+signals:

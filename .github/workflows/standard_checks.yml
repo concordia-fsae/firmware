@@ -1,55 +1,41 @@
-name: 'Build entire platform'
+name: 'Build All Firmware'
 
 on:
   pull_request:
     branches: [ master ]
 
 jobs:
-  cfr24:
-    runs-on: self-hosted
-    container: 
-      image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
-    steps:
-      - name: Clean
-        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
-      - name: Pull Branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          show-progress: 'true'
-          submodules: 'recursive'
-      - name: Execute build for CFR24
-        run: |
-          scons --platform=cfr24 -j32 --flashable-bootloader
-  cfr25:
-    runs-on: self-hosted
-    container: 
-      image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
-    steps:
-      - name: Clean
-        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
-      - name: Pull Branch
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          show-progress: 'true'
-          submodules: 'recursive'
-      - name: Execute build for CFR25
-        run: |
-          scons --platform=cfr25 -j32 --flashable-bootloader
+  cfr:
+    strategy:
+      matrix:
+        car: [ cfr24, cfr25 ]
+    uses: ./.github/workflows/build.yml
+    with:
+      build-type: platform
+      build-targets: ${{ matrix.car }}
+      flags: -j32 --skip-bl --package
+      artifact-name: artifact-${{ matrix.car }}
   updaters:
+    uses: ./.github/workflows/build.yml
+    with:
+      build-type: targets 
+      build-targets: bl
+      flags: -j32 --flashable-bootloader --package
+      artifact-name: artifact-bootloaders
+  validate-workflow: # TODO: Missing macos coverage, we would likely eed our own self
+                     # hosted macos runner todo this however
     runs-on: self-hosted
-    container: 
-      image: docker://ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
     steps:
       - name: Clean
         uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
       - name: Pull Branch
         uses: actions/checkout@v4
         with:
+          repository: concordia-fsae/firmware
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
           show-progress: 'true'
           submodules: 'recursive'
-      - name: Execute build for all bootloader updaters
+      - name: Enter Buildroot and Run Build
         run: |
-          scons --targets=bl:1000,1001,1002,1003,1004,1005,1010,1011 -j32
+          ./buildroot.sh -r "scons --targets=bmsb -j32"

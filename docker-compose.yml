@@ -1,6 +1,6 @@
 services:
   buildroot:
-    image: ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:v1.0.0
+    image: ghcr.io/concordia-fsae/containers/ubuntu-noble-lts:${IMAGE_TAG:-latest}
     container_name: buildroot
     hostname: builder
     volumes: # mount pts

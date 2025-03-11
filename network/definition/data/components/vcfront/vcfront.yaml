@@ -1,0 +1,4 @@
+description: "Front Vehicle Controller"
+onBuses:
+  - "veh"
+  - "nose"

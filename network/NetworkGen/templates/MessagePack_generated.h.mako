@@ -10,7 +10,7 @@
  ******************************************************************************/
 
 #include "CAN/CanTypes.h"
-#include "FloatTypes.h"
+#include "LIB_FloatTypes.h"
 #include "Utility.h"
 #include "NetworkDefines_generated.h"
 

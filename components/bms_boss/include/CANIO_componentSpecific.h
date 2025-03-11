@@ -59,5 +59,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_elconMaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define set_elconControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getElconControlByte())
 #define transmit_BMSB_elconChargeCommand (SYS_SFT_checkElconChargerTimeout() == false)
-
+#define transmit_BMSB_currentLimit (SYS_SFT_checkMCTimeout() == false)
+#define set_maxCharge(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit);
+#define set_maxDischarge(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit);
 #include "TemporaryStubbing.h"

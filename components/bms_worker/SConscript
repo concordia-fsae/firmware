@@ -208,7 +208,7 @@ platform_src_files.extend(
 
 uds_srcs = [
     ISOTP_DIR.File("isotp.c"),
-    UDS_DIR.File("src/udsServer.c"),
+    UDS_DIR.File("src/lib_udsServer.c"),
 ]
 
 def render_generated_files(options, renderer, output_dir):

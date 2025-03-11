@@ -1,0 +1,19 @@
+#!/usr/bin/python
+from SCons.Script import Import, Return
+
+Import("*")
+
+target_sconscript = None
+
+match(TARGET):
+    case "vcpdu":
+        target_sconscript = "pdu/SConscript"
+    case "vcfront":
+        target_sconscript = "front/SConscript"
+    case "vcrear":
+        target_sconscript = "rear/SConscript"
+    case _:
+        raise Exception(f"Controller '{TARGET}' is not supported")
+
+artifacts = SConscript(target_sconscript, exports=["CONFIG_IDS", "PLATFORM_ENV", "NETWORK_ENV"])
+Return('artifacts')
