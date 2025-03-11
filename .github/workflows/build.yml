@@ -30,12 +30,6 @@ on:
       archive-url:
         description: "The link to the github archive of the build artifacts"
         value: ${{ jobs.build.outputs.archive-url }}
-      sha:
-        description: "The current branch's SHA"
-        value: ${{ jobs.pull.outputs.sha }}
-      short-sha:
-        description: "The current branch's short (7) SHA"
-        value: ${{ jobs.pull.outputs.short-sha }}
 
 jobs:
   build:
@@ -44,17 +38,17 @@ jobs:
       image: docker://ghcr.io/concordia-fsae/containers/${{ inputs.container }}
     outputs:
       archive-url: ${{ steps.build.outputs.archive-url }}
-      sha: ${{ steps.clean_pull.outputs.sha }}
-      short-sha: ${{ steps.clean_pull.outputs.short-sha }}
     steps:
       - name: Clean
         uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
       - name: Pull Branch
-        id: pull
-        uses: concordia-fsae/firmware/.github/actions/pull/@master
+        uses: actions/checkout@v4
         with:
-          repo: concordia-fsae/firmware
+          repository: concordia-fsae/firmware
           ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          show-progress: 'true'
+          submodules: 'recursive'
       - name: Build Targets
         id: build
         uses: concordia-fsae/firmware/.github/actions/build/@master
