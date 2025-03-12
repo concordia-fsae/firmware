@@ -25,7 +25,7 @@
 #include "HW_can.h"
 #include "ModuleDesc.h"
 #include "task.h"
-#include "uds.h"
+#include "lib_uds.h"
 #include "LIB_app.h"
 #include "Utility.h"
 

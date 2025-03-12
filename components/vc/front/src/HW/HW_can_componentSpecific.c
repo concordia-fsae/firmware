@@ -19,8 +19,6 @@
 
 #include "NetworkDefines_generated.h"
 #include "MessageUnpack_generated.h"
-#include "uds.h"
-#include "uds_componentSpecific.h"
 #include "LIB_app.h"
 
 /******************************************************************************
