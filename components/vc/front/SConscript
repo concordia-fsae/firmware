@@ -26,6 +26,7 @@ SHARED_LIBS = SHARED_CODE.Dir("libs")
 SHARED_APP = SHARED_CODE.Dir("app")
 SHARED_HW = SHARED_CODE.Dir("HW")
 SHARED_RTOS = SHARED_CODE.Dir("RTOS")
+SHARED_DRV = SHARED_CODE.Dir("DRV")
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -127,6 +128,7 @@ LIBS_INCLUDE_DIRS = [
     SHARED_APP,
     SHARED_HW,
     SHARED_RTOS,
+    SHARED_DRV,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -159,6 +161,9 @@ project_hw_files = [
     HW_DIR.File("HW_tim.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
+    HW_DIR.File("drv_tps20xx_componentSpecific.c"),
+    SHARED_DRV.File("drv_tps20xx.c"),
+    SHARED_DRV.File("drv_timer.c"),
 ]
 
 project_source_files += project_hw_files
