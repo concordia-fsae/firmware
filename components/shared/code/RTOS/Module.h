@@ -50,5 +50,11 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+void      Module_componentSpecific_Init(void);
+void      Module_componentSpecific_1kHz(void);
+void      Module_componentSpecific_100Hz(void);
+void      Module_componentSpecific_10Hz(void);
+void      Module_componentSpecific_1Hz(void);
+
 float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task);
-void Module_ApplicationIdleHook(void);
+void      Module_ApplicationIdleHook(void);
