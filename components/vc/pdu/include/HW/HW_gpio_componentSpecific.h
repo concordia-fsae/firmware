@@ -50,11 +50,11 @@ typedef enum
     HW_GPIO_RESET_5V,
     HW_GPIO_VCU_SFTY_EN,
     HW_GPIO_CAN2_RX,
-    HW_GPIO_CAN2_TX,
+    HW_GPIO_CAN2_TX, /*removed 2 from ..._2TX*/
     HW_GPIO_VC1_EN,
     HW_GPIO_VC2_EN,
     HW_GPIO_LP4_LATCH,
-    HW_GPIO_HP_SPI_CS_EN, /*ADDED ..._SPI_CS_...*/
+    HW_GPIO_HP_SPI_CS_EN, /*ADDED ..._SPI_CS_...*/ /*CS ELEMENT*/
     HW_GPIO_DIA_EN,
     HW_GPIO_5V_FLT2,
     HW_GPIO_5V_EN1,
