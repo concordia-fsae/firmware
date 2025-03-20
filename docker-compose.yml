@@ -4,7 +4,7 @@ services:
     container_name: buildroot
     hostname: builder
     volumes: # mount pts
-      - ./:/firmware
+      - .:/firmware
     user: builduser
     tty: true # open terminal for interacting
     stdin_open: true
