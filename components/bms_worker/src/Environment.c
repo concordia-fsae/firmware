@@ -19,11 +19,9 @@
 #include "HW_adc.h"
 #include "HW_SHT40.h"
 #include "IO.h"
-#include "THERMISTORS.h"
-#include "NCP21XV103J03RA.h"
-#include "MF52C1103F3380.h"
+#include "lib_thermistors.h"
+#include "lib_voltageDivider.h"
 #include "BatteryMonitoring.h"
-
 
 /******************************************************************************
  *                              D E F I N E S
@@ -33,9 +31,8 @@
 #define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
 #define TEMP_CHIP_FROM_V(v)   (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
 
-#define THERM_PULLUP  10000
-#define RES_FROM_V(v) (THERM_PULLUP * ((v / ADC_REF_VOLTAGE) / (1 - (v / ADC_REF_VOLTAGE))))
-
+#define THERM_PULLUP  10000.0F
+#define RES_FROM_V(v) (lib_voltageDivider_getRFromVKnownPullUp(v, THERM_PULLUP, ADC_REF_VOLTAGE))
 
 /******************************************************************************
  *                              E X T E R N S
@@ -106,16 +103,16 @@ static void Environment10Hz_PRD()
     }
 
     ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu);
-    ENV.values.board.brd_temp[BRD1] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD1])) - KELVIN_OFFSET);
-    ENV.values.board.brd_temp[BRD2] = (THERM_GetTempFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD2])) - KELVIN_OFFSET);
+    ENV.values.board.brd_temp[BRD1] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD1]));
+    ENV.values.board.brd_temp[BRD2] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD2]));
 
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
-        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux1[i])) - KELVIN_OFFSET) : 0;
-        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux2[i])) - KELVIN_OFFSET) : 0;
+        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux1[i])) : 0.0F;
+        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux2[i])) : 0.0F;
         if (i < 4)
         {
-            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? (THERM_GetTempFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux3[i])) - KELVIN_OFFSET) : 0;
+            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux3[i])): 0.0F;
         }
     }
 
