@@ -9,6 +9,7 @@
 
 /**< Module Header */
 #include "Module.h"
+#include "drv_tps20xx.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -25,3 +26,23 @@ const ModuleDesc_S* modules[] = {
     &CANIO_rx,
     &CANIO_tx,
 };
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+void Module_componentSpecific_Init(void)
+{
+    // Initialize drivers prior to application runtime
+    drv_tps20xx_init();
+
+}
+
+/**
+ * #brief Run the pre 10Hz task functions
+ * @note typically reserved for drivers
+ */
+void Module_componentSpecific_10Hz(void)
+{
+    drv_tps20xx_run();
+}

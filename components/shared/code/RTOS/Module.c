@@ -39,10 +39,22 @@ static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
  ******************************************************************************/
 
 /**
+ * @brief Function to be called before all modules are initialized
+ * @note This function can be overridden with a user defined function
+ */
+#pragma weak Module_componentSpecific_Init
+void Module_componentSpecific_Init(void)
+{
+
+}
+
+/**
  * @brief  Module Init function
  */
 void Module_Init(void)
 {
+    Module_componentSpecific_Init();
+
     /**< Run each of the modules Init function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -54,10 +66,22 @@ void Module_Init(void)
 }
 
 /**
+ * @brief Function to be called before all modules run their 1kHz task
+ * @note This function can be overridden with a user defined function
+ */
+#pragma weak Module_componentSpecific_1kHz
+void Module_componentSpecific_1kHz(void)
+{
+
+}
+
+/**
  * @brief  1kHz periodic function
  */
 void Module_1kHz_TSK(void)
 {
+    Module_componentSpecific_1kHz();
+
     /**< Run each of the modules 1kHz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -71,10 +95,22 @@ void Module_1kHz_TSK(void)
 }
 
 /**
+ * @brief Function to be called before all modules run their 100Hz task
+ * @note This function can be overridden with a user defined function
+ */
+#pragma weak Module_componentSpecific_100Hz
+void Module_componentSpecific_100Hz(void)
+{
+
+}
+
+/**
  * @brief  100Hz periodic function
  */
 void Module_100Hz_TSK(void)
 {
+    Module_componentSpecific_100Hz();
+
     /**< Run each of the modules 100Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -88,10 +124,22 @@ void Module_100Hz_TSK(void)
 }
 
 /**
+ * @brief Function to be called before all modules run their 10Hz task
+ * @note This function can be overridden with a user defined function
+ */
+#pragma weak Module_componentSpecific_10Hz
+void Module_componentSpecific_10Hz(void)
+{
+
+}
+
+/**
  * @brief  10Hz periodic function
  */
 void Module_10Hz_TSK(void)
 {
+    Module_componentSpecific_10Hz();
+
     /**< Run each of the modules 10Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
@@ -105,10 +153,22 @@ void Module_10Hz_TSK(void)
 }
 
 /**
+ * @brief Function to be called before all modules run their 1Hz task
+ * @note This function can be overridden with a user defined function
+ */
+#pragma weak Module_componentSpecific_1Hz
+void Module_componentSpecific_1Hz(void)
+{
+
+}
+
+/**
  * @brief  1Hz periodic function
  */
 void Module_1Hz_TSK(void)
 {
+    Module_componentSpecific_1Hz();
+
     /**< Run each of the modules 1Hz function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
