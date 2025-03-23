@@ -17,8 +17,9 @@
 #include <string.h>
 
 /**< Driver Includes */
-#include "HW_HIH.h"
+#include "drv_hih.h"
 #include "IO.h"
+#include "HW_i2c.h"
 
 
 /******************************************************************************
@@ -36,6 +37,18 @@
 
 ENV_S ENV;
 
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static HW_I2C_Device_S i2c_hih = {
+    .addr   =  0x27,
+    .handle = &i2c,
+};
+
+static drv_hih_S hih_chip = {
+    .dev = &i2c_hih,
+};
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -54,7 +67,7 @@ static void ENV_init()
     memset(&ENV, 0x00, sizeof(ENV));
     ENV.state = ENV_INIT;
 
-    if (!HIH_init())
+    if (!drv_hih_init(&hih_chip))
     {
         // ENV.state = ENV_ERROR;
     }
@@ -68,12 +81,12 @@ static void ENV_init()
  */
 static void ENV10Hz_PRD()
 {
-    if (hih_chip.data.state == HIH_MEASURING)
+    if (drv_hih_getState(&hih_chip) == DRV_HIH_MEASURING)
     {
-        if (HIH_getData())
+        if (drv_hih_getData(&hih_chip))
         {
-            ENV.board.ambient_temp = ((float32_t)hih_chip.data.temp)/16382*165-40;
-            ENV.board.rh           = ((float32_t)hih_chip.data.rh)/16382*100;
+            ENV.board.ambient_temp = drv_hih_getTemperature(&hih_chip);
+            ENV.board.rh           = drv_hih_getRH(&hih_chip);
         }
     }
 
@@ -90,7 +103,7 @@ static void ENV1Hz_PRD()
         case ENV_INIT:
             break;
         case ENV_RUNNING:
-            HIH_startConversion();
+            drv_hih_startConversion(&hih_chip);
             break;
         case ENV_ERROR:
             break;

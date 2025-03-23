@@ -157,3 +157,25 @@ signals:
         max: 75
       signedness: unsigned
     continuous: true
+
+  packRH:
+    description: The relative humidity at the BMSB
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 100
+      resolution: 1
+    continuous: true
+
+  packAmbient:
+    description: The ambient temperature measured in the pack
+    unit: "degC"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 100
+      resolution: 1
+    continuous: true

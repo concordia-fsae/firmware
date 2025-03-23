@@ -62,4 +62,6 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define transmit_BMSB_currentLimit (SYS_SFT_checkMCTimeout() == false)
 #define set_maxCharge(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit);
 #define set_maxDischarge(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit);
+#define set_packRH(m,b,n,s) set(m,b,n,s, ENV.board.rh)
+#define set_packTemperature(m,b,n,s) set(m,b,n,s, ENV.board.ambient_temp)
 #include "TemporaryStubbing.h"
