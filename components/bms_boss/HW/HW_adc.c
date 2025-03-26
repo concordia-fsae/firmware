@@ -17,6 +17,7 @@
 // Firmware Includes
 #include "HW.h"
 #include "HW_adc.h"
+#include "HW_dma.h"
 
 // Other Includes
 #include "IO.h"
@@ -29,9 +30,6 @@
 
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
 #define ADC_CALIBRATION_TIMEOUT                 10U
-
-#define ADC_MAX_COUNT 4095
-#define ADC_REF_VOLTAGE 3.0F
 
 #define ADC_N_CHANNEL ADC_CHANNEL_0
 #define ADC_P_CHANNEL ADC_CHANNEL_1
@@ -49,7 +47,7 @@ DMA_HandleTypeDef hdma_adc1;
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_ADC_unpackBuffer(bufferHalf_E half);
+void HW_ADC_unpackBuffer(HW_dma_bufferHalf_E half);
 
 
 /******************************************************************************
@@ -59,7 +57,7 @@ void HW_ADC_unpackBuffer(bufferHalf_E half);
 /**
  * @brief  Init function for ADC firmware
  */
-void HW_ADC_init(void)
+HW_StatusTypeDef_E HW_ADC_init(void)
 {
     ADC_MultiModeTypeDef   multimode = { 0 };
     ADC_ChannelConfTypeDef sConfig   = { 0 };
@@ -130,6 +128,8 @@ void HW_ADC_init(void)
     }
 
     HAL_ADC_Start(&hadc2);
+
+    return HW_OK;
 }
 
 /**
@@ -204,9 +204,9 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
+HW_StatusTypeDef_E HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
 {
-    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK;
+    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK ? HW_OK : HW_ERROR;
 }
 
 /**
@@ -218,7 +218,7 @@ bool HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
+HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
 {
-    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK;
+    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK ? HW_OK : HW_ERROR;
 }
