@@ -1,6 +1,6 @@
 /**
- * @file HW_dma.h
- * @brief  Header file for DMA firmware
+ * @file HW_adc_componentSpecific.h
+ * @brief  Header file for ADC firmware
  */
 
 #pragma once
@@ -9,22 +9,18 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "SystemConfig.h"
+#include "HW.h"
 
 /******************************************************************************
- *                             T Y P E D E F S
+ *                              D E F I N E S
  ******************************************************************************/
 
-typedef enum
-{
-    BUFFER_HALF_LOWER = 0U,
-    BUFFER_HALF_UPPER,
-} HW_dma_bufferHalf_E;
+#define ADC_REF_VOLTAGE 3.0f
 
 /******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ *                              E X T E R N S
  ******************************************************************************/
 
-void HW_DMA_init(void);
-void HW_DMA_deInit(void);
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
+extern DMA_HandleTypeDef hdma_adc1;
