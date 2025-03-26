@@ -158,6 +158,7 @@ src_files = [
     CELLS_DIR.File("P42A.c"),
     SHARED_LIBS.File("LIB_app.c"),
     SRC_DIR.File("CANIO_componentSpecific.c"),
+    SHARED_LIBS.File("LIB_simpleFilter.c"),
 ]
 
 hw_files = [

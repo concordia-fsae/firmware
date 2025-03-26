@@ -27,27 +27,17 @@
 #include "ModuleDesc.h"
 #include "Utility.h"
 #include "FeatureDefines_generated.h"
-
+#include "LIB_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_VOLTAGE_DIVISION    2U /**< Voltage division for cell voltage output */
-
+#define ADC_VOLTAGE_DIVISION    2.0f /**< Voltage division for cell voltage output */
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    ADC_STATE_INIT = 0,
-    ADC_STATE_CALIBRATION,
-    ADC_STATE_RUNNING,
-    ADC_STATE_CALIBRATION_FAILED,
-    ADC_STATE_COUNT,
-} adcState_E;
 
 typedef enum
 {
@@ -64,10 +54,10 @@ _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length
 
 typedef struct
 {
-    adcState_E     adcState;
-    uint32_t       adcBuffer[IO_ADC_BUF_LEN];
-    simpleFilter_S adcData[ADC_CHANNEL_COUNT];
-    simpleFilter_S bmsData;
+    HW_adc_state_E     adcState;
+    uint32_t           adcBuffer[IO_ADC_BUF_LEN];
+    LIB_simpleFilter_S adcData[ADC_CHANNEL_COUNT];
+    LIB_simpleFilter_S bmsData;
 } io_S;
 
 
@@ -144,8 +134,7 @@ static void IO10Hz_PRD(void)
 
         for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
         {
-            io.adcData[i].value  = (io.adcData[i].count != 0) ? ((float32_t)io.adcData[i].raw) / io.adcData[i].count : 0;
-            io.adcData[i].value *= ADC_REF_VOLTAGE / ADC_MAX_VAL;
+            io.adcData[i].value *= ADC_REF_VOLTAGE / ADC_MAX_COUNT;
         }
 
         IO.temp.mcu               = io.adcData[ADC_CHANNEL_TEMP_MCU].value;
@@ -185,8 +174,7 @@ void IO10kHz_CB(void)
 
             IO_Cells_unpackADCBuffer();
 
-            io.bmsData.value      = (io.bmsData.count != 0) ? ((float32_t)io.bmsData.raw) / io.bmsData.count : 0;
-            io.bmsData.value     *= ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE / ADC_MAX_VAL;
+            io.bmsData.value     *= ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 
             IO.cell[current_cell] = io.bmsData.value;
 
@@ -207,8 +195,7 @@ void IO10kHz_CB(void)
             IO_Cells_unpackADCBuffer();
             if (io.bmsData.count != 0)
             {
-                io.bmsData.value  = ((float32_t)io.bmsData.raw / io.bmsData.count);
-                io.bmsData.value *= (ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE) / ADC_MAX_VAL;
+                io.bmsData.value *= (ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE) / ADC_MAX_COUNT;
             }
 
             IO.segment        = io.bmsData.value;
@@ -239,14 +226,17 @@ void IO_Temps_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
     {
-        io.adcData[i].raw   = 0;
-        io.adcData[i].count = 0;
+        LIB_simpleFilter_clear(&io.adcData[i]);
     }
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
-        io.adcData[i % ADC_CHANNEL_COUNT].raw += io.adcBuffer[i] & 0xffff;
-        io.adcData[i % ADC_CHANNEL_COUNT].count++;
+        LIB_simpleFilter_increment(&io.adcData[i % ADC_CHANNEL_COUNT], (float32_t)(io.adcBuffer[i] & 0xffff));
+    }
+
+    for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
+    {
+        LIB_simpleFilter_average(&io.adcData[i]);
     }
 }
 
@@ -255,12 +245,12 @@ void IO_Temps_unpackADCBuffer(void)
  */
 void IO_Cells_unpackADCBuffer(void)
 {
-    io.bmsData.raw   = 0;
-    io.bmsData.count = 0;
+    LIB_simpleFilter_clear(&io.bmsData);
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
-        io.bmsData.raw += io.adcBuffer[i] >> 16;
-        io.bmsData.count++;
+        LIB_simpleFilter_increment(&io.bmsData, (float32_t)(io.adcBuffer[i] >> 16U));
     }
+
+    LIB_simpleFilter_average(&io.bmsData);
 }
