@@ -1,6 +1,6 @@
 /**
- * @file HW.h
- * @brief  Header file for generic firmware functions
+ * @file HW_tim.h
+ * @brief  Header file for TIM firmware
  */
 
 #pragma once
@@ -9,26 +9,27 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "stdbool.h"
-#include "stdint.h"
+// Firmware Includes
+#include "HW.h"
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define HW_TIM_TICK TIM2
+#define HW_TIM_TICK_IRQN TIM2_IRQn
+#define HW_TIM_TICK_ENABLECLK __HAL_RCC_TIM2_CLK_ENABLE
+#define HW_TIM_TICK_GETCLKFREQ 2*HAL_RCC_GetPCLK1Freq
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum 
+typedef enum
 {
-  HW_OK = 0x00U,
-  HW_ERROR = 0x01U
-} HW_StatusTypeDef_E;
+    HW_TIM_PORT_COUNT,
+} HW_TIM_port_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
-
-bool     HW_init(void);
-uint32_t HW_getTick(void);
-void     HW_delay(uint32_t delay);
-void     HW_usDelay(uint8_t us);
-void     HW_systemHardReset(void);

@@ -14,9 +14,13 @@
 #include "stdbool.h"
 
 // Firmware Includes
-#include "include/HW_tim.h"
 #include "stm32f1xx.h"
+#include "HW_tim.h"
 
+#include "FeatureDefines_generated.h"
+
+#if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105) || \
+    (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB)
 typedef struct
 {
     volatile uint32_t const CPUID;
@@ -38,6 +42,9 @@ typedef struct
 
 #define AIRCR_RESET        (0x05FA0000UL)
 #define AIRCR_RESET_REQ    (AIRCR_RESET | 0x04UL)
+#else
+#error "Chipset not supported"
+#endif
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -46,26 +53,51 @@ typedef struct
 /**
  * @brief  Initializes the generic low-level firmware
  *
- * @retval HW_OK  
+ * @retval Always true 
  */
 HW_StatusTypeDef_E HW_init(void) 
 {
-    HAL_Init();
-    return HW_OK;
+    return HAL_Init() == HAL_OK ? HW_OK : HW_ERROR;
 }
 
 /**
- * @brief Deinitializes the generic low-level firmware
+ * @brief  Get the number of ticks since clock start
  *
- * @retval HW_OK
+ * @retval Number of ticks
  */
-HW_StatusTypeDef_E HW_deInit(void)
+uint32_t HW_getTick(void)
 {
-    HAL_DeInit();
-    return HW_OK;
+    return HAL_GetTick();
+}
+
+/**
+ * @brief  Delay the execution in blocking mode for amount of ticks
+ *
+ * @param delay Number of ticks to delay in blocking mode
+ */
+void HW_delay(uint32_t delay)
+{
+    HAL_Delay(delay);
+}
+
+/**
+ * @brief  This function is blocking and should be avoided
+ *
+ * @param us Microsecond blocking delay
+ */
+void HW_usDelay(uint8_t us)
+{
+    uint64_t us_start = HW_TIM_getBaseTick();
+
+    while (HW_TIM_getBaseTick() < us_start + us);
 }
 
 void HW_systemHardReset(void)
 {
+#if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105) || \
+    (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB)
     pSCB->AIRCR = AIRCR_RESET_REQ;
+#else
+#error "Chipset not supported"
+#endif
 }
