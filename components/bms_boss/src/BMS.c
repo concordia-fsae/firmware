@@ -11,7 +11,7 @@
 #include "HW_gpio.h"
 
 #include "IMD.h"
-#include "IO.h"
+#include "drv_inputAD.h"
 #include "Module.h"
 #include "Sys.h"
 #include "SystemConfig.h"
@@ -98,7 +98,7 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
-    BMS.pack_current = IO.current / CURRENT_SENSE_V_per_A;
+    BMS.pack_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) / CURRENT_SENSE_V_per_A;
 
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {
@@ -118,13 +118,15 @@ static void BMS100Hz_PRD(void)
         HW_GPIO_writePin(HW_GPIO_IMD_STATUS, false);
     }
 
-    if (BMS.fault || !IO.imd_ok || !IO.master_switch)
+    if (BMS.fault ||
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_LOW) ||
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_INPUTAD_LOGIC_LOW))
     {
         SYS_SFT_openContactors();
     }
     else
     {
-        if (IO.master_switch)
+        if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_HIGH)
         {
             if (SYS.contacts == SYS_CONTACTORS_OPEN)
             {
