@@ -44,13 +44,13 @@ HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint
 }
 
 /**
- * @brief  Get analog input voltage in 0.1mV from ADC count
+ * @brief  Get analog input voltage in V from ADC count
  *
  * @param cnt ADC count
  *
- * @retval unit:  0.01mV
+ * @retval unit:  V
  */
 float32_t HW_ADC_getVFromCount(uint16_t cnt)
 {
-    return ((float32_t)cnt) * ((float32_t)ADC_REF_VOLTAGE / (float32_t)ADC_MAX_COUNT);
+    return ((float32_t)cnt) * (float32_t)(((float32_t)ADC_REF_VOLTAGE) / ((float32_t)ADC_MAX_COUNT));
 }
