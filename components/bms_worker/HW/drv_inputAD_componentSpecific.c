@@ -8,12 +8,9 @@
  ******************************************************************************/
 
 /**< Module Header */
-#include "IO.h"
+#include "drv_inputAD_private.h"
 
 /**< System Includes*/
-#include "FeatureDefs.h"
-#include "Types.h"
-#include <stdint.h>
 #include <string.h>
 
 /**< Firmware Includes */
@@ -22,11 +19,11 @@
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_tim.h"
+#include "HW_NX3L4051PW.h"
+#include "BatteryMonitoring.h"
 
 /**< Other Includes */
 #include "ModuleDesc.h"
-#include "Utility.h"
-#include "FeatureDefines_generated.h"
 #include "LIB_simpleFilter.h"
 
 /******************************************************************************
@@ -39,51 +36,28 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum
-{
-    ADC_CHANNEL_TEMP_MCU = 0x00,
-    ADC_CHANNEL_TEMP_MUX1,
-    ADC_CHANNEL_TEMP_MUX2,
-    ADC_CHANNEL_TEMP_MUX3,
-    ADC_CHANNEL_TEMP_BRD1,
-    ADC_CHANNEL_TEMP_BRD2,
-    ADC_CHANNEL_COUNT,
-} adcChannels_E;
-_Static_assert(IO_ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0,       "ADC Buffer Length should be a multiple of the number of ADC channels");
-_Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
-
 typedef struct
 {
     HW_adc_state_E     adcState;
-    uint32_t           adcBuffer[IO_ADC_BUF_LEN];
-    LIB_simpleFilter_S adcData[ADC_CHANNEL_COUNT];
-    LIB_simpleFilter_S bmsData;
+    uint32_t           adcBuffer[DRV_INPUTAD_ADC_BUF_LEN];
+    LIB_simpleFilter_S adcData_bank1[ADC_BANK1_CHANNEL_COUNT];
+    LIB_simpleFilter_S adcData_bank2[ADC_BANK2_CHANNEL_COUNT];
 } io_S;
-
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
+drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
+};
 static io_S io;
-
-/******************************************************************************
- *                           P U B L I C  V A R S
- ******************************************************************************/
-
-/**
- * @brief  Stores the public IO struct
- */
-IO_S IO;
-
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void IO_Temps_unpackADCBuffer(void);
-void IO_Cells_unpackADCBuffer(void);
-
+void drv_inputAD_private_unpackADCBufferCells(void);
+void drv_inputAD_private_unpackADCBufferTemps(void);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -92,10 +66,11 @@ void IO_Cells_unpackADCBuffer(void);
 /**
  * @brief  IO Module Init function
  */
-static void IO_init(void)
+static void drv_inputAD_init_componentSpecific(void)
 {
     memset(&io, 0x00, sizeof(io));
-    memset(&IO, 0x00, sizeof(IO));
+
+    drv_inputAD_private_init();
 
     NX3L_init();
     NX3L_enableMux();
@@ -103,7 +78,7 @@ static void IO_init(void)
 
     if ((HW_ADC_calibrate(&hadc1) == HW_OK) && (HW_ADC_calibrate(&hadc2) == HW_OK))
     {
-        HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
+        HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, DRV_INPUTAD_ADC_BUF_LEN);
         io.adcState = ADC_STATE_RUNNING;
     }
     else
@@ -112,7 +87,7 @@ static void IO_init(void)
     }
 }
 
-static void IO10Hz_PRD(void)
+static void drv_inputAD_10Hz_PRD(void)
 {
     static NX3L_MUXChannel_E current_sel = NX3L_MUX1;
 
@@ -126,20 +101,19 @@ static void IO10Hz_PRD(void)
     }
     else
     {
-        IO_Temps_unpackADCBuffer();
+        drv_inputAD_private_unpackADCBufferTemps();
 
-        for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
+        for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
         {
-            io.adcData[i].value *= ADC_REF_VOLTAGE / ADC_MAX_COUNT;
+            io.adcData_bank1[i].value = HW_ADC_getVFromCount((uint16_t)io.adcData_bank1[i].value);
         }
 
-        IO.temp.mcu               = io.adcData[ADC_CHANNEL_TEMP_MCU].value;
-        IO.temp.board[BRD1]       = io.adcData[ADC_CHANNEL_TEMP_BRD1].value;
-        IO.temp.board[BRD2]       = io.adcData[ADC_CHANNEL_TEMP_BRD2].value;
-
-        IO.temp.mux1[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX1].value;
-        IO.temp.mux2[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX2].value;
-        IO.temp.mux3[current_sel] = io.adcData[ADC_CHANNEL_TEMP_MUX3].value;
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, io.adcData_bank1[ADC_BANK1_CHANNEL_MCU_TEMP].value);
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1, io.adcData_bank1[ADC_BANK1_CHANNEL_BOARD1].value);
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2, io.adcData_bank1[ADC_BANK1_CHANNEL_BOARD2].value);
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + current_sel, io.adcData_bank1[ADC_BANK1_CHANNEL_MUX1].value);
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + current_sel, io.adcData_bank1[ADC_BANK1_CHANNEL_MUX2].value);
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, io.adcData_bank1[ADC_BANK1_CHANNEL_MUX3].value);
 
         if (++current_sel == NX3L_MUX_COUNT)
         {
@@ -148,6 +122,8 @@ static void IO10Hz_PRD(void)
 
         NX3L_setMux(current_sel);
     }
+
+    drv_inputAD_private_run();
 }
 
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
@@ -168,11 +144,11 @@ void IO10kHz_CB(void)
         {
             const MAX_selectedCell_E current_cell = BMS_getCurrentOutputCell();
 
-            IO_Cells_unpackADCBuffer();
+            drv_inputAD_private_unpackADCBufferCells();
 
-            io.bmsData.value     *= ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
+            io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP].value = HW_ADC_getVFromCount((uint16_t)io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP].value) * ADC_VOLTAGE_DIVISION;
 
-            IO.cell[current_cell] = io.bmsData.value;
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell, io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP].value);
 
             if (current_cell == MAX_CELL1)
             {
@@ -188,24 +164,19 @@ void IO10kHz_CB(void)
         }
         else if (BMS.state == BMS_SAMPLING)
         {
-            IO_Cells_unpackADCBuffer();
-            if (io.bmsData.count != 0)
-            {
-                io.bmsData.value *= (ADC_VOLTAGE_DIVISION * ADC_REF_VOLTAGE) / ADC_MAX_COUNT;
-            }
-
-            IO.segment        = io.bmsData.value;
+            drv_inputAD_private_unpackADCBufferCells();
+            io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP].value = HW_ADC_getVFromCount((uint16_t)io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP].value) * ADC_VOLTAGE_DIVISION;
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT, io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP].value);
         }
     }
 }
-
 
 /**
  * @brief  IO Module descriptor
  */
 const ModuleDesc_S IO_desc = {
-    .moduleInit       = &IO_init,
-    .periodic10Hz_CLK = &IO10Hz_PRD,
+    .moduleInit       = &drv_inputAD_init_componentSpecific,
+    .periodic10Hz_CLK = &drv_inputAD_10Hz_PRD,
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
     .periodic10kHz_CLK = &IO10kHz_PRD,
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
@@ -218,35 +189,35 @@ const ModuleDesc_S IO_desc = {
 /**
  * @brief  Unpack ADC buffer for the thermistor measurements
  */
-void IO_Temps_unpackADCBuffer(void)
+void drv_inputAD_private_unpackADCBufferTemps(void)
 {
-    for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
+    for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        LIB_simpleFilter_clear(&io.adcData[i]);
+        LIB_simpleFilter_clear(&io.adcData_bank1[i]);
     }
 
-    for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
+    for (uint16_t i = 0; i < DRV_INPUTAD_DIGITAL_COUNT; i++)
     {
-        LIB_simpleFilter_increment(&io.adcData[i % ADC_CHANNEL_COUNT], (io.adcBuffer[i] & 0xffff));
+        LIB_simpleFilter_increment(&io.adcData_bank1[i % ADC_BANK1_CHANNEL_COUNT], (io.adcBuffer[i] & 0xffff));
     }
 
-    for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
+    for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        LIB_simpleFilter_average(&io.adcData[i]);
+        LIB_simpleFilter_average(&io.adcData_bank1[i]);
     }
 }
 
 /**
  * @brief  Unpack ADC buffer for the cell measurements
  */
-void IO_Cells_unpackADCBuffer(void)
+void drv_inputAD_private_unpackADCBufferCells(void)
 {
-    LIB_simpleFilter_clear(&io.bmsData);
+    LIB_simpleFilter_clear(&io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP]);
 
-    for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
+    for (uint16_t i = 0; i < DRV_INPUTAD_DIGITAL_COUNT; i++)
     {
-        LIB_simpleFilter_increment(&io.bmsData, (io.adcBuffer[i] >> 16U));
+        LIB_simpleFilter_increment(&io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP], (io.adcBuffer[i] >> 16U));
     }
 
-    LIB_simpleFilter_average(&io.bmsData);
+    LIB_simpleFilter_average(&io.adcData_bank2[ADC_BANK2_CHANNEL_BMS_CHIP]);
 }

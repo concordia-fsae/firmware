@@ -18,6 +18,27 @@
 #define ADC_REF_VOLTAGE 3.0f
 
 /******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef enum
+{
+    ADC_BANK1_CHANNEL_MCU_TEMP,
+    ADC_BANK1_CHANNEL_MUX1,
+    ADC_BANK1_CHANNEL_MUX2,
+    ADC_BANK1_CHANNEL_MUX3,
+    ADC_BANK1_CHANNEL_BOARD1,
+    ADC_BANK1_CHANNEL_BOARD2,
+    ADC_BANK1_CHANNEL_COUNT,
+} HW_adcChannels_bank1_E;
+
+typedef enum
+{
+    ADC_BANK2_CHANNEL_BMS_CHIP,
+    ADC_BANK2_CHANNEL_COUNT,
+} HW_adcChannels_bank2_E;
+
+/******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 

@@ -23,7 +23,7 @@
 #include <stdint.h>
 
 #include "CELL.h"
-#include "IO.h"
+#include "drv_inputAD.h"
 
 #include "MessageUnpack_generated.h"
 #include "FeatureDefines_generated.h"
@@ -145,7 +145,7 @@ static void BMS100Hz_PRD()
         else if (HW_TIM_getTimeMS() >= max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
             max_chip.config.sampling_start       = UINT32_MAX;
-            BMS.pack_voltage                     = IO.segment * 16;
+            BMS.pack_voltage                     = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT) * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
             BMS.state                            = BMS_HOLDING;
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
@@ -361,7 +361,7 @@ void BMS_calcSegStats(void)
 {
     for (uint8_t i = 0; i < BMS.connected_cells; i++)
     {
-        BMS.cells[i].voltage = IO.cell[i] + BMS.cells[i].parasitic_corr;
+        BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i) + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > 2.0f) && (BMS.cells[i].voltage < 4.5f))
         {
 #if BMS_FAULTS
@@ -505,7 +505,7 @@ void BMS_measurementComplete(void)
     {
         for (uint8_t i = 0; i < BMS.connected_cells; i++)
         {
-            BMS.cells[i].parasitic_corr = (IO.cell[i]) / 128;
+            BMS.cells[i].parasitic_corr = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i)) / 128.0f;
             BMS.state                   = BMS_WAITING;
         }
     }

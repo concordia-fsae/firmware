@@ -16,7 +16,7 @@
 #include "FeatureDefines_generated.h"
 
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-#include "IO.h"
+#include "drv_inputAD.h"
 #endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
 
 /******************************************************************************
