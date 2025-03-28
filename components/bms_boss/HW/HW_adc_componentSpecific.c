@@ -20,7 +20,6 @@
 #include "HW_dma.h"
 
 // Other Includes
-#include "IO.h"
 #include "SystemConfig.h"
 
 /******************************************************************************
@@ -102,7 +101,7 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 2;
+    hadc2.Init.NbrOfConversion       = 1;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
@@ -110,14 +109,6 @@ HW_StatusTypeDef_E HW_ADC_init(void)
 
     sConfig.Channel      = ADC_P_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
-    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }
-
-    sConfig.Channel      = ADC_P_CHANNEL;
-    sConfig.Rank         = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     {

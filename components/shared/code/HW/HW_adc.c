@@ -52,5 +52,5 @@ HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint
  */
 float32_t HW_ADC_getVFromCount(uint16_t cnt)
 {
-    return ((float32_t)cnt) * ((float32_t)ADC_REF_VOLTAGE / (float32_t)ADC_MAX_COUNT);
+    return ((float32_t)cnt) * (((float32_t)ADC_REF_VOLTAGE) / ((float32_t)ADC_MAX_COUNT));
 }
