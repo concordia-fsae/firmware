@@ -31,8 +31,8 @@
  * @brief  Modules run by the Module Manager. Order will apply to execution.
  */
 static const ModuleDesc_S* modules[] = {
+    &drv_inputAD_desc,
     &ENV_desc,
-    &IO_desc,
     &BMS_desc,
     &SYS_desc,
 #if APP_UDS
