@@ -158,11 +158,13 @@ src_files = [
     CELLS_DIR.File("P42A.c"),
     SHARED_LIBS.File("LIB_app.c"),
     SRC_DIR.File("CANIO_componentSpecific.c"),
+    SHARED_LIBS.File("LIB_simpleFilter.c"),
 ]
 
 hw_files = [
     SHARED_HW.File("HW.c"),
-    HW_DIR.File("HW_adc.c"),
+    SHARED_HW.File("HW_adc.c"),
+    HW_DIR.File("HW_adc_componentSpecific.c"),
     HW_DIR.File("HW_can_componentSpecific.c"),
     HW_DIR.File("HW_dma_componentSpecific.c"),
     HW_DIR.File("HW_gpio_componentSpecific.c"),

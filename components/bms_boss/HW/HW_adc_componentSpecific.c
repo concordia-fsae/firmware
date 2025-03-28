@@ -15,12 +15,13 @@
 #include "string.h"
 
 // Firmware Includes
+#include "HW.h"
 #include "HW_adc.h"
+#include "HW_dma.h"
 
 // Other Includes
-#include "BatteryMonitoring.h"
+#include "IO.h"
 #include "SystemConfig.h"
-
 
 /******************************************************************************
  *                              D E F I N E S
@@ -28,12 +29,9 @@
 
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
 #define ADC_CALIBRATION_TIMEOUT                 10U
-#define ADC_CHANNEL_CELL_MEASUREMENT            ADC_CHANNEL_0
-#define ADC_CHANNEL_MUX1                        ADC_CHANNEL_1
-#define ADC_CHANNEL_MUX2                        ADC_CHANNEL_2
-#define ADC_CHANNEL_MUX3                        ADC_CHANNEL_3
-#define ADC_CHANNEL_BRD1                        ADC_CHANNEL_4
-#define ADC_CHANNEL_BRD2                        ADC_CHANNEL_5
+
+#define ADC_N_CHANNEL ADC_CHANNEL_0
+#define ADC_P_CHANNEL ADC_CHANNEL_1
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -43,22 +41,18 @@ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
 
-
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void HW_ADC_unpackBuffer(bufferHalf_E half);
-
+void HW_ADC_unpackBuffer(HW_dma_bufferHalf_E half);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
 /**
- * @brief Initializes ADC peripheral
- *
- * @retval HW_OK
+ * @brief  Init function for ADC firmware
  */
 HW_StatusTypeDef_E HW_ADC_init(void)
 {
@@ -72,7 +66,7 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 6;
+    hadc1.Init.NbrOfConversion = 2;
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -86,84 +80,51 @@ HW_StatusTypeDef_E HW_ADC_init(void)
 
     // Configure Regular Channels
 
-    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Channel      = ADC_N_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_MUX1;
-    sConfig.Rank         = ADC_REGULAR_RANK_2;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_MUX2;
-    sConfig.Rank         = ADC_REGULAR_RANK_3;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_MUX3;
-    sConfig.Rank         = ADC_REGULAR_RANK_4;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_BRD1;
-    sConfig.Rank         = ADC_REGULAR_RANK_5;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
-    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    sConfig.Channel      = ADC_CHANNEL_BRD2;
-    sConfig.Rank         = ADC_REGULAR_RANK_6;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
 
-    // Common config
+    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
     hadc2.Instance                   = ADC2;
     hadc2.Init.ScanConvMode          = ADC_SCAN_ENABLE;
     hadc2.Init.ContinuousConvMode    = ENABLE;
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 6;
+    hadc2.Init.NbrOfConversion       = 2;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
     }
 
-    sConfig.Channel      = ADC_CHANNEL_CELL_MEASUREMENT;
+    sConfig.Channel      = ADC_P_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
-    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    sConfig.Channel      = ADC_P_CHANNEL;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
 
     HAL_ADC_Start(&hadc2);
-
-    return HW_OK;
-}
-
-
-/**
- * @brief Deinitializes ADC peripheral
- *
- * @retval HW_OK
- */
-HW_StatusTypeDef_E HW_ADC_deInit()
-{
-    HAL_ADC_DeInit(&hadc2);
 
     return HW_OK;
 }
@@ -226,68 +187,4 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
         // Peripheral clock disable
         __HAL_RCC_ADC2_CLK_DISABLE();
     }
-}
-
-/**
- * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
- *
- * @param hadc Pointer to ADC peripheral
- */
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance == ADC1)
-    {}
-}
-
-/**
- * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
- *
- * @param hadc Pointer to ADC peripheral
- */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance == ADC1)
-    {}
-}
-
-/******************************************************************************
- *                       P U B L I C  F U N C T I O N S
- ******************************************************************************/
-
-/**
- * @brief Firmware function to initiate ADC calibration.
- *
- * @param hadc Pointer to ADC peripheral
- *
- * @retval true = Success, false = Failure
- */
-bool HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
-{
-    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK;
-}
-
-/**
- * @brief  Firmware function to start DMA transfer
- *
- * @param hadc Pointer to ADC peripheral
- * @param data Pointer to memory start address
- * @param size Size of buffer
- *
- * @retval true = Success, false = Failure
- */
-bool HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
-{
-    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK;
-}
-
-/**
- * @brief  Get analog input voltage in 0.1mV from ADC count
- *
- * @param cnt ADC count
- *
- * @retval unit:  0.01mV
- */
-float32_t HW_ADC_getVFromCount(uint16_t cnt)
-{
-    return ((float32_t)cnt) * ADC_REF_VOLTAGE / ADC_MAX_COUNT;
 }

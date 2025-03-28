@@ -21,9 +21,6 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define VREF 3.0F /**< Shunt Diode reference voltage */
-
-#define ADC_MAX_VAL    4095U    // Max integer value of ADC reading (2^12 for this chip)
 #define IO_ADC_BUF_LEN 192U      /**< To fit the number of measurements into a time less than 100us  \
                                    the buffer length must be less than 100us / (ADC clock freq *    \
                                    cycles per conversion). For this firmware, there is 14 cycles    \
