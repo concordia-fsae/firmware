@@ -16,11 +16,34 @@
  ******************************************************************************/
 
 #define ADC_REF_VOLTAGE 2.5F
+#define HW_ADC_BUF_LEN  96U
 
 /******************************************************************************
- *                              E X T E R N S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
-extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
-extern DMA_HandleTypeDef hdma_adc1;
+typedef enum
+{
+    ADC_BANK1_CHANNEL_R_BR_TEMP,
+    ADC_BANK1_CHANNEL_L_SHK_DISP,
+    ADC_BANK1_CHANNEL_PU1,
+    ADC_BANK1_CHANNEL_BR_POT,
+    ADC_BANK1_CHANNEL_SPARE1,
+    ADC_BANK1_CHANNEL_SPARE2, 
+    ADC_BANK1_CHANNEL_APPS_P1,
+    ADC_BANK1_CHANNEL_MCU_TEMP,
+    ADC_BANK1_CHANNEL_COUNT,
+} HW_adcChannels_bank1_E;
+
+typedef enum
+{
+    ADC_BANK2_CHANNEL_L_BR_TEMP,
+    ADC_BANK2_CHANNEL_R_SHK_DISP,
+    ADC_BANK2_CHANNEL_BR_PR,
+    ADC_BANK2_CHANNEL_PU2,
+    ADC_BANK2_CHANNEL_SPARE3, 
+    ADC_BANK2_CHANNEL_SPARE4, 
+    ADC_BANK2_CHANNEL_APPS_P2,
+    ADC_BANK2_CHANNEL_BOARD_TEMP,
+    ADC_BANK2_CHANNEL_COUNT,
+} HW_adcChannels_bank2_E;
