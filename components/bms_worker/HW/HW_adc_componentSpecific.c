@@ -135,7 +135,7 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 6;
+    hadc2.Init.NbrOfConversion       = 1;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
@@ -148,7 +148,8 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     {
         Error_Handler();
     }
-
+    HW_ADC_calibrate(&hadc1);
+    HW_ADC_calibrate(&hadc2);
     HAL_ADC_Start(&hadc2);
 
     return HW_OK;
