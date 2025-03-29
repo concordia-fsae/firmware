@@ -16,6 +16,7 @@
  ******************************************************************************/
 
 #define ADC_REF_VOLTAGE 3.0f
+#define HW_ADC_BUF_LEN  48U
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -23,7 +24,7 @@
 
 typedef enum
 {
-    ADC_BANK1_CHANNEL_MCU_TEMP,
+    ADC_BANK1_CHANNEL_MCU_TEMP = 0x00U,
     ADC_BANK1_CHANNEL_MUX1,
     ADC_BANK1_CHANNEL_MUX2,
     ADC_BANK1_CHANNEL_MUX3,
@@ -34,14 +35,6 @@ typedef enum
 
 typedef enum
 {
-    ADC_BANK2_CHANNEL_BMS_CHIP,
+    ADC_BANK2_CHANNEL_BMS_CHIP = 0x00U,
     ADC_BANK2_CHANNEL_COUNT,
 } HW_adcChannels_bank2_E;
-
-/******************************************************************************
- *                              E X T E R N S
- ******************************************************************************/
-
-extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
-extern DMA_HandleTypeDef hdma_adc1;

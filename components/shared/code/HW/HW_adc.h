@@ -45,6 +45,5 @@ typedef enum
 
 HW_StatusTypeDef_E HW_ADC_init(void);
 HW_StatusTypeDef_E HW_ADC_deInit(void);
-HW_StatusTypeDef_E HW_ADC_calibrate(ADC_HandleTypeDef* hadc);
-HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size);
-float32_t          HW_ADC_getVFromCount(uint16_t cnt);
+float32_t          HW_ADC_getVFromBank1Channel(HW_adcChannels_bank1_E channel);
+float32_t          HW_ADC_getVFromBank2Channel(HW_adcChannels_bank2_E channel);

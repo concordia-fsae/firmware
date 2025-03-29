@@ -12,11 +12,6 @@
 #include "HW_gpio.h"
 #include "HW_adc.h"
 
-_Static_assert(DRV_INPUTAD_ADC_BUF_LEN % ADC_BANK1_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
-_Static_assert((DRV_INPUTAD_ADC_BUF_LEN / 2) % ADC_BANK1_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
-_Static_assert(DRV_INPUTAD_ADC_BUF_LEN % ADC_BANK2_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
-_Static_assert((DRV_INPUTAD_ADC_BUF_LEN / 2) % ADC_BANK2_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
-
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -43,6 +38,10 @@ static inputAD_S inputs;
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief Populate the most recent pin state
+ * @param channel Digital channel to update
+ */
 static void inputAD_getDigitalInput(drv_inputAD_channelDigital_E channel)
 {
     inputs.logic_levels[channel] = HW_GPIO_readPin(drv_inputAD_configDigital[channel].pin) ? DRV_INPUTAD_LOGIC_HIGH : DRV_INPUTAD_LOGIC_LOW;
@@ -52,11 +51,17 @@ static void inputAD_getDigitalInput(drv_inputAD_channelDigital_E channel)
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+/**
+ * @brief Initialize inputAD
+ */
 void drv_inputAD_private_init(void)
 {
     memset(&inputs, 0x00U, sizeof(inputs));
 }
 
+/**
+ * @brief Update digital pin states
+ */
 void drv_inputAD_private_runDigital(void)
 {
     for(uint8_t i = 0U; i < DRV_INPUTAD_DIGITAL_COUNT; i++)
@@ -65,16 +70,31 @@ void drv_inputAD_private_runDigital(void)
     }
 }
 
+/**
+ * @brief Update the analog voltage of a pin
+ * @param channel Analog channel to update
+ * @param voltage Measured voltage
+ */
 void drv_inputAD_private_setAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage)
 {
     inputs.voltages[channel] = voltage;
 }
 
+/**
+ * @breif Get the last measured analog voltage of a pin
+ * @param channel Analog channel to retrieve
+ * @returns Last measured voltage
+ */
 float32_t drv_inputAD_getAnalogVoltage(drv_inputAD_channelAnalog_E channel)
 {
     return inputs.voltages[channel];
 }
 
+/**
+ * @brief Get the logic level of a digital pin
+ * @param channel Channel to retrieve
+ * @return Current logic level state
+ */
 drv_inputAD_logicLevel_E drv_inputAD_getLogicLevel(drv_inputAD_channelDigital_E channel)
 {
     inputAD_getDigitalInput(channel);

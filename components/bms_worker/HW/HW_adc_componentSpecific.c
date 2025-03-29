@@ -15,7 +15,7 @@
 #include "string.h"
 
 // Firmware Includes
-#include "HW_adc.h"
+#include "HW_adc_private.h"
 #include "HW_dma.h"
 
 // Other Includes
@@ -37,18 +37,17 @@
 #define ADC_CHANNEL_BRD2                        ADC_CHANNEL_5
 
 /******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern ADC_HandleTypeDef hadc1;
+extern ADC_HandleTypeDef hadc2;
+
+/******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-ADC_HandleTypeDef hadc1;
-ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
-
-/******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
-
-void HW_ADC_unpackBuffer(HW_dma_bufferHalf_E half);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -56,10 +55,9 @@ void HW_ADC_unpackBuffer(HW_dma_bufferHalf_E half);
 
 /**
  * @brief Initializes ADC peripheral
- *
  * @retval HW_OK
  */
-HW_StatusTypeDef_E HW_ADC_init(void)
+HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
 {
     ADC_MultiModeTypeDef   multimode = { 0 };
     ADC_ChannelConfTypeDef sConfig   = { 0 };
@@ -148,9 +146,6 @@ HW_StatusTypeDef_E HW_ADC_init(void)
     {
         Error_Handler();
     }
-    HW_ADC_calibrate(&hadc1);
-    HW_ADC_calibrate(&hadc2);
-    HAL_ADC_Start(&hadc2);
 
     return HW_OK;
 }
@@ -197,8 +192,8 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 
         __HAL_LINKDMA(adcHandle, DMA_Handle, hdma_adc1);
 
-        HAL_NVIC_SetPriority(ADC1_2_IRQn, ADC_IRQ_PRIO, 0U);
-        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+        HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, DMA_IRQ_PRIO, 0U);
+        HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
     }
     else if (adcHandle->Instance == ADC2)
     {
@@ -218,6 +213,8 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
     {
         __HAL_RCC_ADC1_CLK_DISABLE();
 
+        HAL_NVIC_DisableIRQ(DMA1_Channel2_IRQn);
+        HAL_NVIC_DisableIRQ(DMA1_Channel1_IRQn);
         // ADC1 DMA DeInit
         HAL_DMA_DeInit(adcHandle->DMA_Handle);
     }
@@ -226,26 +223,4 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
         // Peripheral clock disable
         __HAL_RCC_ADC2_CLK_DISABLE();
     }
-}
-
-/**
- * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
- *
- * @param hadc Pointer to ADC peripheral
- */
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance == ADC1)
-    {}
-}
-
-/**
- * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
- *
- * @param hadc Pointer to ADC peripheral
- */
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
-{
-    if (hadc->Instance == ADC1)
-    {}
 }

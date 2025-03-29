@@ -32,10 +32,10 @@
  * @brief  Modules run by the Module Manager. Order will apply to execution.
  */
 static const ModuleDesc_S* modules[] = {
+    &drv_inputAD_desc,
     &BMS_desc,
     &ENV_desc,
     &COOL_desc,
-    &IO_desc,
     &SYS_desc,
 #if FEATURE_IS_ENABLED(APP_UDS)
     &UDS_desc,

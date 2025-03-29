@@ -1,6 +1,16 @@
 /**
  * @file drv_inputAD.h
  * @brief  Header file for the digital and analog input driver
+ *
+ * Setup
+ * 1. Define the digital and analog channels in drv_inputAD_componentSpecific.h
+ *    and name them drv_inputAD_channelAnalog_E and drv_inputAD_getLogicLevel.
+ * 2. Configure the digital channels in drv_inputAD_componentSpecific.c and name
+ *    them drv_inputAD_configDigital
+ * 3. Include drv_inputAD_private.h in drv_inputAD_componentSpecific.c and call
+ *    the drv_inputAD_private_init function
+ * 4. Periodically call the drv_inputAD_private_runDigital function to update
+ *    the digital inputs and load new voltages with drv_inputAD_setAnalogVoltage
  */
 
 #pragma once
