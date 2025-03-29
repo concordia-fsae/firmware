@@ -24,7 +24,7 @@ extern TIM_HandleTypeDef htim4;
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
 extern TIM_HandleTypeDef htim3;
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan;
 
 
@@ -118,7 +118,7 @@ void TIM3_IRQHandler(void)
 
 void TIM2_IRQHandler(void)
 {
-    HAL_TIM_IRQHandler(&htim2);
+    HAL_TIM_IRQHandler(&htim_tick);
 }
 
 void TIM1_TRG_COM_IRQHandler(void)

@@ -25,7 +25,7 @@
 /**< Other Includes */
 #include "ModuleDesc.h"
 #include "Utility.h"
-
+#include "LIB_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -34,15 +34,6 @@
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    ADC_STATE_INIT = 0,
-    ADC_STATE_CALIBRATION,
-    ADC_STATE_RUNNING,
-    ADC_STATE_CALIBRATION_FAILED,
-    ADC_STATE_COUNT,
-} adcState_E;
 
 typedef enum
 {
@@ -56,9 +47,9 @@ _Static_assert((IO_ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length
 
 typedef struct
 {
-    adcState_E     adcState;
-    uint32_t       adcBuffer[IO_ADC_BUF_LEN];
-    simpleFilter_S adcData[ADC_CHANNEL_COUNT];
+    HW_adc_state_E     adcState;
+    uint32_t           adcBuffer[IO_ADC_BUF_LEN];
+    LIB_simpleFilter_S adcData[ADC_CHANNEL_COUNT];
 } io_S;
 
 
@@ -96,24 +87,21 @@ static void IO_init(void)
 {
     memset(&io, 0x00, sizeof(io));
     memset(&IO, 0x00, sizeof(IO));
+
+    if ((HW_ADC_calibrate(&hadc1) == HW_OK) && (HW_ADC_calibrate(&hadc2) == HW_OK))
+    {
+        HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
+        io.adcState = ADC_STATE_RUNNING;
+    }
+    else
+    {
+        io.adcState = ADC_STATE_CALIBRATION_FAILED;
+    }
 }
 
 static void IO10Hz_PRD(void)
 {
-    if (io.adcState == ADC_STATE_INIT)
-    {
-        io.adcState = ADC_STATE_CALIBRATION;
-        if (HW_ADC_calibrate(&hadc1) && HW_ADC_calibrate(&hadc2))
-        {
-            HW_ADC_startDMA(&hadc1, (uint32_t*)&io.adcBuffer, IO_ADC_BUF_LEN);
-            io.adcState = ADC_STATE_RUNNING;
-        }
-        else
-        {
-            io.adcState = ADC_STATE_CALIBRATION_FAILED;
-        }
-    }
-    else if (io.adcState == ADC_STATE_CALIBRATION_FAILED)
+    if (io.adcState == ADC_STATE_CALIBRATION_FAILED)
     {
         // adc calibration failed
         // what do now?
@@ -121,8 +109,8 @@ static void IO10Hz_PRD(void)
     else if (io.adcState == ADC_STATE_RUNNING)
     {
         IO_unpackADCBuffer();
-        IO.current  = (io.adcData[ADC_CURRENT_P].value - io.adcData[ADC_CURRENT_N].value) / ADC_MAX_VAL * VREF;
-        IO.mcu_temp = (io.adcData[ADC_MCU_TEMP].value / ADC_MAX_VAL) * VREF;
+        IO.current  = (io.adcData[ADC_CURRENT_P].value - io.adcData[ADC_CURRENT_N].value) / ADC_MAX_COUNT * ADC_REF_VOLTAGE;
+        IO.mcu_temp = (io.adcData[ADC_MCU_TEMP].value / ADC_MAX_COUNT) * ADC_REF_VOLTAGE;
     }
 
     IO.master_switch = (HW_GPIO_readPin(HW_GPIO_TSMS_CHG)) ? true : false;
@@ -150,27 +138,23 @@ void IO_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_CHANNEL_COUNT; i++)
     {
-        io.adcData[i].raw   = 0;
-        io.adcData[i].count = 0;
+        LIB_simpleFilter_clear(&io.adcData[i]);
     }
 
     for (uint16_t i = 0; i < IO_ADC_BUF_LEN; i++)
     {
         if (i % 2 == 0)
         {
-            io.adcData[ADC_CURRENT_N].raw += io.adcBuffer[i] & 0xffff;
-            io.adcData[ADC_CURRENT_P].raw += (io.adcBuffer[i]) >> 16;
-            io.adcData[ADC_CURRENT_N].count++;
-            io.adcData[ADC_CURRENT_P].count++;
+            LIB_simpleFilter_increment(&io.adcData[ADC_CURRENT_N], (io.adcBuffer[i] & 0xffff));
+            LIB_simpleFilter_increment(&io.adcData[ADC_CURRENT_P], (io.adcBuffer[i] >> 16U));
         }
         else
         {
-            io.adcData[ADC_MCU_TEMP].raw += io.adcBuffer[i] & 0xffff;
-            io.adcData[ADC_MCU_TEMP].count++;
+            LIB_simpleFilter_increment(&io.adcData[ADC_MCU_TEMP],  (io.adcBuffer[i] & 0xffff));
         }
     }
 
-    io.adcData[ADC_CURRENT_N].value = (float32_t)io.adcData[ADC_CURRENT_N].raw / io.adcData[ADC_CURRENT_N].count;
-    io.adcData[ADC_CURRENT_P].value = (float32_t)io.adcData[ADC_CURRENT_P].raw / io.adcData[ADC_CURRENT_P].count;
-    io.adcData[ADC_MCU_TEMP].value  = (float32_t)io.adcData[ADC_MCU_TEMP].raw / io.adcData[ADC_MCU_TEMP].count;
+    LIB_simpleFilter_average(&io.adcData[ADC_CURRENT_N]);
+    LIB_simpleFilter_average(&io.adcData[ADC_CURRENT_P]);
+    LIB_simpleFilter_average(&io.adcData[ADC_MCU_TEMP]);
 }
