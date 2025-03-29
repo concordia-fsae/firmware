@@ -81,6 +81,7 @@ void Module_10kHz_TSK(void)
     }
 
     stats[MODULE_10kHz_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_10kHz_TASK].iterations++;
 }
 #endif // FEATURE_10KHZ_TASK
 
@@ -99,6 +100,7 @@ void Module_1kHz_TSK(void)
     }
 
     stats[MODULE_1kHz_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_1kHz_TASK].iterations++;
 }
 
 /**
@@ -116,6 +118,7 @@ void Module_100Hz_TSK(void)
     }
 
     stats[MODULE_100Hz_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_100Hz_TASK].iterations++;
 }
 
 /**
@@ -133,6 +136,7 @@ void Module_10Hz_TSK(void)
     }
 
     stats[MODULE_10Hz_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_10Hz_TASK].iterations++;
 }
 
 /**
@@ -150,6 +154,7 @@ void Module_1Hz_TSK(void)
     }
 
     stats[MODULE_1Hz_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_1Hz_TASK].iterations++;
 }
 
 /**
@@ -158,6 +163,7 @@ void Module_1Hz_TSK(void)
 void Module_ApplicationIdleHook()
 {
     stats[MODULE_IDLE_TASK].total_percentage = (float32_t)ulTaskGetRunTimePercent(NULL);
+    stats[MODULE_IDLE_TASK].iterations++;
 }
 
 /**
@@ -168,4 +174,14 @@ void Module_ApplicationIdleHook()
 float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task)
 {
     return stats[task].total_percentage;
+}
+
+/**
+ * @brief Returns the total iterations of a task
+ * @param task Task to get the total runtime iterations of
+ * @returns The total runtime iterations of the task
+ */
+uint32_t Module_getTotalRuntimeIterations(Module_taskSpeeds_E task)
+{
+    return stats[task].iterations;
 }

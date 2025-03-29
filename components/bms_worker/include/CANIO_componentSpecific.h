@@ -94,6 +94,9 @@
 #define set_taskUsage100Hz(m,b,n,s)              set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
 #define set_taskUsage10Hz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
 #define set_taskUsage1Hz(m,b,n,s)                set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
-#define set_taskUsageIdle(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
+#define set_taskIterations1kHz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1kHz_TASK));
+#define set_taskIterations100Hz(m,b,n,s)         set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_100Hz_TASK));
+#define set_taskIterations10Hz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_10Hz_TASK));
+#define set_taskIterations1Hz(m,b,n,s)           set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1Hz_TASK));
 
 #include "TemporaryStubbing.h"
