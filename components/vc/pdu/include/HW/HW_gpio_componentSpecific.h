@@ -26,11 +26,11 @@ typedef enum
     HW_GPIO_ADC_LP4_SNS,
     HW_GPIO_ADC_LP5_SNS,
     HW_GPIO_ADC_UVL_BATT,
-    HW_GPIO_ADC_THERMISTORS, /* Typo: THERMISTERS*/
-    HW_GPIO_ADC_HP_CS, 
+    HW_GPIO_ADC_MUX2_THERMISTORS, /* Typo: THERMISTERS*/ /*Added MUX2*/ 
+    HW_GPIO_ADC_MUX2_HP_CS, /*was HW_GPIO_HP_SNS*/ /*Added MUX2*/
     HW_GPIO_ADC_5V_VOLTAGE,
     HW_GPIO_DAC_BRAKE_IN, /*THE ONLY DAC*/
-    HW_GPIO_ADC_5V_CS_SNS, /*Name change, was HW_GPIO_ADC_5V_SNS*/
+    HW_GPIO_ADC_5V_CS_SNS,
     HW_GPIO_ADC_LP1_SNS,
     HW_GPIO_ADC_LP6_SNS,
     HW_GPIO_ADC_LP7_SNS,
@@ -42,25 +42,25 @@ typedef enum
     HW_GPIO_MUX_SEL2,
     HW_GPIO_PUMP_EN,
     HW_GPIO_PUMP_FAULT,
-    HW_GPIO_FAN_EN, /* HW_GPIO_FAN~~HP~~_EN */
-    HW_GPIO_FAN_FAULT, /* HW_GPIO_FAN~~HP~~_EN */
+    HW_GPIO_FAN_EN, /* was HW_GPIO_FAN~~HP~~_EN */
+    HW_GPIO_FAN_FAULT, /* was HW_GPIO_FAN~~HP~~_EN */
     HW_GPIO_SPARE_EN,
     HW_GPIO_BMS4_EN,
     HW_GPIO_OL_DETECT,
-    HW_GPIO_RESET_5V,
+    HW_GPIO_VCU_SFTY_RESET, /*was HW_GPIO_RESET_5V*/
     HW_GPIO_VCU_SFTY_EN,
     HW_GPIO_CAN2_RX,
     HW_GPIO_CAN2_TX, /*removed 2 from ..._2TX*/
     HW_GPIO_VC1_EN,
     HW_GPIO_VC2_EN,
     HW_GPIO_LP4_LATCH,
-    HW_GPIO_HP_CS_EN, /*Name change, was IO_S_EN*/
+    HW_GPIO_HP_SNS_EN, /*was IO_S_EN*/
     HW_GPIO_DIA_EN,
     HW_GPIO_5V_FLT2,
     HW_GPIO_5V_EN1,
     HW_GPIO_5V_EN2,
     HW_GPIO_5V_FLT1,
-    HW_GPIO_MUX_LP_SEL2, /*ADDED ..._MUX_LP_...*/
+    HW_GPIO_MUX_LP_SEL2, /*Added MUX_LP*/ 
     HW_GPIO_PWM1,
     HW_GPIO_PWM2,
     HW_GPIO_VCU1_EN,
@@ -71,10 +71,10 @@ typedef enum
     HW_GPIO_CAN1_RX,
     HW_GPIO_CAN1_TX,
     HW_GPIO_SPI_CS_IMU, /*SPI bus*/ 
-    HW_GPIO_UART_TX_MCU, /* Changed to .._TX_.. */
+    HW_GPIO_UART_TX_MCU, /* Remains .._TX_.. */
     HW_GPIO_UART_RX_MCU, /* Changed to .._RX_.. */
     HW_GPIO_BMS3_EN,
-    HW_GPIO_MUX_LP_SEL1, /*ADDED ..._MUX_LP_...*/
+    HW_GPIO_MUX_LP_SEL1, /*Added MUX_LP*/ 
     HW_GPIO_HVE_EN,
     HW_GPIO_COCKPIT_EN,
     HW_GPIO_LP6_LATCH,
