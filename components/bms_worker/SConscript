@@ -160,6 +160,7 @@ src_files = [
     SHARED_LIBS.File("LIB_app.c"),
     SRC_DIR.File("CANIO_componentSpecific.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
+    SHARED_LIBS.File("lib_thermistors.c"),
 ]
 
 hw_files = [
@@ -187,6 +188,8 @@ hw_files = [
     SHARED_HW.File("HW_gpio.c"),
     SHARED_DRV.File("drv_inputAD.c"),
     HW_DIR.File("drv_inputAD_componentSpecific.c"),
+    SHARED_DRV.File("drv_tempSensors.c"),
+    HW_DIR.File("drv_tempSensors_componentSpecific.c"),
 ]
 
 src_files += hw_files

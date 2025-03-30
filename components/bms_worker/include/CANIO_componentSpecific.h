@@ -18,6 +18,7 @@
 #include "Environment.h"
 #include "BatteryMonitoring.h"
 #include "Module.h"
+#include "drv_tempSensors.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -81,9 +82,9 @@
 #define set_cellVoltage12(m, b, n, s)            set(m,b,n,s, BMS.cells[12].voltage)
 #define set_boardRelativeHumidity(m, b, n, s)    set(m,b,n,s, ENV.values.board.rh)
 #define set_boardAmbientTemp(m, b, n, s)         set(m,b,n,s, ENV.values.board.ambient_temp)
-#define set_mcuTemp(m, b, n, s)                  set(m,b,n,s, ENV.values.board.mcu_temp)
-#define set_boardTemp0(m, b, n, s)               set(m,b,n,s, ENV.values.board.brd_temp[0])
-#define set_boardTemp1(m, b, n, s)               set(m,b,n,s, ENV.values.board.brd_temp[1])
+#define set_mcuTemp(m, b, n, s)                  set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_MCU_TEMP))
+#define set_boardTemp0(m, b, n, s)               set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD1))
+#define set_boardTemp1(m, b, n, s)               set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD2))
 #define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[1])
 #define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[0])
 #define set_coolPct1(m, b, n, s)                 set(m,b,n,s, COOL.percentage[1])
