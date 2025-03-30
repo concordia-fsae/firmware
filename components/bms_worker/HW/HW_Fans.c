@@ -16,6 +16,7 @@
 
 // Other Inlcudes
 #include "Cooling.h"
+#include "include/HW_tim_componentSpecific.h"
 
 
 /******************************************************************************
@@ -96,8 +97,8 @@ void FANS_setPower(uint8_t* fan)
         }
     }
 
-    HW_TIM4_setDutyCH1(fans.percentage[FAN1]);
-    HW_TIM4_setDutyCH2(fans.percentage[FAN2]);
+    HW_TIM_setDuty(HW_TIM_PORT_PWM, HW_TIM_CHANNEL_1, ((float32_t)fans.percentage[FAN1]) / 100.0f);
+    HW_TIM_setDuty(HW_TIM_PORT_PWM, HW_TIM_CHANNEL_2, ((float32_t)fans.percentage[FAN2]) / 100.0f);
 }
 
 /**

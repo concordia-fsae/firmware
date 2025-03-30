@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 // System Includes
+#include "include/HW_tim_componentSpecific.h"
 #include "SystemConfig.h"
 #include "LIB_Types.h"
 
@@ -23,11 +24,7 @@
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-TIM_HandleTypeDef htim1;
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-TIM_HandleTypeDef htim3;
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-TIM_HandleTypeDef htim4;
+TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
 
 static uint64_t   fan1_last_tick[2] = { 0 };
 static uint64_t   fan2_last_tick[2] = { 0 };
@@ -56,29 +53,29 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     __HAL_RCC_TIM4_CLK_ENABLE();
 
     uwTimclock                   = HAL_RCC_GetPCLK2Freq();
-    htim1.Instance               = TIM1;
-    htim1.Init.Prescaler         = (uwTimclock / 2000000) - 1;
-    htim1.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim1.Init.Period            = 65535;
-    htim1.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-    htim1.Init.RepetitionCounter = 0;
-    htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+    htim[HW_TIM_PORT_TACH].Instance               = TIM1;
+    htim[HW_TIM_PORT_TACH].Init.Prescaler         = (uwTimclock / 2000000) - 1;
+    htim[HW_TIM_PORT_TACH].Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim[HW_TIM_PORT_TACH].Init.Period            = 65535;
+    htim[HW_TIM_PORT_TACH].Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim[HW_TIM_PORT_TACH].Init.RepetitionCounter = 0;
+    htim[HW_TIM_PORT_TACH].Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_Base_Init(&htim[HW_TIM_PORT_TACH]) != HAL_OK)
     {
         Error_Handler();
     }
     sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-    if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+    if (HAL_TIM_ConfigClockSource(&htim[HW_TIM_PORT_TACH], &sClockSourceConfig) != HAL_OK)
     {
         Error_Handler();
     }
-    if (HAL_TIM_IC_Init(&htim1) != HAL_OK)
+    if (HAL_TIM_IC_Init(&htim[HW_TIM_PORT_TACH]) != HAL_OK)
     {
         Error_Handler();
     }
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
     sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
-    if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim[HW_TIM_PORT_TACH], &sMasterConfig) != HAL_OK)
     {
         Error_Handler();
     }
@@ -86,41 +83,41 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
     sConfigIC.ICPrescaler = TIM_ICPSC_DIV8;
     sConfigIC.ICFilter    = 0;
-    if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+    if (HAL_TIM_IC_ConfigChannel(&htim[HW_TIM_PORT_TACH], &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
     {
         Error_Handler();
     }
-    if (HAL_TIM_IC_ConfigChannel(&htim1, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
+    if (HAL_TIM_IC_ConfigChannel(&htim[HW_TIM_PORT_TACH], &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
     {
         Error_Handler();
     }
-    HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_1);    // main channel
-    HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_2);    // main channel
+    HAL_TIM_IC_Start_IT(&htim[HW_TIM_PORT_TACH], TIM_CHANNEL_1);    // main channel
+    HAL_TIM_IC_Start_IT(&htim[HW_TIM_PORT_TACH], TIM_CHANNEL_2);    // main channel
 
     // Get clock configuration
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
     uwTimclock                   = HAL_RCC_GetPCLK1Freq();
     uwPrescalerValue             = (uint32_t)((uwTimclock / 1000000U) - 1U);
-    htim4.Instance               = TIM4;
-    htim4.Init.Prescaler         = uwPrescalerValue;
-    htim4.Init.CounterMode       = TIM_COUNTERMODE_UP;
-    htim4.Init.Period            = 2000000 / 20000;
-    htim4.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-    htim4.Init.RepetitionCounter = 0;
-    htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+    htim[HW_TIM_PORT_PWM].Instance               = TIM4;
+    htim[HW_TIM_PORT_PWM].Init.Prescaler         = uwPrescalerValue;
+    htim[HW_TIM_PORT_PWM].Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim[HW_TIM_PORT_PWM].Init.Period            = 2000000 / 20000;
+    htim[HW_TIM_PORT_PWM].Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim[HW_TIM_PORT_PWM].Init.RepetitionCounter = 0;
+    htim[HW_TIM_PORT_PWM].Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_Base_Init(&htim[HW_TIM_PORT_PWM]) != HAL_OK)
     {
         Error_Handler();
     }
 
     sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 
-    if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+    if (HAL_TIM_ConfigClockSource(&htim[HW_TIM_PORT_PWM], &sClockSourceConfig) != HAL_OK)
     {
         Error_Handler();
     }
 
-    if (HAL_TIM_OC_Init(&htim4) != HAL_OK)
+    if (HAL_TIM_OC_Init(&htim[HW_TIM_PORT_PWM]) != HAL_OK)
     {
         Error_Handler();
     }
@@ -132,7 +129,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
     sConfigOC.OCIdleState  = TIM_OCIDLESTATE_RESET;
     sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-    if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+    if (HAL_TIM_OC_ConfigChannel(&htim[HW_TIM_PORT_PWM], &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
     {
         Error_Handler();
     }
@@ -143,13 +140,13 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
     sConfigOC.OCIdleState  = TIM_OCIDLESTATE_RESET;
     sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-    if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+    if (HAL_TIM_OC_ConfigChannel(&htim[HW_TIM_PORT_PWM], &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
     {
         Error_Handler();
     }
 
-    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+    HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_2);
 
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
     // Configure the TIM3 IRQ priority
@@ -166,19 +163,19 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
 
     // Initialize TIM4
-    htim3.Instance   = TIM3;
+    htim[HW_TIM_PORT_HS_INTERRUPT].Instance   = TIM3;
 
     // Initialize TIMx peripheral as follow:
     // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.
     // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
     // ClockDivision = 0
     // Counter direction = Up
-    htim3.Init.Period        = (1000000U / 5000) - 1U;
-    htim3.Init.Prescaler     = uwPrescalerValue;
-    htim3.Init.ClockDivision = 0;
-    htim3.Init.CounterMode   = TIM_COUNTERMODE_UP;
-    htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+    htim[HW_TIM_PORT_HS_INTERRUPT].Init.Period        = (1000000U / 5000) - 1U;
+    htim[HW_TIM_PORT_HS_INTERRUPT].Init.Prescaler     = uwPrescalerValue;
+    htim[HW_TIM_PORT_HS_INTERRUPT].Init.ClockDivision = 0;
+    htim[HW_TIM_PORT_HS_INTERRUPT].Init.CounterMode   = TIM_COUNTERMODE_UP;
+    htim[HW_TIM_PORT_HS_INTERRUPT].Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_Base_Init(&htim[HW_TIM_PORT_HS_INTERRUPT]) != HAL_OK)
     {
         return HW_ERROR;
     }
@@ -193,7 +190,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
  */
 HW_StatusTypeDef_E HW_TIM_deInit(void)
 {
-    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Stop(&htim[HW_TIM_PORT_TACH], TIM_CHANNEL_1);
     __HAL_RCC_TIM1_CLK_DISABLE();
 
     return HW_OK;
@@ -220,14 +217,14 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
  *
  * @param htim TIM peripheral
  */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 {
-    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)    // If the interrupt is triggered by channel 1
+    if (tim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)    // If the interrupt is triggered by channel 1
     {
         fan1_last_tick[0] = fan1_last_tick[1];
         fan1_last_tick[1] = HW_TIM_getBaseTick();
     }
-    else if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
+    else if (tim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
     {
         fan2_last_tick[0] = fan2_last_tick[1];
         fan2_last_tick[1] = HW_TIM_getBaseTick();
@@ -241,34 +238,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
  * a global variable "uwTick" used as application time base.
  * @param  htim : TIM handle
  */
-void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* htim)
+void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
 {
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-    if (htim->Instance == TIM3)
+    if (tim->Instance == TIM3)
     {
-        HAL_TIM_Base_Stop_IT(&htim3);
+        HAL_TIM_Base_Stop_IT(&htim[HW_TIM_PORT_HS_INTERRUPT]);
         IO10kHz_CB();
     }
 #endif
-}
-
-/**
- * @brief  Set duty cycle of TIM4 CH1 output
- *
- * @param percentage1 Duty cycle percentage. Unit: 1%
- */
-void HW_TIM4_setDutyCH1(uint8_t percentage1)
-{
-    htim4.Instance->CCR1 = (uint16_t)(((uint32_t)percentage1 * htim4.Init.Period) / 100);
-}
-
-/* @brief  Set duty cycle of TIM4 CH2 output
- *
- * @param percentage2 Duty cycle percentage. Unit: 1%
- */
-void HW_TIM4_setDutyCH2(uint8_t percentage2)
-{
-    htim4.Instance->CCR2 = (uint16_t)(((uint32_t)percentage2 * htim4.Init.Period) / 100);
 }
 
 /**
@@ -302,6 +280,6 @@ uint16_t HW_TIM1_getFreqCH2(void)
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
 void HW_TIM_10kHz_timerStart(void)
 {
-    HAL_TIM_Base_Start_IT(&htim3);
+    HAL_TIM_Base_Start_IT(&htim[HW_TIM_PORT_HS_INTERRUPT]);
 }
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED

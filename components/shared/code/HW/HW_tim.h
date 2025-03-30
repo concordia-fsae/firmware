@@ -26,6 +26,13 @@ typedef enum
 } HW_TIM_channel_E;
 
 /******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+extern TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
+extern TIM_HandleTypeDef htim_tick;
+
+/******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
@@ -41,3 +48,6 @@ void               HW_TIM_delayUS(uint8_t us);
 
 void               HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim);
 void               HW_TIM_setDuty(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t percentage);
+void               HW_TIM_setFreqHz(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t hz);
+float32_t          HW_TIM_getDuty(HW_TIM_port_E port, HW_TIM_channel_E channel);
+float32_t          HW_TIM_getFreqHz(HW_TIM_port_E port, HW_TIM_channel_E channel);

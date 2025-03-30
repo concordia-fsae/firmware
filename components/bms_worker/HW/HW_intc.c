@@ -11,22 +11,16 @@
 #include "HW_intc.h"
 #include "stm32f1xx.h"
 #include "FeatureDefines_generated.h"
-
+#include "HW_tim.h"
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
+
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim4;
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-extern TIM_HandleTypeDef htim3;
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan;
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -106,13 +100,13 @@ void ADC1_2_IRQHandler(void)
  */
 void TIM4_IRQHandler(void)
 {
-    HAL_TIM_IRQHandler(&htim4);
+    HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_PWM]);
 }
 
 void TIM3_IRQHandler(void)
 {
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-    HAL_TIM_IRQHandler(&htim3);
+    HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_HS_INTERRUPT]);
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
 }
 
@@ -123,12 +117,12 @@ void TIM2_IRQHandler(void)
 
 void TIM1_TRG_COM_IRQHandler(void)
 {
-    HAL_TIM_IRQHandler(&htim1);
+    HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_TACH]);
 }
 
 void TIM1_CC_IRQHandler(void)
 {
-    HAL_TIM_IRQHandler(&htim1);
+    HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_TACH]);
 }
 
 // CAN interrupts
