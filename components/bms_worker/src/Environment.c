@@ -102,10 +102,6 @@ static void Environment10Hz_PRD()
         SHT_startConversion();
     }
 
-    ENV.values.board.mcu_temp       = (uint8_t)drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_MCU_TEMP);
-    ENV.values.board.brd_temp[BRD1] = (uint8_t)drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD1);
-    ENV.values.board.brd_temp[BRD2] = (uint8_t)drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD2);
-
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
         const float32_t mux1 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + i);
