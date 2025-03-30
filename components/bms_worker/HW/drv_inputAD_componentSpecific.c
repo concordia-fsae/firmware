@@ -53,6 +53,8 @@ static void drv_inputAD_init_componentSpecific(void)
     NX3L_init();
     NX3L_enableMux();
     NX3L_setMux(NX3L_MUX1);
+
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
 }
 
 static void drv_inputAD_10Hz_PRD(void)
@@ -90,7 +92,7 @@ void IO10kHz_CB(void)
     {
         const MAX_selectedCell_E current_cell = BMS_getCurrentOutputCell();
 
-        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell, 
+        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
                                              HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
 
         if (current_cell == MAX_CELL1)

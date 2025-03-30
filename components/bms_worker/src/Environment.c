@@ -20,7 +20,7 @@
 #include "HW_SHT40.h"
 #include "HW_NX3L4051PW.h"
 #include "drv_inputAD.h"
-#include "lib_thermistors.h"
+#include "drv_tempSensors.h"
 #include "lib_voltageDivider.h"
 #include "BatteryMonitoring.h"
 
@@ -102,9 +102,9 @@ static void Environment10Hz_PRD()
         SHT_startConversion();
     }
 
-    ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP));
-    ENV.values.board.brd_temp[BRD1] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1)));
-    ENV.values.board.brd_temp[BRD2] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2)));
+    ENV.values.board.mcu_temp       = (uint8_t)drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_MCU_TEMP);
+    ENV.values.board.brd_temp[BRD1] = (uint8_t)drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD1);
+    ENV.values.board.brd_temp[BRD2] = (uint8_t)drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD2);
 
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
