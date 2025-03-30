@@ -1,24 +1,18 @@
 /**
- * @file HW_dma.c
- * @brief  Source code for DMA firmware
+ * @file HW_adc_private.h
+ * @brief  Private header file for ADC firmware
  */
+
+#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_dma.h"
-
+#include "HW_adc.h"
 
 /******************************************************************************
- *                       P U B L I C  F U N C T I O N S
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-/**
- * @brief  Firmware DMA Initialization function
- */
-void HW_DMA_init(void)
-{
-    // DMA controller clock enable
-    __HAL_RCC_DMA1_CLK_ENABLE();
-}
+HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void);

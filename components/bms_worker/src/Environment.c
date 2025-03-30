@@ -18,7 +18,8 @@
 /**< Driver Includes */
 #include "HW_adc.h"
 #include "HW_SHT40.h"
-#include "IO.h"
+#include "HW_NX3L4051PW.h"
+#include "drv_inputAD.h"
 #include "lib_thermistors.h"
 #include "lib_voltageDivider.h"
 #include "BatteryMonitoring.h"
@@ -39,7 +40,6 @@
  ******************************************************************************/
 
 extern SHT_S sht_chip;
-extern IO_S IO;
 
 
 /******************************************************************************
@@ -102,17 +102,26 @@ static void Environment10Hz_PRD()
         SHT_startConversion();
     }
 
-    ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(IO.temp.mcu);
-    ENV.values.board.brd_temp[BRD1] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD1]));
-    ENV.values.board.brd_temp[BRD2] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(IO.temp.board[BRD2]));
+    ENV.values.board.mcu_temp       = TEMP_CHIP_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP));
+    ENV.values.board.brd_temp[BRD1] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1)));
+    ENV.values.board.brd_temp[BRD2] = lib_thermistors_getCelsiusFromR_BParameter(&NCP21_bParam, RES_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2)));
 
     for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
     {
-        ENV.values.temps[i].temp     = (IO.temp.mux1[i] > 0.25F && IO.temp.mux1[i] < 2.25F) ? lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux1[i])) : 0.0F;
-        ENV.values.temps[i + 8].temp = (IO.temp.mux2[i] > 0.1F && IO.temp.mux2[i] < 2.9F) ? lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux2[i])) : 0.0F;
+        const float32_t mux1 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + i);
+        const float32_t mux2 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + i);
+        const float32_t mux3 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + i);
+        ENV.values.temps[i].temp     = (mux1 > 0.25F && mux1 < 2.25F) ? 
+                                        lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(mux1)) :
+                                        0.0F;
+        ENV.values.temps[i + 8].temp = (mux2 > 0.1F && mux2 < 2.9F) ?
+                                        lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(mux2)) :
+                                        0.0F;
         if (i < 4)
         {
-            ENV.values.temps[i + 16].temp = (IO.temp.mux3[i] > 0.1F && IO.temp.mux3[i] < 2.9F) ? lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(IO.temp.mux3[i])): 0.0F;
+            ENV.values.temps[i + 16].temp = (mux3 > 0.1F && mux3 < 2.9F) ? 
+                                             lib_thermistors_getCelsiusFromR_BParameter(&MF52_bParam, RES_FROM_V(mux3)) :
+                                             0.0F;
         }
     }
 

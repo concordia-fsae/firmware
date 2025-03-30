@@ -16,11 +16,20 @@
  ******************************************************************************/
 
 #define ADC_REF_VOLTAGE 2.5F
+#define HW_ADC_BUF_LEN  96U
 
 /******************************************************************************
- *                              E X T E R N S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
-extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
-extern DMA_HandleTypeDef hdma_adc1;
+typedef enum
+{
+    ADC_BANK1_CHANNEL_MCU_TEMP,
+    ADC_BANK1_CHANNEL_COUNT,
+} HW_adcChannels_bank1_E;
+
+typedef enum
+{
+    ADC_BANK2_CHANNEL_BOARD_TEMP,
+    ADC_BANK2_CHANNEL_COUNT,
+} HW_adcChannels_bank2_E;

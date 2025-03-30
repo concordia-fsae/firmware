@@ -18,9 +18,8 @@
 
 /**< Driver Includes */
 #include "drv_hih.h"
-#include "IO.h"
+#include "drv_inputAD.h"
 #include "HW_i2c.h"
-
 
 /******************************************************************************
  *                              D E F I N E S
@@ -90,7 +89,7 @@ static void ENV10Hz_PRD()
         }
     }
 
-    ENV.board.mcu_temp = TEMP_CHIP_FROM_V(IO.mcu_temp);
+    ENV.board.mcu_temp = TEMP_CHIP_FROM_V(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP));
 }
 
 /**

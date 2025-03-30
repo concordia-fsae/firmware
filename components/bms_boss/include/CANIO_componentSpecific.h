@@ -17,7 +17,6 @@
 #include "CANTypes_generated.h"
 
 // imports for data access
-#include "IO.h"
 #include "BMS.h"
 #include "Sys.h"
 #include "IMD.h"
@@ -64,4 +63,9 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_maxDischarge(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit);
 #define set_packRH(m,b,n,s) set(m,b,n,s, ENV.board.rh)
 #define set_packTemperature(m,b,n,s) set(m,b,n,s, ENV.board.ambient_temp)
+#define set_taskIterations1kHz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1kHz_TASK));
+#define set_taskIterations100Hz(m,b,n,s)         set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_100Hz_TASK));
+#define set_taskIterations10Hz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_10Hz_TASK));
+#define set_taskIterations1Hz(m,b,n,s)           set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1Hz_TASK));
+
 #include "TemporaryStubbing.h"

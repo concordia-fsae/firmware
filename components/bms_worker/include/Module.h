@@ -26,7 +26,7 @@ extern const ModuleDesc_S BMS_desc;
 extern const ModuleDesc_S COOL_desc;
 extern const ModuleDesc_S ENV_desc;
 extern const ModuleDesc_S SYS_desc;
-extern const ModuleDesc_S IO_desc;
+extern const ModuleDesc_S drv_inputAD_desc;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;
@@ -61,7 +61,8 @@ typedef enum
 
 typedef struct
 {
-    float32_t  total_percentage;
+    float32_t total_percentage;
+    uint32_t  iterations;
 } Module_taskStats_S;
 
 /******************************************************************************
@@ -69,4 +70,5 @@ typedef struct
  ******************************************************************************/
 
 float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task);
+uint32_t  Module_getTotalRuntimeIterations(Module_taskSpeeds_E task);
 void Module_ApplicationIdleHook(void);

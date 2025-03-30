@@ -14,6 +14,18 @@ messages:
       taskUsage1Hz:
         template: percentage
         description: 1Hz total runtime cpu usage
+      taskIterations1Hz:
+        template: count9Bit
+        description: 1Hz total runtime iterations
+      taskIterations10Hz:
+        template: count9Bit
+        description: 10Hz total runtime iterations
+      taskIterations100Hz:
+        template: count9Bit
+        description: 100Hz total runtime iterations
+      taskIterations1kHz:
+        template: count9Bit
+        description: 1kHz total runtime iterations
   uds:
     unscheduled: true
     signals:

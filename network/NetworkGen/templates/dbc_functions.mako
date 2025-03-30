@@ -1,5 +1,5 @@
 <%def name="make_message(message)">
-BO_ ${message.id} ${message.name}: ${message.length_bytes} ${message.node_name}\
+BO_ ${message.id if message.id <=0x7ff else message.id + 0x80000000} ${message.name}: ${message.length_bytes} ${message.node_name}\
 <%
   for signal in message.signal_objs.values():
     make_signal(signal)
@@ -27,5 +27,4 @@ VAL_ ${signal.message_ref.id} ${signal.name} ${signal.discrete_values.repr_for_d
 </%def>
 
 <%def name="make_cycle_time(message)">
-BA_ "GenMsgCycleTime" BO_ ${message.id} ${message.cycle_time_ms};\
 </%def>

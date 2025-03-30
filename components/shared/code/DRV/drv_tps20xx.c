@@ -257,5 +257,5 @@ static void drv_tps20xx_private_setICEnabled(drv_tps20xx_channel_E channel, bool
  */
 static bool drv_tps20xx_private_getICFaulted(drv_tps20xx_channel_E channel)
 {
-    return HW_GPIO_readPin(drv_tps20xx_channels[channel].fault) == false; // TPS20xx has active low fault output
+    return drv_inputAD_getLogicLevel(drv_tps20xx_channels[channel].fault) == DRV_INPUTAD_LOGIC_LOW; // TPS20xx has active low fault output
 }
