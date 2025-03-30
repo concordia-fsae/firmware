@@ -19,14 +19,16 @@
  ******************************************************************************/
 
 TIM_HandleTypeDef htim_tick;
-extern TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-/* @brief  Set duty cycle of TIM4 CH2 output
- * @param percentage2 Duty cycle percentage. Unit: 1%
+/**
+ * @brief  Set duty cycle of output
+ * @param port Port to interact with
+ * @param channel Channel to set the duty cycle of
+ * @param percentage Duty cycle percentage
  */
 void HW_TIM_setDuty(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t percentage)
 {
@@ -48,11 +50,40 @@ void HW_TIM_setDuty(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t perc
 }
 
 /**
+ * @brief  Set duty cycle of output
+ * @param port Port to interact with
+ * @param channel Channel to set the duty cycle of
+ * @return Duty cycle percentage
+ */
+float32_t HW_TIM_getDuty(HW_TIM_port_E port, HW_TIM_channel_E channel)
+{
+    float32_t ret = 0.0f;
+
+    switch (channel)
+    {
+        case HW_TIM_CHANNEL_1:
+            ret = (((float32_t)htim[port].Instance->CCR1) / ((float32_t)htim[port].Init.Period));
+            break;
+        case HW_TIM_CHANNEL_2:
+            ret = (((float32_t)htim[port].Instance->CCR2) / ((float32_t)htim[port].Init.Period));
+            break;
+        case HW_TIM_CHANNEL_3:
+            ret = (((float32_t)htim[port].Instance->CCR3) / ((float32_t)htim[port].Init.Period));
+            break;
+        case HW_TIM_CHANNEL_4:
+            ret = (((float32_t)htim[port].Instance->CCR4) / ((float32_t)htim[port].Init.Period));
+            break;
+    }
+
+    return ret;
+}
+
+/**
  * @brief  Period elapsed callback in non blocking mode
  * @note   This function is called  when TIM4 interrupt took place, inside
  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
  * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
+ * @param  tim : TIM handle
  */
 __weak void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
 {
@@ -64,7 +95,7 @@ __weak void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
  * @note   This function is called TIMx interrupt took place, inside
  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
  * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
+ * @param  tim : TIM handle
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* tim)
 {

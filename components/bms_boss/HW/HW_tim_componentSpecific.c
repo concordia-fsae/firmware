@@ -133,21 +133,21 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim)
 /**
  * @brief  HAL callback called once an input capture has triggered
  *
- * @param htim TIM peripheral
+ * @param tim TIM peripheral
  */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim)
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 {
-    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
+    if (tim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)    // If the interrupt is triggered by channel 1
     {
         uint32_t ICValue, Duty, Frequency;
         // Read the IC value
-        ICValue = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2);
+        ICValue = HAL_TIM_ReadCapturedValue(tim, TIM_CHANNEL_2);
 
         if (ICValue != 0)
         {
 
             // calculate the Duty Cycle
-            Duty = (HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1) * 100) / ICValue;
+            Duty = (HAL_TIM_ReadCapturedValue(tim, TIM_CHANNEL_1) * 100) / ICValue;
 
 
             //Weird black magic? Has todo with counter and etc
