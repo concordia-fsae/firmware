@@ -1,5 +1,5 @@
 /**
- * @file Cooling.h
+ * @file cooling.h
  * @brief  Header file for Cooling Application
  */
 
@@ -9,13 +9,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "stdint.h"
-#include "FloatTypes.h"
-
-// Driver Includes
-#include "HW_Fans.h"
-
+#include "app_cooling.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -23,23 +17,13 @@
 
 typedef enum
 {
-    COOL_INIT = 0x00,
-    COOL_OFF,
-    COOL_ON,
-    COOL_FULL,
-    COOL_ERR,
-} COOL_state_E;
-
-typedef struct
-{
-    COOL_state_E    state[FAN_COUNT];
-    uint8_t         percentage[FAN_COUNT];
-    uint16_t        rpm[FAN_COUNT];
-} COOL_S;
-
+    COOLING_CHANNEL_FAN1,
+    COOLING_CHANNEL_FAN2,
+    COOLING_CHANNEL_COUNT,
+} cooling_channel_E;
 
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
-extern COOL_S COOL;
+extern app_cooling_channel_S cooling[COOLING_CHANNEL_COUNT];

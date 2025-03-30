@@ -14,7 +14,7 @@
 #include "HW_tim.h"
 
 // imports for data access
-#include "Cooling.h"
+#include "cooling.h"
 #include "Environment.h"
 #include "BatteryMonitoring.h"
 #include "Module.h"
@@ -85,12 +85,14 @@
 #define set_mcuTemp(m, b, n, s)                  set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_MCU_TEMP))
 #define set_boardTemp0(m, b, n, s)               set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD1))
 #define set_boardTemp1(m, b, n, s)               set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD2))
-#define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[1])
-#define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, COOL.rpm[0])
-#define set_coolPct1(m, b, n, s)                 set(m,b,n,s, COOL.percentage[1])
-#define set_coolState1(m, b, n, s)               set(m,b,n,s, (COOL.state[1] != COOL_OFF) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_coolPct0(m, b, n, s)                 set(m,b,n,s, COOL.percentage[0])
-#define set_coolState0(m,b,n,s)                  set(m,b,n,s, (COOL.state[0] != COOL_OFF) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, app_cooling_getRate(&cooling[COOLING_CHANNEL_FAN2]))
+#define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, app_cooling_getRate(&cooling[COOLING_CHANNEL_FAN1]))
+#define set_coolPct1(m, b, n, s)                 set(m,b,n,s, (app_cooling_getPower(&cooling[COOLING_CHANNEL_FAN2]) * 100.0f))
+#define set_coolState1(m, b, n, s)               set(m,b,n,s, (app_cooling_getState(&cooling[COOLING_CHANNEL_FAN2]) != COOLING_OFF) ? \
+                                                               CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_coolPct0(m, b, n, s)                 set(m,b,n,s, (app_cooling_getPower(&cooling[COOLING_CHANNEL_FAN1]) * 100.0f))
+#define set_coolState0(m, b, n, s)               set(m,b,n,s, (app_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
+                                                               CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_taskUsage1kHz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
 #define set_taskUsage100Hz(m,b,n,s)              set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
 #define set_taskUsage10Hz(m,b,n,s)               set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));

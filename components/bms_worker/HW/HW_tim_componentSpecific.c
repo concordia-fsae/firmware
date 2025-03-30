@@ -254,7 +254,7 @@ void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
  *
  * @retval Frequency of TIM1 CH1 input
  */
-uint16_t HW_TIM1_getFreqCH1(void)
+float32_t HW_TIM1_getFreqCH1(void)
 {
     if ((fan1_last_tick[1] + 1000000) < HW_TIM_getBaseTick()) 
     {
@@ -268,7 +268,7 @@ uint16_t HW_TIM1_getFreqCH1(void)
  *
  * @retval Frequency of TIM1 CH2 input
  */
-uint16_t HW_TIM1_getFreqCH2(void)
+float32_t HW_TIM1_getFreqCH2(void)
 {
     if ((fan2_last_tick[1] + 1000000U) < HW_TIM_getBaseTick()) 
     {

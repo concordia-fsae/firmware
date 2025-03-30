@@ -19,7 +19,6 @@
 #include "MessageUnpack_generated.h"
 #include "lib_uds.h"
 #include "uds_componentSpecific.h"
-#include "Cooling.h"
 
 /******************************************************************************
  *                              D E F I N E S

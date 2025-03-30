@@ -8,6 +8,16 @@
  ******************************************************************************/
 
 #include "drv_tempSensors.h"
+#include "Environment.h"
+
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
+static float32_t getMaxSegmentTemp(void)
+{
+    return ENV.values.max_temp;
+}
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -40,5 +50,9 @@ drv_tempSensors_channelConfig_S drv_tempSensors_channels[] = {
             .adc_channel = DRV_INPUTAD_ANALOG_BOARD_TEMP1,
             .ref_voltage = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
         },
+    },
+    [DRV_TEMPSENSORS_CHANNEL_SEGMENT_MAX] = {
+        .sensor_type = DRV_TEMPSENSORS_SENSOR_FUNC,
+        .config.func = &getMaxSegmentTemp,
     },
 };
