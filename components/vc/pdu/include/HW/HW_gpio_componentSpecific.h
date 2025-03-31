@@ -16,30 +16,29 @@ typedef enum
     HW_GPIO_ACCUM_EN,
     HW_GPIO_LP2_LATCH,
     HW_GPIO_BSPD_MEM,
-    HW_GPIO_CS_SD,
+    HW_GPIO_SPI_NCS_SD,
     HW_GPIO_VCU3_EN,
     HW_GPIO_MC_EN,
     HW_GPIO_LP5_LATCH,
     /*----ADC/DAC STARTS HERE----*/
-    HW_GPIO_ADC_LP2_SNS, 
-    HW_GPIO_ADC_LP3_SNS,
-    HW_GPIO_ADC_LP4_SNS,
-    HW_GPIO_ADC_LP5_SNS,
+    HW_GPIO_ADC_MUX_LP2_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP3_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP4_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP5_SNS, /*Added MUX*/
     HW_GPIO_ADC_UVL_BATT,
     HW_GPIO_ADC_MUX2_THERMISTORS, /* Typo: THERMISTERS*/ /*Added MUX2*/ 
     HW_GPIO_ADC_MUX2_HP_CS, /*was HW_GPIO_HP_SNS*/ /*Added MUX2*/
     HW_GPIO_ADC_5V_VOLTAGE,
     HW_GPIO_DAC_BRAKE_IN, /*THE ONLY DAC*/
     HW_GPIO_ADC_5V_CS_SNS,
-    HW_GPIO_ADC_LP1_SNS,
-    HW_GPIO_ADC_LP6_SNS,
-    HW_GPIO_ADC_LP7_SNS,
-    HW_GPIO_ADC_LP8_SNS,
-    HW_GPIO_ADC_LP9_SNS,
+    HW_GPIO_ADC_MUX_LP1_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP6_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP7_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP8_SNS, /*Added MUX*/
+    HW_GPIO_ADC_MUX_LP9_SNS, /*Added MUX*/
     /*----ADC/DAC ENDS HERE----*/
-    HW_GPIO_BMS_STATUS,
-    HW_GPIO_MUX_SEL1,
-    HW_GPIO_MUX_SEL2,
+    HW_GPIO_MUX2_SEL1, /*Added MUX2, was MUX*/
+    HW_GPIO_MUX2_SEL2, /*Added MUX2, was MUX*/
     HW_GPIO_PUMP_EN,
     HW_GPIO_PUMP_FAULT,
     HW_GPIO_FAN_EN, /* was HW_GPIO_FAN~~HP~~_EN */
@@ -70,9 +69,9 @@ typedef enum
     HW_GPIO_BMS_MEM,
     HW_GPIO_CAN1_RX,
     HW_GPIO_CAN1_TX,
-    HW_GPIO_SPI_CS_IMU, /*SPI bus*/ 
-    HW_GPIO_UART_TX_MCU, /* Remains .._TX_.. */
-    HW_GPIO_UART_RX_MCU, /* Changed to .._RX_.. */
+    HW_GPIO_SPI_NCS_IMU, /*SPI bus*/ 
+    HW_GPIO_MCU_UART_TX, /* Remains .._TX_.. */
+    HW_GPIO_MCU_UART_RX, /* Changed to .._RX_.. */
     HW_GPIO_BMS3_EN,
     HW_GPIO_MUX_LP_SEL1, /*Added MUX_LP*/ 
     HW_GPIO_HVE_EN,

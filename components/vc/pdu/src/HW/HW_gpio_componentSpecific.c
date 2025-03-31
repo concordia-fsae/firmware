@@ -51,7 +51,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-};
+},
 
 
 
@@ -680,9 +680,5 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     .speed = GPIO_SPEED_FREQ_LOW,
     .pull = GPIO_NOPULL,
     .resetState = HW_GPIO_PINRESET,
-}
+};
     
-
-    
-
-    the port is found under the D column, it is a letter A-E thats found after P... Example, the port for 'PE2' is 'E' therfore you will write  .port = GPIOE
