@@ -30,7 +30,7 @@ typedef enum
     HW_GPIO_ADC_MUX2_HP_CS, /*was HW_GPIO_HP_SNS*/ /*Added MUX2*/
     HW_GPIO_ADC_5V_VOLTAGE,
     HW_GPIO_DAC_BRAKE_IN, /*THE ONLY DAC*/
-    HW_GPIO_ADC_5V_CS_SNS,
+    HW_GPIO_ADC_SUPPLY_5V_SNS, /*was HW_GPIO_ADC_5V_CS_SNS (cannot be CS and SNS)*/
     HW_GPIO_ADC_MUX_LP1_SNS, /*Added MUX*/
     HW_GPIO_ADC_MUX_LP6_SNS, /*Added MUX*/
     HW_GPIO_ADC_MUX_LP7_SNS, /*Added MUX*/
