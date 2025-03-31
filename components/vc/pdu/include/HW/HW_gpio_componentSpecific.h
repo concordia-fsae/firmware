@@ -69,7 +69,7 @@ typedef enum
     HW_GPIO_BMS_MEM,
     HW_GPIO_CAN1_RX,
     HW_GPIO_CAN1_TX,
-    HW_GPIO_SPI_NCS_IMU, /*SPI bus*/ 
+    HW_GPIO_SPI_NCS_IMU, /*SPI bus*/ /*was CS_IMD(typo)*/
     HW_GPIO_MCU_UART_TX, /* Remains .._TX_.. */
     HW_GPIO_MCU_UART_RX, /* Changed to .._RX_.. */
     HW_GPIO_BMS3_EN,
