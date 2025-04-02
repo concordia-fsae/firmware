@@ -22,6 +22,7 @@
 #include "IMD.h"
 #include "ENV.h"
 #include "Module.h"
+#include "drv_inputAD.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -63,9 +64,19 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_maxDischarge(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit);
 #define set_packRH(m,b,n,s) set(m,b,n,s, ENV.board.rh)
 #define set_packTemperature(m,b,n,s) set(m,b,n,s, ENV.board.ambient_temp)
-#define set_taskIterations1kHz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1kHz_TASK));
-#define set_taskIterations100Hz(m,b,n,s)         set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_100Hz_TASK));
-#define set_taskIterations10Hz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_10Hz_TASK));
-#define set_taskIterations1Hz(m,b,n,s)           set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1Hz_TASK));
+#define set_taskIterations1kHz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1kHz_TASK))
+#define set_taskIterations100Hz(m,b,n,s)         set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_100Hz_TASK))
+#define set_taskIterations10Hz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_10Hz_TASK))
+#define set_taskIterations1Hz(m,b,n,s)           set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1Hz_TASK))
+#define set_tsmsChg(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_ACTIVE) ? \
+                                           CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_okHS(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_ACTIVE) ? \
+                                        CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_bmsIMDReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_BMS_IMD_RESET) == DRV_IO_ACTIVE) ? \
+                                               CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_imdStatusMem(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_IMD_STATUS_MEM) == DRV_IO_ACTIVE) ? \
+                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_bmsStatusMem(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_BMS_STATUS_MEM) == DRV_IO_ACTIVE) ? \
+                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #include "TemporaryStubbing.h"
