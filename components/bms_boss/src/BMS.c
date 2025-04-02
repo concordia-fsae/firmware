@@ -119,14 +119,14 @@ static void BMS100Hz_PRD(void)
     }
 
     if (BMS.fault ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_LOW) ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_INPUTAD_LOGIC_LOW))
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW) ||
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW))
     {
         SYS_SFT_openContactors();
     }
     else
     {
-        if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_HIGH)
+        if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_HIGH)
         {
             if (SYS.contacts == SYS_CONTACTORS_OPEN)
             {

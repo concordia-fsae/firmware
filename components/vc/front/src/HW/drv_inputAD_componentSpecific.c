@@ -28,22 +28,46 @@
 
 drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
     [DRV_INPUTAD_DIGITAL_SPARE1] = {
-        .pin = HW_GPIO_DIG_SPARE1,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_DIG_SPARE1,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_SPARE2] = {
-        .pin = HW_GPIO_DIG_SPARE2,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_DIG_SPARE2,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_SPARE3] = {
-        .pin = HW_GPIO_DIG_SPARE3,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_DIG_SPARE3,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_SPARE4] = {
-        .pin = HW_GPIO_DIG_SPARE4,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_DIG_SPARE4,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_5V_FLT1] = {
-        .pin = HW_GPIO_5V_FLT1,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_5V_FLT1,
+            .active_level = DRV_IO_LOGIC_LOW, // TPS20xx has active low fault output
+        },
     },
     [DRV_INPUTAD_DIGITAL_5V_FLT2] = {
-        .pin = HW_GPIO_5V_FLT2,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_5V_FLT2,
+            .active_level = DRV_IO_LOGIC_LOW, // TPS20xx has active low fault output
+        },
     },
 };
 
