@@ -1,0 +1,10 @@
+config:
+  prefix: feature
+  description: General definitions for applications and bootloaders
+defs:
+  vehicleState_mode:
+    discreteValue: mode
+discreteValues:
+  mode:
+    - leader
+    - follower

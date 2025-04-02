@@ -126,3 +126,9 @@ brakeLightState:
   "OFF": 1
   "ON": 2
   "FAULT": 3
+
+vehicleState:
+  "INIT": 0
+  "ON_GLV": 1
+  "ON_HV": 2
+  "TS_RUN": 3
