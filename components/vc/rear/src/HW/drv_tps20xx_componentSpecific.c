@@ -15,14 +15,14 @@
 
 drv_tps20xx_channelConfig_S drv_tps20xx_channels[DRV_TPS20XX_CHANNEL_COUNT] = {
     [DRV_TPS20XX_CHANNEL_5V_CRITICAL] = {
-        .enable = HW_GPIO_5V_EN1,
+        .enable = HW_GPIO_5V_NEN1,
         .inverted_enable_logic = true, // Using the TPS2062
         .fault = DRV_INPUTAD_DIGITAL_5V_FLT1,
         .auto_reset = false,
         .retry_wait_ms = 1U, // We want this line to come back on as soon as possible
     },
     [DRV_TPS20XX_CHANNEL_5V_EXT] = {
-        .enable = HW_GPIO_5V_EN2,
+        .enable = HW_GPIO_5V_NEN2,
         .inverted_enable_logic = true, // Using the TPS2062
         .fault = DRV_INPUTAD_DIGITAL_5V_FLT2,
         .auto_reset = false,
