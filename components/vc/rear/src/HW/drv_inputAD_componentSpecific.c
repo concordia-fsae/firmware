@@ -40,10 +40,10 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
         .pin = HW_GPIO_DIG_SPARE4,
     },
     [DRV_INPUTAD_DIGITAL_5V_FLT1] = {
-        .pin = HW_GPIO_5V_FLT1,
+        .pin = HW_GPIO_5V_NFLT1,
     },
     [DRV_INPUTAD_DIGITAL_5V_FLT2] = {
-        .pin = HW_GPIO_5V_FLT2,
+        .pin = HW_GPIO_5V_NFLT2,
     },
 };
 
