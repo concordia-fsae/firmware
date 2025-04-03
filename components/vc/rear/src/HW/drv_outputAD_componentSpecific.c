@@ -17,14 +17,14 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
     [DRV_OUTPUTAD_DIGITAL_5V_EN1] = {
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
-            .pin = HW_GPIO_5V_EN1,
+            .pin = HW_GPIO_5V_NEN1,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_DIGITAL_5V_EN2] = {
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
-            .pin = HW_GPIO_5V_EN2,
+            .pin = HW_GPIO_5V_NEN2,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
@@ -94,14 +94,14 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
     [DRV_OUTPUTAD_DIGITAL_CS_IMU] = {
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
-            .pin = HW_GPIO_SPI_CS_IMU,
+            .pin = HW_GPIO_SPI_NCS_IMU,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_DIGITAL_CS_SD] = {
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
-            .pin = HW_GPIO_SPI_CS_SD,
+            .pin = HW_GPIO_SPI_NCS_SD,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
