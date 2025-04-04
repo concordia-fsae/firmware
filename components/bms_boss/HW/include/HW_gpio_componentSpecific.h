@@ -31,9 +31,8 @@ typedef enum
     HW_GPIO_LED,
     HW_GPIO_COUNT,
 } HW_GPIO_pinmux_E;
-#endif
 
-#if BMSB_CONFIG_ID == 1U //CFR25 platform
+#elif BMSB_CONFIG_ID == 1U //CFR25 platform
 typedef enum
 {
     HW_GPIO_AIR = 0U,

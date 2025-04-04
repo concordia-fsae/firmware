@@ -10,23 +10,30 @@
 // Firmware Includes
 #include "HW_gpio.h"
 
-#if BMSB_CONFIG_ID == 0U
 const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
-    [HW_GPIO_CAN1_RX] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_8,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_HIGH,
+    [HW_GPIO_AIR] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_0,
+        .mode = GPIO_MODE_OUTPUT_PP,
+        .speed = GPIO_SPEED_FREQ_LOW,
         .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
+        .resetState = HW_GPIO_PINRESET,
     },
-    [HW_GPIO_CAN1_TX] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_9,
-        .mode = GPIO_MODE_AF_PP,
-        .speed = GPIO_SPEED_FREQ_HIGH,
+    [HW_GPIO_PCHG] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_1,
+        .mode = GPIO_MODE_OUTPUT_PP,
+        .speed = GPIO_SPEED_FREQ_LOW,
         .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINSET,
+        .resetState = HW_GPIO_PINRESET,
+    },
+    [HW_GPIO_LED] = {
+        .port = GPIOC,
+        .pin = GPIO_PIN_13,
+        .mode = GPIO_MODE_OUTPUT_PP,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_PINRESET,
     },
     [HW_GPIO_I2C1_SCL] = {
         .port = GPIOB,
@@ -52,14 +59,6 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_TSMS_CHG] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_14,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
     [HW_GPIO_OK_HS] = {
         .port = GPIOA,
         .pin = GPIO_PIN_8,
@@ -68,25 +67,104 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
+
+    [HW_GPIO_CAN1_RX] = {
+        .mode = GPIO_MODE_INPUT,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+
+        #if BMSB_CONFIG_ID == 0U
+        .port = GPIOB,
+        .pin = GPIO_PIN_8,
+        #elif BMSB_CONFIG_ID == 1U
+        .port = GPIOA,
+        .pin = GPIO_PIN_11,
+        #endif
+    },
+    [HW_GPIO_CAN1_TX] = {
+        .mode = GPIO_MODE_AF_PP,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_PINSET,
+
+        #if BMSB_CONFIG_ID == 0U
+        .port = GPIOB,
+        .pin = GPIO_PIN_9,
+        #elif BMSB_CONFIG_ID == 1U
+        .port = GPIOA,
+        .pin = GPIO_PIN_12,
+        #endif
+    },
+    [HW_GPIO_TSMS_CHG] = {
+        .mode = GPIO_MODE_INPUT,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+
+        #if BMSB_CONFIG_ID == 0U
+        .port = GPIOB,
+        .pin = GPIO_PIN_14,
+        #elif BMSB_CONFIG_ID == 1U
+        .port = GPIOD,
+        .pin = GPIO_PIN_2,
+        #endif
+    },
+    [HW_GPIO_IMD_STATUS_MEM] = {
+        .mode = GPIO_MODE_INPUT,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+
+        #if BMSB_CONFIG_ID == 0U
+        .port = GPIOA,
+        .pin = GPIO_PIN_4,
+        #elif BMSB_CONFIG_ID == 1U
+        .port = GPIOB,
+        .pin = GPIO_PIN_8,
+        #endif
+    },
+    [HW_GPIO_BMS_STATUS_MEM] = {
+        .mode = GPIO_MODE_INPUT,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+
+        #if BMSB_CONFIG_ID == 0U
+        .port = GPIOA,
+        .pin = GPIO_PIN_5,
+        #elif BMSB_CONFIG_ID == 1U
+        .port = GPIOB,
+        .pin = GPIO_PIN_9,
+        #endif
+    },
+    [HW_GPIO_BMS_STATUS] = {
+        .mode = GPIO_MODE_OUTPUT_PP,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_PULLDOWN,
+        .resetState = HW_GPIO_PINRESET,
+
+        #if BMSB_CONFIG_ID == 0U
+        .port = GPIOB,
+        .pin = GPIO_PIN_12,
+        #elif BMSB_CONFIG_ID == 1U
+        .port = GPIOA,
+        .pin = GPIO_PIN_4,
+        #endif
+    },
+
+    #if BMSB_CONFIG_ID == 0U
+    [HW_GPIO_IMD_STATUS] = {
+        .port = GPIOB,
+        .pin = GPIO_PIN_13,
+        .mode = GPIO_MODE_OUTPUT_PP,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_PULLDOWN,
+        .resetState = HW_GPIO_PINRESET,
+    },
     [HW_GPIO_BMS_IMD_RESET] = {
         .port = GPIOA,
         .pin = GPIO_PIN_2,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_IMD_STATUS_MEM] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_4,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_BMS_STATUS_MEM] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_5,
         .mode = GPIO_MODE_INPUT,
         .speed = GPIO_SPEED_FREQ_LOW,
         .pull = GPIO_NOPULL,
@@ -108,68 +186,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_BMS_STATUS] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_12,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_PULLDOWN,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_IMD_STATUS] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_13,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_PULLDOWN,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_AIR] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_0,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_PCHG] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_1,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_LED] = {
-        .port = GPIOC,
-        .pin = GPIO_PIN_13,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
-};
-#endif
-
-#if BMSB_CONFIG_ID == 1U
-const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
-
-    [HW_GPIO_AIR] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_0,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_PCHG] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_1,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
+    #elif BMSB_CONFIG_ID == 1U
     [HW_GPIO_UART_TX_3V] = {
         .port = GPIOA,
         .pin = GPIO_PIN_2,
@@ -185,46 +202,6 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_BMS_STATUS] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_4,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_PULLDOWN,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_OK_HS] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_8,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_MHLS] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_9,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_CAN1_RX] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_11,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_HIGH,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_CAN1_TX] = {
-        .port = GPIOA,
-        .pin = GPIO_PIN_12,
-        .mode = GPIO_MODE_AF_PP,
-        .speed = GPIO_SPEED_FREQ_HIGH,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINSET,
     },
     [HW_GPIO_ADC_TEMP] = {
         .port = GPIOC,
@@ -258,62 +235,6 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_LED] = {
-        .port = GPIOC,
-        .pin = GPIO_PIN_13,
-        .mode = GPIO_MODE_OUTPUT_PP,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
-    [HW_GPIO_ADC_CS_N] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_0,
-        .mode = GPIO_MODE_ANALOG,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_ADC_CS_P] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_1,
-        .mode = GPIO_MODE_ANALOG,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_I2C1_SCL] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_6,
-        .mode = GPIO_MODE_AF_OD,
-        .speed = GPIO_SPEED_FREQ_HIGH,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_I2C1_SDA] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_7,
-        .mode = GPIO_MODE_AF_OD,
-        .speed = GPIO_SPEED_FREQ_HIGH,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_IMD_STATUS_MEM] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_8,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
-    [HW_GPIO_BMS_STATUS_MEM] = {
-        .port = GPIOB,
-        .pin = GPIO_PIN_9,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
     [HW_GPIO_CAN2_RX] = {
         .port = GPIOB,
         .pin = GPIO_PIN_12,
@@ -330,14 +251,6 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINSET,
     },
-    [HW_GPIO_TSMS_CHG] = {
-        .port = GPIOD,
-        .pin = GPIO_PIN_2,
-        .mode = GPIO_MODE_INPUT,
-        .speed = GPIO_SPEED_FREQ_LOW,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_NOSET,
-    },
     [HW_GPIO_RESET] = {
         .port = GPIOD,
         .pin = GPIO_PIN_3,
@@ -346,5 +259,21 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
+    [HW_GPIO_ADC_CS_N] = {
+        .port = GPIOB,
+        .pin = GPIO_PIN_0,
+        .mode = GPIO_MODE_ANALOG,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+    },
+    [HW_GPIO_ADC_CS_P] = {
+        .port = GPIOB,
+        .pin = GPIO_PIN_1,
+        .mode = GPIO_MODE_ANALOG,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+    },
+    #endif
 };
-#endif
