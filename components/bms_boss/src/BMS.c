@@ -109,6 +109,7 @@ static void BMS100Hz_PRD(void)
         SYS_SFT_closeShutdown();
     }
 
+    #if BMSB_CONFIG_ID == 0U
     if (IMD_getState() == IMD_HEALTHY)
     {
         HW_GPIO_writePin(HW_GPIO_IMD_STATUS, true);
@@ -117,6 +118,7 @@ static void BMS100Hz_PRD(void)
     {
         HW_GPIO_writePin(HW_GPIO_IMD_STATUS, false);
     }
+    #endif
 
     if (BMS.fault ||
         (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_LOW) ||
