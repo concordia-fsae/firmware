@@ -23,6 +23,7 @@
 #include "ENV.h"
 #include "Module.h"
 #include "drv_inputAD.h"
+#include "drv_outputAD.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -78,5 +79,9 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
                                                 CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_bmsStatusMem(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_BMS_STATUS_MEM) == DRV_IO_ACTIVE) ? \
                                                 CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_bmsStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS) == DRV_IO_ACTIVE) ?\
+                                             CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ?\
+                                             CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #include "TemporaryStubbing.h"

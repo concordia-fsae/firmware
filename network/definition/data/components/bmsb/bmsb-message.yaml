@@ -67,7 +67,7 @@ messages:
       maxDischarge:
       maxCharge:
 
-  inputStatus:
+  ioStatus:
     description: "Status of the BMSB inputs"
     cycleTimeMs: 50
     id: 0x501
@@ -78,3 +78,5 @@ messages:
       bmsIMDReset:
       imdStatusMem:
       bmsStatusMem:
+      bmsStatus:
+      imdStatus:
