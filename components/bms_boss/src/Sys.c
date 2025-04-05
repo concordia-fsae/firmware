@@ -12,7 +12,7 @@
 
 /**< HW Includes */
 #include "HW.h"
-#include "HW_gpio.h"
+#include "drv_outputAD.h"
 #include "SystemConfig.h"
 
 /**< Other Includes */
@@ -64,7 +64,7 @@ static void SYS10Hz_PRD()
         case SYS_INIT:
             break;
         case SYS_ERROR:
-            HW_GPIO_togglePin(HW_GPIO_LED);
+            drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
             break;
     }
 }
@@ -78,7 +78,7 @@ static void SYS1Hz_PRD()
     switch (SYS.state)
     {
         case SYS_RUNNING:
-            HW_GPIO_togglePin(HW_GPIO_LED);
+            drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
             break;
         case SYS_INIT:
             break;
@@ -99,18 +99,18 @@ const ModuleDesc_S SYS_desc = {
 
 void SYS_SFT_openShutdown(void)
 {
-    HW_GPIO_writePin(HW_GPIO_BMS_STATUS, false);
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_INACTIVE);
 }
 
 void SYS_SFT_closeShutdown(void)
 {
-    HW_GPIO_writePin(HW_GPIO_BMS_STATUS, true);
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_ACTIVE);
 }
 
 void SYS_SFT_openContactors(void)
 {
-    HW_GPIO_writePin(HW_GPIO_AIR, false);
-    HW_GPIO_writePin(HW_GPIO_PCHG, false);
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_INACTIVE);
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
     SYS.contacts = SYS_CONTACTORS_OPEN;
 }
 
@@ -118,17 +118,17 @@ void SYS_SFT_cycleContacts(void)
 {
     if (SYS.contacts == SYS_CONTACTORS_OPEN)
     {
-        HW_GPIO_writePin(HW_GPIO_PCHG, true);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_ACTIVE);
         SYS.contacts = SYS_CONTACTORS_PRECHARGE;
     }
     else if (SYS.contacts == SYS_CONTACTORS_PRECHARGE)
     {
-        HW_GPIO_writePin(HW_GPIO_AIR, true);        
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_ACTIVE);
         SYS.contacts = SYS_CONTACTORS_CLOSED;
     }
     else if (SYS.contacts == SYS_CONTACTORS_CLOSED)
     {
-        HW_GPIO_writePin(HW_GPIO_PCHG, false);        
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
         SYS.contacts = SYS_CONTACTORS_HVP_CLOSED;
     }
 }

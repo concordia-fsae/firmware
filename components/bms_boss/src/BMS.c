@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "HW.h"
-#include "HW_gpio.h"
 
 #include "IMD.h"
 #include "drv_inputAD.h"
+#include "drv_outputAD.h"
 #include "Module.h"
 #include "Sys.h"
 #include "SystemConfig.h"
@@ -111,11 +111,11 @@ static void BMS100Hz_PRD(void)
 
     if (IMD_getState() == IMD_HEALTHY)
     {
-        HW_GPIO_writePin(HW_GPIO_IMD_STATUS, true);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_ACTIVE);
     }
     else
     {
-        HW_GPIO_writePin(HW_GPIO_IMD_STATUS, false);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_INACTIVE);
     }
 
     if (BMS.fault ||
