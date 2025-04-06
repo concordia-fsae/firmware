@@ -11,3 +11,15 @@ messages:
     id: 0x551
     sourceBuses: veh
     template: rtosTaskInfo
+
+  pedalPosition:
+    description: Pedal position
+    id: 0x50
+    cycleTimeMs: 10
+    signals:
+      apps1:
+      apps2:
+      brakePosition:
+      apps1Voltage:
+      apps2Voltage:
+      brakeVoltage:

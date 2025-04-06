@@ -10,6 +10,7 @@
 /**< Module Header */
 #include "Module.h"
 #include "drv_tps20xx.h"
+#include "drv_pedalMonitor.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -35,7 +36,7 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_tps20xx_init();
-
+    drv_pedalMonitor_init();
 }
 
 /**
@@ -45,4 +46,13 @@ void Module_componentSpecific_Init(void)
 void Module_componentSpecific_10Hz(void)
 {
     drv_tps20xx_run();
+}
+
+/**
+ * #brief Run the pre 100Hz task functions
+ * @note typically reserved for drivers
+ */
+void Module_componentSpecific_100Hz(void)
+{
+    drv_pedalMonitor_run();
 }
