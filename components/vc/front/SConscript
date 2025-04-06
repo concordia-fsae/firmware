@@ -148,6 +148,7 @@ project_source_files = [
     SRC_DIR.File("UDS.c"),
     SHARED_LIBS.File("LIB_app.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
+    SHARED_LIBS.File("lib_interpolation.c"),
 ]
 
 project_hw_files = [
@@ -171,6 +172,8 @@ project_hw_files = [
     SHARED_DRV.File("drv_outputAD.c"),
     HW_DIR.File("drv_outputAD_componentSpecific.c"),
     SHARED_DRV.File("drv_io.c"),
+    SHARED_DRV.File("drv_pedalMonitor.c"),
+    HW_DIR.File("drv_pedalMonitor_componentSpecific.c"),
 ]
 
 project_source_files += project_hw_files

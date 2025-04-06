@@ -116,13 +116,37 @@ float32_t drv_pedalMonitor_getPedalPosition(drv_pedalMonitor_channel_E channel)
 }
 
 /**
- * @brief Get the pedal position of a channel
+ * @brief Get the pedal state of a channel
  * @param channel The channel to retrieve
  * @return The current state of the pedal channel 
  */
 drv_pedalMonitor_state_E drv_pedalMonitor_getPedalState(drv_pedalMonitor_channel_E channel)
 {
     return pedals[channel].state;
+}
+
+/**
+ * @brief Get the pedal CAN state of a channel
+ * @param channel The channel to retrieve
+ * @return The current state of the pedal channel 
+ */
+CAN_pedalState_E drv_pedalMonitor_getPedalStateCAN(drv_pedalMonitor_channel_E channel)
+{
+    CAN_pedalState_E ret = CAN_PEDALSTATE_SNA;
+
+    switch (pedals[channel].state)
+    {
+        case DRV_PEDALMONITOR_OK:
+            ret = CAN_PEDALSTATE_OK;
+            break;
+        case DRV_PEDALMONITOR_FAULT:
+            ret = CAN_PEDALSTATE_FAULT;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
 }
 
 /**

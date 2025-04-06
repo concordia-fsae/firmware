@@ -70,4 +70,5 @@ void                     drv_pedalMonitor_init(void);
 void                     drv_pedalMonitor_run(void);
 float32_t                drv_pedalMonitor_getPedalPosition(drv_pedalMonitor_channel_E channel);
 drv_pedalMonitor_state_E drv_pedalMonitor_getPedalState(drv_pedalMonitor_channel_E channel);
+CAN_pedalState_E         drv_pedalMonitor_getPedalStateCAN(drv_pedalMonitor_channel_E channel);
 float32_t                drv_pedalMonitor_getPedalVoltage(drv_pedalMonitor_channel_E channel);
