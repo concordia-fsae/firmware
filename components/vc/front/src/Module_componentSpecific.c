@@ -23,6 +23,7 @@
 const ModuleDesc_S* modules[] = {
     &CANIO_rx,
     &APPS_desc,
+    &BPPC_desc,
 #if APP_UDS
     &UDS_desc,
 #endif

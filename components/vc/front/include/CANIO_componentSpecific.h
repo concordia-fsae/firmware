@@ -21,6 +21,7 @@
 #include "drv_pedalMonitor.h"
 #include "drv_inputAD.h"
 #include "APPS.h"
+#include "BPPC.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -46,5 +47,6 @@
 #define set_brakeVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_POT))
 #define set_acceleratorPosition(m,b,n,s) set(m,b,n,s, APPS_getPedalPosition() * 100)
 #define set_acceleratorState(m,b,n,s) set(m,b,n,s, APPS_getStateCAN())
+#define set_bppcState(m,b,n,s) set(m,b,n,s, BPPC_getStateCAN())
 
 #include "TemporaryStubbing.h"

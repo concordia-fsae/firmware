@@ -31,3 +31,4 @@ messages:
     signals:
       acceleratorPosition:
       acceleratorState:
+      bppcState:

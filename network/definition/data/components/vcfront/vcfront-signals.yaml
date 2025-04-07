@@ -30,3 +30,7 @@ signals:
   acceleratorState:
     description: "State of the accelerator sensor"
     discreteValues: appsState
+
+  bppcState:
+    description: "State of the accelerator sensor"
+    discreteValues: bppcState

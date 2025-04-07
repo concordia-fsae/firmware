@@ -105,3 +105,10 @@ appsState:
   "FAULT_BOTH": 4
   "FAULT_DISAGREEMENT": 5
   "ERROR": 6
+
+bppcState:
+  "SNA": 0
+  "OK": 1
+  "INPLAUSIBLE": 2
+  "FAULT": 3
+  "ERROR": 4
