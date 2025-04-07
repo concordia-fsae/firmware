@@ -23,3 +23,11 @@ messages:
       apps1Voltage:
       apps2Voltage:
       brakeVoltage:
+
+  accelerator:
+    description: Status of the pedal sensors
+    id: 0x4f
+    cycleTimeMs: 10
+    signals:
+      acceleratorPosition:
+      acceleratorState:

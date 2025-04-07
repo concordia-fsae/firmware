@@ -22,3 +22,11 @@ signals:
   brakeVoltage:
     description: "Voltage of the brake pedal"
     template: voltsPrecise
+
+  acceleratorPosition:
+    description: "Accelerator pedal position"
+    template: percentage
+
+  acceleratorState:
+    description: "State of the accelerator sensor"
+    discreteValues: appsState

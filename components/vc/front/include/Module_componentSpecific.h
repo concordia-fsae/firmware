@@ -17,6 +17,7 @@
  ******************************************************************************/
 
 /**< Modules */
+extern const ModuleDesc_S APPS_desc;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;
@@ -27,7 +28,8 @@ extern const ModuleDesc_S CANIO_tx;
 
 typedef enum
 {
-    MODULE_UDS = 0x00U,
+    MODULE_APPS = 0x00U,
+    MODULE_UDS,
     MODULE_CANIO_tx,
     MODULE_CANIO_rx,
     MODULE_CNT

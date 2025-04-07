@@ -96,3 +96,12 @@ pm100dxIsLimited:
 pm100dxFaultStatus:
   "OK": 0
   "FAULT": 1
+
+appsState:
+  "SNA": 0
+  "OK": 1
+  "FAULT_PEDAL1": 2
+  "FAULT_PEDAL2": 3
+  "FAULT_BOTH": 4
+  "FAULT_DISAGREEMENT": 5
+  "ERROR": 6

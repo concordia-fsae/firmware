@@ -21,10 +21,11 @@
  * @brief  Modules run by the Module Manager. Order will apply to execution.
  */
 const ModuleDesc_S* modules[] = {
+    &CANIO_rx,
+    &APPS_desc,
 #if APP_UDS
     &UDS_desc,
 #endif
-    &CANIO_rx,
     &CANIO_tx,
 };
 
