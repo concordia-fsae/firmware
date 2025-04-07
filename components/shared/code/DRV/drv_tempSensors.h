@@ -24,10 +24,18 @@
 *                             T Y P E D E F S
  ******************************************************************************/
 
+/**
+ * @brief The type of temperature sensor
+ * @value DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE A thermistor on the low side of
+ *        a voltage divider
+ * @value DRV_TEMPSENSORS_SENSOR_LINEAR A linear temperature sensor such as a diode
+ * @value DRV_TEMPSENSORS_SENSOR_FUNC A function that returns a value in degrees C
+ */
 typedef enum
 {
     DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE,
     DRV_TEMPSENSORS_SENSOR_LINEAR,
+    DRV_TEMPSENSORS_SENSOR_FUNC,
 } drv_tempSensors_sensorType_E;
 
 typedef struct
@@ -50,6 +58,7 @@ typedef union
 {
     drv_tempSensors_configThermistorLowSide_S thermistor_ls;
     drv_tempSensors_configLinear_S            linear;
+    float32_t                                 (*func)(void);
 } drv_tempSensors_config_S;
 
 typedef struct

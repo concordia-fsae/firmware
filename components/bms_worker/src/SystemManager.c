@@ -21,8 +21,6 @@
 #include "HW_spi.h"
 #include "HW_tim.h"
 
-/**< Driver Includes */
-#include "HW_Fans.h"
 #include "HW_HS4011.h"
 #include "HW_LTC2983.h"
 #include "HW_MAX14921.h"

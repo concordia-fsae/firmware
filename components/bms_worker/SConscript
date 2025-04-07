@@ -150,7 +150,7 @@ src_files = [
     SRC_DIR.File("Module.c"),
     SHARED_APP.File("CAN/CANIO-tx.c"),
     SHARED_APP.File("CAN/CANIO-rx.c"),
-    SRC_DIR.File("Cooling.c"),
+    SRC_DIR.File("cooling.c"),
     SRC_DIR.File("Environment.c"),
     SRC_DIR.File("BatteryMonitoring.c"),
     SRC_DIR.File("Sys.c"),
@@ -161,6 +161,7 @@ src_files = [
     SRC_DIR.File("CANIO_componentSpecific.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
     SHARED_LIBS.File("lib_thermistors.c"),
+    SHARED_LIBS.File("lib_interpolation.c"),
 ]
 
 hw_files = [
@@ -178,7 +179,7 @@ hw_files = [
     HW_DIR.File("HW_spi_componentSpecific.c"),
     SHARED_HW.File("HW_tim.c"),
     HW_DIR.File("HW_tim_componentSpecific.c"),
-    HW_DIR.File("HW_Fans.c"),
+    SHARED_APP.File("app_cooling.c"),
     HW_DIR.File("HW_HS4011.c"),
     HW_DIR.File("HW_MAX14921.c"),
     HW_DIR.File("HW_LTC2983.c"),
@@ -190,6 +191,7 @@ hw_files = [
     HW_DIR.File("drv_inputAD_componentSpecific.c"),
     SHARED_DRV.File("drv_tempSensors.c"),
     HW_DIR.File("drv_tempSensors_componentSpecific.c"),
+    SHARED_DRV.File("drv_timer.c"),
 ]
 
 src_files += hw_files

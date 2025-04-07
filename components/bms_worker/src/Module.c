@@ -35,7 +35,7 @@ static const ModuleDesc_S* modules[] = {
     &drv_inputAD_desc,
     &BMS_desc,
     &ENV_desc,
-    &COOL_desc,
+    &cooling_desc,
     &SYS_desc,
 #if FEATURE_IS_ENABLED(APP_UDS)
     &UDS_desc,

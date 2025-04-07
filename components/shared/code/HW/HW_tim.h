@@ -25,6 +25,12 @@ typedef enum
     HW_TIM_CHANNEL_4,
 } HW_TIM_channel_E;
 
+typedef struct
+{
+    HW_TIM_port_E    tim_port;
+    HW_TIM_channel_E tim_channel;
+} HW_TIM_pwmChannel_S;
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/

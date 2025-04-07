@@ -23,7 +23,7 @@
 
 /**< Modules */
 extern const ModuleDesc_S BMS_desc;
-extern const ModuleDesc_S COOL_desc;
+extern const ModuleDesc_S cooling_desc;
 extern const ModuleDesc_S ENV_desc;
 extern const ModuleDesc_S SYS_desc;
 extern const ModuleDesc_S drv_inputAD_desc;

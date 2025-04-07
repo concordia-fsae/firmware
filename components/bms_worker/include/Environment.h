@@ -27,13 +27,6 @@
 
 typedef enum
 {
-    BRD1 = 0x00,
-    BRD2,
-    BRD_COUNT,
-} ENV_BRDChannels_E;
-
-typedef enum
-{
     CH1 = 0x00,
     CH2,
     CH3,
@@ -78,12 +71,10 @@ typedef struct
     {
         struct
         {
-            float32_t  mcu_temp;            /**< Stored in 0.1 deg C */
-            float32_t  brd_temp[BRD_COUNT]; /**< Stored in 0.1 deg C */
-            float32_t  ambient_temp;        /**< Stored in 0.1 deg C */
-            float32_t  rh;                  /**< Stored in 0.01% RH */
+            float32_t ambient_temp;
+            float32_t rh;
         } board;
-        ENV_temperature_S temps[CHANNEL_COUNT]; /**< Stored in 0.1 deg C */
+        ENV_temperature_S temps[CHANNEL_COUNT];
         float32_t       max_temp;
         float32_t       min_temp;
         float32_t       avg_temp;

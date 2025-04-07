@@ -40,7 +40,7 @@ typedef enum
  ******************************************************************************/
 
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-void     HW_TIM_10kHz_timerStart(void);
+void      HW_TIM_10kHz_timerStart(void);
 #endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-uint16_t HW_TIM1_getFreqCH1(void);
-uint16_t HW_TIM1_getFreqCH2(void);
+float32_t HW_TIM1_getFreqCH1(void);
+float32_t HW_TIM1_getFreqCH2(void);
