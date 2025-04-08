@@ -113,7 +113,7 @@ static void BMS100Hz_PRD(void)
     {
         SYS_SFT_closeShutdown();
     }
-
+#if BMSB_CONFIG_ID == 0U
     if (IMD_getState() == IMD_HEALTHY)
     {
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_ACTIVE);
@@ -122,6 +122,7 @@ static void BMS100Hz_PRD(void)
     {
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_INACTIVE);
     }
+#endif
 
     if (BMS.fault ||
         (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW) ||
