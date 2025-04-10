@@ -179,3 +179,31 @@ signals:
         max: 100
       resolution: 1
     continuous: true
+
+  tsmsChg:
+    description: "Status of the BMSB TSMS CHG Master Switch"
+    discreteValues: "digitalStatus"
+
+  okHS:
+    description: "Status of the BMSB IMD OK Signal"
+    discreteValues: "digitalStatus"
+
+  bmsIMDReset:
+    description: "Status of the BMSB BMS/IMD Reset Switch"
+    discreteValues: "digitalStatus"
+
+  imdStatusMem:
+    description: "Status of the BMSB IMD SFTY Control Output"
+    discreteValues: "digitalStatus"
+
+  bmsStatusMem:
+    description: "Status of the BMSB BMS SFTY Control Output"
+    discreteValues: "digitalStatus"
+
+  bmsStatus:
+    description: "Status of the BMSB BMS SFTY"
+    discreteValues: "digitalStatus"
+
+  imdStatus:
+    description: "Status of the BMSB IMD SFTY"
+    discreteValues: "digitalStatus"

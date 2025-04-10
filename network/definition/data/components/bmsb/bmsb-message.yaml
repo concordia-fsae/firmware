@@ -66,3 +66,17 @@ messages:
     signals:
       maxDischarge:
       maxCharge:
+
+  ioStatus:
+    description: "Status of the BMSB inputs"
+    cycleTimeMs: 50
+    id: 0x501
+    sourceBuses: veh
+    signals:
+      tsmsChg:
+      okHS:
+      bmsIMDReset:
+      imdStatusMem:
+      bmsStatusMem:
+      bmsStatus:
+      imdStatus:

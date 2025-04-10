@@ -8,10 +8,10 @@
 #include <string.h>
 
 #include "HW.h"
-#include "HW_gpio.h"
 
 #include "IMD.h"
 #include "drv_inputAD.h"
+#include "drv_outputAD.h"
 #include "Module.h"
 #include "Sys.h"
 #include "SystemConfig.h"
@@ -111,22 +111,22 @@ static void BMS100Hz_PRD(void)
 
     if (IMD_getState() == IMD_HEALTHY)
     {
-        HW_GPIO_writePin(HW_GPIO_IMD_STATUS, true);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_ACTIVE);
     }
     else
     {
-        HW_GPIO_writePin(HW_GPIO_IMD_STATUS, false);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_INACTIVE);
     }
 
     if (BMS.fault ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_LOW) ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_INPUTAD_LOGIC_LOW))
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW) ||
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW))
     {
         SYS_SFT_openContactors();
     }
     else
     {
-        if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_INPUTAD_LOGIC_HIGH)
+        if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_HIGH)
         {
             if (SYS.contacts == SYS_CONTACTORS_OPEN)
             {

@@ -168,8 +168,11 @@ project_hw_files = [
     SHARED_DRV.File("drv_hih.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
+    SHARED_DRV.File("drv_io.c"),
     SHARED_DRV.File("drv_inputAD.c"),
     HW_DIR.File("drv_inputAD_componentSpecific.c"),
+    SHARED_DRV.File("drv_outputAD.c"),
+    HW_DIR.File("drv_outputAD_componentSpecific.c"),
 ]
 
 project_source_files += project_hw_files

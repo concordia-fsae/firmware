@@ -29,19 +29,39 @@
 
 drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
     [DRV_INPUTAD_DIGITAL_TSMS_CHG] = {
-        .pin = HW_GPIO_TSMS_CHG,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_TSMS_CHG,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_OK_HS] = {
-        .pin = HW_GPIO_OK_HS,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_OK_HS,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_BMS_IMD_RESET] = {
-        .pin = HW_GPIO_BMS_STATUS_MEM,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_BMS_IMD_RESET,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_IMD_STATUS_MEM] = {
-        .pin = HW_GPIO_IMD_STATUS_MEM,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_IMD_STATUS_MEM,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
     [DRV_INPUTAD_DIGITAL_BMS_STATUS_MEM] = {
-        .pin = HW_GPIO_BMS_STATUS_MEM,
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_BMS_STATUS_MEM,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
     },
 };
 
