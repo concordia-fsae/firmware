@@ -25,3 +25,12 @@ signals:
       range:
         min: 0
         max: 18446744073709551615
+  voltsPrecise:
+    unit: 'V'
+    nativeRepresentation:
+      resolution: 0.001
+      bitWidth: 13
+      range:
+        min: 0
+        max: 8
+    continuous: true

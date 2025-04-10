@@ -312,6 +312,10 @@ def process_node(node: CanNode):
         for sig, definition in signals_dict.items():
             try:
                 SIGNAL_SCHEMA.validate(definition)
+                if "template" in definition:
+                    if definition["template"] not in templates["signals"]:
+                        raise Exception(f"Signal '{sig}' has template signal '{definition["template"]}' which can not be found in the template signals")
+                    definition.update(templates["signals"][definition["template"]])
                 if "nativeRepresentation" not in definition and "discreteValues" not in definition:
                     raise Exception(f"Signal '{sig}' in '{node.name}' has neither a discreteValues or nativeRepresentation.")
                 if "unit" in definition:
