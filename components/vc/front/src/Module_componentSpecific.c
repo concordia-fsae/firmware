@@ -23,6 +23,9 @@
 const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
+    &apps_desc,
+    &bppc_desc,
+    &torque_desc,
     &CANIO_tx,
 };
 
