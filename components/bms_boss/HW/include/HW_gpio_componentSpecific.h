@@ -30,9 +30,6 @@ typedef enum
     HW_GPIO_AIR,
     HW_GPIO_PCHG,
     HW_GPIO_LED,
-#if BMSB_CONFIG_ID == 0U
-    HW_GPIO_COUNT,
-#endif
 #if BMSB_CONFIG_ID == 1U
     HW_GPIO_UART_TX_3V,
     HW_GPIO_UART_RX_3V,
@@ -42,6 +39,6 @@ typedef enum
     HW_GPIO_VPACK_DIAG,
     HW_GPIO_CAN2_RX,
     HW_GPIO_CAN2_TX,
-    HW_GPIO_COUNT,
 #endif
+    HW_GPIO_COUNT,
 } HW_GPIO_pinmux_E;
