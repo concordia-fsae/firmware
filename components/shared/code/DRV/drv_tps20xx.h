@@ -47,7 +47,7 @@
 
 #include "drv_tps20xx_componentSpecific.h"
 #include "drv_inputAD.h"
-#include "HW_gpio.h"
+#include "drv_outputAD.h"
 #include "stdbool.h"
 
 /******************************************************************************
@@ -56,11 +56,10 @@
 
 typedef struct
 {
-    const HW_GPIO_pinmux_E             enable;
-    const bool                         inverted_enable_logic;
-    const drv_inputAD_channelDigital_E fault;
-    bool                               auto_reset;
-    uint16_t                           retry_wait_ms;
+    const drv_outputAD_channelDigital_E enable;
+    const drv_inputAD_channelDigital_E  fault;
+    bool                                auto_reset;
+    uint16_t                            retry_wait_ms;
 } drv_tps20xx_channelConfig_S;
 
 extern drv_tps20xx_channelConfig_S drv_tps20xx_channels[DRV_TPS20XX_CHANNEL_COUNT];

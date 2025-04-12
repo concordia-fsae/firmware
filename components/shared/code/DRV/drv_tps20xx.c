@@ -8,6 +8,8 @@
  ******************************************************************************/
 
 #include "drv_tps20xx.h"
+#include "drv_io.h"
+#include "drv_outputAD.h"
 #include "string.h"
 #include "drv_timer.h"
 
@@ -236,18 +238,8 @@ void drv_tps20xx_setEnabled(drv_tps20xx_channel_E channel, bool enabled)
  */
 static void drv_tps20xx_private_setICEnabled(drv_tps20xx_channel_E channel, bool enabled)
 {
-    // Set the pin to what logic level the software wants
-    bool pin_state = (drv_tps20xx_channels[channel].inverted_enable_logic) ? enabled == false : enabled;
-
-    // If the output is a push pull and a set pin is a digital high output. keep it the same
-    // Otherwise, invert the logic for an open drain so that a low level triggers it being set
-    bool state_to_set = (HW_GPIO_pinmux[drv_tps20xx_channels[channel].enable].mode == GPIO_MODE_OUTPUT_PP) ?
-                    pin_state :
-                    pin_state == false;
-
-    // The different TI chips in the family have different input polarities. This in turn with the gpio
-    // firmware we can set the correct pin state while only considering the hsd as on/off in the application
-    HW_GPIO_writePin(drv_tps20xx_channels[channel].enable, state_to_set);
+    const drv_io_activeState_E state_to_set = (enabled) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+    drv_outputAD_setDigitalActiveState(drv_tps20xx_channels[channel].enable, state_to_set);
 }
 
 /**
