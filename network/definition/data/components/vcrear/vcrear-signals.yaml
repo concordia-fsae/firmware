@@ -1,1 +1,4 @@
 signals:
+  brakeLightState:
+    description: 'State of the break light'
+    discreteValues: brakeLightState

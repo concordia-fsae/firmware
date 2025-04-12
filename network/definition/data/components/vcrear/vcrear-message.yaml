@@ -11,3 +11,11 @@ messages:
     id: 0x552
     sourceBuses: veh
     template: rtosTaskInfo
+
+  outputState:
+    description: Information about the VCREAR output states
+    cycleTimeMs: 100
+    id: 0x400
+    sourceBuses: veh
+    signals:
+      brakeLightState:
