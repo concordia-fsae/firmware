@@ -18,3 +18,10 @@ typedef enum
 {
     DRV_INPUTAD_ANALOG_COUNT,
 } drv_inputAD_channelAnalog_E;
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+void drv_inputAD_init_componentSpecific(void);
+void drv_inputAD_1kHz_componentSpecific(void);
