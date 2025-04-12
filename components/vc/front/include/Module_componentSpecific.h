@@ -17,9 +17,8 @@
  ******************************************************************************/
 
 /**< Modules */
-extern const ModuleDesc_S IO_desc;
-extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_rx;
+extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -28,9 +27,8 @@ extern const ModuleDesc_S CANIO_tx;
 
 typedef enum
 {
-    MODULE_IO = 0x00,
+    MODULE_CANIO_rx = 0x00U,
     MODULE_UDS,
     MODULE_CANIO_tx,
-    MODULE_CANIO_rx,
     MODULE_CNT
 } Module_tasks_E;

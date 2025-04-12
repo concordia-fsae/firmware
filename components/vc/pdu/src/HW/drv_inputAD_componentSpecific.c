@@ -36,23 +36,15 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
 /**
  * @brief  IO Module Init function
  */
-static void drv_inputAD_init_componentSpecific(void)
+void drv_inputAD_init_componentSpecific(void)
 {
     drv_inputAD_private_init();
     drv_inputAD_private_runDigital();
 }
 
-static void drv_inputAD_1kHz_PRD(void)
+void drv_inputAD_1kHz_componentSpecific(void)
 {
     // TODO: Populate inputAD analog voltages
 
     drv_inputAD_private_runDigital();
 }
-
-/**
- * @brief  IO Module descriptor
- */
-const ModuleDesc_S IO_desc = {
-    .moduleInit       = &drv_inputAD_init_componentSpecific,
-    .periodic1kHz_CLK = &drv_inputAD_1kHz_PRD,
-};
