@@ -1,0 +1,107 @@
+/**
+* @file apps.c
+* @brief Module for the Accelerator Pedal Position Sensor
+ * @note Pedal positon is a float percentage between 0.0f and 1.0f where
+ *       0.0f is 0% and 1.0f is 100%
+*/
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
+#include "apps.h"
+#include "drv_pedalMonitor.h"
+#include "Module.h"
+#include "ModuleDesc.h"
+#include "string.h"
+#include "lib_utility.h"
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static struct
+{
+    float32_t pedal_position; // [%] 0.0f - 1.0f | 0.0f = 0% ad 1.0f = 100%
+    apps_state_E state;
+} apps_data;
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+float32_t apps_getPedalPosition(void)
+{
+    return (apps_data.state == APPS_OK) ? apps_data.pedal_position : 0.0f;
+}
+
+apps_state_E apps_getState(void)
+{
+    return apps_data.state;
+}
+
+CAN_appsState_E apps_getStateCAN(void)
+{
+    CAN_appsState_E ret = CAN_APPSSTATE_SNA;
+
+    switch (apps_data.state)
+    {
+        case APPS_OK:
+            ret = CAN_APPSSTATE_OK;
+            break;
+        case APPS_FAULT:
+            ret = CAN_APPSSTATE_FAULT;
+            break;
+        case APPS_ERROR:
+            ret = CAN_APPSSTATE_ERROR;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
+static void apps_init(void)
+{
+    memset(&apps_data, 0x00U, sizeof(apps_data));
+}
+
+static void apps_periodic_100Hz(void)
+{
+    // Reset the pedal position unless set otherwise by the periodic
+    float32_t pedal_position = 0.0f;
+    apps_state_E state = APPS_ERROR;
+
+    if ((drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS1) == DRV_PEDALMONITOR_OK) &&
+        (drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS2) == DRV_PEDALMONITOR_OK))
+    {
+        const float32_t apps1 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1);
+        const float32_t apps2 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2);
+        const float32_t apps_difference = apps1 - apps2;
+
+        if ((apps_difference > 0.10f)  || (apps_difference < -0.10f))
+        {
+            state = APPS_FAULT;
+        }
+        else
+        {
+            const float32_t apps_average = (apps1 + apps2) / 2.0f;
+
+            pedal_position = apps_average;
+            state = APPS_OK;
+        }
+    }
+
+    apps_data.pedal_position = SATURATE(0.0f, pedal_position, 1.0f);
+    apps_data.state = state;
+}
+
+/******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
+const ModuleDesc_S apps_desc = {
+    .moduleInit = &apps_init,
+    .periodic100Hz_CLK = &apps_periodic_100Hz,
+};

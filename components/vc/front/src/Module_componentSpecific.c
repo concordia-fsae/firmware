@@ -11,6 +11,7 @@
 #include "Module.h"
 #include "drv_tps20xx.h"
 #include "drv_inputAD.h"
+#include "drv_pedalMonitor.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -22,6 +23,9 @@
 const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
+    &apps_desc,
+    &bppc_desc,
+    &torque_desc,
     &CANIO_tx,
 };
 
@@ -34,7 +38,7 @@ void Module_componentSpecific_Init(void)
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
     drv_tps20xx_init();
-
+    drv_pedalMonitor_init();
 }
 
 /**
@@ -44,6 +48,15 @@ void Module_componentSpecific_Init(void)
 void Module_componentSpecific_10Hz(void)
 {
     drv_tps20xx_run();
+}
+
+/**
+ * #brief Run the pre 100Hz task functions
+ * @note typically reserved for drivers
+ */
+void Module_componentSpecific_100Hz(void)
+{
+    drv_pedalMonitor_run();
 }
 
 /**

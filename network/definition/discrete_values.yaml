@@ -96,3 +96,27 @@ pm100dxIsLimited:
 pm100dxFaultStatus:
   "OK": 0
   "FAULT": 1
+
+pedalState:
+  SNA: 0
+  OK: 1
+  FAULT: 2
+
+appsState:
+  "SNA": 0
+  "OK": 1
+  "FAULT": 5
+  "ERROR": 6
+
+bppcState:
+  "SNA": 0
+  "OK": 1
+  "FAULT": 2
+  "FAULT_LATCHED": 3
+  "ERROR": 4
+
+torqueManagerState:
+  SNA: 0
+  INACTIVE: 1
+  ACTIVE: 2
+  ERROR: 3

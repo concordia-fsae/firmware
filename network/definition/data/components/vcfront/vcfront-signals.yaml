@@ -1,1 +1,51 @@
 signals:
+  apps1:
+    description: "Accelerator pedal 1 position"
+    template: percentage
+
+  apps2:
+    description: "Accelerator pedal 2 position"
+    template: percentage
+
+  brakePosition:
+    description: "Brake pedal position"
+    template: percentage
+
+  apps1Voltage:
+    description: "Voltage of the accelerator pedal 1"
+    template: voltsPrecise
+
+  apps2Voltage:
+    description: "Voltage of the accelerator pedal 2"
+    template: voltsPrecise
+
+  brakeVoltage:
+    description: "Voltage of the brake pedal"
+    template: voltsPrecise
+
+  acceleratorPosition:
+    description: "Accelerator pedal position"
+    template: percentage
+
+  acceleratorState:
+    description: "State of the accelerator sensor"
+    discreteValues: appsState
+
+  bppcState:
+    description: "State of the accelerator sensor"
+    discreteValues: bppcState
+
+  torqueManagerState:
+    description: "State of the torque manager"
+    discreteValues: torqueManagerState
+
+  torqueRequest:
+    description: Torque request from the torque manager
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: -100
+        max: 150
+      resolution: 1
+    continuous: true
