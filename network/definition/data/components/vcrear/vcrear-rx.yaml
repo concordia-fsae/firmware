@@ -2,4 +2,6 @@ messages:
   UDSCLIENT_vcrearUdsRequest:
     sourceBuses: veh
     unrecorded: true
+  VCFRONT_pedalPosition:
+    sourceBuses: veh
 signals:

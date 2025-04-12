@@ -22,6 +22,7 @@
 const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
+    &brakeLight_desc,
     &CANIO_tx,
 };
 

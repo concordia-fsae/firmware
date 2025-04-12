@@ -116,7 +116,13 @@ bppcState:
   "ERROR": 4
 
 torqueManagerState:
-  SNA: 0
-  INACTIVE: 1
-  ACTIVE: 2
-  ERROR: 3
+  "SNA": 0
+  "INACTIVE": 1
+  "ACTIVE": 2
+  "ERROR": 3
+
+brakeLightState:
+  "SNA": 0
+  "OFF": 1
+  "ON": 2
+  "FAULT": 3

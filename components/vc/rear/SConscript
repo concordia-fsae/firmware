@@ -148,6 +148,7 @@ project_source_files = [
     SRC_DIR.File("UDS.c"),
     SHARED_LIBS.File("LIB_app.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
+    SRC_DIR.File("brakeLight.c"),
 ]
 
 project_hw_files = [
