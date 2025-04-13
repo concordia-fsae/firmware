@@ -19,3 +19,4 @@ messages:
     sourceBuses: veh
     signals:
       brakeLightState:
+      hornState:

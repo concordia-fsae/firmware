@@ -2,3 +2,7 @@ signals:
   brakeLightState:
     description: 'State of the break light'
     discreteValues: brakeLightState
+
+  hornState:
+    description: State of the horn
+    discreteValues: digitalStatus
