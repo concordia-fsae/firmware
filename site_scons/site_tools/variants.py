@@ -10,7 +10,10 @@ def GenerateFeatures(env, selection_files: List[FS.File], features_dict: List[di
         with open(selection_file.abspath, "r") as fd:
             loaded_selections = safe_load(fd)
             try:
-                features_files += [ File(loaded_selections["featureDefs"]) ]
+                if type(loaded_selections["featureDefs"]) is str:
+                    features_files += [ File(loaded_selections["featureDefs"]) ]
+                elif type(loaded_selections["featureDefs"]) is list:
+                    features_files += [ File(file) for file in loaded_selections["featureDefs"] ]
             except KeyError:
                 raise Exception(f"FeatureDefs: Definition file in {selection_file.abspath} not specified in 'featureDefs'.")
 
