@@ -1,1 +1,4 @@
 signals:
+  vehicleState:
+    description: "Current state of the vehicle"
+    discreteValues: vehicleState

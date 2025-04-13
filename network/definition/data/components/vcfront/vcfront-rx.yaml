@@ -3,3 +3,5 @@ messages:
     sourceBuses: veh
     unrecorded: true
 signals:
+  VCPDU_vehicleState:
+    sourceBuses: veh

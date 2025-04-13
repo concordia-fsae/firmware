@@ -11,6 +11,8 @@
 
 typedef enum
 {
+    DRV_INPUTAD_TSCHG_MS = 0x00,
+    DRV_INPUTAD_RUN_BUTTON,
     DRV_INPUTAD_DIGITAL_COUNT,
 } drv_inputAD_channelDigital_E;
 

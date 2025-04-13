@@ -10,3 +10,11 @@ messages:
     id: 0x553
     sourceBuses: veh
     template: rtosTaskInfo
+
+  vehicleState:
+    description: Current state of the vehicle
+    id: 0x110
+    sourceBuses: veh
+    cycleTimeMs: 10
+    signals:
+      vehicleState:

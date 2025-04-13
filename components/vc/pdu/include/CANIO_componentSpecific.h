@@ -18,6 +18,7 @@
 
 // imports for data access
 #include "Module.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -35,5 +36,6 @@
 #define set_taskUsage10Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
 #define set_taskUsage1Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
 #define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
+#define set_vehicleState(m,b,n,s) set(m,b,n,s, app_vehicleState_getStateCAN())
 
 #include "TemporaryStubbing.h"

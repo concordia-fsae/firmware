@@ -11,6 +11,7 @@
 
 // System Includes
 #include "ModuleDesc.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -29,6 +30,7 @@ typedef enum
 {
     MODULE_CANIO_rx = 0x00U,
     MODULE_UDS,
+    MODULE_VEHICLESTATE,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;
