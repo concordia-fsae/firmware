@@ -3,3 +3,9 @@ messages:
     sourceBuses: veh
     unrecorded: true
 signals:
+  BMSB_packContactorState:
+    sourceBuses: veh
+  BMSB_tsmsChg:
+    sourceBuses: veh
+  VCFRONT_runButtonStatus:
+    sourceBuses: veh

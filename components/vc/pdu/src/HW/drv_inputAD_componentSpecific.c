@@ -21,12 +21,21 @@
 
 /**< Other Includes */
 #include "ModuleDesc.h"
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
 drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
+    [DRV_INPUTAD_TSCHG_MS] = {
+        .type = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_tsmsChg),
+    },
+    [DRV_INPUTAD_RUN_BUTTON] = {
+        .type = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, VCFRONT_runButtonStatus),
+    },
 };
 
 /******************************************************************************
