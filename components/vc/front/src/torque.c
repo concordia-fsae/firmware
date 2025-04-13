@@ -15,6 +15,7 @@
 #include "ModuleDesc.h"
 #include "string.h"
 #include "lib_utility.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -97,16 +98,24 @@ static void torque_periodic_100Hz(void)
     switch (torque_data.state)
     {
         case TORQUE_INACTIVE:
-            // TODO: Add vehicle power state transition for run mode
-            // Tracked in Issue #189
+            if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
+            {
+                torque_data.state = TORQUE_ACTIVE;
+            }
             torque = 0.0f;
             break;
         case TORQUE_ACTIVE:
-            // TODO: Add vehicle power state transition after exiting run mode
-            // Tracked in Issue #189
-            torque = (bppc_getState() == BPPC_OK) ?
-                      apps_getPedalPosition() * torque_data.torque_request_max :
-                      0.0f;
+            if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
+            {
+                torque = (bppc_getState() == BPPC_OK) ?
+                          apps_getPedalPosition() * torque_data.torque_request_max :
+                          0.0f;
+            }
+            else
+            {
+                torque_data.state = TORQUE_INACTIVE;
+                torque = 0.0f;
+            }
             break;
         case TORQUE_ERROR:
         default:
