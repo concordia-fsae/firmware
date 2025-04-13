@@ -11,6 +11,7 @@
 
 // System Includes
 #include "ModuleDesc.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -34,6 +35,7 @@ typedef enum
     MODULE_UDS,
     MODULE_APPS,
     MODULE_BPPC,
+    MODULE_VEHICLESTATE,
     MODULE_TORQUE,
     MODULE_CANIO_tx,
     MODULE_CNT

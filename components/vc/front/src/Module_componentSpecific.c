@@ -25,6 +25,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &UDS_desc,
     &apps_desc,
     &bppc_desc,
+    &app_vehicleState_desc,
     &torque_desc,
     &CANIO_tx,
 };
