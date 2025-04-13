@@ -34,3 +34,10 @@ messages:
       apps1Voltage:
       apps2Voltage:
       brakeVoltage:
+
+  inputStatus:
+    description: Status of VCFRONT inputs
+    id: 0x52
+    cycleTimeMs: 50
+    signals:
+      runButtonStatus:

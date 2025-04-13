@@ -39,6 +39,10 @@ signals:
     description: "State of the torque manager"
     discreteValues: torqueManagerState
 
+  runButtonStatus:
+    description: Status of the run button switch
+    discreteValues: digitalStatus
+
   torqueRequest:
     description: Torque request from the torque manager
     unit: Nm

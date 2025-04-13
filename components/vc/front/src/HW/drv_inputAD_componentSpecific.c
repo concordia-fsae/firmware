@@ -69,6 +69,13 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
             .active_level = DRV_IO_LOGIC_LOW, // TPS20xx has active low fault output
         },
     },
+    [DRV_INPUTAD_DIGITAL_RUN_BUTTON] = {
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_RUN_BUTTON,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
+    },
 };
 
 /******************************************************************************
