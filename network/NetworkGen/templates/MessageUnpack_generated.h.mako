@@ -22,7 +22,8 @@
 
 #define CANRX_validate(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_validate),_,signal)())
 #define CANRX_validateDuplicate(bus, signal, nodeId) (JOIN3(JOIN3(CANRX_,bus,_validate),_,signal)(nodeId))
-#define CANRX_get_signal(bus, signal, val) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))(val)
+#define CANRX_get_signal_func(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))
+#define CANRX_get_signal(bus, signal, val) CANRX_get_signal_func(bus, signal)(val)
 #define CANRX_get_signalDuplicate(bus, signal, val, nodeId) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))(val, nodeId)
 #define CANRX_get_signal_timeSinceLastMessageMS(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_timeSinceLastMessageMS)))()
 
