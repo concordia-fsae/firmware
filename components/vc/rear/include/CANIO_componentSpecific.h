@@ -19,6 +19,7 @@
 // imports for data access
 #include "Module.h"
 #include "brakeLight.h"
+#include "horn.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -37,5 +38,6 @@
 #define set_taskUsage1Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
 #define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 #define set_brakeLightState(m,b,n,s) set(m,b,n,s, brakeLight_getStateCAN())
+#define set_hornState(m,b,n,s) set(m,b,n,s, horn_getStateCAN())
 
 #include "TemporaryStubbing.h"

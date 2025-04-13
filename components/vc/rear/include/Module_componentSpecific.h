@@ -11,6 +11,7 @@
 
 // System Includes
 #include "ModuleDesc.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -20,6 +21,7 @@
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S brakeLight_desc;
+extern const ModuleDesc_S horn_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -30,7 +32,9 @@ typedef enum
 {
     MODULE_CANIO_rx = 0x00U,
     MODULE_UDS,
+    MODULE_VEHICLESTATE,
     MODULE_BRAKELIGHT,
+    MODULE_HORN,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;

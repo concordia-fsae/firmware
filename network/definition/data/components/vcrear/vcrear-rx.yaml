@@ -5,3 +5,5 @@ messages:
   VCFRONT_pedalPosition:
     sourceBuses: veh
 signals:
+  VCPDU_vehicleState:
+    sourceBuses: veh

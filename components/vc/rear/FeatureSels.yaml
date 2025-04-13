@@ -1,6 +1,9 @@
-featureDefs: "#/components/bms_boss/FeatureDefs.yaml"
+featureDefs: 
+  - "#/components/bms_boss/FeatureDefs.yaml"
+  - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
   feature_canrx_swi: true
   app_component_id: vcrear
   app_uds: true
+  feature_vehicleState_mode: follower
