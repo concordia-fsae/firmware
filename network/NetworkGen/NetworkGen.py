@@ -573,6 +573,8 @@ def process_receivers(bus: CanBus, node: CanNode):
         raise Exception("Error processing node receivers, see previous errors...")
 
     for sig_name in rx_sig_dict.keys():
+        if rx_sig_dict[sig_name] and ('sourceBuses' in rx_sig_dict[sig_name] and rx_sig_dict[sig_name]['sourceBuses'] != bus.name):
+            continue
         if sig_name not in bus.signals:
             print(
                 f"Node '{node.alias}' attempted to RX signal '{sig_name}' "
