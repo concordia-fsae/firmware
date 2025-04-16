@@ -55,3 +55,4 @@ bool SYS_SFT_checkBrusaChargerTimeout(void);
 bool SYS_SFT_checkElconChargerTimeout(void);
 void SYS_stopCharging(void);
 void SYS_continueCharging(void);
+void closeSYS_SFT_cycleContacts(void);

@@ -12,6 +12,7 @@
 #include "IMD.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "drv_timer.h"
 #include "Module.h"
 #include "Sys.h"
 #include "SystemConfig.h"
@@ -20,8 +21,12 @@
 #include "FeatureDefines_generated.h"
 
 #define CURRENT_SENSE_V_per_A 0.005f
+#define PRECHARGE_MIN_TIME_MS 1320U
 
 BMSB_S BMS;
+
+static drv_timer_S precharge_timer;
+static bool precharge_timer_started = false;
 
 void BMS_workerWatchdog(void);
 
@@ -138,11 +143,25 @@ static void BMS100Hz_PRD(void)
                 float32_t chg_voltage = 0.0f;
                 const bool mc_valid = (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage, &ts_voltage) == CANRX_MESSAGE_VALID);
                 const bool chg_valid = (CANRX_get_signal(VEH, BRUSA513_dcBusVoltage, &chg_voltage) == CANRX_MESSAGE_VALID);
+                
+                if (SYS.contacts == SYS_CONTACTORS_PRECHARGE && !precharge_timer_started)
+                {
+                    drv_timer_init(&precharge_timer);
+                    drv_timer_start(&precharge_timer, 0);
+                    precharge_timer_started = true;
+                }
+                
                 if ((mc_valid || chg_valid) &&
-                    ((ts_voltage > 0.95f * BMS.pack_voltage) || (chg_voltage > 0.95f * BMS.pack_voltage)))
+                    ((ts_voltage > 0.95f * BMS.pack_voltage) || (chg_voltage > 0.95f * BMS.pack_voltage)) && 
+                (drv_timer_getElapsedTimeMs(&precharge_timer) >= PRECHARGE_MIN_TIME_MS))
                 {
                     SYS_SFT_cycleContacts();
+                    precharge_timer_started = false; //to reset for next time
                 }
+            }
+            if (SYS.contacts != SYS_CONTACTORS_PRECHARGE)
+            {
+                precharge_timer_started = false;
             }
         }
     }
