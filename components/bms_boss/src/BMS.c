@@ -12,6 +12,7 @@
 #include "IMD.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "drv_timer.h"
 #include "Module.h"
 #include "Sys.h"
 #include "SystemConfig.h"
@@ -20,8 +21,11 @@
 #include "FeatureDefines_generated.h"
 
 #define CURRENT_SENSE_V_per_A 0.005f
+#define PRECHARGE_MIN_TIME_MS 1320U
 
 BMSB_S BMS;
+
+static drv_timer_S precharge_timer;
 
 void BMS_workerWatchdog(void);
 
@@ -29,6 +33,7 @@ static void BMS_init(void)
 {
     memset(&BMS, 0x00, sizeof(BMSB_S));
     IMD_init();
+    drv_timer_init(&precharge_timer);
 }
 
 static void BMS10Hz_PRD(void)
@@ -123,6 +128,7 @@ static void BMS100Hz_PRD(void)
         (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW))
     {
         SYS_SFT_openContactors();
+        drv_timer_stop(&precharge_timer);
     }
     else
     {
@@ -131,6 +137,7 @@ static void BMS100Hz_PRD(void)
             if (SYS.contacts == SYS_CONTACTORS_OPEN)
             {
                 SYS_SFT_cycleContacts();
+                drv_timer_start(&precharge_timer, PRECHARGE_MIN_TIME_MS);
             }
             else if ((SYS.contacts == SYS_CONTACTORS_PRECHARGE) || (SYS.contacts == SYS_CONTACTORS_CLOSED))
             {
@@ -138,7 +145,10 @@ static void BMS100Hz_PRD(void)
                 float32_t chg_voltage = 0.0f;
                 const bool mc_valid = (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage, &ts_voltage) == CANRX_MESSAGE_VALID);
                 const bool chg_valid = (CANRX_get_signal(VEH, BRUSA513_dcBusVoltage, &chg_voltage) == CANRX_MESSAGE_VALID);
-                if (((mc_valid == true) && (ts_voltage > 0.95f * BMS.pack_voltage)) || ((chg_valid == true) && (chg_voltage > 0.95f * BMS.pack_voltage)))
+
+                if ((((mc_valid == true) && (ts_voltage > 0.95f * BMS.pack_voltage)) ||
+                     ((chg_valid == true) && (chg_voltage > 0.95f * BMS.pack_voltage)))  &&
+                    (drv_timer_getState(&precharge_timer) == DRV_TIMER_EXPIRED))
                 {
                     SYS_SFT_cycleContacts();
                 }
