@@ -114,7 +114,7 @@ void SYS_SFT_openContactors(void)
     SYS.contacts = SYS_CONTACTORS_OPEN;
 }
 
-void SYS_SFT_cycleContacts(void)
+void closeSYS_SFT_cycleContacts(void)
 {
     if (SYS.contacts == SYS_CONTACTORS_OPEN)
     {
