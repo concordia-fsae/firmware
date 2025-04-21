@@ -25,10 +25,11 @@ static lib_interpolation_point_S rad_fan_curve[] = {
         .y = 1.0f, // duty cycle
     },
 };
+min_pump = 0.4f;// minimum pump speed
 static lib_interpolation_point_S pump_curve[] = {
     {
         .x = 25, // degC
-        .y = 0.40f, // duty cycle
+        .y = min_pump, // duty cycle
     },
     {
         .x = 50, // degC
@@ -64,7 +65,7 @@ static lib_interpolation_point_S pump_curve[] = {
             .cooling_map = {
                 .points = (lib_interpolation_point_S*)&rad_fan_curve,
                 .number_points = COUNTOF(rad_fan_curve),
-                .saturate_left = false,
+                .saturate_left = true,
                 .saturate_right = true,
             }
         },
@@ -90,7 +91,7 @@ static lib_interpolation_point_S pump_curve[] = {
             .cooling_map = {
                 .points = (lib_interpolation_point_S*)&pump_curve,
                 .number_points = COUNTOF(pump_curve),
-                .saturate_left = false,
+                .saturate_left = true,
                 .saturate_right = true,
             }
         },
@@ -127,8 +128,9 @@ static void cooling10Hz_PRD(void)
     float32_t override_fan = 0.0f;
     if (boot_timer_state == DRV_TIMER_RUNNING)
     {
-    if (time<STARTUP_TIMER/4.0F):
-        override_fan = 0.5f
+        const uint32_t time = HW_TIM_getTimeMS();
+        if (time<STARTUP_TIMER/4.0F):
+            override_fan = 0.5f
     }
     //What is CAN message I need
     else if ((CANRX_get_signal(VEH, TOOLING_, &percent_override_fan) == CANRX_MESSAGE_VALID)){
@@ -139,8 +141,8 @@ static void cooling10Hz_PRD(void)
     app_cooling_runChannel(&cooling_rad[0], (boot_timer_state == DRV_TIMER_EXPIRED) );
 
     //CODE FOR PUMP
-    uint8_t percent_override_pump = 0;
-    float32_t override_pump = 0.0f;
+    uint8_t percent_override_pump =0 ;
+    float32_t override_pump = min_pump;
     //What is CAN message I need
     else if ((CANRX_get_signal(VEH, TOOLING_, &percent_override_fan) == CANRX_MESSAGE_VALID)){
         override_pump = ((float32_t)percent_override_pump) / 100.0f;
