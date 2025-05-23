@@ -301,7 +301,7 @@ configs:
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
-        app_component_id: vcpdu
+        app_component_id: vcfront
         app_validation_enabled: true
         feature_erase_invalid_app: false
   1030:
@@ -316,7 +316,7 @@ configs:
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
-        app_component_id: vcpdu
+        app_component_id: vcfront
         app_validation_enabled: true
         feature_erase_invalid_app: false
   31:
@@ -331,7 +331,7 @@ configs:
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
-        app_component_id: vcpdu
+        app_component_id: vcrear
         app_validation_enabled: true
         feature_erase_invalid_app: false
   1031:
@@ -346,7 +346,7 @@ configs:
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
-        app_component_id: vcpdu
+        app_component_id: vcrear
         app_validation_enabled: true
         feature_erase_invalid_app: false
   32:
