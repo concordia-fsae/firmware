@@ -138,8 +138,7 @@ static void BMS100Hz_PRD(void)
                 float32_t chg_voltage = 0.0f;
                 const bool mc_valid = (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage, &ts_voltage) == CANRX_MESSAGE_VALID);
                 const bool chg_valid = (CANRX_get_signal(VEH, BRUSA513_dcBusVoltage, &chg_voltage) == CANRX_MESSAGE_VALID);
-                if ((mc_valid || chg_valid) &&
-                    ((ts_voltage > 0.95f * BMS.pack_voltage) || (chg_voltage > 0.95f * BMS.pack_voltage)))
+                if (((mc_valid == true) && (ts_voltage > 0.95f * BMS.pack_voltage)) || ((chg_valid == true) && (chg_voltage > 0.95f * BMS.pack_voltage)))
                 {
                     SYS_SFT_cycleContacts();
                 }
