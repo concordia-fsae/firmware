@@ -173,6 +173,7 @@ project_hw_files = [
     HW_DIR.File("drv_inputAD_componentSpecific.c"),
     SHARED_DRV.File("drv_outputAD.c"),
     HW_DIR.File("drv_outputAD_componentSpecific.c"),
+    SHARED_DRV.File("drv_timer.c")
 ]
 
 project_source_files += project_hw_files
