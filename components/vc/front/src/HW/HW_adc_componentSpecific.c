@@ -59,7 +59,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 1;
+    hadc1.Init.NbrOfConversion       = 8;
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -72,8 +72,57 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     }
 
     // Configure Regular Channels
-    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Channel      = ADC_CHANNEL_7;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_4;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_14;
+    sConfig.Rank         = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_3;
+    sConfig.Rank         = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_10;
+    sConfig.Rank         = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_11;
+    sConfig.Rank         = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_1;
+    sConfig.Rank         = ADC_REGULAR_RANK_7;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Rank         = ADC_REGULAR_RANK_8;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
@@ -86,20 +135,70 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 1;
+    hadc2.Init.NbrOfConversion       = 8;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
     }
 
     // Configure Regular Channels
-    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Channel      = ADC_CHANNEL_5;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
+    sConfig.Channel      = ADC_CHANNEL_6;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_8;
+    sConfig.Rank         = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_15;
+    sConfig.Rank         = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_12;
+    sConfig.Rank         = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_13;
+    sConfig.Rank         = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_2;
+    sConfig.Rank         = ADC_REGULAR_RANK_7;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_CHANNEL_9;
+    sConfig.Rank         = ADC_REGULAR_RANK_8;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    
 
     return HW_OK;
 }
