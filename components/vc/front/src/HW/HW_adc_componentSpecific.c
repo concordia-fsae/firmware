@@ -27,6 +27,24 @@
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
 #define ADC_CALIBRATION_TIMEOUT                 10U
 
+#define ADC_BANK1_CHANNEL_R_BR_TEMP             ADC_CHANNEL_7
+#define ADC_BANK1_CHANNEL_L_SHK_DISP            ADC_CHANNEL_4
+#define ADC_BANK1_CHANNEL_PU1                   ADC_CHANNEL_14
+#define ADC_BANK1_CHANNEL_BR_POT                ADC_CHANNEL_3
+#define ADC_BANK1_CHANNEL_SPARE1                ADC_CHANNEL_10
+#define ADC_BANK1_CHANNEL_SPARE2                ADC_CHANNEL_11
+#define ADC_BANK1_CHANNEL_APPS_P1               ADC_CHANNEL_1
+#define ADC_BANK1_CHANNEL_MCU_TEMP              ADC_CHANNEL_TEMPSENSOR
+
+#define ADC_BANK2_CHANNEL_L_BR_TEMP             ADC_CHANNEL_5
+#define ADC_BANK2_CHANNEL_R_SHK_DISP            ADC_CHANNEL_6
+#define ADC_BANK2_CHANNEL_BR_PR                 ADC_CHANNEL_8
+#define ADC_BANK2_CHANNEL_PU2                   ADC_CHANNEL_15
+#define ADC_BANK2_CHANNEL_SPARE3                ADC_CHANNEL_12
+#define ADC_BANK2_CHANNEL_SPARE4                ADC_CHANNEL_13
+#define ADC_BANK2_CHANNEL_APPS_P2               ADC_CHANNEL_2
+#define ADC_BANK2_CHANNEL_BOARD_TEMP            ADC_CHANNEL_9
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -59,7 +77,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion       = 1;
+    hadc1.Init.NbrOfConversion       = 8;
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
@@ -72,8 +90,57 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     }
 
     // Configure Regular Channels
-    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Channel      = ADC_BANK1_CHANNEL_R_BR_TEMP;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_L_SHK_DISP;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_PU1;
+    sConfig.Rank         = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_BR_POT;
+    sConfig.Rank         = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_SPARE1;
+    sConfig.Rank         = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_SPARE2;
+    sConfig.Rank         = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_APPS_P1;
+    sConfig.Rank         = ADC_REGULAR_RANK_7;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK1_CHANNEL_MCU_TEMP;
+    sConfig.Rank         = ADC_REGULAR_RANK_8;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     {
@@ -86,15 +153,64 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-    hadc2.Init.NbrOfConversion       = 1;
+    hadc2.Init.NbrOfConversion       = 8;
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
     }
 
     // Configure Regular Channels
-    sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Channel      = ADC_BANK2_CHANNEL_L_BR_TEMP;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_R_SHK_DISP;
+    sConfig.Rank         = ADC_REGULAR_RANK_2;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_BR_PR;
+    sConfig.Rank         = ADC_REGULAR_RANK_3;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_PU2;
+    sConfig.Rank         = ADC_REGULAR_RANK_4;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_SPARE3;
+    sConfig.Rank         = ADC_REGULAR_RANK_5;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_SPARE4;
+    sConfig.Rank         = ADC_REGULAR_RANK_6;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_APPS_P2;
+    sConfig.Rank         = ADC_REGULAR_RANK_7;
+    sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+    if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfig.Channel      = ADC_BANK2_CHANNEL_BOARD_TEMP;
+    sConfig.Rank         = ADC_REGULAR_RANK_8;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     {
