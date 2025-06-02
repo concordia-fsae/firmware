@@ -41,3 +41,15 @@ messages:
     cycleTimeMs: 50
     signals:
       runButtonStatus:
+
+  frontBrakeTemperature: 
+    description: Front Left and Right Brake Temperature
+    id: 0x54
+    sourceBuses: veh
+    template: brakeTemperatureInfo
+
+  frontWheelSpeedInfo:
+    description: Front Left and Right Wheel Speed
+    id: 0x55
+    sourceBuses: veh
+    template: wheelSpeedInfo

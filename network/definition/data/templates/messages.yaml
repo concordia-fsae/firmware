@@ -31,3 +31,21 @@ messages:
     signals:
       udsPayload:
         template: udsPayload
+  brakeTemperatureInfo:
+    cycleTimeMs: 100
+    signals:
+      LBrakeTemp: 
+        template: brakeTemperature
+        description: Left brake temperature
+      RBrakeTemp:
+        template: brakeTemperature
+        description: Right brake temperature
+  wheelSpeedInfo:
+    cycleTimeMs: 10
+    signals:
+      LWheelSpeed:
+        template: wheelSpeed
+        description: Left wheel speed sensor
+      RWheelSpeed:
+        template: wheelSpeed
+        description: Right wheel speed sensor

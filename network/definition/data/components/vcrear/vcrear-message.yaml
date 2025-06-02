@@ -20,3 +20,23 @@ messages:
     signals:
       brakeLightState:
       hornState:
+
+  brakePressureInfo:
+    description: Brake Pressure
+    cycleTimeMs: 1
+    id: 0x453
+    sourceBuses: veh
+    signals:
+      brakePressure:
+
+  RearBrakeTemperature: 
+    description: Rear Left and Right Brake Temperature
+    id: 0x454
+    sourceBuses: veh
+    template: brakeTemperatureInfo
+
+  # wheelSpeedInfo:
+  #   description: Rear Left and Right Wheel Speed
+  #   id: 0x455
+  #   sourceBuses: veh
+  #   template: wheelSpeedInfo

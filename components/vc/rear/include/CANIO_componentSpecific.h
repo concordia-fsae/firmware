@@ -19,7 +19,9 @@
 // imports for data access
 #include "Module.h"
 #include "brakeLight.h"
+#include "brakePressure.h"
 #include "horn.h"
+#include "drv_tempSensors.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -39,5 +41,8 @@
 #define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 #define set_brakeLightState(m,b,n,s) set(m,b,n,s, brakeLight_getStateCAN())
 #define set_hornState(m,b,n,s) set(m,b,n,s, horn_getStateCAN())
+#define set_LBrakeTemp(m,b,n,s) set(m,b,n,s, (drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSOR_L_BR_TEMP)))
+#define set_RBrakeTemp(m,b,n,s) set(m,b,n,s, (drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSOR_R_BR_TEMP)))
+#define set_brakePressure(m,b,n,s) set(m,b,n,s, (brakePressure_getBrakePressure()))
 
 #include "TemporaryStubbing.h"

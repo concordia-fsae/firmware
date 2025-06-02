@@ -53,3 +53,13 @@ signals:
         max: 150
       resolution: 1
     continuous: true
+
+  # wheelSpeed:
+  #   unit: 'km/h'
+  #   nativeRepresentation:
+  #     bitWidth: 16
+  #     resolution: 1
+  #     range:
+  #       min: 0
+  #       max: 200
+  #   continuous: false

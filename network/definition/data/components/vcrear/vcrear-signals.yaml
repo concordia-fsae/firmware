@@ -6,3 +6,14 @@ signals:
   hornState:
     description: State of the horn
     discreteValues: digitalStatus
+
+  brakePressure:
+    description: Rear brake Pressure
+    unit: 'PSI'
+    nativeRepresentation:
+      resolution: 20
+      bitWidth: 12
+      range:
+        min: 0
+        max: 2000
+    continuous: true

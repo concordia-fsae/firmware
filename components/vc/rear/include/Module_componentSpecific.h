@@ -21,6 +21,7 @@
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S brakeLight_desc;
+extern const ModuleDesc_S brakePressure_desc;
 extern const ModuleDesc_S horn_desc;
 extern const ModuleDesc_S CANIO_tx;
 
@@ -34,6 +35,7 @@ typedef enum
     MODULE_UDS,
     MODULE_VEHICLESTATE,
     MODULE_BRAKELIGHT,
+    MODULE_BRAKEPRESSURE,
     MODULE_HORN,
     MODULE_CANIO_tx,
     MODULE_CNT

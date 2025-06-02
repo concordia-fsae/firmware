@@ -149,6 +149,7 @@ project_source_files = [
     SHARED_LIBS.File("LIB_app.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
     SHARED_LIBS.File("lib_interpolation.c"),
+    SHARED_LIBS.File("lib_thermistors.c"),
     SRC_DIR.File("apps.c"),
     SRC_DIR.File("bppc.c"),
     SRC_DIR.File("torque.c"),
@@ -178,6 +179,8 @@ project_hw_files = [
     SHARED_DRV.File("drv_io.c"),
     SHARED_DRV.File("drv_pedalMonitor.c"),
     HW_DIR.File("drv_pedalMonitor_componentSpecific.c"),
+    SHARED_DRV.File("drv_tempSensors.c"),
+    HW_DIR.File("drv_tempSensors_componentSpecific.c"),
 ]
 
 project_source_files += project_hw_files
