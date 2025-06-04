@@ -27,9 +27,16 @@
 
 typedef enum
 {
+    HW_TIM_PORT_TACH,
     HW_TIM_PORT_COUNT,
 } HW_TIM_port_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
+
+float32_t HW_TIM4_getFreqCH3(void);
+float32_t HW_TIM4_getFreqCH4(void);
+
+float32_t TIM4_getWheelSpeedCH3(void);
+float32_t TIM4_getWheelSpeedCH4(void);
