@@ -35,6 +35,7 @@
       ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_PCBA_ID == 0U)) || \
       ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_PCBA_ID == 0U)) || \
       ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_PCBA_ID == 0U)) || \
+      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_PCBA_ID == 0U)) || \
       (APP_PCBA_ID == 10U)
 
 # define CAN_AFIO_REMAP    false
@@ -48,6 +49,18 @@
 #error "Invalid configuration"
 #endif // if PCB_ID == 0
 
+#if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_PCBA_ID == 0U))
+
+# define CAN_SLEEP true
+# define CAN_SLEEP_PIN 8U
+# define CAN_SLEEP_PORT GPIOA
+
+#else
+
+# define CAN_SLEEP false
+
+#endif
+
 // Use Boot1 (PB2)
 #define BUTTON_PORT             GPIOB
 #define BUTTON_PIN              2U
@@ -56,6 +69,9 @@
 #if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_PCBA_ID == 0U))
 # define LED_PORT GPIOB
 # define LED_PIN  8U
+#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_PCBA_ID == 0U))
+# define LED_PORT GPIOB
+# define LED_PIN  6U
 #else
 # define LED_PORT GPIOC
 # define LED_PIN  13U
@@ -66,6 +82,7 @@
     ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_PCBA_ID == 0U)) || \
     ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_PCBA_ID == 0U)) || \
     ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_PCBA_ID == 0U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_PCBA_ID == 0U)) || \
     (APP_PCBA_ID == 10U)
 # define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
 #elif APP_PCBA_ID == 0

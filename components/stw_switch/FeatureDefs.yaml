@@ -1,0 +1,6 @@
+config:
+  prefix: feature
+  description: Feature definitions for the SWS
+defs:
+  canrx_swi:
+  cantx_swi: 

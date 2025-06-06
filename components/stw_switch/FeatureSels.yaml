@@ -1,0 +1,8 @@
+featureDefs: 
+  - "#/components/stw_switch/FeatureDefs.yaml"
+  - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
+features:
+  feature_cantx_swi: true
+  feature_canrx_swi: true
+  app_component_id: sws
+  app_uds: true

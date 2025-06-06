@@ -42,6 +42,7 @@ discreteValues:
     - vcpdu
     - vcfront
     - vcrear
+    - sws
   function_id:
     - bl
     - app

@@ -1,0 +1,31 @@
+signals:
+  din1Debug:
+    description: Status of DIN1 button
+    discreteValues: digitalStatus
+  din2Debug:
+    description: Status of DIN2 button
+    discreteValues: digitalStatus
+  din3Debug:
+    description: Status of DIN3 button
+    discreteValues: digitalStatus
+  din4Debug:
+    description: Status of DIN4 button
+    discreteValues: digitalStatus
+  din5Debug:
+    description: Status of DIN5 button
+    discreteValues: digitalStatus
+  din6Debug:
+    description: Status of DIN6 button
+    discreteValues: digitalStatus
+  din7Debug:
+    description: Status of DIN7 button
+    discreteValues: digitalStatus
+  din8Debug:
+    description: Status of DIN8 button
+    discreteValues: digitalStatus
+  din9Debug:
+    description: Status of DIN9 button
+    discreteValues: digitalStatus
+  din10Debug:
+    description: Status of DIN10 button
+    discreteValues: digitalStatus
