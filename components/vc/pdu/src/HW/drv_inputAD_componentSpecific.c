@@ -91,5 +91,8 @@ void drv_inputAD_1kHz_componentSpecific(void)
         drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP, 0.0f);
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_FAN, 0.0f);
+
     drv_inputAD_private_runDigital();
 }

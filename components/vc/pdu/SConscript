@@ -150,6 +150,7 @@ project_source_files = [
     SHARED_LIBS.File("LIB_simpleFilter.c"),
     SHARED_APP.File("app_vehicleState.c"),
     SHARED_LIBS.File("lib_swFuse.c"),
+    SRC_DIR.File("powerManager.c"),
 ]
 
 project_hw_files = [
@@ -173,6 +174,8 @@ project_hw_files = [
     SHARED_DRV.File("drv_timer.c"),
     SHARED_DRV.File("drv_tps2hb16ab.c"),
     HW_DIR.File("drv_tps2hb16ab_componentSpecific.c"),
+    SHARED_DRV.File("drv_vn9008.c"),
+    HW_DIR.File("drv_vn9008_componentSpecific.c"),
 ]
 
 project_source_files += project_hw_files
