@@ -6,10 +6,17 @@ BO_ ${message.id if message.id <=0x7ff else message.id + 0x80000000} ${message.n
 %>
 </%def>
 
-
 <%def name="make_signal(signal)">
+  <%
+  start_bit = signal.start_bit
+  try:
+    if signal.native_representation.endianness.value == 0:
+      start_bit = 7 - (start_bit % 8) + int(start_bit / 7) * 8
+  except:
+    pass
+%>\
  SG_ ${signal.name} : \
-${signal.start_bit}|${signal.native_representation.bit_width}@${signal.native_representation.endianness.value}${signal.native_representation.signedness.value} \
+${start_bit}|${signal.native_representation.bit_width}@${signal.native_representation.endianness.value}${signal.native_representation.signedness.value} \
 (${signal.scale},${signal.offset}) [${signal.native_representation.range.min}|${signal.native_representation.range.max}] \
 "${signal.unit.value}" ${",".join([sig.alias.upper() for sig in signal.receivers]) if signal.receivers else "Vector__XXX"}\
 </%def>
