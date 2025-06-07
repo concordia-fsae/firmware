@@ -53,6 +53,9 @@ static void powerManager_periodic_10Hz(void)
     }
 
     output = (output + 1) % DRV_TPS2HB16AB_OUT_COUNT;
+
+    drv_tps2hb16ab_run();
+    drv_vn9008_run();
 }
 
 /******************************************************************************
