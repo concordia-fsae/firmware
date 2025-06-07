@@ -27,3 +27,15 @@ nodes:
   bmsb:
     request_id: 0x609
     response_id: 0x649
+  vcfront:
+    request_id: 0x630
+    response_id: 0x670
+  vcrear:
+    request_id: 0x631
+    response_id: 0x671
+  vcpdu:
+    request_id: 0x632
+    response_id: 0x672
+  sws:
+    request_id: 0x651
+    response_id: 0x691
