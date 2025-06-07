@@ -18,6 +18,7 @@
 #include "HW_adc.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
+#include "drv_mux.h"
 
 /**< Other Includes */
 #include "ModuleDesc.h"
@@ -66,6 +67,23 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
     },
 };
 
+struct inputs_data {
+    drv_mux_channel_S signal_mux;
+};
+
+struct inputs_data inputs_data = {
+    .signal_mux = {
+        .type = DRV_MUX_TYPE_GPIO,
+        .config = {
+            .max_output_channel = 2U,
+            .outputs.gpio = {
+                .pin_first = DRV_OUTPUTAD_MUX2_SEL1,
+                .pin_last = DRV_OUTPUTAD_MUX2_SEL2,
+            },
+        },
+    }
+};
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -77,6 +95,8 @@ void drv_inputAD_init_componentSpecific(void)
 {
     drv_inputAD_private_init();
     drv_inputAD_private_runDigital();
+    drv_mux_init(&inputs_data.signal_mux);
+    drv_mux_setMuxOutput(&inputs_data.signal_mux, 0U);
 }
 
 void drv_inputAD_1kHz_componentSpecific(void)
@@ -91,8 +111,22 @@ void drv_inputAD_1kHz_componentSpecific(void)
         drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP, 0.0f);
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_FAN, 0.0f);
+    const float32_t hp_cs = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_HP_CS);
+
+    switch (drv_mux_getMuxOutput(&inputs_data.signal_mux))
+    {
+        case 0U:
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP, hp_cs);
+            break;
+        case 1U:
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_FAN, hp_cs);
+            break;
+        case 2U:
+            break;
+    }
+
+    const uint8_t current_channel = drv_mux_getMuxOutput(&inputs_data.signal_mux);
+    drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)((current_channel + 1U) % 3U));
 
     drv_inputAD_private_runDigital();
 }
