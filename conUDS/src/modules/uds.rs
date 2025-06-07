@@ -176,7 +176,7 @@ impl UdsClient {
             .with_message(Cow::Borrowed("Erasing app"))
             .with_style(ProgressStyle::with_template("{spinner} {msg} [{elapsed}]")?);
 
-        let mut retries = 100; // 100 retries with a 10ms delay is 1s, which should be plenty of time
+        let mut retries = 1000; // 100 retries with a 10ms delay is 1s, which should be plenty of time
                                // to erase any of our current apps.
 
         loop {
