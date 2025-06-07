@@ -153,6 +153,7 @@ project_source_files = [
     SRC_DIR.File("bppc.c"),
     SRC_DIR.File("torque.c"),
     SHARED_APP.File("app_vehicleState.c"),
+    SRC_DIR.File("powerManager.c"),
 ]
 
 project_hw_files = [

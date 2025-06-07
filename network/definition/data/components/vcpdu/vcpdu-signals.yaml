@@ -2,3 +2,83 @@ signals:
   vehicleState:
     description: "Current state of the vehicle"
     discreteValues: vehicleState
+
+  pumpHsdState:
+    description: "Current state of Pump HSD"
+    discreteValues: hsdState
+
+  fanHsdState:
+    description: "Current state of Fan HSD"
+    discreteValues: hsdState
+
+  bms1HsdState:
+    description: "Current state of BMSW1 HSD"
+    discreteValues: hsdState
+
+  shutdownHsdState:
+    description: "Current state of SHUTDOWN HSD"
+    discreteValues: hsdState
+
+  bms2HsdState:
+    description: "Current state of BMSW2 HSD"
+    discreteValues: hsdState
+
+  accumHsdState:
+    description: "Current state of ACCUM HSD"
+    discreteValues: hsdState
+
+  bms3HsdState:
+    description: "Current state of BMSW3 HSD"
+    discreteValues: hsdState
+
+  sensorHsdState:
+    description: "Current state of SENSOR HSD"
+    discreteValues: hsdState
+
+  vc1HsdState:
+    description: "Current state of VC1 HSD"
+    discreteValues: hsdState
+
+  vc2HsdState:
+    description: "Current state of VC2 HSD"
+    discreteValues: hsdState
+
+  mcHsdState:
+    description: "Current state of MC HSD"
+    discreteValues: hsdState
+
+  vcu3HsdState:
+    description: "Current state of VCU3 HSD"
+    discreteValues: hsdState
+
+  hveHsdState:
+    description: "Current state of HVE HSD"
+    discreteValues: hsdState
+
+  cockpitHsdState:
+    description: "Current state of COCKPIT HSD"
+    discreteValues: hsdState
+
+  spareHsdState:
+    description: "Current state of SPARE HSD"
+    discreteValues: hsdState
+
+  bms4HsdState:
+    description: "Current state of BMSW4 HSD"
+    discreteValues: hsdState
+
+  vcu1HsdState:
+    description: "Current state of VCU1 HSD"
+    discreteValues: hsdState
+
+  vcu2HsdState:
+    description: "Current state of VCU2 HSD"
+    discreteValues: hsdState
+
+  bms5HsdState:
+    description: "Current state of BMSW5 HSD"
+    discreteValues: hsdState
+
+  bms6HsdState:
+    description: "Current state of BMSW6 HSD"
+    discreteValues: hsdState
