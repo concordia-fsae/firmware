@@ -276,6 +276,32 @@ configs:
       overrides:
         app_pcba_id: 10
         app_component_id: stw
+  21:
+    description: Steering Wheel Switches Bootloader
+    options:
+      udsRequestId: 0x651
+      udsResponseId: 0x691
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: sws
+  1021:
+    description: Steering Wheel Switches Bootloader
+    options:
+      udsRequestId: 0x651
+      udsResponseId: 0x691
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 0
+        app_component_id: sws
   100:
     description: Debug Board Bootloader
     options:

@@ -1,0 +1,28 @@
+messages:
+  udsResponse:
+    description: UDS response message from the SWS
+    id: 0x691
+    sourceBuses: veh
+    template: uds
+
+  rtosTaskInfo:
+    description: SWS rtos task information
+    id: 0x554
+    sourceBuses: veh
+    template: rtosTaskInfo
+
+  inputDebugStatus:
+    description: Status of SWS inputs
+    id: 0x599
+    cycleTimeMs: 100
+    signals:
+      din1Debug:
+      din2Debug:
+      din3Debug:
+      din4Debug:
+      din5Debug:
+      din6Debug:
+      din7Debug:
+      din8Debug:
+      din9Debug:
+      din10Debug:

@@ -48,19 +48,25 @@ messages:
     template: uds
 
   vcfrontUdsRequest:
-    description: UDS request message for the Steering Wheel
+    description: UDS request message for the VCFRONT
     cycleTimeMs: 10
     id: 0x630
     template: uds
 
   vcrearUdsRequest:
-    description: UDS request message for the Steering Wheel
+    description: UDS request message for the VCREAR
     cycleTimeMs: 10
     id: 0x631
     template: uds
 
   vcpduUdsRequest:
-    description: UDS request message for the Steering Wheel
+    description: UDS request message for the VCPDU
     cycleTimeMs: 10
     id: 0x632
+    template: uds
+
+  swsUdsRequest:
+    description: UDS request message for the Steering Wheel Switchs
+    cycleTimeMs: 10
+    id: 0x651
     template: uds
