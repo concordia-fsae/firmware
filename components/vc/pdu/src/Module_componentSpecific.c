@@ -10,7 +10,6 @@
 /**< Module Header */
 #include "Module.h"
 #include "drv_inputAD.h"
-#include "drv_tps2hb16ab.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -23,6 +22,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
     &app_vehicleState_desc,
+    &powerManager_desc,
     &CANIO_tx,
 };
 
@@ -34,7 +34,6 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
-    drv_tps2hb16ab_init();
 
 }
 
@@ -45,13 +44,4 @@ void Module_componentSpecific_Init(void)
 void Module_componentSpecific_1kHz(void)
 {
     drv_inputAD_1kHz_componentSpecific();
-}
-
-/**
- * #brief Run the pre 100Hz task functions
- * @note typically reserved for drivers
- */
-void Module_componentSpecific_100Hz(void)
-{
-    drv_tps2hb16ab_run();
 }
