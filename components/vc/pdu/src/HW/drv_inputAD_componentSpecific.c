@@ -36,6 +36,34 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
         .type = INPUT_DIGITAL_CAN,
         .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, VCFRONT_runButtonStatus),
     },
+    [DRV_INPUTAD_5V_NFLT1] = { 
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_5V_NFLT1,
+            .active_level = DRV_IO_LOGIC_LOW,
+        },
+    },
+    [DRV_INPUTAD_5V_NFLT2] = { 
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_5V_NFLT2,
+            .active_level = DRV_IO_LOGIC_LOW,
+        },
+    },
+    [DRV_INPUTAD_VCU_SFTY_RESET] = { 
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_VCU_SFTY_RESET,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
+    },
+    [DRV_INPUTAD_BSPD_MEM] = { 
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_BSPD_MEM,
+            .active_level = DRV_IO_LOGIC_LOW,
+        },
+    },
 };
 
 /******************************************************************************
@@ -53,7 +81,15 @@ void drv_inputAD_init_componentSpecific(void)
 
 void drv_inputAD_1kHz_componentSpecific(void)
 {
-    // TODO: Populate inputAD analog voltages
+    // This method only works since there is a 1:1 mapping from adc input to inputAD output
+    for (uint8_t i = 0U; i < ADC_BANK1_CHANNEL_COUNT; i++)
+    {
+        drv_inputAD_private_setAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
+    }
+    for (uint8_t i = 0U; i < ADC_BANK2_CHANNEL_COUNT; i++)
+    {
+        drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
+    }
 
     drv_inputAD_private_runDigital();
 }
