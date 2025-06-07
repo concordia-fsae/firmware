@@ -23,6 +23,7 @@ extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S apps_desc;
 extern const ModuleDesc_S bppc_desc;
 extern const ModuleDesc_S torque_desc;
+extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -37,6 +38,7 @@ typedef enum
     MODULE_BPPC,
     MODULE_VEHICLESTATE,
     MODULE_TORQUE,
+    MODULE_POWERMANAGER,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;
