@@ -26,7 +26,6 @@ typedef struct
     float32_t voltages[DRV_OUTPUTAD_ANALOG_COUNT];
     struct
     {
-        drv_io_logicLevel_E logic_level;
         drv_io_activeState_E active_state;
     } digital[DRV_OUTPUTAD_DIGITAL_COUNT];
 } outputAD_S;
