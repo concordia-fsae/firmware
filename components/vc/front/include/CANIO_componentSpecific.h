@@ -58,6 +58,8 @@
 #define set_runButtonStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
                                                    CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 #define set_LBrakeTemp(m,b,n,s) set(m,b,n,s, (drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSOR_L_BR_TEMP)))
-#define set_RBrakeTemp(m,b,n,s) set(m,b,n,s, (drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSOR_R_BR_TEMP)))
+//#define set_RBrakeTemp(m,b,n,s) set(m,b,n,s, (0x05))
+#define set_RBrakeTemp(m,b,n,s) set(m,b,n,s, (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_R_BR_TEMP)))
+//#define set_RBrakeTemp(m,b,n,s) set(m,b,n,s, (drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSOR_R_BR_TEMP)))
 
 #include "TemporaryStubbing.h"

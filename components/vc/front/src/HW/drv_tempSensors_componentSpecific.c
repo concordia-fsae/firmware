@@ -31,7 +31,7 @@ drv_tempSensors_channelConfig_S drv_tempSensors_channels[DRV_TEMPSENSORS_CHANNEL
             .linear = {
         .t0_temp = 0.0f,
         .t0_voltage = 0.5f,
-        .degC_per_mV = 0.2f,
+        .degC_per_mV = 5.0f,
         .adc_channel = DRV_INPUTAD_ANALOG_R_BR_TEMP,
             },
         },

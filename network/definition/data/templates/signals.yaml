@@ -37,8 +37,8 @@ signals:
   brakeTemperature:
     unit: 'C'
     nativeRepresentation:
-      bitWidth: 16
-      resolution: 24
+      bitWidth: 12
+      resolution: 1
       range:
         min: 0
         max: 800

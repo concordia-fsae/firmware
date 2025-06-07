@@ -35,10 +35,10 @@ messages:
     cycleTimeMs: 100
     signals:
       LBrakeTemp: 
-        template: brakeTemperature
+        template: voltsPrecise
         description: Left brake temperature
       RBrakeTemp:
-        template: brakeTemperature
+        template: voltsPrecise
         description: Right brake temperature
   wheelSpeedInfo:
     cycleTimeMs: 10
