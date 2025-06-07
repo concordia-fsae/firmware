@@ -18,3 +18,29 @@ messages:
     cycleTimeMs: 10
     signals:
       vehicleState:
+
+  hsdState:
+    description: Current state of the HSDs
+    id: 0x150
+    cycleTimeMs: 50
+    signals:
+      pumpHsdState:
+      fanHsdState:
+      bms1HsdState:
+      shutdownHsdState:
+      bms2HsdState:
+      accumHsdState:
+      bms3HsdState:
+      sensorHsdState:
+      vc1HsdState:
+      vc2HsdState:
+      mcHsdState:
+      vcu3HsdState:
+      hveHsdState:
+      cockpitHsdState:
+      spareHsdState:
+      bms4HsdState:
+      vcu1HsdState:
+      vcu2HsdState:
+      bms5HsdState:
+      bms6HsdState:

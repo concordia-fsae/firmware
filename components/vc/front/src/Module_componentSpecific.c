@@ -27,6 +27,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &bppc_desc,
     &app_vehicleState_desc,
     &torque_desc,
+    &powerManager_desc,
     &CANIO_tx,
 };
 
@@ -38,17 +39,7 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
-    drv_tps20xx_init();
     drv_pedalMonitor_init();
-}
-
-/**
- * #brief Run the pre 10Hz task functions
- * @note typically reserved for drivers
- */
-void Module_componentSpecific_10Hz(void)
-{
-    drv_tps20xx_run();
 }
 
 /**

@@ -132,3 +132,13 @@ vehicleState:
   "ON_GLV": 1
   "ON_HV": 2
   "TS_RUN": 3
+
+hsdState:
+  "SNA": 0
+  "OFF": 1
+  "ON": 2
+  "SW_FUSED": 3
+  "OVERCURRENT": 4
+  "OVERTEMP": 5
+  "RETRY": 6
+  "FAULT": 7
