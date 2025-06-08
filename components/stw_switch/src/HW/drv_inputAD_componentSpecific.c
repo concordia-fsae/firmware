@@ -114,6 +114,8 @@ void drv_inputAD_init_componentSpecific(void)
 
 void drv_inputAD_1kHz_componentSpecific(void)
 {
+    HW_ADC_unpackADCBuffer();
+
     // This method only works since there is a 1:1 mapping from adc input to inputAD output
     for (uint8_t i = 0U; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
