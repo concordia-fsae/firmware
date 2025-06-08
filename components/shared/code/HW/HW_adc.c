@@ -61,38 +61,6 @@ static float32_t HW_ADC_private_getVFromCount(uint16_t cnt)
 }
 
 /**
- * @brief  Unpack ADC buffer
- */
-static void HW_ADC_private_unpackADCBuffer(void)
-{
-    for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
-    {
-        LIB_simpleFilter_clear(&inputs.adcData_bank1[i]);
-    }
-    for (uint8_t i = 0; i < ADC_BANK2_CHANNEL_COUNT; i++)
-    {
-        LIB_simpleFilter_clear(&inputs.adcData_bank2[i]);
-    }
-
-    for (uint16_t i = 0; i < HW_ADC_BUF_LEN; i++)
-    {
-        LIB_simpleFilter_increment(&inputs.adcData_bank1[i % ADC_BANK1_CHANNEL_COUNT], (inputs.adcBuffer[i] & 0xffff));
-        LIB_simpleFilter_increment(&inputs.adcData_bank2[i % ADC_BANK2_CHANNEL_COUNT], (inputs.adcBuffer[i] >> 16U));
-    }
-
-    for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
-    {
-        LIB_simpleFilter_average(&inputs.adcData_bank1[i]);
-        inputs.voltages1[i] = HW_ADC_private_getVFromCount((uint16_t)inputs.adcData_bank1[i].value);
-    }
-    for (uint8_t i = 0; i < ADC_BANK2_CHANNEL_COUNT; i++)
-    {
-        LIB_simpleFilter_average(&inputs.adcData_bank2[i]);
-        inputs.voltages2[i] = HW_ADC_private_getVFromCount((uint16_t)inputs.adcData_bank2[i].value);
-    }
-}
-
-/**
  * @brief Firmware functinputsn to initiate ADC calibraton.
  *
  * @param hadc Pointer to ADC peripheral
@@ -136,6 +104,38 @@ HW_StatusTypeDef_E HW_ADC_init(void)
 }
 
 /**
+ * @brief  Unpack ADC buffer
+ */
+void HW_ADC_unpackADCBuffer(void)
+{
+    for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
+    {
+        LIB_simpleFilter_clear(&inputs.adcData_bank1[i]);
+    }
+    for (uint8_t i = 0; i < ADC_BANK2_CHANNEL_COUNT; i++)
+    {
+        LIB_simpleFilter_clear(&inputs.adcData_bank2[i]);
+    }
+
+    for (uint16_t i = 0; i < HW_ADC_BUF_LEN; i++)
+    {
+        LIB_simpleFilter_increment(&inputs.adcData_bank1[i % ADC_BANK1_CHANNEL_COUNT], (inputs.adcBuffer[i] & 0xffff));
+        LIB_simpleFilter_increment(&inputs.adcData_bank2[i % ADC_BANK2_CHANNEL_COUNT], (inputs.adcBuffer[i] >> 16U));
+    }
+
+    for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
+    {
+        LIB_simpleFilter_average(&inputs.adcData_bank1[i]);
+        inputs.voltages1[i] = HW_ADC_private_getVFromCount((uint16_t)inputs.adcData_bank1[i].value);
+    }
+    for (uint8_t i = 0; i < ADC_BANK2_CHANNEL_COUNT; i++)
+    {
+        LIB_simpleFilter_average(&inputs.adcData_bank2[i]);
+        inputs.voltages2[i] = HW_ADC_private_getVFromCount((uint16_t)inputs.adcData_bank2[i].value);
+    }
+}
+
+/**
  * @brief  STM32 HAL callback. Called when DMA transfer is half complete.
  * @param hadc Pointer to ADC peripheral
  */
@@ -153,7 +153,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if (hadc->Instance == ADC1)
     {
-        HW_ADC_private_unpackADCBuffer();
+        HW_ADC_unpackADCBuffer();
     }
 }
 

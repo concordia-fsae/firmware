@@ -45,5 +45,6 @@ typedef enum
 
 HW_StatusTypeDef_E HW_ADC_init(void);
 HW_StatusTypeDef_E HW_ADC_deInit(void);
+void               HW_ADC_unpackADCBuffer(void);
 float32_t          HW_ADC_getVFromBank1Channel(HW_adcChannels_bank1_E channel);
 float32_t          HW_ADC_getVFromBank2Channel(HW_adcChannels_bank2_E channel);
