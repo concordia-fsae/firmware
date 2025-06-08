@@ -82,8 +82,8 @@ drv_pedalMonitor_channelConfig_S drv_pedalMonitor_channels[DRV_PEDALMONITOR_CHAN
         .type = DRV_PEDALMONITOR_TYPE_ANALOG,
         .input.analog = {
             .channel = DRV_INPUTAD_ANALOG_APPS_P2,
-            .fault_high = 2.05f,
-            .fault_low = 0.8f,
+            .fault_high = 2.5f,
+            .fault_low = 0.5f,
             .pedal_map = {
                 .points = (lib_interpolation_point_S*)&mapping_apps2,
                 .number_points = COUNTOF(mapping_apps2),
