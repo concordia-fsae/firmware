@@ -80,6 +80,8 @@ static void drv_inputAD_init_componentSpecific(void)
 
 static void drv_inputAD_1kHz_PRD(void)
 {
+    HW_ADC_unpackADCBuffer();
+
     const float32_t differential = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_CS_P) - HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_CS_N);
 
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CS, differential);
