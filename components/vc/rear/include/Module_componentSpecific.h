@@ -23,6 +23,7 @@ extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S brakeLight_desc;
 extern const ModuleDesc_S horn_desc;
+extern const ModuleDesc_S brakePressure_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -37,6 +38,7 @@ typedef enum
     MODULE_POWERMANAGER,
     MODULE_BRAKELIGHT,
     MODULE_HORN,
+    MODULE_BRAKEPRESSURE,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;

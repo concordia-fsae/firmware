@@ -20,3 +20,13 @@ messages:
     signals:
       brakeLightState:
       hornState:
+
+  rearBrakePressure:
+    description: Rear Brake Pressure
+    cycleTimeMs: 10
+    id: 0x453
+    sourceBuses: veh
+    signals:
+      brakePressure:
+        template: brakePressure
+        description: Brake pressure

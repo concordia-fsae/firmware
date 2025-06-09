@@ -33,7 +33,11 @@ messages:
     signals:
       apps1Voltage:
       apps2Voltage:
-      brakeVoltage:
+      brakePotVoltage:
+      brakePrVoltage:
+      brakePressure:
+        template: brakePressure
+        description: Front Brake Pressure
 
   inputStatus:
     description: Status of VCFRONT inputs

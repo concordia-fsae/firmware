@@ -34,3 +34,12 @@ signals:
         min: 0
         max: 8
     continuous: true
+  brakePressure:
+    unit: 'PSI'
+    nativeRepresentation:
+      resolution: 2
+      bitWidth: 10
+      range:
+        min: 0
+        max: 2000
+    continuous: true

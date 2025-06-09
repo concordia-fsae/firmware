@@ -152,6 +152,7 @@ project_source_files = [
     SHARED_APP.File("app_vehicleState.c"),
     SRC_DIR.File("horn.c"),
     SRC_DIR.File("powerManager.c"),
+    SRC_DIR.File("brakePressure.c"),
 ]
 
 project_hw_files = [

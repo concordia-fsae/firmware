@@ -19,8 +19,12 @@ signals:
     description: "Voltage of the accelerator pedal 2"
     template: voltsPrecise
 
-  brakeVoltage:
-    description: "Voltage of the brake pedal"
+  brakePotVoltage:
+    description: "Voltage of the brake pedal potentiometer"
+    template: voltsPrecise
+
+  brakePrVoltage:
+    description: "Voltage of the brake pedal pressure"
     template: voltsPrecise
 
   acceleratorPosition:
