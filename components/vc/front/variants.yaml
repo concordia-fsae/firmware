@@ -9,3 +9,4 @@ configs:
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
+        feature_brakepedal_from_pressure: true
