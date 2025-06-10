@@ -142,3 +142,8 @@ hsdState:
   "OVERTEMP": 5
   "RETRY": 6
   "FAULT": 7
+
+raceMode:
+  "SNA": 0
+  "PIT": 1
+  "RACE": 2

@@ -32,3 +32,32 @@ signals:
       range:
         min: 0
         max: 18446744073709551615
+
+  runButton:
+    description: State of the steering wheel run button
+    discreteValues: digitalStatus
+
+  raceMode:
+    description: State of the steering wheel race mode
+    discreteValues: raceMode
+
+  maxRequestTorque:
+    unit: Nm
+    description: Max torque to be requested
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 150
+
+  maxRequestCurrent:
+    unit: A
+    description: Max current to be requested
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 150
+
