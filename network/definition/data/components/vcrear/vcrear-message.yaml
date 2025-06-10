@@ -20,3 +20,5 @@ messages:
     signals:
       brakeLightState:
       hornState:
+      bmsStatusMEM:
+      imdStatusMEM:

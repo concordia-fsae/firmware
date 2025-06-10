@@ -6,3 +6,11 @@ signals:
   hornState:
     description: State of the horn
     discreteValues: digitalStatus
+  
+  bmsStatusMEM:
+    description: BMS status memory
+    discreteValues: digitalStatus
+
+  imdStatusMEM:
+    description: IMD status memory
+    discreteValues: digitalStatus
