@@ -151,6 +151,7 @@ project_source_files = [
     SHARED_APP.File("app_vehicleState.c"),
     SHARED_LIBS.File("lib_swFuse.c"),
     SRC_DIR.File("powerManager.c"),
+    SRC_DIR.File("cooling.c"),
 ]
 
 project_hw_files = [
