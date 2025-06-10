@@ -34,6 +34,9 @@ static void powerManager_init(void)
 
     drv_tps2hb16ab_init();
     drv_vn9008_init();
+
+    drv_tps2hb16ab_setDiagEnabled(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, true); // All diag pins are set to the same gpio
+    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_PUMP, true); // All sense enable pins are set to the same gpio
 }
 
 static void powerManager_periodic_10Hz(void)
