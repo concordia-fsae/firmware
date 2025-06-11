@@ -65,3 +65,11 @@ signals:
         max: 150
       resolution: 1
     continuous: true
+
+  bmsLightState:
+    description: "State of the BMS light"
+    discreteValues: digitalStatus
+
+  imdLightState:
+    description: "State of the IMD light"
+    discreteValues: digitalStatus

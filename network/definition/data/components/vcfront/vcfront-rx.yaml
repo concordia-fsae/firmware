@@ -5,3 +5,7 @@ messages:
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh
+  BMSB_bmsStatusMem:
+    sourceBuses: veh
+  BMSB_imdStatusMem:
+    sourceBuses: veh

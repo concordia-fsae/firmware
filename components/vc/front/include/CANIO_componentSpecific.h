@@ -25,6 +25,7 @@
 #include "torque.h"
 #include "brakePressure.h"
 #include "drv_tps20xx.h"
+#include "cockpitLights.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -72,5 +73,7 @@
 #define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
 #define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
+#define set_bmsLightState(m,b,n,s) set(m,b,n,s, cockpitLights_bms_getStateCAN())
+#define set_imdLightState(m,b,n,s) set(m,b,n,s, cockpitLights_imd_getStateCAN())
 
 #include "TemporaryStubbing.h"
