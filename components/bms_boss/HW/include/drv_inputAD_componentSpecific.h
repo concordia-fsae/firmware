@@ -23,5 +23,8 @@ typedef enum
 {
     DRV_INPUTAD_ANALOG_CS,
     DRV_INPUTAD_ANALOG_MCU_TEMP,
+#if BMSB_CONFIG_ID == 1U
+    DRV_INPUTAD_ANALOG_VPACK,
+#endif
     DRV_INPUTAD_ANALOG_COUNT,
 } drv_inputAD_channelAnalog_E;

@@ -24,6 +24,12 @@
 #include "LIB_simpleFilter.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define VPACK_DIVISOR 250
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
@@ -88,6 +94,13 @@ static void drv_inputAD_1kHz_PRD(void)
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
 
     drv_inputAD_private_runDigital();
+
+#if BMSB_CONFIG_ID == 1U
+    const float32_t vpack_p = HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_VPACK_P);
+    const float32_t vpack_n = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_VPACK_N);
+    const float32_t vpack_diff = vpack_p - vpack_n;
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK, vpack_diff * VPACK_DIVISOR);
+#endif
 }
 
 /**
