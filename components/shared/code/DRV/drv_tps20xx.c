@@ -238,7 +238,7 @@ void drv_tps20xx_setEnabled(drv_tps20xx_channel_E channel, bool enabled)
  */
 static void drv_tps20xx_private_setICEnabled(drv_tps20xx_channel_E channel, bool enabled)
 {
-    const drv_io_activeState_E state_to_set = (enabled) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+    const drv_io_activeState_E state_to_set = (enabled) ? DRV_IO_INACTIVE : DRV_IO_ACTIVE;
     drv_outputAD_setDigitalActiveState(drv_tps20xx_channels[channel].enable, state_to_set);
 }
 
