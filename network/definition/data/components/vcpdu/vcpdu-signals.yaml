@@ -82,3 +82,13 @@ signals:
   bms6HsdState:
     description: "Current state of BMSW6 HSD"
     discreteValues: hsdState
+
+  glvVoltage:
+    unit: 'V'
+    description: GLV Battery Voltage
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 16
+    continuous: true

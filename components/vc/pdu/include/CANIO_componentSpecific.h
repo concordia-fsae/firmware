@@ -21,6 +21,7 @@
 #include "app_vehicleState.h"
 #include "drv_vn9008.h"
 #include "drv_tps2hb16ab.h"
+#include "powerManager.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -59,5 +60,6 @@
 #define set_vcu2HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2)))
 #define set_bms5HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1)))
 #define set_bms6HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))
+#define set_glvVoltage(m,b,n,s) set(m,b,n,s, powerManager_getGLVVoltage())
 
 #include "TemporaryStubbing.h"
