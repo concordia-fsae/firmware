@@ -14,6 +14,8 @@
 #include "drv_vn9008.h"
 #include "LIB_Types.h"
 #include "string.h"
+#include "drv_inputAD.h"
+#include "drv_outputAD.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -22,11 +24,17 @@
 static struct
 {
     float32_t total_current;
+    float32_t glv_voltage;
 } powerManager_data;
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+float32_t powerManager_getGLVVoltage(void)
+{
+    return powerManager_data.glv_voltage;
+}
 
 static void powerManager_init(void)
 {
@@ -44,13 +52,22 @@ static void powerManager_init(void)
 
 static void powerManager_periodic_10Hz(void)
 {
+    const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
+    powerManager_data.glv_voltage = glv_voltage;
+
+    const bool enable_loads = glv_voltage > 8.0f;
+    const bool enable_shutdown = glv_voltage > 9.0f;
+
+    const drv_io_activeState_E shutdown_en = enable_shutdown ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, shutdown_en);
+
     // TODO: Improve
     static drv_tps2hb16ab_output_E output = DRV_TPS2HB16AB_OUT_1;
 
     for (uint8_t i = 0; i < DRV_TPS2HB16AB_IC_COUNT; i++)
     {
-        drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_1, true);
-        drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_2, true);
+        drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_1, enable_loads);
+        drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_2, enable_loads);
     }
     output = (output + 1) % DRV_TPS2HB16AB_OUT_COUNT;
     drv_tps2hb16ab_setCSChannel(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, output); // All CS select pins are on the same GPIO

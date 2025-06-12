@@ -18,6 +18,7 @@ messages:
     cycleTimeMs: 10
     signals:
       vehicleState:
+      glvVoltage:
 
   hsdState:
     description: Current state of the HSDs
