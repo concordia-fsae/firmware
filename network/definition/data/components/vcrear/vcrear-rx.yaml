@@ -4,6 +4,8 @@ messages:
     unrecorded: true
   VCFRONT_pedalPosition:
     sourceBuses: veh
+  BMSB_ioStatus:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh

@@ -20,6 +20,7 @@ messages:
     signals:
       brakeLightState:
       hornState:
+      tssiState:
 
   rearBrakePressure:
     description: Rear Brake Pressure

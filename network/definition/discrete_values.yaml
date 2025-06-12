@@ -147,3 +147,8 @@ raceMode:
   "SNA": 0
   "PIT": 1
   "RACE": 2
+
+tssiState:
+  "SNA": 0
+  "ON_GREEN": 1
+  "ON_RED": 2
