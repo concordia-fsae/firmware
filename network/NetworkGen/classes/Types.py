@@ -96,6 +96,7 @@ class Units(Enum):
     deg = "deg"
     Hz = "Hz"
     Wb = "Wb"
+    psi = "PSI"
     
 
 

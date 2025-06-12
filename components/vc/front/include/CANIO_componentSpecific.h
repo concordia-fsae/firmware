@@ -23,6 +23,7 @@
 #include "apps.h"
 #include "bppc.h"
 #include "torque.h"
+#include "brakePressure.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -49,12 +50,14 @@
 #define set_brakeState(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalStateCAN(DRV_PEDALMONITOR_BRAKE_POT))
 #define set_apps1Voltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_APPS1))
 #define set_apps2Voltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_APPS2))
-#define set_brakeVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_POT))
+#define set_brakePotVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_POT))
+#define set_brakePrVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_PR))
 #define set_acceleratorState(m,b,n,s) set(m,b,n,s, apps_getStateCAN())
 #define set_bppcState(m,b,n,s) set(m,b,n,s, bppc_getStateCAN())
 #define set_torqueRequest(m,b,n,s) set(m,b,n,s, torque_getTorqueRequest())
 #define set_torqueManagerState(m,b,n,s) set(m,b,n,s, torque_getStateCAN())
 #define set_runButtonStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
                                                    CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
 
 #include "TemporaryStubbing.h"

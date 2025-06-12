@@ -19,6 +19,7 @@
 // imports for data access
 #include "Module.h"
 #include "brakeLight.h"
+#include "brakePressure.h"
 #include "horn.h"
 
 /******************************************************************************
@@ -39,5 +40,6 @@
 #define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 #define set_brakeLightState(m,b,n,s) set(m,b,n,s, brakeLight_getStateCAN())
 #define set_hornState(m,b,n,s) set(m,b,n,s, horn_getStateCAN())
+#define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
 
 #include "TemporaryStubbing.h"

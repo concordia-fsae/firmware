@@ -26,6 +26,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &powerManager_desc,
     &brakeLight_desc,
     &horn_desc,
+    &brakePressure_desc,
     &CANIO_tx,
 };
 

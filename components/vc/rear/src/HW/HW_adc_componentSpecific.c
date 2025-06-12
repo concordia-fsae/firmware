@@ -38,8 +38,8 @@
 
 #define ADC_BANK2_CHANNEL_L_BR_TEMP             ADC_CHANNEL_5
 #define ADC_BANK2_CHANNEL_R_SHK_DISP            ADC_CHANNEL_6
-#define ADC_BANK2_CHANNEL_BR_PR                 ADC_CHANNEL_8
 #define ADC_BANK2_CHANNEL_PU2                   ADC_CHANNEL_15
+#define ADC_BANK2_CHANNEL_BR_PR                 ADC_CHANNEL_8
 #define ADC_BANK2_CHANNEL_SPARE3                ADC_CHANNEL_12
 #define ADC_BANK2_CHANNEL_SPARE4                ADC_CHANNEL_13
 #define ADC_BANK2_CHANNEL_APPS_P2               ADC_CHANNEL_2
@@ -174,14 +174,14 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     {
         Error_Handler();
     }
-    sConfig.Channel      = ADC_BANK2_CHANNEL_BR_PR;
+    sConfig.Channel      = ADC_BANK2_CHANNEL_PU2;
     sConfig.Rank         = ADC_REGULAR_RANK_3;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     {
         Error_Handler();
     }
-    sConfig.Channel      = ADC_BANK2_CHANNEL_PU2;
+    sConfig.Channel      = ADC_BANK2_CHANNEL_BR_PR;
     sConfig.Rank         = ADC_REGULAR_RANK_4;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
