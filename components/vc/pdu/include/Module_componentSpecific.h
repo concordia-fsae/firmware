@@ -20,6 +20,7 @@
 /**< Modules */
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S UDS_desc;
+extern const ModuleDesc_S cooling_desc;
 extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S CANIO_tx;
 
@@ -32,6 +33,7 @@ typedef enum
     MODULE_CANIO_rx = 0x00U,
     MODULE_UDS,
     MODULE_VEHICLESTATE,
+    MODULE_COOLING,
     MODULE_POWERMANAGER,
     MODULE_CANIO_tx,
     MODULE_CNT

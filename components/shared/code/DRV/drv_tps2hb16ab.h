@@ -53,4 +53,5 @@ void            drv_tps2hb16ab_run(void);
 drv_hsd_state_E drv_tps2hb16ab_getState(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output);
 float32_t       drv_tps2hb16ab_getCurrent(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output);
 void            drv_tps2hb16ab_setEnabled(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output, bool enabled);
+void            drv_tps2hb16ab_setDiagEnabled(drv_tps2hb16ab_E ic, bool enabled);
 void            drv_tps2hb16ab_setCSChannel(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output);
