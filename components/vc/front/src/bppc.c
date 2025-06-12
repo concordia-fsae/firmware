@@ -15,6 +15,16 @@
 #include "string.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#if FEATURE_IS_ENABLED(FEATURE_BRAKEPEDAL_FROM_PRESSURE)
+#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_PR
+#else
+#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_POT
+#endif
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
@@ -66,9 +76,9 @@ static void bppc_periodic_100Hz(void)
 {
     bppc_state_E state = BPPC_ERROR;
 
-    if (drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_BRAKE_POT) == DRV_PEDALMONITOR_OK)
+    if (drv_pedalMonitor_getPedalState(BRAKE_CHANNEL) == DRV_PEDALMONITOR_OK)
     {
-        const float32_t brake_pos = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_BRAKE_POT);
+        const float32_t brake_pos = drv_pedalMonitor_getPedalPosition(BRAKE_CHANNEL);
         const float32_t accelerator_pos = apps_getPedalPosition();
 
         if ((accelerator_pos > 0.25f) && (brake_pos > 0.10f))

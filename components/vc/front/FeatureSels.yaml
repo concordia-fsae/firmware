@@ -1,5 +1,5 @@
 featureDefs:
-  - "#/components/bms_boss/FeatureDefs.yaml"
+  - "#/components/vc/front/FeatureDefs.yaml"
   - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
