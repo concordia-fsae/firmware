@@ -31,11 +31,17 @@
 static struct
 {
     bppc_state_E state;
+    float32_t position;
 } bppc_data;
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+float32_t bppc_getPedalPosition(void)
+{
+    return bppc_data.position;
+}
 
 bppc_state_E bppc_getState(void)
 {
@@ -80,6 +86,7 @@ static void bppc_periodic_100Hz(void)
     {
         const float32_t brake_pos = drv_pedalMonitor_getPedalPosition(BRAKE_CHANNEL);
         const float32_t accelerator_pos = apps_getPedalPosition();
+        bppc_data.position = brake_pos;
 
         if ((accelerator_pos > 0.25f) && (brake_pos > 0.10f))
         {
