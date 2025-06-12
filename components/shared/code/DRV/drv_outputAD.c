@@ -49,12 +49,7 @@ static void setDigitalOutputState(drv_outputAD_channelDigital_E channel)
     const drv_io_logicLevel_E desired_level = (outputs.digital[channel].active_state == DRV_IO_ACTIVE) ?
                                                drv_outputAD_configDigital[channel].config.gpio.active_level :
                                                drv_io_invertLogicLevel(drv_outputAD_configDigital[channel].config.gpio.active_level);
-
-    // If the output is a push pull and a set pin is a digital high output. keep it the same
-    // Otherwise, invert the logic for an open drain so that a low level triggers it being set
-    const bool state_to_set = (HW_GPIO_pinmux[drv_outputAD_configDigital[channel].config.gpio.pin].mode == GPIO_MODE_OUTPUT_PP) ?
-                               desired_level == DRV_IO_LOGIC_HIGH :
-                               desired_level == DRV_IO_LOGIC_LOW;
+    const bool state_to_set = desired_level == DRV_IO_LOGIC_HIGH;
 
     HW_GPIO_writePin(drv_outputAD_configDigital[channel].config.gpio.pin, state_to_set);
 }
