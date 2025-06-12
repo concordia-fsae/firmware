@@ -6,3 +6,7 @@ signals:
   hornState:
     description: State of the horn
     discreteValues: digitalStatus
+  
+  tssiState:
+    description: State of the tssi light
+    discreteValues: tssiState
