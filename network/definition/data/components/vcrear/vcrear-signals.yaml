@@ -144,3 +144,57 @@ signals:
         max: 800
     continuous: true
 
+  torqueCommand:
+    unit: Nm
+    description: Commanded Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  speedCommand:
+    unit: RPM
+    description: Commanded Motor Speed
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: -32768
+        max: 32767
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  directionCommand:
+    description: Commanded direction
+    discreteValues: pm100dxDirectionCommand
+
+  inverterEnable:
+    description: Commanded enable state
+    discreteValues: pm100dxEnableState
+
+  dischargeEnable:
+    description: Commanded discharge state
+    discreteValues: pm100dxEnableState
+
+  speedOverride:
+    description: Override torque control mode
+    discreteValues: pm100dxEnableState
+
+  torqueLimit:
+    unit: Nm
+    description: Commanded Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true

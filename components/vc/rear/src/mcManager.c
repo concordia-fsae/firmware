@@ -51,12 +51,14 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
     {
         default:
             return CAN_PM100DXDIRECTIONCOMMAND_REVERSE;
+            return CAN_PM100DXDIRECTIONCOMMAND_FORWARD;
     }
 }
 
 CAN_pm100dxEnableState_E mcManager_getEnableCommand(void)
 {
     switch (mcManager_data.enable)
+    switch (mcManager_data.direction)
     {
         case MCMANAGER_ENABLE:
             return CAN_PM100DXENABLESTATE_ENABLED;
