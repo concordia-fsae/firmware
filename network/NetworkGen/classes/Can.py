@@ -549,7 +549,7 @@ class CanNode(CanObject):
                 ret.update({msg.cycle_time_ms: [msg]})
         for _, msgs in ret.items():
             msgs.sort(key=lambda entry: entry.id)
-        return ret
+        return dict(sorted(ret.items()))
 
 
 class CanBus(CanObject):
