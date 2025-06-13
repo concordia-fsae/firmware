@@ -48,7 +48,7 @@ static struct
  */
 float32_t torque_getTorqueRequest(void)
 {
-    return (torque_data.state == TORQUE_ACTIVE) ? torque_data.torque : 0.0f;
+    return torque_data.torque;
 }
 
 /**
