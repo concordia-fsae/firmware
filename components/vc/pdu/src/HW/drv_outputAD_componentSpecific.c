@@ -280,6 +280,7 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
+#if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
     [DRV_OUTPUTAD_PWM1] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
@@ -287,6 +288,7 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
+#endif
     [DRV_OUTPUTAD_PWM2] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
