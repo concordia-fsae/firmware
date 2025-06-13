@@ -21,6 +21,8 @@ messages:
       brakeLightState:
       hornState:
       tssiState:
+      5vCriticalHsdState:
+      5vExtHsdState:
 
   rearBrakePressure:
     description: Rear Brake Pressure

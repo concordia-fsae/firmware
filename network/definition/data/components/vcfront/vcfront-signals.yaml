@@ -47,6 +47,14 @@ signals:
     description: Status of the run button switch
     discreteValues: digitalStatus
 
+  5vCriticalHsdState:
+    description: "Current state of the 5V HSD for critical loads"
+    discreteValues: hsdState
+
+  5vExtHsdState:
+    description: "Current state of the 5V HSD for external loads"
+    discreteValues: hsdState
+
   torqueRequest:
     description: Torque request from the torque manager
     unit: Nm

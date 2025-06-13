@@ -36,6 +36,11 @@ float32_t powerManager_getGLVVoltage(void)
     return powerManager_data.glv_voltage;
 }
 
+float32_t powerManager_getGLVCurrent(void)
+{
+    return powerManager_data.total_current;
+}
+
 static void powerManager_init(void)
 {
     memset(&powerManager_data, 0x00, sizeof(powerManager_data));
@@ -53,6 +58,8 @@ static void powerManager_init(void)
 static void powerManager_periodic_10Hz(void)
 {
     const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
+    float32_t tmp_current = 0.0f;
+
     powerManager_data.glv_voltage = glv_voltage;
 
     const bool enable_loads = glv_voltage > 8.0f;
@@ -68,10 +75,18 @@ static void powerManager_periodic_10Hz(void)
     {
         drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_1, enable_loads);
         drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_2, enable_loads);
+        tmp_current += drv_tps2hb16ab_getCurrent(i, DRV_TPS2HB16AB_OUT_1);
+        tmp_current += drv_tps2hb16ab_getCurrent(i, DRV_TPS2HB16AB_OUT_2);
     }
     output = (output + 1) % DRV_TPS2HB16AB_OUT_COUNT;
     drv_tps2hb16ab_setCSChannel(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, output); // All CS select pins are on the same GPIO
 
+    for (uint8_t i = 0; i < DRV_VN9008_CHANNEL_COUNT; i++)
+    {
+        tmp_current += drv_vn9008_getCurrent(i);
+    }
+
+    powerManager_data.total_current = tmp_current;
     drv_tps2hb16ab_run();
     drv_vn9008_run();
 }

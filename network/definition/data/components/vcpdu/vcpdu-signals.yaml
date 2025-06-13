@@ -92,3 +92,13 @@ signals:
         min: 0
         max: 16
     continuous: true
+
+  glvCurrent:
+    unit: 'A'
+    description: GLV Battery Current
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 30
+    continuous: true

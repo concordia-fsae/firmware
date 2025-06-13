@@ -204,6 +204,38 @@ drv_tps20xx_state_E drv_tps20xx_getState(drv_tps20xx_channel_E channel)
     return ret;
 }
 
+CAN_hsdState_E drv_tps20xx_getStateCAN(drv_tps20xx_channel_E channel)
+{
+    CAN_hsdState_E ret = CAN_HSDSTATE_SNA;
+
+    switch (drv_tps20xx_data[channel].state)
+    {
+        case DRV_TPS20XX_STATE_OFF:
+            ret = CAN_HSDSTATE_OFF;
+            break;
+        case DRV_TPS20XX_STATE_ENABLED:
+            ret = CAN_HSDSTATE_ON;
+            break;
+        case DRV_TPS20XX_STATE_FAULTED_OC:
+            ret = CAN_HSDSTATE_OVERCURRENT;
+            break;
+        case DRV_TPS20XX_STATE_FAULTED_OT:
+            ret = CAN_HSDSTATE_OVERTEMP;
+            break;
+        case DRV_TPS20XX_STATE_RETRY:
+            ret = CAN_HSDSTATE_RETRY;
+            break;
+        case DRV_TPS20XX_STATE_ERROR:
+            ret = CAN_HSDSTATE_FAULT;
+            break;
+        case DRV_TPS20XX_STATE_INIT:
+        default:
+            break;
+    }
+
+    return ret;
+}
+
 /**
  * @brief Set the state of a channel. 
  * @note If a channel is off and it is set to on, the driver will enable

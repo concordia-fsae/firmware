@@ -10,3 +10,11 @@ signals:
   tssiState:
     description: State of the tssi light
     discreteValues: tssiState
+
+  5vCriticalHsdState:
+    description: "Current state of the 5V HSD for critical loads"
+    discreteValues: hsdState
+
+  5vExtHsdState:
+    description: "Current state of the 5V HSD for external loads"
+    discreteValues: hsdState

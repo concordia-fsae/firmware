@@ -24,6 +24,7 @@
 #include "bppc.h"
 #include "torque.h"
 #include "brakePressure.h"
+#include "drv_tps20xx.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -69,5 +70,7 @@
 #define set_runButtonStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
                                                    CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 #define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
+#define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
+#define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
 
 #include "TemporaryStubbing.h"
