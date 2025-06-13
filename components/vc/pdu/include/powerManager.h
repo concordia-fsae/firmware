@@ -16,3 +16,4 @@
  ******************************************************************************/
 
 float32_t powerManager_getGLVVoltage(void);
+float32_t powerManager_getGLVCurrent(void);

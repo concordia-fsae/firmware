@@ -61,5 +61,6 @@
 #define set_bms5HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1)))
 #define set_bms6HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))
 #define set_glvVoltage(m,b,n,s) set(m,b,n,s, powerManager_getGLVVoltage())
+#define set_glvCurrent(m,b,n,s) set(m,b,n,s, powerManager_getGLVCurrent())
 
 #include "TemporaryStubbing.h"

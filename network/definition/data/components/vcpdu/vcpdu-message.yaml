@@ -19,6 +19,7 @@ messages:
     signals:
       vehicleState:
       glvVoltage:
+      glvCurrent:
 
   hsdState:
     description: Current state of the HSDs
