@@ -374,7 +374,11 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     [HW_GPIO_PWM1] = {
         .port = GPIOC,
         .pin = GPIO_PIN_6, // Based on PC6
+#if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
         .mode = GPIO_MODE_OUTPUT_PP,
+#else
+        .mode = GPIO_MODE_AF_PP,
+#endif
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,

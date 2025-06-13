@@ -1,5 +1,5 @@
 featureDefs: 
-  - "#/components/bms_boss/FeatureDefs.yaml"
+  - "#/components/vc/pdu/FeatureDefs.yaml"
   - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
@@ -7,3 +7,4 @@ features:
   app_component_id: vcpdu
   app_uds: true
   feature_vehicleState_mode: leader
+  feature_pump_full_beans:
