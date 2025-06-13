@@ -60,77 +60,77 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP1_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP2_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP2_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP3_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP3_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP4_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP4_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP5_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP5_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP6_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP6_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP7_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP7_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP8_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP8_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_LP9_LATCH] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_LP9_LATCH, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_PUMP_FAULT] = { 
     .type = OUTPUT_DIGITAL,
     .config.gpio = {
         .pin = HW_GPIO_PUMP_FAULT, 
-        .active_level = DRV_IO_LOGIC_HIGH,
+        .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_FAN_FAULT] = { 
     .type = OUTPUT_DIGITAL,
     .config.gpio = {
         .pin = HW_GPIO_FAN_FAULT, 
-        .active_level = DRV_IO_LOGIC_HIGH,
+        .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_OUTPUTAD_ACCUM_EN] = { 
