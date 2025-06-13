@@ -84,4 +84,5 @@ HW_StatusTypeDef_E  drv_tps20xx_deInit(void);
 void                drv_tps20xx_run(void);
 
 drv_tps20xx_state_E drv_tps20xx_getState(drv_tps20xx_channel_E channel);
+CAN_hsdState_E      drv_tps20xx_getStateCAN(drv_tps20xx_channel_E channel);
 void                drv_tps20xx_setEnabled(drv_tps20xx_channel_E channel, bool enabled);

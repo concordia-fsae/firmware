@@ -45,3 +45,12 @@ messages:
     cycleTimeMs: 50
     signals:
       runButtonStatus:
+
+  outputState:
+    description: Information about the VCFRONT output states
+    cycleTimeMs: 100
+    id: 0x401
+    sourceBuses: veh
+    signals:
+      5vCriticalHsdState:
+      5vExtHsdState:
