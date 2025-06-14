@@ -9,3 +9,7 @@ signals:
     sourceBuses: veh
   BMSB_imdStatusMem:
     sourceBuses: veh
+  STW_maxRequestTorque:
+    sourceBuses: veh
+  STW_raceMode:
+    sourceBuses: veh
