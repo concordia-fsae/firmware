@@ -25,6 +25,9 @@
 typedef enum
 {
     ADC_BANK1_CHANNEL_CS_N,
+#if BMSB_CONFIG_ID == 1U
+    ADC_BANK1_CHANNEL_VPACK_P,
+#endif
     ADC_BANK1_CHANNEL_MCU_TEMP,
     ADC_BANK1_CHANNEL_COUNT,
 } HW_adcChannels_bank1_E;
@@ -32,6 +35,9 @@ typedef enum
 typedef enum
 {
     ADC_BANK2_CHANNEL_CS_P = 0x00U,
+#if BMSB_CONFIG_ID == 1U
+    ADC_BANK2_CHANNEL_VPACK_N,
+#endif
     // All empty values should be disregarded because of simultaneous current sense sampling
     ADC_BANK2_CHANNEL_COUNT = ADC_BANK1_CHANNEL_COUNT,
 } HW_adcChannels_bank2_E;
