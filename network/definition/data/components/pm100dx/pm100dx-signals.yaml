@@ -9,7 +9,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -22,7 +22,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -35,7 +35,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -48,7 +48,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -61,7 +61,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -74,7 +74,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -87,7 +87,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -100,7 +100,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -113,7 +113,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -126,7 +126,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -139,7 +139,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -152,7 +152,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -165,7 +165,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -178,7 +178,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -191,7 +191,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -204,7 +204,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -217,7 +217,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -230,7 +230,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -275,7 +275,7 @@ signals:
       range:
         min: 0.0
         max: 359.9
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -288,7 +288,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -301,7 +301,7 @@ signals:
       range:
         min: 0
         max: 359.9
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -314,7 +314,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -327,7 +327,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -340,7 +340,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -353,7 +353,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -366,7 +366,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -379,7 +379,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -392,7 +392,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -405,7 +405,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -418,7 +418,7 @@ signals:
       range:
         min: -32.768
         max: 32.767
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -431,7 +431,7 @@ signals:
       range:
         min: -32.768
         max: 32.767
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -444,7 +444,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -457,7 +457,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -470,7 +470,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -483,7 +483,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -496,7 +496,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -509,7 +509,7 @@ signals:
       range:
         min: -327.68
         max: 327.67
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -527,7 +527,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -566,7 +566,7 @@ signals:
       range:
         min: 0
         max: 15
-      endianness: big
+      endianness: little
       signedness: unsigned
     continuous: true
 
@@ -849,7 +849,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -862,7 +862,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -875,7 +875,7 @@ signals:
       range:
         min: 0
         max: 4294967295
-      endianness: big
+      endianness: little
       signedness: unsigned
     continuous: true
 
@@ -888,7 +888,7 @@ signals:
       range:
         min: 0
         max: 65535
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -901,7 +901,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -914,7 +914,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -927,7 +927,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -940,7 +940,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -953,7 +953,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -966,7 +966,7 @@ signals:
       range:
         min: -32768
         max: 32767
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -979,7 +979,7 @@ signals:
       range:
         min: -32768
         max: 32767
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -992,7 +992,7 @@ signals:
       range:
         min: -3276.8
         max: 3276.7
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
 
@@ -1005,6 +1005,6 @@ signals:
       range:
         min: -32768
         max: 32767
-      endianness: big
+      endianness: little
       signedness: signed
     continuous: true
