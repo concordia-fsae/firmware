@@ -35,11 +35,13 @@ static void cooling10Hz_PRD(void)
         // TODO: Make less ret
         drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, true);
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_ACTIVE);
+        HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.75f);
     }
     else
     {
         drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, false);
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_INACTIVE);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_ACTIVE);
+        HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.00f);
     }
 }
 
