@@ -285,7 +285,7 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_PWM1, 
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
 #endif
