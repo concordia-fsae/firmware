@@ -45,7 +45,7 @@ static void cooling10Hz_PRD(void)
     {
         drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, false);
 #if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_INACTIVE);
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_ACTIVE);
 #else
         HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.00f);
 #endif
