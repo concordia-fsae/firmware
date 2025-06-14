@@ -3,4 +3,5 @@ config:
   description: Feature definitions for the BMS Boss
 defs:
   canrx_swi:
-  cantx_swi: 
+  cantx_swi:
+  pump_full_beans:
