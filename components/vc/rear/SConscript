@@ -154,6 +154,7 @@ project_source_files = [
     SRC_DIR.File("powerManager.c"),
     SRC_DIR.File("brakePressure.c"),
     SRC_DIR.File("tssi.c"),
+    SRC_DIR.File("mcManager.c"),
 ]
 
 project_hw_files = [
