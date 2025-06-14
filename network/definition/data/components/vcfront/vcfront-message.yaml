@@ -46,6 +46,14 @@ messages:
     signals:
       runButtonStatus:
 
+  cockpitLightStatus:
+    description: Status of the cockpit lights
+    id: 0x402
+    cycleTimeMs: 100
+    signals:
+      bmsLightState:
+      imdLightState:
+
   outputState:
     description: Information about the VCFRONT output states
     cycleTimeMs: 100

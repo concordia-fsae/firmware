@@ -154,6 +154,7 @@ project_source_files = [
     SRC_DIR.File("torque.c"),
     SHARED_APP.File("app_vehicleState.c"),
     SRC_DIR.File("powerManager.c"),
+    SRC_DIR.File("cockpitLights.c"),
     SRC_DIR.File("brakePressure.c"),
 ]
 

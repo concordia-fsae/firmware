@@ -28,6 +28,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &app_vehicleState_desc,
     &torque_desc,
     &powerManager_desc,
+    &cockpitLights_desc,
     &brakePressure_desc,
     &CANIO_tx,
 };
