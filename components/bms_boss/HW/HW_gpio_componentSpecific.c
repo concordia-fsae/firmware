@@ -150,16 +150,20 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_PULLDOWN,
         .resetState = HW_GPIO_PINRESET,
     },
-#if BMSB_CONFIG_ID == 0U
     [HW_GPIO_IMD_STATUS] = {
+#if BMSB_CONFIG_ID == 0U
         .port = GPIOB,
         .pin = GPIO_PIN_13,
         .mode = GPIO_MODE_OUTPUT_PP,
+#elif BMSB_CONFIG_ID == 1U
+        .port = GPIOA,
+        .pin = GPIO_PIN_8,
+        .mode = GPIO_MODE_INPUT,
+#endif
         .speed = GPIO_SPEED_FREQ_LOW,
         .pull = GPIO_PULLDOWN,
         .resetState = HW_GPIO_PINRESET,
     },
-#endif
     [HW_GPIO_AIR] = {
         .port = GPIOA,
         .pin = GPIO_PIN_0,

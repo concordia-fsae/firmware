@@ -63,6 +63,15 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
+#if BMSB_CONFIG_ID == 1U
+    [DRV_INPUTAD_DIGITAL_IMD_STATUS] = {
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_IMD_STATUS,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
+    },
+#endif
 };
 
 /******************************************************************************

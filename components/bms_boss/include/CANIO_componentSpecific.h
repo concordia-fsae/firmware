@@ -81,7 +81,12 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
                                                 CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_bmsStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS) == DRV_IO_ACTIVE) ?\
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#if BMSB_CONFIG_ID == 0U
 #define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ?\
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#elif BMSB_CONFIG_ID == 1U
+#define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_IMD_STATUS) == DRV_IO_ACTIVE) ?\
+                                             CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#endif
 
 #include "TemporaryStubbing.h"

@@ -24,9 +24,7 @@ typedef enum
     HW_GPIO_ADC_N,
     HW_GPIO_ADC_P,
     HW_GPIO_BMS_STATUS,
-#if BMSB_CONFIG_ID == 0U
     HW_GPIO_IMD_STATUS,
-#endif
     HW_GPIO_AIR,
     HW_GPIO_PCHG,
     HW_GPIO_LED,
