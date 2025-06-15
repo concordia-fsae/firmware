@@ -152,3 +152,11 @@ tssiState:
   "SNA": 0
   "ON_GREEN": 1
   "ON_RED": 2
+
+pm100dxEepromAddress:
+  "RELAY_COMMAND": 1
+  "FAULT_CLEAR": 20
+
+pm100dxEepromRWCommand:
+  "READ": 0
+  "WRITE": 1
