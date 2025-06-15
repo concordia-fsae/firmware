@@ -36,3 +36,4 @@ float32_t                     mcManager_getTorqueCommand(void);
 CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void);
 CAN_pm100dxEnableState_E      mcManager_getEnableCommand(void);
 float32_t                     mcManager_getTorqueLimit(void);
+bool                          mcManager_clearEepromCommand(void);

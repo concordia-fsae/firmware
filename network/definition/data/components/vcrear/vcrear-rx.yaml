@@ -9,3 +9,5 @@ messages:
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh
+  BMSB_packContactorState:
+    sourceBuses: veh
