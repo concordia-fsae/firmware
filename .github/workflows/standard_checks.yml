@@ -2,7 +2,7 @@ name: 'Build All Firmware'
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ master, comp* ]
 
 jobs:
   cfr:
