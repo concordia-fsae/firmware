@@ -124,10 +124,6 @@ void app_vehicleState_run100Hz(void)
             {
                 vehicleState_data.state = VEHICLESTATE_ON_GLV;
             }
-            else if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE)
-            {
-                vehicleState_data.state = VEHICLESTATE_ON_HV;
-            }
             break;
     }
 #else
