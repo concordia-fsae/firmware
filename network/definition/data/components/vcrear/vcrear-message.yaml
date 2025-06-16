@@ -47,11 +47,11 @@ messages:
       directionCommand:
         startBit: 32
       inverterEnable:
-        startBit: 33
-      dischargeEnable:
-        startBit: 34
-      speedOverride:
         startBit: 40
+      dischargeEnable:
+        startBit: 41
+      speedOverride:
+        startBit: 42
       torqueLimit:
         startBit: 48
 

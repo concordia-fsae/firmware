@@ -56,7 +56,7 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
 
 CAN_pm100dxEnableState_E mcManager_getEnableCommand(void)
 {
-    switch (mcManager_data.direction)
+    switch (mcManager_data.enable)
     {
         case MCMANAGER_ENABLE:
             return CAN_PM100DXENABLESTATE_ENABLED;
