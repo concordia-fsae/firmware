@@ -279,3 +279,15 @@ messages:
     lengthBytes: 8
     signals:
       torqueCapability:
+
+  eepromResponse:
+    description: Response for the PM100DX eeprom
+    cycleTimeMs: 10
+    idOffset: 0x22
+    signals:
+      eepromAddress:
+        startBit: 0
+      eepromCommand:
+        startBit: 16
+      eepromDataRaw:
+        startBit: 32

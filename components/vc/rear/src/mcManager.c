@@ -32,6 +32,8 @@ static struct
     mcManager_direction_E direction;
     mcManager_enable_E enable;
     float32_t torque_limit;
+    CAN_prechargeContactorState_E last_contactor_state;
+    bool clear_faults;
 } mcManager_data;
 
 /******************************************************************************
@@ -68,6 +70,14 @@ float32_t mcManager_getTorqueLimit(void)
     return mcManager_data.torque_limit;
 }
 
+bool mcManager_clearEepromCommand(void)
+{
+    const bool ret = mcManager_data.clear_faults;
+    mcManager_data.clear_faults = false;
+
+    return ret;
+}
+
 static void mcManager_init(void)
 {
     memset(&mcManager_data, 0x00, sizeof(mcManager_data));
@@ -76,12 +86,17 @@ static void mcManager_init(void)
     mcManager_data.torque_limit = MCMANAGER_TORQUE_LIMIT;
     mcManager_data.direction = MCMANAGER_FORWARD_DIRECTION;
     mcManager_data.enable = MCMANAGER_DISABLE;
+    mcManager_data.last_contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
+    mcManager_data.clear_faults = false;
 }
 
 static void mcManager_periodic_100Hz(void)
 {
     float32_t torque_command = 0.0f;
     mcManager_enable_E enable = MCMANAGER_DISABLE;
+    CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
+
+    (void)CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state);
 
     switch (app_vehicleState_getState())
     {
@@ -101,10 +116,20 @@ static void mcManager_periodic_100Hz(void)
                 enable = MCMANAGER_DISABLE;
             }
             break;
+        case VEHICLESTATE_ON_HV:
+            {
+                if ((mcManager_data.last_contactor_state != CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED) &&
+                    (contactor_state == CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
+                {
+                    mcManager_data.clear_faults = true;
+                }
+                break;
+            }
         default:
             break;
     }
 
+    mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable = enable;
     mcManager_data.torque_command = SATURATE(0.0f, torque_command, MCMANAGER_TORQUE_LIMIT);
 }
