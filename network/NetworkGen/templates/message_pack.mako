@@ -80,7 +80,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
         idx_s = int(idx_s/2)
 %>\
 %if signal.native_representation.bit_width == 1:
-    atomicXorU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)(m->u8[${int(signal.start_bit / 8)}U] ^ ((val ? 1U : 0U) << ${signal.start_bit % 8}U)));
+    atomicXorU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)((val ? 1U : 0U) << ${signal.start_bit % 8}U));
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
     uint${dtype}_t tmp_${signal.name};
