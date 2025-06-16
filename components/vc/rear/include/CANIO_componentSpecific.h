@@ -49,7 +49,7 @@
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
 #define set_torqueCommand(m,b,n,s) set(m,b,n,s, mcManager_getTorqueCommand())
 #define set_directionCommand(m,b,n,s) set(m,b,n,s, mcManager_getDirectionCommand())
-#define set_inverterEnable(m,b,n,s) set(m,b,n,s, CAN_PM100DXENABLESTATE_ENABLED)
+#define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
 #define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
 
 #define transmit_VCREAR_mcEepromCommand mcManager_clearEepromCommand()
