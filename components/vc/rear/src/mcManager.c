@@ -50,7 +50,7 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
     switch (mcManager_data.direction)
     {
         default:
-            return CAN_PM100DXDIRECTIONCOMMAND_FORWARD;
+            return CAN_PM100DXDIRECTIONCOMMAND_REVERSE;
     }
 }
 
