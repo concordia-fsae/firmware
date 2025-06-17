@@ -52,4 +52,10 @@
 #define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
 #define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
 
+// TODO: Improve this interface to support other parameters
+#define transmit_VCREAR_mcEepromCommand mcManager_clearEepromCommand()
+#define set_eepromAddress(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR)
+#define set_eepromCommand(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMRWCOMMAND_WRITE)
+#define set_eepromDataRaw(m,b,n,s) set(m,b,n,s, 0U)
+
 #include "TemporaryStubbing.h"

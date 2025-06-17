@@ -63,9 +63,4 @@
 #define set_glvVoltage(m,b,n,s) set(m,b,n,s, powerManager_getGLVVoltage())
 #define set_glvCurrent(m,b,n,s) set(m,b,n,s, powerManager_getGLVCurrent())
 
-// TODO: Improve this interface to support other parameters
-#define transmit_VCREAR_mcEepromCommand mcManager_clearEepromCommand()
-#define set_eepromAddress(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR)
-#define set_eepromCommand(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMRWCOMMAND_WRITE)
-#define set_eepromDataRaw(m,b,n,s) set(m,b,n,s, 0U)
 #include "TemporaryStubbing.h"
