@@ -66,7 +66,7 @@ static void cockpitLights_periodic_10Hz(void)
         cockpitLights_data.imdState = true;
     }
 
-    if (bms_light_valid == true && (can_imd_status == CAN_DIGITALSTATUS_ON))
+    if (bms_light_valid == true && (can_bms_status == CAN_DIGITALSTATUS_ON))
     {
         cockpitLights_data.bmsState = false;
     }
