@@ -7,7 +7,6 @@ bblayers_conf_header:
     BBPATH = "${TOPDIR}/"
     BBFILES ?= ""
 local_conf_header:
-  custom-local-conf: |
+  custom-cfr-yocto-conf: |
     ACCEPT_FSL_EULA = "1"
-    LICENSE_FLAGS_ACCEPTED = "synaptics-killswitch commercial"
     TMPDIR = "${TOPDIR}/glibc"

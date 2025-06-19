@@ -45,3 +45,9 @@ repos:
       meta:
       meta-poky:
       meta-yocto-bsp:
+
+local_conf_header:
+  custom-cfr-conf: |
+    LICENSE_FLAGS_ACCEPTED = "synaptics-killswitch"
+    PACKAGE_CLASSES = "package_rpm"
+    IMAGE_INSTALL:append = " iproute2 openssh ethtool"
