@@ -1,4 +1,4 @@
-mcu: STM32F103
+mcu: stm32f103xb
 linker:
   useDefault: true
 drivers:

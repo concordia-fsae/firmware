@@ -1,3 +1,4 @@
 [tool.pyright]
-venvPath = "."
-venv = "env"
+allowedUntypedLibraries = ["SCons"]
+reportAny = false
+reportExplicitAny = false
