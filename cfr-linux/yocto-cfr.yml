@@ -1,0 +1,13 @@
+header:
+  version: 11
+
+bblayers_conf_header:
+  custom-bblayers-conf: |
+    POKY_BBLAYERS_CONF_VERSION = "2"
+    BBPATH = "${TOPDIR}/"
+    BBFILES ?= ""
+local_conf_header:
+  custom-local-conf: |
+    ACCEPT_FSL_EULA = "1"
+    LICENSE_FLAGS_ACCEPTED = "synaptics-killswitch commercial"
+    TMPDIR = "${TOPDIR}/glibc"
