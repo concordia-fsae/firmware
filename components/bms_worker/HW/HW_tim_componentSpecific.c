@@ -240,13 +240,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
  */
 void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
 {
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
     if (tim->Instance == TIM3)
     {
+#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
         HAL_TIM_Base_Stop_IT(&htim[HW_TIM_PORT_HS_INTERRUPT]);
         IO10kHz_CB();
-    }
 #endif
+    }
 }
 
 /**

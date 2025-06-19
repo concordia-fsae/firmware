@@ -13,3 +13,5 @@ configs:
         app_component_id: bmsw
         app_uds: true
         app_node_id: true
+        app_10kHz_task: true
+        feature_high_frequency_cell_measurement_task: true
