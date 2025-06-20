@@ -15,7 +15,7 @@ messages:
     sourceBuses: veh
   ELCON_criticalData:
     sourceBuses: privbms
-  PM100DX_criticalData:
+  VCREAR_mcCriticalData:
     sourceBuses: veh
   UDSCLIENT_bmsbUdsRequest:
     sourceBuses: veh

@@ -135,7 +135,7 @@ void SYS_SFT_cycleContacts(void)
 
 bool SYS_SFT_checkMCTimeout(void)
 {
-    return (CANRX_validate(VEH, PM100DX_criticalData) != CANRX_MESSAGE_VALID);
+    return (CANRX_validate(VEH, VCREAR_mcCriticalData) != CANRX_MESSAGE_VALID);
 }
 
 bool SYS_SFT_checkBrusaChargerTimeout(void)

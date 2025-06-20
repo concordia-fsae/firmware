@@ -88,3 +88,55 @@ signals:
       bitWidth: 16
       resolution: 1
       endianness: little
+
+  vctorqueCommand:
+    unit: Nm
+    description: Commanded Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  vctorqueFeedback:
+    unit: Nm
+    description: Estimated Motor Torque
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  vcmotorSpeedCritical:
+    unit: RPM
+    description: Measured Motor Speed
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: -32768
+        max: 32767
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  vctractiveSystemVoltage:
+    unit: V
+    description: Motor Controller DC Bus Voltage
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true

@@ -67,3 +67,15 @@ messages:
         startBit: 16
       eepromDataRaw:
         startBit: 32
+
+  mcCriticalData:
+    cycleTimeMs: 3
+    description: PM100DXR Critical Data
+    id: 0x26
+    lengthBytes: 8
+    signals:
+      vctorqueCommand:
+      vctorqueFeedback:
+      vcmotorSpeedCritical:
+      vctractiveSystemVoltage: #DC bus voltage
+ 
