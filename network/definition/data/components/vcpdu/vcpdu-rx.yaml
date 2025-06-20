@@ -9,3 +9,5 @@ signals:
     sourceBuses: veh
   VCFRONT_runButtonStatus:
     sourceBuses: veh
+  VCFRONT_brakePosition:
+    sourceBuses: veh

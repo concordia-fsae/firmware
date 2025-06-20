@@ -103,6 +103,7 @@ void app_vehicleState_run100Hz(void)
         case VEHICLESTATE_ON_HV:
             {
                 CAN_prechargeContactorState_E contacts = CAN_PRECHARGECONTACTORSTATE_OPEN;
+                float32_t percentage = 0.0f;
 
                 if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_TSMS) == DRV_IO_INACTIVE)
                 {
@@ -113,11 +114,11 @@ void app_vehicleState_run100Hz(void)
                 {
                     break;
                 }
-                else if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE)
+                else if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE && ((VEHICLESTATE_CANRX_BRAKEPOSITION(&percentage) == CANRX_MESSAGE_VALID) && (percentage > 10.0f)))
                 {
                     vehicleState_data.state = VEHICLESTATE_TS_RUN;
                 }
-            }
+            }   
             break;
         case VEHICLESTATE_TS_RUN:
             if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_TSMS) == DRV_IO_INACTIVE)
