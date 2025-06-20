@@ -29,6 +29,8 @@ static drv_timer_S precharge_timer;
 
 void BMS_workerWatchdog(void);
 
+CAN_bmsFaultCause_E bms_getFaultCauseCAN(void);
+
 static void BMS_init(void)
 {
     memset(&BMS, 0x00, sizeof(BMSB_S));
@@ -57,6 +59,7 @@ static void BMS10Hz_PRD(void)
         }
         else if (worker_valid && (seg_faultFlag == CAN_FLAG_SET))
         {
+            BMS.fault_cause = (CAN_BMSFAULTCAUSE_WORKER_FAULT0 + i);
 #if BMS_FAULTS
             tmp.fault                = true;
             tmp.pack_discharge_limit = 0.0f;
@@ -85,6 +88,7 @@ static void BMS10Hz_PRD(void)
 
     if (BMS.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
     {
+        BMS.fault_cause = CAN_BMSFAULTCAUSE_CONNECTED_SEGMENTS;
         tmp.fault                = true;
         BMS.pack_charge_limit    = 0U;
         BMS.pack_discharge_limit = 0U;
@@ -113,6 +117,10 @@ static void BMS100Hz_PRD(void)
 
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {
+        if (SYS_SFT_checkMCTimeout())
+        {
+            BMS.fault_cause = CAN_BMSFAULTCAUSE_MC_TIMEOUT;
+        }
         SYS_SFT_openShutdown();
     }
     else
@@ -187,4 +195,9 @@ void BMS_workerWatchdog(void)
 #endif // BMS_FAULTS
         }
     }
+}
+
+CAN_bmsFaultCause_E bms_getFaultCauseCAN(void)
+{
+    return BMS.fault_cause;
 }

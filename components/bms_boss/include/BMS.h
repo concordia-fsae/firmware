@@ -9,6 +9,7 @@
 #include "stdint.h"
 
 #include "FloatTypes.h"
+#include "CANTypes_generated.h"
 
 #define BMS_MAX_SEGMENTS 8U
 _Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
@@ -48,6 +49,9 @@ typedef struct {
         float32_t max; // [V] precision 1mv
         float32_t min; // [V] precision 1mv
     } voltages;
+    CAN_bmsFaultCause_E fault_cause;
 } BMSB_S;
 
 extern BMSB_S BMS;
+
+CAN_bmsFaultCause_E bms_getFaultCauseCAN(void);

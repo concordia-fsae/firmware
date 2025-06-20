@@ -207,3 +207,7 @@ signals:
   imdStatus:
     description: "Status of the BMSB IMD SFTY"
     discreteValues: "digitalStatus"
+
+  bmsFaultCause:
+    description: "Cause of BMS fault"
+    discreteValues: "bmsFaultCause"
