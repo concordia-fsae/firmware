@@ -211,3 +211,7 @@ signals:
   bmsFaultCause:
     description: "Cause of BMS fault"
     discreteValues: "bmsFaultCause"
+  
+  bmsWorkerFault:
+    description: "Which worker is faulted"
+    discreteValues: "bmsWorkerFault"

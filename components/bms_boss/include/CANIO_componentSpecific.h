@@ -84,5 +84,6 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ?\
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_bmsFaultCause(m,b,n,s) set(m,b,n,s, (bms_getFaultCauseCAN()))
+#define set_bmsWorkerFault(m,b,n,s) set(m,b,n,s, (bms_getWorkerFaultCAN()))
 
 #include "TemporaryStubbing.h"

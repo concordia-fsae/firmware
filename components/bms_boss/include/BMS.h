@@ -50,8 +50,10 @@ typedef struct {
         float32_t min; // [V] precision 1mv
     } voltages;
     CAN_bmsFaultCause_E fault_cause;
+    CAN_bmsWorkerFault_E worker_fault;
 } BMSB_S;
 
 extern BMSB_S BMS;
 
 CAN_bmsFaultCause_E bms_getFaultCauseCAN(void);
+CAN_bmsWorkerFault_E bms_getWorkerFaultCAN(void);

@@ -30,6 +30,7 @@ static drv_timer_S precharge_timer;
 void BMS_workerWatchdog(void);
 
 CAN_bmsFaultCause_E bms_getFaultCauseCAN(void);
+CAN_bmsWorkerFault_E bms_getWorkerFaultCAN(void);
 
 static void BMS_init(void)
 {
@@ -59,7 +60,7 @@ static void BMS10Hz_PRD(void)
         }
         else if (worker_valid && (seg_faultFlag == CAN_FLAG_SET))
         {
-            BMS.fault_cause = (CAN_BMSFAULTCAUSE_WORKER_FAULT0 + i);
+            BMS.worker_fault = (CAN_BMSWORKERFAULT_WORKER_FAULT0 + i);
 #if BMS_FAULTS
             tmp.fault                = true;
             tmp.pack_discharge_limit = 0.0f;
@@ -200,4 +201,9 @@ void BMS_workerWatchdog(void)
 CAN_bmsFaultCause_E bms_getFaultCauseCAN(void)
 {
     return BMS.fault_cause;
+}
+
+CAN_bmsWorkerFault_E bms_getWorkerFaultCAN(void)
+{
+    return BMS.worker_fault;
 }
