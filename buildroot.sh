@@ -68,12 +68,17 @@ done
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 # one day we can do things here with positional args or params
 # for now, just always start the container
-echo "Pulling buildroot image tag '$IMAGE_TAG'"
-IMAGE_TAG=${IMAGE_TAG} docker-compose pull buildroot
-docker-compose up -d
-IMAGE_TAG=${IMAGE_TAG} docker-compose run --rm buildroot $RUN_COMMAND
 
-EXIT_CODE=$?
-if [ $EXIT_CODE != 0 ]; then
-    echo "Container exited with error code $EXIT_CODE..."
+if [ $POSITIONAL_ARGS == "linux" ]; then
+    kas-container shell cfr-linux/cfr.yml;
+else
+    echo "Pulling buildroot image tag '$IMAGE_TAG'"
+    IMAGE_TAG=${IMAGE_TAG} docker-compose pull buildroot
+    docker-compose up -d
+    IMAGE_TAG=${IMAGE_TAG} docker-compose run --rm buildroot $RUN_COMMAND
+
+    EXIT_CODE=$?
+    if [ $EXIT_CODE != 0 ]; then
+        echo "Container exited with error code $EXIT_CODE..."
+    fi
 fi
