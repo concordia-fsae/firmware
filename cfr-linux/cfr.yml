@@ -5,13 +5,18 @@ header:
 
 distro: poky
 target: core-image-base
-machine: raspberrypi-armv8
+machine: raspberrypi4-64
 
 defaults:
   repos:
     branch: scarthgap
 
 repos:
+  cfr-linux:
+    path: cfr-linux
+    layers:
+      meta-cfr-compute:
+    
   meta-openembedded:
     url: http://git.openembedded.org/meta-openembedded
     path: build/extern/meta-openembedded
@@ -45,9 +50,3 @@ repos:
       meta:
       meta-poky:
       meta-yocto-bsp:
-
-local_conf_header:
-  custom-cfr-conf: |
-    LICENSE_FLAGS_ACCEPTED = "synaptics-killswitch"
-    PACKAGE_CLASSES = "package_rpm"
-    IMAGE_INSTALL:append = " iproute2 openssh ethtool"
