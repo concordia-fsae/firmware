@@ -45,6 +45,8 @@ messages:
     cycleTimeMs: 50
     signals:
       runButtonStatus:
+      steeringAngle:
+      steeringAngleVoltage:
 
   cockpitLightStatus:
     description: Status of the cockpit lights
