@@ -26,6 +26,7 @@ extern const ModuleDesc_S torque_desc;
 extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S cockpitLights_desc;
 extern const ModuleDesc_S brakePressure_desc;
+extern const ModuleDesc_S steeringAngle_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -43,6 +44,7 @@ typedef enum
     MODULE_POWERMANAGER,
     MODULE_COCKPITLIGHTS,
     MODULE_BRAKEPRESSURE,
+    MODULE_STEERINGANGLE,
     MODULE_CANIO_tx,
     MODULE_CNT,
 } Module_tasks_E;
