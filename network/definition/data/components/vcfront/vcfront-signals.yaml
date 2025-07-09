@@ -141,4 +141,31 @@ signals:
       range:
         min: 0
         max: 800
+
+  shockpotVoltFL:
+    description: Front Left shock pot Voltage
+    template: voltsPrecise
+
+  shockpotdispFL:
+    unit: mm
+    description: "Shock pot displacment front left"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 75
+    continuous: true
+
+  shockpotVoltFR:
+    description: Front right shock pot Voltage
+    template: voltsPrecise
+
+  shockpotdispFR:
+    unit: mm
+    description: "Shock pot displacment front right"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 75
     continuous: true

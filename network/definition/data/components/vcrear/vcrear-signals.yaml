@@ -19,7 +19,6 @@ signals:
     description: "Current state of the 5V HSD for external loads"
     discreteValues: hsdState
 
-<<<<<<< HEAD
   torqueCommand:
     unit: Nm
     description: Commanded Torque

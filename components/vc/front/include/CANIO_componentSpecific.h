@@ -86,4 +86,8 @@
 #define set_steeringAngle(m,b,n,s) set (m,b,n,s, steeringAngle_getSteeringAngle())
 #define set_steeringAngleVoltage(m,b,n,s) set (m,b,n,s,steeringAngle_getSteeringVoltage())
 
+#define set_shockpotdispFL(m,b,n,s) set(m,b,n,s, shockpot_getFLDisp())
+#define set_shockpotdispFR(m,b,n,s) set(m,b,n,s, shockpot_getFRDisp())
+#define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
+#define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
 #include "TemporaryStubbing.h"
