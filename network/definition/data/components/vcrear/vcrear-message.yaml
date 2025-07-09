@@ -33,3 +33,13 @@ messages:
       brakePressure:
         template: brakePressure
         description: Brake pressure
+  
+  shockpot:
+    description: Data from rear shock pots
+    id: 0x454
+    cycleTimeMs: 100
+    signals:
+      shockpotRLVoltage:
+      shockpotRLDisp:
+      shockpotRRVoltage:
+      shockpotRRDisp:

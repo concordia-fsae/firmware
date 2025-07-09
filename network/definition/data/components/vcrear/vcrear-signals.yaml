@@ -18,3 +18,31 @@ signals:
   5vExtHsdState:
     description: "Current state of the 5V HSD for external loads"
     discreteValues: hsdState
+
+  shockpotRLVoltage:
+    description: Front Left shock pot Voltage
+    template: voltsPrecise
+
+  shockpotRLDisp:
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 30
+      resolution: 1
+    continuous: true
+
+  shockpotRRVoltage:
+    description: Front right shock pot Voltage
+    template: voltsPrecise
+
+  shockpotRRDisp:
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 30
+      resolution: 1
+    continuous: true 
