@@ -46,6 +46,16 @@ messages:
     signals:
       runButtonStatus:
 
+  shockpot:
+    description: Data from front shock pots
+    id: 0x53
+    cycleTimeMs: 100
+    signals:
+      shockpotFLVoltage:
+      shockpotFLDisp:
+      shockpotFRVoltage:
+      shockpotFRDisp:
+
   cockpitLightStatus:
     description: Status of the cockpit lights
     id: 0x402

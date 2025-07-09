@@ -73,3 +73,31 @@ signals:
   imdLightState:
     description: "State of the IMD light"
     discreteValues: digitalStatus
+  
+  shockpotFLVoltage:
+    description: Front Left shock pot Voltage
+    template: voltsPrecise
+
+  shockpotFLDisp:
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 30
+      resolution: 1
+    continuous: true
+
+  shockpotFRVoltage:
+    description: Front right shock pot Voltage
+    template: voltsPrecise
+
+  shockpotFRDisp:
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 30
+      resolution: 1
+    continuous: true
