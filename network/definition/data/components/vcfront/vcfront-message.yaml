@@ -51,10 +51,10 @@ messages:
     id: 0x53
     cycleTimeMs: 100
     signals:
-      shockpotFLVoltage:
-      shockpotFLDisp:
-      shockpotFRVoltage:
-      shockpotFRDisp:
+      shockpotVoltFL:
+      shockpotdispFL:
+      shockpotVoltFR:
+      shockpotdispFR:
 
   cockpitLightStatus:
     description: Status of the cockpit lights

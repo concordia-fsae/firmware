@@ -31,11 +31,11 @@ static struct
 static lib_interpolation_point_S shockpot_FLMap[] = {
     {
         .x = 2.378f, // sensor reference voltage
-        .y = 0.0f, // left turned degrees
+        .y = 0.0f, 
     },
     {
         .x = 0.58f, // voltage
-        .y = 30.0f, // right turned degrees
+        .y = 30.0f, 
     },
 };
 
