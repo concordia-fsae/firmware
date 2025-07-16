@@ -30,23 +30,23 @@ static struct
 
 static lib_interpolation_point_S shockpot_FLMap[] = {
     {
-        .x = 2.378f, // sensor reference voltage
+        .x = 2.736f, // sensor reference voltage
         .y = 0.0f, 
     },
     {
-        .x = 0.58f, // voltage
-        .y = 30.0f, 
+        .x = 2.0f, // voltage
+        .y = 3977.0f, 
     },
 };
 
 static lib_interpolation_point_S shockpot_FRMap[] = {
     {
-        .x = 2.378f, // voltage
-        .y = -102.0f, 
+        .x = 2.72f, // voltage
+        .y = 0.0f, 
     },
     {
-        .x = 0.58f, // voltage
-        .y = 102.0f, 
+        .x = 0.153f, // voltage
+        .y = 3977.0f, 
     },
 };
 
@@ -85,9 +85,9 @@ static lib_interpolation_mapping_S shockpot_map2 = {
 };
 static void shockpot_init(void)
 {
-    memset(&shockpot_FLMap, 0x00U, sizeof(shockpot_FLMap)); 
+    memset(&shockpot_FL, 0x00U, sizeof(shockpot_FL)); 
     lib_interpolation_init(&shockpot_map1, 0.0f);
-    memset(&shockpot_FRMap, 0x00U, sizeof(shockpot_FRMap)); 
+    memset(&shockpot_FR, 0x00U, sizeof(shockpot_FR)); 
     lib_interpolation_init(&shockpot_map2, 0.0f);
 }
 

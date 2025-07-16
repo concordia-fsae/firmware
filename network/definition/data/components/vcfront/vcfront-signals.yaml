@@ -79,13 +79,12 @@ signals:
     template: voltsPrecise
 
   shockpotdispFL:
-    unit: Nm
+    unit: N
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 16
       range:
         min: 0
-        max: 30
-      resolution: 1
+        max: 4000
     continuous: true
 
   shockpotVoltFR:
@@ -93,11 +92,10 @@ signals:
     template: voltsPrecise
 
   shockpotdispFR:
-    unit: Nm
+    unit: N
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 16
       range:
         min: 0
-        max: 30
-      resolution: 1
+        max: 4000
     continuous: true

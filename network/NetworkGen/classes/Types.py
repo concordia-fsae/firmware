@@ -93,6 +93,7 @@ class Units(Enum):
     rpm = "RPM"
     pct = "%"
     Nm = "Nm"
+    N = "N"
     deg = "deg"
     Hz = "Hz"
     Wb = "Wb"
