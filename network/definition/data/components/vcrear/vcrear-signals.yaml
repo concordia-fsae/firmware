@@ -19,30 +19,30 @@ signals:
     description: "Current state of the 5V HSD for external loads"
     discreteValues: hsdState
 
-  shockpotRLVoltage:
+  shockpotVoltRL:
     description: Front Left shock pot Voltage
     template: voltsPrecise
 
-  shockpotRLDisp:
-    unit: Nm
+  shockpotdispRL:
+    description: "shock pot displacment rear left"
+    unit: N
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 16
       range:
         min: 0
-        max: 30
-      resolution: 1
+        max: 4000
     continuous: true
 
-  shockpotRRVoltage:
+  shockpotVoltRR:
     description: Front right shock pot Voltage
     template: voltsPrecise
 
-  shockpotRRDisp:
-    unit: Nm
+  shockpotdispRR:
+    description: "shockpot displacment rear right"
+    unit: N
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 16
       range:
         min: 0
-        max: 30
-      resolution: 1
+        max: 4000
     continuous: true 

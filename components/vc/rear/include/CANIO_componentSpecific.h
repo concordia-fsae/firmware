@@ -23,6 +23,7 @@
 #include "horn.h"
 #include "tssi.h"
 #include "drv_tps20xx.h"
+#include "shockpot.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -46,9 +47,9 @@
 #define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
 #define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
-#define set_shockpotdispRL(m,b,n,s) set(m,b,n,s shockpot_getRLDisp())
-#define set_shockpotdispRR(m,b,n,s) set(m,b,n,s shockpot_getRRDisp())
-#define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s shockpot_getRLVoltage())
-#define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s shockpot_getRRVoltage())
+#define set_shockpotdispRL(m,b,n,s) set(m,b,n,s, shockpot_getRLDisp())
+#define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRRDisp())
+#define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
+#define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
 
 #include "TemporaryStubbing.h"
