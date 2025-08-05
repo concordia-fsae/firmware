@@ -19,6 +19,7 @@ signals:
     description: "Current state of the 5V HSD for external loads"
     discreteValues: hsdState
 
+<<<<<<< HEAD
   torqueCommand:
     unit: Nm
     description: Commanded Torque
@@ -116,3 +117,30 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  brakeTempVoltRL:
+    description: Rear Left brake Temp Voltage
+    template:
+
+  brakeTempTempRL:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+    continuous: true
+
+  brakeTempVoltRR:
+    description: Rear Right brake Temp Voltage
+    template:
+
+  brakeTempTempRR:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+    continuous: true
+

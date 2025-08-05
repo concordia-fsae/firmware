@@ -26,9 +26,13 @@
 #include "brakePressure.h"
 #include "drv_tps20xx.h"
 #include "cockpitLights.h"
+<<<<<<< HEAD
 #include "steeringAngle.h"
 #include "shockpot.h"
 #include "Module.h"
+=======
+#include "brakeTemp.h"
+>>>>>>> 33ae4d8 (Created brakeTemp.h in vc/front/include && vc/rear/include. Created brakeTemp.c in vc/front/src and vc/rear/src. Modified Module_component.c and .h in vcfront and vcrear(included brakeTemp.h). Modified CANIO_componentSpecific.h in vcfront and vcrear(included brakeTemp.h). Modified SConscript in vcfront and vcrear(Included brakeTemp variables). Modified vc message.yaml and vc signal.yaml in vcfront and vcrear (included signals definition for brakeTemp).)
 
 /******************************************************************************
  *                              D E F I N E S
@@ -75,9 +79,12 @@
 #define set_imdLightState(m,b,n,s) set(m,b,n,s, cockpitLights_imd_getStateCAN())
 #define set_steeringAngle(m,b,n,s) set (m,b,n,s, steeringAngle_getSteeringAngle())
 #define set_steeringAngleVoltage(m,b,n,s) set (m,b,n,s,steeringAngle_getSteeringVoltage())
-
 #define set_shockpotdispFL(m,b,n,s) set(m,b,n,s, shockpot_getFLDisp())
 #define set_shockpotdispFR(m,b,n,s) set(m,b,n,s, shockpot_getFRDisp())
 #define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
 #define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
+#define set_braketempTempFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLTemp());
+#define set_braketempTempFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRTemp());
+#define set_braketempVoltFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLVoltage());
+#define set_braketempVoltFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRVoltage());
 #include "TemporaryStubbing.h"

@@ -157,6 +157,7 @@ project_source_files = [
     SRC_DIR.File("tssi.c"),
     SRC_DIR.File("mcManager.c"),
     SRC_DIR.File("shockpot.c"),
+    SRC_DIR.File("brakeTemp.c"),
 ]
 
 project_hw_files = [

@@ -23,9 +23,13 @@
 #include "horn.h"
 #include "tssi.h"
 #include "drv_tps20xx.h"
+<<<<<<< HEAD
 #include "mcManager.h"
 #include "shockpot.h"
 #include "Module.h"
+=======
+#include "brakeTemp.h"
+>>>>>>> 33ae4d8 (Created brakeTemp.h in vc/front/include && vc/rear/include. Created brakeTemp.c in vc/front/src and vc/rear/src. Modified Module_component.c and .h in vcfront and vcrear(included brakeTemp.h). Modified CANIO_componentSpecific.h in vcfront and vcrear(included brakeTemp.h). Modified SConscript in vcfront and vcrear(Included brakeTemp variables). Modified vc message.yaml and vc signal.yaml in vcfront and vcrear (included signals definition for brakeTemp).)
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -59,5 +63,9 @@
 #define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRRDisp())
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
+#define set_braketempTempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLTemp());
+#define set_braketempTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRTemp());
+#define set_braketempVoltRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLVoltage());
+#define set_braketempVoltRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRVoltage());
 
 #include "TemporaryStubbing.h"
