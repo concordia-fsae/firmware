@@ -76,7 +76,6 @@ messages:
       shockpotdispRL:
       shockpotVoltRR:
       shockpotdispRR:
-
   brakeTemp:
     description: Data from the rear brake Temp sensors
     id: 0x455

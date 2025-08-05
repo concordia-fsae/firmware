@@ -64,9 +64,5 @@
 #define set_braketempTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRTemp());
 #define set_braketempVoltRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLVoltage());
 #define set_braketempVoltRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRVoltage());
-#define set_torqueCommand(m,b,n,s) set(m,b,n,s, mcManager_getTorqueCommand())
-#define set_directionCommand(m,b,n,s) set(m,b,n,s, mcManager_getDirectionCommand())
-#define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
-#define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
 
 #include "TemporaryStubbing.h"

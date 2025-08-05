@@ -52,4 +52,5 @@ typedef enum
     MODULE_BRAKETEMP,
     MODULE_CNT,
 
+    MODULE_BRAKETEMP,
 } Module_tasks_E;
