@@ -27,6 +27,7 @@ extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S cockpitLights_desc;
 extern const ModuleDesc_S brakePressure_desc;
 extern const ModuleDesc_S CANIO_tx;
+extern const ModuleDesc_S brakeTemp_desc;
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -45,4 +46,5 @@ typedef enum
     MODULE_BRAKEPRESSURE,
     MODULE_CANIO_tx,
     MODULE_CNT,
+    MODULE_BRAKETEMP,
 } Module_tasks_E;

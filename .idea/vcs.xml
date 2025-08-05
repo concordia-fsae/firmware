@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/libs/CMSIS" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/libs/FreeRTOS" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/libs/isotp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/libs/lib_FTDI_FT81x" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/libs/printf" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/platforms/stm32/f1/cmsis" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/embedded/platforms/stm32/f1/hal" vcs="Git" />
+  </component>
+</project>
