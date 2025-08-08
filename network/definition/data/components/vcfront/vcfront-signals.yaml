@@ -77,7 +77,7 @@ signals:
 
   brakeTempVoltFL:
     description: Front Left brake Temp Voltage
-    template:
+    template: voltsPrecise
 
   brakeTempTempFL:
     unit: degC
@@ -90,7 +90,7 @@ signals:
 
   brakeTempVoltFR:
     description: Front Right brake Temp Voltage
-    template:
+    template: voltsPrecise
 
   brakeTempTempFR:
     unit: degC

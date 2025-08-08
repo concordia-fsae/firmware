@@ -201,15 +201,15 @@ float32_t brakeTemp_getFRVoltage(void)
 static lib_interpolation_mapping_S brakeTemp_map1 = {
     .points = (lib_interpolation_point_S*)&brakeTemp_FLMap,
     .number_points = COUNTOF(brakeTemp_FLMap),
-    .saturate_left = false,
-    .saturate_right = false,
+    .saturate_left = true,
+    .saturate_right = true,
 };
 
 static lib_interpolation_mapping_S brakeTemp_map2 = {
     .points = (lib_interpolation_point_S*)&brakeTemp_FRMap,
     .number_points = COUNTOF(brakeTemp_FRMap),
-    .saturate_left = false,
-    .saturate_right = false,
+    .saturate_left = true,
+    .saturate_right = true,
 };
 
 

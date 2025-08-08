@@ -45,6 +45,7 @@ typedef enum
     MODULE_COCKPITLIGHTS,
     MODULE_BRAKEPRESSURE,
     MODULE_CANIO_tx,
-    MODULE_CNT,
     MODULE_BRAKETEMP,
+    MODULE_CNT,
+
 } Module_tasks_E;
