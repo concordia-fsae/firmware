@@ -120,7 +120,7 @@ signals:
 
   brakeTempVoltRL:
     description: Rear Left brake Temp Voltage
-    template:
+    template: voltsPrecise
 
   brakeTempTempRL:
     unit: degC
@@ -133,7 +133,7 @@ signals:
 
   brakeTempVoltRR:
     description: Rear Right brake Temp Voltage
-    template:
+    template: voltsPrecise
 
   brakeTempTempRR:
     unit: degC

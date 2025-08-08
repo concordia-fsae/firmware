@@ -49,6 +49,7 @@ typedef enum
     MODULE_STEERINGANGLE,
     MODULE_SHOCKPOT,
     MODULE_CANIO_tx,
-    MODULE_CNT,
     MODULE_BRAKETEMP,
+    MODULE_CNT,
+
 } Module_tasks_E;
