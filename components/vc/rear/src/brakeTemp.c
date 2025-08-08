@@ -205,6 +205,7 @@ static lib_interpolation_mapping_S brakeTemp_map1 = {
     .saturate_right = true,
     .saturate_left = false,
     .saturate_right = false,
+
 };
 
 static lib_interpolation_mapping_S brakeTemp_map2 = {
@@ -214,6 +215,7 @@ static lib_interpolation_mapping_S brakeTemp_map2 = {
     .saturate_right = true,
     .saturate_left = false,
     .saturate_right = false,
+
 };
 
 
