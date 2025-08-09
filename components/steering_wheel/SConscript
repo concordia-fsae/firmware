@@ -41,7 +41,7 @@ c_flags = [
     "-msoft-float",
     "-nostdlib",
     "-nostartfiles",
-    "--specs=nano.specs",
+    "-specs=nano.specs",
     "-ffunction-sections",
     "-fdata-sections",
     "-fshort-enums",
@@ -180,6 +180,12 @@ src_files = [
     HW_DIR.File("HW_msp.c"),
     HW_DIR.File("HW_spi.c"),
     HW_DIR.File("HW_timebase.c"),
+    (
+        LIBS_DIR.File("printf/src/printf/printf.c"),
+        ["-DPRINTF_INCLUDE_CONFIG_H=1", "-Wno-float-equal", "-Wno-inline"],
+    ),
+    (RTOS_DIR.File("FreeRTOSResources.c"), ["-Wno-missing-prototypes"]),
+    RTOS_DIR.File("FreeRTOS_SWI.c"),
 ]
 
 ftdi_lib_files = [
@@ -190,34 +196,25 @@ ftdi_lib_files = [
 src_files += ftdi_lib_files
 
 rtos_src_files = [
-    RTOS_DIR.File("FreeRTOSResources.c"),
-    RTOS_DIR.File("FreeRTOS_SWI.c"),
     FREERTOS_DIR.File("Source/croutine.c"),
     FREERTOS_DIR.File("Source/event_groups.c"),
     FREERTOS_DIR.File("Source/list.c"),
+    FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
     FREERTOS_DIR.File("Source/queue.c"),
     FREERTOS_DIR.File("Source/tasks.c"),
     FREERTOS_DIR.File("Source/timers.c"),
-    FREERTOS_DIR.File("Source/portable/GCC/ARM_CM3/port.c"),
     # FREERTOS_DIR.File("Source/stream_buffer.c"),
     # FREERTOS_DIR.File("Source/portable/MemMang/heap_4.c"),
 ]
 
-platform_source_files = [
-    (
-        LIBS_DIR.File("printf/src/printf/printf.c"),
-        ["-DPRINTF_INCLUDE_CONFIG_H=1", "-Wno-float-equal", "-Wno-inline"],
-    ),
-]
-
 # add driver source files
-platform_source_files.extend(
-    [(src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]]
-)
+platform_source_files = [
+    (src[0], src[1] + ["-Wno-inline"]) for src in chip_config["sources"]
+]
 
 uds_srcs = [
     ISOTP_DIR.File("isotp.c"),
-    UDS_DIR.File("src/udsServer.c"),
+    UDS_DIR.File("src/lib_udsServer.c"),
 ]
 
 
@@ -256,21 +253,26 @@ def compile_objects(
         objs.append(env.Object(target=target, source=src_file, CCFLAGS=these_flags))
     return objs
 
+
 generated_dir = BUILD_DIR.Dir("generated")
-NETWORK_ENV.GenerateNodes({ f"stw": generated_dir, })
+NETWORK_ENV.GenerateNodes(
+    {
+        f"stw": generated_dir,
+    }
+)
 
 ## actually compile stuff
 
 objs = []  # store objects here
-
-# compile platform files
-objs.extend(compile_objects(env, platform_source_files, target_dir="embedded/"))
 
 # compile rtos source files
 objs.extend(compile_objects(rtos_env, rtos_src_files, target_dir="FreeRTOS/"))
 
 # compile project source files
 objs.extend(compile_objects(env, src_files))
+
+# compile platform files
+objs.extend(compile_objects(env, platform_source_files, target_dir="embedded/"))
 
 # compile UDS source files
 objs.extend(compile_objects(uds_env, uds_srcs, target_dir="uds/"))
@@ -283,7 +285,10 @@ Depends(elf, env["LINKSCRIPT"])
 binary = env.Bin(source=elf)
 
 # asms target generates disassembled binaries
-asms = env.Asm(source=objs + [elf])
+asm = env.Asm(source=objs + [elf])
+env.Alias("asm", asm)
+
+asms = env.Asms(source=objs + [elf])
 env.Alias("asms", asms)
 
 # env for generarting the CRC

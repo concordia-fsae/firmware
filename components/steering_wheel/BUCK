@@ -1,0 +1,284 @@
+load("@toolchains//gcc-arm-none-eabi/defs.bzl", "generate_asms", "generate_stripped_asms")
+load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load("//tools/hextools/defs.bzl", "inject_crc")
+
+TOOLCHAIN = "@toolchains//:gcc-14.2.rel1"
+APP_START_ADDR = 0x08002000
+
+compiler_flags = [
+    "-std=gnu17",
+    "-mthumb",
+    "-mcpu=cortex-m3",
+    "-mfloat-abi=soft",
+    "-msoft-float",
+    "-nostdlib",
+    "-nostartfiles",
+    "-specs=nano.specs",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    "-DAPP_START_ADDR={}".format(APP_START_ADDR),
+    # "-DLD_USE_STACK",
+    # "-DLD_USE_HEAP",
+    "-DSTM32F1",
+    "-DSTM32F103xB",
+    "-DUSE_HAL_DRIVER",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wfloat-equal",
+    "-Wcast-align",
+    "-Wlogical-op",
+    "-Winline",
+    "-Wshadow",
+    "-Winit-self",
+    "-Wmissing-prototypes",
+    "-Wunused-function",
+    "-Wpointer-arith",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+    "-ggdb3",
+    "-g3",
+    "-Og",
+]
+
+linker_flags = [
+    "-Wl,--gc-sections",
+    # "--print-gc-sections",
+    "-Wl,--relax",
+    "-Wl,--print-memory-usage",
+    "-Wl,--stats",
+]
+
+# TODO: use this library instead of freertos as part of the main binary
+cxx_library(
+    name = "FreeRTOS",
+    _cxx_toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags,
+    srcs = [
+        "//embedded/libs:FreeRTOS.git[Source/croutine.c]",
+        "//embedded/libs:FreeRTOS.git[Source/event_groups.c]",
+        "//embedded/libs:FreeRTOS.git[Source/list.c]",
+        "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/port.c]",
+        "//embedded/libs:FreeRTOS.git[Source/queue.c]",
+        "//embedded/libs:FreeRTOS.git[Source/tasks.c]",
+        "//embedded/libs:FreeRTOS.git[Source/timers.c]",
+    ],
+    header_namespace = "",
+    exported_headers = {
+        "FreeRTOS.h": "//embedded/libs:FreeRTOS.git[Source/include/FreeRTOS.h]",
+        "croutine.h": "//embedded/libs:FreeRTOS.git[Source/include/croutine.h]",
+        "deprecated_definitions.h": "//embedded/libs:FreeRTOS.git[Source/include/deprecated_definitions.h]",
+        "event_groups.h": "//embedded/libs:FreeRTOS.git[Source/include/event_groups.h]",
+        "list.h": "//embedded/libs:FreeRTOS.git[Source/include/list.h]",
+        "mpu_wrappers.h": "//embedded/libs:FreeRTOS.git[Source/include/mpu_wrappers.h]",
+        "portable.h": "//embedded/libs:FreeRTOS.git[Source/include/portable.h]",
+        "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
+        "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
+        "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
+        "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
+        "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
+        "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
+        "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
+    },
+    headers = {
+        "FreeRTOSConfig.h": "include/RTOS/FreeRTOSConfig.h",
+    },
+)
+
+cxx_library(
+    name = "udsServer",
+    _cxx_toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags + [
+        "-Wno-missing-prototypes",
+        "-Wno-unused-parameter",
+        "-DBYTE_ORDER=_BYTE_ORDER",
+        "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+        "-Wno-inline",
+    ],
+    srcs = [
+        "//embedded/libs:isotp[isotp.c]",
+        "//embedded/libs/uds:lib_udsServer.c",
+    ],
+    header_namespace = "",
+    exported_headers = {
+        "lib_uds.h": "//embedded/libs/uds:lib_uds.h",
+    },
+    headers = {
+        "uds_componentSpecific.h": "include/uds_componentSpecific.h",
+        "isotp.h": "//embedded/libs:isotp[include/isotp.h]",
+        "isotp_config.h": "//embedded/libs:isotp[include/isotp_config.h]",
+        "isotp_defines.h": "//embedded/libs:isotp[include/isotp_defines.h]",
+        "isotp_user.h": "//embedded/libs:isotp[include/isotp_user.h]",
+    },
+)
+
+stm32f1_hal(
+    name = "hal",
+    toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags,
+    variant = "stm32f103",
+    hal_conf_header = "include/HW/stm32f1xx_hal_conf.h",
+    config = {
+        "linker": {
+            "useDefault": True,
+        },
+        "drivers": {
+            "adc": {},
+            "adc_ex": {},
+            "can": {},
+            "cortex": {},  # required
+            "dma": {},
+            "flash": {},
+            "gpio": {},
+            "pwr": {},
+            "rcc": {},
+            "rcc_ex": {},  # required
+            "spi": {
+                "use_ll": True,
+            },
+            "tim": {},
+            "tim_ex": {},  # required with tim,
+        },
+    },
+)
+
+cxx_genrule(
+    name = "linkscript",
+    _cxx_toolchain = TOOLCHAIN,
+    cmd = "$(cpp) -P -undef {}".format(" ".join(compiler_flags)) + " ${SRCS} | sed -e '/^#.\\+$/d' > ${OUT}",
+    out = "stm32f103c8.ld",
+    srcs = ["//embedded/platforms/stm32/f1/f103:stm32f103c8.ld"],
+)
+
+cxx_binary(
+    name = "elf",
+    _cxx_toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags,
+    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"] + [
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/croutine.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/event_groups.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/list.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/queue.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/tasks.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/timers.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/portable/GCC/ARM_CM3/port.c.o])",
+    ],
+    executable_name = "stw.elf",
+    srcs = [
+        # TODO: get rid of these and use the :FreeRTOS target instead
+        "//embedded/libs:FreeRTOS.git[Source/croutine.c]",
+        "//embedded/libs:FreeRTOS.git[Source/event_groups.c]",
+        "//embedded/libs:FreeRTOS.git[Source/list.c]",
+        "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/port.c]",
+        "//embedded/libs:FreeRTOS.git[Source/queue.c]",
+        "//embedded/libs:FreeRTOS.git[Source/tasks.c]",
+        "//embedded/libs:FreeRTOS.git[Source/timers.c]",
+        "src/SystemManager.c",
+        "src/Module.c",
+        "src/CAN/CANIO-tx.c",
+        "src/CAN/CANIO-rx.c",
+        "src/IO.c",
+        "src/Screen.c",
+        "src/Display/Pills.c",
+        "src/Display/Dots.c",
+        "src/UDS.c",
+        "src/HW/HW_adc.c",
+        "src/HW/HW_can.c",
+        "src/HW/HW_dma.c",
+        "src/HW/HW_gpio.c",
+        "src/HW/HW_intc.c",
+        "src/HW/HW_msp.c",
+        "src/HW/HW_spi.c",
+        "src/HW/HW_timebase.c",
+        ("//embedded/libs:printf[src/printf/printf.c]", ["-DPRINTF_INCLUDE_CONFIG_H=1", "-Wno-float-equal", "-Wno-inline"]),
+        ("src/RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
+        "src/RTOS/FreeRTOS_SWI.c",
+        ("//embedded/libs:lib_FTDI_FT81x[src/EVE_commands.c]", ["-Wno-inline"]),
+        ("//embedded/libs:lib_FTDI_FT81x[src/EVE_target.c]", ["-Wno-inline"]),
+        "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
+    ],
+    header_namespace = "",
+    headers = {
+        "EVE.h": "//embedded/libs:lib_FTDI_FT81x[include/EVE.h]",
+        "EVE_commands.h": "//embedded/libs:lib_FTDI_FT81x[include/EVE_commands.h]",
+        "EVE_target.h": "//embedded/libs:lib_FTDI_FT81x[include/EVE_target.h]",
+        "EVE_target_STM32.h": "//embedded/libs:lib_FTDI_FT81x[include/EVE_target_STM32.h]",
+        "printf/printf.h": "//embedded/libs:printf[src/printf/printf.h]",
+        "printf.h": "//embedded/libs:printf[src/printf/printf.h]",
+        "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+
+        # TODO: get rid of these and use the :FreeRTOS target instead
+        "FreeRTOS.h": "//embedded/libs:FreeRTOS.git[Source/include/FreeRTOS.h]",
+        "croutine.h": "//embedded/libs:FreeRTOS.git[Source/include/croutine.h]",
+        "deprecated_definitions.h": "//embedded/libs:FreeRTOS.git[Source/include/deprecated_definitions.h]",
+        "event_groups.h": "//embedded/libs:FreeRTOS.git[Source/include/event_groups.h]",
+        "list.h": "//embedded/libs:FreeRTOS.git[Source/include/list.h]",
+        "mpu_wrappers.h": "//embedded/libs:FreeRTOS.git[Source/include/mpu_wrappers.h]",
+        "portable.h": "//embedded/libs:FreeRTOS.git[Source/include/portable.h]",
+        "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
+        "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
+        "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
+        "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
+        "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
+        "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
+        "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
+        "FreeRTOSConfig.h": "include/RTOS/FreeRTOSConfig.h",
+    },
+    include_directories = [
+        "include",
+        "include/HW",
+        "include/RTOS",
+        "generated",
+    ],
+    deps = [
+        ":CMSIS",
+        ":hal",
+        ":udsServer",
+        # TODO: use the :FreeRTOS target
+        # ":FreeRTOS",
+    ],
+)
+
+generate_asms(
+    name = "asm",
+    binary = ":elf",
+)
+
+generate_stripped_asms(
+    name = "asms",
+    targets = [
+        ":elf",
+        # TODO: use the :FreeRTOS target
+        # ":FreeRTOS",
+        ":udsServer",
+        ":hal",
+    ],
+    toolchain = TOOLCHAIN,
+)
+
+cxx_genrule(
+    name = "bin",
+    _cxx_toolchain = TOOLCHAIN,
+    srcs = [":elf"],
+    out = "stw.bin",
+    cmd = "$(objcopy) -O binary ${SRCS} ${OUT}",
+)
+
+inject_crc(
+    name = "bin_crc",
+    binary = ":bin",
+    output = "stw_crc.bin",
+    start_address = APP_START_ADDR,
+)
+
+alias(
+    name = "compdb",
+    actual = ":elf[full-compilation-database]",
+)
+
+alias(
+    name = "stw",
+    actual = ":bin",
+)
