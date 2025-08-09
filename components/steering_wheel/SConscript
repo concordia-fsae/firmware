@@ -265,9 +265,6 @@ NETWORK_ENV.GenerateNodes(
 
 objs = []  # store objects here
 
-# compile rtos source files
-objs.extend(compile_objects(rtos_env, rtos_src_files, target_dir="FreeRTOS/"))
-
 # compile project source files
 objs.extend(compile_objects(env, src_files))
 
@@ -276,6 +273,9 @@ objs.extend(compile_objects(env, platform_source_files, target_dir="embedded/"))
 
 # compile UDS source files
 objs.extend(compile_objects(uds_env, uds_srcs, target_dir="uds/"))
+
+# compile rtos source files
+objs.extend(compile_objects(rtos_env, rtos_src_files, target_dir="FreeRTOS/"))
 
 # link all the compiled objects into an elf
 elf, map = env.Program(BUILD_DIR.File("steering_wheel.elf"), objs)

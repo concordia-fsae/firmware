@@ -51,7 +51,6 @@ linker_flags = [
     "-Wl,--stats",
 ]
 
-# TODO: use this library instead of freertos as part of the main binary
 cxx_library(
     name = "FreeRTOS",
     _cxx_toolchain = TOOLCHAIN,
@@ -167,14 +166,6 @@ cxx_binary(
     ],
     executable_name = "stw.elf",
     srcs = [
-        # TODO: get rid of these and use the :FreeRTOS target instead
-        "//embedded/libs:FreeRTOS.git[Source/croutine.c]",
-        "//embedded/libs:FreeRTOS.git[Source/event_groups.c]",
-        "//embedded/libs:FreeRTOS.git[Source/list.c]",
-        "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/port.c]",
-        "//embedded/libs:FreeRTOS.git[Source/queue.c]",
-        "//embedded/libs:FreeRTOS.git[Source/tasks.c]",
-        "//embedded/libs:FreeRTOS.git[Source/timers.c]",
         "src/SystemManager.c",
         "src/Module.c",
         "src/CAN/CANIO-tx.c",
@@ -208,23 +199,6 @@ cxx_binary(
         "printf/printf.h": "//embedded/libs:printf[src/printf/printf.h]",
         "printf.h": "//embedded/libs:printf[src/printf/printf.h]",
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
-
-        # TODO: get rid of these and use the :FreeRTOS target instead
-        "FreeRTOS.h": "//embedded/libs:FreeRTOS.git[Source/include/FreeRTOS.h]",
-        "croutine.h": "//embedded/libs:FreeRTOS.git[Source/include/croutine.h]",
-        "deprecated_definitions.h": "//embedded/libs:FreeRTOS.git[Source/include/deprecated_definitions.h]",
-        "event_groups.h": "//embedded/libs:FreeRTOS.git[Source/include/event_groups.h]",
-        "list.h": "//embedded/libs:FreeRTOS.git[Source/include/list.h]",
-        "mpu_wrappers.h": "//embedded/libs:FreeRTOS.git[Source/include/mpu_wrappers.h]",
-        "portable.h": "//embedded/libs:FreeRTOS.git[Source/include/portable.h]",
-        "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
-        "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
-        "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
-        "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
-        "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
-        "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
-        "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
-        "FreeRTOSConfig.h": "include/RTOS/FreeRTOSConfig.h",
     },
     include_directories = [
         "include",
@@ -236,8 +210,7 @@ cxx_binary(
         ":CMSIS",
         ":hal",
         ":udsServer",
-        # TODO: use the :FreeRTOS target
-        # ":FreeRTOS",
+        ":FreeRTOS",
     ],
 )
 
@@ -250,8 +223,7 @@ generate_stripped_asms(
     name = "asms",
     targets = [
         ":elf",
-        # TODO: use the :FreeRTOS target
-        # ":FreeRTOS",
+        ":FreeRTOS",
         ":udsServer",
         ":hal",
     ],
