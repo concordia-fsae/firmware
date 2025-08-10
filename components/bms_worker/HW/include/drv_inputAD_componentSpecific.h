@@ -65,11 +65,3 @@ typedef enum
     DRV_INPUTAD_ANALOG_REF_VOLTAGE,
     DRV_INPUTAD_ANALOG_COUNT,
 } drv_inputAD_channelAnalog_E;
-
-/******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
-
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-void IO10kHz_CB(void);
-#endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK

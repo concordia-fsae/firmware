@@ -143,7 +143,7 @@ extern uint64_t HW_TIM_getBaseTick(void);
 #define pdMS_TO_TICKS(xTime) (xTime * (configTICK_RATE_HZ / 1000U))
 #if FEATURE_IS_ENABLED(APP_10KHZ_TASK)
 #define pdUS_TO_TICKS(xTime) (uint32_t)((float32_t)xTime * ((float32_t)configTICK_RATE_HZ / (float32_t)1000000U))
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+#endif // APP_10KHZ_TASK
 
 /* Normal assert() semantics without relying on the provision of an assert.h
  * header file. */

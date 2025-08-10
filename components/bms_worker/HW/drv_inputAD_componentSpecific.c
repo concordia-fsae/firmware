@@ -105,9 +105,5 @@ static void drv_inputAD_1kHz_PRD(void)
  */
 const ModuleDesc_S drv_inputAD_desc = {
     .moduleInit       = &drv_inputAD_init_componentSpecific,
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-    .periodic10kHz_CLK = &IO10kHz_PRD,
-#else // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
     .periodic1kHz_CLK = &drv_inputAD_1kHz_PRD,
-#endif
 };
