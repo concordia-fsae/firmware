@@ -119,9 +119,6 @@ static void BMS100Hz_PRD()
             max_chip.config.output.state       = MAX_CELL_VOLTAGE;
             max_chip.config.output.output.cell = max_chip.state.connected_cells; /**< Prepare for next step */
             BMS.state                          = BMS_PARASITIC_MEASUREMENT;
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-            HW_TIM_10kHz_timerStart();
-#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
         }
     }
     else if (BMS.state == BMS_SAMPLING)
@@ -137,9 +134,6 @@ static void BMS100Hz_PRD()
 
             MAX_readWriteToChip();
             max_chip.config.sampling_start = HW_TIM_getTimeMS();
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-            HW_TIM_10kHz_timerStart();
-#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
             return;
         }
         else if (HW_TIM_getTimeMS() >= max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
@@ -148,9 +142,6 @@ static void BMS100Hz_PRD()
             BMS.pack_voltage                     = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT) * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
             BMS.state                            = BMS_HOLDING;
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-            HW_TIM_10kHz_timerStart();
-#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
         }
     }
     else if (BMS.state == BMS_WAITING)
@@ -265,40 +256,6 @@ static void BMS1Hz_PRD()
         BMS.state = BMS_PARASITIC;
         return;
     }
-
-    if (!max_chip.state.ready)
-    {
-        return;
-    }
-
-#if FEATURE_MAX14921_CALIBRATE
-    max_chip.config.diagnostic_enabled = false;
-    max_chip.config.sampling           = false;
-    max_chip.config.low_power_mode     = false;
-    max_chip.config.balancing          = 0x00;
-    max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    MAX_readWriteToChip();
-
-    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    MAX_readWriteToChip();
-
-    BMS.state = BMS_CALIBRATING;
-    while (!max_chip.state.ready) MAX_readWriteToChip();
-#endif // FEATURE_MAX14921_CALIBRATE
-#if FEATURE_CELL_DIAGNOSTICS
-    max_chip.config.diagnostic_enabled = true;
-    max_chip.config.sampling           = true;
-    max_chip.config.low_power_mode     = false;
-    max_chip.config.balancing          = 0x00;
-    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
-    MAX_readWriteToChip();
-
-    max_chip.config.sampling_start = HW_TIM_getTimeMS();
-    BMS.state                            = BMS_DIAGNOSTIC;
-#endif // FEATURE_CELL_DIAGNOSTICS
 }
 
 #if FEATURE_CELL_SLEEP
@@ -509,6 +466,34 @@ void BMS_measurementComplete(void)
             BMS.state                   = BMS_WAITING;
         }
     }
+#if FEATURE_MAX14921_CALIBRATE
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.sampling           = false;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    MAX_readWriteToChip();
+
+    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    MAX_readWriteToChip();
+
+    BMS.state = BMS_CALIBRATING;
+    while (!max_chip.state.ready) MAX_readWriteToChip();
+#endif // FEATURE_MAX14921_CALIBRATE
+#if FEATURE_CELL_DIAGNOSTICS
+    max_chip.config.diagnostic_enabled = true;
+    max_chip.config.sampling           = true;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    MAX_readWriteToChip();
+
+    max_chip.config.sampling_start = HW_TIM_getTimeMS();
+    BMS.state                            = BMS_DIAGNOSTIC;
+#endif // FEATURE_CELL_DIAGNOSTICS
 }
 
 void BMS_chargeLimit()

@@ -57,9 +57,11 @@ static void drv_inputAD_init_componentSpecific(void)
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
 }
 
-static void drv_inputAD_10Hz_PRD(void)
+static void drv_inputAD_1kHz_PRD(void)
 {
     static NX3L_MUXChannel_E current_sel = NX3L_MUX1;
+
+    HW_ADC_unpackADCBuffer();
 
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD1));
@@ -74,20 +76,7 @@ static void drv_inputAD_10Hz_PRD(void)
     }
 
     NX3L_setMux(current_sel);
-}
 
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-/**
- * @brief  10kHz IO periodic function
- */
-static void IO10kHz_PRD(void)
-#else // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-/**
- * @brief  10kHz IO periodic function
- */
-void IO10kHz_CB(void)
-#endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-{
     if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
     {
         const MAX_selectedCell_E current_cell = BMS_getCurrentOutputCell();
@@ -102,9 +91,6 @@ void IO10kHz_CB(void)
         else
         {
             BMS_setOutputCell(current_cell - 1);
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-            HW_TIM_10kHz_timerStart();
-#endif // FEATUFEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
         }
     }
     else if (BMS.state == BMS_SAMPLING)
@@ -119,8 +105,9 @@ void IO10kHz_CB(void)
  */
 const ModuleDesc_S drv_inputAD_desc = {
     .moduleInit       = &drv_inputAD_init_componentSpecific,
-    .periodic10Hz_CLK = &drv_inputAD_10Hz_PRD,
 #if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
     .periodic10kHz_CLK = &IO10kHz_PRD,
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+#else // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+    .periodic1kHz_CLK = &drv_inputAD_1kHz_PRD,
+#endif
 };
