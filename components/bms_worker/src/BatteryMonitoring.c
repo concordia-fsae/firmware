@@ -117,7 +117,7 @@ static void BMS100Hz_PRD()
             max_chip.config.low_power_mode     = false;
             max_chip.config.balancing          = 0x00;
             max_chip.config.output.state       = MAX_CELL_VOLTAGE;
-            max_chip.config.output.output.cell = max_chip.state.connected_cells; /**< Prepare for next step */
+            max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
             BMS.state                          = BMS_PARASITIC_MEASUREMENT;
         }
     }
@@ -130,7 +130,7 @@ static void BMS100Hz_PRD()
             max_chip.config.low_power_mode     = false;
             max_chip.config.balancing          = 0x00;
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+            max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
 
             MAX_readWriteToChip();
             max_chip.config.sampling_start = HW_TIM_getTimeMS();
@@ -159,7 +159,7 @@ static void BMS100Hz_PRD()
             max_chip.config.low_power_mode       = false;
             max_chip.config.balancing            = 0x00;
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell   = MAX_CELL1; /**< Prepare for next step */
+            max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
             MAX_readWriteToChip();
             max_chip.config.sampling_start = UINT32_MAX;
 
@@ -267,7 +267,7 @@ void BMS_toSleep(void)
     max_chip.config.low_power_mode     = true;
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
     max_chip.config.sampling_start = UINT32_MAX;
     MAX_readWriteToChip();
     MAX_readWriteToChip(); // Update value
@@ -285,7 +285,7 @@ void BMS_wakeUp(void)
     max_chip.config.low_power_mode     = false;
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
     MAX_readWriteToChip();
 
     while (!max_chip.state.ready) MAX_readWriteToChip(); // Update value
@@ -472,11 +472,11 @@ void BMS_measurementComplete(void)
     max_chip.config.low_power_mode     = false;
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
     MAX_readWriteToChip();
 
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
     MAX_readWriteToChip();
 
     BMS.state = BMS_CALIBRATING;
@@ -488,7 +488,7 @@ void BMS_measurementComplete(void)
     max_chip.config.low_power_mode     = false;
     max_chip.config.balancing          = 0x00;
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = MAX_CELL1; /**< Prepare for next step */
+    max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
     MAX_readWriteToChip();
 
     max_chip.config.sampling_start = HW_TIM_getTimeMS();
