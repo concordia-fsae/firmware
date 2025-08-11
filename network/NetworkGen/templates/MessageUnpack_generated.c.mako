@@ -13,13 +13,13 @@
 #include "string.h"
 
 /******************************************************************************
- *                         P R I V A T E  V A R S
+ *                         P U B L I C  V A R S
  ******************************************************************************/
 %for node in nodes:
   %for bus in node.on_buses:
 
-static CANRX_${bus.upper()}_signals_S CANRX_${bus.upper()}_signals;
-static CANRX_${bus.upper()}_messages_S CANRX_${bus.upper()}_messages;
+CANRX_${bus.upper()}_signals_S CANRX_${bus.upper()}_signals;
+CANRX_${bus.upper()}_messages_S CANRX_${bus.upper()}_messages;
   %endfor
 %endfor
 
@@ -211,6 +211,11 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
               %endif
             %endfor
     msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.timestamp = CANIO_getTimeMs();
+            %if node.received_msgs[message].bridged:
+
+    msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.raw = *m;
+    msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.new_message = true;
+            %endif
 }
       %endif
     %endfor

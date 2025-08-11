@@ -33,6 +33,13 @@
 %for node in nodes:
   %for bus in node.on_buses:
 
+extern CANRX_${bus.upper()}_signals_S CANRX_${bus.upper()}_signals;
+extern CANRX_${bus.upper()}_messages_S CANRX_${bus.upper()}_messages;
+  %endfor
+%endfor
+%for node in nodes:
+  %for bus in node.on_buses:
+
 static const uint16_t CANRX_${bus.upper()}_unpackList[] = {
     %for message in node.received_msgs:
       %if bus in node.received_msgs[message].source_buses and node.received_msgs[message].id <= 0x7ff:

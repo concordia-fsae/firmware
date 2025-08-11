@@ -556,8 +556,10 @@ def process_bridges(node: CanNode):
             continue
 
         message = copy.deepcopy(can_bus_defs[definition["sourceBuses"]].messages[msg_name])
-        message.bridged = True
+        can_bus_defs[definition["sourceBuses"]].messages[msg_name].bridged = True
+        message.from_bridge = True
         message.source_buses = definition["destBuses"]
+        message.origin_bus = definition["sourceBuses"]
         node.add_message(message)
         can_bus_defs[definition["destBuses"]].messages[message.name] = message
         sigs = {}

@@ -371,6 +371,8 @@ class CanMessage(CanObject):
         self.checksum_sig: Optional[CanSignal] = None
         self.receivers = []
         self.bridged = False
+        self.from_bridge = False
+        self.origin_bus = None
         self.source_buses: List[str]
         if source_buses := msg_def.get("sourceBuses"):
             if isinstance(source_buses, list):
@@ -544,7 +546,7 @@ class CanNode(CanObject):
     def messages_by_cycle_time(self) -> Dict[int, List[CanMessage]]:
         ret = {}
         for msg in self.messages.values():
-            if msg.unscheduled == False and msg.bridged == False:
+            if msg.unscheduled == False:
                 if msg.cycle_time_ms in ret:
                     ret[msg.cycle_time_ms].append(msg)
                     continue

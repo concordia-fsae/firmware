@@ -3,19 +3,31 @@
 <%def name="make_packfn(bus, msg)">
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
+  %if msg.from_bridge:
+    (void)counter;
+    extern CANRX_${msg.origin_bus.upper()}_messages_S CANRX_${msg.origin_bus.upper()}_messages;
+
+    if (CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message == false)
+    {
+        return false;
+    }
+
+    *message = CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.raw;
+    CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message = false;
+  %else:
     if (transmit_${msg.name} == false)
     {
         return false;
     }
 
-  %for signal in msg.get_non_val_sigs():
+    %for signal in msg.get_non_val_sigs():
     set_${signal.get_name_nodeless()}(message, ${bus.upper()}, ${msg.node_name}, ${signal.get_name_nodeless()});
-  %endfor
-
-  %if msg.counter_sig:
+    %endfor
+    %if msg.counter_sig:
     message->u64 |= counter;
-  %else:
+    %else:
     (void)counter;
+    %endif
   %endif
 
     return true;
@@ -37,10 +49,10 @@ const packTable_S ${bus.upper()}_packTable_${cycle_time}ms[] = {
 
 <%def name="make_sigpack(bus, node, signal)">
 %if signal.discrete_values:
-__attribute__((always_inline)) static inline void set_${bus.upper()}_${node.upper()}_${signal.get_name_nodeless()}(CAN_data_T* m, CAN_${signal.discrete_values.name}_E val)
+__attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, CAN_${signal.discrete_values.name}_E val)
 {
 %else:
-__attribute__((always_inline)) static inline void set_${bus.upper()}_${node.upper()}_${signal.get_name_nodeless()}(CAN_data_T* m, ${signal.datatype.value} val)
+__attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, ${signal.datatype.value} val)
 {
 %endif
 <%

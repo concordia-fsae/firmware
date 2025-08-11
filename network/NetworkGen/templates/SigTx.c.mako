@@ -29,15 +29,9 @@
     %for msg in node.messages.values():
       %if bus in msg.source_buses:
         %for signal in msg.signal_objs.values():
-          %if not signal.message_ref.bridged:
 <%make_sigpack(bus, node.alias, signal)%>\
-          %endif
         %endfor
       %endif
     %endfor
   %endfor
 %endfor
-
-
-
-
