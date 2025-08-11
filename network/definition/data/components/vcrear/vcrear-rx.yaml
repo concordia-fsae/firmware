@@ -6,6 +6,12 @@ messages:
     sourceBuses: veh
   BMSB_ioStatus:
     sourceBuses: veh
+  PM100DX_criticalData:
+    destBuses: veh
+    sourceBuses: ass
+  BMSB_currentLimit:
+    destBuses: ass
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh

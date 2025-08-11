@@ -1,3 +1,4 @@
+import copy
 from math import ceil, log
 from typing import List, Optional
 from schema import Schema, Or, Optional, And
@@ -369,6 +370,7 @@ class CanMessage(CanObject):
         self.counter_sig: Optional[CanSignal] = None
         self.checksum_sig: Optional[CanSignal] = None
         self.receivers = []
+        self.bridged = False
         self.source_buses: List[str]
         if source_buses := msg_def.get("sourceBuses"):
             if isinstance(source_buses, list):
@@ -391,7 +393,7 @@ class CanMessage(CanObject):
         self.is_valid = False
 
     def __repr__(self):
-        return f"id: {self.id}, Counter: {self.counter_sig}, Checksum: {self.checksum_sig}, Signals: {list(self.signal_objs.values())}"
+        return f"id: {self.id}, buses: {self.source_buses}, Counter: {self.counter_sig}, Checksum: {self.checksum_sig}, Signals: {list(self.signal_objs.values())}"
 
     def add_signal(self, msg_signal: dict, signal_obj: CanSignal):
         """Add the given signal to this message"""
@@ -542,7 +544,7 @@ class CanNode(CanObject):
     def messages_by_cycle_time(self) -> Dict[int, List[CanMessage]]:
         ret = {}
         for msg in self.messages.values():
-            if msg.unscheduled == False:
+            if msg.unscheduled == False and msg.bridged == False:
                 if msg.cycle_time_ms in ret:
                     ret[msg.cycle_time_ms].append(msg)
                     continue
@@ -599,5 +601,15 @@ class CanBus(CanObject):
             self.nodes[node.name + "_" + str(node.offset)] = node
         else:
             self.nodes[node.name] = node
+        self.messages.update(node.messages)
+        self.signals.update(node.signals)
+
+    def update_node(self, node: CanNode):
+        if node.name not in self.nodes.keys():
+            print(
+                f"Tried to update node '{node.name}' to bus '{self.name}', a node with that name wasn't present"
+            )
+            return
+
         self.messages.update(node.messages)
         self.signals.update(node.signals)
