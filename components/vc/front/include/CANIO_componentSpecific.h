@@ -26,6 +26,7 @@
 #include "brakePressure.h"
 #include "drv_tps20xx.h"
 #include "cockpitLights.h"
+#include "brakeTemp.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -75,5 +76,8 @@
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
 #define set_bmsLightState(m,b,n,s) set(m,b,n,s, cockpitLights_bms_getStateCAN())
 #define set_imdLightState(m,b,n,s) set(m,b,n,s, cockpitLights_imd_getStateCAN())
-
+#define set_braketempTempFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLTemp());
+#define set_braketempTempFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRTemp());
+#define set_braketempVoltFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLVoltage());
+#define set_braketempVoltFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRVoltage());
 #include "TemporaryStubbing.h"
