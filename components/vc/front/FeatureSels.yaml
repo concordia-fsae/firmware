@@ -7,4 +7,4 @@ features:
   app_component_id: vcfront
   app_uds: true
   feature_vehicleState_mode: follower
-  feature_wiggly_pedal: false
+  feature_wiggly_pedal: true

@@ -21,7 +21,7 @@
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(FEATURE_WIGGLY_PEDAL)
-#define PEDAL_TOLERANCE 0.15f
+#define PEDAL_TOLERANCE 0.20f
 #else
 #define PEDAL_TOLERANCE 0.10f
 #endif
