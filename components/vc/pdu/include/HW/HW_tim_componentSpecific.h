@@ -27,6 +27,7 @@
 
 typedef enum
 {
+    HW_TIM_PORT_PUMP = 0x00U,
     HW_TIM_PORT_COUNT,
 } HW_TIM_port_E;
 

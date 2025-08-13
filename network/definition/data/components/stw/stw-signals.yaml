@@ -50,6 +50,7 @@ signals:
       range:
         min: 0
         max: 150
+    continuous: true
 
   maxRequestCurrent:
     unit: A
@@ -60,4 +61,4 @@ signals:
       range:
         min: 0
         max: 150
-
+    continuous: true

@@ -4,9 +4,6 @@ config:
 defs:
   max14921_calibrate:
   cell_balancing:
-  high_frequency_cell_measurement_task:
-    requires: 
-      - app_10kHz_task
   canrx_swi:
   cantx_swi: 
   cell_diagnostics:

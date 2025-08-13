@@ -1,6 +1,6 @@
 /**
- * @file HW_tim.h
- * @brief  Header file for TIM firmware
+ * @file mcManager.h
+ * @brief Header file for the motor controller manager
  */
 
 #pragma once
@@ -9,17 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// Firmware Includes
-#include "HW.h"
-
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
-#define HW_TIM_TICK TIM2
-#define HW_TIM_TICK_IRQN TIM2_IRQn
-#define HW_TIM_TICK_ENABLECLK __HAL_RCC_TIM2_CLK_ENABLE
-#define HW_TIM_TICK_GETCLKFREQ 2*HAL_RCC_GetPCLK1Freq
+#include "LIB_Types.h"
+#include "CANTypes_generated.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -27,14 +18,22 @@
 
 typedef enum
 {
-    HW_TIM_PORT_TACH,
-    HW_TIM_PORT_PWM,
-    HW_TIM_PORT_COUNT,
-} HW_TIM_port_E;
+    MCMANAGER_FORWARD = 0x00,
+    MCMANAGER_REVERSE,
+} mcManager_direction_E;
+
+typedef enum
+{
+    MCMANAGER_DISABLE = 0x00,
+    MCMANAGER_ENABLE,
+} mcManager_enable_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-float32_t HW_TIM1_getFreqCH1(void);
-float32_t HW_TIM1_getFreqCH2(void);
+float32_t                     mcManager_getTorqueCommand(void);
+CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void);
+CAN_pm100dxEnableState_E      mcManager_getEnableCommand(void);
+float32_t                     mcManager_getTorqueLimit(void);
+bool                          mcManager_clearEepromCommand(void);

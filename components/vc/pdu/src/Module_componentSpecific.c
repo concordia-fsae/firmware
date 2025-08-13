@@ -22,8 +22,8 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
     &app_vehicleState_desc,
-    &cooling_desc,
     &powerManager_desc,
+    &cooling_desc,
     &CANIO_tx,
 };
 

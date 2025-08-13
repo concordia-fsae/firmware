@@ -16,15 +16,15 @@
 #include "string.h"
 #include "lib_utility.h"
 #include "app_vehicleState.h"
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #define DEFAULT_TORQUE_PITS 10.0f // 10Nm on boot
-#define DEFAULT_TORQUE_DRIVE 90.0f
 
-#define ABSOLUTE_MAX_TORQUE 150.0f
+#define ABSOLUTE_MAX_TORQUE 130.0f
 #define ABSOLUTE_MIN_TORQUE 0.0f
 
 /******************************************************************************
@@ -48,7 +48,7 @@ static struct
  */
 float32_t torque_getTorqueRequest(void)
 {
-    return (torque_data.state == TORQUE_ACTIVE) ? torque_data.torque : 0.0f;
+    return torque_data.torque;
 }
 
 /**
@@ -93,35 +93,36 @@ static void torque_init(void)
 
 static void torque_periodic_100Hz(void)
 {
+    CAN_raceMode_E race_mode = CAN_RACEMODE_PIT;
     float32_t torque = 0.0f;
+    const bool race_mode_not_sna = CANRX_get_signal(VEH, STW_raceMode, &race_mode) != CANRX_MESSAGE_SNA;
 
-    switch (torque_data.state)
+    if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
     {
-        case TORQUE_INACTIVE:
-            if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
-            {
-                torque_data.state = TORQUE_ACTIVE;
-            }
-            torque = 0.0f;
-            break;
-        case TORQUE_ACTIVE:
-            if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
-            {
-                torque = (bppc_getState() == BPPC_OK) ?
-                          apps_getPedalPosition() * torque_data.torque_request_max :
-                          0.0f;
-            }
-            else
-            {
-                torque_data.state = TORQUE_INACTIVE;
-                torque = 0.0f;
-            }
-            break;
-        case TORQUE_ERROR:
-        default:
-            torque = 0.0f;
-            break;
+        torque_data.state = TORQUE_ACTIVE;
     }
+    else
+    {
+        torque_data.state = TORQUE_INACTIVE;
+    }
+    if (race_mode_not_sna)
+    {
+        if (race_mode == CAN_RACEMODE_RACE)
+        {
+            float32_t max_torque = 0.0f;
+            (void)CANRX_get_signal(VEH, STW_maxRequestTorque, &max_torque);
+
+            torque_data.torque_request_max = max_torque;
+        }
+        else
+        {
+            torque_data.torque_request_max = DEFAULT_TORQUE_PITS;
+        }
+    }
+
+    torque = (bppc_getState() == BPPC_OK) ?
+              apps_getPedalPosition() * torque_data.torque_request_max :
+              0.0f;
 
     torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);
 }

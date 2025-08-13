@@ -57,7 +57,7 @@ uint8_t CANIO_tx_getNLG513ControlByte(void)
     uint8_t ret = 0x00;
     switch (SYS.contacts)
     {
-        case SYS_CONTACTORS_CLOSED:
+        case SYS_CONTACTORS_PRECHARGE:
             ret = 0x40;
             break;
 

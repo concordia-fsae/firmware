@@ -76,7 +76,8 @@ RX_FILE_SCHEMA = Schema({
 RX_ITEM_SCHEMA = Schema({
     Optional("sourceBuses"): Or(str, list[str]),
     Optional("unrecorded"): bool,
-    Optional("node"): Or(int, list[int])
+    Optional("node"): Or(int, list[int]),
+    Optional("destBuses"): list[str],
 })
 
 # if this gets set during the build, we will fail at the end
@@ -512,6 +513,60 @@ def process_node(node: CanNode):
     for bus in node.on_buses:
         can_bus_defs[bus].add_node(node)
 
+def process_bridges(node: CanNode):
+    global ERROR
+    global can_bus_defs
+    error = False
+
+    rx_file = RX_FILE.format(name=node.name)
+    if rx_file not in node.def_files:
+        print(f"Note: rx file not found for node '{node.name}'")
+        return
+    with open(node.def_files[rx_file], "r") as fd:
+        rx_sig_file = safe_load(fd)
+        try:
+            RX_FILE_SCHEMA.validate(rx_sig_file)
+        except Exception as e:
+            print(f"CAN rx definition for node '{node.name}' is invalid.")
+            print(f"File Schema Error: {e}")
+            raise e
+
+    rx_msg_dict = rx_sig_file["messages"] if rx_sig_file["messages"] is not None else {}
+    for msg, definition in rx_msg_dict.items():
+        if definition is not None:
+            try:
+                RX_ITEM_SCHEMA.validate(definition)
+                if "destBuses" not in definition:
+                    continue
+                if "sourceBuses" not in definition:
+                    raise Exception(f"Source bus is not defined.")
+                if definition["sourceBuses"] not in can_bus_defs:
+                    raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+            except Exception as e:
+                print(f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid.")
+                print(f"CAN RX Message Error: {e}")
+                error = True
+                continue
+    if error:
+        ERROR = True
+        raise Exception("Error processing node bridges, see previous errors...")
+
+    for msg_name, definition in rx_msg_dict.items():
+        if definition is None or "destBuses" not in definition:
+            continue
+
+        message = copy.deepcopy(can_bus_defs[definition["sourceBuses"]].messages[msg_name])
+        can_bus_defs[definition["sourceBuses"]].messages[msg_name].bridged = True
+        message.from_bridge = True
+        message.source_buses = definition["destBuses"]
+        message.origin_bus = definition["sourceBuses"]
+        node.add_message(message)
+        can_bus_defs[definition["destBuses"]].messages[message.name] = message
+        sigs = {}
+        for sig, defn in message.signal_objs.items():
+            sigs[sig] = defn
+        can_bus_defs[definition["destBuses"]].signals.update(sigs)
+
 
 def process_receivers(bus: CanBus, node: CanNode):
     """Process signals received by a node"""
@@ -544,6 +599,8 @@ def process_receivers(bus: CanBus, node: CanNode):
                 RX_ITEM_SCHEMA.validate(definition)
                 if "sourceBuses" in definition and definition["sourceBuses"] not in can_bus_defs:
                     raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                if "bridge" in definition:
+                    raise Exception(f"Cannot bridge signals.")
             except Exception as e:
                 print(f"CAN signal reception definition for '{sig}' in node '{node.name}' is invalid.")
                 print(f"CAN RX Signal Error: {e}")
@@ -751,6 +808,9 @@ def parseNetwork(args, lookup):
 
     for node in can_nodes.values():
         process_node(node)
+
+    for node in can_nodes.values():
+        process_bridges(node)
 
     for bus in can_bus_defs.values():
         for node in bus.nodes.values():

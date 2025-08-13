@@ -45,6 +45,9 @@
  #ifndef VEHICLESTATE_CANRX_CONTACTORSTATE
  #error "User must define 'VEHICLESTATE_CANRX_CONTACTORSTATE' in app_vehicleState_componentSpecific.h"
  #endif
+ #ifndef VEHICLESTATE_CANRX_BRAKEPOSITION
+ #error "User must define 'VEHICLESTATE_CANRX_BRAKEPOSITION' in app_vehicleState_componentSpecific.h"
+ #endif
 #else
  #ifndef VEHICLESTATE_CANRX_SIGNAL
  #error "User must define 'VEHICLESTATE_CANRX_SIGNAL' in app_vehicleState_componentSpecific.h"

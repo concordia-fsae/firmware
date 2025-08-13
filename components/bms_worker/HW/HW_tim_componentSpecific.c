@@ -16,10 +16,6 @@
 #include "HW_tim.h"
 #include "FeatureDefines_generated.h"
 
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-#include "drv_inputAD.h"
-#endif // not FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
-
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -148,38 +144,6 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_2);
 
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-    // Configure the TIM3 IRQ priority
-    HAL_NVIC_SetPriority(TIM3_IRQn, TIM_IRQ_PRIO, 0);
-    HAL_NVIC_EnableIRQ(TIM3_IRQn);
-    __HAL_RCC_TIM3_CLK_ENABLE();
-
-    // Get clock configuration
-    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
-
-    // Compute TIM2 clock
-    uwTimclock       = 1 * HAL_RCC_GetPCLK2Freq();
-    // Compute the prescaler value to have TIM4 counter clock equal to 1MHz
-    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
-
-    // Initialize TIM4
-    htim[HW_TIM_PORT_HS_INTERRUPT].Instance   = TIM3;
-
-    // Initialize TIMx peripheral as follow:
-    // Period = [(TIM4CLK/1000) - 1]. to have a (1/10000) s time base.
-    // Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
-    // ClockDivision = 0
-    // Counter direction = Up
-    htim[HW_TIM_PORT_HS_INTERRUPT].Init.Period        = (1000000U / 5000) - 1U;
-    htim[HW_TIM_PORT_HS_INTERRUPT].Init.Prescaler     = uwPrescalerValue;
-    htim[HW_TIM_PORT_HS_INTERRUPT].Init.ClockDivision = 0;
-    htim[HW_TIM_PORT_HS_INTERRUPT].Init.CounterMode   = TIM_COUNTERMODE_UP;
-    htim[HW_TIM_PORT_HS_INTERRUPT].Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_Base_Init(&htim[HW_TIM_PORT_HS_INTERRUPT]) != HAL_OK)
-    {
-        return HW_ERROR;
-    }
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
     return HW_OK;
 }
 
@@ -232,24 +196,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 }
 
 /**
- * @brief  Period elapsed callback in non blocking mode
- * @note   This function is called  when TIM4 interrupt took place, inside
- * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
- * a global variable "uwTick" used as application time base.
- * @param  htim : TIM handle
- */
-void HW_TIM_periodElapsedCb(TIM_HandleTypeDef* tim)
-{
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-    if (tim->Instance == TIM3)
-    {
-        HAL_TIM_Base_Stop_IT(&htim[HW_TIM_PORT_HS_INTERRUPT]);
-        IO10kHz_CB();
-    }
-#endif
-}
-
-/**
  * @brief  Get input frequency from TIM1 CH1
  *
  * @retval Frequency of TIM1 CH1 input
@@ -277,9 +223,3 @@ float32_t HW_TIM1_getFreqCH2(void)
     return (uint16_t)((fan2_last_tick[1]) ? 4000000U / (fan2_last_tick[1] - fan2_last_tick[0]) : 0);
 }
 
-#if FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED
-void HW_TIM_10kHz_timerStart(void)
-{
-    HAL_TIM_Base_Start_IT(&htim[HW_TIM_PORT_HS_INTERRUPT]);
-}
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK == FEATURE_DISABLED

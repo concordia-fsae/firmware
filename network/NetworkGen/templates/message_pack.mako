@@ -3,19 +3,31 @@
 <%def name="make_packfn(bus, msg)">
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
+  %if msg.from_bridge:
+    (void)counter;
+    extern CANRX_${msg.origin_bus.upper()}_messages_S CANRX_${msg.origin_bus.upper()}_messages;
+
+    if (CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message == false)
+    {
+        return false;
+    }
+
+    *message = CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.raw;
+    CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message = false;
+  %else:
     if (transmit_${msg.name} == false)
     {
         return false;
     }
 
-  %for signal in msg.get_non_val_sigs():
+    %for signal in msg.get_non_val_sigs():
     set_${signal.get_name_nodeless()}(message, ${bus.upper()}, ${msg.node_name}, ${signal.get_name_nodeless()});
-  %endfor
-
-  %if msg.counter_sig:
+    %endfor
+    %if msg.counter_sig:
     message->u64 |= counter;
-  %else:
+    %else:
     (void)counter;
+    %endif
   %endif
 
     return true;
@@ -37,10 +49,10 @@ const packTable_S ${bus.upper()}_packTable_${cycle_time}ms[] = {
 
 <%def name="make_sigpack(bus, node, signal)">
 %if signal.discrete_values:
-__attribute__((always_inline)) static inline void set_${bus.upper()}_${node.upper()}_${signal.get_name_nodeless()}(CAN_data_T* m, CAN_${signal.discrete_values.name}_E val)
+__attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, CAN_${signal.discrete_values.name}_E val)
 {
 %else:
-__attribute__((always_inline)) static inline void set_${bus.upper()}_${node.upper()}_${signal.get_name_nodeless()}(CAN_data_T* m, ${signal.datatype.value} val)
+__attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, ${signal.datatype.value} val)
 {
 %endif
 <%
@@ -80,7 +92,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
         idx_s = int(idx_s/2)
 %>\
 %if signal.native_representation.bit_width == 1:
-    atomicXorU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)(m->u8[${int(signal.start_bit / 8)}U] ^ ((val ? 1U : 0U) << ${signal.start_bit % 8}U)));
+    atomicXorU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)((val ? 1U : 0U) << ${signal.start_bit % 8}U));
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
     uint${dtype}_t tmp_${signal.name};
@@ -93,16 +105,16 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${node.uppe
     tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((val - ${int(signal.offset)}) / ${int(signal.scale)});
     %endif
     %if signal.native_representation.signedness == Signedness.signed:
-    tmp_${signal.name} = (tmp_${signal.name} & ${2**(signal.native_representation.bit_width - 1) - 1}U) | ((tmp_${signal.name} < 0) ? 1 << ${(signal.native_representation.bit_width - 1)}U : 0U);
+    tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((tmp_${signal.name} & ${2**(signal.native_representation.bit_width - 1) - 1}U) | ((tmp_${signal.name} < 0) ? 1 << ${(signal.native_representation.bit_width - 1)}U : 0U));
     %endif
     %if signal.native_representation.endianness.value == 0 and signal.native_representation.bit_width > 8:
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${int(signal.native_representation.bit_width / 8)}U);
-    tmp_${signal.name} = ((tmp_${signal.name} & ~(255U)) >> ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (tmp_${signal.name} & ${(2**(8 - (signal.native_representation.bit_width % 8))) - 1}U);
+    tmp_${signal.name} = ((tmp_${signal.name} & (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)(~(255U))) >> ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (int${dtype}_t)((tmp_${signal.name} & ${(2**(8 - (signal.native_representation.bit_width % 8))) - 1}U));
     %endif
     %if dtype == 64:
     atomicXorU64(&m->u64, (uint64_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit}U);
     %else: 
-    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], (uint${dtype}_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
+    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], (uint${dtype}_t)((uint${dtype}_t)(tmp_${signal.name}) & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
     %endif 
 %else:
     (void)m;

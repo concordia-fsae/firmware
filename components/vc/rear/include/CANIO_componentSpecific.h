@@ -23,6 +23,7 @@
 #include "horn.h"
 #include "tssi.h"
 #include "drv_tps20xx.h"
+#include "mcManager.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -46,5 +47,15 @@
 #define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
 #define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
+#define set_torqueCommand(m,b,n,s) set(m,b,n,s, mcManager_getTorqueCommand())
+#define set_directionCommand(m,b,n,s) set(m,b,n,s, mcManager_getDirectionCommand())
+#define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
+#define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
+
+// TODO: Improve this interface to support other parameters
+#define transmit_VCREAR_mcEepromCommand mcManager_clearEepromCommand()
+#define set_eepromAddress(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR)
+#define set_eepromCommand(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMRWCOMMAND_WRITE)
+#define set_eepromDataRaw(m,b,n,s) set(m,b,n,s, 0U)
 
 #include "TemporaryStubbing.h"
