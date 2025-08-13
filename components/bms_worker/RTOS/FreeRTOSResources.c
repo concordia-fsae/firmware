@@ -68,7 +68,7 @@ TimerHandle_t       rtos_tick_timer;
 #if APP_10KHZ_TASK
 static StaticTask_t Task10kHz;
 static StackType_t  task10kHzStack[configMINIMAL_STACK_SIZE];
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+#endif // APP_10KHZ_TASK
 static StaticTask_t Task1kHz;
 static StackType_t  task1kHzStack[configMINIMAL_STACK_SIZE];
 static StaticTask_t Task100Hz;
@@ -81,7 +81,7 @@ static StackType_t  task1HzStack[configMINIMAL_STACK_SIZE];
 // module periodic tasks, defined in Module.h
 #if APP_10KHZ_TASK
 extern void Module_10kHz_TSK(void);
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+#endif // APP_10KHZ_TASK
 extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
@@ -113,7 +113,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
         },
         .periodMs = pdUS_TO_TICKS(100U),
     },
-#endif // FEATURE_HIGH_FREQUENCY_CELL_MEASUREMENT_TASK
+#endif // APP_10KHZ_TASK
     {
         .function    = &Module_1kHz_TSK,
         .name        = "Task 1kHz",
