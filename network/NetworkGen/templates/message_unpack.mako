@@ -3,6 +3,10 @@
 <%def name="make_structdef_message(node, message)">\
     struct {
         uint32_t timestamp;
+%if node.received_msgs[message].bridged:
+        CAN_data_T raw;
+        bool new_message;
+%endif
     } ${node.received_msgs[message].name};
 </%def>\
 

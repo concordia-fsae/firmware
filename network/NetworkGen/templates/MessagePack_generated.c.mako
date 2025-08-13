@@ -12,6 +12,7 @@
 #include "MessagePack_generated.h"
 #include "NetworkDefines_generated.h"
 #include "SigTx.c"
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S

@@ -35,7 +35,3 @@
     %endfor
   %endfor
 %endfor
-
-
-
-

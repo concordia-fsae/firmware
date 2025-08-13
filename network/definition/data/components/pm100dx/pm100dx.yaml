@@ -1,4 +1,4 @@
 description: "Cascadia Motion PM100DX/DXR Motor Controller"
 onBuses:
-  - "veh"
+  - "ass"
 baseId: 0x01

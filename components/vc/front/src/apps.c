@@ -17,6 +17,16 @@
 #include "lib_utility.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#if FEATURE_IS_ENABLED(FEATURE_WIGGLY_PEDAL)
+#define PEDAL_TOLERANCE 0.20f
+#else
+#define PEDAL_TOLERANCE 0.10f
+#endif
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
@@ -80,7 +90,7 @@ static void apps_periodic_100Hz(void)
         const float32_t apps2 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2);
         const float32_t apps_difference = apps1 - apps2;
 
-        if ((apps_difference > 0.10f)  || (apps_difference < -0.10f))
+        if ((apps_difference > PEDAL_TOLERANCE)  || (apps_difference < -PEDAL_TOLERANCE))
         {
             state = APPS_FAULT;
         }

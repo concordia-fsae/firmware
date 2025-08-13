@@ -49,7 +49,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_nlg513ControlByte(m,b,n,s) set(m,b,n,s, CANIO_tx_getNLG513ControlByte())
 #define set_nlg513MaxMainsCurrent(m,b,n,s) set(m,b,n,s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m,b,n,s) set(m,b,n,s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
-#define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
+#define set_nlg513MaxChargeCurrent(m,b,n,s) set(m,b,n,s, (CANIO_tx_getNLG513ControlByte() == 0x40) ? 0.0f : BMS.pack_charge_limit)
 #define transmit_BMSB_brusaChargeCommand (SYS_SFT_checkBrusaChargerTimeout() == false)
 #define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
 #define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
