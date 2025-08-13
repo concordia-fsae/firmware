@@ -43,3 +43,9 @@ signals:
         min: 0
         max: 2000
     continuous: true
+  shutdownRelayStatus:
+    description: State of Safety Relay
+    discreteValues: shutdownCircuitStatus
+  digitalStatus:
+    description: Digital Status
+    discreteValues: digitalStatus

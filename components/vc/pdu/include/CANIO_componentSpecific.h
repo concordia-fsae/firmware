@@ -62,5 +62,24 @@
 #define set_bms6HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))
 #define set_glvVoltage(m,b,n,s) set(m,b,n,s, powerManager_getGLVVoltage())
 #define set_glvCurrent(m,b,n,s) set(m,b,n,s, powerManager_getGLVCurrent())
+#define set_runButton(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
+                                             CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_pduSafetyReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_VCU_SFTY_RESET) == DRV_IO_ACTIVE) ? \
+                                                 CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_bmsSafetyReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_RESET) == DRV_IO_ACTIVE) ? \
+                                                 CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_safetyReset(m,b,n,s) set(m,b,n,s, ((drv_inputAD_getDigitalActiveState(DRV_INPUTAD_VCU_SFTY_RESET) == DRV_IO_ACTIVE) && \
+                                               (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_RESET) == DRV_IO_ACTIVE)) ? \
+                                               CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_bmsbSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_IMD_SAFETY_EN) == DRV_IO_ACTIVE) ? \
+                                                    CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_imdSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_SAFETY_EN) == DRV_IO_ACTIVE) ? \
+                                                   CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_bspdSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BSPD_MEM) == DRV_IO_ACTIVE) ? \
+                                                    CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_vcSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN) == DRV_IO_ACTIVE) ? \
+                                                  CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
+                                                    CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 
 #include "TemporaryStubbing.h"

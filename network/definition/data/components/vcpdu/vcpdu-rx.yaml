@@ -5,9 +5,15 @@ messages:
 signals:
   BMSB_packContactorState:
     sourceBuses: veh
+  BMSB_imdStatusMem:
+    sourceBuses: veh
+  BMSB_bmsStatusMem:
+    sourceBuses: veh
+  BMSB_bmsIMDReset:
+    sourceBuses: veh
   BMSB_tsmsChg:
     sourceBuses: veh
-  VCFRONT_runButtonStatus:
+  STW_runButton:
     sourceBuses: veh
   VCFRONT_brakePosition:
     sourceBuses: veh
