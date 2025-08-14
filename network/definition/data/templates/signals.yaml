@@ -49,3 +49,25 @@ signals:
   digitalStatus:
     description: Digital Status
     discreteValues: digitalStatus
+  imuLinearAcceleration:
+    unit: 'm/s2'
+    nativeRepresentation:
+      resolution: 0.001
+      bitWidth: 16
+      range:
+        min: -250
+        max: 250
+      signedness: signed
+      endianness: big
+    continuous: true
+  imuRotationalAcceleration:
+    unit: 'Hz'
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.001
+      range:
+        min: -4
+        max: 4
+      signedness: signed
+      endianness: big
+    continuous: true

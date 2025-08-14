@@ -1,0 +1,4 @@
+description: "Racegrade IMU"
+baseId: 0x470
+onBuses:
+  - "veh"

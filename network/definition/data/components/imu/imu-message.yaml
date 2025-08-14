@@ -1,0 +1,24 @@
+messages:
+  linearAccel:
+    description: IMU Linear Acceleration
+    idOffset: 0x00
+    cycleTimeMs: 2
+    signals:
+      lateral:
+        template: imuLinearAcceleration
+      longitudinal:
+        template: imuLinearAcceleration
+      vertical:
+        template: imuLinearAcceleration
+
+  linearRotation:
+    description: IMU Rotational Acceleration
+    idOffset: 0x01
+    cycleTimeMs: 10
+    signals:
+      yaw:
+        template: imuRotationalAcceleration
+      pitch:
+        template: imuRotationalAcceleration
+      roll:
+        template: imuRotationalAcceleration
