@@ -27,6 +27,8 @@ SHARED_APP = SHARED_CODE.Dir("app")
 SHARED_HW = SHARED_CODE.Dir("HW")
 SHARED_RTOS = SHARED_CODE.Dir("RTOS")
 SHARED_DRV = SHARED_CODE.Dir("DRV")
+SHARED_VC_HW = Dir("../shared/HW/")
+SHARED_VC_WS = Dir("../shared/wheelSpeed/")
 
 env = PLATFORM_ENV.Clone(
     tools=[
@@ -129,6 +131,8 @@ LIBS_INCLUDE_DIRS = [
     SHARED_HW,
     SHARED_RTOS,
     SHARED_DRV,
+    SHARED_VC_HW,
+    SHARED_VC_WS,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -158,6 +162,8 @@ project_source_files = [
     SRC_DIR.File("brakePressure.c"),
     SRC_DIR.File("steeringAngle.c"),
     SRC_DIR.File("shockpot.c"),
+    SHARED_VC_WS.File("wheelSpeed.c"),
+    SRC_DIR.File("wheelSpeed_componentSpecific.c"),
 ]
 
 project_hw_files = [
@@ -170,7 +176,7 @@ project_hw_files = [
     HW_DIR.File("HW_intc.c"),
     HW_DIR.File("HW_msp.c"),
     SHARED_HW.File("HW_tim.c"),
-    HW_DIR.File("HW_tim_componentSpecific.c"),
+    SHARED_VC_HW.File("HW_tim.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
     HW_DIR.File("drv_tps20xx_componentSpecific.c"),
