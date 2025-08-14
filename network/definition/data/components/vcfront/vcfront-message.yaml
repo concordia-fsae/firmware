@@ -74,3 +74,17 @@ messages:
     signals:
       5vCriticalHsdState:
       5vExtHsdState:
+
+  wheelSpeed:
+    description: Front wheel speeds
+    id: 0x461
+    cycleTimeMs: 50
+    signals:
+      wheelSpeedLinearFL:
+        template: wheelSpeedLinear
+      wheelSpeedLinearFR:
+        template: wheelSpeedLinear
+      wheelSpeedRotationalFL:
+        template: wheelSpeedRotational
+      wheelSpeedRotationalFR:
+        template: wheelSpeedRotational

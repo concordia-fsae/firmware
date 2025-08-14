@@ -100,7 +100,7 @@ class Units(Enum):
     Wb = "Wb"
     psi = "PSI"
     mps2 = "m/s2"
-
+    mps = "m/s"
 
 
 class ValidationRole(Enum):

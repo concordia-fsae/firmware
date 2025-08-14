@@ -29,6 +29,7 @@
 #include "steeringAngle.h"
 #include "shockpot.h"
 #include "Module.h"
+#include "wheelSpeed.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -80,4 +81,10 @@
 #define set_shockpotdispFR(m,b,n,s) set(m,b,n,s, shockpot_getFRDisp())
 #define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
 #define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
+
+#define set_wheelSpeedLinearFL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEELSPEED_SENSOR_L))
+#define set_wheelSpeedLinearFR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEELSPEED_SENSOR_R))
+#define set_wheelSpeedRotationalFL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEELSPEED_SENSOR_L))
+#define set_wheelSpeedRotationalFR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEELSPEED_SENSOR_R))
+
 #include "TemporaryStubbing.h"

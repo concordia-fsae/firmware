@@ -26,6 +26,7 @@
 #include "mcManager.h"
 #include "shockpot.h"
 #include "Module.h"
+#include "wheelSpeed.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -59,5 +60,10 @@
 #define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRRDisp())
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
+
+#define set_wheelSpeedLinearRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEELSPEED_SENSOR_L))
+#define set_wheelSpeedLinearRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEELSPEED_SENSOR_R))
+#define set_wheelSpeedRotationalRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEELSPEED_SENSOR_L))
+#define set_wheelSpeedRotationalRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEELSPEED_SENSOR_R))
 
 #include "TemporaryStubbing.h"

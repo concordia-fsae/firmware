@@ -95,3 +95,19 @@ signals:
         min: 0.0
         max: 15
     continuous: true
+  wheelSpeedLinear:
+    unit: 'm/s'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 50
+    continuous: true
+  wheelSpeedRotational:
+    unit: 'RPM'
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 2000
+    continuous: true
