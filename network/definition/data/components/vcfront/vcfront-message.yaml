@@ -45,6 +45,18 @@ messages:
     cycleTimeMs: 50
     signals:
       runButtonStatus:
+      steeringAngle:
+      steeringAngleVoltage:
+
+  shockpot:
+    description: Data from front shock pots
+    id: 0x455
+    cycleTimeMs: 100
+    signals:
+      shockpotVoltFL:
+      shockpotdispFL:
+      shockpotVoltFR:
+      shockpotdispFR:
 
   cockpitLightStatus:
     description: Status of the cockpit lights

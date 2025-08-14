@@ -148,6 +148,7 @@ project_source_files = [
     SRC_DIR.File("UDS.c"),
     SHARED_LIBS.File("LIB_app.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
+    SHARED_LIBS.File("lib_interpolation.c"),
     SRC_DIR.File("brakeLight.c"),
     SHARED_APP.File("app_vehicleState.c"),
     SRC_DIR.File("horn.c"),
@@ -155,6 +156,7 @@ project_source_files = [
     SRC_DIR.File("brakePressure.c"),
     SRC_DIR.File("tssi.c"),
     SRC_DIR.File("mcManager.c"),
+    SRC_DIR.File("shockpot.c"),
 ]
 
 project_hw_files = [

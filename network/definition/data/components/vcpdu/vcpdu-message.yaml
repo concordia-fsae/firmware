@@ -20,6 +20,24 @@ messages:
       vehicleState:
       glvVoltage:
       glvCurrent:
+      runButton:
+        template: digitalStatus
+      pduSafetyReset:
+        template: digitalStatus
+      bmsSafetyReset:
+        template: digitalStatus
+      safetyReset:
+        template: digitalStatus
+      bmsbSafetyStatus:
+        template: shutdownRelayStatus
+      imdSafetyStatus:
+        template: shutdownRelayStatus
+      bspdSafetyStatus:
+        template: shutdownRelayStatus
+      vcSafetyStatus:
+        template: shutdownRelayStatus
+      tsmsSafetyStatus:
+        template: digitalStatus
 
   hsdState:
     description: Current state of the HSDs

@@ -32,7 +32,7 @@
 #define ADC_BANK1_CHANNEL_PU1                   ADC_CHANNEL_14
 #define ADC_BANK1_CHANNEL_BR_POT                ADC_CHANNEL_3
 #define ADC_BANK1_CHANNEL_SPARE1                ADC_CHANNEL_10
-#define ADC_BANK1_CHANNEL_SPARE2                ADC_CHANNEL_11
+#define ADC_BANK1_CHANNEL_STR_ANGLE             ADC_CHANNEL_11
 #define ADC_BANK1_CHANNEL_APPS_P1               ADC_CHANNEL_1
 #define ADC_BANK1_CHANNEL_MCU_TEMP              ADC_CHANNEL_TEMPSENSOR
 
@@ -125,7 +125,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     {
         Error_Handler();
     }
-    sConfig.Channel      = ADC_BANK1_CHANNEL_SPARE2;
+    sConfig.Channel      = ADC_BANK1_CHANNEL_STR_ANGLE;
     sConfig.Rank         = ADC_REGULAR_RANK_6;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)

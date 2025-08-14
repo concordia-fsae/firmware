@@ -160,3 +160,8 @@ pm100dxEepromAddress:
 pm100dxEepromRWCommand:
   "READ": 0
   "WRITE": 1
+
+shutdownCircuitStatus:
+  "SNA": 0
+  "OPEN": 1
+  "CLOSED": 2

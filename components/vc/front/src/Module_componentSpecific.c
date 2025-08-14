@@ -30,6 +30,8 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &powerManager_desc,
     &cockpitLights_desc,
     &brakePressure_desc,
+    &steeringAngle_desc,
+    &shockpot_desc,
     &CANIO_tx,
 };
 

@@ -24,6 +24,7 @@
 #include "tssi.h"
 #include "drv_tps20xx.h"
 #include "mcManager.h"
+#include "shockpot.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -57,5 +58,10 @@
 #define set_eepromAddress(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR)
 #define set_eepromCommand(m,b,n,s) set(m,b,n,s, CAN_PM100DXEEPROMRWCOMMAND_WRITE)
 #define set_eepromDataRaw(m,b,n,s) set(m,b,n,s, 0U)
+
+#define set_shockpotdispRL(m,b,n,s) set(m,b,n,s, shockpot_getRLDisp())
+#define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRRDisp())
+#define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
+#define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
 
 #include "TemporaryStubbing.h"

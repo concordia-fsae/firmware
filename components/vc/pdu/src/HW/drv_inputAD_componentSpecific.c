@@ -35,7 +35,19 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
     },
     [DRV_INPUTAD_RUN_BUTTON] = {
         .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, VCFRONT_runButtonStatus),
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, STW_runButton),
+    },
+    [DRV_INPUTAD_IMD_SAFETY_EN] = {
+        .type = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_imdStatusMem),
+    },
+    [DRV_INPUTAD_BMS_SAFETY_EN] = {
+        .type = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_bmsStatusMem),
+    },
+    [DRV_INPUTAD_BMS_RESET] = {
+        .type = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_bmsIMDReset),
     },
     [DRV_INPUTAD_5V_NFLT1] = { 
         .type = INPUT_DIGITAL,
@@ -62,7 +74,7 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_BSPD_MEM,
-            .active_level = DRV_IO_LOGIC_LOW,
+            .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
 };

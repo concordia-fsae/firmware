@@ -26,6 +26,7 @@ extern const ModuleDesc_S brakeLight_desc;
 extern const ModuleDesc_S horn_desc;
 extern const ModuleDesc_S tssi_desc;
 extern const ModuleDesc_S brakePressure_desc;
+extern const ModuleDesc_S shockpot_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -43,6 +44,7 @@ typedef enum
     MODULE_HORN,
     MODULE_TSSI,
     MODULE_BRAKEPRESSURE,
+    MODULE_SHOCKPOT,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;

@@ -88,3 +88,31 @@ signals:
       bitWidth: 16
       resolution: 1
       endianness: little
+
+  shockpotVoltRL:
+    description: Front Left shock pot Voltage
+    template: voltsPrecise
+
+  shockpotdispRL:
+    description: "Shock pot displacment rear left"
+    unit: mm
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 75
+    continuous: true
+
+  shockpotVoltRR:
+    description: Front right shock pot Voltage
+    template: voltsPrecise
+
+  shockpotdispRR:
+    description: "Shockpot displacment rear right"
+    unit: mm
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 75
+    continuous: true
