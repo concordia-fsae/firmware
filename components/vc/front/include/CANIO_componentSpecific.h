@@ -28,6 +28,7 @@
 #include "cockpitLights.h"
 #include "steeringAngle.h"
 #include "shockpot.h"
+#include "Module.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -50,11 +51,6 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
-#define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
-#define set_taskUsage10Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
-#define set_taskUsage1Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
-#define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 #define set_apps1(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1) * 100)
 #define set_apps2(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2) * 100)
 #define set_brakePosition(m,b,n,s) set(m,b,n,s, bppc_getPedalPosition() * 100)
