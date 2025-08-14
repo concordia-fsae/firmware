@@ -99,7 +99,8 @@ class Units(Enum):
     Hz = "Hz"
     Wb = "Wb"
     psi = "PSI"
-    
+    mps2 = "m/s2"
+
 
 
 class ValidationRole(Enum):

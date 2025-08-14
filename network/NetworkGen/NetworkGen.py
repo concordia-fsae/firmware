@@ -472,7 +472,8 @@ def process_node(node: CanNode):
                     continue
                 try:
                     sig_obj = CanSignal(msg_signal, new_sig)
-                except:
+                except Exception as e:
+                    print(f"Error parsing signal '{msg_signal}': {e}")
                     error = True
                     continue
                 signals[msg_signal] = sig_obj
