@@ -89,6 +89,16 @@ signals:
         max: 400
     continuous: true
 
+  packCSVoltage:
+    unit: 'V'
+    description: BMS Boss Pack Current Sensor Voltage
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: -2
+        max: 2
+    continuous: true
+
   packContactorState:
     description: Pack Contactor Status
     discreteValues: prechargeContactorState

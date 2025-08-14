@@ -23,6 +23,8 @@
 #define CURRENT_SENSE_V_per_A 0.005f
 #define PRECHARGE_MIN_TIME_MS 1320U
 
+#define PACK_CS_0_OFFSET 0.269531f
+
 BMSB_S BMS;
 
 static drv_timer_S precharge_timer;
@@ -109,7 +111,7 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
-    BMS.pack_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) / CURRENT_SENSE_V_per_A;
+    BMS.pack_current = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
 
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {

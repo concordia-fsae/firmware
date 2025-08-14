@@ -83,5 +83,5 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ?\
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-
+#define set_packCSVoltage(m,b,n,s) set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS))
 #include "TemporaryStubbing.h"
