@@ -28,6 +28,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &brakeLight_desc,
     &horn_desc,
     &tssi_desc,
+    &wheelSpeed_desc,
     &brakePressure_desc,
     &shockpot_desc,
     &CANIO_tx,

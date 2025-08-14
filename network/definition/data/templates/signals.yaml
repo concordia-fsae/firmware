@@ -71,3 +71,19 @@ signals:
       signedness: signed
       endianness: big
     continuous: true
+  tireLinearVelocity:
+    unit: 'm/s'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: -25
+        max: 50
+    continuous: true
+  tireRPM:
+    unit: 'RPM'
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: -1000
+        max: 2000
+    continuous: true

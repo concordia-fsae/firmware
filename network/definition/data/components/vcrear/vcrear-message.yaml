@@ -76,3 +76,17 @@ messages:
       shockpotdispRL:
       shockpotVoltRR:
       shockpotdispRR:
+
+  wheelSpeed:
+    description: Data from rear shock pots
+    id: 0x460
+    cycleTimeMs: 50
+    signals:
+      velocityL:
+        template: tireLinearVelocity
+      velocityR:
+        template: tireLinearVelocity
+      rpmL:
+        template: tireRPM
+      rpmR:
+        template: tireRPM

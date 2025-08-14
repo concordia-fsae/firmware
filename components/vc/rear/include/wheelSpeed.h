@@ -1,6 +1,6 @@
 /**
- * @file HW_tim.h
- * @brief  Header file for TIM firmware
+ * @file wheelSpeed.h
+ * @brief  Header file for wheel speed sensors
  */
 
 #pragma once
@@ -9,17 +9,16 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// Firmware Includes
-#include "HW.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define HW_TIM_TICK TIM2
-#define HW_TIM_TICK_IRQN TIM2_IRQn
-#define HW_TIM_TICK_ENABLECLK __HAL_RCC_TIM2_CLK_ENABLE
-#define HW_TIM_TICK_GETCLKFREQ 2*HAL_RCC_GetPCLK1Freq
+#define set_velocityL(m,b,n,s) set(m,b,n,s, wheelSpeed_getMps(WHEELSPEED_SENSOR_L))
+#define set_velocityR(m,b,n,s) set(m,b,n,s, wheelSpeed_getMps(WHEELSPEED_SENSOR_R))
+#define set_rpmL(m,b,n,s) set(m,b,n,s, wheelSpeed_getRpm(WHEELSPEED_SENSOR_L))
+#define set_rpmR(m,b,n,s) set(m,b,n,s, wheelSpeed_getRpm(WHEELSPEED_SENSOR_R))
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -27,13 +26,14 @@
 
 typedef enum
 {
-    HW_TIM_PORT_WHEELSPEED = 0x00U, // TIM4
-    HW_TIM_PORT_COUNT,
-} HW_TIM_port_E;
+    WHEELSPEED_SENSOR_L = 0x00,
+    WHEELSPEED_SENSOR_R,
+    WHEELSPEED_SENSOR_CNT,
+} wheelSpeed_Sensor_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-float32_t HW_TIM4_getFreqCH3(void);
-float32_t HW_TIM4_getFreqCH4(void);
+uint16_t  wheelSpeed_getRpm(wheelSpeed_Sensor_E wheel);
+float32_t wheelSpeed_getMps(wheelSpeed_Sensor_E wheel);
