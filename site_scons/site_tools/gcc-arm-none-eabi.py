@@ -56,6 +56,7 @@ def generate(env):
         OBJDUMP=tool_path("objdump"),
         GDB=tool_path("gdb"),
         CPP=tool_path("cpp"),  # c pre-processor, not c++
+        STRIP=tool_path("strip"),
     )
 
     env.Replace(
@@ -71,7 +72,7 @@ def generate(env):
             ASPPCOMSTR="Assembling $SOURCE > $TARGET",
             CCCOMSTR="Compiling $SOURCE > $TARGET",
             LINKCOMSTR="Linking into '$TARGET'",
-            PRELINKCOMSTR="Running c preprocessor on provided linkscript"
+            PRELINKCOMSTR="Running c preprocessor on provided linkscript",
         )
 
     # default values
@@ -126,6 +127,14 @@ def generate(env):
         ),
         src_suffix=[".obj", ".elf"],
         suffix=".asm",
+        single_source=True,
+    )
+
+    env["BUILDERS"]["Asms"] = Builder(
+        generator=asms_generator,
+        emitter=asms_emitter,
+        src_suffix=[".obj", ".elf"],
+        suffix=".asms",
         single_source=True,
     )
 
@@ -201,6 +210,28 @@ def handle_ldscript(target, env):
     env["__LINKSCRIPT"] = target[0].File(ldname)
 
     Clean(target[0], env["__LINKSCRIPT"])
+
+
+def asms_generator(target, source, env, for_signature):
+    ext = source[0].abspath.split(".")[-1]
+    env["STRIPPED_TARGET"] = source[0].target_from_source(prefix="", suffix=f"_stripped.{ext}")
+
+    strip_object = Action(
+        f"$STRIP -o $STRIPPED_TARGET $SOURCE",
+        cmdstr="Stripping object $SOURCE into $STRIPPED_TARGET",
+    )
+
+    generate_asm = Action(
+        f"$OBJDUMP -D $STRIPPED_TARGET > $TARGET",
+        cmdstr="Disassembling $STRIPPED_TARGET > $TARGET",
+    )
+
+    return [strip_object, generate_asm]
+
+
+def asms_emitter(target, source, env):
+    target.append(source[0].target_from_source(prefix="", suffix=".asms"))
+    return target, source
 
 
 def prog_generator(target, source, env, for_signature):

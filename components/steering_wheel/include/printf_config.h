@@ -1,6 +1,6 @@
 /**
  * printf_config.h
- * Config file for the lightweight printf library in /platforms/libs/printf
+ * Config file for the lightweight printf library in /embedded/libs/printf
  */
 
 #pragma once

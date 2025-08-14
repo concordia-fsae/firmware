@@ -18,7 +18,7 @@
 #include "ModuleDesc.h"
 #include "task.h"
 #include "Types.h"
-#include "uds.h"
+#include "lib_uds.h"
 #include "Utility.h"
 
 // system includes

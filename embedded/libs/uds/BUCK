@@ -1,0 +1,11 @@
+export_file(
+    name = "lib_uds.h",
+    src = "include/lib_uds.h",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "lib_udsServer.c",
+    src = "src/lib_udsServer.c",
+    visibility = ["PUBLIC"],
+)

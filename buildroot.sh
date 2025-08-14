@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 POSITIONAL_ARGS=()
 CURRENT_TAG="v1.0.0"
