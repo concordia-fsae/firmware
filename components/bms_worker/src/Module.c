@@ -55,6 +55,13 @@ static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
  */
 void Module_Init(void)
 {
+    // Initialize module stats
+    for (uint8_t i = 0U; i < MODULE_TASK_CNT; i++)
+    {
+        stats[i].total_percentage = 0x00U;
+        stats[i].iterations = 0x00U;
+    }
+
     /**< Run each of the modules Init function in order */
     for (uint8_t i = 0U; i < COUNTOF(modules); i++)
     {
