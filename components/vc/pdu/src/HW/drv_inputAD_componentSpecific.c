@@ -126,16 +126,20 @@ void drv_inputAD_1kHz_componentSpecific(void)
     }
 
     const float32_t hp_cs = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_HP_CS);
+    const float32_t thermistor_voltage = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_THERMISTORS);
 
     switch (drv_mux_getMuxOutput(&inputs_data.signal_mux))
     {
         case 0U:
             drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP, hp_cs);
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_MCU, thermistor_voltage);
             break;
         case 1U:
             drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_FAN, hp_cs);
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_HSD1, thermistor_voltage);
             break;
         case 2U:
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_HSD2, thermistor_voltage);
             break;
     }
 
