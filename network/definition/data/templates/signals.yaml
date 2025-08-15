@@ -71,3 +71,27 @@ signals:
       signedness: signed
       endianness: big
     continuous: true
+  ampPreciseSmall:
+    unit: 'A'
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0.0
+        max: 0.5
+    continuous: true
+  ampPreciseLarge:
+    unit: 'A'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0.0
+        max: 2.5
+    continuous: true
+  amps:
+    unit: 'A'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0.0
+        max: 15
+    continuous: true
