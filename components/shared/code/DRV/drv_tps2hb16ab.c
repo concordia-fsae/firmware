@@ -84,14 +84,7 @@ void drv_tps2hb16ab_run(void)
                     }
                     break;
                 case DRV_HSD_STATE_ON:
-                    if (drv_tps2hb16ab_data.request_enabled[i][n])
-                    {
-                        if (drv_tps2hb16ab_data.current[i][n] > ADC_REF_VOLTAGE * 0.9f * drv_tps2hb16ab_ics[i].cs_amp_per_volt)
-                        {
-                            drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OVERCURRENT;
-                        }
-                    }
-                    else
+                    if (drv_tps2hb16ab_data.request_enabled[i][n] == false)
                     {
                         drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OFF;
                     }
