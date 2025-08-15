@@ -203,8 +203,7 @@ static lib_interpolation_mapping_S brakeTemp_map1 = {
     .number_points = COUNTOF(brakeTemp_RLMap),
     .saturate_left = true,
     .saturate_right = true,
-    .saturate_left = false,
-    .saturate_right = false,
+
 
 };
 
@@ -213,8 +212,7 @@ static lib_interpolation_mapping_S brakeTemp_map2 = {
     .number_points = COUNTOF(brakeTemp_RRMap),
     .saturate_left = true,
     .saturate_right = true,
-    .saturate_left = false,
-    .saturate_right = false,
+
 
 };
 

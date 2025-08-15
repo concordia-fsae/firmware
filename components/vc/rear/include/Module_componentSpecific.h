@@ -46,7 +46,7 @@ typedef enum
     MODULE_TSSI,
     MODULE_BRAKEPRESSURE,
     MODULE_SHOCKPOT,
-    MODULE_CANIO_tx,
     MODULE_CNT,
+    MODULE_CANIO_tx,
     MODULE_BRAKETEMP,
 } Module_tasks_E;
