@@ -22,7 +22,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define DEFAULT_TORQUE_PITS 10.0f // 10Nm on boot
+#define DEFAULT_TORQUE_PITS 25.0f
 
 #define ABSOLUTE_MAX_TORQUE 130.0f
 #define ABSOLUTE_MIN_TORQUE 0.0f
