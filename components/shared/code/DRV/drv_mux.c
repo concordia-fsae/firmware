@@ -24,14 +24,13 @@ void drv_mux_init(drv_mux_channel_S * mux)
     // --- Compute and store bit width based on max output channels ---
     uint8_t width = 0;
     uint8_t max_channel = mux->config.max_output_channel;
-    while ((1U << width) < max_channel)
-    {
+    do {
         width++;
-    }
+    } while ((1U << width) < max_channel);
     mux->data.bit_width = width;
 
     // --- Set all mux selector pins to inactive ---
-    for (uint8_t bit = 0; bit < width; ++bit)
+    for (uint8_t bit = 0; bit < width; bit++)
     {
         drv_outputAD_channelDigital_E pin = 0U;
 
@@ -77,7 +76,7 @@ void drv_mux_setMuxOutput(drv_mux_channel_S * mux, uint8_t output)
 
     uint8_t bit_width = mux->data.bit_width;
 
-    for (uint8_t bit = 0; bit < bit_width; ++bit)
+    for (uint8_t bit = 0; bit < bit_width; bit++)
     {
         drv_outputAD_channelDigital_E pin = 0U;
         uint8_t offset = 0U;
