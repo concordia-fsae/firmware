@@ -32,6 +32,7 @@ typedef struct
             {
                 drv_outputAD_channelDigital_E pin_first;
                 drv_outputAD_channelDigital_E pin_last;
+                bool disable_on_ch0;
             } gpio;
             struct
             {

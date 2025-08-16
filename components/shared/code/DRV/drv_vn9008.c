@@ -40,7 +40,7 @@ void drv_vn9008_init(void)
         drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
         drv_vn9008_data.request_enabled[i] = false;
         drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable, DRV_IO_INACTIVE);
-        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].sense_enable, DRV_IO_INACTIVE);
+        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable_cs, DRV_IO_INACTIVE);
         drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_INACTIVE);
     }
 }
@@ -51,7 +51,7 @@ void drv_vn9008_run(void)
     {
         const float32_t cs_voltage = drv_inputAD_getAnalogVoltage(drv_vn9008_channels[i].cs_channel);
         const float32_t current =  cs_voltage * drv_vn9008_channels[i].cs_amp_per_volt;
-        const bool diagnostic = drv_outputAD_getDigitalActiveState(drv_vn9008_channels[i].sense_enable) == DRV_IO_ACTIVE;
+        const bool diagnostic = drv_outputAD_getDigitalActiveState(drv_vn9008_channels[i].enable_cs) == DRV_IO_ACTIVE;
         drv_vn9008_data.current[i] = diagnostic ? current : drv_vn9008_data.current[i];
 
         switch (drv_vn9008_data.state[i])
@@ -65,14 +65,7 @@ void drv_vn9008_run(void)
                 }
                 break;
             case DRV_HSD_STATE_ON:
-                if (drv_vn9008_data.request_enabled[i])
-                {
-                    if (cs_voltage > 0.9f * ADC_REF_VOLTAGE)
-                    {
-                        drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERCURRENT;
-                    }
-                }
-                else
+                if (drv_vn9008_data.request_enabled[i] == false)
                 {
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                 }
@@ -116,5 +109,5 @@ void drv_vn9008_setEnabled(drv_vn9008_E ic, bool enabled)
 void drv_vn9008_setCSEnabled(drv_vn9008_E ic, bool enabled)
 {
     const drv_io_activeState_E state = enabled ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
-    drv_outputAD_setDigitalActiveState(drv_vn9008_channels[ic].sense_enable, state);
+    drv_outputAD_setDigitalActiveState(drv_vn9008_channels[ic].enable_cs, state);
 }

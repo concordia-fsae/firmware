@@ -84,14 +84,7 @@ void drv_tps2hb16ab_run(void)
                     }
                     break;
                 case DRV_HSD_STATE_ON:
-                    if (drv_tps2hb16ab_data.request_enabled[i][n])
-                    {
-                        if (drv_tps2hb16ab_data.current[i][n] > ADC_REF_VOLTAGE * 0.9f * drv_tps2hb16ab_ics[i].cs_amp_per_volt)
-                        {
-                            drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OVERCURRENT;
-                        }
-                    }
-                    else
+                    if (drv_tps2hb16ab_data.request_enabled[i][n] == false)
                     {
                         drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OFF;
                     }
@@ -134,13 +127,13 @@ void drv_tps2hb16ab_setEnabled(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E outp
 
 void drv_tps2hb16ab_setCSChannel(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output)
 {
-    const drv_io_activeState_E sel2_state = output == DRV_TPS2HB16AB_OUT_1 ? DRV_IO_INACTIVE : DRV_IO_INACTIVE;
+    const drv_io_activeState_E sel2_state = output == DRV_TPS2HB16AB_OUT_1 ? DRV_IO_INACTIVE : DRV_IO_ACTIVE;
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].sel1, DRV_IO_INACTIVE);
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].sel2, sel2_state);
 }
 
 void drv_tps2hb16ab_setDiagEnabled(drv_tps2hb16ab_E ic, bool enabled)
 {
-    const drv_io_activeState_E diag_state = enabled ? DRV_IO_INACTIVE : DRV_IO_INACTIVE;
+    const drv_io_activeState_E diag_state = enabled ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].diag_en, diag_state);
 }

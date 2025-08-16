@@ -87,10 +87,11 @@ struct inputs_data inputs_data = {
     .signal_mux = {
         .type = DRV_MUX_TYPE_GPIO,
         .config = {
-            .max_output_channel = 2U,
+            .max_output_channel = 3U,
             .outputs.gpio = {
                 .pin_first = DRV_OUTPUTAD_MUX2_SEL1,
                 .pin_last = DRV_OUTPUTAD_MUX2_SEL2,
+                .disable_on_ch0 = true,
             },
         },
     }
@@ -126,21 +127,12 @@ void drv_inputAD_1kHz_componentSpecific(void)
     }
 
     const float32_t hp_cs = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_HP_CS);
-
-    switch (drv_mux_getMuxOutput(&inputs_data.signal_mux))
-    {
-        case 0U:
-            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP, hp_cs);
-            break;
-        case 1U:
-            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_FAN, hp_cs);
-            break;
-        case 2U:
-            break;
-    }
-
+    const float32_t thermistor_voltage = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_THERMISTORS);
     const uint8_t current_channel = drv_mux_getMuxOutput(&inputs_data.signal_mux);
-    drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)((current_channel + 1U) % 3U));
+
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP + current_channel, hp_cs);
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_MCU + current_channel, thermistor_voltage);
+    drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)(current_channel + 1U));
 
     drv_inputAD_private_runDigital();
 }

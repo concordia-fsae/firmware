@@ -64,3 +64,67 @@ messages:
       vcu2HsdState:
       bms5HsdState:
       bms6HsdState:
+  hsdCurrentBMSW:
+    description: Current through each HSD
+    id: 0x140
+    cycleTimeMs: 50
+    sourceBuses: veh
+    signals:
+      bms1Current:
+        template: ampPreciseLarge
+      bms2Current:
+        template: ampPreciseLarge
+      bms3Current:
+        template: ampPreciseLarge
+      bms4Current:
+        template: ampPreciseLarge
+      bms5Current:
+        template: ampPreciseLarge
+      bms6Current:
+        template: ampPreciseLarge
+  hsdCurrent1:
+    description: Current through each HSD
+    id: 0x141
+    cycleTimeMs: 50
+    sourceBuses: veh
+    signals:
+      pumpCurrent:
+        template: amps
+      fanCurrent:
+        template: amps
+      accumCurrent:
+        template: ampPreciseLarge
+      spareCurrent:
+        template: ampPreciseLarge
+      shutdownCurrent:
+        template: ampPreciseSmall
+      sensorCurrent:
+        template: ampPreciseSmall
+  hsdCurrent2:
+    description: Current through each HSD
+    id: 0x142
+    cycleTimeMs: 50
+    sourceBuses: veh
+    signals:
+      vc1Current:
+        template: ampPreciseLarge
+      vc2Current:
+        template: ampPreciseLarge
+      vcu1Current:
+        template: ampPreciseLarge
+      vcu2Current:
+        template: ampPreciseLarge
+      vcu3Current:
+        template: ampPreciseLarge
+      mcCurrent:
+        template: ampPreciseLarge
+  hsdCurrent3:
+    description: Current through each HSD
+    id: 0x143
+    cycleTimeMs: 50
+    sourceBuses: veh
+    signals:
+      cockpitCurrent:
+        template: ampPreciseLarge
+      hveCurrent:
+        template: ampPreciseSmall
