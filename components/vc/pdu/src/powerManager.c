@@ -17,6 +17,8 @@
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 
+#define PDU_CS_AMPS_PER_VOLT 0.20f
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -24,6 +26,7 @@
 static struct
 {
     float32_t total_current;
+    float32_t pdu_current;
     float32_t glv_voltage;
 } powerManager_data;
 
@@ -86,9 +89,16 @@ static void powerManager_periodic_10Hz(void)
         tmp_current += drv_vn9008_getCurrent(i);
     }
 
-    powerManager_data.total_current = tmp_current;
+    const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
+    powerManager_data.pdu_current = pdu_current;
+    powerManager_data.total_current = tmp_current + pdu_current;
     drv_tps2hb16ab_run();
     drv_vn9008_run();
+}
+
+float32_t powerManager_getPduCurrent(void)
+{
+    return powerManager_data.pdu_current;
 }
 
 /******************************************************************************
