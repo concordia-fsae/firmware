@@ -31,7 +31,6 @@ typedef struct
     drv_outputAD_channelDigital_E fault_reset;
     drv_outputAD_channelDigital_E enable;
     drv_outputAD_channelDigital_E enable_cs;
-    drv_outputAD_channelDigital_E sense_enable;
 } drv_vn9008_channelConfig_S;
 
 extern const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT];
