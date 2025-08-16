@@ -65,14 +65,7 @@ void drv_vn9008_run(void)
                 }
                 break;
             case DRV_HSD_STATE_ON:
-                if (drv_vn9008_data.request_enabled[i])
-                {
-                    if (cs_voltage > 0.9f * ADC_REF_VOLTAGE)
-                    {
-                        drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERCURRENT;
-                    }
-                }
-                else
+                if (drv_vn9008_data.request_enabled[i] == false)
                 {
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                 }
