@@ -32,15 +32,16 @@ static void cooling_init()
  */
 static void cooling10Hz_PRD(void)
 {
-    if ((app_vehicleState_getState() == VEHICLESTATE_ON_HV) ||
-        (app_vehicleState_getState() == VEHICLESTATE_TS_RUN))
+    if (app_vehicleState_getState() == VEHICLESTATE_ON_HV)
     {
-        // TODO: Make less ret
-        drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, true);
         drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_PUMP, true); // Power of pump controlled by the cooling manager
 #if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
         HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.75f);
 #endif
+    }
+    else if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
+    {
+        drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, true);
     }
     else
     {
