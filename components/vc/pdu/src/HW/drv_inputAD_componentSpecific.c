@@ -87,7 +87,7 @@ struct inputs_data inputs_data = {
     .signal_mux = {
         .type = DRV_MUX_TYPE_GPIO,
         .config = {
-            .max_output_channel = 2U,
+            .max_output_channel = 3U,
             .outputs.gpio = {
                 .pin_first = DRV_OUTPUTAD_MUX2_SEL1,
                 .pin_last = DRV_OUTPUTAD_MUX2_SEL2,
@@ -144,7 +144,7 @@ void drv_inputAD_1kHz_componentSpecific(void)
     }
 
     const uint8_t current_channel = drv_mux_getMuxOutput(&inputs_data.signal_mux);
-    drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)((current_channel + 1U) % 3U));
+    drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)(current_channel + 1U));
 
     drv_inputAD_private_runDigital();
 }
