@@ -80,18 +80,20 @@ void drv_mux_setMuxOutput(drv_mux_channel_S * mux, uint8_t output)
     for (uint8_t bit = 0; bit < bit_width; ++bit)
     {
         drv_outputAD_channelDigital_E pin = 0U;
+        uint8_t offset = 0U;
 
         switch (mux->type)
         {
             case DRV_MUX_TYPE_GPIO:
                 pin = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio.pin_first + bit);
+                offset = (mux->config.outputs.gpio.disable_on_ch0 ? 1U : 0U);
                 break;
             case DRV_MUX_TYPE_GPIO_EN:
                 pin = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio_en.pin_first + bit);
                 break;
         }
 
-        drv_io_activeState_E state = (output_channel & (1U << bit)) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+        drv_io_activeState_E state = ((output_channel + offset) & (1U << bit)) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
         drv_outputAD_setDigitalActiveState(pin, state);
     }
 }

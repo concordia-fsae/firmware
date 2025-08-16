@@ -91,6 +91,7 @@ struct inputs_data inputs_data = {
             .outputs.gpio = {
                 .pin_first = DRV_OUTPUTAD_MUX2_SEL1,
                 .pin_last = DRV_OUTPUTAD_MUX2_SEL2,
+                .disable_on_ch0 = true,
             },
         },
     }
