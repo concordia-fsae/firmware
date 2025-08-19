@@ -28,7 +28,8 @@
 #include "cockpitLights.h"
 #include "steeringAngle.h"
 #include "shockpot.h"
-#include "Module.h"
+#include "brakeTemp.h"
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -75,9 +76,23 @@
 #define set_imdLightState(m,b,n,s) set(m,b,n,s, cockpitLights_imd_getStateCAN())
 #define set_steeringAngle(m,b,n,s) set (m,b,n,s, steeringAngle_getSteeringAngle())
 #define set_steeringAngleVoltage(m,b,n,s) set (m,b,n,s,steeringAngle_getSteeringVoltage())
+#define set_shockpotdispFL(m,b,n,s) set(m,b,n,s, shockpot_getFLDisp())
+#define set_shockpotdispFR(m,b,n,s) set(m,b,n,s, shockpot_getFRDisp())
+#define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
+#define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
+#define set_braketempTempFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLTemp());
+#define set_braketempTempFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRTemp());
+#define set_braketempVoltFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLVoltage());
+#define set_braketempVoltFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRVoltage());
+#define set_steeringAngle(m,b,n,s) set (m,b,n,s, steeringAngle_getSteeringAngle())
+#define set_steeringAngleVoltage(m,b,n,s) set (m,b,n,s,steeringAngle_getSteeringVoltage())
 
 #define set_shockpotdispFL(m,b,n,s) set(m,b,n,s, shockpot_getFLDisp())
 #define set_shockpotdispFR(m,b,n,s) set(m,b,n,s, shockpot_getFRDisp())
 #define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
 #define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
+#define set_braketempTempFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLTemp());
+#define set_braketempTempFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRTemp());
+#define set_braketempVoltFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLVoltage());
+#define set_braketempVoltFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRVoltage());
 #include "TemporaryStubbing.h"

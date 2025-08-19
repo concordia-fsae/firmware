@@ -76,3 +76,12 @@ messages:
       shockpotdispRL:
       shockpotVoltRR:
       shockpotdispRR:
+  brakeTemp:
+    description: Data from the rear brake Temp sensors
+    id: 0x455
+    cycleTimeMs: 100
+    signals:
+      brakeTempVoltRL:
+      brakeTempTempRL:
+      brakeTempVoltRR:
+      brakeTempTempRR:

@@ -88,7 +88,7 @@ signals:
   imdLightState:
     description: "State of the IMD light"
     discreteValues: digitalStatus
-  
+
   shockpotVoltFL:
     description: Front Left shock pot Voltage
     template: voltsPrecise
@@ -115,4 +115,82 @@ signals:
       range:
         min: 0
         max: 75
+
+
+  brakeTempVoltFL:
+    description: Front Left brake Temp Voltage
+    template: voltsPrecise
+
+  brakeTempTempFL:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+    continuous: true
+
+  brakeTempVoltFR:
+    description: Front Right brake Temp Voltage
+    template: voltsPrecise
+
+  brakeTempTempFR:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+
+  shockpotVoltFL:
+    description: Front Left shock pot Voltage
+    template: voltsPrecise
+
+  shockpotdispFL:
+    unit: mm
+    description: "Shock pot displacment front left"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 75
+    continuous: true
+
+  shockpotVoltFR:
+    description: Front right shock pot Voltage
+    template: voltsPrecise
+
+  shockpotdispFR:
+    unit: mm
+    description: "Shock pot displacment front right"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 75
+
+  brakeTempVoltFL:
+    description: Front Left brake Temp Voltage
+    template: voltsPrecise
+
+  brakeTempTempFL:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+    continuous: true
+
+  brakeTempVoltFR:
+    description: Front Right brake Temp Voltage
+    template: voltsPrecise
+
+  brakeTempTempFR:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
     continuous: true

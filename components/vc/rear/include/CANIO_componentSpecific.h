@@ -26,6 +26,7 @@
 #include "mcManager.h"
 #include "shockpot.h"
 #include "Module.h"
+#include "brakeTemp.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -59,5 +60,9 @@
 #define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRRDisp())
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
+#define set_braketempTempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLTemp());
+#define set_braketempTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRTemp());
+#define set_braketempVoltRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLVoltage());
+#define set_braketempVoltRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRVoltage());
 
 #include "TemporaryStubbing.h"
