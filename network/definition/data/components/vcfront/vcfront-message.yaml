@@ -66,6 +66,16 @@ messages:
       bmsLightState:
       imdLightState:
 
+  brakeTemperatures:
+    description: Data from the front brake Temp sensors
+    id: 0x456
+    cycleTimeMs: 100
+    signals:
+      brakeTempVoltageFL:
+      brakeTempFL:
+      brakeTempVoltageFR:
+      brakeTempFR:
+
   outputState:
     description: Information about the VCFRONT output states
     cycleTimeMs: 100

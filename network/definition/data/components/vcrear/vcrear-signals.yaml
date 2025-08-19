@@ -116,3 +116,29 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  brakeTempVoltageRL:
+    description: Rear Left brake Temp Voltage
+    template: voltsPrecise
+
+  brakeTempRL:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: -20
+        max: 800
+    continuous: true
+
+  brakeTempVoltageRR:
+    description: Rear Right brake Temp Voltage
+    template: voltsPrecise
+
+  brakeTempRR:
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: -20
+        max: 800
+    continuous: true
