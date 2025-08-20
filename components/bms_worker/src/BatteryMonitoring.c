@@ -76,6 +76,7 @@ static void BMS_Init(void)
 {
     memset(&BMS, 0, sizeof(BMS));
     BMS.state = BMS_INIT;
+    BMS.delayed_measurement = false;
 
     if (!MAX_init())
     {
@@ -141,6 +142,7 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling_start       = UINT32_MAX;
             BMS.pack_voltage                     = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT) * 16;
             BMS_setOutputCell(BMS.connected_cells - 1);
+            BMS.delayed_measurement              = true;
             BMS.state                            = BMS_HOLDING;
         }
     }
@@ -161,9 +163,9 @@ static void BMS100Hz_PRD()
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
             MAX_readWriteToChip();
-            max_chip.config.sampling_start = UINT32_MAX;
-
-            BMS.state                          = BMS_HOLDING;
+            max_chip.config.sampling_start       = UINT32_MAX;
+            BMS.delayed_measurement              = true;
+            BMS.state                            = BMS_HOLDING;
         }
     }
 #endif // FEATURE_CELL_DIAGNOSTICS
@@ -418,6 +420,7 @@ void BMS_checkFault(void)
  */
 void BMS_setOutputCell(MAX_selectedCell_E cell)
 {
+
     max_chip.config.sampling           = false;
     max_chip.config.diagnostic_enabled = false;
     max_chip.config.low_power_mode     = false;
@@ -481,6 +484,7 @@ void BMS_measurementComplete(void)
 
     BMS.state = BMS_CALIBRATING;
     while (!max_chip.state.ready) MAX_readWriteToChip();
+    BMS.state                          = BMS_WAITING;
 #endif // FEATURE_MAX14921_CALIBRATE
 #if FEATURE_CELL_DIAGNOSTICS
     max_chip.config.diagnostic_enabled = true;
