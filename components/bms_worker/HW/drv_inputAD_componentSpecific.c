@@ -81,16 +81,19 @@ static void drv_inputAD_1kHz_PRD(void)
     {
         const MAX_selectedCell_E current_cell = BMS_getCurrentOutputCell();
 
-        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
-                                             HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
-
         if (current_cell == MAX_CELL1)
         {
+            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
+                                                 HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
             BMS_measurementComplete();
         }
         else
         {
-            BMS_setOutputCell(current_cell - 1);
+            if (BMS_setOutputCell(current_cell - 1))
+            {
+                drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
+                                                     HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
+            }
         }
     }
     else if (BMS.state == BMS_SAMPLING)
