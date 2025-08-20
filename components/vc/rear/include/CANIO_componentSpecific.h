@@ -60,9 +60,9 @@
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
 
-#define set_braketempTempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLTemp());
-#define set_braketempTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRTemp());
-#define set_braketempVoltRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLVoltage());
-#define set_braketempVoltRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRVoltage());
+#define set_brakeTempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLTemp());
+#define set_brakeTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRTemp());
+#define set_brakeTempVoltageRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLVoltage());
+#define set_brakeTempVoltageRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRVoltage());
 
 #include "TemporaryStubbing.h"
