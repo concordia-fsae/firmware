@@ -490,7 +490,9 @@ void BMS_measurementComplete(void)
     MAX_readWriteToChip();
 
     BMS.state = BMS_CALIBRATING;
-    while (!max_chip.state.ready) MAX_readWriteToChip();
+    MAX_readWriteToChip();
+    if (!max_chip.state.ready) return;
+
     BMS.state                          = BMS_WAITING;
 #endif // FEATURE_MAX14921_CALIBRATE
 #if FEATURE_CELL_DIAGNOSTICS
