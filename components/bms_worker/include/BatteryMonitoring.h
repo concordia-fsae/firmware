@@ -73,6 +73,7 @@ typedef struct
 typedef struct
 {
     BMS_State_E state;
+    bool        delayed_measurement;
     bool        fault;
     uint16_t    balancing_cells;
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [V], precision 1V
@@ -109,7 +110,7 @@ extern BMS_S BMS;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void BMS_setOutputCell(MAX_selectedCell_E cell);
+bool BMS_setOutputCell(MAX_selectedCell_E cell);
 void BMS_toSleep(void);
 void BMS_wakeUp(void);
 MAX_selectedCell_E BMS_getCurrentOutputCell(void);
