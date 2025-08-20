@@ -25,7 +25,9 @@
 #include "drv_tps20xx.h"
 #include "mcManager.h"
 #include "shockpot.h"
+#include "brakeTemp.h"
 #include "Module.h"
+
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
