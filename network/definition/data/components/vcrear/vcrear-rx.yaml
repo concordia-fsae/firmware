@@ -24,7 +24,10 @@ messages:
   PM100DX_torqueAndTimerInfo:
     destBuses: veh
     sourceBuses: ass
-  
+  PM100DX_currentInfo:
+    destBuses: veh
+    sourceBuses: ass
+
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh
