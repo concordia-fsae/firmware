@@ -31,11 +31,11 @@ static struct
 
 static lib_interpolation_point_S brakeTemp_FLMap[] = {
     {
-        .x = 0.5f, // sensor reference voltage
+        .x = 0.83f, // sensor reference voltage
         .y = 0.0f,
     },
     {
-        .x = 4.5f, // voltage
+        .x = 2.7f, // voltage
         .y = 800.0f,
     },
 
@@ -43,11 +43,11 @@ static lib_interpolation_point_S brakeTemp_FLMap[] = {
 
 static lib_interpolation_point_S brakeTemp_FRMap[] = {
     {
-        .x = 0.5f, // sensor reference voltage
+        .x = 0.83f, // sensor reference voltage
         .y = 0.0f,
     },
     {
-        .x = 4.5f, // voltage
+        .x = 2.7f, // voltage
         .y = 800.0f,
     },
 

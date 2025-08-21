@@ -32,71 +32,12 @@ static struct
 
 static lib_interpolation_point_S brakeTemp_RLMap[] = {
     {
-        .x = 0.5f, // sensor reference voltage
+        .x = 0.83f, // on the datasheet it reads 0.5 but the function outputs on a 3.3v scale and to change
+                        //it to a 5V scale I need to multiply by (3/5)
         .y = 0.0f,
     },
     {
-        .x = 0.6f, // voltage
-        .y = 20.0f,
-    },
-    {
-        .x = 0.7f, // voltage
-        .y = 40.0f,
-    },
-    {
-        .x = 0.8f, // voltage
-        .y = 60.0f,
-    },
-    {
-        .x = 0.9f, // voltage
-        .y = 80.0f,
-    },
-    {
-        .x = 1.0f, // voltage
-        .y = 100.0f,
-    },
-    {
-        .x = 1.10f, // voltage
-        .y = 120.0f,
-    },
-    {
-        .x = 1.2f, // voltage
-        .y = 140.0f,
-    },
-    {
-        .x = 1.3f, // voltage
-        .y = 160.0f,
-    },
-    {
-        .x = 1.4f, // voltage
-        .y = 180.0f,
-    },
-    {
-        .x = 1.5f, // voltage
-        .y = 200.0f,
-    },
-    {
-        .x = 2.0f, // voltage
-        .y = 300.0f,
-    },
-    {
-        .x = 2.5f, // voltage
-        .y = 400.0f,
-    },
-    {
-        .x = 3.0f, // voltage
-        .y = 500.0f,
-    },
-    {
-        .x = 3.5f, // voltage
-        .y = 600.0f,
-    },
-    {
-        .x = 4.0f, // voltage
-        .y = 700.0f,
-    },
-    {
-        .x = 4.5f, // voltage
+        .x = 2.7f, // voltage
         .y = 800.0f,
     },
 
@@ -104,73 +45,13 @@ static lib_interpolation_point_S brakeTemp_RLMap[] = {
 
 static lib_interpolation_point_S brakeTemp_RRMap[] = {
     {
-        .x = 0.5f, // sensor reference voltage
+        .x = 0.83f, // sensor reference voltage
         .y = 0.0f,
     },
     {
-        .x = 0.6f, // voltage
-        .y = 20.0f,
-    },
-    {
-        .x = 0.7f, // voltage
-        .y = 40.0f,
-    },
-    {
-        .x = 0.8f, // voltage
-        .y = 60.0f,
-    },
-    {
-        .x = 0.9f, // voltage
-        .y = 80.0f,
-    },
-    {
-        .x = 1.0f, // voltage
-        .y = 100.0f,
-    },
-    {
-        .x = 1.10f, // voltage
-        .y = 120.0f,
-    },
-    {
-        .x = 1.2f, // voltage
-        .y = 140.0f,
-    },
-    {
-        .x = 1.3f, // voltage
-        .y = 160.0f,
-    },
-    {
-        .x = 1.4f, // voltage
-        .y = 180.0f,
-    },
-    {
-        .x = 1.5f, // voltage
-        .y = 200.0f,
-    },
-    {
-        .x = 2.0f, // voltage
-        .y = 300.0f,
-    },
-    {
-        .x = 2.5f, // voltage
-        .y = 400.0f,
-    },
-    {
-        .x = 3.0f, // voltage
-        .y = 500.0f,
-    },
-    {
-        .x = 3.5f, // voltage
-        .y = 600.0f,
-    },
-    {
-        .x = 4.0f, // voltage
-        .y = 700.0f,
-    },
-    {
-        .x = 4.5f, // voltage
+        .x = 2.7f, // voltage
         .y = 800.0f,
-    },
+    }
 
 };
 
