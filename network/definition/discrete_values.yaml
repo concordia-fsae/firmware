@@ -167,3 +167,8 @@ shutdownCircuitStatus:
   "SNA": 0
   "OPEN": 1
   "CLOSED": 2
+
+gear:
+  "SNA": 0
+  "FORWARD": 1
+  "REVERSE": 2
