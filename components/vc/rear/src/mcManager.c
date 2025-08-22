@@ -19,8 +19,6 @@
  ******************************************************************************/
 
 #define MCMANAGER_TORQUE_LIMIT 130.0f
-#define MCMANAGER_FORWARD_DIRECTION MCMANAGER_FORWARD
-#define MCMANAGER_REVERSE_DIRECTION ((MCMANAGER_FORWARD_DIRECTION == MCMANAGER_FORWARD) ? MCMANAGER_REVERSE : MCMANAGER_FORWARD)
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -50,7 +48,7 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
     switch (mcManager_data.direction)
     {
         default:
-            return CAN_PM100DXDIRECTIONCOMMAND_REVERSE;
+            return CAN_PM100DXDIRECTIONCOMMAND_FORWARD;
     }
 }
 
@@ -84,7 +82,7 @@ static void mcManager_init(void)
 
     mcManager_data.torque_command = 0.0f;
     mcManager_data.torque_limit = MCMANAGER_TORQUE_LIMIT;
-    mcManager_data.direction = MCMANAGER_FORWARD_DIRECTION;
+    mcManager_data.direction = MCMANAGER_FORWARD;
     mcManager_data.enable = MCMANAGER_DISABLE;
     mcManager_data.last_contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
     mcManager_data.clear_faults = false;

@@ -3,70 +3,95 @@ messages:
     description: UDS request message for the BMS Worker 0
     cycleTimeMs: 10
     id: 0x600
+    sourceBuses:
+      - veh
     template: uds
 
   bmsw1UdsRequest:
     description: UDS request message for the BMS Worker 1
     cycleTimeMs: 10
     id: 0x601
+    sourceBuses:
+      - veh
     template: uds
 
   bmsw2UdsRequest:
     description: UDS request message for the BMS Worker 2
     cycleTimeMs: 10
     id: 0x602
+    sourceBuses:
+      - veh
     template: uds
 
   bmsw3UdsRequest:
     description: UDS request message for the BMS Worker 3
     cycleTimeMs: 10
     id: 0x603
+    sourceBuses:
+      - veh
     template: uds
 
   bmsw4UdsRequest:
     description: UDS request message for the BMS Worker 4
     cycleTimeMs: 10
     id: 0x604
+    sourceBuses:
+      - veh
     template: uds
 
   bmsw5UdsRequest:
     description: UDS request message for the BMS Worker 5
     cycleTimeMs: 10
     id: 0x605
+    sourceBuses:
+      - veh
     template: uds
 
   bmsbUdsRequest:
     description: UDS request message for the BMS Boss
     cycleTimeMs: 10
     id: 0x609
+    sourceBuses:
+      - veh
     template: uds
 
   stwUdsRequest:
     description: UDS request message for the Steering Wheel
     cycleTimeMs: 10
     id: 0x620
+    sourceBuses:
+      - veh
     template: uds
 
   vcfrontUdsRequest:
     description: UDS request message for the VCFRONT
     cycleTimeMs: 10
     id: 0x630
+    sourceBuses:
+      - veh
     template: uds
 
   vcrearUdsRequest:
     description: UDS request message for the VCREAR
     cycleTimeMs: 10
     id: 0x631
+    sourceBuses:
+      - veh
+      - ass
     template: uds
 
   vcpduUdsRequest:
     description: UDS request message for the VCPDU
     cycleTimeMs: 10
     id: 0x632
+    sourceBuses:
+      - veh
     template: uds
 
   swsUdsRequest:
     description: UDS request message for the Steering Wheel Switchs
     cycleTimeMs: 10
     id: 0x651
+    sourceBuses:
+      - veh
     template: uds

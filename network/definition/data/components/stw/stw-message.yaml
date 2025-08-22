@@ -35,3 +35,5 @@ messages:
         startBit: 16
       raceMode:
         startBit: 24
+      gear:
+        startBit: 32

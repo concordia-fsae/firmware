@@ -10,6 +10,7 @@
 // Firmware Includes
 #include "HW_intc.h"
 #include "NetworkDefines_generated.h"
+#include "HW_tim.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -18,7 +19,7 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
-extern TIM_HandleTypeDef htim4;
+extern TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
 extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 
@@ -105,6 +106,11 @@ void ADC1_2_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
     HAL_TIM_IRQHandler(&htim_tick);
+}
+
+void TIM4_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_WHEELSPEED]);
 }
 
 // CAN interrupts

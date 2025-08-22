@@ -11,6 +11,7 @@
 #include "Module.h"
 #include "drv_tps20xx.h"
 #include "drv_inputAD.h"
+#include "wheelSpeed.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -28,6 +29,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &brakeLight_desc,
     &horn_desc,
     &tssi_desc,
+    &wheelSpeed_desc,
     &brakePressure_desc,
     &shockpot_desc,
     &CANIO_tx,
