@@ -1,10 +1,26 @@
 messages:
   BMSB_udsResponse:
+    sourceBuses: veh
   BMSW0_udsResponse:
+    sourceBuses: veh
   BMSW1_udsResponse:
+    sourceBuses: veh
   BMSW2_udsResponse:
+    sourceBuses: veh
   BMSW3_udsResponse:
+    sourceBuses: veh
   BMSW4_udsResponse:
+    sourceBuses: veh
   BMSW5_udsResponse:
+    sourceBuses: veh
   STW_udsResponse:
+    sourceBuses: veh
+  VCFRONT_udsResponse:
+    sourceBuses: veh
+  VCPDU_udsResponse:
+    sourceBuses: veh
+  VCREAR_udsResponse:
+    sourceBuses:
+      - veh
+      - ass
 signals:
