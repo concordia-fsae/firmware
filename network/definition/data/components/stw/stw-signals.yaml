@@ -41,6 +41,10 @@ signals:
     description: State of the steering wheel race mode
     discreteValues: raceMode
 
+  gear:
+    description: State of the steering wheel requested gear
+    discreteValues: gear
+
   maxRequestTorque:
     unit: Nm
     description: Max torque to be requested
