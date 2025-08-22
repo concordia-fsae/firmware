@@ -541,8 +541,14 @@ def process_bridges(node: CanNode):
                     continue
                 if "sourceBuses" not in definition:
                     raise Exception(f"Source bus is not defined.")
-                if definition["sourceBuses"] not in can_bus_defs:
-                    raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                if type(definition["sourceBuses"]) is list:
+                    for bus in definition["sourceBuses"]:
+                        if bus not in can_bus_defs:
+                            raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+
+                else:
+                    if definition["sourceBuses"] not in can_bus_defs:
+                        raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
             except Exception as e:
                 print(f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid.")
                 print(f"CAN RX Message Error: {e}")
@@ -619,10 +625,17 @@ def process_receivers(bus: CanBus, node: CanNode):
         if definition is not None:
             try:
                 RX_ITEM_SCHEMA.validate(definition)
-                if "sourceBuses" in definition and definition["sourceBuses"] not in can_bus_defs:
-                    raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                if "sourceBuses" not in definition:
+                    continue
+                if type(definition["sourceBuses"]) is list:
+                    if bus not in definition["sourceBuses"]:
+                        return
+
+                else:
+                    if definition["sourceBuses"] not in can_bus_defs:
+                        raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
             except Exception as e:
-                print(f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid.")
+                print(f"CAN message fuck reception definition for '{msg}' in node '{node.name}' is invalid.")
                 print(f"CAN RX Message Error: {e}")
                 error = True
                 continue
