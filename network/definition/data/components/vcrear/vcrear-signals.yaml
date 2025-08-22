@@ -126,7 +126,7 @@ signals:
     nativeRepresentation:
       bitWidth: 10
       range:
-        min: o
+        min: 0
         max: 800
     continuous: true
 
