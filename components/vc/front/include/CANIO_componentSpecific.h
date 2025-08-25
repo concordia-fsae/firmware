@@ -82,6 +82,7 @@
 #define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
 #define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
 
+//brakeTemp currently voided
 #define set_brakeTempFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLTemp());
 #define set_brakeTempFR(m,b,n,s) set(m,b,n,s, brakeTemp_getFRTemp());
 #define set_brakeTempVoltageFL(m,b,n,s) set(m,b,n,s, brakeTemp_getFLVoltage());
