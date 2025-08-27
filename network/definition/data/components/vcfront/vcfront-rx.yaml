@@ -2,6 +2,8 @@ messages:
   UDSCLIENT_vcfrontUdsRequest:
     sourceBuses: veh
     unrecorded: true
+
+  
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh
@@ -12,4 +14,6 @@ signals:
   STW_maxRequestTorque:
     sourceBuses: veh
   STW_raceMode:
+    sourceBuses: veh
+  VCREAR_brakePressure:
     sourceBuses: veh

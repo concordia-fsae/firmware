@@ -116,3 +116,13 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  brakeBias:
+    unit: "%"
+    description: "Brake Bias expressed as a percentage, indicating the percentage of the braking that is coming from the front axle."
+    nativeRepresentation:
+      bitWidth: 10 
+      range:
+        min: 0
+        max: 100
+    continuous: true 
