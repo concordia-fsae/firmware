@@ -82,8 +82,8 @@ pm100dxInverterLockoutState:
 # 0= Reverse if inverter enabled & 0= stopped if inverter disabled.
 # I'm not sure how to implement that condition in yaml
 pm100dxDirectionCommand:
-  "FORWARD": 1
-  "REVERSE": 0
+  "FORWARD": 0
+  "REVERSE": 1
 
 pm100dxBmsActive:
   "BMS_NOT_RECEIVED": 0
@@ -155,7 +155,9 @@ tssiState:
 
 pm100dxEepromAddress:
   "RELAY_COMMAND": 1
+  "GAMMA_ADJUST": 12
   "FAULT_CLEAR": 20
+  "GAMMA_ADJUST_EEPROM": 152
 
 pm100dxEepromRWCommand:
   "READ": 0
@@ -165,3 +167,8 @@ shutdownCircuitStatus:
   "SNA": 0
   "OPEN": 1
   "CLOSED": 2
+
+gear:
+  "SNA": 0
+  "FORWARD": 1
+  "REVERSE": 2
