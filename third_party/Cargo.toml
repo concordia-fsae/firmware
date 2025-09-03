@@ -1,0 +1,16 @@
+[workspace]
+
+[package]
+name = "rust-third-party"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Dummy target to keep Cargo happy
+[[bin]]
+name = "fake"
+path = "/dev/null"
+
+[dependencies]
+socketcan = "3.5.0"
+libc = "0.2.175"

@@ -1,4 +1,4 @@
-load("@toolchains//gcc-arm-none-eabi/defs.bzl", "generate_asms", "generate_stripped_asms")
+load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//tools/hextools/defs.bzl", "inject_crc")
 

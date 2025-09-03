@@ -19,6 +19,18 @@ releases = {
             "archive": "https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz",
             "strip_prefix": "arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi",
         },
+        "x86_64-linux-aarch64-linux-gnu": {
+            "sha256sum": "47aeefc02b0ee39f6d4d1812110952975542d365872a7474b5306924bca4faa1",
+            "size": "",
+            "archive": "https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz",
+            "strip_prefix": "arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu",
+        },
+        "x86_64-linux-arm-linux-gnueabihf": {
+            "sha256sum": "32301a5a33aab47810837cdab848a5a513ca22804d3168d3ada5833828b07912",
+            "size": "",
+            "archive": "https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz",
+            "strip_prefix": "arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-linux-gnueabihf",
+        },
         "x86_64-macos": {
             "sha256sum": "2d9e717dd4f7751d18936ae1365d25916534105ebcb7583039eff1092b824505",
             "size": "",
