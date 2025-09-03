@@ -12,5 +12,6 @@ name = "fake"
 path = "/dev/null"
 
 [dependencies]
-socketcan = "3.5.0"
+clap = { version = "4", features = ["derive"] }
 libc = "0.2.175"
+socketcan = "3.5.0"
