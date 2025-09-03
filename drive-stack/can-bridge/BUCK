@@ -1,7 +1,7 @@
 rust_binary(
-    name = "bin",
+    name = "can-bridge",
     srcs = ["src/main.rs"],
-    edition = "2021",
+    edition = "2024",
     deps = [
         "//third_party:clap",
         "//third_party:libc",

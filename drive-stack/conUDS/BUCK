@@ -1,0 +1,38 @@
+rust_library(
+    name = "conUDS",
+    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
+    edition = "2021",
+    deps = [
+        "//third_party:anyhow",
+        "//third_party:argh",
+        "//third_party:automotive_diag",
+        "//third_party:crc",
+        "//third_party:ecu_diagnostics",
+        "//third_party:indicatif",
+        "//third_party:log",
+        "//third_party:serde",
+        "//third_party:serde_derive",
+        "//third_party:serde_yaml",
+        "//third_party:tokio",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "bin",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [
+        ":conUDS",
+        "//third_party:anyhow",
+        "//third_party:argh",
+        "//third_party:ecu_diagnostics",
+        "//third_party:log",
+        "//third_party:simplelog",
+        "//third_party:tokio",
+    ],
+    visibility = ["PUBLIC"],
+)
