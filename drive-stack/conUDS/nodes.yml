@@ -1,0 +1,41 @@
+nodes:
+  dbg:
+    request_id: 0x456
+    response_id: 0x123
+  stw:
+    # just added this for testing, this isn't actually true yet
+    request_id: 0x111
+    response_id: 0x112
+  bmsw0:
+    request_id: 0x600
+    response_id: 0x640
+  bmsw1:
+    request_id: 0x601
+    response_id: 0x641
+  bmsw2:
+    request_id: 0x602
+    response_id: 0x642
+  bmsw3:
+    request_id: 0x603
+    response_id: 0x643
+  bmsw4:
+    request_id: 0x604
+    response_id: 0x644
+  bmsw5:
+    request_id: 0x605
+    response_id: 0x645
+  bmsb:
+    request_id: 0x609
+    response_id: 0x649
+  vcfront:
+    request_id: 0x630
+    response_id: 0x670
+  vcrear:
+    request_id: 0x631
+    response_id: 0x671
+  vcpdu:
+    request_id: 0x632
+    response_id: 0x672
+  sws:
+    request_id: 0x651
+    response_id: 0x691
