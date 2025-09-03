@@ -1,0 +1,53 @@
+config_setting(
+    name = "arm64-mac",
+    constraint_values = [
+        "prelude//os/constraints:mac",
+        "prelude//cpu/constraints:arm64",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+config_setting(
+    name = "x86_64-linux",
+    constraint_values = [
+        "prelude//os/constraints:linux",
+        "prelude//cpu/constraints:x86_64",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+config_setting(
+    name = "arm32-linux",
+    constraint_values = [
+        "prelude//os/constraints:linux",
+        "prelude//cpu/constraints:arm32",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+config_setting(
+    name = "arm64-linux",
+    constraint_values = [
+        "prelude//os/constraints:linux",
+        "prelude//cpu/constraints:arm64",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+config_setting(
+    name = "x86_64-windows",
+    constraint_values = [
+        "prelude//os/constraints:windows",
+        "prelude//cpu/constraints:x86_64",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+config_setting(
+    name = "arm32-none",
+    constraint_values = [
+        "prelude//os/constraints:none",
+        "prelude//cpu/constraints:arm32",
+    ],
+    visibility = ["PUBLIC"],
+)

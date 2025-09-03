@@ -1,0 +1,13 @@
+rust_binary(
+    name = "bin",
+    crate = "can-bridge",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [
+        "//third_party:socketcan",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)

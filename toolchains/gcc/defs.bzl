@@ -39,7 +39,7 @@ load(
     "releases",
 )
 
-GccArmNoneEabiReleaseInfo = provider(
+GccReleaseInfo = provider(
     # @unsorted-dict-items
     fields = {
         "version": provider_field(typing.Any, default = None),
@@ -49,15 +49,17 @@ GccArmNoneEabiReleaseInfo = provider(
     },
 )
 
-def get_gcc_release(version: str) -> GccArmNoneEabiReleaseInfo:
+def get_gcc_release(version: str, target_arch: str, target_os: str) -> GccReleaseInfo:
     if not version in releases:
-        fail("Unknown gcc-arm-none-eabi release version '{}'. Available versions: {}".format(
+        fail("Unknown gcc release version '{}'. Available versions: {}".format(
             version,
             ", ".join(releases.keys()),
         ))
     gcc_version = releases[version]
 
     platform = "{}-{}".format(host_arch(), host_os())
+    if target_os != "eabi":
+        platform = platform + "-{}-{}".format(target_arch, target_os)
     if not platform in gcc_version:
         fail("Unsupported platform '{}'. Supported platforms: {}".format(
             platform,
@@ -65,19 +67,21 @@ def get_gcc_release(version: str) -> GccArmNoneEabiReleaseInfo:
         ))
     gcc_platform = gcc_version[platform]
 
-    return GccArmNoneEabiReleaseInfo(
+    return GccReleaseInfo(
         version = gcc_version.get("version", version),
         url = gcc_platform["archive"],
         sha256 = gcc_platform["sha256sum"],
         strip_prefix = gcc_platform["strip_prefix"],
     )
 
-GccArmNoneEabiDistributionInfo = provider(
+GccDistributionInfo = provider(
     # @unsorted-dict-items
     fields = {
         "version": provider_field(typing.Any, default = None),
         "arch": provider_field(typing.Any, default = None),
         "os": provider_field(typing.Any, default = None),
+        "target_arch": provider_field(typing.Any, default = None),
+        "target_os": provider_field(typing.Any, default = None),
     },
 )
 
@@ -85,11 +89,16 @@ def download_gcc_distribution(
         name: str,
         version: str,
         arch: [None, str] = None,
-        os: [None, str] = None):
+        os: [None, str] = None,
+        target_arch: [None, str] = None,
+        target_os: [None, str] = None):
     arch = arch or host_arch()
-    os = os or host_arch()
+    os = os or host_os()
+
+    target_arch = target_arch or "arm"
+    target_os = target_os or "eabi"
     archive_name = name + "-archive"
-    release = get_gcc_release(version)
+    release = get_gcc_release(version, target_arch, target_os)
     native.http_archive(
         name = archive_name,
         urls = [release.url],
@@ -102,16 +111,17 @@ def download_gcc_distribution(
         version = release.version,
         arch = arch,
         os = os,
+        target_arch = target_arch,
+        target_os = target_os,
     )
 
 def _gcc_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
-    dest = ctx.actions.declare_output("gcc-arm-none-eabi")
+    dest = ctx.actions.declare_output("gcc-{}-none-{}".format(ctx.attrs.target_arch, ctx.attrs.target_os))
     src = cmd_args(ctx.attrs.dist[DefaultInfo].default_outputs[0], format = "{}/")
     ctx.actions.run(
         ["ln", "-sf", cmd_args(src, relative_to = (dest, 1)), dest.as_output()],
         category = "cp_compiler",
     )
-
     compiler = cmd_args(
         [dest],
         hidden = [
@@ -123,10 +133,12 @@ def _gcc_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         ctx.attrs.dist[DefaultInfo],
         RunInfo(args = compiler),
-        GccArmNoneEabiDistributionInfo(
+        GccDistributionInfo(
             version = ctx.attrs.version,
             arch = ctx.attrs.arch or host_arch(),
             os = ctx.attrs.os or host_os(),
+            target_arch = ctx.attrs.target_arch,
+            target_os = ctx.attrs.target_os,
         ),
     ]
 
@@ -137,6 +149,8 @@ gcc_distribution = rule(
         "version": attrs.string(),
         "arch": attrs.option(attrs.string(), default = None),
         "os": attrs.option(attrs.string(), default = None),
+        "target_arch": attrs.option(attrs.string(), default = None),
+        "target_os": attrs.option(attrs.string(), default = None),
     },
 )
 
@@ -163,32 +177,34 @@ def host_os() -> str:
 def _shell_quote(xs):
     return cmd_args(xs, quote = "shell")
 
-def _gcc_arm_none_eabi_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
-    bin = cmd_args(ctx.attrs.distribution[RunInfo], format = "{}/bin")
-
-    platform_name = "arm32"
+def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
+    target_arch = ctx.attrs.distribution[GccDistributionInfo].target_arch
+    target_os = ctx.attrs.distribution[GccDistributionInfo].target_os
+    target_os = target_os if target_os != "none" else "eabi"
+    bin = cmd_args(ctx.attrs.distribution[RunInfo], format = "{}/bin/" + "{}-none-{}-".format(target_arch, target_os))
+    platform_name = target_arch
     platform_info = CxxPlatformInfo(name = platform_name)
 
     toolchain_info = CxxToolchainInfo(
         internal_tools = ctx.attrs._cxx_internal_tools[CxxInternalTools],
         c_compiler_info = CCompilerInfo(
-            compiler = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-gcc")),
+            compiler = RunInfo(args = cmd_args(bin, format = "{}gcc")),
             compiler_type = "gnu",
             compiler_flags = cmd_args(ctx.attrs.c_compiler_flags),
-            preprocessor = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-cpp")),
+            preprocessor = RunInfo(args = cmd_args(bin, format = "{}cpp")),
             preprocessor_type = "gcc",
             preprocessor_flags = cmd_args(ctx.attrs.c_preprocessor_flags),
         ),
         cxx_compiler_info = CxxCompilerInfo(
-            compiler = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-g++")),
+            compiler = RunInfo(args = cmd_args(bin, format = "{}g++")),
             compiler_type = "gnu",
             compiler_flags = cmd_args(ctx.attrs.cxx_compiler_flags),
-            preprocessor = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-cpp")),
+            preprocessor = RunInfo(args = cmd_args(bin, format = "{}cpp")),
             preprocessor_type = "gnu",
             preprocessor_flags = cmd_args(ctx.attrs.cxx_preprocessor_flags),
         ),
         linker_info = LinkerInfo(
-            archiver = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-gcc-ar")),
+            archiver = RunInfo(args = cmd_args(bin, format = "{}gcc-ar")),
             archiver_type = "gnu",
             archiver_supports_argfiles = True,
             archive_objects_locally = False,
@@ -198,7 +214,7 @@ def _gcc_arm_none_eabi_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             link_libraries_locally = False,
             link_style = LinkStyle(ctx.attrs.link_style),
             link_weight = 1,
-            linker = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-gcc")),
+            linker = RunInfo(args = cmd_args(bin, format = "{}gcc")),
             linker_flags = cmd_args(ctx.attrs.linker_flags),
             lto_mode = "thin",
             object_file_extension = "o",
@@ -216,18 +232,18 @@ def _gcc_arm_none_eabi_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
             is_pdb_generated = is_pdb_generated(LinkerType("gnu"), ctx.attrs.linker_flags),
         ),
         binary_utilities_info = BinaryUtilitiesInfo(
-            nm = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-gcc-nm")),
-            objcopy = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-objcopy")),
-            objdump = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-objdump")),
-            ranlib = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-gcc-ranlib")),
-            strip = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-strip")),
+            nm = RunInfo(args = cmd_args(bin, format = "{}gcc-nm")),
+            objcopy = RunInfo(args = cmd_args(bin, format = "{}objcopy")),
+            objdump = RunInfo(args = cmd_args(bin, format = "{}objdump")),
+            ranlib = RunInfo(args = cmd_args(bin, format = "{}gcc-ranlib")),
+            strip = RunInfo(args = cmd_args(bin, format = "{}strip")),
         ),
         header_mode = HeaderMode("symlink_tree_only"),
         as_compiler_info = CCompilerInfo(
-            compiler = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-gcc")),
+            compiler = RunInfo(args = cmd_args(bin, format = "{}gcc")),
             compiler_type = "gnu",
             compiler_flags = cmd_args(ctx.attrs.as_compiler_flags),
-            preprocessor = RunInfo(args = cmd_args(bin, format = "{}/arm-none-eabi-cpp")),
+            preprocessor = RunInfo(args = cmd_args(bin, format = "{}cpp")),
             preprocessor_type = "gnu",
             preprocessor_flags = cmd_args(ctx.attrs.as_preprocessor_flags),
         ),
@@ -270,8 +286,8 @@ def _gcc_arm_none_eabi_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
 
     return [ctx.attrs.distribution[DefaultInfo], toolchain_info, placeholders_info, platform_info]
 
-gcc_arm_none_eabi_toolchain = rule(
-    impl = _gcc_arm_none_eabi_toolchain_impl,
+gcc_toolchain = rule(
+    impl = _gcc_toolchain_impl,
     attrs = {
         "c_compiler_flags": attrs.list(attrs.arg(), default = []),
         "c_preprocessor_flags": attrs.list(attrs.arg(), default = []),
@@ -279,7 +295,7 @@ gcc_arm_none_eabi_toolchain = rule(
         "cxx_preprocessor_flags": attrs.list(attrs.arg(), default = []),
         "as_compiler_flags": attrs.list(attrs.arg(), default = []),
         "as_preprocessor_flags": attrs.list(attrs.arg(), default = []),
-        "distribution": attrs.exec_dep(providers = [RunInfo, GccArmNoneEabiDistributionInfo]),
+        "distribution": attrs.exec_dep(providers = [RunInfo, GccDistributionInfo]),
         "link_style": attrs.enum(
             LinkStyle.values(),
             default = "static",
