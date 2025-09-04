@@ -1,7 +1,8 @@
 rust_library(
-    name = "conUDS",
+    name = "lib",
+    crate = "conUDS",
     srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
-    edition = "2021",
+    edition = "2024",
     deps = [
         "//third_party:anyhow",
         "//third_party:argh",
@@ -22,11 +23,11 @@ rust_library(
 )
 
 rust_binary(
-    name = "bin",
+    name = "conUDS",
     srcs = ["src/main.rs"],
-    edition = "2021",
+    edition = "2024",
     deps = [
-        ":conUDS",
+        ":lib",
         "//third_party:anyhow",
         "//third_party:argh",
         "//third_party:ecu_diagnostics",
