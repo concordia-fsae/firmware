@@ -6,131 +6,304 @@ defaultLinkerFile: "f105/STM32F105VC.ld"
 drivers:
   hal:
     required: true
-    path: "stm32f1xx_hal.c"
+    sources:
+      - "stm32f1xx_hal.c"
+    headers:
+      - "stm32f1xx_hal.h"
   adc:
-    path: "stm32f1xx_hal_adc.c"
+    sources:
+      - "stm32f1xx_hal_adc.c"
+    headers:
+      - "stm32f1xx_hal_adc.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_adc.c"
+    ll_sources:
+      - "stm32f1xx_ll_adc.c"
+    ll_headers:
+      - "stm32f1xx_ll_adc.h"
   adc_ex:
-    path: "stm32f1xx_hal_adc_ex.c"
+    sources:
+      - "stm32f1xx_hal_adc_ex.c"
+    headers:
+      - "stm32f1xx_hal_adc_ex.h"
   can:
-    path: "stm32f1xx_hal_can.c"
+    sources:
+      - "stm32f1xx_hal_can.c"
+    headers:
+      - "stm32f1xx_hal_can.h"
   cec:
-    path: "stm32f1xx_hal_cec.c"
+    sources:
+      - "stm32f1xx_hal_cec.c"
+    headers:
+      - "stm32f1xx_hal_cec.h"
   cortex:
     required: true
-    path: "stm32f1xx_hal_cortex.c"
+    sources:
+      - "stm32f1xx_hal_cortex.c"
+    headers:
+      - "stm32f1xx_hal_cortex.h"
   crc:
-    path: "stm32f1xx_hal_crc.c"
+    sources:
+      - "stm32f1xx_hal_crc.c"
+    headers:
+      - "stm32f1xx_hal_crc.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_crc.c"
+    ll_sources:
+      - "stm32f1xx_ll_crc.c"
+    ll_headers:
+      - "stm32f1xx_ll_crc.h"
   dac:
-    path: "stm32f1xx_hal_dac.c"
+    sources:
+      - "stm32f1xx_hal_dac.c"
+    headers:
+      - "stm32f1xx_hal_dac.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_dac.c"
+    ll_sources:
+      - "stm32f1xx_ll_dac.c"
+    ll_headers:
+      - "stm32f1xx_ll_dac.h"
   dac_ex:
-    path: "stm32f1xx_hal_dac_ex.c"
+    sources:
+      - "stm32f1xx_hal_dac_ex.c"
+    headers:
+      - "stm32f1xx_hal_dac_ex.h"
   dma:
-    path: "stm32f1xx_hal_dma.c"
+    sources:
+      - "stm32f1xx_hal_dma.c"
+    headers:
+      - "stm32f1xx_hal_dma.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_dma.c"
+    ll_sources:
+      - "stm32f1xx_ll_dma.c"
+    ll_headers:
+      - "stm32f1xx_ll_dma.h"
   eth:
-    path: "stm32f1xx_hal_eth.c"
+    sources:
+      - "stm32f1xx_hal_eth.c"
+    headers:
+      - "stm32f1xx_hal_eth.h"
   exti:
-    path: "stm32f1xx_hal_exti.c"
+    sources:
+      - "stm32f1xx_hal_exti.c"
+    headers:
+      - "stm32f1xx_hal_exti.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_exti.c"
+    ll_sources:
+      - "stm32f1xx_ll_exti.c"
+    ll_headers:
+      - "stm32f1xx_ll_exti.h"
   flash:
-    path: "stm32f1xx_hal_flash.c"
+    sources:
+      - "stm32f1xx_hal_flash.c"
+    headers:
+      - "stm32f1xx_hal_flash.h"
   flash_ex:
-    path: "stm32f1xx_hal_flash_ex.c"
+    sources:
+      - "stm32f1xx_hal_flash_ex.c"
+    headers:
+      - "stm32f1xx_hal_flash_ex.h"
   fsmc:
     ll_available: true
     ll_only: true
-    ll_path: "stm32f1xx_ll_fsmc.c"
+    ll_sources:
+      - "stm32f1xx_ll_fsmc.c"
+    ll_headers:
+      - "stm32f1xx_ll_fsmc.h"
   gpio:
-    path: "stm32f1xx_hal_gpio.c"
+    sources:
+      - "stm32f1xx_hal_gpio.c"
+    headers:
+      - "stm32f1xx_hal_gpio.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_gpio.c"
+    ll_sources:
+      - "stm32f1xx_ll_gpio.c"
+    ll_headers:
+      - "stm32f1xx_ll_gpio.h"
   gpio_ex:
-    path: "stm32f1xx_hal_gpio_ex.c"
+    sources:
+      - "stm32f1xx_hal_gpio_ex.c"
+    headers:
+      - "stm32f1xx_hal_gpio_ex.h"
   hcd:
-    path: "stm32f1xx_hal_hcd.c"
+    sources:
+      - "stm32f1xx_hal_hcd.c"
+    headers:
+      - "stm32f1xx_hal_hcd.h"
   i2c:
-    path: "stm32f1xx_hal_i2c.c"
+    sources:
+      - "stm32f1xx_hal_i2c.c"
+    headers:
+      - "stm32f1xx_hal_i2c.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_i2c.c"
+    ll_sources:
+      - "stm32f1xx_ll_i2c.c"
+    ll_headers:
+      - "stm32f1xx_ll_i2c.h"
   i2s:
-    path: "stm32f1xx_hal_i2s.c"
+    sources:
+      - "stm32f1xx_hal_i2s.c"
+    headers:
+      - "stm32f1xx_hal_i2s.h"
   irda:
-    path: "stm32f1xx_hal_irda.c"
+    sources:
+      - "stm32f1xx_hal_irda.c"
+    headers:
+      - "stm32f1xx_hal_irda.h"
   iwdg:
-    path: "stm32f1xx_hal_iwdg.c"
+    sources:
+      - "stm32f1xx_hal_iwdg.c"
+    headers:
+      - "stm32f1xx_hal_iwdg.h"
   mmc:
-    path: "stm32f1xx_hal_mmc.c"
+    sources:
+      - "stm32f1xx_hal_mmc.c"
+    headers:
+      - "stm32f1xx_hal_mmc.h"
   nand:
-    path: "stm32f1xx_hal_nand.c"
+    sources:
+      - "stm32f1xx_hal_nand.c"
+    headers:
+      - "stm32f1xx_hal_nand.h"
   nor:
-    path: "stm32f1xx_hal_nor.c"
+    sources:
+      - "stm32f1xx_hal_nor.c"
+    headers:
+      - "stm32f1xx_hal_nor.h"
   pccard:
-    path: "stm32f1xx_hal_pccard.c"
+    sources:
+      - "stm32f1xx_hal_pccard.c"
+    headers:
+      - "stm32f1xx_hal_pccard.h"
   pcd:
-    path: "stm32f1xx_hal_pcd.c"
+    sources:
+      - "stm32f1xx_hal_pcd.c"
+    headers:
+      - "stm32f1xx_hal_pcd.h"
   pcd_ex:
-    path: "stm32f1xx_hal_pcd_ex.c"
+    sources:
+      - "stm32f1xx_hal_pcd_ex.c"
+    headers:
+      - "stm32f1xx_hal_pcd_ex.h"
   pwr:
-    path: "stm32f1xx_hal_pwr.c"
+    sources:
+      - "stm32f1xx_hal_pwr.c"
+    headers:
+      - "stm32f1xx_hal_pwr.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_pwr.c"
+    ll_sources:
+      - "stm32f1xx_ll_pwr.c"
+    ll_headers:
+      - "stm32f1xx_ll_pwr.h"
   rcc:
-    path: "stm32f1xx_hal_rcc.c"
+    sources:
+      - "stm32f1xx_hal_rcc.c"
+    headers:
+      - "stm32f1xx_hal_rcc.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_rcc.c"
+    ll_sources:
+      - "stm32f1xx_ll_rcc.c"
+    ll_headers:
+      - "stm32f1xx_ll_rcc.h"
   rcc_ex:
     required: true
-    path: "stm32f1xx_hal_rcc_ex.c"
+    sources:
+      - "stm32f1xx_hal_rcc_ex.c"
+    headers:
+      - "stm32f1xx_hal_rcc_ex.h"
   rtc:
-    path: "stm32f1xx_hal_rtc.c"
+    sources:
+      - "stm32f1xx_hal_rtc.c"
+    headers:
+      - "stm32f1xx_hal_rtc.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_rtc.c"
+    ll_sources:
+      - "stm32f1xx_ll_rtc.c"
+    ll_headers:
+      - "stm32f1xx_ll_rtc.h"
   rtc_ex:
-    path: "stm32f1xx_hal_rtc_ex.c"
+    sources:
+      - "stm32f1xx_hal_rtc_ex.c"
+    headers:
+      - "stm32f1xx_hal_rtc_ex.h"
   sd:
-    path: "stm32f1xx_hal_sd.c"
+    sources:
+      - "stm32f1xx_hal_sd.c"
+    headers:
+      - "stm32f1xx_hal_sd.h"
   sdmmc:
     ll_available: true
     ll_only: true
-    ll_path: "stm32f1xx_ll_sdmmc.c"
+    ll_sources:
+      - "stm32f1xx_ll_sdmmc.c"
+    ll_headers:
+      - "stm32f1xx_ll_sdmmc.h"
   smartcard:
-    path: "stm32f1xx_hal_smartcard.c"
+    sources:
+      - "stm32f1xx_hal_smartcard.c"
+    headers:
+      - "stm32f1xx_hal_smartcard.h"
   spi:
-    path: "stm32f1xx_hal_spi.c"
+    sources:
+      - "stm32f1xx_hal_spi.c"
+    headers:
+      - "stm32f1xx_hal_spi.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_spi.c"
+    ll_sources:
+      - "stm32f1xx_ll_spi.c"
+    ll_headers:
+      - "stm32f1xx_ll_spi.h"
     ll_extra_flags:
       - "-DUSE_FULL_LL_DRIVER"
   sram:
-    path: "stm32f1xx_hal_sram.c"
+    sources:
+      - "stm32f1xx_hal_sram.c"
+    headers:
+      - "stm32f1xx_hal_sram.h"
   tim:
-    path: "stm32f1xx_hal_tim.c"
+    deps:
+      - tim_ex
+    sources:
+      - "stm32f1xx_hal_tim.c"
+    headers:
+      - "stm32f1xx_hal_tim.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_tim.c"
+    ll_sources:
+      - "stm32f1xx_ll_tim.c"
+    ll_headers:
+      - "stm32f1xx_ll_tim.h"
   tim_ex:
-    # required with tim
-    path: "stm32f1xx_hal_tim_ex.c"
+    sources:
+      - "stm32f1xx_hal_tim_ex.c"
+    headers:
+      - "stm32f1xx_hal_tim_ex.h"
   uart:
-    path: "stm32f1xx_hal_uart.c"
+    sources:
+      - "stm32f1xx_hal_uart.c"
+    headers:
+      - "stm32f1xx_hal_uart.h"
   usart:
-    path: "stm32f1xx_hal_usart.c"
+    sources:
+      - "stm32f1xx_hal_usart.c"
+    headers:
+      - "stm32f1xx_hal_usart.h"
     ll_available: true
-    ll_path: "stm32f1xx_ll_usart"
+    ll_sources:
+      - "stm32f1xx_ll_usart"
   usb:
     ll_available: true
     ll_only: true
-    ll_path: "stm32f1xx_ll_usb.c"
+    ll_sources:
+      - "stm32f1xx_ll_usb.c"
+    ll_headers:
+      - "stm32f1xx_ll_usb.h"
   utils:
     ll_available: true
     ll_only: true
-    ll_path: "stm32f1xx_ll_utils.c"
+    ll_sources:
+      - "stm32f1xx_ll_utils.c"
+    ll_headers:
+      - "stm32f1xx_ll_utils.h"
   wwdg:
-    path: "stm32f1xx_hal_wwdg.c"
+    sources:
+      - "stm32f1xx_hal_wwdg.c"
+    headers:
+      - "stm32f1xx_hal_wwdg.h"

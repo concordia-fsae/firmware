@@ -1,0 +1,100 @@
+git_fetch(
+    name = "FreeRTOS.git",
+    repo = "git@github.com:ARM-software/CMSIS-FreeRTOS.git",
+    rev = "0bb666c1ff7430f5827e9469883b827df5b8fb06",
+    sub_targets = [
+        "Source/croutine.c",
+        "Source/event_groups.c",
+        "Source/include",
+        "Source/include/FreeRTOS.h",
+        "Source/include/StackMacros.h",
+        "Source/include/atomic.h",
+        "Source/include/croutine.h",
+        "Source/include/deprecated_definitions.h",
+        "Source/include/event_groups.h",
+        "Source/include/list.h",
+        "Source/include/message_buffer.h",
+        "Source/include/mpu_prototypes.h",
+        "Source/include/mpu_syscall_numbers.h",
+        "Source/include/mpu_wrappers.h",
+        "Source/include/newlib-freertos.h",
+        "Source/include/picolibc-freertos.h",
+        "Source/include/portable.h",
+        "Source/include/projdefs.h",
+        "Source/include/queue.h",
+        "Source/include/semphr.h",
+        "Source/include/stack_macros.h",
+        "Source/include/stream_buffer.h",
+        "Source/include/task.h",
+        "Source/include/timers.h",
+        "Source/list.c",
+        "Source/portable/GCC/ARM_CM3",
+        "Source/portable/GCC/ARM_CM3/port.c",
+        "Source/portable/GCC/ARM_CM3/portmacro.h",
+        "Source/queue.c",
+        "Source/stream_buffer.c",
+        "Source/tasks.c",
+        "Source/timers.c",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+git_fetch(
+    name = "lib_FTDI_FT81x",
+    repo = "git@github.com:concordia-fsae/lib_FTDI_FT81x.git",
+    rev = "1ca656236b94ebd6075e9cdb6762ba0de89895f6",
+    sub_targets = [
+        "include/EVE.h",
+        "include/EVE_commands.h",
+        "include/EVE_target.h",
+        "include/EVE_target_STM32.h",
+        "src/EVE_commands.c",
+        "src/EVE_target.c",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+git_fetch(
+    name = "CMSIS.git",
+    repo = "git@github.com:ARM-software/CMSIS_6.git",
+    rev = "b0bbb0423b278ca632cfe1474eb227961d835fd2",
+    sub_targets = [
+        "CMSIS/Core/Include/core_cm3.h",
+        "CMSIS/Core/Include/cmsis_version.h",
+        "CMSIS/Core/Include/cmsis_compiler.h",
+        "CMSIS/Core/Include/cmsis_gcc.h",
+        "CMSIS/Core/Include/m-profile/cmsis_gcc_m.h",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+git_fetch(
+    name = "printf",
+    repo = "git@github.com:eyalroz/printf.git",
+    rev = "f8ed5a9bd9fa8384430973465e94aa14c925872d",
+    sub_targets = [
+        "src/printf/printf.c",
+        "src/printf/printf.h",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "lib_atomic.h",
+    src = "atomic/lib_atomic.h",
+    visibility = ["PUBLIC"],
+)
+
+git_fetch(
+    name = "isotp",
+    repo = "git@github.com:concordia-fsae/isotp.git",
+    rev = "1c7c384db5f00af1ef83a3d336a873288fc9f77a",
+    sub_targets = [
+        "isotp.c",
+        "include/isotp.h",
+        "include/isotp_config.h",
+        "include/isotp_defines.h",
+        "include/isotp_user.h",
+    ],
+    visibility = ["PUBLIC"],
+)

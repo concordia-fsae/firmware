@@ -1,0 +1,11 @@
+export_file(
+    name = "stm32f103c8.ld",
+    src = "STM32F103C8.ld",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "startup_stm32f103xb.S",
+    src = "startup_stm32f103xb.S",
+    visibility = ["PUBLIC"],
+)
