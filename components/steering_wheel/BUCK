@@ -245,6 +245,12 @@ inject_crc(
     start_address = APP_START_ADDR,
 )
 
+command_alias(
+    name = "download",
+    exe = "//drive-stack/conUDS:conUDS",
+    args = ["-n", "stw", "download", "$(location :bin_crc)"],
+)
+
 alias(
     name = "compdb",
     actual = ":elf[full-compilation-database]",
