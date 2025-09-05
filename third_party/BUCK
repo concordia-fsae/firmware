@@ -2123,39 +2123,11 @@ cargo.rust_library(
     crate = "portable_atomic",
     crate_root = "portable-atomic-1.11.1.crate/src/lib.rs",
     edition = "2018",
-    env = {
-        "OUT_DIR": "$(location :portable-atomic-1.11.1-build-script-run[out_dir])",
-    },
-    features = [
-        "default",
-        "fallback",
-    ],
-    rustc_flags = ["@$(location :portable-atomic-1.11.1-build-script-run[rustc_flags])"],
-    visibility = [],
-)
-
-cargo.rust_binary(
-    name = "portable-atomic-1.11.1-build-script-build",
-    srcs = [":portable-atomic-1.11.1.crate"],
-    crate = "build_script_build",
-    crate_root = "portable-atomic-1.11.1.crate/build.rs",
-    edition = "2018",
     features = [
         "default",
         "fallback",
     ],
     visibility = [],
-)
-
-buildscript_run(
-    name = "portable-atomic-1.11.1-build-script-run",
-    package_name = "portable-atomic",
-    buildscript_rule = ":portable-atomic-1.11.1-build-script-build",
-    features = [
-        "default",
-        "fallback",
-    ],
-    version = "1.11.1",
 )
 
 http_archive(
