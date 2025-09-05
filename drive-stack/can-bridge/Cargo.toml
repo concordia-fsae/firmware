@@ -11,4 +11,5 @@ path = "src/main.rs"
 clap = { workspace = true }
 can-dbc = { workspace = true }
 libc = { workspace = true }
+ratatui = { workspace = true }
 socketcan = { workspace = true }
