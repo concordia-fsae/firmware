@@ -416,6 +416,33 @@ cargo.rust_library(
     visibility = [],
 )
 
+alias(
+    name = "can-dbc",
+    actual = ":can-dbc-6.0.0",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "can-dbc-6.0.0.crate",
+    sha256 = "cbe0d033ec316c3bb50e2e53d7ef3d8805e65c5f976d49daea65a12f7e0f9ce8",
+    strip_prefix = "can-dbc-6.0.0",
+    urls = ["https://static.crates.io/crates/can-dbc/6.0.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "can-dbc-6.0.0",
+    srcs = [":can-dbc-6.0.0.crate"],
+    crate = "can_dbc",
+    crate_root = "can-dbc-6.0.0.crate/src/lib.rs",
+    edition = "2018",
+    visibility = [],
+    deps = [
+        ":derive-getters-0.3.0",
+        ":nom-7.1.3",
+    ],
+)
+
 http_archive(
     name = "cfg-if-1.0.3.crate",
     sha256 = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9",
@@ -678,6 +705,29 @@ cargo.rust_library(
     ],
     visibility = [],
     deps = [":powerfmt-0.2.0"],
+)
+
+http_archive(
+    name = "derive-getters-0.3.0.crate",
+    sha256 = "7a2c35ab6e03642397cdda1dd58abbc05d418aef8e36297f336d5aba060fe8df",
+    strip_prefix = "derive-getters-0.3.0",
+    urls = ["https://static.crates.io/crates/derive-getters/0.3.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "derive-getters-0.3.0",
+    srcs = [":derive-getters-0.3.0.crate"],
+    crate = "derive_getters",
+    crate_root = "derive-getters-0.3.0.crate/src/lib.rs",
+    edition = "2018",
+    proc_macro = True,
+    visibility = [],
+    deps = [
+        ":proc-macro2-1.0.101",
+        ":quote-1.0.40",
+        ":syn-1.0.109",
+    ],
 )
 
 http_archive(
@@ -1632,6 +1682,24 @@ buildscript_run(
 )
 
 http_archive(
+    name = "minimal-lexical-0.2.1.crate",
+    sha256 = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a",
+    strip_prefix = "minimal-lexical-0.2.1",
+    urls = ["https://static.crates.io/crates/minimal-lexical/0.2.1/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "minimal-lexical-0.2.1",
+    srcs = [":minimal-lexical-0.2.1.crate"],
+    crate = "minimal_lexical",
+    crate_root = "minimal-lexical-0.2.1.crate/src/lib.rs",
+    edition = "2018",
+    features = ["std"],
+    visibility = [],
+)
+
+http_archive(
     name = "mio-1.0.4.crate",
     sha256 = "78bed444cc8a2160f01cbcf811ef18cac863ad68ae8ca62092e8db51d51c761c",
     strip_prefix = "mio-1.0.4",
@@ -1889,6 +1957,32 @@ buildscript_run(
         "socket",
     ],
     version = "0.29.0",
+)
+
+http_archive(
+    name = "nom-7.1.3.crate",
+    sha256 = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a",
+    strip_prefix = "nom-7.1.3",
+    urls = ["https://static.crates.io/crates/nom/7.1.3/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "nom-7.1.3",
+    srcs = [":nom-7.1.3.crate"],
+    crate = "nom",
+    crate_root = "nom-7.1.3.crate/src/lib.rs",
+    edition = "2018",
+    features = [
+        "alloc",
+        "default",
+        "std",
+    ],
+    visibility = [],
+    deps = [
+        ":memchr-2.7.5",
+        ":minimal-lexical-0.2.1",
+    ],
 )
 
 http_archive(
@@ -2990,12 +3084,19 @@ cargo.rust_library(
         "default",
         "derive",
         "extra-traits",
-        "full",
         "parsing",
         "printing",
         "proc-macro",
         "quote",
     ],
+    platform = {
+        "linux-arm64": dict(
+            features = ["full"],
+        ),
+        "linux-x86_64": dict(
+            features = ["full"],
+        ),
+    },
     rustc_flags = ["@$(location :syn-1.0.109-build-script-run[rustc_flags])"],
     visibility = [],
     deps = [
@@ -3016,12 +3117,19 @@ cargo.rust_binary(
         "default",
         "derive",
         "extra-traits",
-        "full",
         "parsing",
         "printing",
         "proc-macro",
         "quote",
     ],
+    platform = {
+        "linux-arm64": dict(
+            features = ["full"],
+        ),
+        "linux-x86_64": dict(
+            features = ["full"],
+        ),
+    },
     visibility = [],
 )
 
@@ -3034,12 +3142,19 @@ buildscript_run(
         "default",
         "derive",
         "extra-traits",
-        "full",
         "parsing",
         "printing",
         "proc-macro",
         "quote",
     ],
+    platform = {
+        "linux-arm64": dict(
+            features = ["full"],
+        ),
+        "linux-x86_64": dict(
+            features = ["full"],
+        ),
+    },
     version = "1.0.109",
 )
 
