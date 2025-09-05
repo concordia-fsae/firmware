@@ -11,26 +11,44 @@ use std::ffi::CString;
 use std::io;
 use std::mem::{size_of, zeroed};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::path::Path;
 use std::ptr;
 use std::sync::{mpsc, Arc};
 use std::thread;
 
 use can_dbc::{ByteOrder, DBC, Message, MessageId, MultiplexIndicator, Signal, ValueType};
 
-/// Parse inputs like:
-///   can0
-///   can1=chassis.dbc
-///   vcan0=powertrain.dbc
-/// into a list of bus names and an optional per-bus DBC bundle.
+/// Read multiple CAN buses; each input may be IFACE or IFACE=DBC.
+/// Filters:
+///  - --id / -i ID or START-END (repeatable; hex like 0x123 supported)
+///  - --msg / -m SUBSTR         (repeatable; case-insensitive)
+///  - --sig / -s SUBSTR         (repeatable; case-insensitive)
+///
+/// Rules in OUTPUT loop:
+///  - No filters → print everything
+///  - If ID filters set → print when ID matches (regardless of msg/sig)
+///  - If only msg/sig filters set → print only when message name or any signal matches (needs DBC)
 #[derive(Parser, Debug)]
 #[command(
     name = "can-bridge",
-    about = "Read multiple CAN buses; each input may be IFACE or IFACE=DBC. Merges output with timestamps; per-bus DBC decoding optional."
+    about = "Merge CAN frames from multiple interfaces; per-bus optional DBC decode; filters; decoding in main thread."
 )]
 struct Args {
-    /// Quiet mode: do NOT print to stdout (still runs listeners)
+    /// Quiet mode: suppress stdout (still runs listeners & filtering/decoding)
     #[arg(long, short, default_value_t = false)]
     quiet: bool,
+
+    /// Include only these CAN IDs or ranges (repeatable). Examples: -i 0x123 -i 0x100-0x1FF
+    #[arg(long = "id", short = 'i', value_name = "ID|START-END")]
+    ids: Vec<String>,
+
+    /// Include only messages whose name contains this substring (repeatable, case-insensitive)
+    #[arg(long = "msg", short = 'm', value_name = "SUBSTR")]
+    msgs: Vec<String>,
+
+    /// Include only signals whose name contains this substring (repeatable, case-insensitive)
+    #[arg(long = "sig", short = 's', value_name = "SUBSTR")]
+    sigs: Vec<String>,
 
     /// Bus specs: IFACE or IFACE=PATH/TO.dbc (repeatable)
     ///
@@ -42,45 +60,179 @@ struct Args {
     inputs: Vec<String>,
 }
 
+/// Lightweight frame we can send across threads
+#[derive(Clone, Copy, Debug)]
+struct CanFrame {
+    can_id: u32,
+    can_dlc: u8,
+    data: [u8; 8],
+}
+
+/// Event sent by workers -> main thread
+#[derive(Clone, Debug)]
+struct Event {
+    bus: String,
+    frame: CanFrame,
+    ts_opt: Option<(u64, u32)>,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let (tx, rx) = mpsc::channel::<String>();
 
-    // Parse inputs into (buses list) and per-bus DBC bundles
+    // Parse bus specs
     let (buses, per_bus_bundles) = parse_bus_specs(&args.inputs)?;
 
-    // Spawn a thread per bus
-    for bus in buses {
-        let tx = tx.clone();
-        let bus_name = bus.clone();
-        let bundle_opt = per_bus_bundles.get(&bus_name).cloned(); // Option<Arc<BusDbc>>
+    // Build filters (used in OUTPUT loop)
+    let filters = Filters::from_args(&args)?;
+    if filters.id_ranges.is_empty() && filters.msg_filters.is_empty() && filters.sig_filters.is_empty() {
+        println!("[filters] none");
+    } else {
+        if !filters.id_ranges.is_empty() {
+            let ids: Vec<String> = filters.id_ranges.iter().map(|r| {
+                if r.start == r.end {
+                    format!("0x{:X} ({})", r.start, r.start)
+                } else {
+                    format!("0x{:X}-0x{:X} ({}-{})", r.start, r.end, r.start, r.end)
+                }
+            }).collect();
+            println!("[filters] id: {}", ids.join(", "));
+        }
+        if !filters.msg_filters.is_empty() {
+            println!("[filters] msg: {}", filters.msg_filters.join(", "));
+        }
+        if !filters.sig_filters.is_empty() {
+            println!("[filters] sig: {}", filters.sig_filters.join(", "));
+        }
+    }
 
+    // Channel of raw events
+    let (tx, rx) = mpsc::channel::<Event>();
+
+    // Spawn workers
+    for bus in buses.clone() {
+        let tx = tx.clone();
+        let thread_name = format!("can-bridge-{}", bus);
+        let dbc = match per_bus_bundles.get(&bus) {
+            Some(name) => name.dbc_name.clone(),
+            None => "unknown".to_string(),
+        };
+        println!("Attaching thread '{}' on interface '{}' with bus '{}'", thread_name, bus, dbc);
         thread::Builder::new()
-            .name(format!("can-bridge-{}", bus))
+            .name(thread_name.clone())
             .spawn(move || {
-                if let Err(e) = run_bus(&bus_name, &tx, bundle_opt.as_ref()) {
-                    let _ = tx.send(format!("[{bus_name}] fatal: {e}"));
+                if let Err(e) = run_bus_worker(&bus, &tx) {
+                    eprintln!("[{bus}] fatal: {e}");
                 }
             })?;
     }
     drop(tx);
 
-    // Print merged lines unless quiet
-    if args.quiet {
-        for _ in rx {
-            // swallow
-        }
-    } else {
-        for line in rx {
-            println!("{line}");
+    // ----------------------- Output (filtering + decoding happen here) -----------------------
+    let print = !args.quiet;
+    for ev in rx {
+        let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
+            ev.frame.can_id & CAN_EFF_MASK
+        } else {
+            ev.frame.can_id & CAN_SFF_MASK
+        } as u32;
+
+        let has_id_filters = !filters.id_ranges.is_empty();
+        let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
+
+        // Forward everything if no filters are set, or check if  and try to decode
+        if !has_msg_sig_filters {
+            if has_id_filters && !filters.match_id(id_masked) {
+                continue;
+            }
+            let decoded = maybe_decode(
+                per_bus_bundles.get(&ev.bus),
+                &ev.frame,
+                id_masked,
+                true,  // allow empty signals
+                true,  // ignore msg filter
+                &[],   // msg filters
+                &[],   // sig filters
+            );
+            let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
+            if print { println!("{line}"); }
+            continue;
+        } else {
+            // Need DBC to evaluate
+            let decoded = maybe_decode(
+                per_bus_bundles.get(&ev.bus),
+                &ev.frame,
+                id_masked,
+                false, // don't allow empty results
+                false, // enforce message filter
+                &filters.msg_filters,
+                &filters.sig_filters,
+            );
+            if decoded.is_none() {
+                continue;
+            }
+            let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
+            if print { println!("{line}"); }
+            continue;
         }
     }
+    // -----------------------------------------------------------------------------------------
+
     Ok(())
 }
 
+/// Worker: open socket, read frames, extract timestamp, send Event
+fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>) -> io::Result<()> {
+    let fd = open_can_with_timestamping(bus)?;
+
+    let mut frame: can_frame = unsafe { zeroed() };
+    let mut name: sockaddr_can = unsafe { zeroed() };
+
+    let mut iov = iovec {
+        iov_base: (&mut frame as *mut can_frame) as *mut c_void,
+        iov_len: size_of::<can_frame>(),
+    };
+
+    // Enough for cmsghdr + 3x timespec + padding
+    let mut cbuf = [0u8; 256];
+
+    loop {
+        let mut msg: msghdr = unsafe { zeroed() };
+        msg.msg_name = (&mut name as *mut sockaddr_can) as *mut c_void;
+        msg.msg_namelen = size_of::<sockaddr_can>() as socklen_t;
+        msg.msg_iov = &mut iov as *mut iovec;
+        msg.msg_iovlen = 1;
+        msg.msg_control = cbuf.as_mut_ptr() as *mut c_void;
+        msg.msg_controllen = cbuf.len();
+
+        let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
+        if n < 0 {
+            let err = io::Error::last_os_error();
+            if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
+                continue;
+            }
+            return Err(err);
+        }
+
+        let ts_opt = parse_timestamp_from_cmsgs(&msg);
+
+        // Copy libc::can_frame -> portable CanFrame
+        let cf = CanFrame {
+            can_id: frame.can_id,
+            can_dlc: frame.can_dlc,
+            data: frame.data,
+        };
+
+        let _ = tx.send(Event {
+            bus: bus.to_string(),
+            frame: cf,
+            ts_opt,
+        });
+    }
+}
+
 /// Parse CLI inputs (IFACE or IFACE=DBC) into:
-///  - Vec<String> of unique buses in order of first appearance
-///  - HashMap<String, Arc<BusDbc>> for those that provided a DBC
+///  - Vec<String> of unique buses
+///  - HashMap<String, Arc<BusDbc>> for buses that provided a DBC
 fn parse_bus_specs(
     specs: &[String],
 ) -> Result<(Vec<String>, HashMap<String, Arc<BusDbc>>), Box<dyn std::error::Error>> {
@@ -93,21 +245,27 @@ fn parse_bus_specs(
             let bus = bus.trim();
             let dbc_path = dbc_path.trim();
             if bus.is_empty() || dbc_path.is_empty() {
-                return Err("Each BUS=FILE must have non-empty BUS and FILE".into());
+                return Err("Each IFACE=FILE must have non-empty IFACE and FILE".into());
             }
             if !seen.contains_key(bus) {
                 seen.insert(bus.to_string(), buses.len());
                 buses.push(bus.to_string());
             }
 
-            // Load/parse DBC and build index
+            // Load/parse DBC and build index; also compute a nice name to report
             let dbc_bytes = std::fs::read(dbc_path)?;
             let dbc = DBC::from_slice(&dbc_bytes)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{e:?}")))?;
             let id_index = build_id_index(&dbc);
-            bundles.insert(bus.to_string(), Arc::new(BusDbc { dbc, id_index }));
+            let dbc_name = Path::new(dbc_path)
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| dbc_path.to_string());
+            bundles.insert(
+                bus.to_string(),
+                Arc::new(BusDbc { dbc, id_index, dbc_name }),
+            );
         } else {
-            // Plain IFACE
             let bus = spec.trim();
             if bus.is_empty() {
                 return Err("Interface name must not be empty".into());
@@ -116,7 +274,6 @@ fn parse_bus_specs(
                 seen.insert(bus.to_string(), buses.len());
                 buses.push(bus.to_string());
             }
-            // No DBC for this bus (ok)
         }
     }
 
@@ -127,10 +284,12 @@ fn parse_bus_specs(
     Ok((buses, bundles))
 }
 
-/// Bundle decoder and ID index for one bus
+/// Bundle decoder and ID index for one bus.
+/// `dbc_name` is a user-friendly name (filename) we can print with --show-dbc-names.
 struct BusDbc {
     dbc: DBC,
     id_index: HashMap<u32, usize>,
+    dbc_name: String,
 }
 
 /// Build a fast lookup: masked 11/29-bit CAN ID -> message index
@@ -172,7 +331,6 @@ fn open_can_with_timestamping(iface: &str) -> io::Result<OwnedFd> {
         return Err(io::Error::last_os_error());
     }
 
-    // Bind to interface
     let ifname = CString::new(iface).unwrap();
     let ifindex = unsafe { if_nametoindex(ifname.as_ptr()) };
     if ifindex == 0 {
@@ -196,68 +354,7 @@ fn open_can_with_timestamping(iface: &str) -> io::Result<OwnedFd> {
     Ok(fd)
 }
 
-/// Per-bus receive loop using recvmsg() to capture SCM_TIMESTAMPING and decode via per-bus DBC (if provided).
-fn run_bus(bus: &str, tx: &mpsc::Sender<String>, bundle: Option<&Arc<BusDbc>>) -> io::Result<()> {
-    let fd = open_can_with_timestamping(bus)?;
-
-    let mut frame: can_frame = unsafe { zeroed() };
-    let mut name: sockaddr_can = unsafe { zeroed() };
-
-    let mut iov = iovec {
-        iov_base: (&mut frame as *mut can_frame) as *mut c_void,
-        iov_len: size_of::<can_frame>(),
-    };
-
-    // Enough for cmsghdr + 3x timespec + padding
-    let mut cbuf = [0u8; 256];
-
-    loop {
-        let mut msg: msghdr = unsafe { zeroed() };
-        msg.msg_name = (&mut name as *mut sockaddr_can) as *mut c_void;
-        msg.msg_namelen = size_of::<sockaddr_can>() as socklen_t;
-        msg.msg_iov = &mut iov as *mut iovec;
-        msg.msg_iovlen = 1;
-        msg.msg_control = cbuf.as_mut_ptr() as *mut c_void;
-        msg.msg_controllen = cbuf.len();
-
-        let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
-        if n < 0 {
-            let err = io::Error::last_os_error();
-            if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
-                continue;
-            }
-            return Err(err);
-        }
-
-        // Decode (unless RTR/ERR frames) and only if this bus has a DBC
-        let decoded = if (frame.can_id & (CAN_RTR_FLAG | CAN_ERR_FLAG)) == 0 {
-            if let Some(b) = bundle {
-                let id_masked = if (frame.can_id & CAN_EFF_FLAG) != 0 {
-                    frame.can_id & CAN_EFF_MASK
-                } else {
-                    frame.can_id & CAN_SFF_MASK
-                } as u32;
-
-                if let Some(&msg_idx) = b.id_index.get(&id_masked) {
-                    let msg_dbc = &b.dbc.messages()[msg_idx];
-                    Some(render_decoded(msg_dbc, &frame))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
-        let ts_opt = parse_timestamp_from_cmsgs(&msg);
-        let line = format_can_line(bus, &frame, ts_opt, decoded);
-        let _ = tx.send(line);
-    }
-}
-
-/// Parse SCM_TIMESTAMPING ([timespec; 3]) from control messages.
+/// Extract SCM_TIMESTAMPING ([timespec; 3]) from control messages.
 /// Prefer RAW_HARDWARE (idx 2), else SOFTWARE (idx 0).
 fn parse_timestamp_from_cmsgs(msg: &msghdr) -> Option<(u64, u32)> {
     let ctrl = msg.msg_control as *const u8;
@@ -307,7 +404,7 @@ fn parse_timestamp_from_cmsgs(msg: &msghdr) -> Option<(u64, u32)> {
 /// ts_opt is (sec, nsec) from kernel (HW if available, else SW). If None, prints "-".
 fn format_can_line(
     bus: &str,
-    f: &can_frame,
+    f: &CanFrame,
     ts_opt: Option<(u64, u32)>,
     decoded: Option<String>,
 ) -> String {
@@ -342,6 +439,71 @@ fn format_can_line(
                 ts_str, bus, id_str, f.can_dlc, payload
             ),
         }
+    }
+}
+
+// ----------------- Filters -----------------
+
+#[derive(Clone)]
+struct Filters {
+    id_ranges: Vec<IdRange>,
+    msg_filters: Vec<String>, // lowercased substrings
+    sig_filters: Vec<String>, // lowercased substrings
+}
+
+impl Filters {
+    fn from_args(args: &Args) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut id_ranges = Vec::new();
+        for tok in &args.ids {
+            id_ranges.push(parse_id_range(tok)?);
+        }
+        let msg_filters = args.msgs.iter().map(|s| s.to_lowercase()).collect();
+        let sig_filters = args.sigs.iter().map(|s| s.to_lowercase()).collect();
+        Ok(Filters { id_ranges, msg_filters, sig_filters })
+    }
+
+    #[inline]
+    fn match_id(&self, id: u32) -> bool {
+        if self.id_ranges.is_empty() {
+            true // no ID filters -> allow all
+        } else {
+            self.id_ranges.iter().any(|r| r.contains(id))
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct IdRange {
+    start: u32,
+    end: u32, // inclusive
+}
+impl IdRange {
+    fn contains(&self, x: u32) -> bool {
+        self.start <= x && x <= self.end
+    }
+}
+
+fn parse_id_range(s: &str) -> Result<IdRange, Box<dyn std::error::Error>> {
+    let s = s.trim();
+    if let Some((a, b)) = s.split_once('-') {
+        let start = parse_u32_id(a.trim())?;
+        let end = parse_u32_id(b.trim())?;
+        let (start, end) = if start <= end { (start, end) } else { (end, start) };
+        Ok(IdRange { start, end })
+    } else {
+        let v = parse_u32_id(s)?;
+        Ok(IdRange { start: v, end: v })
+    }
+}
+
+fn parse_u32_id(tok: &str) -> Result<u32, Box<dyn std::error::Error>> {
+    let t = tok.trim();
+    if let Some(hex) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+        Ok(u32::from_str_radix(hex, 16)?)
+    } else if t.chars().any(|c| matches!(c, 'a'..='f' | 'A'..='F')) {
+        Ok(u32::from_str_radix(t, 16)?)
+    } else {
+        Ok(t.parse::<u32>()?)
     }
 }
 
@@ -440,7 +602,42 @@ fn is_signal_active(sig: &Signal, mux: Option<u64>) -> bool {
     }
 }
 
-fn render_decoded(msg: &Message, f: &can_frame) -> String {
+/// Try to decode and apply filters.
+/// - If ID not in DBC -> returns None (caller may still print raw)
+/// - `allow_empty_signals`: when true, if no signals matched sig filter, we still return Some("<MsgName>")
+/// - `ignore_msg_filter`: when true, we skip message-name filtering entirely
+fn maybe_decode(
+    bundle_opt: Option<&Arc<BusDbc>>,
+    frame: &CanFrame,
+    id_masked: u32,
+    allow_empty_signals: bool,
+    ignore_msg_filter: bool,
+    msg_filters: &[String],
+    sig_filters: &[String],
+) -> Option<String> {
+    let b = bundle_opt?;
+    let &msg_idx = b.id_index.get(&id_masked)?;
+    let msg = &b.dbc.messages()[msg_idx];
+
+    if !ignore_msg_filter && !msg_filters.is_empty() {
+        let lname = msg.message_name().to_lowercase();
+        if !msg_filters.iter().any(|p| lname.contains(p)) {
+            return None;
+        }
+    }
+
+    render_decoded_with_optional_sig_filter(msg, frame, sig_filters, allow_empty_signals)
+}
+
+/// Render with optional signal-name filtering (case-insensitive).
+/// If `allow_empty` is true and no signals match, returns Some("<MsgName>") to still show the message.
+/// If `allow_empty` is false and no signals match, returns None.
+fn render_decoded_with_optional_sig_filter(
+    msg: &Message,
+    f: &CanFrame,
+    sig_filters: &[String],
+    allow_empty: bool,
+) -> Option<String> {
     let data: [u8; 8] = f.data;
     let mux = find_mux_value(msg, &data);
 
@@ -448,6 +645,12 @@ fn render_decoded(msg: &Message, f: &can_frame) -> String {
     for sig in msg.signals() {
         if !is_signal_active(sig, mux) {
             continue;
+        }
+        if !sig_filters.is_empty() {
+            let lname = sig.name().to_lowercase();
+            if !sig_filters.iter().any(|p| lname.contains(p)) {
+                continue;
+            }
         }
         let v = decode_signal(sig, &data);
         let unit = sig.unit();
@@ -459,9 +662,12 @@ fn render_decoded(msg: &Message, f: &can_frame) -> String {
     }
 
     if parts.is_empty() {
-        format!("{}", msg.message_name())
+        if allow_empty {
+            Some(format!("{}", msg.message_name()))
+        } else {
+            None
+        }
     } else {
-        format!("{}: {}", msg.message_name(), parts.join("; "))
+        Some(format!("{}: {}", msg.message_name(), parts.join("; ")))
     }
 }
-
