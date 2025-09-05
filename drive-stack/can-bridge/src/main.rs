@@ -1,12 +1,4 @@
-use clap::Parser;
-use libc::{
-    bind, can_frame, c_long, c_void, cmsghdr, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t,
-    sockaddr, sockaddr_can, socklen_t, socket, timespec, AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK,
-    CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK, EINTR, SCM_TIMESTAMPING, SO_TIMESTAMPING,
-    SOCK_RAW, SOL_SOCKET, SOF_TIMESTAMPING_RAW_HARDWARE, SOF_TIMESTAMPING_RX_HARDWARE,
-    SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
-};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::ffi::CString;
 use std::io;
 use std::mem::{size_of, zeroed};
@@ -15,6 +7,22 @@ use std::path::Path;
 use std::ptr;
 use std::sync::{mpsc, Arc};
 use std::thread;
+use std::time::{Instant, Duration};
+
+use clap::Parser;
+use libc::{
+    bind, can_frame, c_long, c_void, cmsghdr, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t,
+    sockaddr, sockaddr_can, socklen_t, socket, timespec, AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK,
+    CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK, EINTR, SCM_TIMESTAMPING, SO_TIMESTAMPING,
+    SOCK_RAW, SOL_SOCKET, SOF_TIMESTAMPING_RAW_HARDWARE, SOF_TIMESTAMPING_RX_HARDWARE,
+    SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
+};
+use ratatui::crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEventKind, KeyModifiers};
+use ratatui::crossterm::execute;
+use ratatui::crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use ratatui::prelude::{Alignment, Constraint, CrosstermBackend, Direction, Layout, Rect, Style, Stylize};
+use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap};
+use ratatui::Terminal;
 
 use can_dbc::{ByteOrder, DBC, Message, MessageId, MultiplexIndicator, Signal, ValueType};
 
@@ -34,9 +42,13 @@ use can_dbc::{ByteOrder, DBC, Message, MessageId, MultiplexIndicator, Signal, Va
     about = "Merge CAN frames from multiple interfaces; per-bus optional DBC decode; filters; decoding in main thread."
 )]
 struct Args {
-    /// Quiet mode: suppress stdout (still runs listeners & filtering/decoding)
+    /// Quiet mode: suppress stdout/UI (still runs listeners & filtering/decoding)
     #[arg(long, short, default_value_t = false)]
     quiet: bool,
+
+    /// Legacy flag; UI now opens whenever print==true (i.e., not quiet)
+    #[arg(long, default_value_t = false)]
+    tui: bool,
 
     /// Include only these CAN IDs or ranges (repeatable). Examples: -i 0x123 -i 0x100-0x1FF
     #[arg(long = "id", short = 'i', value_name = "ID|START-END")]
@@ -58,6 +70,10 @@ struct Args {
     ///   vcan0=/etc/dbcs/powertrain.dbc
     #[arg(value_name = "IFACE[=DBC]", num_args = 1..)]
     inputs: Vec<String>,
+
+    /// Max messages kept in the UI scrollback
+    #[arg(long, default_value_t = 2000)]
+    max_msgs: usize,
 }
 
 /// Lightweight frame we can send across threads
@@ -107,126 +123,378 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Channel of raw events
     let (tx, rx) = mpsc::channel::<Event>();
+    let (bus_states_emitter, bus_states) = mpsc::channel::<(String, BusState)>();
+
+    // Bus status map (UI shows Starting -> Active once a frame is seen)
+    let mut bus_status: HashMap::<String, BusState> = HashMap::new();
 
     // Spawn workers
     for bus in buses.clone() {
         let tx = tx.clone();
+        let bus_states_emitter = bus_states_emitter.clone();
         let thread_name = format!("can-bridge-{}", bus);
+
         let dbc = match per_bus_bundles.get(&bus) {
             Some(name) => name.dbc_name.clone(),
             None => "unknown".to_string(),
         };
         println!("Attaching thread '{}' on interface '{}' with bus '{}'", thread_name, bus, dbc);
+
+        // Start assuming "Starting"; mark Active when a frame arrives
+        let mut state = BusState::Starting;
+        &bus_status.insert(bus.clone(), state);
+
+        let bus_tmp = bus.clone();
         thread::Builder::new()
             .name(thread_name.clone())
             .spawn(move || {
-                if let Err(e) = run_bus_worker(&bus, &tx) {
-                    eprintln!("[{bus}] fatal: {e}");
-                }
+                run_bus_worker(&bus_tmp, &tx, &bus_states_emitter)
             })?;
     }
     drop(tx);
+    drop(bus_states_emitter);
 
-    // ----------------------- Output (filtering + decoding happen here) -----------------------
-    let print = !args.quiet;
-    for ev in rx {
-        let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
-            ev.frame.can_id & CAN_EFF_MASK
-        } else {
-            ev.frame.can_id & CAN_SFF_MASK
-        } as u32;
-
-        let has_id_filters = !filters.id_ranges.is_empty();
-        let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
-
-        // Forward everything if no filters are set, or check if  and try to decode
-        if !has_msg_sig_filters {
-            if has_id_filters && !filters.match_id(id_masked) {
-                continue;
+    // ----------------------- Output / UI -----------------------
+    if args.tui {
+        run_tui(
+            rx,
+            bus_states,
+            buses,
+            per_bus_bundles,
+            filters,
+            bus_status,
+            args.max_msgs,
+        )?;
+    } else {
+        let mut last_cycle = Instant::now();
+        let mut bandwidth: HashMap<String, u32> = HashMap::new();
+        loop {
+            let time_delta = Instant::now() - last_cycle;
+            if time_delta >= Duration::from_secs(60) {
+                for (bus, bps) in bandwidth {
+                    println!("[{}] transmits {:.3} bits/s in {:?}s", bus, bps as f64/time_delta.as_secs_f64(), time_delta);
+                }
+                last_cycle = Instant::now();
+                bandwidth = HashMap::new();
             }
-            let decoded = maybe_decode(
-                per_bus_bundles.get(&ev.bus),
-                &ev.frame,
-                id_masked,
-                true,  // allow empty signals
-                true,  // ignore msg filter
-                &[],   // msg filters
-                &[],   // sig filters
-            );
-            let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
-            if print { println!("{line}"); }
-            continue;
-        } else {
-            // Need DBC to evaluate
-            let decoded = maybe_decode(
-                per_bus_bundles.get(&ev.bus),
-                &ev.frame,
-                id_masked,
-                false, // don't allow empty results
-                false, // enforce message filter
-                &filters.msg_filters,
-                &filters.sig_filters,
-            );
-            if decoded.is_none() {
-                continue;
+            while let Ok((node, state)) = bus_states.try_recv() {
+                let s = match state {
+                    BusState::Active => "Active".to_string(),
+                    BusState::Failed => "Failed".to_string(),
+                    BusState::Error => "Error".to_string(),
+                    _ => "Starting".to_string(),
+                };
+                println!("[{}] reported: {}", node, s);
             }
-            let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
-            if print { println!("{line}"); }
-            continue;
+            while let Ok(ev) = rx.try_recv() {
+                // SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
+                // DEL(1), ACK(1), DEL(1), EOF(7), ITM(11)
+                let mut bit_length = 43;
+                bit_length += ev.frame.can_dlc * 8;
+                let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
+                    bit_length += 29;
+                    ev.frame.can_id & CAN_EFF_MASK
+                } else {
+                    bit_length += 11;
+                    ev.frame.can_id & CAN_SFF_MASK
+                } as u32;
+
+                let has_id_filters = !filters.id_ranges.is_empty();
+                let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
+
+                match bandwidth.get(&ev.bus) {
+                    Some(bits) => { bandwidth.insert(ev.bus.clone(), (bit_length as u32 + bits).into()); }
+                    None => { bandwidth.insert(ev.bus.clone(), bit_length.into()); }
+                }
+
+                if !has_msg_sig_filters {
+                    if has_id_filters && !filters.match_id(id_masked) {
+                        continue;
+                    }
+                    let decoded = maybe_decode(
+                        per_bus_bundles.get(&ev.bus),
+                        &ev.frame,
+                        id_masked,
+                        true,  // allow empty signals
+                        true,  // ignore msg filter
+                        &[],   // msg filters
+                        &[],   // sig filters
+                    );
+
+                    let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
+                    if !args.quiet { println!("{line}"); }
+                } else {
+                    let decoded = maybe_decode(
+                        per_bus_bundles.get(&ev.bus),
+                        &ev.frame,
+                        id_masked,
+                        false, // don't allow empty results
+                        false, // enforce message filter
+                        &filters.msg_filters,
+                        &filters.sig_filters,
+                    );
+                    if decoded.is_none() {
+                        continue;
+                    }
+
+                    let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
+                    if !args.quiet { println!("{line}"); }
+                }
+            }
         }
     }
-    // -----------------------------------------------------------------------------------------
+    // ----------------------------------------------------------
 
     Ok(())
 }
 
-/// Worker: open socket, read frames, extract timestamp, send Event
-fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>) -> io::Result<()> {
-    let fd = open_can_with_timestamping(bus)?;
+// ----------------------- TUI -----------------------
 
-    let mut frame: can_frame = unsafe { zeroed() };
-    let mut name: sockaddr_can = unsafe { zeroed() };
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum BusState { Failed, Starting, Active, Error }
 
-    let mut iov = iovec {
-        iov_base: (&mut frame as *mut can_frame) as *mut c_void,
-        iov_len: size_of::<can_frame>(),
-    };
+fn run_tui(
+    rx: mpsc::Receiver<Event>,
+    states: mpsc::Receiver<(String, BusState)>,
+    buses: Vec<String>,
+    per_bus_bundles: HashMap<String, Arc<BusDbc>>,
+    filters: Filters,
+    mut bus_status: HashMap<String, BusState>,
+    max_msgs: usize,
+) -> io::Result<()> {
+    // Terminal setup
+    enable_raw_mode()?;
+    let mut std_fd = io::stderr();
+    execute!(std_fd, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(std_fd);
+    let mut terminal = Terminal::new(backend)?;
 
-    // Enough for cmsghdr + 3x timespec + padding
-    let mut cbuf = [0u8; 256];
+    // Message buffer
+    let mut messages: VecDeque<String> = VecDeque::with_capacity(max_msgs);
 
-    loop {
-        let mut msg: msghdr = unsafe { zeroed() };
-        msg.msg_name = (&mut name as *mut sockaddr_can) as *mut c_void;
-        msg.msg_namelen = size_of::<sockaddr_can>() as socklen_t;
-        msg.msg_iov = &mut iov as *mut iovec;
-        msg.msg_iovlen = 1;
-        msg.msg_control = cbuf.as_mut_ptr() as *mut c_void;
-        msg.msg_controllen = cbuf.len();
+    // Tabs (single tab "main")
+    let tabs = vec!["main".to_string()];
+    let mut active_tab_idx = 0usize;
+    let mut last_cycle = Instant::now();
+    let mut bandwidth: HashMap<String, u32> = HashMap::new();
 
-        let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
-        if n < 0 {
-            let err = io::Error::last_os_error();
-            if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
-                continue;
+    // UI loop
+    'ui: loop {
+        // Drain all pending events from CAN workers
+        while let Ok((node, state)) = states.try_recv() {
+            bus_status.insert(node, state);
+        }
+        while let Ok(ev) = rx.try_recv() {
+            // SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
+            // DEL(1), ACK(1), DEL(1), EOF(7), ITM(11)
+            let mut bit_length = 43;
+            bit_length += ev.frame.can_dlc * 8;
+            let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
+                bit_length += 29;
+                ev.frame.can_id & CAN_EFF_MASK
+            } else {
+                bit_length += 11;
+                ev.frame.can_id & CAN_SFF_MASK
+            } as u32;
+
+            let has_id_filters = !filters.id_ranges.is_empty();
+            let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
+
+            match bandwidth.get(&ev.bus) {
+                Some(bits) => { bandwidth.insert(ev.bus.clone(), (bit_length as u32 + bits).into()); }
+                None => { bandwidth.insert(ev.bus.clone(), bit_length.into()); }
             }
-            return Err(err);
+
+            let maybe_line = if !has_msg_sig_filters {
+                if has_id_filters && !filters.match_id(id_masked) {
+                    None
+                } else {
+                    let decoded = maybe_decode(
+                        per_bus_bundles.get(&ev.bus),
+                        &ev.frame,
+                        id_masked,
+                        true,
+                        true,
+                        &[],
+                        &[],
+                    );
+                    Some(format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded))
+                }
+            } else {
+                let decoded = maybe_decode(
+                    per_bus_bundles.get(&ev.bus),
+                    &ev.frame,
+                    id_masked,
+                    false,
+                    false,
+                    &filters.msg_filters,
+                    &filters.sig_filters,
+                );
+                decoded.map(|d| format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(d)))
+            };
+
+            if let Some(line) = maybe_line {
+                if messages.len() == max_msgs { messages.pop_front(); }
+                messages.push_back(line);
+            }
         }
 
-        let ts_opt = parse_timestamp_from_cmsgs(&msg);
+        // Draw
+        terminal.draw(|f| {
+            // Layout: [top status (3 rows) | middle messages (fill) | bottom tabs (1 row)]
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length((buses.len() + 2).try_into().unwrap()),
+                    Constraint::Min(1),
+                    Constraint::Length(1),
+                ])
+                .split(f.size());
 
-        // Copy libc::can_frame -> portable CanFrame
-        let cf = CanFrame {
-            can_id: frame.can_id,
-            can_dlc: frame.can_dlc,
-            data: frame.data,
-        };
+            // Top: status box
+            let mut status_lines: Vec<String> = Vec::with_capacity(buses.len());
+            let time_delta = Instant::now() - last_cycle;
+            for b in &buses {
+                let dbc_name = per_bus_bundles
+                    .get(b)
+                    .map(|x| x.dbc_name.as_str())
+                    .unwrap_or("no-dbc");
+                let s = match bus_status.get(b) {
+                    Some(BusState::Active) => "Active".to_string(),
+                    Some(BusState::Failed) => "Failed".to_string(),
+                    Some(BusState::Error) => "Error".to_string(),
+                    _ => "Starting".to_string(),
+                };
+                let bits = match bandwidth.get(b) {
+                    Some(bits) => *bits as f64/time_delta.as_secs_f64(),
+                    None => 0.0,
+                };
+                let stats = format!("{:.3} bits/s", bits);
+                if time_delta >= Duration::from_secs(60) {
+                    last_cycle = Instant::now();
+                    bandwidth = HashMap::new();
+                }
+                status_lines.push(format!("{b} [{dbc_name}] Status: {s} Transmits: {stats}\n"));
+            }
+            let status = Paragraph::new(status_lines.join("  "))
+                .block(Block::default().borders(Borders::ALL).title("bus status"))
+                .wrap(Wrap { trim: true });
+            f.render_widget(status, chunks[0]);
 
-        let _ = tx.send(Event {
-            bus: bus.to_string(),
-            frame: cf,
-            ts_opt,
-        });
+            // Middle: message list
+            let list_items: Vec<ListItem> = messages
+                .iter()
+                .rev() // newest on top feels nice; remove .rev() if you prefer bottom
+                .map(|m| ListItem::new(m.clone()))
+                .collect();
+            let list = List::new(list_items)
+                .block(Block::default().borders(Borders::ALL).title("messages"));
+            f.render_widget(list, chunks[1]);
+
+            // Bottom: tabs strip (single tab "main")
+            let t = Tabs::new(tabs.iter().map(|t| t.as_str()).collect::<Vec<_>>())
+                .select(active_tab_idx)
+                .block(Block::default().borders(Borders::NONE))
+                .style(Style::default())
+                .highlight_style(Style::default().bold())
+                .divider(" ")
+                .padding("", "");
+            f.render_widget(t, chunks[2]);
+        })?;
+
+        // Input (non-blocking poll)
+        if event::poll(Duration::from_millis(50))? {
+            match event::read()? {
+                CEvent::Resize(w, h) => {
+                    // Adjust terminal viewport on dynamic resize (e.g., tmux pane changes)
+                    terminal.resize(Rect::new(0, 0, w, h))?;
+                }
+                CEvent::Key(key) => {
+                    // handle only real key presses (ignore repeats)
+                    if key.kind == KeyEventKind::Press {
+                        match key.code {
+                            KeyCode::Char('q') => break 'ui,
+                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => break 'ui,
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // teardown
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+    Ok(())
+}
+
+// ----------------------- Worker & helpers -----------------------
+
+/// Worker: open socket, read frames, extract timestamp, send Event
+fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>, bus_state: &mpsc::Sender<(String, BusState)>) {
+    loop {
+        let mut active = false;
+        if let Ok(fd) = open_can_with_timestamping(bus) {
+
+            let mut frame: can_frame = unsafe { zeroed() };
+            let mut name: sockaddr_can = unsafe { zeroed() };
+
+            let mut iov = iovec {
+                iov_base: (&mut frame as *mut can_frame) as *mut c_void,
+                iov_len: size_of::<can_frame>(),
+            };
+
+            // Enough for cmsghdr + 3x timespec + padding
+            let mut cbuf = [0u8; 256];
+
+            'recv_loop: loop {
+                let mut msg: msghdr = unsafe { zeroed() };
+                msg.msg_name = (&mut name as *mut sockaddr_can) as *mut c_void;
+                msg.msg_namelen = size_of::<sockaddr_can>() as socklen_t;
+                msg.msg_iov = &mut iov as *mut iovec;
+                msg.msg_iovlen = 1;
+                msg.msg_control = cbuf.as_mut_ptr() as *mut c_void;
+                msg.msg_controllen = cbuf.len();
+
+                let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
+                if n < 0 {
+                    let err = io::Error::last_os_error();
+                    if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
+                        continue;
+                    } else if active {
+                        active = false;
+                        bus_state.send((bus.to_string(), BusState::Error));
+                    }
+                    break 'recv_loop;
+                } else if !active {
+                    active = true;
+                    bus_state.send((bus.to_string(), BusState::Active));
+                }
+
+                let ts_opt = parse_timestamp_from_cmsgs(&msg);
+
+                // Copy libc::can_frame -> portable CanFrame
+                let cf = CanFrame {
+                    can_id: frame.can_id,
+                    can_dlc: frame.can_dlc,
+                    data: frame.data,
+                };
+
+                let _ = tx.send(Event {
+                    bus: bus.to_string(),
+                    frame: cf,
+                    ts_opt,
+                });
+            }
+        }
+        std::thread::sleep(Duration::from_millis(1000));
     }
 }
 
@@ -431,7 +699,7 @@ fn format_can_line(
         let payload = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
         match decoded {
             Some(dec) if !dec.is_empty() => format!(
-                "[{}] {} ID={}{flags} DLC={} DATA={} | {}",
+                "[{}] {} ID={}{flags} DLC={} DATA={}\n{}",
                 ts_str, bus, id_str, f.can_dlc, payload, dec
             ),
             _ => format!(
@@ -655,9 +923,9 @@ fn render_decoded_with_optional_sig_filter(
         let v = decode_signal(sig, &data);
         let unit = sig.unit();
         if unit.is_empty() {
-            parts.push(format!("{}={}", sig.name(), v));
+            parts.push(format!("  {}={}\n", sig.name(), v));
         } else {
-            parts.push(format!("{}={} {}", sig.name(), v, unit));
+            parts.push(format!("  {}={} {}\n", sig.name(), v, unit));
         }
     }
 
@@ -668,6 +936,6 @@ fn render_decoded_with_optional_sig_filter(
             None
         }
     } else {
-        Some(format!("{}: {}", msg.message_name(), parts.join("; ")))
+        Some(format!("{}:\n{}", msg.message_name(), parts.join("")))
     }
 }

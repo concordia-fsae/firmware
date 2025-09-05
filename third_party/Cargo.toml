@@ -22,6 +22,7 @@ futures = "0.3.30"
 indicatif = "0.17.8"
 log = { version = "0.4.21", features = ["std"] }
 libc = "0.2.175"
+ratatui = "0.29.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_derive = { version = "1.0.197" }
 serde_yaml = { version = "0.9.34" }
