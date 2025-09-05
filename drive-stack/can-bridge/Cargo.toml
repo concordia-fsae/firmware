@@ -1,0 +1,13 @@
+[package]
+name = "can-bridge"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "can-bridge"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+libc = { workspace = true }
+socketcan = { workspace = true }
