@@ -1,0 +1,86 @@
+[*it is recommended to use LAZYGIT when doing git manipulation for visualisation*]
+
+
+———————————————When Doing New Task———————————————
+
+
+	1.	Update master
+	⁃	git checkout master
+	⁃	git pull
+	2.	Create a branch
+	⁃	git checkout -b user/<your initials>/<branchname>
+	3.	Make changes onto branch
+	⁃	do thing...
+	4.	Commit git add . and git commit -m "Initial commit title"
+	5.	make more changes...
+	6.	git commit --amend
+	7.	If remote is already pushed, git push -f to force push
+	8.	Keep amending the last commit as long as its the same task and force pushing
+If you need to make a new branch, go back to step 1 and start over. New branch should only be for a new task
+
+
+
+
+———————————————To verify if you amended correctly———————————————
+
+
+Git log [*make sure its not the same commit num*]
+					^
+	git add .			|
+	git commit --amend 		|
+	:wq				|
+					v
+Git log [*make sure its not the same commit num*]
+
+	git push --force
+
+
+
+
+———————————————If there’s conflicts with your branch and master ———————————————
+(e.g. on master : file Abc has “zzz” on line 1.        AND        on <branchName> : file Abc has “yyy” on line 1.
+Do you want to keep both? Do you want only one to stay?)
+
+ [*make sure you commit before checkout master*] [*if you forget to commit (or stash) your changes before you do that you will lose your changes*] 
+	1. Make sure you're on your feature branch
+	⁃	git checkout user/<your initials>/<branchname>
+
+	2. Fetch the latest changes from origin
+	⁃	git fetch origin
+
+
+[*git fetch origin is a Git command that:
+Downloads all latest changes from the remote repository (usually called origin) — but does not apply them to your current branch.
+In detail:
+•	git fetch updates your local view of remote branches (like origin/master, origin/main, etc.)
+•	It doesn’t change your working directory, or any of your local branches.
+•	Think of it like syncing without applying.*]
+
+
+	3. Rebase your branch onto the latest master
+	⁃	git rebase origin/master 
+
+	4. If there are conflicts, Git will pause and show them
+	⁃	Open each conflicted file and fix the conflict manually [* the use of VSCODE is recommended for visualisation*].
+	▪	Go to vs code and press "accept combination (on top of code) if ur ok with both  OR accept only one change
+	⁃	Then mark it as resolved
+
+ 	5. Continue the rebase after resolving conflicts
+	⁃	git rebase --continue
+
+	6. Repeat steps 4-5 until rebase is complete
+
+ 	7. Now force push your updated branch
+	⁃	git push --force
+
+
+
+
+———————————————If remote is different than local———————————————
+(e.g XX commits ahead master/ XX behind master)
+
+
+https://graphite.dev/guides/git-divergent-branches
+
+
+
