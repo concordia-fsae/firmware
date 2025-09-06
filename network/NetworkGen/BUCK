@@ -1,0 +1,9 @@
+load("//tools/uv/defs.bzl", "uv_tool")
+
+uv_tool(
+    name = "yamcan",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = glob(["**/*.py", "templates/**/*.mako", "templates/dbc_header.dbc"]),
+    visibility = ["PUBLIC"],
+)
