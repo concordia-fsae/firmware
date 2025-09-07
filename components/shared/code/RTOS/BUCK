@@ -1,0 +1,20 @@
+load("//components/shared/code/defs.bzl", "remap_headers")
+
+srcs = glob(["*.c"])
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["//components/..."],
+    )
+    for file in srcs
+]
+
+exported_headers = remap_headers([""])
+prebuilt_cxx_library(
+    name = "headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = exported_headers,
+    visibility = ["PUBLIC"],
+)
