@@ -25,7 +25,7 @@ def generate_nodes(env, nodes: Optional[Dict[str, Dir]], ):
     )
 
     env._generateNodes(nodes=nodes, codegen_args=codegen_args)
-    return ["MessageUnpack_generated.c"]
+    return ["MessageUnpack_generated.c", "MessagePack_generated.c", "SigTx.c"]
 
 
 def emitBuild(target, source, env):
