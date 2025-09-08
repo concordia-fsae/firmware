@@ -13,3 +13,5 @@ signals:
     sourceBuses: veh
   STW_raceMode:
     sourceBuses: veh
+  VCFRONT_wheelSlipRatio:
+    sourceBuses: veh
