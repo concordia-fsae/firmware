@@ -1,0 +1,20 @@
+load("//tools/defs.bzl", "strip_prefix")
+
+shared_sels = glob(["**/*FeatureSels.yaml"])
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["//components/..."],
+    )
+    for file in shared_sels
+]
+shared_defs = glob(["**/*FeatureDefs.yaml"])
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["//components/..."],
+    )
+    for file in shared_defs
+]

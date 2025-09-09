@@ -1,0 +1,22 @@
+load("//tools/uv/defs.bzl", "uv_tool")
+
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["PUBLIC"],
+    )
+    for file in [
+        "FeatureDefines.h",
+        "BuildDefines_generated.h.mako",
+        "FeatureDefines_generated.h.mako",
+    ]
+]
+
+uv_tool(
+    name = "feature-tree",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = ["feature-tree.py"],
+    visibility = ["PUBLIC"],
+)
