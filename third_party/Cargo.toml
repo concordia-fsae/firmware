@@ -15,12 +15,14 @@ anyhow = "1.0.80"
 argh = "0.1.12"
 automotive_diag = { version = "0.1.6", features = ["display", "std", "with-uds"], default-features = false }
 clap = { version = "4", features = ["derive"] }
+can-dbc = "6"
 crc = "3.2.1"
 ecu_diagnostics = "0.99"
 futures = "0.3.30"
 indicatif = "0.17.8"
 log = { version = "0.4.21", features = ["std"] }
 libc = "0.2.175"
+ratatui = "0.29.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_derive = { version = "1.0.197" }
 serde_yaml = { version = "0.9.34" }

@@ -1,14 +1,29 @@
-rust_binary(
-    name = "can-bridge",
-    srcs = ["src/main.rs"],
+rust_library(
+    name = "lib",
+    crate = "can_bridge",
+    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
     edition = "2024",
     deps = [
-        "//third_party:clap",
+        "//third_party:can-dbc",
         "//third_party:libc",
         "//third_party:socketcan",
     ],
     target_compatible_with = [
         "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "can-bridge",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        ":lib",
+        "//third_party:clap",
+        "//third_party:can-dbc",
+        "//third_party:libc",
+        "//third_party:ratatui",
     ],
     visibility = ["PUBLIC"],
 )
