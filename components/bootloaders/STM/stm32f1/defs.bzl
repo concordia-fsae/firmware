@@ -2,6 +2,7 @@ load("@prelude//:rules.bzl", __rules__ = "rules")
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_bootloader_download", "conUDS_download")
 load("//embedded/defs.bzl", "preprocess_linkscript", "produce_bin")
+load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
 
@@ -185,4 +186,12 @@ def _bootloader_impl(
     __rules__["alias"](
         name = name_prefix.format("compdb"),
         actual = ":" + name_prefix.format("elf") + "[full-compilation-database]",
+    )
+
+    openocd_run(
+        name = "gdb-{}-{}".format(config_id, "blu" if is_updater else "bl"),
+        toolchain = toolchain,
+        src = ":" + name_prefix.format("elf"),
+        interface = "stlink",
+        mcu = "stm32f103c8",
     )

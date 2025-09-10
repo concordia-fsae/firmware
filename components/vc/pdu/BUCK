@@ -1,6 +1,7 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_download", "deployable_target")
+load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//network/NetworkGen/defs.bzl", "generate_code")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
@@ -416,6 +417,17 @@ alias(
         src = ":crc-{}".format(variant),
         target_node = APP_NAME,
         visibility = ["PUBLIC"],
+    )
+    for variant in variants
+]
+
+[
+    openocd_run(
+        name = "gdb-{}".format(variant),
+        toolchain = TOOLCHAIN,
+        src = ":elf",
+        interface = "stlink",
+        mcu = "stm32f103c8",
     )
     for variant in variants
 ]

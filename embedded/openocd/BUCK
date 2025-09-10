@@ -1,0 +1,14 @@
+load(":defs.bzl", "download_openocd_distribution")
+
+download_openocd_distribution(
+    name = "dist-openocd",
+    version = "0.12.0-6",
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "repository",
+    srcs = glob(["interface/*", "mcu/*"]),
+    copy = False,
+    visibility = ["PUBLIC"],
+)
