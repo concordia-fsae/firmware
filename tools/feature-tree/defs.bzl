@@ -5,9 +5,16 @@ def generate_feature_tree(
         name: str,
         config_id: int | Select,
         srcs: list[str] | dict[str, str],
+        node_id: int | None = None,
         kv: dict[str, str] = {}):
-    uv_name = name + "-codegen"
     sets = ""
+    exported_identifier = ".config-{}"
+
+    if node_id:
+        name = name + "-{}".format(node_id)
+        exported_identifier = exported_identifier + "-{}".format(node_id)
+
+    uv_name = name + "-codegen"
 
     srcs_qualified = srcs
     if type(srcs) == list:
@@ -46,11 +53,11 @@ def generate_feature_tree(
             },
         ),
         __rules__["export_file"](
-            name = "BuildDefines_generated.h.config-{}".format(config_id),
+            name = "BuildDefines_generated.h" + exported_identifier.format(config_id),
             src = ":" + uv_name + "[BuildDefines_generated.h]",
         ),
         __rules__["export_file"](
-            name = "FeatureDefines_generated.h.config-{}".format(config_id),
+            name = "FeatureDefines_generated.h" + exported_identifier.format(config_id),
             src = ":" + uv_name + "[FeatureDefines_generated.h]",
         ),
 

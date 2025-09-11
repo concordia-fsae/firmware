@@ -5,7 +5,7 @@ def conUDS_download(
         binary: str,
         node: str):
     return __rules__["command_alias"](
-        name = "download",
+        name = name,
         exe = "//drive-stack/conUDS:conUDS",
         args = ["-n", node, "download", "$(location {})".format(binary)],
     )
