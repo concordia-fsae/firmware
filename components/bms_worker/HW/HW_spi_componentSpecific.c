@@ -14,7 +14,6 @@
 #include "HW_gpio.h"
 #include "HW_spi.h"
 #include "stm32f1xx_ll_bus.h"
-#include "stm32f1xx_ll_gpio.h"
 
 
 /******************************************************************************
@@ -91,7 +90,7 @@ static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
         LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
         LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
 
-        LL_GPIO_AF_EnableRemap_SPI1();
+	    __HAL_AFIO_REMAP_SPI1_ENABLE();
     }
 }
 
@@ -106,7 +105,7 @@ static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
     {
         // Peripheral clock disable
         LL_SPI_Disable(SPI1);
-	    LL_GPIO_AF_DisableRemap_SPI1();
+	    __HAL_AFIO_REMAP_SPI1_DISABLE();
 
 	    LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_SPI1);
     }
