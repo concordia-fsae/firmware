@@ -49,6 +49,23 @@ GccReleaseInfo = provider(
     },
 )
 
+GccDistributionInfo = provider(
+    # @unsorted-dict-items
+    fields = {
+        "version": provider_field(typing.Any, default = None),
+        "arch": provider_field(typing.Any, default = None),
+        "os": provider_field(typing.Any, default = None),
+        "target_arch": provider_field(typing.Any, default = None),
+        "target_os": provider_field(typing.Any, default = None),
+    },
+)
+
+GdbToolInfo = provider(
+    fields = {
+        "gdb": provider_field(typing.Any),
+    },
+)
+
 def get_gcc_release(version: str, target_arch: str, target_os: str) -> GccReleaseInfo:
     if not version in releases:
         fail("Unknown gcc release version '{}'. Available versions: {}".format(
@@ -73,17 +90,6 @@ def get_gcc_release(version: str, target_arch: str, target_os: str) -> GccReleas
         sha256 = gcc_platform["sha256sum"],
         strip_prefix = gcc_platform["strip_prefix"],
     )
-
-GccDistributionInfo = provider(
-    # @unsorted-dict-items
-    fields = {
-        "version": provider_field(typing.Any, default = None),
-        "arch": provider_field(typing.Any, default = None),
-        "os": provider_field(typing.Any, default = None),
-        "target_arch": provider_field(typing.Any, default = None),
-        "target_os": provider_field(typing.Any, default = None),
-    },
-)
 
 def download_gcc_distribution(
         name: str,
@@ -284,7 +290,17 @@ def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
 
     placeholders_info = TemplatePlaceholderInfo(unkeyed_variables = unkeyed_variables)
 
-    return [ctx.attrs.distribution[DefaultInfo], toolchain_info, placeholders_info, platform_info]
+    gdb_info = GdbToolInfo(
+        gdb = RunInfo(args = cmd_args(bin, format = "{}gdb")),
+    )
+
+    return [
+        ctx.attrs.distribution[DefaultInfo],
+        toolchain_info,
+        placeholders_info,
+        platform_info,
+        gdb_info,
+    ]
 
 gcc_toolchain = rule(
     impl = _gcc_toolchain_impl,
