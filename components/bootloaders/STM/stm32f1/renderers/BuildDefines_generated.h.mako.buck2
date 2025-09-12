@@ -1,0 +1,12 @@
+/*
+ * BuildDefines_generated.h
+ *
+ */
+
+#pragma once
+
+%if "nodeId" in configs:
+#define NODE_ID          ${configs["nodeId"]}U
+%endif
+#define UDS_REQUEST_ID   ${configs["udsRequestId"]}U
+#define UDS_RESPONSE_ID  ${configs["udsResponseId"]}U

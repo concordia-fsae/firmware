@@ -85,6 +85,17 @@ export_file(
     visibility = ["PUBLIC"],
 )
 
+export_file(
+    name = "libcrc.h",
+    src = "libcrc/libcrc.h",
+    visibility = ["PUBLIC"],
+)
+export_file(
+    name = "libcrc.c",
+    src = "libcrc/libcrc.c",
+    visibility = ["PUBLIC"],
+)
+
 git_fetch(
     name = "isotp",
     repo = "git@github.com:concordia-fsae/isotp.git",
