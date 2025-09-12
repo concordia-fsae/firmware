@@ -12,6 +12,7 @@
 #include "string.h"
 #include "wheelSpeed.h"
 #include "lib_utility.h"
+#include <math.h>
 
 /******************************************************************************
  *                              D E F I N E S
@@ -120,8 +121,14 @@ static void calcSlipRatio_100Hz(void)
 {
     float32_t FR_wheelSpeed = wheelSpeed_getSpeedLinear(WHEEL_FR);
     float32_t RR_wheelSpeed = wheelSpeed_getSpeedLinear(WHEEL_RR);
-
-    slipRatio = (FR_wheelSpeed - RR_wheelSpeed) / FR_wheelSpeed;
+    if(fabs(FR_wheelSpeed) > 1e-6f)
+    {
+        slipRatio = ((FR_wheelSpeed - RR_wheelSpeed) / FR_wheelSpeed)*100;
+    }
+    else
+    {
+        slipRatio =0.0f;
+    }
     slipRatio = SATURATE(0,slipRatio,100);
 }
 
