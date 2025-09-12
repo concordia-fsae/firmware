@@ -9,3 +9,13 @@ def conUDS_download(
         exe = "//drive-stack/conUDS:conUDS",
         args = ["-n", node, "download", "$(location {})".format(binary)],
     )
+
+def conUDS_bootloader_download(
+        name: str,
+        binary: str,
+        node: str):
+    return __rules__["command_alias"](
+        name = name,
+        exe = "//drive-stack/conUDS:conUDS",
+        args = ["-n", node, "bootloader-download", "$(location {})".format(binary)],
+    )

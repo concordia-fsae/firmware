@@ -6,7 +6,8 @@ def generate_feature_tree(
         config_id: int | Select,
         srcs: list[str] | dict[str, str],
         node_id: int | None = None,
-        kv: dict[str, str] = {}):
+        kv: dict[str, str] = {},
+        build_renderer: str | None = None):
     sets = ""
     exported_identifier = ".config-{}"
 
@@ -15,16 +16,17 @@ def generate_feature_tree(
         exported_identifier = exported_identifier + "-{}".format(node_id)
 
     uv_name = name + "-codegen"
+    build_renderer = build_renderer or "//tools/feature-tree:BuildDefines_generated.h.mako"
 
     srcs_qualified = srcs
     if type(srcs) == list:
         srcs_qualified = srcs_qualified + [
-            "//tools/feature-tree:BuildDefines_generated.h.mako",
+            build_renderer,
             "//tools/feature-tree:FeatureDefines_generated.h.mako",
         ]
     else:
         srcs_qualified = srcs_qualified | {
-            "BuildDefines_generated.h.mako": "//tools/feature-tree:BuildDefines_generated.h.mako",
+            "BuildDefines_generated.h.mako": build_renderer,
             "FeatureDefines_generated.h.mako": "//tools/feature-tree:FeatureDefines_generated.h.mako",
         }
 
