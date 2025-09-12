@@ -98,5 +98,8 @@
                                                   CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
 #define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
                                                     CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_imuInit(m,b,n,s) set (m,b,n,s, imuInit())
+#define set_imuReadWhoAmI(m,b,n,s) set(m,b,n,s, imuReadWhoAmI())
+#define set_imuReadData(m,b,n,s) set(m,b,n,s, imuReadData())
 
 #include "TemporaryStubbing.h"
