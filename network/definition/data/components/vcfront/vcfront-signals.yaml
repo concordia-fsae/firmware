@@ -116,3 +116,13 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  wheelSlipRatio:
+    unit: '%'
+    description: "Slip Ratio expressed as a percentage, representing how much the driven wheel is slipping relative to the reference wheel speed"
+    nativeRepresentation:
+      bitWidth: 10 
+      range:
+        min: 0
+        max: 100
+    continuous: true 
