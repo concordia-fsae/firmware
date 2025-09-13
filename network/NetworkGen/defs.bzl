@@ -1,8 +1,31 @@
-load("//tools/uv/defs.bzl", "uv_genrule", "uv_tool")
 load("@prelude//:rules.bzl", "cxx_library")
 load("//components/shared/code/defs.bzl", "remap_headers")
+load("//tools/uv/defs.bzl", "uv_genrule", "uv_tool")
 
-def network_gen_code(name: str, network_dep: str, node: str, library_deps: list[str] | None = None, **kwargs):
+def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: list[str] | None = None, **kwargs):
+    args = ""
+    for node in ignore_nodes:
+        args += " --ignore-node {}".format(node)
+
+    for filt in filters:
+        args += " --manifest-filter {}".format(filt)
+
+    return uv_genrule(
+        name = name,
+        tool = "//network/NetworkGen:yamcan",
+        # Named output dir called "include"
+        out = "manifest.yaml",
+        cmd = (
+            "$(python) ${TOOLDIR}/NetworkGen.py" +
+            " --cache-dir ${SRCS}" +
+            " --manifest-output ${OUT}" +
+            args
+        ),
+        srcs = [dep],
+        **kwargs,
+    )
+
+def generate_code(name: str, network_dep: str, node: str, library_deps: list[str] | None = None, **kwargs):
     uv_name = name + "-codegen"
     cxx_deps = [":" + uv_name] + library_deps if library_deps else []
     return [
@@ -20,7 +43,7 @@ def network_gen_code(name: str, network_dep: str, node: str, library_deps: list[
                 "sources": [
                     "generated/MessagePack_generated.c",
                     "generated/MessageUnpack_generated.c",
-                    "generated/SigTx.c"
+                    "generated/SigTx.c",
                 ],
             },
             cmd = (
@@ -51,7 +74,7 @@ def network_gen_code(name: str, network_dep: str, node: str, library_deps: list[
         ),
     ]
 
-def network_gen_stats(
+def generate_stats(
         name: str,
         dep: str,
         **kwargs):
@@ -64,7 +87,7 @@ def network_gen_stats(
         **kwargs
     )
 
-def network_gen_dbc(
+def generate_dbcs(
         name: str,
         dep: str,
         **kwargs):
@@ -77,7 +100,7 @@ def network_gen_dbc(
         **kwargs
     )
 
-def network_build(
+def build_network(
         name: str,
         data_dir: str,
         **kwargs):

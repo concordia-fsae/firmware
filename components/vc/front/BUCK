@@ -1,7 +1,7 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//tools/hextools/defs.bzl", "inject_crc")
-load("//network/NetworkGen/defs.bzl", "network_gen_code")
+load("//network/NetworkGen/defs.bzl", "generate_code")
 load("//components/shared/code/defs.bzl", "shared_code_library", "remap_headers")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
@@ -155,7 +155,7 @@ prebuilt_cxx_library(
 
 compiler_flags += ["-include", "BuildDefines.h"]
 
-network_gen_code(
+generate_code(
     name = "network",
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags + ["-Wno-float-conversion", "-Wno-sign-conversion"],
@@ -406,6 +406,7 @@ alias(
     conUDS_download(
         name = "download-{}".format(variant),
         binary = ":crc-{}".format(variant),
+        manifest = "//network:manifest-uds",
         node = APP_NAME,
     )
     for variant in variants
