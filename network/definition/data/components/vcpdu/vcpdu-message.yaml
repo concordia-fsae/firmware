@@ -38,6 +38,7 @@ messages:
         template: shutdownRelayStatus
       tsmsSafetyStatus:
         template: digitalStatus
+      pdu5vVoltage:
 
   hsdState:
     description: Current state of the HSDs

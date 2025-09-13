@@ -102,3 +102,13 @@ signals:
         min: 0
         max: 30
     continuous: true
+    
+  pdu5vVoltage:
+    unit: 'V'
+    description: PDU 5V Rail
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 6
+    continuous: true
