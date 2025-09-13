@@ -480,12 +480,12 @@ chips = {
     "stm32f105": {
         "defaultLinkerFile": "f105/STM32F105VC.ld",
         "srcs": [
-            "f105/startup_stm32f105vc.S",
-            "system_stm32f1xx.c",
-            "stm32f1xx_hal.c",
+            "Src/stm32f1xx_hal.c",
         ],
         "headers": [
-            "stm32f1xx_hal.h",
+            "Inc/stm32f1xx_hal.h",
+            ("Legacy/stm32_hal_legacy.h", "Inc/Legacy/stm32_hal_legacy.h"),
+            ("stm32f1xx_hal_def.h", "Inc/stm32f1xx_hal_def.h"),
         ],
         "drivers": {
             "adc": {
@@ -582,6 +582,7 @@ chips = {
                 ],
                 "headers": [
                     "Inc/stm32f1xx_hal_dma.h",
+                    "Inc/stm32f1xx_hal_dma_ex.h",
                 ],
                 "ll": {
                     "srcs": [

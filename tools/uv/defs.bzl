@@ -88,6 +88,7 @@ uv_genrule = rule(
                 ),
                 default = None,
             ),
+            "default_outs": attrs.option(attrs.list(attrs.string()), default = None),
             "bash": attrs.option(attrs.arg(), default = None),
             "cacheable": attrs.option(attrs.bool(), default = None),
             "executable_outs": attrs.option(

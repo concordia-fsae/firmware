@@ -233,6 +233,7 @@ void vApplicationTickHook(void)
  * @brief create resources that are required by FreeRTOS
  *        namely, all of the tasks, timers, and SWIs
  */
+void RTOS_createResources(void);
 void RTOS_createResources(void)
 {
     /*

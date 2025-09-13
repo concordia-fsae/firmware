@@ -1,0 +1,18 @@
+load("//network/NetworkGen/defs.bzl", "network_build", "network_gen_stats", "network_gen_dbc", "network_gen_code")
+
+network_build(
+    name = "network",
+    data_dir = "definition/",
+    visibility = ["PUBLIC"],
+)
+
+network_gen_dbc(
+    name = "dbc",
+    dep = ":network",
+    visibility = ["PUBLIC"],
+)
+
+network_gen_stats(
+    name = "stats",
+    dep = ":network",
+)
