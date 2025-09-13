@@ -793,6 +793,20 @@ def parse_args() -> Namespace:
     )
 
     parser.add_argument(
+        "--gen-dbc",
+        dest="dbc",
+        action="store_true",
+        help="Generate DBC files.",
+    )
+
+    parser.add_argument(
+        "--gen-stats",
+        dest="stats",
+        action="store_true",
+        help="Generate stats files.",
+    )
+
+    parser.add_argument(
         "--cache-dir",
         type=Path,
         dest="cache_dir",
@@ -838,6 +852,7 @@ def calculate_bus_load(bus, output_dir):
     total_unscheduled_messages = 0
     total_messages = 0
 
+    makedirs(output_dir, exist_ok=True)
     output = [ open(str(output_dir) + f"/{bus.name}-stats.txt", 'w'), sys.stdout ]
 
     for _, message in bus.messages.items():
@@ -886,17 +901,15 @@ def main():
     lookup = TemplateLookup(directories=[ path.dirname(__file__) + "/templates" ])
 
     if args.build:
-        print(f"Parsing network...")
-        parseNetwork(args, lookup)
-        if not ERROR:
-            for bus in can_bus_defs.values():
-                calculate_bus_load(bus, args.output_dir)
-                generate_dbcs(lookup, bus, args.output_dir)
-        if args.cache_dir:
-            pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
-            pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))
-            pickle.dump(discrete_values, open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "wb"))
-            pickle.dump(templates, open(args.cache_dir.joinpath("CachedTemplates.pickle"), "wb"))
+        if args.definition_dir:
+            print(f"Parsing network...")
+            parseNetwork(args, lookup)
+            if args.cache_dir:
+                makedirs(args.cache_dir, exist_ok=True)
+                pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
+                pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))
+                pickle.dump(discrete_values, open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "wb"))
+                pickle.dump(templates, open(args.cache_dir.joinpath("CachedTemplates.pickle"), "wb"))
     elif args.cache_dir:
         try:
             can_nodes = pickle.load(open(args.cache_dir.joinpath("CachedNodes.pickle"), "rb"))
@@ -906,6 +919,13 @@ def main():
         except Exception as e:
             print(f"Could not retreive cache files. Try building the network again...")
             ERROR = True
+
+    if args.output_dir:
+        for bus in can_bus_defs.values():
+            if (not args.dbc and not args.stats) or args.stats:
+                calculate_bus_load(bus, args.output_dir)
+            if (not args.dbc and not args.stats) or args.dbc:
+                generate_dbcs(lookup, bus, args.output_dir)
 
     if ERROR:
         raise Exception("Build failed. See previous errors in output")

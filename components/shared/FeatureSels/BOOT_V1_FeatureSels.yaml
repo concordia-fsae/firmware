@@ -5,3 +5,4 @@ features:
   app_function_id: bl
   app_uds: true
   app_validation_enabled: true
+  feature_flashable_bootloader: true

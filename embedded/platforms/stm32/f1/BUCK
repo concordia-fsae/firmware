@@ -11,6 +11,7 @@ git_fetch(
     sub_targets = [
         "Include/stm32f1xx.h",
         "Include/stm32f103xb.h",
+        "Include/stm32f105xc.h",
         "Include/system_stm32f1xx.h",
         "Source",
         "Source/Templates",

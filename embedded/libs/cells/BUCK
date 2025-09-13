@@ -1,0 +1,15 @@
+export_file(
+    name = "P42A.c",
+    src = "P42A.c",
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "cells",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = {
+        "CELL.h": "CELL.h",
+    },
+    visibility = ["PUBLIC"],
+)

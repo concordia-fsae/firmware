@@ -146,7 +146,7 @@ stm32f1_hal(
 cxx_genrule(
     name = "linkscript",
     _cxx_toolchain = TOOLCHAIN,
-    cmd = "$(cpp) -P -undef {}".format(" ".join(compiler_flags)) + " ${SRCS} | sed -e '/^#.\\+$/d' > ${OUT}",
+    cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) + " ${SRCS} | sed -e '/^#.\\+$/d' > ${OUT}",
     out = "stm32f103c8.ld",
     srcs = ["//embedded/platforms/stm32/f1/f103:stm32f103c8.ld"],
 )

@@ -73,6 +73,7 @@ async fn main() {
                 "Downloading binary at '{:#?}' to node `{}`",
                 dl.binary, args.node
             );
+            uds.client.start_persistent_tp().await;
             uds.reset_node(SupportedResetTypes::Hard).await;
             if let Err(e) = &uds.file_download(&dl.binary, 0x08002000).await {
                 error!("While downloading app: {}", e);

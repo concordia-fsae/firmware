@@ -175,7 +175,7 @@ project_hw_files = [
     HW_DIR.File("HW_intc.c"),
     HW_DIR.File("HW_msp.c"),
     SHARED_HW.File("HW_tim.c"),
-    SHARED_VC_HW.File("HW_tim.c"),
+    SHARED_VC_HW.File("HW_tim_vcSpecific.c"),
     SHARED_HW.File("HW_can.c"),
     SHARED_HW.File("HW_gpio.c"),
     HW_DIR.File("drv_tps20xx_componentSpecific.c"),

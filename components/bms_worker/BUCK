@@ -1,0 +1,472 @@
+load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
+load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load("//tools/hextools/defs.bzl", "inject_crc")
+load("//network/NetworkGen/defs.bzl", "network_gen_code")
+load("//components/shared/code/defs.bzl", "shared_code_library", "remap_headers")
+load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
+load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
+
+TOOLCHAIN = "@toolchains//:gcc-14.2.rel1"
+APP_START_ADDR = 0x08002000
+APP_NAME = "bmsw"
+NUMBER_NODES = 6
+
+variants = [
+    0,
+]
+
+constraint_setting(
+    name = "variant",
+)
+constraint_setting(
+    name = "node",
+)
+[
+    constraint_value(
+        name = "config-{}".format(variant),
+        constraint_setting = ":variant",
+    )
+    for variant in variants
+]
+[
+    constraint_value(
+        name = "node-{}".format(node),
+        constraint_setting = ":node",
+    )
+    for node in range(NUMBER_NODES)
+]
+
+[
+    platform(
+        name = "cfg{}-node-{}".format(variant, i),
+        constraint_values = [
+            ":config-{}".format(variant),
+            ":node-{}".format(i),
+        ],
+    )
+    for variant in variants for i in range(NUMBER_NODES)
+]
+
+compiler_flags = [
+    "-std=c11",
+    "-mthumb",
+    "-mcpu=cortex-m3",
+    "-mfloat-abi=soft",
+    "-msoft-float",
+    "-nostdlib",
+    "-nostartfiles",
+    "-specs=nano.specs",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fshort-enums",
+    "-funsigned-char",
+    # "-DLD_USE_STACK",
+    "-DLD_USE_HEAP",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wfloat-equal",
+    "-Wcast-align",
+    "-Wlogical-op",
+    "-Winline",
+    "-Wshadow",
+    "-Winit-self",
+    "-Wmissing-prototypes",
+    "-Wunused-function",
+    "-Wpointer-arith",
+    "-Wno-type-limits",
+    "-Wno-unused-local-typedefs",
+    "-Wundef",
+    "-Wconversion",
+    "-ggdb3",
+    "-g3",
+    "-Og",
+]
+
+linker_flags = [
+    "-Wl,--gc-sections",
+    # "--print-gc-sections",
+    "-Wl,--relax",
+    "-Wl,--print-memory-usage",
+    "-Wl,--stats",
+]
+
+cxx_library(
+    name = "FreeRTOS",
+    _cxx_toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags,
+    srcs = [
+        "//embedded/libs:FreeRTOS.git[Source/croutine.c]",
+        "//embedded/libs:FreeRTOS.git[Source/event_groups.c]",
+        "//embedded/libs:FreeRTOS.git[Source/list.c]",
+        "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/port.c]",
+        "//embedded/libs:FreeRTOS.git[Source/queue.c]",
+        "//embedded/libs:FreeRTOS.git[Source/tasks.c]",
+        "//embedded/libs:FreeRTOS.git[Source/timers.c]",
+    ],
+    header_namespace = "",
+    exported_headers = {
+        "FreeRTOS.h": "//embedded/libs:FreeRTOS.git[Source/include/FreeRTOS.h]",
+        "croutine.h": "//embedded/libs:FreeRTOS.git[Source/include/croutine.h]",
+        "deprecated_definitions.h": "//embedded/libs:FreeRTOS.git[Source/include/deprecated_definitions.h]",
+        "event_groups.h": "//embedded/libs:FreeRTOS.git[Source/include/event_groups.h]",
+        "list.h": "//embedded/libs:FreeRTOS.git[Source/include/list.h]",
+        "mpu_wrappers.h": "//embedded/libs:FreeRTOS.git[Source/include/mpu_wrappers.h]",
+        "portable.h": "//embedded/libs:FreeRTOS.git[Source/include/portable.h]",
+        "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
+        "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
+        "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
+        "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
+        "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
+        "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
+        "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
+        "FreeRTOSConfig.h": "RTOS/include/FreeRTOSConfig.h",
+    },
+    headers = {
+    },
+    exported_deps = [":CMSIS",":feature-tree",],
+)
+
+[
+    generate_feature_tree(
+        name = "feature-tree-{}".format(v),
+        config_id = v,
+        node_id = n,
+        srcs = {
+            "variants.yaml": "variants.yaml",
+            "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_FeatureSels.yaml",
+            "BMS_FeatureDefs.yaml": "//components/shared:FeatureDefs/BMS_FeatureDefs.yaml",
+            "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
+            "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
+            "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
+            "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
+            "FeatureDefs.yaml": "FeatureDefs.yaml",
+            "FeatureSels.yaml": "FeatureSels.yaml",
+        },
+        kv = {
+            APP_NAME + "_config_id": "{}U".format(v),
+            "bmsw_node_id": "{}U".format(n),
+        },
+    )
+    for v in variants
+    for n in range(NUMBER_NODES)
+]
+
+alias(
+    name = "feature-tree",
+    actual = select({
+        ":config-0": select({
+            ":node-0": ":feature-tree-0",
+            ":node-1": ":feature-tree-0-1",
+            ":node-2": ":feature-tree-0-2",
+            ":node-3": ":feature-tree-0-3",
+            ":node-4": ":feature-tree-0-4",
+            ":node-5": ":feature-tree-0-5",
+        }),
+        "DEFAULT": select({
+            ":node-0": ":feature-tree-0",
+            ":node-1": ":feature-tree-0-1",
+            ":node-2": ":feature-tree-0-2",
+            ":node-3": ":feature-tree-0-3",
+            ":node-4": ":feature-tree-0-4",
+            ":node-5": ":feature-tree-0-5",
+            "DEFAULT": ":feature-tree-0",
+        }),
+    })
+)
+
+prebuilt_cxx_library(
+    name = "build-headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = {
+        "BuildDefines.h": "HW/include/BuildDefines.h",
+    } | remap_headers(["HW/include/"]) | remap_headers(["include/"]),
+    exported_deps = [":feature-tree"],
+)
+
+compiler_flags += ["-include", "BuildDefines.h"]
+
+[
+    network_gen_code(
+        name = "network-node-{}".format(int(node)),
+        _cxx_toolchain = TOOLCHAIN,
+        compiler_flags = compiler_flags + ["-Wno-float-conversion", "-Wno-sign-conversion"],
+        node = APP_NAME + "_{}".format(node),
+        network_dep = "//network:network",
+        library_deps = [
+            ":build-headers",
+            ":hal",
+            ":FreeRTOS",
+            "//components/shared/code:headers",
+        ],
+    )
+    for node in range(NUMBER_NODES)
+]
+alias(
+    name = "network",
+    actual = select({
+        ":node-0": ":network-node-0",
+        ":node-1": ":network-node-1",
+        ":node-2": ":network-node-2",
+        ":node-3": ":network-node-3",
+        ":node-4": ":network-node-4",
+        ":node-5": ":network-node-5",
+        "DEFAULT": ":network-node-0",
+    })
+)
+
+cxx_library(
+    name = "udsServer",
+    _cxx_toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags + [
+        "-Wno-missing-prototypes",
+        "-Wno-unused-parameter",
+        "-DBYTE_ORDER=_BYTE_ORDER",
+        "-DLITTLE_ENDIAN=_LITTLE_ENDIAN",
+        "-Wno-inline",
+        "-Wno-conversion",
+    ],
+    srcs = [
+        "//embedded/libs:isotp[isotp.c]",
+        "//embedded/libs/uds:lib_udsServer.c",
+    ],
+    header_namespace = "",
+    exported_headers = {
+        "lib_uds.h": "//embedded/libs/uds:lib_uds.h",
+    },
+    deps = [
+        ":network",
+        ":build-headers",
+        "//components/shared/code:headers",
+    ],
+    headers = {
+        "uds_componentSpecific.h": "include/uds_componentSpecific.h",
+        "isotp.h": "//embedded/libs:isotp[include/isotp.h]",
+        "isotp_config.h": "//embedded/libs:isotp[include/isotp_config.h]",
+        "isotp_defines.h": "//embedded/libs:isotp[include/isotp_defines.h]",
+        "isotp_user.h": "//embedded/libs:isotp[include/isotp_user.h]",
+    },
+)
+
+[
+    stm32f1_hal(
+        name = "hal-" + name,
+        toolchain = TOOLCHAIN,
+        compiler_flags = compiler_flags,
+        variant = variant,
+        hal_conf_header = "HW/include/stm32f1xx_hal_conf.h",
+        additional_deps = [
+            ":build-headers",
+        ],
+        config = {
+            "linker": {
+                "useDefault": True,
+            },
+            "drivers": {
+                "adc": {},
+                "adc_ex": {},
+                "can": {},
+                "cortex": {},  # required
+                "dma": {},
+                "exti": {},
+                "flash": {},
+                "gpio": {},
+                "i2c": {},
+                "pwr": {},
+                "rcc": {},
+                "rcc_ex": {},  # required
+                "spi": {
+                    "use_ll": True,
+                },
+                "tim": {},
+                "tim_ex": {},  # required with tim,
+            },
+        },
+    )
+    for name, variant in [
+        ("f103", "stm32f103"),
+    ]
+]
+
+alias(
+    name = "hal",
+    actual = select({
+        ":config-0": ":hal-f103",
+        "DEFAULT": ":hal-f103",
+    })
+)
+
+alias(
+    name = "CMSIS",
+    actual = select({
+        ":config-0": ":CMSIS-hal-f103",
+        "DEFAULT": ":CMSIS-hal-f103",
+    })
+)
+
+[
+    cxx_genrule(
+        name = "linkscript-" + variant,
+        _cxx_toolchain = TOOLCHAIN,
+        cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) +
+            " -include BuildDefines.h linkscript | sed -e '/^#.\\+$/d' > ${OUT}",
+        out = "linkscript",
+        srcs = {
+            "linkscript": "//embedded/platforms/stm32/f1/" + variant + ":" + script,
+            "BuildDefines.h": "HW/include/BuildDefines.h",
+            "FeatureDefines.h": "//tools/feature-tree:FeatureDefines.h",
+            "BuildDefines_generated.h": select({
+                ":config-0": ":BuildDefines_generated.h.config-0",
+                "DEFAULT": ":BuildDefines_generated.h.config-0",
+            }),
+            "FeatureDefines_generated.h": select({
+                ":config-0": ":FeatureDefines_generated.h.config-0",
+                "DEFAULT": ":FeatureDefines_generated.h.config-0",
+            }),
+        },
+    )
+    for variant, script in [
+        ("f103", "stm32f103c8.ld"),
+    ]
+]
+
+alias(
+    name = "linkscript",
+    actual = select({
+        ":config-0": ":linkscript-f103",
+        "DEFAULT": ":linkscript-f103",
+    })
+)
+
+component_headers = remap_headers(["include/", "HW/include/"])
+
+cxx_binary(
+    name = "elf",
+    _cxx_toolchain = TOOLCHAIN,
+    compiler_flags = compiler_flags,
+    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"] + [
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/croutine.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/event_groups.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/list.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/queue.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/tasks.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/timers.c.o])",
+        # "$(location :FreeRTOS[objects][FreeRTOS/Source/portable/GCC/ARM_CM3/port.c.o])",
+    ],
+    executable_name = APP_NAME + ".elf",
+    srcs = 
+        glob(["src/*.c", "HW/*.c"]) + [
+        "//components/shared/code:DRV/drv_inputAD.c",
+        "//components/shared/code:DRV/drv_io.c",
+        "//components/shared/code:DRV/drv_tempSensors.c",
+        "//components/shared/code:DRV/drv_timer.c",
+        "//components/shared/code:HW/HW.c",
+        "//components/shared/code:HW/HW_adc.c",
+        "//components/shared/code:HW/HW_can.c",
+        "//components/shared/code:HW/HW_gpio.c",
+        "//components/shared/code:HW/HW_i2c.c",
+        "//components/shared/code:HW/HW_spi.c",
+        "//components/shared/code:HW/HW_tim.c",
+        "//components/shared/code:app/CAN/CANIO-rx.c",
+        "//components/shared/code:app/CAN/CANIO-tx.c",
+        "//components/shared/code:app/app_cooling.c",
+        "//components/shared/code:libs/LIB_app.c",
+        "//components/shared/code:libs/LIB_simpleFilter.c",
+        "//components/shared/code:libs/lib_interpolation.c",
+        "//components/shared/code:libs/lib_thermistors.c",
+        "//embedded/libs/cells:P42A.c",
+        ("RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
+        "RTOS/FreeRTOS_SWI.c",
+        select({
+            ":config-0": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
+            "DEFAULT": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
+        }),
+    ],
+    header_namespace = "",
+    headers = {
+        "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+    } | component_headers,
+    include_directories = [
+        "include/",
+        "HW/include/",
+        "RTOS/include/",
+    ],
+    deps = [
+        ":hal",
+        ":udsServer",
+        ":FreeRTOS",
+        ":network",
+        ":build-headers",
+        "//components/shared/code:headers",
+        "//embedded/libs/cells:cells",
+    ],
+)
+
+generate_asms(
+    name = "asm",
+    binary = ":elf",
+)
+
+generate_stripped_asms(
+    name = "asms",
+    targets = [
+        ":elf",
+        ":FreeRTOS",
+        ":udsServer",
+        ":hal",
+        ":network",
+    ],
+    toolchain = TOOLCHAIN,
+)
+
+[
+    cxx_genrule(
+        name = "bin-node-{}".format(node),
+        _cxx_toolchain = TOOLCHAIN,
+        srcs = [":elf"],
+        out = APP_NAME + "node{}.bin".format(node),
+        cmd = "$(objcopy) -O binary ${SRCS} ${OUT}",
+    )
+    for node in range(NUMBER_NODES)
+]
+
+[
+    inject_crc(
+        name = "bin_crc-node-{}".format(node),
+        binary = ":bin-node-{}".format(node),
+        output = APP_NAME + "_crc-node-{}.bin".format(node),
+        start_address = APP_START_ADDR,
+    )
+    for node in range(NUMBER_NODES)
+]
+[
+    configured_alias(
+        name = "crc-node-{}".format(i),
+        actual = ":bin_crc-node-{}".format(i),
+        platform = ":cfg0-node-{}".format(i),
+    )
+    for i in range(NUMBER_NODES)
+]
+
+filegroup(
+    name = "bin_crc.all_nodes.config0",
+    srcs = [
+        ":bin_crc.node-{}".format(i)
+        for i in range(NUMBER_NODES)
+    ],
+)
+
+alias(
+    name = "compdb",
+    actual = ":elf[full-compilation-database]",
+)
+
+[
+    conUDS_download(
+        name = "download-node-{}".format(node),
+        binary = ":crc-node-{}".format(node),
+        node = APP_NAME + "{}".format(node),
+    )
+    for node in range(NUMBER_NODES)
+]

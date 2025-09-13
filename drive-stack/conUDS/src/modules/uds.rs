@@ -112,8 +112,6 @@ impl UdsSession {
     }
 
     pub async fn file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
-        self.client.start_persistent_tp().await;
-
         if self.interactive_session {
             info!("Waiting for the user to hit enter before continuing with download");
             let mut garbage = String::new();
