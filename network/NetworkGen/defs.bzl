@@ -1,5 +1,6 @@
 load("@prelude//:rules.bzl", "cxx_library")
-load("//components/shared/code/defs.bzl", "remap_headers")
+load("//tools/defs.bzl", "remap_files")
+load("@prelude//:rules.bzl", __rules__ = "rules")
 load("//tools/uv/defs.bzl", "uv_genrule", "uv_tool")
 
 def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: list[str] | None = None, **kwargs):
@@ -104,10 +105,15 @@ def build_network(
         name: str,
         data_dir: str,
         **kwargs):
+    defs = remap_files(data_dir, glob([data_dir + "**/*.yaml"]))
+    __rules__["filegroup"](
+        name = "network-defs",
+        srcs = defs,
+    )
     uv_genrule(
         name = name,
         tool = "//network/NetworkGen:yamcan",
-        srcs = [data_dir],
+        srcs = [":network-defs"],
         out = "network-cache",
         cmd = "$(python) ${TOOLDIR}/NetworkGen.py --data-dir ${SRCS} --cache-dir ${OUT} --build",
         **kwargs

@@ -62,7 +62,7 @@ def _uv_genrule_impl(ctx: AnalysisContext) -> list[Provider]:
     } | {src.short_path: src for src in ctx.attrs.tool[UvTool].srcs}
 
     tooldir = ctx.actions.symlinked_dir("tool", symlinks)
-    env = {"TOOLDIR": cmd_args(tooldir, format = "/".join([".", "{}"]))}
+    env = {"TOOLDIR": cmd_args(tooldir, format = "./{}")}
 
     return process_genrule(ctx, ctx.attrs.out, ctx.attrs.outs, extra_env_vars = env)
 
