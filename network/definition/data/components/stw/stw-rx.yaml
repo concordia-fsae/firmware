@@ -1,2 +1,4 @@
 messages:
+  UDSCLIENT_stwUdsRequest:
+    sourceBuses: "veh"
 signals:

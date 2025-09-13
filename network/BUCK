@@ -1,18 +1,33 @@
-load("//network/NetworkGen/defs.bzl", "network_build", "network_gen_stats", "network_gen_dbc", "network_gen_code")
+load(
+    "//network/NetworkGen/defs.bzl",
+    "build_network",
+    "generate_code",
+    "generate_dbcs",
+    "generate_manifest",
+    "generate_stats",
+)
 
-network_build(
+build_network(
     name = "network",
     data_dir = "definition/",
     visibility = ["PUBLIC"],
 )
 
-network_gen_dbc(
+generate_dbcs(
     name = "dbc",
     dep = ":network",
     visibility = ["PUBLIC"],
 )
 
-network_gen_stats(
+generate_stats(
     name = "stats",
     dep = ":network",
+)
+
+generate_manifest(
+    name = "manifest-uds",
+    dep = ":network",
+    filters = ["UdsRequest=request_id", "udsResponse=response_id"],
+    ignore_nodes = ["udsClient"],
+    visibility = ["PUBLIC"],
 )
