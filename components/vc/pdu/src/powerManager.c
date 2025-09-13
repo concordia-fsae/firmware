@@ -18,6 +18,7 @@
 #include "drv_outputAD.h"
 
 #define PDU_CS_AMPS_PER_VOLT 0.20f
+#define PDU_VS_VOLTAGE_MULTIPLIER 3.61f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -26,8 +27,11 @@
 static struct
 {
     float32_t total_current;
-    float32_t pdu_current;
     float32_t glv_voltage;
+    struct {
+        float32_t current;
+        float32_t rail_5v_voltage;
+    } pdu;
 } powerManager_data;
 
 /******************************************************************************
@@ -90,15 +94,23 @@ static void powerManager_periodic_10Hz(void)
     }
 
     const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
-    powerManager_data.pdu_current = pdu_current;
+    powerManager_data.pdu.current = pdu_current;
     powerManager_data.total_current = tmp_current + pdu_current;
     drv_tps2hb16ab_run();
     drv_vn9008_run();
+
+    const float32_t pdu_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
+    powerManager_data.pdu.rail_5v_voltage = pdu_5v_voltage;
 }
 
 float32_t powerManager_getPduCurrent(void)
 {
-    return powerManager_data.pdu_current;
+    return powerManager_data.pdu.current;
+}
+
+float32_t powerManager_getPdu5vVoltage(void)
+{
+    return powerManager_data.pdu.rail_5v_voltage;
 }
 
 /******************************************************************************

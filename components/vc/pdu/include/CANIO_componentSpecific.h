@@ -65,6 +65,7 @@
 #define set_bms3Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_1))
 #define set_sensorCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_2))
 #define set_pduCurrent(m,b,n,s) set(m,b,n,s, powerManager_getPduCurrent())
+#define set_pdu5vVoltage(m,b,n,s) set(m,b,n,s, powerManager_getPdu5vVoltage())
 #define set_vc1Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_1))
 #define set_vc2Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_2))
 #define set_mcCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_1))
