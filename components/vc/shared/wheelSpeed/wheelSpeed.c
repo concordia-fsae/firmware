@@ -129,7 +129,7 @@ static void calcSlipRatio_100Hz(void)
     {
         slipRatio =0.0f;
     }
-    slipRatio = SATURATE(0,slipRatio,100);
+    //slipRatio = SATURATE(0,slipRatio,100);
 }
 
 static void wheelSpeed_init(void)
