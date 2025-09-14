@@ -55,20 +55,20 @@ def GenerateFeatures(selection_files: List[str], features_dict: List[dict] = lis
             if loaded_features["defs"] is None:
                 continue
             if "config" not in loaded_features.keys():
-                raise Exception(f"Feature: File {feature_file} doesn't contain a configuration.")
+                raise Exception(f"Feature: File {fd.name} doesn't contain a configuration.")
             if "prefix" not in loaded_features["config"] or "description" not in  loaded_features["config"]:
-                raise Exception(f"Feature: File {feature_file} doesn't contain a prefix or description.")
+                raise Exception(f"Feature: File {fd.name} doesn't contain a prefix or description.")
             defs_copy = loaded_features["defs"].copy()
             for loaded_feature in defs_copy:
                 new_loaded_feature = loaded_features["config"]["prefix"] + "_" + loaded_feature
                 loaded_features["defs"][new_loaded_feature] = loaded_features["defs"].pop(loaded_feature)
                 if new_loaded_feature in features.keys():
-                    raise Exception(f"Feature: {new_loaded_feature} in file {feature_file} already exists.")
+                    raise Exception(f"Feature: {new_loaded_feature} in file {fd.name} already exists.")
             features.update(loaded_features["defs"])
             if "discreteValues" in loaded_features:
                 for value in loaded_features["discreteValues"]:
                     if value in discreteValues.keys():
-                        raise Exception(f"FeatureDef: {value} in file {feature_file} already exists in the feature tree.")
+                        raise Exception(f"FeatureDef: {value} in file {fd.name} already exists in the feature tree.")
                 discreteValues.update(loaded_features["discreteValues"])
 
     feature_values = {}
