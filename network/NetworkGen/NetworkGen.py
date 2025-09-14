@@ -814,6 +814,37 @@ def parse_args() -> Namespace:
         help="Directory where generated network files will be placed",
     )
 
+    parser.add_argument(
+        "--manifest-output",
+        dest="manifest",
+        type= str,
+        action="store",
+        help="Generate network manifest.",
+    )
+
+    parser.add_argument(
+        "--manifest-bus",
+        dest="manifest_bus",
+        type= str,
+        action="store",
+        help="Bus to generate the network manifest for.",
+    )
+
+    parser.add_argument(
+        "--manifest-filter",
+        dest="filters",
+        action="append",
+        type=str,
+        help="Name of a message (or substring of the name) to include in the node manifest.",
+    )
+    parser.add_argument(
+        "--ignore-node",
+        dest="ignore_nodes",
+        action="append",
+        type=str,
+        help="Name of the node to ignore from the manifest file.",
+    )
+
     args = parser.parse_args()
 
     if (args.codegen_dir and not args.node) or (not args.codegen_dir and args.node):
@@ -888,6 +919,32 @@ def calculate_bus_load(bus, output_dir):
     if usage > 1:
         raise Exception(f"CAN Bus '{bus.name.upper()}' has total bus usage of {usage}")
 
+
+def generate_manifest(bus: str, manifest: str, filters: list[str], ignore_nodes: list[str]):
+    nodes = {}
+
+    for node, node_def in can_nodes.items():
+        if node in ignore_nodes:
+            continue
+        for message, defs in { **node_def.messages, **node_def.received_msgs }.items():
+            for filter in filters:
+                alt = None
+                if '=' in filter:
+                    alt = filter.split('=')[1]
+                    filter = filter.split('=')[0]
+                if filter in message:
+                    node = node_def.alias
+                    if node not in nodes:
+                        nodes[node] = {}
+
+                    if nodes[node]:
+                        nodes[node][alt or filter] = defs.id
+                    else:
+                        nodes[node] = { alt or filter: defs.id }
+
+    with open(manifest, 'w') as fd:
+        yaml.dump({ "nodes": nodes }, fd, default_flow_style=False)
+
 def main():
     """Main function"""
     global ERROR
@@ -919,6 +976,12 @@ def main():
         except Exception as e:
             print(f"Could not retreive cache files. Try building the network again...")
             ERROR = True
+
+    if args.manifest:
+        if len(args.filters) == 0:
+            print("No manifest filters specified!")
+            exit(1)
+        generate_manifest(args.manifest_bus, args.manifest, args.filters, args.ignore_nodes)
 
     if args.output_dir:
         for bus in can_bus_defs.values():

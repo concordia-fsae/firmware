@@ -383,6 +383,7 @@ alias(
     conUDS_download(
         name = "download-updater-{}".format(variant),
         binary = ":crc-updater-{}".format(variant),
+        manifest = "//network:manifest-uds",
         node = node,
     )
     for node, variant, _, _ in variants
@@ -391,6 +392,7 @@ alias(
     conUDS_bootloader_download(
         name = "download-bootloader-{}".format(variant),
         binary = ":crc-{}".format(variant),
+        manifest = "//network:manifest-uds",
         node = node,
     )
     for node, variant, has_updater, _ in variants if has_updater
