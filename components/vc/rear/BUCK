@@ -126,6 +126,8 @@ cxx_library(
             "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
             "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
             "SharedApp_FeatureDefs.yaml": "//components/shared/code:SharedApp_FeatureDefs.yaml",
+            "VC_FeatureSels.yaml": "//components/vc/shared/features:VC_FeatureSels.yaml",
+            "VC_FeatureDefs.yaml": "//components/vc/shared/features:VC_FeatureDefs.yaml",
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
         },
