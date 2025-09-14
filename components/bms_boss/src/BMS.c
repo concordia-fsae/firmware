@@ -97,16 +97,10 @@ static void BMS10Hz_PRD(void)
         BMS.pack_discharge_limit = tmp.pack_discharge_limit;
     }
 
-#if (BMSB_CONFIG_ID == 0U)
     BMS.pack_voltage = tmp.pack_voltage;
-#elif (BMSB_CONFIG_ID == 1U)
-    BMS.pack_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK);
-#else
-#error "Unsupported config id."
-#endif
-    BMS.fault                = tmp.fault;
-    BMS.voltages             = tmp.voltages;
-    BMS.max_temp             = tmp.max_temp;
+    BMS.fault        = tmp.fault;
+    BMS.voltages     = tmp.voltages;
+    BMS.max_temp     = tmp.max_temp;
 }
 
 static void BMS100Hz_PRD(void)
