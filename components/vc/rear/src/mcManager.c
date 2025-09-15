@@ -21,6 +21,10 @@
 #define MCMANAGER_TORQUE_LIMIT 130.0f
 #define MCMANAGER_TORQUE_LIMIT_REVERSE 15.0f
 
+#define LASH_TORQUE 2.0f
+#define LASH_TORQUE_RPM_DISABLE 180.0f
+#define LASH_TORQUE_RPM_ENABLE 2 * LASH_TORQUE_RPM_DISABLE
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -33,6 +37,7 @@ static struct
     float32_t torque_limit;
     CAN_prechargeContactorState_E last_contactor_state;
     bool clear_faults;
+    bool lash_enabled;
 } mcManager_data;
 
 /******************************************************************************
@@ -127,6 +132,26 @@ static void mcManager_periodic_100Hz(void)
                 const bool command_valid = CANRX_get_signal(VEH, VCFRONT_torqueRequest, &torque_command) == CANRX_MESSAGE_VALID;
                 (void)CANRX_get_signal(VEH, VCFRONT_torqueManagerState, &manager_state);
 
+                float32_t motor_rpm = 0.0f;
+                const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
+
+                if (!mcManager_data.lash_enabled)
+                {
+                    if ((speed_valid && 
+                        ((motor_rpm > 2 * LASH_TORQUE_RPM_ENABLE) ||
+                         (motor_rpm < 2 * -LASH_TORQUE_RPM_ENABLE))) &&
+                        (torque_command > LASH_TORQUE))
+                    {
+                        mcManager_data.lash_enabled = true;
+                    }
+                }
+                else if (!speed_valid ||
+                         ((motor_rpm < LASH_TORQUE_RPM_DISABLE) &&
+                          (motor_rpm > -LASH_TORQUE_RPM_DISABLE)))
+                {
+                    mcManager_data.lash_enabled = false;
+                }
+
                 if (command_valid && (manager_state == CAN_TORQUEMANAGERSTATE_ACTIVE))
                 {
                     enable = MCMANAGER_ENABLE;
@@ -138,6 +163,7 @@ static void mcManager_periodic_100Hz(void)
             break;
         case VEHICLESTATE_ON_HV:
             {
+                mcManager_data.lash_enabled = false;
                 if ((mcManager_data.last_contactor_state != CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED) &&
                     (contactor_state == CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
                 {
@@ -163,9 +189,11 @@ static void mcManager_periodic_100Hz(void)
     }
 #endif
 
+    const float32_t min_torque = mcManager_data.lash_enabled ? LASH_TORQUE : 0.0f;
+
     mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable = enable;
-    mcManager_data.torque_command = SATURATE(0.0f, torque_command, MCMANAGER_TORQUE_LIMIT);
+    mcManager_data.torque_command = SATURATE(min_torque, torque_command, MCMANAGER_TORQUE_LIMIT);
 }
 
 /******************************************************************************
