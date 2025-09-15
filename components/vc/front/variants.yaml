@@ -6,6 +6,7 @@ configs:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
+        - "#/components/vc/shared/features/VC_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
