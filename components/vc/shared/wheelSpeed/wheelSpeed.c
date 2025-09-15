@@ -8,10 +8,10 @@
  ******************************************************************************/
 
 #include "HW_tim.h"
+#include "lib_utility.h"
 #include "ModuleDesc.h"
 #include "string.h"
 #include "wheelSpeed.h"
-#include "lib_utility.h"
 #include <math.h>
 
 /******************************************************************************
@@ -38,10 +38,9 @@ typedef struct
  ******************************************************************************/
 static struct
 {
-    float32_t  slipRatio;
+    float32_t    slipRatio;
     wheelSpeed_S wheels;
-
-}wheelSpeed_data;
+} wheelSpeed_data;
 
 
 /******************************************************************************
@@ -128,19 +127,18 @@ static void calcSlipRatio_100Hz(void)
     float32_t FL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_FL);
     float32_t RL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_RL);
 
-    float32_t frontAvg = FR_wheelSpeed+FL_wheelSpeed*0.5f;
-    float32_t rearAvg = RR_wheelSpeed+RL_wheelSpeed*0.5f;
-    
+    float32_t frontAvg      = FR_wheelSpeed + FL_wheelSpeed * 0.5f;
+    float32_t rearAvg       = RR_wheelSpeed + RL_wheelSpeed * 0.5f;
 
-    if(fabs(frontAvg) > 1e-6f)
+
+    if (fabs(frontAvg) > 1e-6f)
     {
-        wheelSpeed_data.slipRatio = ((frontAvg - rearAvg) / frontAvg)*100;
+        wheelSpeed_data.slipRatio = ((frontAvg - rearAvg) / frontAvg) * 100;
     }
     else
     {
-        wheelSpeed_data.slipRatio =0.0f;
+        wheelSpeed_data.slipRatio = 0.0f;
     }
-   
 }
 
 static void wheelSpeed_init(void)
