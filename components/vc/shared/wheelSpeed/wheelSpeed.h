@@ -9,10 +9,10 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
-#include "ModuleDesc.h"
 #include "CANTypes_generated.h"
 #include "HW_tim.h"
+#include "LIB_Types.h"
+#include "ModuleDesc.h"
 #include "wheel.h"
 
 /******************************************************************************
@@ -41,7 +41,7 @@ typedef struct
  ******************************************************************************/
 
 extern const wheelSpeed_config_E wheelSpeed_config;
-extern const ModuleDesc_S wheelSpeed_desc;
+extern const ModuleDesc_S        wheelSpeed_desc;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -49,3 +49,4 @@ extern const ModuleDesc_S wheelSpeed_desc;
 
 uint16_t  wheelSpeed_getSpeedRotational(wheel_E wheel);
 float32_t wheelSpeed_getSpeedLinear(wheel_E wheel);
+float32_t wheelSpeed_getSlipRatio(void);
