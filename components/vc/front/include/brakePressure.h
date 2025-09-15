@@ -17,3 +17,4 @@
  ******************************************************************************/
 
 float32_t brakePressure_getBrakePressure(void);
+float32_t brakePressure_getBrakeBias(void);// Brake bias in this situation is expressed as the percentage of force applied to the front brakes

@@ -38,6 +38,15 @@ messages:
       brakePressure:
         template: brakePressure
         description: Front Brake Pressure
+  
+  pedalInformation2:
+    description: Information of the pedal sensors, continued
+    id: 0x53
+    cycleTimeMs: 100
+    signals:
+      brakeBias:
+     
+
 
   inputStatus:
     description: Status of VCFRONT inputs

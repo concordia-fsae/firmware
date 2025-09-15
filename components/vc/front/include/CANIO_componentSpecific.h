@@ -52,6 +52,8 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
+
+#define set_brakeBias(m,b,n,s) set (m,b,n,s,brakePressure_getBrakeBias())
 #define set_apps1(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1) * 100)
 #define set_apps2(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2) * 100)
 #define set_brakePosition(m,b,n,s) set(m,b,n,s, bppc_getPedalPosition() * 100)
