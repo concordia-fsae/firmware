@@ -1,0 +1,18 @@
+shared_sels = glob(["**/*FeatureSels.yaml"])
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["//components/vc/..."],
+    )
+    for file in shared_sels
+]
+shared_defs = glob(["**/*FeatureDefs.yaml"])
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["//components/vc/..."],
+    )
+    for file in shared_defs
+]

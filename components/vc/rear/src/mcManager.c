@@ -19,6 +19,7 @@
  ******************************************************************************/
 
 #define MCMANAGER_TORQUE_LIMIT 130.0f
+#define MCMANAGER_TORQUE_LIMIT_REVERSE 15.0f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -47,6 +48,8 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
 {
     switch (mcManager_data.direction)
     {
+        case MCMANAGER_REVERSE:
+            return CAN_PM100DXDIRECTIONCOMMAND_REVERSE;
         default:
             return CAN_PM100DXDIRECTIONCOMMAND_FORWARD;
     }
@@ -54,17 +57,36 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
 
 CAN_pm100dxEnableState_E mcManager_getEnableCommand(void)
 {
+    CAN_pm100dxEnableState_E ret = CAN_PM100DXENABLESTATE_DISABLED;
+    CAN_pm100dxInverterLockoutState_E inverter_lock_out = CAN_PM100DXINVERTERLOCKOUTSTATE_CANNOT_BE_ENABLED;
+
+    const bool lockout_valid = CANRX_get_signal(ASS, PM100DX_inverterEnableLockout, &inverter_lock_out) == CANRX_MESSAGE_VALID;
+
+    if (!lockout_valid || (inverter_lock_out == CAN_PM100DXINVERTERLOCKOUTSTATE_CANNOT_BE_ENABLED))
+    {
+        return CAN_PM100DXENABLESTATE_DISABLED;
+    }
+
     switch (mcManager_data.enable)
     {
         case MCMANAGER_ENABLE:
-            return CAN_PM100DXENABLESTATE_ENABLED;
+            ret = CAN_PM100DXENABLESTATE_ENABLED;
+            break;
         default:
-            return CAN_PM100DXENABLESTATE_DISABLED;
+            ret = CAN_PM100DXENABLESTATE_DISABLED;
+            break;
     }
+
+    return ret;
 }
 
 float32_t mcManager_getTorqueLimit(void)
 {
+    if (mcManager_data.direction == MCMANAGER_REVERSE)
+    {
+        return MCMANAGER_TORQUE_LIMIT_REVERSE;
+    }
+
     return mcManager_data.torque_limit;
 }
 
@@ -126,6 +148,20 @@ static void mcManager_periodic_100Hz(void)
         default:
             break;
     }
+
+#if FEATURE_IS_ENABLED(FEATURE_REVERSE)
+    CAN_gear_E direction = CAN_GEAR_FORWARD;
+    const bool direction_valid = CANRX_get_signal(VEH, STW_gear, &direction) == CANRX_MESSAGE_VALID;
+    if (direction_valid && (direction == CAN_GEAR_REVERSE))
+    {
+        mcManager_data.direction = MCMANAGER_REVERSE;
+        torque_command = SATURATE(0.0f, torque_command, MCMANAGER_TORQUE_LIMIT_REVERSE);
+    }
+    else
+    {
+        mcManager_data.direction = MCMANAGER_FORWARD;
+    }
+#endif
 
     mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable = enable;

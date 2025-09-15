@@ -2,14 +2,12 @@ messages:
   UDSCLIENT_vcfrontUdsRequest:
     sourceBuses: veh
     unrecorded: true
+  STW_driverControls:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh
   BMSB_bmsStatusMem:
     sourceBuses: veh
   BMSB_imdStatusMem:
-    sourceBuses: veh
-  STW_maxRequestTorque:
-    sourceBuses: veh
-  STW_raceMode:
     sourceBuses: veh

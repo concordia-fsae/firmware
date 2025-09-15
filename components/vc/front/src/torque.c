@@ -23,6 +23,7 @@
  ******************************************************************************/
 
 #define DEFAULT_TORQUE_PITS 25.0f
+#define DEFAULT_TORQUE_LIMIT_REVERSE 15.0f
 
 #define ABSOLUTE_MAX_TORQUE 130.0f
 #define ABSOLUTE_MIN_TORQUE 0.0f
@@ -119,6 +120,15 @@ static void torque_periodic_100Hz(void)
             torque_data.torque_request_max = DEFAULT_TORQUE_PITS;
         }
     }
+
+#if FEATURE_IS_ENABLED(FEATURE_REVERSE)
+    CAN_gear_E direction = CAN_GEAR_FORWARD;
+    const bool direction_valid = CANRX_get_signal(VEH, STW_gear, &direction) == CANRX_MESSAGE_VALID;
+    if (direction_valid && (direction == CAN_GEAR_REVERSE))
+    {
+        torque_data.torque_request_max = DEFAULT_TORQUE_LIMIT_REVERSE;
+    }
+#endif
 
     torque = (bppc_getState() == BPPC_OK) ?
               apps_getPedalPosition() * torque_data.torque_request_max :

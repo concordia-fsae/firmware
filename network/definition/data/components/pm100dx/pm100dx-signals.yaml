@@ -584,7 +584,7 @@ signals:
 
   inverterEnableLockout:
     description: Inverter Enable Lockout
-    discreteValues: pm100dxOutputState
+    discreteValues: pm100dxInverterLockoutState
 
   directionCommand:
     description: Inverter Direction Command

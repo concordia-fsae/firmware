@@ -26,6 +26,10 @@ messages:
   PM100DX_currentInfo:
     destBuses: veh
     sourceBuses: ass
+  STW_driverControls:
+    sourceBuses: veh
+  PM100DX_internalStates:
+    sourceBuses: ass
 
 signals:
   VCPDU_vehicleState:

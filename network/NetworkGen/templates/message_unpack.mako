@@ -90,7 +90,7 @@
         %if dtype == 64:
     int64_t tmp_${signal.name} = (m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}U;
         %else:
-    int${math.ceil(signal.native_representation.bit_width / 8) * 8}_t tmp_${signal.name} = (m->u${dtype}[${idx_s}U] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}U;
+    int${math.ceil(signal.native_representation.bit_width / 8) * 8}_t tmp_${signal.name} = (int${math.ceil(signal.native_representation.bit_width / 8) * 8}_t)((m->u${dtype}[${idx_s}U] >> ${signal.start_bit % dtype}U) & ${(2**signal.native_representation.bit_width) - 1}U);
         %endif
     %endif
     %if signal.native_representation.endianness.value == 0:

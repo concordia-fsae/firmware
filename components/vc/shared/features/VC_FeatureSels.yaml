@@ -1,0 +1,3 @@
+featureDefs: "#/components/vc/shared/features/VC_FeatureDefs.yaml"
+features:
+  feature_reverse: true
