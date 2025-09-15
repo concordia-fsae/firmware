@@ -2,6 +2,8 @@ messages:
   UDSCLIENT_vcfrontUdsRequest:
     sourceBuses: veh
     unrecorded: true
+  STW_driverControls:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh
@@ -9,9 +11,11 @@ signals:
     sourceBuses: veh
   BMSB_imdStatusMem:
     sourceBuses: veh
+<<<<<<< HEAD
   STW_maxRequestTorque:
     sourceBuses: veh
   STW_raceMode:
     sourceBuses: veh
   VCFRONT_wheelSlipRatio:
     sourceBuses: veh
+
