@@ -58,6 +58,14 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
 CAN_pm100dxEnableState_E mcManager_getEnableCommand(void)
 {
     CAN_pm100dxEnableState_E ret = CAN_PM100DXENABLESTATE_DISABLED;
+    CAN_pm100dxInverterLockoutState_E inverter_lock_out = CAN_PM100DXINVERTERLOCKOUTSTATE_CANNOT_BE_ENABLED;
+
+    const bool lockout_valid = CANRX_get_signal(ASS, PM100DX_inverterEnableLockout, &inverter_lock_out) == CANRX_MESSAGE_VALID;
+
+    if (!lockout_valid || (inverter_lock_out == CAN_PM100DXINVERTERLOCKOUTSTATE_CANNOT_BE_ENABLED))
+    {
+        return CAN_PM100DXENABLESTATE_DISABLED;
+    }
 
     switch (mcManager_data.enable)
     {
