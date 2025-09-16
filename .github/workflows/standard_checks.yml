@@ -34,7 +34,7 @@ jobs:
         with:
           version: "latest"
       - name: Build Stack
-        run: buck build //platforms:cfr25-embedded
+        run: buck build //platforms:cfr25-embedded -j32
   cfr-drive-stack:
     runs-on: ubuntu-latest
     steps:
@@ -47,7 +47,7 @@ jobs:
         with:
           version: "latest"
       - name: Build Stack
-        run: buck build //drive-stack/...
+        run: buck build //drive-stack/... -j32
   validate-workflow: # TODO: Missing macos coverage, we would likely eed our own self
                      # hosted macos runner todo this however
     runs-on: self-hosted
