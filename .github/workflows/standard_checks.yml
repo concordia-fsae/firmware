@@ -22,6 +22,32 @@ jobs:
       build-targets: bl
       flags: -j32 --flashable-bootloader --package
       artifact-name: artifact-bootloaders
+  cfr-buck2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Buck2
+        uses: dtolnay/install-buck2@latest
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Build Stack
+        run: buck build //platforms:cfr25-embedded
+  cfr-drive-stack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Buck2
+        uses: dtolnay/install-buck2@latest
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Build Stack
+        run: buck build //drive-stack/...
   validate-workflow: # TODO: Missing macos coverage, we would likely eed our own self
                      # hosted macos runner todo this however
     runs-on: self-hosted
