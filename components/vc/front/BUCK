@@ -390,6 +390,7 @@ inject_crc(
         name = "crc-{}".format(variant),
         actual = ":bin_crc",
         platform = ":platform-{}".format(variant),
+        visibility = ["PUBLIC"],
     )
     for variant in variants
 ]
