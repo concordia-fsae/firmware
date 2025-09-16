@@ -22,7 +22,7 @@ jobs:
       build-targets: bl
       flags: -j32 --flashable-bootloader --package
       artifact-name: artifact-bootloaders
-  cfr-buck2:
+  generate-dbc:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,9 +34,49 @@ jobs:
         with:
           version: "latest"
       - name: Build Stack
-        run: buck build //platforms:cfr25-embedded -j32
+        run: buck2 build //network:dbc --out dbc/
+      - name: Archive Artifacts
+        id: archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbc
+          path: dbc/
+  cfr-firmware:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ ubuntu-24.04, ubuntu-24.04-arm,]
+                  # TODO: Bringup support
+                  # macos-15, macos-14, macos-13,
+                  # windows-2022, windows-11-arm, ]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Buck2
+        uses: dtolnay/install-buck2@latest
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Build Stack
+        run: buck2 build //platforms:cfr25-embedded -j32 --out builds/
+      - name: Archive Artifacts
+        if: ${{ matrix.runner == 'ubuntu-24.04' }}
+        id: archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedded
+          path: builds/
   cfr-drive-stack:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ ubuntu-24.04, ubuntu-24.04-arm,]
+                  # TODO: Bringup support
+                  # macos-15, macos-14, macos-13,
+                  # windows-2022, windows-11-arm, ]
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -46,8 +86,45 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
+      - name: Add ARM64 Toolchain
+        run: rustup target add aarch64-unknown-linux-gnu
       - name: Build Stack
-        run: buck build //drive-stack/... -j32
+        run: buck2 build //drive-stack:cfr26-stack -j32 --out builds/
+      - name: Archive Artifacts
+        if: ${{ matrix.runner == 'ubuntu-24.04' }}
+        id: archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-stack-arm64
+          path: builds/
+  drive-tools:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ ubuntu-24.04, ubuntu-24.04-arm,]
+                  # TODO: Bringup support
+                  # macos-15, macos-14, macos-13,
+                  # windows-2022, windows-11-arm, ]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Buck2
+        uses: dtolnay/install-buck2@latest
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Build Tools
+        run: buck2 build //drive-stack/conUDS:conUDS -j32 --out builds/conUDS
+      - name: Build Manifests
+        run: buck2 build //network:manifest-uds -j32 --out builds/manifest-uds.yaml
+      - name: Archive Artifacts
+        id: archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-tools-${{ matrix.runner }}
+          path: builds/
   validate-workflow: # TODO: Missing macos coverage, we would likely eed our own self
                      # hosted macos runner todo this however
     runs-on: self-hosted

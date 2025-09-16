@@ -81,12 +81,12 @@ class NativeRepresentation:
             try:
                 Endianess[signal_def["endianness"]]
             except:
-                raise Exception(f"Invalid endianness '{signal_def["endianness"]}. Endianness can be any of { [ e.name for e in Endianess ] }.'")
+                raise Exception(f"Invalid endianness '{signal_def['endianness']}. Endianness can be any of { [ e.name for e in Endianess ] }.'")
         if "signedness" in signal_def:
             try:
                 Signedness[signal_def["signedness"]]
             except:
-                raise Exception(f"Invalid signedness '{signal_def["signedness"]}. Signedness can be any of { [ e.name for e in Signedness ] }.")
+                raise Exception(f"Invalid signedness '{signal_def['signedness']}. Signedness can be any of { [ e.name for e in Signedness ] }.")
 
         self.bit_width = get_if_exists(signal_def, "bitWidth", int, None)
         self.range = get_if_exists(signal_def, "range", Range, None)
