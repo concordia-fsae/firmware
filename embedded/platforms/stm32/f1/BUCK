@@ -6,7 +6,7 @@ export_file(
 
 git_fetch(
     name = "cmsis.git",
-    repo = "git@github.com:STMicroelectronics/cmsis_device_f1.git",
+    repo = "https://github.com/STMicroelectronics/cmsis_device_f1.git",
     rev = "49daecceeb4b251999a784995e8b8d714b59dbc2",
     sub_targets = [
         "Include/stm32f1xx.h",
@@ -22,7 +22,7 @@ git_fetch(
 
 git_fetch(
     name = "hal.git",
-    repo = "git@github.com:STMicroelectronics/stm32f1xx_hal_driver.git",
+    repo = "https://github.com/STMicroelectronics/stm32f1xx_hal_driver.git",
     rev = "7bda31007fdc1a3e45077cf151d137b4e8e38651",
     sub_targets = [
         "Inc",

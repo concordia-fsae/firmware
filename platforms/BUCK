@@ -13,3 +13,34 @@
         ("arm32-linux", ["prelude//os/constraints:linux", "prelude//cpu/constraints:arm32"]),
     ]
 ]
+
+filegroup(
+    name = "cfr25-embedded",
+    srcs = [
+        "//components/bms_boss:crc-0",
+        "//components/bms_worker:crc-0.all_nodes",
+        "//components/bootloaders/STM/stm32f1:crc-0",
+        "//components/bootloaders/STM/stm32f1:crc-1",
+        "//components/bootloaders/STM/stm32f1:crc-2",
+        "//components/bootloaders/STM/stm32f1:crc-3",
+        "//components/bootloaders/STM/stm32f1:crc-4",
+        "//components/bootloaders/STM/stm32f1:crc-5",
+        "//components/bootloaders/STM/stm32f1:crc-11",
+        "//components/bootloaders/STM/stm32f1:crc-30",
+        "//components/bootloaders/STM/stm32f1:crc-31",
+        "//components/bootloaders/STM/stm32f1:crc-32",
+        "//components/bootloaders/STM/stm32f1:crc-updater-0",
+        "//components/bootloaders/STM/stm32f1:crc-updater-1",
+        "//components/bootloaders/STM/stm32f1:crc-updater-2",
+        "//components/bootloaders/STM/stm32f1:crc-updater-3",
+        "//components/bootloaders/STM/stm32f1:crc-updater-4",
+        "//components/bootloaders/STM/stm32f1:crc-updater-5",
+        "//components/bootloaders/STM/stm32f1:crc-updater-11",
+        "//components/bootloaders/STM/stm32f1:crc-updater-30",
+        "//components/bootloaders/STM/stm32f1:crc-updater-31",
+        "//components/bootloaders/STM/stm32f1:crc-updater-32",
+        "//components/vc/front:crc-0",
+        "//components/vc/pdu:crc-0",
+        "//components/vc/rear:crc-0",
+    ],
+)

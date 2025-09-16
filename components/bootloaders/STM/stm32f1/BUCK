@@ -349,6 +349,7 @@ generate_stripped_asms(
         name = "crc-{}".format(i),
         actual = ":bin_crc-{}".format(i),
         platform = ":platform-{}".format(i),
+        visibility = ["PUBLIC"],
     )
     for _, i, _, _ in variants
 ]
@@ -357,6 +358,7 @@ generate_stripped_asms(
         name = "crc-updater-{}".format(i),
         actual = ":bin_crc-updater-{}".format(i),
         platform = ":platform-updater-{}".format(i),
+        visibility = ["PUBLIC"],
     )
     for _, i, has_updater, _ in variants if has_updater
 ]
