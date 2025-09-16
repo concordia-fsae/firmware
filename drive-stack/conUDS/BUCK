@@ -37,3 +37,10 @@ rust_binary(
     ],
     visibility = ["PUBLIC"],
 )
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":conUDS",
+    platform = "//platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)

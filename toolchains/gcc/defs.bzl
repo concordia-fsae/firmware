@@ -58,7 +58,7 @@ def get_gcc_release(version: str, target_arch: str, target_os: str) -> GccReleas
     gcc_version = releases[version]
 
     platform = "{}-{}".format(host_arch(), host_os())
-    if target_os != "eabi":
+    if host_arch() != target_arch or host_os() not in target_os:
         platform = platform + "-{}-{}".format(target_arch, target_os)
     if not platform in gcc_version:
         fail("Unsupported platform '{}'. Supported platforms: {}".format(
@@ -94,9 +94,9 @@ def download_gcc_distribution(
         target_os: [None, str] = None):
     arch = arch or host_arch()
     os = os or host_os()
+    target_arch = target_arch or host_arch()
+    target_os = target_os or host_os()
 
-    target_arch = target_arch or "arm"
-    target_os = target_os or "eabi"
     archive_name = name + "-archive"
     release = get_gcc_release(version, target_arch, target_os)
     native.http_archive(

@@ -1,0 +1,7 @@
+filegroup(
+    name = "cfr26-stack",
+    srcs = [
+        "//drive-stack/can-bridge:bin-arm64",
+        "//drive-stack/conUDS:bin-arm64",
+    ],
+)

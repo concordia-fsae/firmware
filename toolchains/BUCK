@@ -14,30 +14,6 @@ system_genrule_toolchain(
     visibility = ["PUBLIC"],
 )
 
-# gcc 7-2017-q4-major
-download_gcc_distribution(
-    name = "gcc-7-2017-q4-major-dist",
-    version = "7-2017-q4-major",
-)
-
-gcc_toolchain(
-    name = "gcc-7-2017-q4-major",
-    distribution = ":gcc-7-2017-q4-major-dist",
-    visibility = ["PUBLIC"],
-)
-
-# gcc 10.3-2021.10
-download_gcc_distribution(
-    name = "gcc-10.3-2021.10-dist",
-    version = "10.3-2021.10",
-)
-
-gcc_toolchain(
-    name = "gcc-10.3-2021.10",
-    distribution = ":gcc-10.3-2021.10-dist",
-    visibility = ["PUBLIC"],
-)
-
 # gcc 14.2.rel1
 download_gcc_distribution(
     name = "gcc-14.2.rel1-dist",
@@ -47,6 +23,19 @@ download_gcc_distribution(
 gcc_toolchain(
     name = "gcc-14.2.rel1",
     distribution = ":gcc-14.2.rel1-dist",
+    visibility = ["PUBLIC"],
+)
+
+download_gcc_distribution(
+    name = "gcc-14.2.rel1-arm-none-dist",
+    version = "14.2.rel1",
+    target_arch = "arm",
+    target_os = "none",
+)
+
+gcc_toolchain(
+    name = "gcc-14.2.rel1-arm-none",
+    distribution = ":gcc-14.2.rel1-arm-none-dist",
     visibility = ["PUBLIC"],
 )
 
