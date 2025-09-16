@@ -1,6 +1,6 @@
 git_fetch(
     name = "FreeRTOS.git",
-    repo = "git@github.com:ARM-software/CMSIS-FreeRTOS.git",
+    repo = "https://github.com/ARM-software/CMSIS-FreeRTOS.git",
     rev = "0bb666c1ff7430f5827e9469883b827df5b8fb06",
     sub_targets = [
         "Source/croutine.c",
@@ -41,7 +41,7 @@ git_fetch(
 
 git_fetch(
     name = "lib_FTDI_FT81x",
-    repo = "git@github.com:concordia-fsae/lib_FTDI_FT81x.git",
+    repo = "https://github.com/concordia-fsae/lib_FTDI_FT81x.git",
     rev = "1ca656236b94ebd6075e9cdb6762ba0de89895f6",
     sub_targets = [
         "include/EVE.h",
@@ -56,7 +56,7 @@ git_fetch(
 
 git_fetch(
     name = "CMSIS.git",
-    repo = "git@github.com:ARM-software/CMSIS_6.git",
+    repo = "https://github.com/ARM-software/CMSIS_6.git",
     rev = "b0bbb0423b278ca632cfe1474eb227961d835fd2",
     sub_targets = [
         "CMSIS/Core/Include/core_cm3.h",
@@ -70,7 +70,7 @@ git_fetch(
 
 git_fetch(
     name = "printf",
-    repo = "git@github.com:eyalroz/printf.git",
+    repo = "https://github.com/eyalroz/printf.git",
     rev = "f8ed5a9bd9fa8384430973465e94aa14c925872d",
     sub_targets = [
         "src/printf/printf.c",
@@ -98,7 +98,7 @@ export_file(
 
 git_fetch(
     name = "isotp",
-    repo = "git@github.com:concordia-fsae/isotp.git",
+    repo = "https://github.com/concordia-fsae/isotp.git",
     rev = "1c7c384db5f00af1ef83a3d336a873288fc9f77a",
     sub_targets = [
         "isotp.c",
