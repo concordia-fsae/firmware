@@ -1,0 +1,17 @@
+[package]
+name = "net-detec"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "net-detec"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.80"
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.11"
+if-addrs = "0.14"
+log = "0.4.21"
+mdns-sd = "0.15.1"
+thiserror = "1.0"
