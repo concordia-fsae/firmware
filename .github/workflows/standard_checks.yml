@@ -99,7 +99,8 @@ jobs:
         with:
           version: "latest"
       - name: Build Tools
-        run: buck2 build //drive-stack/conUDS:conUDS -j32 --out builds/conUDS
+        run: buck2 build //drive-stack/conUDS -j32 --out builds/conUDS &&
+             buck2 build //drive-stack/net-detec -j32 --out builds/net-detec
       - name: Build Manifests
         run: buck2 build //network:manifest-uds -j32 --out builds/manifest-uds.yaml
       - name: Archive Artifacts
