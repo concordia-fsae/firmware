@@ -4,14 +4,16 @@ POSITIONAL_ARGS=()
 CURRENT_TAG="v1.0.0"
 IMAGE_TAG=$CURRENT_TAG
 RUN_COMMAND=""
+BUILDROOT_CONTAINER="buildroot"
 
 print_help () {
-    echo "Usage 'buildroot.sh [OPTIONS]'"
+    echo "Usage 'buildroot.sh [OPTIONS] SERVICE_APPEND'"
     echo "Buildroot help..."
     echo "Options:"
     echo "  -h --help            Displays this help message"
     echo "  -l --latest          Displays this help message"
     echo "  -r --run COMMAND     Command to run in the docker container once started"
+    echo "  -b --buck2           Run the buck2 container"
     echo "  -t --tag TAG         The tag to use for the buildroot container. Default's to $IMAGE_TAG"
 }
 
@@ -43,6 +45,9 @@ do
             shift
             RUN_COMMAND="$1"
             ;;
+        -b|--buck2)
+            BUILDROOT_CONTAINER="buildroot-buck"
+            ;;
         -*|--*) # catch any unknown args and exit
             echo "Unknown option $1"
             print_help
@@ -69,9 +74,9 @@ set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 # one day we can do things here with positional args or params
 # for now, just always start the container
 echo "Pulling buildroot image tag '$IMAGE_TAG'"
-IMAGE_TAG=${IMAGE_TAG} docker-compose pull buildroot
+IMAGE_TAG=${IMAGE_TAG} docker-compose pull $BUILDROOT_CONTAINER
 docker-compose up -d
-IMAGE_TAG=${IMAGE_TAG} docker-compose run --rm buildroot $RUN_COMMAND
+IMAGE_TAG=${IMAGE_TAG} docker-compose run --rm $BUILDROOT_CONTAINER $RUN_COMMAND
 
 EXIT_CODE=$?
 if [ $EXIT_CODE != 0 ]; then
