@@ -88,7 +88,7 @@ def GenerateFeatures(selection_files: List[str], features_dict: List[dict] = lis
                                 valid = True
                                 loaded_selections["features"][feature] = values + "_" + loaded_selections["features"][feature]
                         if not valid:
-                            raise Exception(f"FeatureDefs: Requested value {loaded_selections["features"][feature]} not defined.")
+                            raise Exception(f"FeatureDefs: Requested value {loaded_selections['features'][feature]} not defined.")
                 feature_values.update(loaded_selections["features"])
             except TypeError: # Nonetype
                 pass

@@ -182,7 +182,7 @@ def generate_can_buses(definition_dir: Path) -> None:
             try:
                 Endianess[can_bus_def["defaultEndianness"]]
             except:
-                raise Exception(f"Endianness '{can_bus_def["defaultEndianness"]}' is not valid. Endianness can be { [ e.name for e in Endianess ] }.")
+                raise Exception(f"Endianness '{can_bus_def['defaultEndianness']}' is not valid. Endianness can be { [ e.name for e in Endianess ] }.")
         except Exception as e:
             print(f"CANbus configuration file '{bus_file_path}' is invalid.")
             print(f"CAN Bus Schema Error: {e}")
@@ -261,7 +261,7 @@ def generate_can_nodes(definition_dir: Path) -> None:
                         raise Exception(f"Node '{node.name}' is on bus '{bus}' but that bus is not defined.")
             else:
                 if node_def["onBuses"] not in can_bus_defs:
-                    raise Exception(f"Node '{node.name}' is on bus '{node_def["onBuses"]}' but that bus is not defined.")
+                    raise Exception(f"Node '{node.name}' is on bus '{node_def['onBuses']}' but that bus is not defined.")
         except Exception as e:
             print(f"CAN node configuration file for node '{node.name}' is invalid.")
             print(f"CAN Node Error: {e}")
@@ -315,7 +315,7 @@ def process_node(node: CanNode):
                 SIGNAL_SCHEMA.validate(definition)
                 if "template" in definition:
                     if definition["template"] not in templates["signals"]:
-                        raise Exception(f"Signal '{sig}' has template signal '{definition["template"]}' which can not be found in the template signals")
+                        raise Exception(f"Signal '{sig}' has template signal '{definition['template']}' which can not be found in the template signals")
                     definition.update(templates["signals"][definition["template"]])
                 if "nativeRepresentation" not in definition and "discreteValues" not in definition:
                     raise Exception(f"Signal '{sig}' in '{node.name}' has neither a discreteValues or nativeRepresentation.")
@@ -323,12 +323,12 @@ def process_node(node: CanNode):
                     try:
                         Units(definition["unit"])
                     except:
-                        raise Exception(f"Unit '{definition["unit"]}' is not an accepted unit.")
+                        raise Exception(f"Unit '{definition['unit']}' is not an accepted unit.")
                 if "validationRole" in definition:
                     try:
                         ValidationRole(definition["validationRole"])
                     except:
-                        raise Exception(f"Validation role '{definition["validationRole"]}' is not valid.")
+                        raise Exception(f"Validation role '{definition['validationRole']}' is not valid.")
             except Exception as e:
                 print(f"CAN signal definition for '{sig}' in node '{node.name}' is invalid.")
                 print(f"CAN Signal Schema Error: {e}")
@@ -383,7 +383,7 @@ def process_node(node: CanNode):
 
         if "template" in definition:
             if definition["template"] not in templates["messages"]:
-                print(f"Message '{name}' has template message '{definition["template"]}' which can not be found in the template messages")
+                print(f"Message '{name}' has template message '{definition['template']}' which can not be found in the template messages")
                 ERROR = True
                 break
             definition.update(templates["messages"][definition["template"]])
@@ -459,12 +459,12 @@ def process_node(node: CanNode):
                         try:
                             Units(definition["unit"])
                         except:
-                            raise Exception(f"Unit '{new_sig["unit"]}' is not an accepted unit.")
+                            raise Exception(f"Unit '{new_sig['unit']}' is not an accepted unit.")
                     if "validationRole" in new_sig:
                         try:
                             ValidationRole(new_sig["validationRole"])
                         except:
-                            raise Exception(f"Validation role '{new_sig["validationRole"]}' is not valid.")
+                            raise Exception(f"Validation role '{new_sig['validationRole']}' is not valid.")
                 except Exception as e:
                     print(f"CAN signal definition for '{msg_signal}' in node '{node.name}' is invalid.")
                     print(f"CAN Signal Schema Error: {e}")
@@ -544,11 +544,11 @@ def process_bridges(node: CanNode):
                 if type(definition["sourceBuses"]) is list:
                     for bus in definition["sourceBuses"]:
                         if bus not in can_bus_defs:
-                            raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                            raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
 
                 else:
                     if definition["sourceBuses"] not in can_bus_defs:
-                        raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                        raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
             except Exception as e:
                 print(f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid.")
                 print(f"CAN RX Message Error: {e}")
@@ -605,7 +605,7 @@ def process_receivers(bus: CanBus, node: CanNode):
             try:
                 RX_ITEM_SCHEMA.validate(definition)
                 if "sourceBuses" in definition and definition["sourceBuses"] not in can_bus_defs:
-                    raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                    raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
                 if "bridge" in definition:
                     raise Exception(f"Cannot bridge signals.")
             except Exception as e:
@@ -633,7 +633,7 @@ def process_receivers(bus: CanBus, node: CanNode):
 
                 else:
                     if definition["sourceBuses"] not in can_bus_defs:
-                        raise Exception(f"Source bus {definition["sourceBuses"]} is not defined in the network.")
+                        raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
             except Exception as e:
                 print(f"CAN message fuck reception definition for '{msg}' in node '{node.name}' is invalid.")
                 print(f"CAN RX Message Error: {e}")
@@ -684,7 +684,7 @@ def process_receivers(bus: CanBus, node: CanNode):
         if rx_msg_dict[msg_name] is not None:
             if "node" in rx_msg_dict[msg_name]:
                 if node.duplicateNode is False:
-                    Exception(f"{msg_name} in file {rx_file} is for node {rx_msg_dict[msg_name]["node"]}, however {node.alias} is not a duplicate node.")
+                    Exception(f"{msg_name} in file {rx_file} is for node {rx_msg_dict[msg_name]['node']}, however {node.alias} is not a duplicate node.")
                 if rx_msg_dict[msg_name]["node"] is not node.offset:
                     continue
 

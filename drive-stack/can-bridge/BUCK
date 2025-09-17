@@ -27,3 +27,10 @@ rust_binary(
     ],
     visibility = ["PUBLIC"],
 )
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":can-bridge",
+    platform = "//platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
