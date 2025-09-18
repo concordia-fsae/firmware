@@ -99,3 +99,11 @@ messages:
     id: 0x7f9
     sourceBuses: veh
     template: nvmInformation
+
+  informationDebug:
+    description: BMS Boss debug information
+    cycleTimeMs: 1000
+    id: 0x7a0
+    sourceBuses: veh
+    signals:
+      mcuTemperature:
