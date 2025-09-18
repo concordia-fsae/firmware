@@ -1,5 +1,5 @@
-use std::error::Error;
 use std::collections::HashMap;
+use std::error::Error;
 use std::ffi::CString;
 use std::io;
 use std::mem::{size_of, zeroed};
@@ -8,7 +8,7 @@ use std::path::Path;
 use std::ptr;
 use std::sync::{mpsc, Arc};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use libc::{
     bind, can_frame, c_long, c_void, cmsghdr, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t,
@@ -18,6 +18,9 @@ use libc::{
     SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
 };
 use can_dbc::{ByteOrder, DBC, Message, MessageId, MultiplexIndicator, Signal, ValueType};
+
+// We use the Val enum from bin-logger for decoded maps:
+use bin_logger::Val;
 
 // ---------------- Types ----------------
 
@@ -112,7 +115,7 @@ pub fn format_can_line(
     bus: &str,
     f: &CanFrame,
     ts_opt: Option<(u64, u32)>,
-    decoded: Option<String>,
+    decoded_pretty: Option<String>,
 ) -> String {
     let is_eff = (f.can_id & CAN_EFF_FLAG) != 0;
     let is_rtr = (f.can_id & CAN_RTR_FLAG) != 0;
@@ -135,7 +138,7 @@ pub fn format_can_line(
     } else {
         let bytes = &f.data[..(f.can_dlc as usize).min(8)];
         let payload = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
-        match decoded {
+        match decoded_pretty {
             Some(dec) if !dec.is_empty() => format!(
                 "[{}] {} ID={}{flags} DLC={} DATA={}\n{}",
                 ts_str, bus, id_str, f.can_dlc, payload, dec
@@ -193,7 +196,6 @@ pub fn parse_bus_specs(
                 buses.push(bus.to_string());
             }
 
-            // Load/parse DBC and build index; also compute a nice name to report
             let dbc_bytes = std::fs::read(dbc_path)?;
             let dbc = DBC::from_slice(&dbc_bytes)
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{e:?}")))?;
@@ -310,7 +312,18 @@ fn is_signal_active(sig: &Signal, mux: Option<u64>) -> bool {
     }
 }
 
+/// Compact hex for raw payload (no spaces)
+fn hex_compact(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{:02X}", b)).collect::<String>()
+}
+
 /// Try to decode and apply filters.
+///
+/// Returns a map { signal_name -> Val::F64(value) } and **always** inserts
+/// { "data" -> Val::Str(<hex payload>) } if a decode is accepted.
+///
+/// - When `allow_empty_signals` is true, returns a map with only `"data"` if no signals matched.
+/// - When `ignore_msg_filter` is false, `msg_filters` must match message name.
 pub fn maybe_decode(
     bundle_opt: Option<&Arc<BusDbc>>,
     frame: &CanFrame,
@@ -319,7 +332,7 @@ pub fn maybe_decode(
     ignore_msg_filter: bool,
     msg_filters: &[String],
     sig_filters: &[String],
-) -> Option<String> {
+) -> Option<HashMap<String, Val>> {
     let b = bundle_opt?;
     let &msg_idx = b.id_index.get(&id_masked)?;
     let msg = &b.dbc.messages()[msg_idx];
@@ -331,19 +344,13 @@ pub fn maybe_decode(
         }
     }
 
-    render_decoded_with_optional_sig_filter(msg, frame, sig_filters, allow_empty_signals)
-}
-
-fn render_decoded_with_optional_sig_filter(
-    msg: &Message,
-    f: &CanFrame,
-    sig_filters: &[String],
-    allow_empty: bool,
-) -> Option<String> {
-    let data: [u8; 8] = f.data;
+    let data: [u8; 8] = frame.data;
     let mux = find_mux_value(msg, &data);
 
-    let mut parts: Vec<String> = Vec::new();
+    let mut out: HashMap<String, Val> = HashMap::new();
+    let mut any = false;
+
+    // decoded signals
     for sig in msg.signals() {
         if !is_signal_active(sig, mux) { continue; }
         if !sig_filters.is_empty() {
@@ -351,93 +358,55 @@ fn render_decoded_with_optional_sig_filter(
             if !sig_filters.iter().any(|p| lname.contains(p)) { continue; }
         }
         let v = decode_signal(sig, &data);
-        let unit = sig.unit();
-        if unit.is_empty() {
-            parts.push(format!("  {}={}\n", sig.name(), v));
-        } else {
-            parts.push(format!("  {}={} {}\n", sig.name(), v, unit));
-        }
+        out.insert(sig.name().to_string(), Val::F64(v));
+        any = true;
     }
 
-    if parts.is_empty() {
-        if allow_empty { Some(format!("{}", msg.message_name())) } else { None }
+    // always include raw "data" hex
+    let bytes = &frame.data[..(frame.can_dlc as usize).min(8)];
+    out.insert("data".to_string(), Val::Str(hex_compact(bytes)));
+
+    if any || allow_empty_signals {
+        Some(out)
     } else {
-        Some(format!("{}:\n{}", msg.message_name(), parts.join("")))
+        None
     }
 }
 
-// ---------------- Workers / Bridge / Headless ----------------
-
-fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>, bus_state: &mpsc::Sender<(String, BusState)>) {
-    loop {
-        let mut active = false;
-        if let Ok(fd) = open_can_with_timestamping(bus) {
-            let mut frame: can_frame = unsafe { zeroed() };
-            let mut name: sockaddr_can = unsafe { zeroed() };
-
-            let mut iov = iovec {
-                iov_base: (&mut frame as *mut can_frame) as *mut c_void,
-                iov_len: size_of::<can_frame>(),
-            };
-
-            // Enough for cmsghdr + 3x timespec + padding
-            let mut cbuf = [0u8; 256];
-
-            'recv_loop: loop {
-                let mut msg: msghdr = unsafe { zeroed() };
-                msg.msg_name = (&mut name as *mut sockaddr_can) as *mut c_void;
-                msg.msg_namelen = size_of::<sockaddr_can>() as socklen_t;
-                msg.msg_iov = &mut iov as *mut iovec;
-                msg.msg_iovlen = 1;
-                msg.msg_control = cbuf.as_mut_ptr() as *mut c_void;
-                msg.msg_controllen = cbuf.len();
-
-                let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
-                if n <= 0 {
-                    let err = io::Error::last_os_error();
-                    if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
-                        continue;
-                    } else if active {
-                        active = false;
-                        let _ = bus_state.send((bus.to_string(), BusState::Error));
-                    }
-                    break 'recv_loop;
-                } else if !active {
-                    active = true;
-                    let _ = bus_state.send((bus.to_string(), BusState::Active));
-                }
-
-                let ts_opt = parse_timestamp_from_cmsgs(&msg);
-
-                // Copy libc::can_frame -> portable CanFrame
-                let cf = CanFrame { can_id: frame.can_id, can_dlc: frame.can_dlc, data: frame.data };
-
-                let _ = tx.send(Event { bus: bus.to_string(), frame: cf, ts_opt });
-            }
+/// Optional: pretty renderer for UI/headless output
+pub fn render_decoded_text(
+    msg_name_opt: Option<&str>,
+    fields: &HashMap<String, Val>
+) -> String {
+    let mut lines = Vec::new();
+    if let Some(n) = msg_name_opt {
+        lines.push(format!("{n}:"));
+    }
+    // "data" first, others alpha
+    let mut keys: Vec<_> = fields.keys().cloned().collect();
+    keys.sort();
+    if let Some(i) = keys.iter().position(|k| k == "data") {
+        let k = keys.remove(i);
+        keys.insert(0, k);
+    }
+    for k in keys {
+        match &fields[&k] {
+            Val::F64(x) => lines.push(format!("  {}={}", k, x)),
+            Val::Str(s) => lines.push(format!("  {}={}", k, s)),
         }
-        thread::sleep(Duration::from_millis(1000));
     }
+    lines.join("\n")
 }
 
-/// Spawn workers for all buses
-pub fn spawn_workers(
-    buses: &[String],
-    tx: mpsc::Sender<Event>,
-    bus_states_emitter: mpsc::Sender<(String, BusState)>,
-) -> io::Result<()> {
-    for bus in buses.iter().cloned() {
-        let tx = tx.clone();
-        let bus_states_emitter = bus_states_emitter.clone();
-        let thread_name = format!("can-bridge-{}", bus);
-
-        thread::Builder::new()
-            .name(thread_name)
-            .spawn(move || run_bus_worker(&bus, &tx, &bus_states_emitter))?;
-    }
-    Ok(())
+/// Get DBC message name for masked ID (for pretty printing)
+pub fn dbc_msg_name_for_id(bundle_opt: Option<&Arc<BusDbc>>, id_masked: u32) -> Option<String> {
+    let b = bundle_opt?;
+    let &idx = b.id_index.get(&id_masked)?;
+    Some(b.dbc.messages()[idx].message_name().to_string())
 }
 
-/// Open a RAW CAN socket bound to `iface`, enable SO_TIMESTAMPING (HW/SW).
+// ---------------- Workers ----------------
+
 fn open_can_with_timestamping(iface: &str) -> io::Result<OwnedFd> {
     let fd = unsafe { socket(AF_CAN, SOCK_RAW, CAN_RAW) };
     if fd < 0 { return Err(io::Error::last_os_error()); }
@@ -512,4 +481,74 @@ fn parse_timestamp_from_cmsgs(msg: &msghdr) -> Option<(u64, u32)> {
         offset = offset.saturating_add(cmsg_len_aligned);
     }
     None
+}
+
+/// Worker loop for a single CAN interface.
+fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>, bus_state: &mpsc::Sender<(String, BusState)>) {
+    loop {
+        let mut active = false;
+        if let Ok(fd) = open_can_with_timestamping(bus) {
+            let mut frame: can_frame = unsafe { zeroed() };
+            let mut name: sockaddr_can = unsafe { zeroed() };
+
+            let mut iov = iovec {
+                iov_base: (&mut frame as *mut can_frame) as *mut c_void,
+                iov_len: size_of::<can_frame>(),
+            };
+
+            // Enough for cmsghdr + 3x timespec + padding
+            let mut cbuf = [0u8; 256];
+
+            'recv_loop: loop {
+                let mut msg: msghdr = unsafe { zeroed() };
+                msg.msg_name = (&mut name as *mut sockaddr_can) as *mut c_void;
+                msg.msg_namelen = size_of::<sockaddr_can>() as socklen_t;
+                msg.msg_iov = &mut iov as *mut iovec;
+                msg.msg_iovlen = 1;
+                msg.msg_control = cbuf.as_mut_ptr() as *mut c_void;
+                msg.msg_controllen = cbuf.len();
+
+                let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
+                if n <= 0 {
+                    let err = io::Error::last_os_error();
+                    if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
+                        continue;
+                    } else if active {
+                        active = false;
+                        let _ = bus_state.send((bus.to_string(), BusState::Error));
+                    }
+                    break 'recv_loop;
+                } else if !active {
+                    active = true;
+                    let _ = bus_state.send((bus.to_string(), BusState::Active));
+                }
+
+                let ts_opt = parse_timestamp_from_cmsgs(&msg);
+
+                // Copy libc::can_frame -> portable CanFrame
+                let cf = CanFrame { can_id: frame.can_id, can_dlc: frame.can_dlc, data: frame.data };
+
+                let _ = tx.send(Event { bus: bus.to_string(), frame: cf, ts_opt });
+            }
+        }
+        thread::sleep(Duration::from_millis(1000));
+    }
+}
+
+/// Spawn workers for all buses
+pub fn spawn_workers(
+    buses: &[String],
+    tx: mpsc::Sender<Event>,
+    bus_states_emitter: mpsc::Sender<(String, BusState)>,
+) -> io::Result<()> {
+    for bus in buses.iter().cloned() {
+        let tx = tx.clone();
+        let bus_states_emitter = bus_states_emitter.clone();
+        let thread_name = format!("can-bridge-{}", bus);
+
+        thread::Builder::new()
+            .name(thread_name)
+            .spawn(move || run_bus_worker(&bus, &tx, &bus_states_emitter))?;
+    }
+    Ok(())
 }

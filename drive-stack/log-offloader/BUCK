@@ -1,0 +1,21 @@
+rust_binary(
+    name = "log-offloader",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        "//libs/bin-logger:lib",
+        "//drive-stack/net-detec:lib",
+        "//third_party:anyhow",
+        "//third_party:bincode",
+        "//third_party:clap",
+        "//third_party:serde_json",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":log-offloader",
+    platform = "//platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
