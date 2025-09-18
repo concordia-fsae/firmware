@@ -8,6 +8,7 @@ name = "can-bridge"
 path = "src/main.rs"
 
 [dependencies]
+bin-logger = { path = "..../libs/bin-logger" }
 clap = { workspace = true }
 can-dbc = { workspace = true }
 libc = { workspace = true }

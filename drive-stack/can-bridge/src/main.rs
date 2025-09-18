@@ -14,7 +14,11 @@ use ratatui::Terminal;
 use can_bridge::{
     BusDbc, BusState, Event, Filters,
     parse_bus_specs, spawn_workers, maybe_decode, format_can_line,
+    render_decoded_text, dbc_msg_name_for_id,
 };
+
+// bin-logger brings the record schema + writer
+use bin_logger::{BinLogger, BinRecordCan, Val};
 
 /// Read multiple CAN buses; each input may be IFACE or IFACE=DBC.
 /// Filters:
@@ -64,6 +68,14 @@ struct Args {
     /// Max messages kept in the UI scrollback
     #[arg(long, default_value_t = 2000)]
     max_msgs: usize,
+
+    /// Directory to write bincode logs (rolling files). If unset, logging is disabled.
+    #[arg(long)]
+    binlog_dir: Option<String>,
+
+    /// Max bytes per rolling file before we rotate to a new file.
+    #[arg(long, default_value_t = 134_217_728)] // 128 MiB
+    binlog_max_bytes: u64,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -108,6 +120,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Spawn workers
     spawn_workers(&buses, tx, bus_states_emitter)?;
 
+    // Optional bin logger
+    let mut binlog_opt = match &args.binlog_dir {
+        Some(dir) => Some(BinLogger::new(dir.clone(), args.binlog_max_bytes)?),
+        None => None,
+    };
+
     // Output / UI
     if args.tui {
         run_tui(
@@ -118,9 +136,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             filters,
             bus_status,
             args.max_msgs,
+            binlog_opt,
         )?;
     } else {
-        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet);
+        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet, binlog_opt);
     }
 
     Ok(())
@@ -136,9 +155,10 @@ fn run_tui(
     filters: Filters,
     mut bus_status: HashMap<String, BusState>,
     max_msgs: usize,
+    mut binlog_opt: Option<BinLogger>,
 ) -> std::io::Result<()> {
     // Terminal setup
-    enable_raw_mode()?;
+    ratatui::crossterm::terminal::enable_raw_mode()?;
     let mut std_fd = std::io::stderr();
     execute!(std_fd, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(std_fd);
@@ -153,12 +173,15 @@ fn run_tui(
 
     // UI loop
     'ui: loop {
-        // Drain all pending events from CAN workers
+        // Drain bus state updates
         while let Ok((node, state)) = states.try_recv() {
             bus_status.insert(node, state);
         }
+
+        // Drain CAN events
         while let Ok(ev) = rx.try_recv() {
-            let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
+            let is_eff = (ev.frame.can_id & CAN_EFF_FLAG) != 0;
+            let id_masked = if is_eff {
                 ev.frame.can_id & CAN_EFF_MASK
             } else {
                 ev.frame.can_id & CAN_SFF_MASK
@@ -167,23 +190,14 @@ fn run_tui(
             let has_id_filters = !filters.id_ranges.is_empty();
             let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
 
-            let maybe_line = if !has_msg_sig_filters {
-                if has_id_filters && !filters.match_id(id_masked) {
-                    None
-                } else {
-                    let decoded = maybe_decode(
-                        per_bus_bundles.get(&ev.bus),
-                        &ev.frame,
-                        id_masked,
-                        true,   // allow empty
-                        true,   // ignore msg filter
-                        &[],
-                        &[],
-                    );
-                    Some(format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded))
-                }
-            } else {
-                let decoded = maybe_decode(
+            // ID prefilter when no msg/sig filters
+            if !has_msg_sig_filters && has_id_filters && !filters.match_id(id_masked) {
+                continue;
+            }
+
+            // Decode to map (includes "data")
+            let decoded_map = if has_msg_sig_filters {
+                maybe_decode(
                     per_bus_bundles.get(&ev.bus),
                     &ev.frame,
                     id_masked,
@@ -191,19 +205,57 @@ fn run_tui(
                     false,  // enforce msg filter
                     &filters.msg_filters,
                     &filters.sig_filters,
-                );
-                decoded.map(|d| format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(d)))
+                )
+            } else {
+                maybe_decode(
+                    per_bus_bundles.get(&ev.bus),
+                    &ev.frame,
+                    id_masked,
+                    true,   // allow empty
+                    true,   // ignore msg filter
+                    &[],
+                    &[],
+                )
             };
 
-            if let Some(line) = maybe_line {
-                if messages.len() == max_msgs { messages.pop_front(); }
-                messages.push_back(line);
+            if has_msg_sig_filters && decoded_map.is_none() {
+                continue;
             }
+
+            let fields = decoded_map.unwrap_or_else(|| {
+                let mut m = HashMap::new();
+                let bytes = &ev.frame.data[..(ev.frame.can_dlc as usize).min(8)];
+                let hex = bytes.iter().map(|b| format!("{:02X}", b)).collect::<String>();
+                m.insert("data".to_string(), Val::Str(hex));
+                m
+            });
+
+            // Log to rolling bin
+            if let Some(logger) = binlog_opt.as_mut() {
+                let rec = BinRecordCan {
+                    ts: ev.ts_opt,
+                    bus: ev.bus.clone(),
+                    id: id_masked,
+                    dlc: ev.frame.can_dlc,
+                    extended: is_eff,
+                    rtr: (ev.frame.can_id & libc::CAN_RTR_FLAG) != 0,
+                    err: (ev.frame.can_id & libc::CAN_ERR_FLAG) != 0,
+                    fields: fields.clone(),
+                };
+                let _ = logger.write_record(&rec);
+            }
+
+            // Pretty line for the UI
+            let msg_name = dbc_msg_name_for_id(per_bus_bundles.get(&ev.bus), id_masked);
+            let text = render_decoded_text(msg_name.as_deref(), &fields);
+            let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(text));
+            if messages.len() == max_msgs { messages.pop_front(); }
+            messages.push_back(line);
         }
 
         // Draw
         terminal.draw(|f| {
-            // Layout: [top status (rows ≈ buses + 2) | messages | tabs]
+            // Layout: [top status | messages | tabs]
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
@@ -243,7 +295,7 @@ fn run_tui(
                 .block(Block::default().borders(Borders::ALL).title("messages"));
             f.render_widget(list, chunks[1]);
 
-            // Bottom: tabs strip (single tab "main")
+            // Bottom: tabs strip
             let t = Tabs::new(tabs.iter().map(|t| t.as_str()).collect::<Vec<_>>())
                 .select(active_tab_idx)
                 .block(Block::default().borders(Borders::NONE))
@@ -284,13 +336,14 @@ fn run_tui(
     Ok(())
 }
 
-/// Headless (non-TUI) output loop; used when `--tui` is not set.
+/// Headless (non-TUI) output loop.
 pub fn run_headless(
     rx: mpsc::Receiver<Event>,
     bus_states: mpsc::Receiver<(String, BusState)>,
     per_bus_bundles: HashMap<String, Arc<BusDbc>>,
     filters: Filters,
     quiet: bool,
+    mut binlog_opt: Option<BinLogger>,
 ) {
     let mut last_cycle = Instant::now();
     let mut bandwidth: HashMap<String, u32> = HashMap::new();
@@ -315,44 +368,34 @@ pub fn run_headless(
         }
 
         while let Ok(ev) = rx.try_recv() {
-            // SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
-            // DEL(1), ACK(1), DEL(1), EOF(7), ITM(11)
-            let mut bit_length = 43;
+            // --- bandwidth calc ---
+            let mut bit_length = 43; // SOF/RTR/IDE/DLC/CRC/DEL/ACK/DEL/EOF/ITM (approx)
             bit_length += ev.frame.can_dlc as u32 * 8;
-            let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
+            let is_eff = (ev.frame.can_id & CAN_EFF_FLAG) != 0;
+            let id_masked = if is_eff {
                 bit_length += 29;
                 ev.frame.can_id & CAN_EFF_MASK
             } else {
                 bit_length += 11;
                 ev.frame.can_id & CAN_SFF_MASK
-            };
-
-            let has_id_filters = !filters.id_ranges.is_empty();
-            let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
+            } as u32;
 
             match bandwidth.get(&ev.bus) {
                 Some(bits) => { bandwidth.insert(ev.bus.clone(), (bit_length + *bits).into()); }
                 None => { bandwidth.insert(ev.bus.clone(), bit_length.into()); }
             }
 
-            if !has_msg_sig_filters {
-                if has_id_filters && !filters.match_id(id_masked) {
-                    continue;
-                }
-                let decoded = maybe_decode(
-                    per_bus_bundles.get(&ev.bus),
-                    &ev.frame,
-                    id_masked,
-                    true,  // allow empty signals
-                    true,  // ignore msg filter
-                    &[],   // msg filters
-                    &[],   // sig filters
-                );
+            // --- filtering + decode (unified) ---
+            let has_id_filters = !filters.id_ranges.is_empty();
+            let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
 
-                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
-                if !quiet { println!("{line}"); }
-            } else {
-                let decoded = maybe_decode(
+            // ID prefilter when no msg/sig filters
+            if !has_msg_sig_filters && has_id_filters && !filters.match_id(id_masked) {
+                continue;
+            }
+
+            let decoded_map = if has_msg_sig_filters {
+                maybe_decode(
                     per_bus_bundles.get(&ev.bus),
                     &ev.frame,
                     id_masked,
@@ -360,13 +403,50 @@ pub fn run_headless(
                     false, // enforce message filter
                     &filters.msg_filters,
                     &filters.sig_filters,
-                );
-                if decoded.is_none() {
-                    continue;
-                }
+                )
+            } else {
+                maybe_decode(
+                    per_bus_bundles.get(&ev.bus),
+                    &ev.frame,
+                    id_masked,
+                    true,  // allow empty results
+                    true,  // ignore msg filter
+                    &[],
+                    &[],
+                )
+            };
 
-                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
-                if !quiet { println!("{line}"); }
+            if has_msg_sig_filters && decoded_map.is_none() {
+                continue;
+            }
+
+            let fields = decoded_map.unwrap_or_else(|| {
+                let mut m = HashMap::new();
+                let bytes = &ev.frame.data[..(ev.frame.can_dlc as usize).min(8)];
+                let hex = bytes.iter().map(|b| format!("{:02X}", b)).collect::<String>();
+                m.insert("data".to_string(), Val::Str(hex));
+                m
+            });
+
+            if let Some(logger) = binlog_opt.as_mut() {
+                let rec = BinRecordCan {
+                    ts: ev.ts_opt,
+                    bus: ev.bus.clone(),
+                    id: id_masked,
+                    dlc: ev.frame.can_dlc,
+                    extended: is_eff,
+                    rtr: (ev.frame.can_id & libc::CAN_RTR_FLAG) != 0,
+                    err: (ev.frame.can_id & libc::CAN_ERR_FLAG) != 0,
+                    fields: fields.clone(),
+                };
+                let _ = logger.write_record(&rec);
+            }
+
+            if !quiet {
+                let msg_name = dbc_msg_name_for_id(per_bus_bundles.get(&ev.bus), id_masked);
+                let text = render_decoded_text(msg_name.as_deref(), &fields);
+                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(text));
+                println!("{line}");
             }
         }
     }

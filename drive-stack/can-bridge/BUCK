@@ -4,6 +4,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
     edition = "2024",
     deps = [
+        "//libs/bin-logger:lib",
         "//third_party:can-dbc",
         "//third_party:libc",
         "//third_party:socketcan",
@@ -20,6 +21,7 @@ rust_binary(
     edition = "2024",
     deps = [
         ":lib",
+        "//libs/bin-logger:lib",
         "//third_party:clap",
         "//third_party:can-dbc",
         "//third_party:libc",
