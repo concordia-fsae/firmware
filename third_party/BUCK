@@ -357,6 +357,30 @@ cargo.rust_library(
     ],
 )
 
+alias(
+    name = "bincode",
+    actual = ":bincode-1.3.3",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "bincode-1.3.3.crate",
+    sha256 = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad",
+    strip_prefix = "bincode-1.3.3",
+    urls = ["https://static.crates.io/crates/bincode/1.3.3/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "bincode-1.3.3",
+    srcs = [":bincode-1.3.3.crate"],
+    crate = "bincode",
+    crate_root = "bincode-1.3.3.crate/src/lib.rs",
+    edition = "2015",
+    visibility = [],
+    deps = [":serde-1.0.219"],
+)
+
 http_archive(
     name = "bitflags-1.3.2.crate",
     sha256 = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a",
@@ -543,6 +567,59 @@ cargo.rust_library(
     crate_root = "cfg_aliases-0.2.1.crate/src/lib.rs",
     edition = "2018",
     visibility = [],
+)
+
+alias(
+    name = "chrono",
+    actual = ":chrono-0.4.42",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "chrono-0.4.42.crate",
+    sha256 = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2",
+    strip_prefix = "chrono-0.4.42",
+    urls = ["https://static.crates.io/crates/chrono/0.4.42/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "chrono-0.4.42",
+    srcs = [":chrono-0.4.42.crate"],
+    crate = "chrono",
+    crate_root = "chrono-0.4.42.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "alloc",
+        "clock",
+        "iana-time-zone",
+        "now",
+        "std",
+        "winapi",
+        "windows-link",
+    ],
+    platform = {
+        "linux-arm64": dict(
+            deps = [":iana-time-zone-0.1.64"],
+        ),
+        "linux-x86_64": dict(
+            deps = [":iana-time-zone-0.1.64"],
+        ),
+        "macos-arm64": dict(
+            deps = [":iana-time-zone-0.1.64"],
+        ),
+        "macos-x86_64": dict(
+            deps = [":iana-time-zone-0.1.64"],
+        ),
+        "windows-gnu": dict(
+            deps = [":windows-link-0.2.0"],
+        ),
+        "windows-msvc": dict(
+            deps = [":windows-link-0.2.0"],
+        ),
+    },
+    visibility = [],
+    deps = [":num-traits-0.2.19"],
 )
 
 alias(
@@ -739,6 +816,27 @@ cargo.rust_library(
         ":once_cell-1.21.3",
         ":unicode-width-0.2.0",
     ],
+)
+
+http_archive(
+    name = "core-foundation-sys-0.8.7.crate",
+    sha256 = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b",
+    strip_prefix = "core-foundation-sys-0.8.7",
+    urls = ["https://static.crates.io/crates/core-foundation-sys/0.8.7/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "core-foundation-sys-0.8.7",
+    srcs = [":core-foundation-sys-0.8.7.crate"],
+    crate = "core_foundation_sys",
+    crate_root = "core-foundation-sys-0.8.7.crate/src/lib.rs",
+    edition = "2018",
+    features = [
+        "default",
+        "link",
+    ],
+    visibility = [],
 )
 
 alias(
@@ -1628,6 +1726,38 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "getrandom-0.3.3.crate",
+    sha256 = "26145e563e54f2cadc477553f1ec5ee650b00862f0a58bcd12cbdc5f0ea2d2f4",
+    strip_prefix = "getrandom-0.3.3",
+    urls = ["https://static.crates.io/crates/getrandom/0.3.3/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "getrandom-0.3.3",
+    srcs = [":getrandom-0.3.3.crate"],
+    crate = "getrandom",
+    crate_root = "getrandom-0.3.3.crate/src/lib.rs",
+    edition = "2021",
+    platform = {
+        "linux-arm64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "linux-x86_64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "macos-arm64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "macos-x86_64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+    },
+    visibility = [],
+    deps = [":cfg-if-1.0.3"],
+)
+
+http_archive(
     name = "glob-0.3.3.crate",
     sha256 = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280",
     strip_prefix = "glob-0.3.3",
@@ -1710,6 +1840,32 @@ cargo.rust_library(
         "default",
         "std",
     ],
+    visibility = [],
+)
+
+http_archive(
+    name = "iana-time-zone-0.1.64.crate",
+    sha256 = "33e57f83510bb73707521ebaffa789ec8caf86f9657cad665b092b581d40e9fb",
+    strip_prefix = "iana-time-zone-0.1.64",
+    urls = ["https://static.crates.io/crates/iana-time-zone/0.1.64/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "iana-time-zone-0.1.64",
+    srcs = [":iana-time-zone-0.1.64.crate"],
+    crate = "iana_time_zone",
+    crate_root = "iana-time-zone-0.1.64.crate/src/lib.rs",
+    edition = "2021",
+    features = ["fallback"],
+    platform = {
+        "macos-arm64": dict(
+            deps = [":core-foundation-sys-0.8.7"],
+        ),
+        "macos-x86_64": dict(
+            deps = [":core-foundation-sys-0.8.7"],
+        ),
+    },
     visibility = [],
 )
 
@@ -2064,6 +2220,31 @@ cargo.rust_library(
             deps = [":windows-targets-0.53.3"],
         ),
     },
+    visibility = [],
+)
+
+http_archive(
+    name = "linux-raw-sys-0.11.0.crate",
+    sha256 = "df1d3c3b53da64cf5760482273a98e575c651a67eec7f77df96b5b642de8f039",
+    strip_prefix = "linux-raw-sys-0.11.0",
+    urls = ["https://static.crates.io/crates/linux-raw-sys/0.11.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "linux-raw-sys-0.11.0",
+    srcs = [":linux-raw-sys-0.11.0.crate"],
+    crate = "linux_raw_sys",
+    crate_root = "linux-raw-sys-0.11.0.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "auxvec",
+        "elf",
+        "errno",
+        "general",
+        "ioctl",
+        "no_std",
+    ],
     visibility = [],
 )
 
@@ -2667,6 +2848,23 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "num-traits-0.2.19.crate",
+    sha256 = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841",
+    strip_prefix = "num-traits-0.2.19",
+    urls = ["https://static.crates.io/crates/num-traits/0.2.19/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "num-traits-0.2.19",
+    srcs = [":num-traits-0.2.19.crate"],
+    crate = "num_traits",
+    crate_root = "num-traits-0.2.19.crate/src/lib.rs",
+    edition = "2021",
+    visibility = [],
+)
+
+http_archive(
     name = "num_threads-0.1.7.crate",
     sha256 = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9",
     strip_prefix = "num_threads-0.1.7",
@@ -3249,6 +3447,82 @@ buildscript_run(
         "termios",
     ],
     version = "0.38.44",
+)
+
+http_archive(
+    name = "rustix-1.1.2.crate",
+    sha256 = "cd15f8a2c5551a84d56efdc1cd049089e409ac19a3072d5037a17fd70719ff3e",
+    strip_prefix = "rustix-1.1.2",
+    urls = ["https://static.crates.io/crates/rustix/1.1.2/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "rustix-1.1.2",
+    srcs = [":rustix-1.1.2.crate"],
+    crate = "rustix",
+    crate_root = "rustix-1.1.2.crate/src/lib.rs",
+    edition = "2021",
+    env = {
+        "OUT_DIR": "$(location :rustix-1.1.2-build-script-run[out_dir])",
+    },
+    features = [
+        "alloc",
+        "default",
+        "fs",
+        "std",
+    ],
+    platform = {
+        "linux-arm64": dict(
+            deps = [":linux-raw-sys-0.11.0"],
+        ),
+        "linux-x86_64": dict(
+            deps = [":linux-raw-sys-0.11.0"],
+        ),
+        "macos-arm64": dict(
+            named_deps = {
+                "libc_errno": ":errno-0.3.13",
+            },
+            deps = [":libc-0.2.175"],
+        ),
+        "macos-x86_64": dict(
+            named_deps = {
+                "libc_errno": ":errno-0.3.13",
+            },
+            deps = [":libc-0.2.175"],
+        ),
+    },
+    rustc_flags = ["@$(location :rustix-1.1.2-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [":bitflags-2.9.4"],
+)
+
+cargo.rust_binary(
+    name = "rustix-1.1.2-build-script-build",
+    srcs = [":rustix-1.1.2.crate"],
+    crate = "build_script_build",
+    crate_root = "rustix-1.1.2.crate/build.rs",
+    edition = "2021",
+    features = [
+        "alloc",
+        "default",
+        "fs",
+        "std",
+    ],
+    visibility = [],
+)
+
+buildscript_run(
+    name = "rustix-1.1.2-build-script-run",
+    package_name = "rustix",
+    buildscript_rule = ":rustix-1.1.2-build-script-build",
+    features = [
+        "alloc",
+        "default",
+        "fs",
+        "std",
+    ],
+    version = "1.1.2",
 )
 
 http_archive(
@@ -4227,6 +4501,58 @@ cargo.rust_library(
     ],
 )
 
+alias(
+    name = "tempfile",
+    actual = ":tempfile-3.22.0",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "tempfile-3.22.0.crate",
+    sha256 = "84fa4d11fadde498443cca10fd3ac23c951f0dc59e080e9f4b93d4df4e4eea53",
+    strip_prefix = "tempfile-3.22.0",
+    urls = ["https://static.crates.io/crates/tempfile/3.22.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "tempfile-3.22.0",
+    srcs = [":tempfile-3.22.0.crate"],
+    crate = "tempfile",
+    crate_root = "tempfile-3.22.0.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "default",
+        "getrandom",
+    ],
+    platform = {
+        "linux-arm64": dict(
+            deps = [":rustix-1.1.2"],
+        ),
+        "linux-x86_64": dict(
+            deps = [":rustix-1.1.2"],
+        ),
+        "macos-arm64": dict(
+            deps = [":rustix-1.1.2"],
+        ),
+        "macos-x86_64": dict(
+            deps = [":rustix-1.1.2"],
+        ),
+        "windows-gnu": dict(
+            deps = [":windows-sys-0.60.2"],
+        ),
+        "windows-msvc": dict(
+            deps = [":windows-sys-0.60.2"],
+        ),
+    },
+    visibility = [],
+    deps = [
+        ":fastrand-2.3.0",
+        ":getrandom-0.3.3",
+        ":once_cell-1.21.3",
+    ],
+)
+
 http_archive(
     name = "termcolor-1.4.1.crate",
     sha256 = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755",
@@ -4815,6 +5141,23 @@ cargo.rust_library(
     crate = "winapi_x86_64_pc_windows_gnu",
     crate_root = "winapi-x86_64-pc-windows-gnu-0.4.0.crate/src/lib.rs",
     edition = "2015",
+    visibility = [],
+)
+
+http_archive(
+    name = "windows-link-0.2.0.crate",
+    sha256 = "45e46c0661abb7180e7b9c281db115305d49ca1709ab8242adf09666d2173c65",
+    strip_prefix = "windows-link-0.2.0",
+    urls = ["https://static.crates.io/crates/windows-link/0.2.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "windows-link-0.2.0",
+    srcs = [":windows-link-0.2.0.crate"],
+    crate = "windows_link",
+    crate_root = "windows-link-0.2.0.crate/src/lib.rs",
+    edition = "2021",
     visibility = [],
 )
 

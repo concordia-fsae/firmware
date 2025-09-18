@@ -1,0 +1,14 @@
+rust_library(
+    name = "lib",
+    crate = "bin_logger",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2024",
+    deps = [
+        "//third_party:anyhow",
+        "//third_party:bincode",
+        "//third_party:chrono",
+        "//third_party:tempfile",
+        "//third_party:serde",
+    ],
+    visibility = ["PUBLIC"],
+)
