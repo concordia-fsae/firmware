@@ -25,7 +25,6 @@ load(
     "@prelude//cxx:linker.bzl",
     "is_pdb_generated",
 )
-load("@prelude//http_archive:http_archive.bzl", "http_archive_impl")
 load(
     "@prelude//linking:link_info.bzl",
     "LinkStyle",
@@ -49,7 +48,19 @@ GccReleaseInfo = provider(
     },
 )
 
-def get_gcc_release(version: str, target_arch: str, target_os: str, target_abi: str) -> GccReleaseInfo:
+GccDistributionInfo = provider(
+    # @unsorted-dict-items
+    fields = {
+        "version": provider_field(typing.Any, default = None),
+        "arch": provider_field(typing.Any, default = None),
+        "os": provider_field(typing.Any, default = None),
+        "target_arch": provider_field(typing.Any, default = None),
+        "target_os": provider_field(typing.Any, default = None),
+        "target_abi": provider_field(typing.Any, default = None),
+    },
+)
+
+def get_gcc_release(version: str, target_arch: str, target_os: str, target_abi: str) -> GccReleaseInfo | None:
     if not version in releases:
         fail("Unknown gcc release version '{}'. Available versions: {}".format(
             version,
@@ -70,6 +81,8 @@ def get_gcc_release(version: str, target_arch: str, target_os: str, target_abi: 
     target_triple = "{}-{}-{}".format(target_arch, target_os, target_abi)
 
     if not target_triple in gcc_targets:
+        # FIXME: I don't think there's much we can do here, but maybe there's a better solution than this?
+        return None
         fail("Unsupported target platform '{}' for this host platform '{}'. Supported platforms: {}".format(
             target_triple,
             host_platform,
@@ -84,18 +97,6 @@ def get_gcc_release(version: str, target_arch: str, target_os: str, target_abi: 
         sha256 = release_info["sha256sum"],
         strip_prefix = release_info["strip_prefix"],
     )
-
-GccDistributionInfo = provider(
-    # @unsorted-dict-items
-    fields = {
-        "version": provider_field(typing.Any, default = None),
-        "arch": provider_field(typing.Any, default = None),
-        "os": provider_field(typing.Any, default = None),
-        "target_arch": provider_field(typing.Any, default = None),
-        "target_os": provider_field(typing.Any, default = None),
-        "target_abi": provider_field(typing.Any, default = None),
-    },
-)
 
 def download_gcc_distribution(
         name: str,
@@ -113,25 +114,30 @@ def download_gcc_distribution(
 
     archive_name = name + "-archive"
     release = get_gcc_release(version, target_arch, target_os, target_abi)
-    native.http_archive(
-        name = archive_name,
-        urls = [release.url],
-        sha256 = release.sha256,
-        strip_prefix = release.strip_prefix,
-    )
-    gcc_distribution(
-        name = name,
-        dist = ":" + archive_name,
-        version = release.version,
-        arch = arch,
-        os = os,
-        target_arch = target_arch,
-        target_os = target_os,
-        target_abi = target_abi,
-    )
+    if release:
+        native.http_archive(
+            name = archive_name,
+            urls = [release.url],
+            sha256 = release.sha256,
+            strip_prefix = release.strip_prefix,
+        )
+        gcc_distribution(
+            name = name,
+            dist = ":" + archive_name,
+            version = release.version,
+            arch = arch,
+            os = os,
+            target_arch = target_arch,
+            target_os = target_os,
+            target_abi = target_abi,
+        )
 
 def _gcc_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
-    dest = ctx.actions.declare_output("gcc-{}-none-{}".format(ctx.attrs.target_arch, ctx.attrs.target_os))
+    dest = ctx.actions.declare_output("gcc-{}-{}-{}".format(
+        ctx.attrs.target_arch,
+        ctx.attrs.target_os,
+        ctx.attrs.target_abi,
+    ))
     src = cmd_args(ctx.attrs.dist[DefaultInfo].default_outputs[0], format = "{}/")
     ctx.actions.run(
         ["ln", "-sf", cmd_args(src, relative_to = (dest, 1)), dest.as_output()],
@@ -171,6 +177,28 @@ gcc_distribution = rule(
     },
 )
 
+def _incompatible_impl(ctx: AnalysisContext) -> list[Provider]:
+    label = ctx.label.raw_target()
+    setting = ConstraintSettingInfo(label = label)
+    value = ConstraintValueInfo(setting = setting, label = label)
+
+    return [
+        DefaultInfo(),
+        RunInfo(),
+        GccDistributionInfo(),
+        ConfigurationInfo(
+            constraints = {label: value},
+            values = {},
+        ),
+    ]
+
+incompatible_rule = rule(
+    attrs = {},
+    impl = _incompatible_impl,
+    doc = "A rule that produces nothing. Used for no-op dep in a select.",
+    is_configuration_rule = True,
+)
+
 def host_arch() -> str:
     arch = host_info().arch
     if arch.is_x86_64:
@@ -200,9 +228,7 @@ def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
     target_abi = ctx.attrs.distribution[GccDistributionInfo].target_abi
     bin = cmd_args(
         ctx.attrs.distribution[RunInfo],
-        format = "{}/bin/" + "{}-none-{}-{}-".format(target_arch, target_os, target_abi)
-            if target_os != "none" else
-            "{}/bin/" + "{}-none-{}-".format(target_arch, target_abi),
+        format = "{}/bin/" + "{}-none-{}-{}-".format(target_arch, target_os, target_abi) if target_os != "none" else "{}/bin/" + "{}-none-{}-".format(target_arch, target_abi),
     )
     platform_name = target_arch
     platform_info = CxxPlatformInfo(name = platform_name)
