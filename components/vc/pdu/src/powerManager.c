@@ -16,6 +16,7 @@
 #include "string.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "app_vehicleState.h"
 
 #define PDU_CS_AMPS_PER_VOLT 0.20f
 #define PDU_VS_VOLTAGE_MULTIPLIER 3.61f
@@ -87,6 +88,12 @@ static void powerManager_periodic_10Hz(void)
     }
     output = (output + 1) % DRV_TPS2HB16AB_OUT_COUNT;
     drv_tps2hb16ab_setCSChannel(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, output); // All CS select pins are on the same GPIO
+
+    drv_tps2hb16ab_setEnabled(
+        DRV_TPS2HB16AB_IC_VC1_VC2,
+        DRV_TPS2HB16AB_OUT_2,
+        app_vehicleState_getState() != VEHICLESTATE_INIT
+    );
 
     for (uint8_t i = 0; i < DRV_VN9008_CHANNEL_COUNT; i++)
     {
