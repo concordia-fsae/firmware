@@ -5,10 +5,12 @@
         visibility = ["PUBLIC"],
     )
     for name, constraint_values in [
-        ("arm64-mac", ["prelude//os/constraints:mac", "prelude//cpu/constraints:arm64"]),
         ("x86_64-linux", ["prelude//os/constraints:linux", "prelude//cpu/constraints:x86_64"]),
-        ("arm64-linux", ["prelude//os/constraints:linux", "prelude//cpu/constraints:arm64"]),
+        ("x86_64-macos", ["prelude//os/constraints:macos", "prelude//cpu/constraints:x86_64"]),
         ("x86_64-windows", ["prelude//os/constraints:windows", "prelude//cpu/constraints:x86_64"]),
+        ("arm64-macos", ["prelude//os/constraints:macos", "prelude//cpu/constraints:arm64"]),
+        ("arm64-linux", ["prelude//os/constraints:linux", "prelude//cpu/constraints:arm64"]),
+        ("arm64-windows", ["prelude//os/constraints:windows", "prelude//cpu/constraints:arm64"]),
         ("arm32-none", ["prelude//os/constraints:none", "prelude//cpu/constraints:arm32"]),
         ("arm32-linux", ["prelude//os/constraints:linux", "prelude//cpu/constraints:arm32"]),
     ]
