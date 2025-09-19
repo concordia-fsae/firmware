@@ -45,9 +45,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ ubuntu-24.04, ubuntu-24.04-arm,]
+        runner: [ ubuntu-24.04, ubuntu-24.04-arm,
+                  macos-26, macos-15, macos-13 ]
                   # TODO: Bringup support
-                  # macos-15, macos-14, macos-13,
                   # windows-2022, windows-11-arm, ]
     runs-on: ${{ matrix.runner }}
     steps:
