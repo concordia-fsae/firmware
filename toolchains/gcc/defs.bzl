@@ -49,7 +49,7 @@ GccReleaseInfo = provider(
     },
 )
 
-def get_gcc_release(version: str, target_arch: str, target_os: str) -> GccReleaseInfo:
+def get_gcc_release(version: str, target_arch: str, target_os: str, target_abi: str) -> GccReleaseInfo:
     if not version in releases:
         fail("Unknown gcc release version '{}'. Available versions: {}".format(
             version,
@@ -57,21 +57,32 @@ def get_gcc_release(version: str, target_arch: str, target_os: str) -> GccReleas
         ))
     gcc_version = releases[version]
 
-    platform = "{}-{}".format(host_arch(), host_os())
-    if host_arch() != target_arch or host_os() not in target_os:
-        platform = platform + "-{}-{}".format(target_arch, target_os)
-    if not platform in gcc_version:
-        fail("Unsupported platform '{}'. Supported platforms: {}".format(
-            platform,
+    host_platform = "{}-{}".format(host_arch(), host_os())
+
+    if not host_platform in gcc_version:
+        fail("Unsupported host platform '{}'. Supported host platforms: {}".format(
+            host_platform,
             ", ".join(gcc_version.keys()),
         ))
-    gcc_platform = gcc_version[platform]
+
+    gcc_targets = gcc_version[host_platform]
+
+    target_triple = "{}-{}-{}".format(target_arch, target_os, target_abi)
+
+    if not target_triple in gcc_targets:
+        fail("Unsupported target platform '{}' for this host platform '{}'. Supported platforms: {}".format(
+            target_triple,
+            host_platform,
+            ", ".join(gcc_targets.keys()),
+        ))
+
+    release_info = gcc_targets[target_triple]
 
     return GccReleaseInfo(
-        version = gcc_version.get("version", version),
-        url = gcc_platform["archive"],
-        sha256 = gcc_platform["sha256sum"],
-        strip_prefix = gcc_platform["strip_prefix"],
+        version = version,
+        url = release_info["archive"],
+        sha256 = release_info["sha256sum"],
+        strip_prefix = release_info["strip_prefix"],
     )
 
 GccDistributionInfo = provider(
@@ -82,23 +93,26 @@ GccDistributionInfo = provider(
         "os": provider_field(typing.Any, default = None),
         "target_arch": provider_field(typing.Any, default = None),
         "target_os": provider_field(typing.Any, default = None),
+        "target_abi": provider_field(typing.Any, default = None),
     },
 )
 
 def download_gcc_distribution(
         name: str,
         version: str,
-        arch: [None, str] = None,
-        os: [None, str] = None,
-        target_arch: [None, str] = None,
-        target_os: [None, str] = None):
+        arch: str | None = None,
+        os: str | None = None,
+        target_arch: str | None = None,
+        target_os: str | None = None,
+        target_abi: str | None = None):
     arch = arch or host_arch()
     os = os or host_os()
     target_arch = target_arch or host_arch()
     target_os = target_os or host_os()
+    target_abi = target_abi or ("gnu" if host_os() == "linux" else "elf" if host_os() == "macos" else fail("Target ABI was not specified and could not be determined automatically"))
 
     archive_name = name + "-archive"
-    release = get_gcc_release(version, target_arch, target_os)
+    release = get_gcc_release(version, target_arch, target_os, target_abi)
     native.http_archive(
         name = archive_name,
         urls = [release.url],
@@ -113,6 +127,7 @@ def download_gcc_distribution(
         os = os,
         target_arch = target_arch,
         target_os = target_os,
+        target_abi = target_abi,
     )
 
 def _gcc_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
@@ -139,6 +154,7 @@ def _gcc_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
             os = ctx.attrs.os or host_os(),
             target_arch = ctx.attrs.target_arch,
             target_os = ctx.attrs.target_os,
+            target_abi = ctx.attrs.target_abi,
         ),
     ]
 
@@ -149,8 +165,9 @@ gcc_distribution = rule(
         "version": attrs.string(),
         "arch": attrs.option(attrs.string(), default = None),
         "os": attrs.option(attrs.string(), default = None),
-        "target_arch": attrs.option(attrs.string(), default = None),
-        "target_os": attrs.option(attrs.string(), default = None),
+        "target_arch": attrs.option(attrs.string()),
+        "target_os": attrs.option(attrs.string()),
+        "target_abi": attrs.option(attrs.string()),
     },
 )
 
@@ -180,8 +197,13 @@ def _shell_quote(xs):
 def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
     target_arch = ctx.attrs.distribution[GccDistributionInfo].target_arch
     target_os = ctx.attrs.distribution[GccDistributionInfo].target_os
-    target_os = target_os if target_os != "none" else "eabi"
-    bin = cmd_args(ctx.attrs.distribution[RunInfo], format = "{}/bin/" + "{}-none-{}-".format(target_arch, target_os))
+    target_abi = ctx.attrs.distribution[GccDistributionInfo].target_abi
+    bin = cmd_args(
+        ctx.attrs.distribution[RunInfo],
+        format = "{}/bin/" + "{}-none-{}-{}-".format(target_arch, target_os, target_abi)
+            if target_os != "none" else
+            "{}/bin/" + "{}-none-{}-".format(target_arch, target_abi),
+    )
     platform_name = target_arch
     platform_info = CxxPlatformInfo(name = platform_name)
 
