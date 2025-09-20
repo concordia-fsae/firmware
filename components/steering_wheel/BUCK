@@ -207,7 +207,7 @@ cxx_binary(
         "generated",
     ],
     deps = [
-        ":CMSIS",
+        ":CMSIS-hal",
         ":hal",
         ":udsServer",
         ":FreeRTOS",
