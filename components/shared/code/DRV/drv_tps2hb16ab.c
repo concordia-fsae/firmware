@@ -1,6 +1,25 @@
 /**
  * @file drv_tps2hb16ab.h
  * @brief Source file for the TPS2HB16A/B high side drivers
+ *
+ * Initialization
+ * 1. Configure each HSD's drv_tps2hb16ab_ic_S
+ * 2. Initialize all of the HSDs with drv_tps2hb16ab_init
+ * 3. The user may choose to do open circuit/short circuit diagnostics
+ *    on first power up or at any time by disabling the HSD channel, enabling
+ *    diagnostics, and evaluating if the SNS line is held high for a given channel
+ *
+ * Usage
+ * 1. Enable or disable the HSD channel depending on the application needs
+ * 2. Enable fault latching if the application requires the HSD to immediately trip
+ *    on a fault condition, otherwise disable fault latching
+ * 3. If a fault is detected by the HSD, the HSD will transition into OVERCURRENT.
+ *    Once in OVERCURRENT, the user must disable the faulted HSD channel. If the
+ *    HSD stays faulted, then the channel is in an OVERTEMPERATURE condition, and
+ *    the application must wait until the HSD cools down and exits the fault state
+ *    before being re-enabled.
+ * 4. The application must select which current sense channel to sense from, the
+ *    HSD driver does not change the channel automatically
  */
 
 /******************************************************************************
@@ -77,6 +96,10 @@ void drv_tps2hb16ab_run(void)
 
         for (uint8_t n = 0U; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
         {
+            // The overcurrent condition provided by the HSD is a high current measurement (over the max that the
+            // circuit can handle). This condition on the current sense line indicates that a given channel is in
+            // a faulted state. To determine the type of fault, it is required to have context of the state
+            // progressions that the HSD undergoes.
             const bool is_overcurrent = drv_tps2hb16ab_data.current[i][n] > drv_tps2hb16ab_ics[i].channel[n].current_limit_amp;
             if (is_overcurrent)
             {
@@ -98,7 +121,13 @@ void drv_tps2hb16ab_run(void)
 
             switch (drv_tps2hb16ab_data.state[i][n])
             {
-                // TODO: Handle state transitions
+                // Fault transitions of the TPS2HB16A/B
+                // 1. If OFF and diagnostics is enabled, check for open circuit/short circuit
+                // 1.1 If HSD output is OC/SC, then set SNS line of the faulted channel high
+                // 2. If ON and over current/over temperature occurs, set SNS line of the faulted
+                //    channel high
+                // 2.1 SNS line goes low once the latch pin is low, enable goes low, and the fault
+                //     condition goes away
                 case DRV_HSD_STATE_OFF:
                     if (drv_tps2hb16ab_data.request_enabled[i][n])
                     {
@@ -112,7 +141,6 @@ void drv_tps2hb16ab_run(void)
                     }
                     break;
                 case DRV_HSD_STATE_OVERCURRENT:
-                    // FIXME: This should only occur if it is safe to reset
                     if (drv_tps2hb16ab_data.request_enabled[i][n] == false)
                     {
                         if (is_overcurrent)
