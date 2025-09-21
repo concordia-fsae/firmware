@@ -1,10 +1,10 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
-load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
-load("//tools/hextools/defs.bzl", "inject_crc")
-load("//network/NetworkGen/defs.bzl", "generate_code")
-load("//components/shared/code/defs.bzl", "shared_code_library", "remap_headers")
-load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
+load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
+load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load("//network/NetworkGen/defs.bzl", "generate_code")
+load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
+load("//tools/hextools/defs.bzl", "inject_crc")
 
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
@@ -112,7 +112,7 @@ cxx_library(
     },
     headers = {
     },
-    exported_deps = [":CMSIS",],
+    exported_deps = [":CMSIS"],
 )
 
 [
@@ -131,9 +131,7 @@ cxx_library(
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
         },
-        kv = {
-            APP_NAME + "_config_id": str(variant) + "U",
-        }
+        **{APP_NAME + "_config_id": str(variant) + "U"}
     )
     for variant in variants
 ]
@@ -142,7 +140,14 @@ alias(
     name = "feature-tree",
     actual = select({
         "DEFAULT": ":feature-tree-0",
-    })
+    }),
+)
+
+alias(
+    name = "feature-tree-codegen",
+    actual = select({
+        "DEFAULT": ":feature-tree-0-codegen",
+    }),
 )
 
 prebuilt_cxx_library(
@@ -247,14 +252,14 @@ alias(
     name = "hal",
     actual = select({
         "DEFAULT": ":hal-f105",
-    })
+    }),
 )
 
 alias(
     name = "CMSIS",
     actual = select({
         "DEFAULT": ":CMSIS-hal-f105",
-    })
+    }),
 )
 
 [
@@ -262,18 +267,14 @@ alias(
         name = "linkscript-" + variant,
         _cxx_toolchain = TOOLCHAIN,
         cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) +
-            " -include BuildDefines.h linkscript | sed -e '/^#.\\+$/d' > ${OUT}",
+              " -include BuildDefines.h linkscript | sed -e '/^#.\\+$/d' > ${OUT}",
         out = "linkscript",
         srcs = {
             "linkscript": "//embedded/platforms/stm32/f1/" + variant + ":" + script,
             "BuildDefines.h": "include/HW/BuildDefines.h",
             "FeatureDefines.h": "//tools/feature-tree:FeatureDefines.h",
-            "BuildDefines_generated.h": select({
-                "DEFAULT": ":BuildDefines_generated.h.config-0",
-            }),
-            "FeatureDefines_generated.h": select({
-                "DEFAULT": ":FeatureDefines_generated.h.config-0",
-            }),
+            "BuildDefines_generated.h": ":feature-tree-codegen[BuildDefines_generated.h]",
+            "FeatureDefines_generated.h": ":feature-tree-codegen[FeatureDefines_generated.h]",
         },
     )
     for variant, script in [
@@ -285,7 +286,7 @@ alias(
     name = "linkscript",
     actual = select({
         "DEFAULT": ":linkscript-f105",
-    })
+    }),
 )
 
 component_headers = remap_headers(["include/", "HW/include/"])
@@ -304,36 +305,36 @@ cxx_binary(
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/portable/GCC/ARM_CM3/port.c.o])",
     ],
     executable_name = APP_NAME + ".elf",
-    srcs = 
+    srcs =
         glob(["src/*.c", "src/HW/*.c"]) + [
-        "//components/shared/code:DRV/drv_hsd.c",
-        "//components/shared/code:DRV/drv_inputAD.c",
-        "//components/shared/code:DRV/drv_io.c",
-        "//components/shared/code:DRV/drv_mux.c",
-        "//components/shared/code:DRV/drv_outputAD.c",
-        "//components/shared/code:DRV/drv_pedalMonitor.c",
-        "//components/shared/code:DRV/drv_timer.c",
-        "//components/shared/code:DRV/drv_tps20xx.c",
-        "//components/shared/code:HW/HW.c",
-        "//components/shared/code:HW/HW_adc.c",
-        "//components/shared/code:HW/HW_can.c",
-        "//components/shared/code:HW/HW_gpio.c",
-        "//components/shared/code:HW/HW_tim.c",
-        "//components/shared/code:app/CAN/CANIO-rx.c",
-        "//components/shared/code:app/CAN/CANIO-tx.c",
-        "//components/shared/code:app/app_vehicleState.c",
-        ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
-        "//components/shared/code/RTOS:FreeRTOS_SWI.c",
-        "//components/shared/code/RTOS:Module.c",
-        "//components/shared/code:libs/LIB_app.c",
-        "//components/shared/code:libs/LIB_simpleFilter.c",
-        "//components/shared/code:libs/lib_interpolation.c",
-        "//components/vc/shared:HW/HW_tim_vcSpecific.c",
-        "//components/vc/shared:wheelSpeed/wheelSpeed.c",
-        select({
-            "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
-        }),
-    ],
+            "//components/shared/code:DRV/drv_hsd.c",
+            "//components/shared/code:DRV/drv_inputAD.c",
+            "//components/shared/code:DRV/drv_io.c",
+            "//components/shared/code:DRV/drv_mux.c",
+            "//components/shared/code:DRV/drv_outputAD.c",
+            "//components/shared/code:DRV/drv_pedalMonitor.c",
+            "//components/shared/code:DRV/drv_timer.c",
+            "//components/shared/code:DRV/drv_tps20xx.c",
+            "//components/shared/code:HW/HW.c",
+            "//components/shared/code:HW/HW_adc.c",
+            "//components/shared/code:HW/HW_can.c",
+            "//components/shared/code:HW/HW_gpio.c",
+            "//components/shared/code:HW/HW_tim.c",
+            "//components/shared/code:app/CAN/CANIO-rx.c",
+            "//components/shared/code:app/CAN/CANIO-tx.c",
+            "//components/shared/code:app/app_vehicleState.c",
+            ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
+            "//components/shared/code/RTOS:FreeRTOS_SWI.c",
+            "//components/shared/code/RTOS:Module.c",
+            "//components/shared/code:libs/LIB_app.c",
+            "//components/shared/code:libs/LIB_simpleFilter.c",
+            "//components/shared/code:libs/lib_interpolation.c",
+            "//components/vc/shared:HW/HW_tim_vcSpecific.c",
+            "//components/vc/shared:wheelSpeed/wheelSpeed.c",
+            select({
+                "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
+            }),
+        ],
     header_namespace = "",
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
