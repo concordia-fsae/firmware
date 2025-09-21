@@ -120,7 +120,7 @@ void drv_tps20xx_run(void)
             case DRV_TPS20XX_STATE_FAULTED_OT:
                 {
                     drv_tps20xx_private_setICEnabled(channel, false);
-                    if ((drv_tps20xx_data[channel].state != DRV_TPS20XX_STATE_FAULTED_OT) && ic_faulted)
+                    if ((drv_tps20xx_data[channel].state != DRV_TPS20XX_STATE_FAULTED_OC) && ic_faulted)
                     {
                             drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_FAULTED_OT;
                     }
@@ -134,6 +134,7 @@ void drv_tps20xx_run(void)
                             // idsabling and re-enabling the channel
                             drv_tps20xx_private_setICEnabled(channel, true);
                             drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_RETRY;
+                            break;
                         }
                     }
 
