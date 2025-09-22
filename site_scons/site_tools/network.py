@@ -34,18 +34,12 @@ def emitBuild(target, source, env):
     source.extend(recursive_glob(env["NETWORK_DATA_DIR"], "*.yaml"))
     target.append([ env["NETWORK_OUTPUT_DIR"].File(f"{bus}.dbc") for bus in buses ])
     target.append([ env["NETWORK_OUTPUT_DIR"].File(f"{bus}-stats.txt") for bus in buses ])
-    target.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
-    target.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
-    target.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
-    target.append(env["NETWORK_CACHE_DIR"].File("CachedTemplates.pickle"))
+    target.append(env["NETWORK_CACHE_DIR"].File("CachedNetwork.pickle"))
     return (target, source)
 
 def emitGen(target, source, env):
     source.extend(recursive_glob(env["NETWORK_PATH"], "*.mako"))
-    source.append(env["NETWORK_CACHE_DIR"].File("CachedNodes.pickle"))
-    source.append(env["NETWORK_CACHE_DIR"].File("CachedBusDefs.pickle"))
-    source.append(env["NETWORK_CACHE_DIR"].File("CachedDiscreteValues.pickle"))
-    source.append(env["NETWORK_CACHE_DIR"].File("CachedTemplates.pickle"))
+    source.append(env["NETWORK_CACHE_DIR"].File("CachedNetwork.pickle"))
     for _, dir in env["nodes"].items():
         target.extend(
             [
