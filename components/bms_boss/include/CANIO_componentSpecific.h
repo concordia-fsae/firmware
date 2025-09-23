@@ -40,7 +40,6 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_criticalDataCounter(m,b,n,s) set(m,b,n,s, cantx_counter.counter_100Hz)
 #define set_packChargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_charge_limit)
 #define set_packDischargeLimit(m,b,n,s) set(m,b,n,s, BMS.pack_discharge_limit)
 #define set_packVoltage(m,b,n,s) set(m,b,n,s, BMS.pack_voltage)
