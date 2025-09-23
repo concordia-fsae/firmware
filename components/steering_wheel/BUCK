@@ -240,9 +240,10 @@ cxx_genrule(
 
 inject_crc(
     name = "bin_crc",
-    binary = ":bin",
-    output = "stw_crc.bin",
+    src = ":bin",
+    out = "stw_crc.bin",
     start_address = APP_START_ADDR,
+    visibility = ["PUBLIC"],
 )
 
 alias(

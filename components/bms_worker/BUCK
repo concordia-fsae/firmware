@@ -452,9 +452,10 @@ generate_stripped_asms(
 [
     inject_crc(
         name = "bin_crc-node-{}".format(node),
-        binary = ":bin-node-{}".format(node),
-        output = APP_NAME + "_crc-node-{}.bin".format(node),
+        src = ":bin-node-{}".format(node),
+        out = APP_NAME + "_crc-node-{}.bin".format(node),
         start_address = APP_START_ADDR,
+        visibility = ["PUBLIC"],
     )
     for node in range(NUMBER_NODES)
 ]
