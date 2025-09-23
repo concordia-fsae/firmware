@@ -78,12 +78,6 @@ signals:
     description: Environment fault flag
     discreteValues: flag
 
-  criticalDataCounter:
-    description: Counter for critical data message
-    nativeRepresentation:
-      bitWidth: 8
-    validationRole: counter
-
   cellTemp10:
     description: Temperature of cell 10
     unit: degC
