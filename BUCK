@@ -1,6 +1,12 @@
 load("//drive-stack/conUDS/defs.bzl", "conUDS_batch")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent_batch")
 
+export_file(
+    name = ".git",
+    src = ".git",
+    visibility = ["//tools/build-info/..."],
+)
+
 filegroup(
     name = "cfr25-embedded",
     srcs = [
