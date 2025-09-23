@@ -131,7 +131,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
 \
 <%def name="make_sigstub(signal)">
 #ifndef set_${signal.get_name_nodeless()}
-#define set_${signal.get_name_nodeless()}(m,b,n,s) set(m,b,n,s, 0U); unsent_signal(m)
+#error "Signal not there brother"
 #endif
 </%def>
 \
