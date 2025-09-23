@@ -22,7 +22,9 @@
       %if bus in msg.source_buses:
 <%make_transmitstub(msg)%>\
         %for signal in msg.signal_objs.values():
+	%if signal.validation_role == "none":
 <%make_sigstub(signal)%>\
+	  %endif
         %endfor
       %endif
     %endfor

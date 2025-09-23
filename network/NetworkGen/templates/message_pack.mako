@@ -120,6 +120,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
     (void)m;
     (void)val;
 %endif
+
 }
 </%def>
 \
@@ -131,7 +132,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
 \
 <%def name="make_sigstub(signal)">
 #ifndef set_${signal.get_name_nodeless()}
-#error "Signal defined but never given a value"
+#error "Signal '${signal.get_name_nodeless()}' defined but never given a value"
 #endif
 </%def>
 \
