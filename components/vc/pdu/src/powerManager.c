@@ -63,15 +63,18 @@ static void powerManager_init(void)
     drv_vn9008_setCSEnabled(DRV_VN9008_CHANNEL_PUMP, true); // All sense enable pins are set to the same gpio
 }
 
-static void powerManager_periodic_10Hz(void)
+static void powerManager_periodic_100Hz(void)
 {
     const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
-    float32_t tmp_current = 0.0f;
-
-    powerManager_data.glv_voltage = glv_voltage;
-
     const bool enable_loads = glv_voltage > 8.0f;
     const bool enable_shutdown = glv_voltage > 9.0f;
+    const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
+    const float32_t pdu_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
+    powerManager_data.glv_voltage = glv_voltage;
+    powerManager_data.pdu.current = pdu_current;
+    powerManager_data.pdu.rail_5v_voltage = pdu_5v_voltage;
+
+    float32_t tmp_current = 0.0f;
 
     const drv_io_activeState_E shutdown_en = enable_shutdown ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, shutdown_en);
@@ -81,33 +84,39 @@ static void powerManager_periodic_10Hz(void)
 
     for (uint8_t i = 0; i < DRV_TPS2HB16AB_IC_COUNT; i++)
     {
-        drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_1, enable_loads);
-        drv_tps2hb16ab_setEnabled(i, DRV_TPS2HB16AB_OUT_2, enable_loads);
+        for (uint8_t n = 0; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
+        {
+            drv_hsd_state_E state = drv_tps2hb16ab_getState(i, n);
+            if (state == DRV_HSD_STATE_OVERCURRENT)
+            {
+                // TODO: Set alarm
+                drv_tps2hb16ab_setEnabled(i, n, false);
+            }
+            else if (state == DRV_HSD_STATE_OFF)
+            {
+                drv_tps2hb16ab_setEnabled(i, n, enable_loads);
+            }
+        }
+    }
+    drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_MC_VCU3, app_vehicleState_getState() != VEHICLESTATE_INIT);
+
+    drv_tps2hb16ab_run();
+    drv_vn9008_run();
+
+    for (uint8_t i = 0; i < DRV_TPS2HB16AB_IC_COUNT; i++)
+    {
         tmp_current += drv_tps2hb16ab_getCurrent(i, DRV_TPS2HB16AB_OUT_1);
         tmp_current += drv_tps2hb16ab_getCurrent(i, DRV_TPS2HB16AB_OUT_2);
     }
-    output = (output + 1) % DRV_TPS2HB16AB_OUT_COUNT;
-    drv_tps2hb16ab_setCSChannel(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, output); // All CS select pins are on the same GPIO
-
-    drv_tps2hb16ab_setEnabled(
-        DRV_TPS2HB16AB_IC_VC1_VC2,
-        DRV_TPS2HB16AB_OUT_2,
-        app_vehicleState_getState() != VEHICLESTATE_INIT
-    );
-
     for (uint8_t i = 0; i < DRV_VN9008_CHANNEL_COUNT; i++)
     {
         tmp_current += drv_vn9008_getCurrent(i);
     }
 
-    const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
-    powerManager_data.pdu.current = pdu_current;
     powerManager_data.total_current = tmp_current + pdu_current;
-    drv_tps2hb16ab_run();
-    drv_vn9008_run();
 
-    const float32_t pdu_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
-    powerManager_data.pdu.rail_5v_voltage = pdu_5v_voltage;
+    output = (output + 1) % DRV_TPS2HB16AB_OUT_COUNT;
+    drv_tps2hb16ab_setCSChannel(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, output); // All CS select pins are on the same GPIO
 }
 
 float32_t powerManager_getPduCurrent(void)
@@ -126,5 +135,5 @@ float32_t powerManager_getPdu5vVoltage(void)
 
 const ModuleDesc_S powerManager_desc = {
     .moduleInit = &powerManager_init,
-    .periodic10Hz_CLK = &powerManager_periodic_10Hz,
+    .periodic100Hz_CLK = &powerManager_periodic_100Hz,
 };
