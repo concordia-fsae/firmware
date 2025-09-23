@@ -658,6 +658,10 @@ def process_receivers(bus: CanBus, node: CanNode):
         rxed_sig = bus.signals[sig_name]
         rxed_msg = rxed_sig.message_ref
 
+        if rxed_msg.checksum_sig and not rxed_msg.checksum_sig.name in rx_sig_dict.keys() and not rxed_msg.checksum_sig.name in node.received_sigs:
+            node.received_sigs[rxed_msg.checksum_sig.name] = rxed_msg.checksum_sig
+            rxed_msg.add_receiver(node, rxed_msg.checksum_sig.name)
+
         node.received_sigs[sig_name] = rxed_sig
         node.received_msgs[rxed_msg.name] = rxed_msg
         rxed_msg.add_receiver(node, rxed_sig.name)
