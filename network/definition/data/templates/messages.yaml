@@ -31,3 +31,9 @@ messages:
     signals:
       udsPayload:
         template: udsPayload
+  buildInfo:
+    signals:
+      crcRepo:
+        template: crc32
+      repoDirty:
+        template: repoDirty

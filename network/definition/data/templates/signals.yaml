@@ -111,3 +111,12 @@ signals:
         min: 0
         max: 2000
     continuous: true
+  crc32:
+    unit: ''
+    description: 32bit CRC
+    nativeRepresentation:
+      bitWidth: 32
+      resolution: 1
+  repoDirty:
+    description: State of the repository which built this application
+    discreteValues: flag
