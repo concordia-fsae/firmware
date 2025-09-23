@@ -176,9 +176,10 @@ def _bootloader_impl(
 
     inject_crc(
         name = name_prefix.format("bin-crc"),
-        binary = ":" + name_prefix.format("bin"),
-        output = "{}-{}-{}_crc.bin".format(app_name, name, config_id),
+        src = ":" + name_prefix.format("bin"),
+        out = "{}-{}-{}_crc.bin".format(app_name, name, config_id),
         start_address = variant.start_address + (variant.updater_offset if is_updater else 0),
+        visibility = ["PUBLIC"],
     )
 
     __rules__["alias"](

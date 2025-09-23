@@ -381,9 +381,10 @@ cxx_genrule(
 
 inject_crc(
     name = "bin_crc",
-    binary = ":bin",
-    output = APP_NAME + "_crc.bin",
+    src = ":bin",
+    out = APP_NAME + "_crc.bin",
     start_address = APP_START_ADDR,
+    visibility = ["PUBLIC"],
 )
 [
     configured_alias(
