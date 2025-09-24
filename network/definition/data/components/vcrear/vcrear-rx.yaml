@@ -36,3 +36,9 @@ signals:
     sourceBuses: veh
   BMSB_packContactorState:
     sourceBuses: veh
+  VCFRONT_wheelSlipRatio:
+    sourceBuses: veh
+  VCFRONT_wheelSpeedRotationalFL:
+    sourceBuses: veh
+  VCFRONT_wheelSpeedRotationalFR:
+    sourceBuses: veh

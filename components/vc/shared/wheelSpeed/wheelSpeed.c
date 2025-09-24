@@ -40,7 +40,7 @@ static struct
 {
     float32_t    slipRatio;
     wheelSpeed_S wheels;
-} wheelSpeed_data;
+} ws_data;
 
 
 /******************************************************************************
@@ -74,7 +74,7 @@ uint16_t wheelSpeed_getSpeedRotational(wheel_E wheel)
         break;
 
         default:
-            rpm = HZ_TO_MPS(wheelSpeed_data.wheels.hz[wheel]);
+            rpm = HZ_TO_MPS(ws_data.wheels.hz[wheel]);
             break;
     }
 
@@ -108,7 +108,7 @@ float32_t wheelSpeed_getSpeedLinear(wheel_E wheel)
         break;
 
         default:
-            mps = HZ_TO_MPS(wheelSpeed_data.wheels.hz[wheel]);
+            mps = HZ_TO_MPS(ws_data.wheels.hz[wheel]);
             break;
     }
 
@@ -117,33 +117,31 @@ float32_t wheelSpeed_getSpeedLinear(wheel_E wheel)
 
 float32_t wheelSpeed_getSlipRatio(void)
 {
-    return wheelSpeed_data.slipRatio;
+    return ws_data.slipRatio;
 }
 
 static void calcSlipRatio_100Hz(void)
 {
     float32_t FR_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_FR);
     float32_t RR_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_RR);
-    float32_t FL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_FL);
-    float32_t RL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_RL);
-
-    float32_t frontAvg      = FR_wheelSpeed + FL_wheelSpeed * 0.5f;
-    float32_t rearAvg       = RR_wheelSpeed + RL_wheelSpeed * 0.5f;
+    //float32_t FL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_FL);
+    //float32_t RL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_RL);
 
 
-    if (fabs(frontAvg) > 1e-6f)
+
+    if (fabs(FR_wheelSpeed) > 1e-6f)
     {
-        wheelSpeed_data.slipRatio = ((frontAvg - rearAvg) / frontAvg) * 100;
+        ws_data.slipRatio = ((FR_wheelSpeed - RR_wheelSpeed) / FR_wheelSpeed) * 100;
     }
     else
     {
-        wheelSpeed_data.slipRatio = 0.0f;
+        ws_data.slipRatio = 0.0f;
     }
 }
 
 static void wheelSpeed_init(void)
 {
-    memset(&wheelSpeed_data.wheels, 0x00U, sizeof(wheelSpeed_data.wheels));
+    memset(&ws_data.wheels, 0x00U, sizeof(ws_data.wheels));
 }
 
 static void wheelSpeed_periodic_100Hz(void)
@@ -152,7 +150,7 @@ static void wheelSpeed_periodic_100Hz(void)
     {
         if (wheelSpeed_config.sensorType[i] == WS_SENSORTYPE_TIM_CHANNEL)
         {
-            wheelSpeed_data.wheels.hz[i] = HW_TIM_getFreq(wheelSpeed_config.config[i].channel_freq);
+            ws_data.wheels.hz[i] = HW_TIM_getFreq(wheelSpeed_config.config[i].channel_freq);
         }
     }
     calcSlipRatio_100Hz();
