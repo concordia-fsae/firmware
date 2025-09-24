@@ -11,16 +11,16 @@
 #include "ModuleDesc.h"
 #include "string.h"
 #include "HW_tim.h"
+#include "wheel.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #define WHEEL_DIAMETER_M 0.4064f
-#define HZ_TO_RPM(hz) ((hz) * 60.0f)
+#define HZ_TO_RPM(hz) ((uint16_t)((hz) * 60))
 #define RPM_TO_HZ(rpm) ((rpm) / 60.0f)
-#define HZ_TO_MPS(hz) ((hz) * WHEEL_DIAMETER_M)
-#define MPS_TO_HZ(mps) ((mps) / WHEEL_DIAMETER_M)
+#define RPM_TO_MPS(hz) (RPM_TO_HZ(hz) * WHEEL_DIAMETER_M)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -28,7 +28,8 @@
 
 typedef struct
 {
-    float32_t hz[WHEEL_CNT];
+    uint16_t rpm_wheel[WHEEL_CNT];
+    uint16_t rpm_axle[AXLE_CNT];
 } wheelSpeed_S;
 
 /******************************************************************************
@@ -38,39 +39,45 @@ typedef struct
 static wheelSpeed_S wheels;
 
 /******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
+static void calculateAxleSpeed(void)
+{
+    wheels.rpm_axle[AXLE_FRONT] = (uint16_t)(wheels.rpm_wheel[WHEEL_FL] + wheels.rpm_wheel[WHEEL_FR]) / 2;
+    wheels.rpm_axle[AXLE_REAR] = (uint16_t)(wheels.rpm_wheel[WHEEL_RL] + wheels.rpm_wheel[WHEEL_RR]) / 2;
+}
+
+/******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+uint16_t wheelSpeed_getAxleRPM(axle_E axle)
+{
+    return wheels.rpm_axle[axle];
+}
+
 uint16_t wheelSpeed_getSpeedRotational(wheel_E wheel)
 {
-    float32_t rpm = 0.0f;
+    uint16_t rpm = 0.0f;
 
     switch (wheelSpeed_config.sensorType[wheel])
     {
         case WS_SENSORTYPE_CAN_RPM:
             {
-                float32_t temp = 0.0f;
+                uint16_t temp = 0.0f;
                 if (wheelSpeed_config.config[wheel].rpm(&temp) == CANRX_MESSAGE_VALID)
                 {
                     rpm = temp;
                 }
             }
             break;
-        case WS_SENSORTYPE_CAN_MPS:
-            {
-                float32_t temp = 0.0f;
-                if (wheelSpeed_config.config[wheel].mps(&temp) == CANRX_MESSAGE_VALID)
-                {
-                    rpm = HZ_TO_RPM(MPS_TO_HZ(temp));
-                }
-            }
-            break;
         default:
-            rpm = HZ_TO_MPS(wheels.hz[wheel]);
+            rpm = wheels.rpm_wheel[wheel];
             break;
     }
 
-    return (uint16_t)rpm;
+    return rpm;
 }
 
 float32_t wheelSpeed_getSpeedLinear(wheel_E wheel)
@@ -81,24 +88,15 @@ float32_t wheelSpeed_getSpeedLinear(wheel_E wheel)
     {
         case WS_SENSORTYPE_CAN_RPM:
             {
-                float32_t temp = 0.0f;
+                uint16_t temp = 0;
                 if (wheelSpeed_config.config[wheel].rpm(&temp) == CANRX_MESSAGE_VALID)
                 {
-                    mps = HZ_TO_MPS(RPM_TO_HZ(temp));
-                }
-            }
-            break;
-        case WS_SENSORTYPE_CAN_MPS:
-            {
-                float32_t temp = 0.0f;
-                if (wheelSpeed_config.config[wheel].mps(&temp) == CANRX_MESSAGE_VALID)
-                {
-                    mps = temp;
+                    mps = RPM_TO_MPS(temp);
                 }
             }
             break;
         default:
-            mps = HZ_TO_MPS(wheels.hz[wheel]);
+            mps = RPM_TO_MPS(wheels.rpm_wheel[wheel]);
             break;
     }
 
@@ -116,9 +114,15 @@ static void wheelSpeed_periodic_100Hz(void)
     {
         if (wheelSpeed_config.sensorType[i] == WS_SENSORTYPE_TIM_CHANNEL)
         {
-            wheels.hz[i] = HW_TIM_getFreq(wheelSpeed_config.config[i].channel_freq);
+            wheels.rpm_wheel[i] = HZ_TO_RPM(HW_TIM_getFreq(wheelSpeed_config.config[i].channel_freq));
+        }
+        else
+        {
+            wheels.rpm_wheel[i] = wheelSpeed_getSpeedRotational(i);
         }
     }
+
+    calculateAxleSpeed();
 }
 
 const ModuleDesc_S wheelSpeed_desc = {

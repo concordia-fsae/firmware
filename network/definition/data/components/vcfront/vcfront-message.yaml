@@ -100,14 +100,12 @@ messages:
 
   wheelSpeed:
     description: Front wheel speeds
+    cycleTimeMs: 10
     id: 0x461
-    cycleTimeMs: 50
     signals:
-      wheelSpeedLinearFL:
-        template: wheelSpeedLinear
-      wheelSpeedLinearFR:
-        template: wheelSpeedLinear
-      wheelSpeedRotationalFL:
+      wheelSpeedFL:
         template: wheelSpeedRotational
-      wheelSpeedRotationalFR:
+      wheelSpeedFR:
+        template: wheelSpeedRotational
+      axleSpeedFront:
         template: wheelSpeedRotational

@@ -17,3 +17,10 @@ typedef enum
     WHEEL_RR,
     WHEEL_CNT,
 } wheel_E;
+
+typedef enum
+{
+    AXLE_FRONT = 0x00,
+    AXLE_REAR,
+    AXLE_CNT,
+} axle_E;
