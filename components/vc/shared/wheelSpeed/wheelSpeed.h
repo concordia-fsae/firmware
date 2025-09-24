@@ -47,5 +47,6 @@ extern const ModuleDesc_S wheelSpeed_desc;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+uint16_t  wheelSpeed_getAxleRPM(axle_E axle);
 uint16_t  wheelSpeed_getSpeedRotational(wheel_E wheel);
 float32_t wheelSpeed_getSpeedLinear(wheel_E wheel);

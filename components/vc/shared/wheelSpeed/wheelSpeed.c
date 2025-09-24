@@ -11,6 +11,7 @@
 #include "ModuleDesc.h"
 #include "string.h"
 #include "HW_tim.h"
+#include "wheel.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -29,6 +30,7 @@
 typedef struct
 {
     float32_t hz[WHEEL_CNT];
+    float32_t hz_axle[AXLE_CNT];
 } wheelSpeed_S;
 
 /******************************************************************************
@@ -40,6 +42,11 @@ static wheelSpeed_S wheels;
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+uint16_t wheelSpeed_getAxleRPM(axle_E axle)
+{
+    return HZ_TO_RPM(wheels.hz_axle[axle]);
+}
 
 uint16_t wheelSpeed_getSpeedRotational(wheel_E wheel)
 {

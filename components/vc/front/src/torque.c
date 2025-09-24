@@ -247,7 +247,7 @@ static void evaluate_traction_control(void)
 
     bool requested = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
                       (traction_control_requested == CAN_DIGITALSTATUS_ON);
-    bool speed_valid = CANRX_get_signal(VEH, VCREAR_axleRPM, &rear_axle_rpm) != CANRX_MESSAGE_SNA;
+    bool speed_valid = CANRX_get_signal(VEH, VCREAR_axleRearRPM, &rear_axle_rpm) != CANRX_MESSAGE_SNA;
 
     if (speed_valid)
     {
