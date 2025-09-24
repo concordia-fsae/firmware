@@ -86,6 +86,8 @@
 #define set_wheelSpeedLinearFR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEEL_FR))
 #define set_wheelSpeedRotationalFL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_FL))
 #define set_wheelSpeedRotationalFR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_FR))
+#define set_slip(m,b,n,s) set(m,b,n,s, wheelSpeed_getSlipRatio())
+#define set_vehicleSpeed(m,b,n,s) set(m,b,n,s, wheelSpeed_getVehicleSpeed())
 
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))

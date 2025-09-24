@@ -189,3 +189,13 @@ signals:
       endianness: big
       bitWidth: 32
       resolution: 1
+  slip:
+    unit: '%'
+    description: 32bit big endian value
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 10
+      range:
+        min: -1000
+        max: 1000
+      signedness: unsigned

@@ -14,6 +14,8 @@
 #include "CANTypes_generated.h"
 #include "HW_tim.h"
 #include "wheel.h"
+#include "MessageUnpack_generated.h"
+#include <math.h>
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -49,3 +51,5 @@ extern const ModuleDesc_S wheelSpeed_desc;
 
 uint16_t  wheelSpeed_getSpeedRotational(wheel_E wheel);
 float32_t wheelSpeed_getSpeedLinear(wheel_E wheel);
+float32_t wheelSpeed_getVehicleSpeed(void);
+float32_t wheelSpeed_getSlipRatio(void);

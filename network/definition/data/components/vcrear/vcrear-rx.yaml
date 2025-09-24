@@ -39,3 +39,7 @@ signals:
     sourceBuses: veh
   BMSB_packContactorState:
     sourceBuses: veh
+  VCFRONT_wheelSpeedRotationalL:
+    sourceBuses: veh
+  VCFRONT_wheelSpeedRotationalR:
+    sourceBuses: veh

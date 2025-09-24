@@ -8,9 +8,13 @@
  ******************************************************************************/
 
 #include "wheelSpeed.h"
+#include "MessageUnpack_generated.h"
+#include "HW_tim.h"
+#include "lib_utility.h"
 #include "ModuleDesc.h"
 #include "string.h"
 #include "HW_tim.h"
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -28,7 +32,9 @@
 
 typedef struct
 {
+    float32_t slipRatio;
     float32_t hz[WHEEL_CNT];
+    float32_t vehicle_mps;
 } wheelSpeed_S;
 
 /******************************************************************************
@@ -105,6 +111,35 @@ float32_t wheelSpeed_getSpeedLinear(wheel_E wheel)
     return mps;
 }
 
+float32_t wheelSpeed_getVehicleSpeed(void)
+{
+    return wheels.vehicle_mps;
+}
+
+float32_t wheelSpeed_getSlipRatio(void)
+{
+    return wheels.slipRatio;
+}
+
+static float32_t calcVehicleSpeed(void)
+{
+    return (wheelSpeed_getSpeedLinear(WHEEL_FL) + wheelSpeed_getSpeedLinear(WHEEL_FR)) / 2;
+}
+
+static void calcSlipRatio(void)
+{
+    const float32_t rear = (wheelSpeed_getSpeedLinear(WHEEL_RL) + wheelSpeed_getSpeedLinear(WHEEL_RR)) / 2;
+
+    if (fabs(wheels.vehicle_mps) > 1e-6f)
+    {
+        wheels.slipRatio = ((wheels.vehicle_mps - rear) / wheels.vehicle_mps) * 100;
+    }
+    else
+    {
+        wheels.slipRatio = 0.0f;
+    }
+}
+
 static void wheelSpeed_init(void)
 {
     memset(&wheels, 0x00U, sizeof(wheels));
@@ -119,6 +154,9 @@ static void wheelSpeed_periodic_100Hz(void)
             wheels.hz[i] = HW_TIM_getFreq(wheelSpeed_config.config[i].channel_freq);
         }
     }
+
+    wheels.vehicle_mps = calcVehicleSpeed();
+    calcSlipRatio();
 }
 
 const ModuleDesc_S wheelSpeed_desc = {
