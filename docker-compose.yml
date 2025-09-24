@@ -12,3 +12,13 @@ services:
     devices:
       # map host's usb buses to container's buses for st-link programmer
       - "/dev/bus/usb/:/dev/bus/usb/"
+  buildroot-buck:
+    image: cfr-firmware:buck
+    container_name: buildroot-buck
+    hostname: builder-buck
+    volumes: # mount pts
+      - .:/firmware
+    user: builduser
+    tty: true # open terminal for interacting
+    stdin_open: true
+    privileged: true
