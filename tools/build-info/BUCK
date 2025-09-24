@@ -1,0 +1,20 @@
+load("//tools/uv/defs.bzl", "uv_tool")
+load("//tools/build-info/defs.bzl", "generate_build_info")
+
+export_file(
+    name = "BuildInfo.h.mako",
+    src = "BuildInfo.h.mako",
+)
+
+uv_tool(
+    name = "build-info-tool",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = ["build-info.py"],
+    visibility = ["PUBLIC"],
+)
+
+generate_build_info(
+    name = "build-info",
+    visibility = ["PUBLIC"],
+)
