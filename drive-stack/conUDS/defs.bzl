@@ -21,7 +21,7 @@ deployable_target = rule(
     impl = _deployable_target,
     attrs = {
         "node": attrs.string(),
-        "binary": attrs.dep(providers = [DefaultInfo]),
+        "binary": attrs.source(),
     },
 )
 
@@ -41,7 +41,7 @@ def _conUDS_batch(ctx: AnalysisContext) -> list[Provider]:
 conUDS_batch = rule(
     impl = _conUDS_batch,
     attrs = {
-        "binaries": attrs.list(attrs.dep(providers = [DeployableAsset])),
+        "binaries": attrs.list(attrs.source()),
         "manifest": attrs.string(),
     },
 )
