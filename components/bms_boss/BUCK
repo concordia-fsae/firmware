@@ -438,6 +438,7 @@ alias(
         name = "deploy-{}".format(variant),
         binary = ":bin_crc",
         node = APP_NAME,
+        visibility = ["PUBLIC"],
     )
     for variant in variants
 ]
