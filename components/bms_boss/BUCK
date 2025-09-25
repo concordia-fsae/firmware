@@ -1,6 +1,6 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
-load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
+load("//drive-stack/conUDS/defs.bzl", "conUDS_download", "deployable_target")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//network/NetworkGen/defs.bzl", "generate_code")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
@@ -430,6 +430,15 @@ alias(
         binary = ":crc-{}".format(variant),
         manifest = "//network:manifest-uds",
         node = APP_NAME,
+    )
+    for variant in variants
+]
+[
+    deployable_target(
+        name = "deploy-{}".format(variant),
+        src = ":crc-{}".format(variant),
+        target_node = APP_NAME,
+        visibility = ["PUBLIC"],
     )
     for variant in variants
 ]
