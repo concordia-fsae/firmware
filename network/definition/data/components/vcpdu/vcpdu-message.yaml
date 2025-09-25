@@ -39,6 +39,8 @@ messages:
       tsmsSafetyStatus:
         template: digitalStatus
       pdu5vVoltage:
+      validator:
+        template: criticalDataChecksum
 
   hsdState:
     description: Current state of the HSDs

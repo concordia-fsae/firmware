@@ -111,3 +111,8 @@ signals:
         min: 0
         max: 2000
     continuous: true
+  criticalDataChecksum:
+    description: Critical Data Checksum
+    nativeRepresentation:
+      bitWidth: 8
+    validationRole: checksum

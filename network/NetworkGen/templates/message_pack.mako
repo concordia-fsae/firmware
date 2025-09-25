@@ -24,9 +24,17 @@ static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t c
     set_${signal.get_name_nodeless()}(message, ${bus.upper()}, ${msg.node_name}, ${signal.get_name_nodeless()});
     %endfor
     %if msg.counter_sig:
-    message->u64 |= counter;
+    set_${bus.upper()}_${msg.node_name}_${msg.counter_sig.get_name_nodeless()}(message, counter);
     %else:
     (void)counter;
+    %endif
+    %if msg.checksum_sig:
+    uint32_t checksum = CAN_${bus.upper()}_${msg.name}_CRC;
+    for (uint8_t i = 0; i < ${msg.length_bytes}U; i++)
+    {
+        checksum += message->u8[i];
+    }
+    set_${bus.upper()}_${msg.node_name}_${msg.checksum_sig.get_name_nodeless()}(message, (uint${(int((msg.checksum_sig.native_representation.bit_width - 1)/8) + 1) * 8}_t)checksum);
     %endif
   %endif
 

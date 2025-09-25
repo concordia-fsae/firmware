@@ -2,6 +2,7 @@ import copy
 from math import ceil, log
 from typing import List, Optional
 from schema import Schema, Or, Optional, And
+from zlib import crc32
 
 from .Types import *
 
@@ -195,6 +196,18 @@ class CanSignal(CanObject):
 
         self._check_val_roles()
 
+    def crc32(self):
+        crc = crc32(self.name.encode())
+        crc = crc32(self.start_bit.to_bytes(4, 'little'), crc)
+        crc = crc32(self.native_representation.bit_width.to_bytes(4, 'little'), crc)
+        crc = crc32(self.native_representation.signedness.value.encode(), crc)
+        crc = crc32(self.native_representation.signedness.value.encode(), crc)
+        crc = crc32(self.native_representation.endianness.value.to_bytes(4, 'little'), crc)
+        crc = crc32(self.unit.value.encode(), crc)
+        crc = crc32(str(self.scale).encode(), crc)
+        crc = crc32(str(self.offset).encode(), crc)
+        return crc
+
     def __repr__(self):
         return (
             f"\nCAN Signal: {self.name}, "
@@ -374,6 +387,8 @@ class CanMessage(CanObject):
         self.from_bridge = False
         self.origin_bus = None
         self.source_buses: List[str]
+        self.crc = -1
+
         if source_buses := msg_def.get("sourceBuses"):
             if isinstance(source_buses, list):
                 self.source_buses = source_buses
@@ -394,6 +409,17 @@ class CanMessage(CanObject):
         self.node_ref = None
         self.is_valid = False
 
+    def crc32(self):
+        crc = crc32(self.id.to_bytes(4, 'little'))
+        if self.counter_sig:
+            crc = crc32(self.counter_sig.crc32().to_bytes(4, 'little'), crc)
+        if self.checksum_sig:
+            crc = crc32(self.checksum_sig.crc32().to_bytes(4, 'little'), crc)
+
+        for signal in sorted(self.signal_objs.values(), key=lambda x: x.start_bit):
+            crc = crc32(signal.crc32().to_bytes(4, 'little'), crc)
+        return crc
+
     def __repr__(self):
         return f"id: {self.id}, buses: {self.source_buses}, Counter: {self.counter_sig}, Checksum: {self.checksum_sig}, Signals: {list(self.signal_objs.values())}"
 
@@ -405,7 +431,7 @@ class CanMessage(CanObject):
             signal_obj.start_bit =  0
         if signal_obj.validation_role == ValidationRole.checksum:
             self.checksum_sig = signal_obj
-        if signal_obj.validation_role == ValidationRole.counter:
+        elif signal_obj.validation_role == ValidationRole.counter:
             self.counter_sig = signal_obj
         self.signal_objs[signal_obj.name] = signal_obj
         self.DISC.update(signal_obj.discrete_values)
@@ -456,7 +482,7 @@ class CanMessage(CanObject):
                 valid = False
 
         if bit_count > 64:
-            print(f"Message {self.name} has length greater than 64 bits!")
+            print(f"Message {self.name} has length {bit_count} which is greater than 64 bits!")
             valid = False
             return
 

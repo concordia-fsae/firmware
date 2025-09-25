@@ -78,13 +78,19 @@ static const CAN_busConfig_T CAN_busConfig[CAN_BUS_COUNT] = {
   msg_name = msg.name if not msg.node_ref.duplicateNode else msg.node_ref.name.upper() + '_' + msg.name.split('_')[1]
 %>\
 #define CAN_${bus.upper()}_${msg_name}_ID ${hex(msg.id)}U
+#define CAN_${bus.upper()}_${msg.name}_CRC ${hex(msg.crc)}U
       %endif
     %endfor
 // Reception ID's
     %for msg in node.received_msgs.values():
       %if bus in msg.source_buses:
 #define CAN_${bus.upper()}_${msg.name}_ID ${hex(msg.id)}U
+#define CAN_${bus.upper()}_${msg.name}_CRC ${hex(msg.crc)}U
       %endif
     %endfor
   %endfor
 %endfor
+
+
+
+
