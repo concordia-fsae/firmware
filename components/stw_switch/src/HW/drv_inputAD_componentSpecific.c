@@ -99,6 +99,33 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
     },
 };
 
+drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN2] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN2,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN4] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN4,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN6] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN6,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_MCU_TEMP] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_MCU_TEMP,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN1] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN1,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN3] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN3,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN5] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN5,
+    }, 
+    [DRV_INPUTAD_ANALOG_CHANNEL_AIN7] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN7,
+    },
+};
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/

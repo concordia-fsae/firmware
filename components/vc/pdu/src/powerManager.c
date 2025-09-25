@@ -64,7 +64,7 @@ static void powerManager_init(void)
 
 static void powerManager_periodic_10Hz(void)
 {
-    const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
+    const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT);
     float32_t tmp_current = 0.0f;
 
     powerManager_data.glv_voltage = glv_voltage;

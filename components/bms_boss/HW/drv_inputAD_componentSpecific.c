@@ -71,6 +71,15 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
     },
 };
 
+drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
+    [DRV_INPUTAD_ANALOG_CS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CS,
+    },
+    [DRV_INPUTAD_ANALOG_MCU_TEMP] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MCU_TEMP,
+    },
+};
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/

@@ -79,6 +79,69 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
     },
 };
 
+drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
+    [DRV_INPUTAD_ANALOG_MUX_LP1_SNS] = {    //Bank 1
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP1_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP2_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP2_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP3_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP3_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP4_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP4_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_5V_VOLTAGE] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_5V_VOLTAGE,
+    },
+    [DRV_INPUTAD_ANALOG_UVL_BATT] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_UVL_BATT,
+    },
+    [DRV_INPUTAD_ANALOG_MCU_TEMP] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MCU_TEMP,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP5_SNS] = {    //Bank2
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP5_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP6_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP6_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP7_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP7_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP8_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP8_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX_LP9_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX_LP9_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX2_HP_CS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX2_HP_CS,
+    },
+    [DRV_INPUTAD_ANALOG_MUX2_THERMISTORS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MUX2_THERMISTORS,
+    },
+    [DRV_INPUTAD_ANALOG_DEMUX2_PUMP] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_PUMP,
+    },
+    [DRV_INPUTAD_ANALOG_DEMUX2_FAN] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_FAN,
+    },
+    [DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_5V_SNS,
+    },
+    [DRV_INPUTAD_ANALOG_DEMUX2_THERM_MCU] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_THERM_MCU,
+    },
+    [DRV_INPUTAD_ANALOG_DEMUX2_THERM_HSD1] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_THERM_HSD1,
+    },
+    [DRV_INPUTAD_ANALOG_DEMUX2_THERM_HSD2] = {
+        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_THERM_HSD2,
+    },
+};
+
 struct inputs_data {
     drv_mux_channel_S signal_mux;
 };
