@@ -21,3 +21,7 @@ signals:
     sourceBuses: veh
   VCREAR_wheelSpeedRotationalRR:
     sourceBuses: veh
+  VCFRONT_wheelSpeedRotationalFL:
+    sourceBuses: veh
+  VCFRONT_wheelSpeedRotationalFR:
+    sourceBuses: veh

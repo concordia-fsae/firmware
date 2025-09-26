@@ -15,8 +15,8 @@
 
 const wheelSpeed_config_E wheelSpeed_config = {
     .sensorType = {
-        [WHEEL_FL] = WS_SENSORTYPE_UNKNOWN,
-        [WHEEL_FR] = WS_SENSORTYPE_UNKNOWN,
+        [WHEEL_FL] = WS_SENSORTYPE_CAN_RPM,
+        [WHEEL_FR] =  WS_SENSORTYPE_CAN_RPM,
         [WHEEL_RL] = WS_SENSORTYPE_TIM_CHANNEL,
         [WHEEL_RR] = WS_SENSORTYPE_TIM_CHANNEL,
     },

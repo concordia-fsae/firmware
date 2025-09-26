@@ -14,6 +14,8 @@
 #include "LIB_Types.h"
 #include "ModuleDesc.h"
 #include "wheel.h"
+#include "MessageUnpack_generated.h"
+#include <math.h>
 
 /******************************************************************************
  *                             T Y P E D E F S

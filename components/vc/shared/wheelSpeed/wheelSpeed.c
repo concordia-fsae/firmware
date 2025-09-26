@@ -6,13 +6,14 @@
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
-
+//#include "MessageUnpack_generated.h"
 #include "HW_tim.h"
 #include "lib_utility.h"
 #include "ModuleDesc.h"
 #include "string.h"
 #include "wheelSpeed.h"
 #include <math.h>
+
 
 /******************************************************************************
  *                              D E F I N E S
@@ -122,16 +123,22 @@ float32_t wheelSpeed_getSlipRatio(void)
 
 static void calcSlipRatio_100Hz(void)
 {
-    float32_t FR_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_FR);
-    float32_t RR_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_RR);
-    //float32_t FL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_FL);
-    //float32_t RL_wheelSpeed = wheelSpeed_getSpeedRotational(WHEEL_RL);
+    float32_t FR_wheelSpeed=0.0f;
+    float32_t RR_wheelSpeed=0.0f;
+    float32_t FL_wheelSpeed=0.0f;
+    float32_t RL_wheelSpeed=0.0f;
+    
+   
 
-
+    CANRX_VEH_get_VCREAR_wheelSpeedRotationalRL(&RL_wheelSpeed);
+    CANRX_VEH_get_VCREAR_wheelSpeedRotationalRR(&RR_wheelSpeed);
+    CANRX_VEH_get_VCFRONT_wheelSpeedRotationalFR(&FR_wheelSpeed);
+    CANRX_VEH_get_VCFRONT_wheelSpeedRotationalFL(&FL_wheelSpeed);
+   
 
     if (fabs(FR_wheelSpeed) > 1e-6f)
     {
-        ws_data.slipRatio = ((FR_wheelSpeed - RR_wheelSpeed) / FR_wheelSpeed) * 100;
+        ws_data.slipRatio = ((RR_wheelSpeed - FR_wheelSpeed) / FR_wheelSpeed) * 100;
     }
     else
     {
