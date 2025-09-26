@@ -78,7 +78,7 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
 	 },
 };
 
-drv_inputAD_configAnalog_S drv_inputAd_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
+drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
     [DRV_INPUTAD_ANALOG_R_BR_TEMP] = {
         .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_R_BR_TEMP,
     },
