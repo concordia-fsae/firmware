@@ -101,28 +101,28 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
 
 drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN2] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN2,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN2,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN4] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN4,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN4,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN6] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN6,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN6,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_MCU_TEMP] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_MCU_TEMP,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_MCU_TEMP,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN1] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN1,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN1,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN3] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN3,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN3,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN5] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN5,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN5,
     }, 
     [DRV_INPUTAD_ANALOG_CHANNEL_AIN7] = {
-        .voltage_divider_multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN7,
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_CHANNEL_AIN7,
     },
 };
 
@@ -146,11 +146,11 @@ void drv_inputAD_1kHz_componentSpecific(void)
     // This method only works since there is a 1:1 mapping from adc input to inputAD output
     for (uint8_t i = 0U; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
     }
     for (uint8_t i = 0U; i < ADC_BANK2_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
     drv_inputAD_private_runDigital();

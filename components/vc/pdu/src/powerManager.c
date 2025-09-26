@@ -18,9 +18,6 @@
 #include "drv_outputAD.h"
 #include "app_vehicleState.h"
 
-#define PDU_CS_AMPS_PER_VOLT 0.20f
-#define PDU_VS_VOLTAGE_MULTIPLIER 3.61f
-
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/

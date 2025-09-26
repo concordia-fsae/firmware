@@ -10,7 +10,7 @@
  * 3. Include drv_inputAD_private.h in drv_inputAD_componentSpecific.c and call
  *    the drv_inputAD_private_init function
  * 4. Periodically call the drv_inputAD_private_runDigital function to update
- *    the digital inputs and load new voltages with drv_inputAD_setAnalogVoltage
+ *    the digital inputs and load new voltages with drv_inputAD_setRawAnalogVoltage
  */
 
 #pragma once
@@ -45,7 +45,7 @@ typedef struct
 
 typedef struct{
     drv_inputAD_channelAnalog_E channel; 
-    float32_t voltage_divider_multiplier;
+    float32_t multiplier;
 } drv_inputAD_configAnalog_S;
 
 /******************************************************************************
@@ -148,7 +148,7 @@ typedef struct{
 #define DRV_INPUTAD_ANALOG_MULTIPLIER_MUX2_THERMISTORS         1.0f
 #define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_PUMP              1.0f
 #define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_FAN               1.0f
-#define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_5V_SNS            0.20f
+#define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_5V_SNS            0.20f //PDU_CS_AMPS_PER_VOLT
 #define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_THERM_MCU         1.0f
 #define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_THERM_HSD1        1.0f
 #define DRV_INPUTAD_ANALOG_MULTIPLIER_DEMUX2_THERM_HSD2        1.0f
