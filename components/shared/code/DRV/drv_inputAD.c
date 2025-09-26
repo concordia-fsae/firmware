@@ -19,6 +19,7 @@
  ******************************************************************************/
 
 extern drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT];
+extern drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT];
 
 /******************************************************************************
 *                             T Y P E D E F S
@@ -93,9 +94,11 @@ void drv_inputAD_private_runDigital(void)
  * @param channel Analog channel to update
  * @param voltage Measured voltage
  */
-void drv_inputAD_private_setAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage)
+void drv_inputAD_private_setRawAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage)
 {
-    inputs.voltages[channel] = voltage;
+    //apply voltage divider multiplier from configuration
+    float32_t divided_voltage = voltage * drv_inputAD_configAnalog[channel].multiplier;
+    inputs.voltages[channel] = divided_voltage;
 }
 
 /**

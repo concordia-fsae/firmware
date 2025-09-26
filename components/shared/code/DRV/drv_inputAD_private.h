@@ -17,4 +17,4 @@
 
 void drv_inputAD_private_init(void);
 void drv_inputAD_private_runDigital(void);
-void drv_inputAD_private_setAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage);
+void drv_inputAD_private_setRawAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage);

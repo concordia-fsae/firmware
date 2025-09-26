@@ -78,6 +78,57 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
 	 },
 };
 
+drv_inputAD_configAnalog_S drv_inputAD_configAnalog[DRV_INPUTAD_ANALOG_COUNT] = {
+    [DRV_INPUTAD_ANALOG_R_BR_TEMP] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_R_BR_TEMP,
+    },
+    [DRV_INPUTAD_ANALOG_L_SHK_DISP] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_L_SHK_DISP,
+    },
+    [DRV_INPUTAD_ANALOG_PU1] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_PU1,
+    },
+    [DRV_INPUTAD_ANALOG_BR_POT] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_BR_POT,
+    },
+    [DRV_INPUTAD_ANALOG_SPARE1] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_SPARE1,
+    },
+    [DRV_INPUTAD_ANALOG_STR_ANGLE] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_STR_ANGLE,
+    },
+    [DRV_INPUTAD_ANALOG_APPS_P1] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_APPS_P1,
+    },
+    [DRV_INPUTAD_ANALOG_MCU_TEMP] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_MCU_TEMP,
+    },
+    [DRV_INPUTAD_ANALOG_L_BR_TEMP] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_L_BR_TEMP,
+    },
+    [DRV_INPUTAD_ANALOG_R_SHK_DISP] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_R_SHK_DISP,
+    },
+    [DRV_INPUTAD_ANALOG_PU2] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_PU2,
+    },
+    [DRV_INPUTAD_ANALOG_BR_PR] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_BR_PR,
+    },
+    [DRV_INPUTAD_ANALOG_SPARE3] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_SPARE3,
+    },
+    [DRV_INPUTAD_ANALOG_SPARE4] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_SPARE4,
+    },
+    [DRV_INPUTAD_ANALOG_APPS_P2] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_APPS_P2,
+    },
+    [DRV_INPUTAD_ANALOG_BOARD_TEMP] = {
+        .multiplier = DRV_INPUTAD_ANALOG_MULTIPLIER_BOARD_TEMP,
+    },
+};
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -98,11 +149,11 @@ void drv_inputAD_1kHz_componentSpecific(void)
     // This method only works since there is a 1:1 mapping from adc input to inputAD output
     for (uint8_t i = 0U; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
     }
     for (uint8_t i = 0U; i < ADC_BANK2_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
     drv_inputAD_private_runDigital();
