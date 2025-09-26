@@ -169,15 +169,10 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
 {
     UNUSED(sigrx); UNUSED(msgrx); UNUSED(m); // For messages with unrecorded signals (Immediately processed at the CAN Layer)
     bool valid = true;
-            %if node.received_msgs[message].checksum_sig is not None:
-
-    valid = false;
-    <%make_sigunpack(bus, node, node.received_msgs[message].checksum_sig, duplicate)%>\
-            %endif
             %if node.received_msgs[message].counter_sig is not None:
 
     uint8_t oldCount = sigrx->${node.received_msgs[message].counter_sig.message_ref.node_ref.name.upper()}_${node.received_msgs[message].counter_sig.name.split('_')[1]}${index};
-<%make_sigunpack(bus, node, node.received_msgs[message].counter_sig, True)%>\
+<%make_sigunpack(bus, node, node.received_msgs[message].counter_sig, duplicate)%>\
     if ((sigrx->${node.received_msgs[message].counter_sig.message_ref.node_ref.name.upper()}_${node.received_msgs[message].counter_sig.name.split('_')[1]}${index} == oldCount + 1) ||
         ((oldCount == ${2**(node.received_msgs[message].counter_sig.native_representation.bit_width) - 1}U) &&
          (sigrx->${node.received_msgs[message].counter_sig.message_ref.node_ref.name.upper()}_${node.received_msgs[message].counter_sig.name.split('_')[1]}${index} == 0U)))
@@ -185,6 +180,23 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
         // Stays valid
     }
     else
+    {
+        valid = false;
+    }
+            %endif
+            %if node.received_msgs[message].checksum_sig is not None:
+
+<%make_sigunpack(bus, node, node.received_msgs[message].checksum_sig, duplicate)%>\
+    uint32_t calculated_checksum = CAN_${bus.upper()}_${node.received_msgs[message].name}_CRC;
+    // Clear checksum bits after unpacking prior to calculation
+    CAN_data_T tmp_msg = *m;
+    tmp_msg.u64 &= ~((uint64_t)${2**(node.received_msgs[message].checksum_sig.native_representation.bit_width) - 1}U << ${node.received_msgs[message].checksum_sig.start_bit});
+    for (uint8_t i = 0; i < ${node.received_msgs[message].length_bytes}U; i++)
+    {
+        calculated_checksum += tmp_msg.u8[i];
+    }
+
+    if ((${2**(node.received_msgs[message].checksum_sig.native_representation.bit_width) - 1}U & calculated_checksum) != tmp_${node.received_msgs[message].checksum_sig.name})
     {
         valid = false;
     }
@@ -221,6 +233,8 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
     %endfor
   %endfor
 %endfor
+
+
 
 
 

@@ -1,8 +1,8 @@
 load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
 load("@prelude//toolchains:python.bzl", "system_python_bootstrap_toolchain")
-load("@toolchains//gcc:defs.bzl", "download_gcc_distribution", "gcc_toolchain")
-load("@prelude//toolchains/cxx.bzl", "system_cxx_toolchain")
 load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
+load("@prelude//toolchains/cxx.bzl", "system_cxx_toolchain")
+load("@toolchains//gcc:defs.bzl", "download_gcc_distribution", "gcc_toolchain")
 
 system_python_bootstrap_toolchain(
     name = "python_bootstrap",
@@ -16,52 +16,52 @@ system_genrule_toolchain(
 
 # gcc 14.2.rel1
 download_gcc_distribution(
-    name = "gcc-14.2.rel1-dist",
-    version = "14.2.rel1",
-)
-
-gcc_toolchain(
-    name = "gcc-14.2.rel1",
-    distribution = ":gcc-14.2.rel1-dist",
-    visibility = ["PUBLIC"],
-)
-
-download_gcc_distribution(
-    name = "gcc-14.2.rel1-arm-none-dist",
+    name = "gcc-14.2.rel1-arm-none-eabi-dist",
     version = "14.2.rel1",
     target_arch = "arm",
     target_os = "none",
+    target_abi = "eabi",
 )
 
 gcc_toolchain(
-    name = "gcc-14.2.rel1-arm-none",
-    distribution = ":gcc-14.2.rel1-arm-none-dist",
+    name = "gcc-14.2.rel1-arm-none-eabi",
+    distribution = ":gcc-14.2.rel1-arm-none-eabi-dist",
     visibility = ["PUBLIC"],
 )
 
 download_gcc_distribution(
-    name = "gcc-14.2.rel1-arm32-linux-dist",
+    name = "gcc-14.2.rel1-arm32-linux-gnueabihf-dist",
     version = "14.2.rel1",
     target_arch = "arm",
-    target_os = "linux-gnueabihf",
+    target_os = "linux",
+    target_abi = "gnueabihf",
 )
 
 gcc_toolchain(
-    name = "gcc-14.2.rel1-arm32-linux",
-    distribution = ":gcc-14.2.rel1-arm32-linux-dist",
+    name = "gcc-14.2.rel1-arm32-gnueabihf-linux",
+    distribution = select({
+        "prelude//os/constraints:linux": ":gcc-14.2.rel1-arm32-linux-gnueabihf-dist",
+        "DEFAULT": "@toolchains//gcc:incompatible",
+    }),
+    target_compatible_with = ["prelude//os/constraints:linux"],
     visibility = ["PUBLIC"],
 )
 
 download_gcc_distribution(
-    name = "gcc-14.2.rel1-aarch64-linux-dist",
+    name = "gcc-14.2.rel1-aarch64-linux-gnu-dist",
     version = "14.2.rel1",
     target_arch = "aarch64",
-    target_os = "linux-gnu",
+    target_os = "linux",
+    target_abi = "gnu",
 )
 
 gcc_toolchain(
-    name = "gcc-14.2.rel1-aarch64-linux",
-    distribution = ":gcc-14.2.rel1-aarch64-linux-dist",
+    name = "gcc-14.2.rel1-aarch64-linux-gnu",
+    distribution = select({
+        "prelude//os/constraints:linux": ":gcc-14.2.rel1-aarch64-linux-gnu-dist",
+        "DEFAULT": "@toolchains//gcc:incompatible",
+    }),
+    target_compatible_with = ["prelude//os/constraints:linux"],
     visibility = ["PUBLIC"],
 )
 
@@ -106,8 +106,8 @@ system_rust_toolchain(
 toolchain_alias(
     name = "cxx",
     actual = select({
-        "root//constraints:arm32-none": ":gcc-14.2.rel1",
-        "root//constraints:arm64-linux": ":gcc-14.2.rel1-aarch64-linux",
+        "root//constraints:arm32-none": ":gcc-14.2.rel1-arm-none-eabi",
+        "root//constraints:arm64-linux": ":gcc-14.2.rel1-aarch64-linux-gnu",
         "prelude//os/constraints:linux": ":cxx-host",
         "DEFAULT": ":cxx-host",
     }),

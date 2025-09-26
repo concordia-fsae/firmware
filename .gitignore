@@ -3,6 +3,7 @@
 .vim/
 .sconsign.dblite
 compile_commands.json
+dbc/
 generated/
 **/html/**
 

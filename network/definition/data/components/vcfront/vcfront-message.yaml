@@ -25,6 +25,8 @@ messages:
       bppcState:
       torqueRequest:
       torqueManagerState:
+      validator:
+        template: criticalDataChecksum
 
   pedalInformation:
     description: Information of the pedal sensors

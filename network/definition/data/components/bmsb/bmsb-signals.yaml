@@ -40,12 +40,6 @@ signals:
         max: 25
     continuous: true
 
-  criticalDataCounter:
-    description: BMS Boss Critical Message Counter
-    nativeRepresentation:
-      bitWidth: 8
-    validationRole: counter
-
   packChargeLimit:
     unit: 'A'
     description: BMS Boss Pack Charge Limit

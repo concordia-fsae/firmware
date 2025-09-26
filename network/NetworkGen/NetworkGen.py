@@ -11,6 +11,7 @@ import sys
 from mako import template
 from mako.lookup import TemplateLookup
 import yaml
+import zlib
 
 from classes.Can import CanBus, CanMessage, CanNode, CanSignal, DiscreteValues
 from classes.Types import *
@@ -657,6 +658,10 @@ def process_receivers(bus: CanBus, node: CanNode):
         rxed_sig = bus.signals[sig_name]
         rxed_msg = rxed_sig.message_ref
 
+        if rxed_msg.checksum_sig and not rxed_msg.checksum_sig.name in rx_sig_dict.keys() and not rxed_msg.checksum_sig.name in node.received_sigs:
+            node.received_sigs[rxed_msg.checksum_sig.name] = rxed_msg.checksum_sig
+            rxed_msg.add_receiver(node, rxed_msg.checksum_sig.name)
+
         node.received_sigs[sig_name] = rxed_sig
         node.received_msgs[rxed_msg.name] = rxed_msg
         rxed_msg.add_receiver(node, rxed_sig.name)
@@ -730,7 +735,12 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
-            ["NetworkDefines_generated.h.mako", {"nodes": [can_nodes[node]], "buses": can_bus_defs}],
+            ["NetworkDefines_generated.h.mako", {
+                "nodes": [can_nodes[node]],
+                "buses": can_bus_defs,
+                "network": {
+                }
+            }],
             ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],
@@ -961,18 +971,29 @@ def main():
         if args.definition_dir:
             print(f"Parsing network...")
             parseNetwork(args, lookup)
+            data = {}
+            data["can_nodes"] = can_nodes
+            data["can_bus_defs"] = can_bus_defs
+            data["discrete_values"] = discrete_values
+            data["templates"] = templates
+            for node in can_nodes.values():
+                if not node.offset:
+                    for message in node.messages.values():
+                        message.crc = message.crc32()
+                else:
+                    for name, message in node.messages.items():
+                        base_message = name.split("_")[0].rstrip(str(node.offset)) + str(0) + "_{}".format(name.split("_")[1])
+                        message.crc = can_nodes[node.name + "_" + str(0)].messages[base_message].crc
             if args.cache_dir:
                 makedirs(args.cache_dir, exist_ok=True)
-                pickle.dump(can_nodes, open(args.cache_dir.joinpath("CachedNodes.pickle"), "wb"))
-                pickle.dump(can_bus_defs, open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "wb"))
-                pickle.dump(discrete_values, open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "wb"))
-                pickle.dump(templates, open(args.cache_dir.joinpath("CachedTemplates.pickle"), "wb"))
+                pickle.dump(data, open(args.cache_dir.joinpath("CachedNetwork.pickle"), "wb"))
     elif args.cache_dir:
         try:
-            can_nodes = pickle.load(open(args.cache_dir.joinpath("CachedNodes.pickle"), "rb"))
-            can_bus_defs = pickle.load(open(args.cache_dir.joinpath("CachedBusDefs.pickle"), "rb"))
-            discrete_values = pickle.load(open(args.cache_dir.joinpath("CachedDiscreteValues.pickle"), "rb"))
-            templates = pickle.load(open(args.cache_dir.joinpath("CachedTemplates.pickle"), "rb"))
+            data = pickle.load(open(args.cache_dir.joinpath("CachedNetwork.pickle"), "rb"))
+            can_nodes = data["can_nodes"]
+            can_bus_defs = data["can_bus_defs"]
+            discrete_values = data["discrete_values"]
+            templates = data["templates"]
         except Exception as e:
             print(f"Could not retreive cache files. Try building the network again...")
             ERROR = True

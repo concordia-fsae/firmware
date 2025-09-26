@@ -6,7 +6,8 @@ messages:
     lengthBytes: 8
     sourceBuses: veh
     signals:
-      criticalDataCounter:
+      validatorData:
+        template: criticalDataChecksum
       packChargeLimit:
       packDischargeLimit:
       packVoltage:
@@ -81,3 +82,5 @@ messages:
       bmsStatusMem:
       bmsStatus:
       imdStatus:
+      validatorIO:
+        template: criticalDataChecksum

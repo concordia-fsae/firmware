@@ -39,7 +39,11 @@ typedef struct
     drv_outputAD_channelDigital_E sel1;
     drv_outputAD_channelDigital_E sel2;
     drv_outputAD_channelDigital_E latch;
-    drv_outputAD_channelDigital_E enable[DRV_TPS2HB16AB_OUT_COUNT];
+    struct {
+        drv_outputAD_channelDigital_E enable;
+        float32_t                     current_limit_amp;
+        uint16_t                      oc_timeout_ms;
+    } channel[DRV_TPS2HB16AB_OUT_COUNT];
 } drv_tps2hb16ab_ic_S;
 
 extern const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT];
@@ -55,3 +59,4 @@ float32_t       drv_tps2hb16ab_getCurrent(drv_tps2hb16ab_E ic, drv_tps2hb16ab_ou
 void            drv_tps2hb16ab_setEnabled(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output, bool enabled);
 void            drv_tps2hb16ab_setDiagEnabled(drv_tps2hb16ab_E ic, bool enabled);
 void            drv_tps2hb16ab_setCSChannel(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output);
+void            drv_tps2hb16ab_setFaultLatch(drv_tps2hb16ab_E ic, bool latch_on_fault);

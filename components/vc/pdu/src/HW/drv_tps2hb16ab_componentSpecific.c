@@ -21,9 +21,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP1_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_BMS1_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_SHUTDOWN_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_BMS1_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_SHUTDOWN_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_BMS2_ACCUM] = {
@@ -33,9 +41,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP2_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_BMS2_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_ACCUM_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_BMS2_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_ACCUM_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_BMS3_SENSOR] = {
@@ -45,9 +61,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP3_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_BMS3_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_SENSOR_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_BMS3_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_SENSOR_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_VC1_VC2] = {
@@ -57,9 +81,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP4_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_VC1_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_VC2_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_VC1_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_VC2_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_MC_VCU3] = {
@@ -69,9 +101,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP5_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_MC_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_VCU3_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_MC_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_VCU3_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_HVE_COCKPIT] = {
@@ -81,9 +121,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP6_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_HVE_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_COCKPIT_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_HVE_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_COCKPIT_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_SPARE_BMS4] = {
@@ -93,9 +141,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP7_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_SPARE_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_BMS4_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_SPARE_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_BMS4_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_VCU1_VCU2] = {
@@ -105,9 +161,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP8_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_VCU1_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_VCU2_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_VCU1_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_VCU2_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
     [DRV_TPS2HB16AB_IC_BMS5_BMS6] = {
@@ -117,9 +181,17 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
         .sel1 = DRV_OUTPUTAD_MUX_LP_SEL1,
         .sel2 = DRV_OUTPUTAD_MUX_LP_SEL2,
         .latch = DRV_OUTPUTAD_LP9_LATCH,
-        .enable = {
-            [DRV_TPS2HB16AB_OUT_1] = DRV_OUTPUTAD_BMS5_EN,
-            [DRV_TPS2HB16AB_OUT_2] = DRV_OUTPUTAD_BMS6_EN,
+        .channel = {
+            [DRV_TPS2HB16AB_OUT_1] = {
+                .enable = DRV_OUTPUTAD_BMS5_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
+            [DRV_TPS2HB16AB_OUT_2] = {
+                .enable = DRV_OUTPUTAD_BMS6_EN,
+                .current_limit_amp = 2.5f,
+                .oc_timeout_ms = 250,
+            },
         },
     },
 };

@@ -5,7 +5,8 @@ messages:
     id: 0x100
     lengthBytes: 8
     signals:
-      criticalDataCounter:
+      validator:
+        template: criticalDataChecksum
       envFaultFlag:
       envErrorFlag:
       faultFlag:

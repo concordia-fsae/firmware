@@ -12,8 +12,11 @@ def stm32f1_hal(
         hal_conf_header: str,
         config: dict,
         additional_deps: list[str] | None = None,
-        additional_headers: list[str] | None = [],
+        additional_headers: list[str] | None = None,
         **kwargs):
+    additional_deps = additional_deps or []
+    additional_headers = additional_headers or []
+
     # check all input data
     expect(variant in chips, "Unknown chip variant '{}'. See embedded/platforms/stm32/f1/chips.bzl for supported chip variants".format(variant))
     chip = chips[variant]
@@ -70,11 +73,10 @@ def stm32f1_hal(
             # element is the path to the header
             headers_qualified[header[0]] = HAL_PATH.format(header[1])
 
-
     cmsis_headers(
         name = "CMSIS-" + name,
         toolchain = toolchain,
-        deps = additional_deps if additional_deps else None,
+        deps = additional_deps,
     )
 
     return __rules__["cxx_library"](
