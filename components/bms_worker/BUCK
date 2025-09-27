@@ -471,7 +471,7 @@ generate_stripped_asms(
 filegroup(
     name = "crc-0.all_nodes",
     srcs = [
-        ":bin_crc-node-{}".format(i)
+        ":crc-node-{}".format(i)
         for i in range(NUMBER_NODES)
     ],
     visibility = ["PUBLIC"],

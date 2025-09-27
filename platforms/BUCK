@@ -19,7 +19,7 @@
 filegroup(
     name = "cfr25-embedded",
     srcs = [
-        "//components/bms_boss:crc-0",
+        "//components/bms_boss:crc-1",
         "//components/bms_worker:crc-0.all_nodes",
         "//components/bootloaders/STM/stm32f1:0-bin-crc",
         "//components/bootloaders/STM/stm32f1:1-bin-crc",
