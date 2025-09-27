@@ -1,5 +1,9 @@
 use std::fs::File;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Read;
 use std::error::Error;
+use std::path::PathBuf;
 
 use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
@@ -8,6 +12,8 @@ use conUDS::SupportedResetTypes;
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
 use conUDS::modules::uds::UdsSession;
+
+const UDS_DID_CRC: u16 = 0x03;
 
 #[tokio::main]
 async fn main() {
@@ -46,68 +52,193 @@ async fn main() {
     });
     debug!("Configuration initialized: {:#?}", cfg);
 
-    let uds_node = cfg.nodes.get(&args.node).unwrap_or_else(|| {
-        error!("UDS node not defined");
-        std::process::exit(1)
-    });
-    debug!("UDS node identified: {:#?}", uds_node);
-
-    let mut uds = UdsSession::new(
-        &args.device,
-        uds_node.request_id,
-        uds_node.response_id,
-        true).await;
-
     match args.subcmd {
+        ArgSubCommands::Batch(batch) => {
+            if batch.targets.is_empty() {
+                error!("No targets provided. Use -u node:/path/to/bin (repeatable).");
+                std::process::exit(1);
+            }
+
+            for upd in &batch.targets {
+                let Some((node, bin)) = parse_update_pair(upd) else {
+                    error!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
+                    continue;
+                };
+
+                let Some(uds_node) = cfg.nodes.get(&node) else {
+                    error!("UDS node '{}' not defined in manifest", node);
+                    continue;
+                };
+
+                info!("Batch update: node='{}', binary='{:?}'", node, bin);
+
+                let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                    error!("UDS node '{}' not defined", node);
+                    std::process::exit(1)
+                });
+
+                let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, false).await;
+                info!("Downloading binary {:?} to node '{}'", bin, node);
+
+                if let Err(e) = download_app_to_target(&bin, &mut uds, false).await {
+                    error!("Download failed for node '{}': {}", node, e);
+                } else {
+                    info!("Download successful for node '{}'...", node);
+                }
+                uds.teardown().await;
+            }
+        }
+
         ArgSubCommands::Reset(reset) => {
-            debug!(
-                "Performing {:#?} reset for node `{}`",
-                reset.reset_type, args.node
-            );
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'reset'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Performing {:?} reset for node '{}'", reset.reset_type, node);
             if let Err(e) = uds.reset_node(reset.reset_type).await {
                 error!("Error while resetting ecu: {}", e);
             }
+            uds.teardown().await;
         }
+
         ArgSubCommands::Download(dl) => {
-            debug!(
-                "Downloading binary at '{:#?}' to node `{}`",
-                dl.binary, args.node
-            );
-            uds.client.start_persistent_tp().await;
-            uds.reset_node(SupportedResetTypes::Hard).await;
-            if let Err(e) = &uds.file_download(&dl.binary, 0x08002000).await {
-                error!("While downloading app: {}", e);
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'download'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, !dl.no_skip).await;
+            info!("Downloading binary {:?} to node '{}'", dl.binary, node);
+
+            if let Err(e) = download_app_to_target(&dl.binary, &mut uds, dl.no_skip).await {
+                error!("Download failed for node '{}': {}", node, e);
+            } else {
+                info!("Download successful for node '{}'...", node);
             }
+            uds.teardown().await;
         }
+
         ArgSubCommands::BootloaderDownload(dl) => {
-            debug!(
-                "Downloading bootloader at '{:#?}' to node `{}`",
-                dl.binary, args.node
-            );
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'bootloader-download'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Downloading bootloader {:?} to node '{}'", dl.binary, node);
             if let Err(e) = uds.file_download(&dl.binary, 0x08000000).await {
                 error!("While downloading bootloader: {}", e);
             }
+            uds.teardown().await;
         }
+
         ArgSubCommands::ReadDID(did) => {
-            info!("Performing DID read on id {:#?} for node `{}`", did.id, args.node);
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'readDID'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Performing DID read on id {:#?} for node '{}'", did.id, node);
             let id = u16::from_str_radix(&did.id, 16).unwrap();
             let _ = uds.client.did_read(id).await;
+            uds.teardown().await;
         }
+
         ArgSubCommands::NVMHardReset(_) => {
-            info!(
-                "Performing NVM hard reset for node `{}`",
-                args.node
-            );
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'nvmHardReset'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Performing NVM hard reset for node '{}'", node);
             if let Err(e) = uds.client.routine_start(0xf0f0, None).await {
-                error!("While downloading app: {}", e);
-            }
-            else {
+                error!("While starting NVM erase: {}", e);
+            } else {
                 let _result = uds.client.routine_get_results(0xf0f0).await;
                 // TODO: Implement error checking
                 info!("Successful NVM erase");
             }
+            uds.teardown().await;
+        }
+    }
+}
+
+async fn verify_app_crc(uds_session: &mut UdsSession) -> Result<u32, String> {
+    let resp = uds_session.client.did_read(UDS_DID_CRC).await;
+    if let Ok(node_crc) = resp {
+        if let Ok(arr) = <[u8; 4]>::try_from(node_crc.as_slice()) {
+            return Ok(u32::from_le_bytes(arr));
+        } else {
+            return Err(format!("Invalid response length for CRC"));
         }
     }
 
-    uds.teardown().await;
+    return Err("CRC read failure".to_string());
+}
+
+async fn download_app_to_target(
+        binary_path: &PathBuf,
+        uds_session: &mut UdsSession,
+        no_skip: bool
+    ) -> Result<(), String> {
+    if !no_skip {
+        let mut file = File::open(binary_path).expect("Binary does not exist!");
+        file.seek(SeekFrom::End(-4)).expect("Seek failed");
+        let mut buffer = [0u8; 4];
+        file.read_exact(&mut buffer).expect("CRC read failed");
+        let app_crc = u32::from_le_bytes(buffer);
+        println!("Application CRC to download: 0x{:08X}", app_crc);
+
+        match verify_app_crc(uds_session).await {
+            Ok(crc) => {
+                if crc == app_crc {
+                    info!("Application CRC match, skipping download.");
+                    return Ok(());
+                } else {
+                    info!(
+                        "CRC mismatch: node=0x{:08X}, app=0x{:08X}. Downloading...",
+                        crc, app_crc
+                    );
+                }
+            },
+            Err(e) => error!("{}", e),
+        }
+    }
+
+    uds_session.client.start_persistent_tp().await;
+    let _ = uds_session.reset_node(SupportedResetTypes::Hard).await;
+    match uds_session.file_download(&binary_path, 0x08002000).await {
+        Ok(()) => return Ok(()),
+        Err(e) => return Err(format!("Error downloading binary: '{}'", e)),
+    }
+}
+
+fn parse_update_pair(s: &str) -> Option<(String, PathBuf)> {
+    // expects "node:/path/to/bin"
+    let (node, path) = s.split_once(':')?;
+    Some((node.to_string(), PathBuf::from(path)))
 }

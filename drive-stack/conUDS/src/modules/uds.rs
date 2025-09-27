@@ -119,8 +119,9 @@ impl UdsSession {
                 // wait for user to hit enter
             }
             info!("Enter key detected, proceeding with download");
+        } else {
+            tokio::time::sleep(time::Duration::from_millis(50)).await;
         }
-
 
         self.client.app_download(path.to_path_buf(), address).await
     }
@@ -215,7 +216,7 @@ impl UdsClient {
             .await?)
     }
 
-    pub async fn did_read(&mut self, did: u16) -> Result<()> {
+    pub async fn did_read(&mut self, did: u16) -> Result<Vec<u8>, UdsError> {
         let id: [u8; 2] = [
             (did & 0xff).try_into().unwrap(),
             (did >> 8).try_into().unwrap(),
@@ -226,34 +227,54 @@ impl UdsClient {
             id[1],
         ];
 
-        info!("Sending ECU read DID command: {:02x?}", buf);
-
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
+            .await
+            .map_err(|e| {
+                error!("send_recv failed: {e}");
+                UdsError::GeneralReject
+            })?
             .await
         {
             Ok(resp) => {
-                if resp.len() == 2 {
-                    let nrc = UdsErrorByte::from(*resp.last().unwrap());
-                    if nrc == ecu_diagnostics::Standard(UdsError::ServiceNotSupported) {
-                        error!("Read DID not supported by ECU.");
-                    }
-                    else {
-                        info!("ECU Read DID results: {:02x?}", resp);
-                    }
+                if resp.is_empty() {
+                    error!("Empty ECU response");
+                    return Err(UdsError::GeneralReject);
                 }
-                else {
-                    let app_id = u8::from(*resp.last().unwrap());
-                    info!("ECU Read DID results: {:02x?}", resp);
-                    info!("App ID: {:01x?}", app_id);
+
+                // Negative response? 0x7F, <requested SID>, <NRC>
+                if resp[0] == 0x7F {
+                    if resp.len() < 3 {
+                        error!("Malformed negative response: {:02X?}", resp);
+                        return Err(UdsError::GeneralReject);
+                    }
+                    let nrc_byte = resp[2];
+                    let uds_err = match UdsError::try_from(nrc_byte) {
+                        Ok(wrapped) => wrapped.into(),
+                        Err(_) => UdsError::GeneralReject,
+                    };
+                    return Err(uds_err);
                 }
-            },
+
+                // Positive response for 0x22 is 0x62
+                if resp[0] != (u8::from(UdsCommand::ReadDataByIdentifier) + 0x40) {
+                    error!("Unexpected positive SID: {:02X?}", resp);
+                    return Err(UdsError::GeneralReject);
+                }
+
+                // We dont echo the DID
+                if resp.len() < 2 {
+                    error!("Positive response too short: {:02X?}", resp);
+                    return Err(UdsError::GeneralReject);
+                }
+
+                let data = resp[1..].to_vec();
+                Ok(data)
+            }
             Err(e) => {
-                error!("When waiting for response from ECU: {}", e);
-                return Err(e.into());
+                error!("Waiting for ECU response failed: {}", e);
+                Err(UdsError::GeneralReject)
             }
         }
-        Ok(())
     }
 
     pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
