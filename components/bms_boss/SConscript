@@ -22,6 +22,7 @@ ARTIFACT_NAME = "bms_boss"
 BUILDS_DIR = Dir(f"build")
 UDS_DIR = LIBS_DIR.Dir("uds")
 ISOTP_DIR = LIBS_DIR.Dir("isotp")
+LIBCRC_DIR = LIBS_DIR.Dir("libcrc")
 SHARED_CODE = Dir("#/components/shared/code")
 SHARED_LIBS = SHARED_CODE.Dir("libs")
 SHARED_APP = SHARED_CODE.Dir("app")
@@ -128,6 +129,7 @@ LIBS_INCLUDE_DIRS = [
     SHARED_APP,
     SHARED_HW,
     SHARED_DRV,
+    LIBCRC_DIR,
 ]
 
 PROJECT_INCLUDE_DIRS = [
@@ -150,6 +152,9 @@ project_source_files = [
     SRC_DIR.File("UDS.c"),
     SHARED_LIBS.File("LIB_app.c"),
     SHARED_LIBS.File("LIB_simpleFilter.c"),
+    SHARED_LIBS.File("lib_nvm.c"),
+    LIBCRC_DIR.File("libcrc.c"),
+    SRC_DIR.File("lib_nvm_componentSpecific.c"),
 ]
 
 project_hw_files = [
@@ -173,7 +178,8 @@ project_hw_files = [
     HW_DIR.File("drv_inputAD_componentSpecific.c"),
     SHARED_DRV.File("drv_outputAD.c"),
     HW_DIR.File("drv_outputAD_componentSpecific.c"),
-    SHARED_DRV.File("drv_timer.c")
+    SHARED_DRV.File("drv_timer.c"),
+    SHARED_HW.File("HW_flash.c"),
 ]
 
 project_source_files += project_hw_files
