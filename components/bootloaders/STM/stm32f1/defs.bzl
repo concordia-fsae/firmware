@@ -68,6 +68,7 @@ def _bootloader_impl(
             "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
             "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
+            "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
         } | (

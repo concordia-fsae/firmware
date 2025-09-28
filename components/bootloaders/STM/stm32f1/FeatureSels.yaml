@@ -1,4 +1,6 @@
-featureDefs: "#/components/bootloaders/STM/stm32f1/FeatureDefs.yaml"
+featureDefs:
+  - "#/components/bootloaders/STM/stm32f1/FeatureDefs.yaml"
+  - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
 features:
   feature_erase_invalid_app: false
   feature_can_debug: false
