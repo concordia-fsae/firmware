@@ -1,0 +1,10 @@
+config:
+  prefix: nvm
+  description: General definitions for non voltaile memory
+defs:
+  lib_enabled:
+  block_size:
+  flash_backed:
+    requires:
+      - nvm_lib_enabled
+      - nvm_block_size
