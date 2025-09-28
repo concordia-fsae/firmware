@@ -317,6 +317,7 @@ def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
         "cxxpp": _shell_quote(toolchain_info.cxx_compiler_info.preprocessor),
         "cxxflags": _shell_quote(toolchain_info.cxx_compiler_info.compiler_flags),
         "cxxppflags": _shell_quote(toolchain_info.cxx_compiler_info.preprocessor_flags),
+        "gdb": RunInfo(args = cmd_args(bin, format = "{}gdb")),
         "ld": toolchain_info.linker_info.linker,
         "ldflags-shared": _shell_quote(toolchain_info.linker_info.linker_flags or []),
         "ldflags-static": _shell_quote(toolchain_info.linker_info.linker_flags or []),
@@ -332,7 +333,12 @@ def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
 
     placeholders_info = TemplatePlaceholderInfo(unkeyed_variables = unkeyed_variables)
 
-    return [ctx.attrs.distribution[DefaultInfo], toolchain_info, placeholders_info, platform_info]
+    return [
+        ctx.attrs.distribution[DefaultInfo],
+        toolchain_info,
+        placeholders_info,
+        platform_info,
+    ]
 
 gcc_toolchain = rule(
     impl = _gcc_toolchain_impl,
