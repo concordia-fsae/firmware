@@ -14,13 +14,12 @@
 #include "LIB_Types.h"
 #include "stddef.h"
 #include "string.h"
+#include "lib_utility.h"
 
 /******************************************************************************
  *                               M A C R O S
  ******************************************************************************/
 
-// Count number of items in array
-#define COUNTOF(x) ((uint16_t)(sizeof(x) / sizeof(x[0])))    // return size of an array as uint16
 // Count leading zeroes
 static inline uint16_t u32CountLeadingZeroes(uint32_t x)
 {
