@@ -60,7 +60,7 @@ jobs:
         with:
           version: "latest"
       - name: Build Stack
-        run: buck2 build //platforms:cfr25-embedded -j32 --out builds/
+        run: buck2 build //buck/platforms:cfr25-embedded -j32 --out builds/
       - name: Archive Artifacts
         if: ${{ matrix.runner == 'ubuntu-24.04' }}
         id: archive
