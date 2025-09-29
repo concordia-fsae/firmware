@@ -210,8 +210,9 @@ async fn main() {
             let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
             info!("Performing DID read on id {:#?} for node '{}'", did.id, node);
             let id = u16::from_str_radix(&did.id, 16).unwrap();
-            let _ = uds.client.did_read(id).await;
+            let resp = uds.client.did_read(id).await;
             uds.teardown().await;
+            println!("{:?}", resp);
         }
 
         ArgSubCommands::NVMHardReset(_) => {
