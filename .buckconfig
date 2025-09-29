@@ -1,7 +1,7 @@
 [cells]
   root = .
   prelude = prelude
-  toolchains = toolchains
+  toolchains = buck/toolchains
   none = none
 
 [cell_aliases]
