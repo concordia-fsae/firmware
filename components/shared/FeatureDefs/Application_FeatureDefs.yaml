@@ -32,7 +32,10 @@ defs:
   validate_crc_enabled:
     requires:
       - app_validation_enabled
+  rtos:
   10kHz_task:
+    requires:
+      - app_rtos
 discreteValues:
   component_id:
     - debug

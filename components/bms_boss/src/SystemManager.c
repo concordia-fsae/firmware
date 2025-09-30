@@ -86,7 +86,7 @@ int main(void)
     HW_ADC_init();
     FLASH_init();
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-    lib_nvm_init();
+    lib_nvm_init(); // Must be done early in the boot stage following flash bringup
 #endif
     HW_GPIO_init();
 

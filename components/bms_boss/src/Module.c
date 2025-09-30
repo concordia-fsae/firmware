@@ -97,7 +97,6 @@ void Module_100Hz_TSK(void)
             (*modules[i]->periodic100Hz_CLK)();
         }
     }
-    lib_nvm_run();
 
     stats[MODULE_100Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_100Hz_TASK].iterations++;
