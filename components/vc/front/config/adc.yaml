@@ -1,0 +1,6 @@
+channel_count: 8
+channels:
+  R_BR_TEMP:
+    multiplier: 1.0
+  SPARE1:
+    multiplier: 1.0
