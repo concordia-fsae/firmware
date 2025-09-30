@@ -107,10 +107,13 @@ cxx_library(
         "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
         "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
         "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
+        "semphr.h": "//embedded/libs:FreeRTOS.git[Source/include/semphr.h]",
         "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
         "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
         "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
         "FreeRTOSConfig.h": "RTOS/include/FreeRTOSConfig.h",
+        "FreeRTOS_SWI.h": "RTOS/include/FreeRTOS_SWI.h",
+        "FreeRTOS_types.h": "RTOS/include/FreeRTOS_types.h",
     },
     exported_deps = [":CMSIS"],
 )

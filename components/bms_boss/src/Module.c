@@ -41,6 +41,7 @@ static const ModuleDesc_S* modules[] = {
 #endif
     &CANIO_rx,
     &CANIO_tx,
+    &NVM_desc,
 };
 
 static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
@@ -95,7 +96,6 @@ void Module_100Hz_TSK(void)
             (*modules[i]->periodic100Hz_CLK)();
         }
     }
-    lib_nvm_run();
 
     stats[MODULE_100Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_100Hz_TASK].iterations++;

@@ -11,7 +11,8 @@
 #include "lib_utility.h"
 #include "libcrc.h"
 #include "string.h"
-#include "FreeRTOS.h"
+#include "rtos.h"
+#include "semphr.h"
 
 #if FEATURE_IS_DISABLED(NVM_LIB_ENABLED)
   #error "lib_nvm.c being compiled with nvm feature disabled"
@@ -70,6 +71,9 @@ typedef struct
 typedef struct
 {
     bool mcuShuttingDown;
+    bool rtosStarted;
+    SemaphoreHandle_t flash_mutex;
+    StaticSemaphore_t flash_mutex_buff;
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
     uint32_t pageSize;
     storage_t* currentPtr;
@@ -90,6 +94,7 @@ typedef struct
 static lib_nvm_recordData_S records[NVM_ENTRYID_COUNT] = {0U};
 static lib_nvm_data_S data = { 
     .mcuShuttingDown = false,
+    .rtosStarted = false,
 };
 
 LIB_NVM_MEMORY_REGION_ARRAY(lib_nvm_recordHeader_S recordHeaders, NVM_ENTRYID_COUNT) = { 0U };
@@ -119,6 +124,9 @@ static uint32_t getNextBlockStart(uint32_t addr);
 
 void lib_nvm_init(void)
 {
+    memset(&data, 0x00, sizeof(data));
+    data.flash_mutex = xSemaphoreCreateMutexStatic(&data.flash_mutex_buff);
+
     lib_nvm_blockHeader_S* block_hdr = (lib_nvm_blockHeader_S*)NVM_ORIGIN;
     uint8_t total_failed_crc = 0U;
     uint8_t total_failed_init = 0U;
@@ -229,7 +237,33 @@ void lib_nvm_init(void)
     lib_nvm_requestWrite(NVM_ENTRYID_CYCLE);
 }
 
-void lib_nvm_run(void)
+void lib_nvm_start(void)
+{
+    data.rtosStarted = true;
+    lib_nvm_check();
+}
+
+void lib_nvm_check(void)
+{
+    bool run_required = false;
+
+    for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
+    {
+        evaluateWriteRequired(index);
+        run_required |= records[index].writeRequired;
+    }
+
+    if (run_required)
+    {
+#if FEATURE_IS_ENABLED(NVM_SWI)
+        SWI_invoke(NVM_swi);
+#elif FEATURE_IS_ENABLED(NVM_TASK)
+        RTOS_enableAsyncTask(RTOS_ASYNC_NVM);
+#endif
+    }
+}
+
+void lib_nvm_save(void)
 {
     for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
     {
@@ -238,7 +272,6 @@ void lib_nvm_run(void)
             continue;
         }
 
-        evaluateWriteRequired(index);
         if (records[index].writeRequired)
         {
             recordWrite(index);
@@ -268,7 +301,20 @@ bool lib_nvm_nvmInitializeNewBlock(void)
 
 void lib_nvm_requestWrite(lib_nvm_entryId_E entryId)
 {
-    records[entryId].writeRequired = true;;
+    records[entryId].writeRequired = true;
+
+    if (data.rtosStarted)
+    {
+#if FEATURE_IS_ENABLED(NVM_SWI)
+        SWI_invoke(NVM_swi);
+#elif FEATURE_IS_ENABLED(NVM_TASK)
+        RTOS_enableAsyncTask(RTOS_ASYNC_NVM);
+#endif
+    }
+    else
+    {
+        recordWrite(entryId);
+    }
 }
 
 uint32_t lib_nvm_getTotalRecordWrites(void)
@@ -308,19 +354,9 @@ uint32_t lib_nvm_getTotalCycles(void)
 
 void lib_nvm_cleanUp(void)
 {
-    portENTER_CRITICAL();
     data.mcuShuttingDown = true;
-
-    for (lib_nvm_entry_t entry = 0U; entry < NVM_ENTRYID_COUNT; entry++)
-    {
-        if ((records[entry].currentNvmAddr_Ptr == NULL) ||
-            (getBlockBaseAddress((uint32_t)records[entry].currentNvmAddr_Ptr) != getBlockBaseAddress((uint32_t)data.currentPtr)) ||
-            (records[entry].writeRequired))
-        {
-            recordWrite(entry);
-        }
-    }
-    portEXIT_CRITICAL();
+    lib_nvm_check();
+    lib_nvm_save();
 }
 
 /******************************************************************************
@@ -364,7 +400,6 @@ static void evaluateWriteRequired(lib_nvm_entry_t entryId)
     {
         records[entryId].writeRequired = true;
     }
-
 }
 
 static void recordWrite(const lib_nvm_entry_t entryId)
@@ -378,39 +413,49 @@ static void recordWrite(const lib_nvm_entry_t entryId)
     }
 
     lib_nvm_recordHeader_S recordHeader = { 0U };
-
     lib_nvm_recordHeader_S * const currentRecord = (lib_nvm_recordHeader_S*)records[entryId].currentNvmAddr_Ptr;
-    lib_nvm_blockHeader_S * const blockHeaderCurrent = (lib_nvm_blockHeader_S * const)getBlockBaseAddress((uint32_t)data.currentPtr);
     uint16_t entrySize = lib_nvm_entries[entryId].entrySize;
 
-    if (blockHeaderCurrent != (lib_nvm_blockHeader_S * const)getBlockBaseAddress((uint32_t)data.currentPtr + sizeof(lib_nvm_recordHeader_S) + entrySize))
+    if (data.rtosStarted)
     {
-        initializeNVMBlock(getNextBlockStart((uint32_t)data.currentPtr));
-        invalidateBlock(blockHeaderCurrent);
+        xSemaphoreTake(data.flash_mutex, portMAX_DELAY);
+    }
+    uint32_t current_hdr = (uint32_t)data.currentPtr;
+    uint32_t current_record = (uint32_t)((lib_nvm_recordHeader_S*)data.currentPtr + 1);
+    lib_nvm_blockHeader_S * const block_header = (lib_nvm_blockHeader_S * const)getBlockBaseAddress(current_hdr);
+    data.currentPtr += sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t);
+    data.currentPtr += lib_nvm_entries[entryId].entrySize / sizeof(storage_t);
+    if (data.rtosStarted)
+    {
+        xSemaphoreGive(data.flash_mutex);
+    }
+    if ((uint32_t)block_header != getBlockBaseAddress((uint32_t)data.currentPtr))
+    {
+        initializeNVMBlock(getNextBlockStart((uint32_t)current_hdr));
+        invalidateBlock(block_header);
         return;
     }
 
-    records[entryId].currentNvmAddr_Ptr = (storage_t*)data.currentPtr;
+
+    records[entryId].currentNvmAddr_Ptr = (storage_t*)current_hdr;
     recordHeader.entryId = entryId;
     recordHeader.entrySize = entrySize;
     recordHeader.initialized = SET_STATE;
     recordHeader.discarded = (storage_t)~SET_STATE;
-    data.currentPtr += sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t);
 
     recordLog.totalRecordWrites++;
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
-    LIB_NVM_WRITE_TO_FLASH((uint32_t)data.currentPtr,
-                            lib_nvm_entries[entryId].entryRam_Ptr,
-                            lib_nvm_entries[entryId].entrySize);
+    LIB_NVM_WRITE_TO_FLASH(current_record,
+                           lib_nvm_entries[entryId].entryRam_Ptr,
+                           lib_nvm_entries[entryId].entrySize);
     recordHeader.entry_version = lib_nvm_entries[entryId].version;
     recordHeader.crc = (storage_t)crc8_calculate(0xff,
-                                                    (uint8_t*)data.currentPtr,
-                                                    lib_nvm_entries[entryId].entrySize);
-    LIB_NVM_WRITE_TO_FLASH((uint32_t)records[entryId].currentNvmAddr_Ptr,
+                                                 (uint8_t*)current_record,
+                                                 lib_nvm_entries[entryId].entrySize);
+    LIB_NVM_WRITE_TO_FLASH(current_hdr,
                            (storage_t*)&recordHeader,
                            sizeof(lib_nvm_recordHeader_S));
-    data.currentPtr += lib_nvm_entries[entryId].entrySize / sizeof(storage_t);
 #endif // NVM_FLASH_BACKED
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
@@ -441,17 +486,24 @@ static void initializeNVMBlock(uint32_t addr)
     blockHeader_tmp.initialized = SET_STATE;
     blockHeader_tmp.nvm_version = LIB_NVM_VERSION;
 
-    data.currentPtr = (storage_t*)getBlockBaseAddress(addr);
-    LIB_NVM_CLEAR_FLASH_PAGES((uint32_t)data.currentPtr, (uint16_t)(NVM_BLOCK_SIZE / data.pageSize));
-
-    data.currentPtr = (storage_t*)((lib_nvm_blockHeader_S*)data.currentPtr + 1);
+    if (data.rtosStarted)
+    {
+        xSemaphoreTake(data.flash_mutex, portMAX_DELAY);
+    }
+    uint32_t page_base = getBlockBaseAddress(addr);
+    data.currentPtr = (storage_t*)((lib_nvm_blockHeader_S*)page_base + 1);
+    if (data.rtosStarted)
+    {
+        xSemaphoreGive(data.flash_mutex);
+    }
+    LIB_NVM_CLEAR_FLASH_PAGES(page_base, (uint16_t)(NVM_BLOCK_SIZE / data.pageSize));
 
     for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
     {
         records[index].writeRequired = true;
     }
 
-    LIB_NVM_WRITE_TO_FLASH(getBlockBaseAddress((uint32_t)data.currentPtr),
+    LIB_NVM_WRITE_TO_FLASH(page_base,
                            (storage_t*)&blockHeader_tmp,
                            sizeof(lib_nvm_blockHeader_S));
 
