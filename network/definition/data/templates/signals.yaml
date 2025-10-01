@@ -116,3 +116,54 @@ signals:
     nativeRepresentation:
       bitWidth: 8
     validationRole: checksum
+  nvmBootCycles:
+    unit: ''
+    description: Count of NVM lifetime boot cycles
+    nativeRepresentation:
+      bitWidth: 10
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
+  nvmRecordWrites:
+    unit: ''
+    description: Count of NVM lifetime record writes
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
+  nvmBlockErases:
+    unit: ''
+    description: Count of NVM lifetime block erases
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 65535
+  nvmFailedCrc:
+    unit: ''
+    description: Count of NVM failed CRC's
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+  nvmRecordFailedInit:
+    unit: ''
+    description: Count of NVM failed record initializations
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+  nvmRecordEmptyInit:
+    unit: ''
+    description: Count of NVM failed record initializations
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 1
+  nvmRecordsVersionFailed:
+    unit: ''
+    description: Count of NVM records which failed updating from version mismatch
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 1

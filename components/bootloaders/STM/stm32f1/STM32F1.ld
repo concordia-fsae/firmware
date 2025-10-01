@@ -22,14 +22,19 @@ __FLASH_SIZE = 256K;
 #error "Chipset not supported"
 #endif
 __BOOT_FLASH_SIZE = 8K;
-__APP_FLASH_SIZE = __FLASH_SIZE - __BOOT_FLASH_SIZE;
+
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+__NVM_SIZE = 2 * NVM_BLOCK_SIZE;
+#else
+__NVM_SIZE = 0;
+#endif
 
 __RAM_ORIGIN = 0x20000000;     /* don't change */
 __FLASH_ORIGIN = 0x8000000;    /* don't change */
 __APP_FLASH_ORIGIN = __FLASH_ORIGIN + __BOOT_FLASH_SIZE;
-__FLASH_END = __FLASH_ORIGIN + __FLASH_SIZE;
+__APP_FLASH_SIZE = __FLASH_SIZE - __NVM_SIZE - __BOOT_FLASH_SIZE;
+__FLASH_END = __FLASH_ORIGIN + __FLASH_SIZE - __NVM_SIZE;
 __BOOT_FLASH_END = __FLASH_ORIGIN + __BOOT_FLASH_SIZE;
-
 
 /* Memory definition */
 MEMORY
@@ -41,6 +46,9 @@ MEMORY
     FLASH    (rx)     : ORIGIN = __APP_FLASH_ORIGIN, LENGTH = __APP_FLASH_SIZE
 #else
 #error "Function not supported"
+#endif
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    NVM      (rw)     : ORIGIN = __FLASH_END,        LENGTH = __NVM_SIZE
 #endif
 }
 

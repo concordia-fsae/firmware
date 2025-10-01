@@ -112,8 +112,6 @@ cxx_library(
         "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
         "FreeRTOSConfig.h": "RTOS/include/FreeRTOSConfig.h",
     },
-    headers = {
-    },
     exported_deps = [":CMSIS"],
 )
 
@@ -128,6 +126,7 @@ generate_feature_tree(
         "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
         "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
         "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
+        "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
         "FeatureDefs.yaml": "FeatureDefs.yaml",
         "FeatureSels.yaml": "FeatureSels.yaml",
     },
@@ -144,6 +143,7 @@ generate_feature_tree(
         "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
         "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
         "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
+        "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
         "FeatureDefs.yaml": "FeatureDefs.yaml",
         "FeatureSels.yaml": "FeatureSels.yaml",
     },
@@ -337,6 +337,7 @@ cxx_binary(
             "//components/shared/code:HW/HW.c",
             "//components/shared/code:HW/HW_adc.c",
             "//components/shared/code:HW/HW_can.c",
+            "//components/shared/code:HW/HW_flash.c",
             "//components/shared/code:HW/HW_gpio.c",
             "//components/shared/code:HW/HW_i2c.c",
             "//components/shared/code:HW/HW_tim.c",
@@ -345,8 +346,10 @@ cxx_binary(
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/LIB_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
+            "//components/shared/code:libs/lib_nvm.c",
             "//components/shared/code:libs/lib_swFuse.c",
             "//components/shared/code:libs/lib_thermistors.c",
+            "//embedded/libs:libcrc.c",
             ("RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "RTOS/FreeRTOS_SWI.c",
             select({
@@ -357,6 +360,7 @@ cxx_binary(
     header_namespace = "",
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+        "libcrc.h": "//embedded/libs:libcrc.h",
     } | component_headers,
     include_directories = [
         "include/",

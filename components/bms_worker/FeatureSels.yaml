@@ -1,4 +1,6 @@
-featureDefs: "#/components/bms_worker/FeatureDefs.yaml"
+featureDefs:
+  - "#/components/bms_worker/FeatureDefs.yaml"
+  - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
 features:
   feature_max14921_calibrate:
   feature_cantx_swi:

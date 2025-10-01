@@ -24,6 +24,8 @@
 #include "Module.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "lib_nvm.h"
+#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -83,4 +85,17 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ?\
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_packCSVoltage(m,b,n,s) set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS))
+
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+#define set_nvmBootCycles(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalCycles())
+#define set_nvmRecordWrites(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalRecordWrites())
+#define set_nvmBlockErases(m,b,n,s) set(m,b,n,s, (uint8_t)lib_nvm_getTotalBlockErases())
+#define set_nvmFailedCrc(m,b,n,s) set(m,b,n,s, (uint8_t)lib_nvm_getTotalFailedCrc())
+#define set_nvmRecordFailedInit(m,b,n,s) set(m,b,n,s, (uint8_t)lib_nvm_getTotalFailedRecordInit())
+#define set_nvmRecordEmptyInit(m,b,n,s) set(m,b,n,s, (uint8_t)lib_nvm_getTotalEmptyRecordInit())
+#define set_nvmRecordsVersionFailed(m,b,n,s) set(m,b,n,s, (uint8_t)lib_nvm_getTotalRecordsVersionFailed())
+#else
+#define transmit_BMSB_nvmInformation false
+#endif
+
 #include "TemporaryStubbing.h"
