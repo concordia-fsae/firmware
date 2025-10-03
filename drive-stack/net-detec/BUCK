@@ -1,0 +1,36 @@
+rust_library(
+    name = "lib",
+    crate = "net_detec",
+    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
+    edition = "2024",
+    deps = [
+        "//third_party:mdns-sd",
+        "//third_party:thiserror",
+        "//third_party:if-addrs",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "net-detec",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        ":lib",
+        "//third_party:anyhow",
+        "//third_party:clap",
+        "//third_party:env_logger",
+        "//third_party:if-addrs",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":net-detec",
+    platform = "//platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
