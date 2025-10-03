@@ -1,0 +1,95 @@
+templates:
+  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.h.mako
+  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.c.mako
+
+channels:
+  MUX1_CH1: 
+   multiplier: 1.0
+  MUX1_CH2: 
+   multiplier: 1.0
+  MUX1_CH3: 
+   multiplier: 1.0
+  MUX1_CH4: 
+   multiplier: 1.0
+  MUX1_CH5: 
+   multiplier: 1.0
+  MUX1_CH6: 
+   multiplier: 1.0
+  MUX1_CH7: 
+   multiplier: 1.0
+  MUX1_CH8: 
+   multiplier: 1.0
+  MUX2_CH1: 
+   multiplier: 1.0
+  MUX2_CH2: 
+   multiplier: 1.0
+  MUX2_CH3: 
+   multiplier: 1.0
+  MUX2_CH4: 
+   multiplier: 1.0
+  MUX2_CH5: 
+   multiplier: 1.0
+  MUX2_CH6: 
+   multiplier: 1.0
+  MUX2_CH7: 
+   multiplier: 1.0
+  MUX2_CH8: 
+   multiplier: 1.0
+  MUX3_CH1: 
+   multiplier: 1.0
+  MUX3_CH2: 
+   multiplier: 1.0
+  MUX3_CH3: 
+   multiplier: 1.0
+  MUX3_CH4: 
+   multiplier: 1.0
+  MUX3_CH5: 
+   multiplier: 1.0
+  MUX3_CH6: 
+   multiplier: 1.0
+  MUX3_CH7: 
+   multiplier: 1.0
+  MUX3_CH8: 
+   multiplier: 1.0
+  CELL1: 
+   multiplier: 1.0
+  CELL2: 
+   multiplier: 1.0
+  CELL3: 
+   multiplier: 1.0
+  CELL4: 
+   multiplier: 1.0
+  CELL5: 
+   multiplier: 1.0
+  CELL6: 
+   multiplier: 1.0
+  CELL7: 
+   multiplier: 1.0
+  CELL8: 
+   multiplier: 1.0
+  CELL9: 
+   multiplier: 1.0
+  CELL10: 
+   multiplier: 1.0
+  CELL11: 
+   multiplier: 1.0
+  CELL12: 
+   multiplier: 1.0
+  CELL13: 
+   multiplier: 1.0
+  CELL14: 
+   multiplier: 1.0
+  CELL15: 
+   multiplier: 1.0
+  CELL16: 
+   multiplier: 1.0
+  SEGMENT: 
+   multiplier: 2.0 # ADC_VOLTAGE_DIVISION
+  BOARD_TEMP1: 
+   multiplier: 1.0
+  BOARD_TEMP2: 
+   multiplier: 1.0
+  MCU_TEMP: 
+   multiplier: 1.0
+  REF_VOLTAGE: 
+   multiplier: 1.0
