@@ -10,13 +10,17 @@
 #include "lib_nvm.h"
 
 /******************************************************************************
- *                             T Y P E D E F S
+ *                              D E F I N E S
  ******************************************************************************/
 
 #define LIB_NVM_GET_TIME_MS HW_TIM_getTimeMS
 #define LIB_NVM_GET_FLASH_PAGE_SIZE FLASH_getPageSize
 #define LIB_NVM_CLEAR_FLASH_PAGES FLASH_erasePages
 #define LIB_NVM_WRITE_TO_FLASH(addr, data, bytes) FLASH_writeHalfwords(addr, data, bytes / sizeof(storage_t))
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
 
 typedef enum
 {

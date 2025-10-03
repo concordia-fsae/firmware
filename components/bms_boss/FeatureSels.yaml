@@ -7,3 +7,5 @@ features:
   nvm_lib_enabled: true
   nvm_flash_backed: true
   nvm_block_size: 2048
+  app_rtos: true
+  nvm_task: true
