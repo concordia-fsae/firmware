@@ -18,9 +18,6 @@
 #include "drv_outputAD.h"
 #include "app_vehicleState.h"
 
-#define PDU_CS_AMPS_PER_VOLT 0.20f
-#define PDU_VS_VOLTAGE_MULTIPLIER 3.61f
-
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -70,11 +67,11 @@ static void powerManager_init(void)
 
 static void powerManager_periodic_100Hz(void)
 {
-    const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
+    const float32_t glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT);
     const bool enable_loads = glv_voltage > 8.0f;
     const bool enable_shutdown = glv_voltage > 9.0f;
-    const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
-    const float32_t pdu_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
+    const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS);
+    const float32_t pdu_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE);
     powerManager_data.glv_voltage = glv_voltage;
     powerManager_data.pdu.current = pdu_current;
     powerManager_data.pdu.rail_5v_voltage = pdu_5v_voltage;
