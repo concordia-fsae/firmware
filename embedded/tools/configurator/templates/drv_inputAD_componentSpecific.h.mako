@@ -1,3 +1,7 @@
+/*
+ * drv_inputAD_componentSpecific.h
+ */
+
 #pragma once
 
 %for channel in channels:
