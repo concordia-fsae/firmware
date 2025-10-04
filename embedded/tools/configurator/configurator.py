@@ -1,9 +1,6 @@
-import argparse
 from argparse import ArgumentParser
 from types import SimpleNamespace
 import os
-from os import makedirs
-from mako import template
 from mako.lookup import TemplateLookup
 import yaml
 
@@ -66,32 +63,24 @@ def main():
         os.makedirs(args.output_dir, exist_ok=True)
         
         #render each template
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        templates_dir = os.path.join(script_dir, 'templates')
-        lookup = TemplateLookup(directories=[templates_dir])
+        lookup = TemplateLookup(directories=["templates"])
 
         for template_path in component_data['templates']:
-            try: 
-                template_filename = os.path.basename(template_path)
-                print(f"Rendering template: {template_filename}")
-                template = lookup.get_template(template_filename)
-                output = template.render(
-                    channels = component_channels,
-                    component = component_data['name']
-                ) 
+            template_filename = os.path.basename(template_path)
+            print(f"Rendering template: {template_filename}")
+            template = lookup.get_template(template_filename)
+            output = template.render(
+                channels = component_channels,
+                component = component_data['name']
+            ) 
 
-                output_filename = os.path.basename(template_path).replace('.mako','')
-                output_file = os.path.join(args.output_dir, output_filename)
+            output_filename = os.path.basename(template_path).replace('.mako','')
+            output_file = os.path.join(args.output_dir, output_filename)
 
-                with open(output_file, 'w') as f: 
-                    f.write(output)
+            with open(output_file, 'w') as f: 
+                f.write(output)
 
-                print(f"Generated: {output_file}")
-
-            except Exception as e: 
-                print(f"ERROR rendering {template_path}: {e}")
-                import traceback
-                traceback.print_exc()
+            print(f"Generated: {output_file}")
 
 if __name__ == '__main__':
     main()
