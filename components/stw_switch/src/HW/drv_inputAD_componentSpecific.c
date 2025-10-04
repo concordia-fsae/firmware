@@ -119,11 +119,11 @@ void drv_inputAD_1kHz_componentSpecific(void)
     // This method only works since there is a 1:1 mapping from adc input to inputAD output
     for (uint8_t i = 0U; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
     }
     for (uint8_t i = 0U; i < ADC_BANK2_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
     drv_inputAD_private_runDigital();

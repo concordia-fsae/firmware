@@ -90,8 +90,8 @@ static void drv_inputAD_1kHz_PRD(void)
 
     const float32_t differential = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_CS_P) - HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_CS_N);
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CS, differential);
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_CS, differential);
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
 
     drv_inputAD_private_runDigital();
 
@@ -99,7 +99,7 @@ static void drv_inputAD_1kHz_PRD(void)
     const float32_t vpack_p = HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_VPACK_P);
     const float32_t vpack_n = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_VPACK_N);
     const float32_t vpack_diff = vpack_p - vpack_n;
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK, vpack_diff * VPACK_DIVISOR);
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK, vpack_diff * VPACK_DIVISOR);
 #endif
 }
 

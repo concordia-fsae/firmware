@@ -119,19 +119,19 @@ void drv_inputAD_1kHz_componentSpecific(void)
     // This method only works since there is a 1:1 mapping from adc input to inputAD output
     for (uint8_t i = 0U; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i, HW_ADC_getVFromBank1Channel(i));
     }
     for (uint8_t i = 0U; i < ADC_BANK2_CHANNEL_COUNT; i++)
     {
-        drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
+        drv_inputAD_private_setRawAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
     const float32_t hp_cs = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_HP_CS);
     const float32_t thermistor_voltage = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_THERMISTORS);
     const uint8_t current_channel = drv_mux_getMuxOutput(&inputs_data.signal_mux);
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP + current_channel, hp_cs);
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_MCU + current_channel, thermistor_voltage);
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP + current_channel, hp_cs);
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_MCU + current_channel, thermistor_voltage);
     drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)(current_channel + 1U));
 
     drv_inputAD_private_runDigital();
