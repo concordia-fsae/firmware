@@ -16,6 +16,7 @@
 // Firmware Includes
 #include "stm32f1xx.h"
 #include "HW_tim.h"
+#include "lib_nvm.h"
 
 #include "FeatureDefines_generated.h"
 
@@ -94,6 +95,10 @@ void HW_usDelay(uint8_t us)
 
 void HW_systemHardReset(void)
 {
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    lib_nvm_cleanUp();
+#endif
+
 #if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105) || \
     (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB)
     pSCB->AIRCR = AIRCR_RESET_REQ;

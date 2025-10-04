@@ -28,6 +28,7 @@
 #include "lib_uds.h"
 #include "LIB_app.h"
 #include "Utility.h"
+#include "lib_nvm.h"
 
 // system includes
 #include <string.h>
@@ -66,6 +67,32 @@ extern void     isotp_user_debug(const char* message, ...);
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+static void routine_0xf0f0(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
+{
+    UNUSED(payloadLengthBytes);
+    UNUSED(payload);
+
+    switch (routineControlType)
+    {
+        case UDS_ROUTINE_CONTROL_START:
+        {
+            bool success = lib_nvm_nvmInitializeNewBlock();
+            uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL,
+                                        UDS_ROUTINE_CONTROL_START,
+                                        (uint8_t*)&success,
+                                        sizeof(success));
+        }
+            break;
+
+        case UDS_ROUTINE_CONTROL_GET_RESULT:
+        case UDS_ROUTINE_CONTROL_STOP:
+        case UDS_ROUTINE_CONTROL_NONE:
+        default:
+            uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
+            break;
+    }
+
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -175,6 +202,9 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
 
     switch (routineId.u16)
     {
+        case 0xf0f0:
+            routine_0xf0f0(routineControlType, payload, payloadLengthBytes);;
+            break;
         default:
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SERVICE_NOT_SUPPORTED);
             break;

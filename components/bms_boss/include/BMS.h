@@ -7,6 +7,7 @@
 
 #include "stdbool.h"
 #include "stdint.h"
+#include "lib_nvm.h"
 
 #include "FloatTypes.h"
 
@@ -49,5 +50,13 @@ typedef struct {
         float32_t min; // [V] precision 1mv
     } voltages;
 } BMSB_S;
+
+typedef struct
+{
+    float32_t pack_amp_hours;
+    float32_t cell_soc[BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS];
+    uint8_t spare[16U];
+} LIB_NVM_STORAGE(nvm_bms_data_S);
+extern nvm_bms_data_S current_data;
 
 extern BMSB_S BMS;

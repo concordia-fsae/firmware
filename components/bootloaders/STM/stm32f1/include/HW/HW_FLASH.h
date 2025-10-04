@@ -35,6 +35,7 @@
 #define FLASH_CR_PG        (0x00000001UL)        // flash program enable bit
 #define FLASH_CR_PER       (0x00000002UL)        // flash page erase enable bit
 #define FLASH_CR_START     (0x00000040UL)        // flash page erase start bit
+#define FLASH_CR_LOCK      (0x00000080UL)        // flash page erase start bit
 
 #define FLASH_PAGE_LAST    (0x08007C00UL)        // address of the last flash page
 #define FLASH_SIZE_REG     (0x1FFFF7E0UL)        // register whose 4 least significant bits
