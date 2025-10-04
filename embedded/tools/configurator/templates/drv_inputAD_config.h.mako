@@ -1,5 +1,5 @@
 /*
- * drv_inputAD_componentSpecific.h
+* drv_inputAD_config.h
  */
 
 #pragma once

@@ -1,6 +1,6 @@
 templates:
-  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.h.mako
-  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.c.mako
+  - embedded/tools/configurator/templates/drv_inputAD_config.h.mako
+  - embedded/tools/configurator/templates/drv_inputAD_config.c.mako
 
 channels: 
   CS: 
