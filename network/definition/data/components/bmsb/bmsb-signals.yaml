@@ -77,20 +77,10 @@ signals:
     unit: 'A'
     description: BMS Boss Pack Current
     nativeRepresentation:
-      bitWidth: 16
+      bitWidth: 15
       range:
         min: -100
         max: 400
-    continuous: true
-
-  packCSVoltage:
-    unit: 'V'
-    description: BMS Boss Pack Current Sensor Voltage
-    nativeRepresentation:
-      bitWidth: 10
-      range:
-        min: -2
-        max: 2
     continuous: true
 
   packContactorState:
@@ -211,3 +201,43 @@ signals:
   imdStatus:
     description: "Status of the BMSB IMD SFTY"
     discreteValues: "digitalStatus"
+
+  packCSPVoltage:
+    unit: 'V'
+    description: BMS Boss Pack Current Sensor Pos Diff Voltage
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 3
+    continuous: true
+
+  packCSNVoltage:
+    unit: 'V'
+    description: BMS Boss Pack Current Sensor Neg Diff Voltage
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 3
+    continuous: true
+
+  packVPackPVoltage:
+    unit: 'V'
+    description: BMS Boss Pack Voltage Sensor Pos Diff Voltage
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 3
+    continuous: true
+
+  packVPackNVoltage:
+    unit: 'V'
+    description: BMS Boss Pack Voltage Sensor Neg Diff Voltage
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 3
+    continuous: true

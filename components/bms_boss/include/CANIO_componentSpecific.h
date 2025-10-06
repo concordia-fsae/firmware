@@ -26,6 +26,7 @@
 #include "drv_outputAD.h"
 #include "lib_nvm.h"
 #include "FeatureDefines_generated.h"
+#include "HW_adc.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -85,6 +86,10 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_imdStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ?\
                                              CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_packCSVoltage(m,b,n,s) set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS))
+#define set_packCSPVoltage(m,b,n,s) set(m,b,n,s, HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_CS_P))
+#define set_packCSNVoltage(m,b,n,s) set(m,b,n,s, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_CS_N))
+#define set_packVPackPVoltage(m,b,n,s) set(m,b,n,s, HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_VPACK_N))
+#define set_packVPackNVoltage(m,b,n,s) set(m,b,n,s, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_VPACK_P))
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 #define set_nvmBootCycles(m,b,n,s) set(m,b,n,s, (uint16_t)lib_nvm_getTotalCycles())

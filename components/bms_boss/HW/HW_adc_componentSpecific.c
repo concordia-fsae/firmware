@@ -29,11 +29,11 @@
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
 #define ADC_CALIBRATION_TIMEOUT                 10U
 
-#define ADC_CS_N_CHANNEL ADC_CHANNEL_0
-#define ADC_PACK_P_CHANNEL ADC_CHANNEL_12
+#define ADC_CS_N_CHANNEL ADC_CHANNEL_8
+#define ADC_PACK_P_CHANNEL ADC_CHANNEL_11
 
-#define ADC_CS_P_CHANNEL ADC_CHANNEL_1
-#define ADC_PACK_N_CHANNEL ADC_CHANNEL_11
+#define ADC_CS_P_CHANNEL ADC_CHANNEL_9
+#define ADC_PACK_N_CHANNEL ADC_CHANNEL_12
 
 /******************************************************************************
  *                              E X T E R N S

@@ -22,7 +22,10 @@ messages:
       packContactorState:
       packRH:
       packAmbient:
-      packCSVoltage:
+      packCSNVoltage:
+      packCSPVoltage:
+      packVPackNVoltage:
+      packVPackPVoltage:
 
   brusaChargeCommand:
     description: Brusa Charge Command
