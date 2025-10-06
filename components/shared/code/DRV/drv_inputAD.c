@@ -7,11 +7,13 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_inputAD.h"
-#include "drv_inputAD_private.h"
 #include <string.h>
-#include "HW_gpio.h"
+
 #include "HW_adc.h"
+#include "HW_gpio.h"
+#include "drv_inputAD.h"
+#include "drv_inputAD_config.h"
+#include "drv_inputAD_private.h"
 #include "drv_io.h"
 
 /******************************************************************************

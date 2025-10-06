@@ -1,86 +1,141 @@
+import logging
 from argparse import ArgumentParser
-from types import SimpleNamespace
-import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, TypedDict
+
+from mako.exceptions import TopLevelLookupException
 from mako.lookup import TemplateLookup
-import yaml
+from yaml import safe_load
 
-def parse_yaml_file(file_path):
+logger = logging.getLogger("configurator")
+
+
+class ConfigInfo(TypedDict):
+    templates: list[str]
+    data: dict[str, Any]
+
+
+@dataclass()
+class Args:
+    input: Path
+    output_dir: Path
+    template_dir: Path
+    output_log: bool = False
+    output_log_name: Path = Path("outs.log")
+
+
+def parse_yaml_file(file: Path) -> ConfigInfo | None:
     try:
-        with open(file_path, 'r') as f: 
-            data = yaml.safe_load(f)
+        with file.open("r") as f:
+            data = safe_load(f)
 
-        #extract the component name from the path
-        path_parts = file_path.split('/')
-        component = path_parts[1]  # Always use the component directory name
-        if len(path_parts) > 3 and path_parts[1] == 'vc':
-            # Special case for VC components: include subdirectory
-            component = f"{path_parts[1]}_{path_parts[2]}"
-        print(f"Parsing {file_path} → component: {component}")
+        templates = data.pop("templates", None)
+        if not templates:
+            raise Exception(f"Config file '{file}' is missing key 'templates'")
 
-        return{
-            'name': component,
-            'templates': data.get('templates', []),
-            'channels': data.get('channels', {}),
+        return {
+            "templates": templates,
+            "data": data,
         }
     except Exception as e:
-        print(f"ERROR parsing {file_path}: {e}")
+        logger.error(f"Failed to parse file '{file}': {e}")
         return None
+
 
 def main():
     """Main function"""
     parser = ArgumentParser()
-    parser.add_argument('--input', action='append', required=True, help='Path to YAML configuration file (can be specified multiple times)')
-    parser.add_argument('--output-dir', default='generated')
-    args = parser.parse_args()
+    parser.add_argument(
+        "--input",
+        required=True,
+        type=Path,
+        help="Path to directory containing yaml configuration files. Nesting is allowed in this directory.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        type=Path,
+        help="Path in which to write rendered files.",
+    )
+    parser.add_argument(
+        "--template-dir",
+        "-t",
+        required=True,
+        type=Path,
+        help="Path in which to look for templates.",
+    )
+    parser.add_argument(
+        "--output-log",
+        action="store_true",
+        help="Write a file containing a newline-separated list of successfully generated files.",
+    )
+    parser.add_argument(
+        "--output-log-name",
+        type=Path,
+        default="outs.log",
+        help="Path, relative to --output-dir, at which to write a log file listing each of the files "
+        "that were successfully generated. Defaults to `outs.log`.",
+    )
+    args = Args(**vars(parser.parse_args()))
 
-    #Process each yaml file
-    for yaml_file in args.input:
-        print(f"Processing: {yaml_file}")
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
-        #PARSE YAML file 
-        component_data = parse_yaml_file(yaml_file)
-        
-        if not component_data['templates']:
-            print(f"SKIPPING - No templates defined in {yaml_file}")
+    # get each of the subdirs of the given template dir that contain at least one mako template
+    template_dirs: set[Path] = set()
+    for dirpath, _, filenames in args.template_dir.walk(follow_symlinks=True):
+        if any(fn.endswith(".mako") for fn in filenames):
+            template_dirs.add(dirpath)
+
+    # build a lookup with each directory that contains at least one mako template
+    lookup = TemplateLookup(directories=[str(d) for d in template_dirs])
+
+    outputs: set[Path] = set()
+
+    # Process each of the yaml files in the given config directory
+    for yaml_file in args.input.glob("**/*.yaml"):
+        logger.info("Processing file '%s'", yaml_file)
+
+        # PARSE YAML file
+        data = parse_yaml_file(yaml_file)
+        if not data:
             continue
-        
-        if not component_data['channels']:
-            print(f"SKIPPING - No channels defined in {yaml_file}")
-        
-        print(f"Component: {component_data['name']}")
-        print(f"Templates: {len(component_data['templates'])}")
-        print(f"Channels: {len(component_data['channels'])}")
 
-        #component specific channels list
-        component_channels = []
-        for channel_name, channel_config in component_data['channels'].items():
-            component_channels.append(SimpleNamespace(
-                name = channel_name,
-                multiplier = channel_config.get('multiplier', 1.0)
-            ))
-        
-        #component specific output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        #render each template
-        lookup = TemplateLookup(directories=["templates"])
+        logger.info("Templates to render: %i", len(data["templates"]))
 
-        for template_path in component_data['templates']:
-            template_filename = os.path.basename(template_path)
-            print(f"Rendering template: {template_filename}")
-            template = lookup.get_template(template_filename)
-            output = template.render(
-                channels = component_channels,
-                component = component_data['name']
-            ) 
+        for template_name in data["templates"]:
+            logger.info("Rendering template: %s", template_name)
+            try:
+                template = lookup.get_template(template_name)
+            except TopLevelLookupException:
+                raise RuntimeError(
+                    f"Failed to find template '{template_name}'"
+                ) from None
 
-            output_filename = os.path.basename(template_path).replace('.mako','')
-            output_file = os.path.join(args.output_dir, output_filename)
+            output = template.render(**data["data"])
 
-            with open(output_file, 'w') as f: 
-                f.write(output)
+            if not isinstance(output, str):
+                raise Exception(
+                    "Got bad type from rendering a template. Expected 'str' got '%s'",
+                    type(output),
+                )
 
-            print(f"Generated: {output_file}")
+            output_file = args.output_dir / template_name.replace(".mako", "")
+            output_file.write_text(output)
+            outputs.add(output_file)
 
-if __name__ == '__main__':
+            logger.info("Generated: '%s'", output_file)
+
+    if args.output_log:
+        args.output_log_name = args.output_dir / args.output_log_name
+        if args.output_log_name.exists():
+            if args.output_log_name.is_dir():
+                args.output_log_name /= "outs.log"
+        elif args.output_log_name.parent is args.output_dir:
+            args.output_log_name /= "outs.log"
+
+        args.output_log_name.write_text("\n".join(str(o) for o in outputs))
+
+
+if __name__ == "__main__":
     main()

@@ -1,3 +1,4 @@
+load("@prelude//rules.bzl", "configured_alias")
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
 load("//drive-stack/defs.bzl", "deployable_target")
@@ -5,11 +6,10 @@ load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load("//embedded/tools/configurator:defs.bzl", "run_configurator")
 load("//tools/yamcan/defs.bzl", "generate_code")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
-load("//embedded/tools/configurator:defs.bzl", "generate_adc_config")
-load("@prelude//rules.bzl", "configured_alias")
 
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
@@ -85,10 +85,13 @@ linker_flags = [
     "-Wl,--stats",
 ]
 
-generate_adc_config(
-    name = "adc-config",
-    adc_config = "config/adc.yaml",
-    component = "bms_boss",
+run_configurator(
+    name = "configurator",
+    src = "config",
+    templates = [
+        "//embedded/tools/configurator/templates:drv_inputAD_config.c.mako",
+        "//embedded/tools/configurator/templates:drv_inputAD_config.h.mako",
+    ],
 )
 
 cxx_library(
@@ -333,17 +336,11 @@ cxx_binary(
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
     linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"] + [
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/croutine.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/event_groups.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/list.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/queue.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/tasks.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/timers.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/portable/GCC/ARM_CM3/port.c.o])",
     ],
     executable_name = APP_NAME + ".elf",
     srcs =
         glob(["src/*.c", "HW/*.c"]) + [
+            ":configurator[srcs]",
             "//components/shared/code:DRV/drv_hih.c",
             "//components/shared/code:DRV/drv_inputAD.c",
             "//components/shared/code:DRV/drv_io.c",
@@ -388,8 +385,8 @@ cxx_binary(
         ":FreeRTOS",
         ":network",
         ":build-headers",
+        ":configurator-headers",
         "//components/shared/code:headers",
-        ":adc-config",
     ],
 )
 

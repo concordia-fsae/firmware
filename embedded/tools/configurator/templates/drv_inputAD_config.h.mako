@@ -1,9 +1,13 @@
 /*
-* drv_inputAD_config.h
+ * drv_inputAD_config.h
  */
 
 #pragma once
 
-%for channel in channels:
-#define DRV_INPUTAD_ANALOG_MULTIPLIER_${channel.name}    ${channel.multiplier}f
+#include "drv_inputAD.h"
+
+extern drv_inputAD_configAnalog_S drv_inputAD_configAnalog[${len(channels)}];
+
+%for name, channel in channels.items():
+#define DRV_INPUTAD_ANALOG_MULTIPLIER_${name}    ${channel["multiplier"]}f
 %endfor

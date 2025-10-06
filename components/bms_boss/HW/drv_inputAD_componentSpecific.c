@@ -97,8 +97,8 @@ static void drv_inputAD_1kHz_PRD(void)
 
     const float32_t vcs_diff = HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_CS) - HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_CS);
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CS, vcs_diff);
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_MCU_TEMP));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_CS, vcs_diff);
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_MCU_TEMP));
 #if BMSB_CONFIG_ID == 1U
     const float32_t vpack_p = HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_VPACK);
     const float32_t vpack_n = HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK);
