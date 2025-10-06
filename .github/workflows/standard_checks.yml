@@ -5,23 +5,6 @@ on:
     branches: [ master, comp* ]
 
 jobs:
-  cfr:
-    strategy:
-      matrix:
-        car: [ cfr24, cfr25 ]
-    uses: ./.github/workflows/build.yml
-    with:
-      build-type: platform
-      build-targets: ${{ matrix.car }}
-      flags: -j32 --skip-bl --package
-      artifact-name: artifact-${{ matrix.car }}
-  updaters:
-    uses: ./.github/workflows/build.yml
-    with:
-      build-type: targets 
-      build-targets: bl
-      flags: -j32 --flashable-bootloader --package
-      artifact-name: artifact-bootloaders
   generate-dbc:
     runs-on: ubuntu-latest
     steps:
@@ -125,20 +108,3 @@ jobs:
         with:
           name: drive-tools-${{ matrix.runner }}
           path: builds/
-  validate-workflow: # TODO: Missing macos coverage, we would likely eed our own self
-                     # hosted macos runner todo this however
-    runs-on: self-hosted
-    steps:
-      - name: Clean
-        uses: AutoModality/action-clean@1077775f5ef0022fc3a9d6f93377921ea3701fa7
-      - name: Pull Branch
-        uses: actions/checkout@v4
-        with:
-          repository: concordia-fsae/firmware
-          ref: ${{ inputs.ref }}
-          fetch-depth: 0
-          show-progress: 'true'
-          submodules: 'recursive'
-      - name: Enter Buildroot and Run Build
-        run: |
-          ./buildroot.sh -r "scons --targets=bmsb -j32"
