@@ -167,3 +167,8 @@ signals:
     nativeRepresentation:
       bitWidth: 7
       resolution: 1
+  bytes:
+    unit: "B"
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1

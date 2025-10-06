@@ -71,6 +71,10 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_taskIterations100Hz(m,b,n,s)         set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_100Hz_TASK))
 #define set_taskIterations10Hz(m,b,n,s)          set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_10Hz_TASK))
 #define set_taskIterations1Hz(m,b,n,s)           set(m,b,n,s, (uint16_t)Module_getTotalRuntimeIterations(MODULE_1Hz_TASK))
+#define set_taskStack1kHz(m,b,n,s)               set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
+#define set_taskStack100Hz(m,b,n,s)              set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
+#define set_taskStack10Hz(m,b,n,s)               set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))
+#define set_taskStack1Hz(m,b,n,s)                set(m,b,n,s, Module_getMinStackLeft(MODULE_1Hz_TASK))
 #define set_tsmsChg(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_ACTIVE) ? \
                                            CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_okHS(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_ACTIVE) ? \

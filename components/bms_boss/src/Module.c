@@ -21,6 +21,7 @@
 
 /**< Other Includes */
 #include "Utility.h"
+#include "lib_utility.h"
 #include "FeatureDefines_generated.h"
 #include "lib_nvm.h"
 
@@ -80,6 +81,7 @@ void Module_1kHz_TSK(void)
 
     stats[MODULE_1kHz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_1kHz_TASK].iterations++;
+    stats[MODULE_1kHz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -99,6 +101,7 @@ void Module_100Hz_TSK(void)
 
     stats[MODULE_100Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_100Hz_TASK].iterations++;
+    stats[MODULE_100Hz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -117,6 +120,7 @@ void Module_10Hz_TSK(void)
 
     stats[MODULE_10Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_10Hz_TASK].iterations++;
+    stats[MODULE_10Hz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -135,6 +139,7 @@ void Module_1Hz_TSK(void)
 
     stats[MODULE_1Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_1Hz_TASK].iterations++;
+    stats[MODULE_1Hz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -164,4 +169,14 @@ float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task)
 uint32_t Module_getTotalRuntimeIterations(Module_taskSpeeds_E task)
 {
     return stats[task].iterations;
+}
+
+/**
+ * @brief Return the minimum lifetime stack bytes left
+ * @param task Task to get the total runtime iterations of
+ * @returns The total runtime stack left saturated from 0 to 256 bytes
+ */
+uint8_t Module_getMinStackLeft(Module_taskSpeeds_E task)
+{
+    return (uint8_t)SATURATE(0, stats[task].stack_left, 256);
 }
