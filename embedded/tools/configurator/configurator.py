@@ -1,86 +1,122 @@
+import logging
 from argparse import ArgumentParser
+from pathlib import Path
 from types import SimpleNamespace
-import os
+from typing import Any, TypedDict
+
+from mako.exceptions import TopLevelLookupException
 from mako.lookup import TemplateLookup
-import yaml
+from yaml import safe_load
 
-def parse_yaml_file(file_path):
+logger = logging.getLogger("configurator")
+
+SHARED_TEMPLATES_DIR = Path("embedded/tools/configurator/templates")
+
+
+class ConfigInfo(TypedDict):
+    templates: list[Path]
+    data: dict[str, Any]
+
+
+class Args(SimpleNamespace):
+    input: Path
+    output_dir: Path
+    template_dir: Path
+
+
+def parse_yaml_file(file: Path) -> ConfigInfo | None:
     try:
-        with open(file_path, 'r') as f: 
-            data = yaml.safe_load(f)
+        with file.open("r") as f:
+            data = safe_load(f)
 
-        #extract the component name from the path
-        path_parts = file_path.split('/')
-        component = path_parts[1]  # Always use the component directory name
-        if len(path_parts) > 3 and path_parts[1] == 'vc':
-            # Special case for VC components: include subdirectory
-            component = f"{path_parts[1]}_{path_parts[2]}"
-        print(f"Parsing {file_path} → component: {component}")
+        templates = data.pop("templates", None)
+        if not templates:
+            raise Exception(f"Config file '{file}' is missing key 'templates'")
 
-        return{
-            'name': component,
-            'templates': data.get('templates', []),
-            'channels': data.get('channels', {}),
+        template_paths = []
+        for template in templates:
+            p = Path(template)
+            try:
+                p.relative_to(SHARED_TEMPLATES_DIR, walk_up=False)
+            except ValueError:
+                pass
+            else:
+                pass
+
+        templates = [Path(t) for t in templates]
+
+        return {
+            "templates": templates,
+            "data": data,
         }
     except Exception as e:
-        print(f"ERROR parsing {file_path}: {e}")
+        logger.error(f"Failed to parse file '{file}': {e}")
         return None
+
 
 def main():
     """Main function"""
     parser = ArgumentParser()
-    parser.add_argument('--input', action='append', required=True, help='Path to YAML configuration file (can be specified multiple times)')
-    parser.add_argument('--output-dir', default='generated')
-    args = parser.parse_args()
+    parser.add_argument(
+        "--input",
+        required=True,
+        type=Path,
+        help="Path to directory containing yaml configuration files. Nesting is allowed in this directory.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        type=Path,
+        help="Path in which to write rendered files.",
+    )
+    parser.add_argument(
+        "--template-dir",
+        "-t",
+        # action="append",
+        type=Path,
+        help="Path in which to look for templates. Can be specified multiple times.",
+    )
+    args = Args()
+    parser.parse_args(namespace=Args)
 
-    #Process each yaml file
-    for yaml_file in args.input:
-        print(f"Processing: {yaml_file}")
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
-        #PARSE YAML file 
-        component_data = parse_yaml_file(yaml_file)
-        
-        if not component_data['templates']:
-            print(f"SKIPPING - No templates defined in {yaml_file}")
+    # Process each yaml file
+    for yaml_file in args.input.glob("**/*.yaml"):
+        logger.info("Processing file '%s'", yaml_file)
+
+        # PARSE YAML file
+        data = parse_yaml_file(yaml_file)
+        if not data:
             continue
-        
-        if not component_data['channels']:
-            print(f"SKIPPING - No channels defined in {yaml_file}")
-        
-        print(f"Component: {component_data['name']}")
-        print(f"Templates: {len(component_data['templates'])}")
-        print(f"Channels: {len(component_data['channels'])}")
 
-        #component specific channels list
-        component_channels = []
-        for channel_name, channel_config in component_data['channels'].items():
-            component_channels.append(SimpleNamespace(
-                name = channel_name,
-                multiplier = channel_config.get('multiplier', 1.0)
-            ))
-        
-        #component specific output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        #render each template
-        lookup = TemplateLookup(directories=["templates"])
+        logger.info("Templates: %i", len(data["templates"]))
 
-        for template_path in component_data['templates']:
-            template_filename = os.path.basename(template_path)
-            print(f"Rendering template: {template_filename}")
-            template = lookup.get_template(template_filename)
-            output = template.render(
-                channels = component_channels,
-                component = component_data['name']
-            ) 
+        # render each template
+        lookup = TemplateLookup(directories=[str(args.template_dir.absolute()) + "/templates"])
 
-            output_filename = os.path.basename(template_path).replace('.mako','')
-            output_file = os.path.join(args.output_dir, output_filename)
+        for template_info in data["templates"]:
+            logger.info("Rendering template: %s", template_info)
+            try:
+                template = lookup.get_template(template_info.name)
+            except TopLevelLookupException:
+                raise RuntimeError(f"Failed to find template '{template_info.name}'") from None
 
-            with open(output_file, 'w') as f: 
-                f.write(output)
+            output = template.render(**data["data"])
 
-            print(f"Generated: {output_file}")
+            if not isinstance(output, str):
+                raise Exception(
+                    "Got bad type from rendering a template. Expected 'str' got '%s'",
+                    type(output),
+                )
 
-if __name__ == '__main__':
+            output_file = args.output_dir / template_info.with_suffix("").name
+            output_file.write_text(output)
+
+            logger.info("Generated: '%s'", output_file)
+
+    raise Exception
+
+
+if __name__ == "__main__":
     main()
