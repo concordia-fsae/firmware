@@ -26,6 +26,21 @@ messages:
       taskIterations1kHz:
         template: count9Bit
         description: 1kHz total runtime iterations
+  rtosTaskMemInfo:
+    cycleTimeMs: 1000
+    signals:
+      taskStack1kHz:
+        template: bytes
+        description: 1kHz min stack bytes left
+      taskStack100Hz:
+        template: bytes
+        description: 100Hz min stack bytes left
+      taskStack10Hz:
+        template: bytes
+        description: 10Hz min stack bytes left
+      taskStack1Hz:
+        template: bytes
+        description: 1Hz min stack bytes left
   uds:
     unscheduled: true
     signals:

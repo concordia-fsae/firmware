@@ -52,6 +52,12 @@ messages:
     sourceBuses: veh
     template: rtosTaskInfo
 
+  rtosTaskMemInfo:
+    description: BMSB rtos task stack usage information
+    id: 0x570
+    sourceBuses: veh
+    template: rtosTaskMemInfo
+
   elconChargeCommand:
     description: Elcon Charge Command
     cycleTimeMs: 1000
