@@ -10,7 +10,7 @@
  * 3. Include drv_inputAD_private.h in drv_inputAD_componentSpecific.c and call
  *    the drv_inputAD_private_init function
  * 4. Periodically call the drv_inputAD_private_runDigital function to update
- *    the digital inputs and load new voltages with drv_inputAD_setAnalogVoltage
+ *    the digital inputs and load new voltages with drv_inputAD_setRawAnalogVoltage
  */
 
 #pragma once
@@ -42,6 +42,10 @@ typedef struct
         CANRX_MESSAGE_health_E (*canrx_digitalStatus)(CAN_digitalStatus_E*);
     } config;
 } drv_inputAD_configDigital_S;
+
+typedef struct{
+    float32_t multiplier;
+} drv_inputAD_configAnalog_S;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

@@ -1,0 +1,22 @@
+templates:
+  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.h.mako
+  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.c.mako
+
+channels: 
+#not sure if i should keep the CHANNEL in the naming convention
+  CHANNEL_AIN2:
+   multiplier: 1.0
+  CHANNEL_AIN4:
+   multiplier: 1.0
+  CHANNEL_AIN6:
+   multiplier: 1.0
+  CHANNEL_MCU_TEMP:
+   multiplier: 1.0
+  CHANNEL_AIN1:
+   multiplier: 1.0
+  CHANNEL_AIN3:
+   multiplier: 1.0
+  CHANNEL_AIN5:
+   multiplier: 1.0
+  CHANNEL_AIN7:
+   multiplier: 1.0

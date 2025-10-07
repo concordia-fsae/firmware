@@ -1,0 +1,37 @@
+templates:
+  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.h.mako
+  - embedded/tools/configurator/templates/drv_inputAD_componentSpecific.c.mako
+  
+c]hannels:
+  R_BR_TEMP:
+   multiplier: 1.0
+  L_SHK_DISP:
+   multiplier: 1.0
+  PU1:
+   multiplier: 1.0
+  BR_POT:
+   multiplier: 1.0
+  SPARE1:
+   multiplier: 1.0
+  SPARE2:
+   multiplier: 1.0 
+  APPS_P1:
+   multiplier: 1.0
+  MCU_TEMP:
+   multiplier: 1.0
+  L_BR_TEMP:
+   multiplier: 1.0 
+  R_SHK_DISP:
+   multiplier: 1.0
+  PU2:
+   multiplier: 1.0
+  BR_PR:
+   multiplier: 1.681
+  SPARE3:
+   multiplier: 1.0 
+  SPARE4:
+   multiplier: 1.0 
+  APPS_P2:
+   multiplier: 1.0
+  BOARD_TEMP:
+   multiplier: 1.0

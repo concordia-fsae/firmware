@@ -54,7 +54,7 @@ static void drv_inputAD_init_componentSpecific(void)
     NX3L_enableMux();
     NX3L_setMux(NX3L_MUX1);
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
 }
 
 static void drv_inputAD_1kHz_PRD(void)
@@ -63,12 +63,12 @@ static void drv_inputAD_1kHz_PRD(void)
 
     HW_ADC_unpackADCBuffer();
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD1));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD2));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX1));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX2));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX3));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD1));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD2));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX1));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX2));
+    drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX3));
 
     if (++current_sel == NX3L_MUX_COUNT)
     {
@@ -83,8 +83,8 @@ static void drv_inputAD_1kHz_PRD(void)
 
         if (current_cell == MAX_CELL1)
         {
-            drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
-                                                 HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
+            drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
+                                                 HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP));
             BMS_measurementComplete();
         }
         else
@@ -96,15 +96,15 @@ static void drv_inputAD_1kHz_PRD(void)
             else
             {
                 BMS_setOutputCell(current_cell - 1);
-                drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
-                                                    HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
+                drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
+                                                    HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP));
             }
         }
     }
     else if (BMS.state == BMS_SAMPLING)
     {
-        drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT,
-                                             HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
+        drv_inputAD_private_setRawAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT,
+                                             HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP));
     }
 }
 

@@ -1,0 +1,22 @@
+load("//tools/uv/defs.bzl", "uv_tool")
+
+[
+    export_file(
+        name = file, 
+        src = file, 
+        visibility = ["PUBLIC"],
+    )
+    for file in [
+        "configurator.py",
+        "templates/drv_inputAD_config.h.mako",
+        "templates/drv_inputAD_config.c.mako",
+    ]
+]
+
+uv_tool(
+    name = "configurator_tool",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = ["configurator.py"],
+    visibility = ["PUBLIC"],
+)
