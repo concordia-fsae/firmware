@@ -66,4 +66,9 @@
 #define set_wheelSpeedRotationalRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RL))
 #define set_wheelSpeedRotationalRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RR))
 
+#define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
+#define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
+#define set_taskStack10Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))
+#define set_taskStack1Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1Hz_TASK))
+
 #include "TemporaryStubbing.h"

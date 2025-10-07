@@ -58,6 +58,7 @@ typedef struct
 {
     uint8_t  total_percentage;
     uint32_t iterations;
+    uint16_t stack_left;
 } Module_taskStats_S;
 
 /******************************************************************************
@@ -72,4 +73,5 @@ void      Module_componentSpecific_1Hz(void);
 
 float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task);
 uint32_t  Module_getTotalRuntimeIterations(Module_taskSpeeds_E task);
+uint8_t   Module_getMinStackLeft(Module_taskSpeeds_E task);
 void      Module_ApplicationIdleHook(void);

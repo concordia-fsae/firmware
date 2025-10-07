@@ -80,6 +80,10 @@
 #define set_bms6Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2))
 #define set_glvVoltage(m,b,n,s) set(m,b,n,s, powerManager_getGLVVoltage())
 #define set_glvCurrent(m,b,n,s) set(m,b,n,s, powerManager_getGLVCurrent())
+#define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
+#define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
+#define set_taskStack10Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))
+#define set_taskStack1Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1Hz_TASK))
 #define set_runButton(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
                                              CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 #define set_pduSafetyReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_VCU_SFTY_RESET) == DRV_IO_ACTIVE) ? \

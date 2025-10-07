@@ -12,6 +12,12 @@ messages:
     sourceBuses: veh
     template: rtosTaskInfo
 
+  rtosTaskMemInfo:
+    description: VCFRONT rtos task stack usage information
+    id: 0x5a0
+    sourceBuses: veh
+    template: rtosTaskMemInfo
+
   pedalPosition:
     description: Pedal position
     id: 0x50

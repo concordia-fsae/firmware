@@ -12,6 +12,12 @@ messages:
     sourceBuses: veh
     template: rtosTaskInfo
 
+  rtosTaskMemInfo:
+    description: VCREAR rtos task stack usage information
+    id: 0x5a2
+    sourceBuses: veh
+    template: rtosTaskMemInfo
+
   outputState:
     description: Information about the VCREAR output states
     cycleTimeMs: 100
