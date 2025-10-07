@@ -56,8 +56,8 @@ See below for programming guidelines for this repository.
             -Contains all source code and header files relating to the implementation of the System's RTOS
         7. `./components/$COMPONENT_DESIGNATOR/src`
             - Contains all System and Application level source code
-        8. `./components/$COMPONENT_DESIGNATOR/SConscript`
-            - Is called by `./SConstruct` to run the component build script
+        8. `./components/$COMPONENT_DESIGNATOR/BUCK`
+            - Defines the build targets for that component
         9. `./components/shared/`: Team libraries, configurations, drivers, firmware, and other...
 2. Embedded System
     - Contains libraries, openocd configurations, and platform code accessible to all devices located in `./embedded/`
@@ -67,10 +67,7 @@ See below for programming guidelines for this repository.
         2. `./embedded/platforms/`: Supported Hardware and MCU platforms
             - Contains the HAL/LL, startup code, and link script for the STM32 family of devices in `./embedded/platforms/stm32/`
 3. Chip Configuration
-    - The chip configuration is stored in YAML files in `./site_scons/chips.yaml` and `./site_scons/components.yaml`
-    - `./site_scons/chips.yaml` contains the configuration of the chip source files and headers to be included by the build system
-    - `./site_scons/components.yaml` contains the different components and their sources for the build system
-    - `./site_scons/platforms.yaml` contains the different platforms and their component composition
+    - The chip configuration is stored in YAML files in `./embedded/platforms/$CHIP.yaml`
 
 # Setting Up and Using the Development Environment
 
@@ -78,53 +75,11 @@ See below for programming guidelines for this repository.
 
 ### 1. Installation and Set-Up
 
-#### SCons
-
-1. Clone repository
-    - Clone with ssh link. This enables ssh when pushing and pulling
-2. Pull in submodules
-    - `git submodule update --init --recursive`
-3. Install and start docker (OS-specific)
-    - **Windows Users**: Install bash emulator: cygwin, mingw64, WSL (test optimal tool)
-4. Install docker compose (OS-specific)
-5. Execute docker script from root directory
-    - `./buildroot.sh`
-        * Change permissions if necessary: `chmod +x buildroot.sh`
-        * **Note**: It has been noticed that a bug on windows and mac hosts creates unexpected build failures. Known workaround is to run it from a linux virtual machine.
-
 #### Buck2
 
-1. Install `buck2` and `uv` on your host system.
+1. Install `buck2`, `reindeer`, and `uv` on your host system.
 
-### 2. Container Usage
-
-- _All components, and their designator, are listed in `./site_scons/components.yaml`. Note the container is only necessary for SCons_
-
-1. Building the program(s)
-    - Execute the SCons program from inside the env
-        - `scons --targets=$COMPONENT_DESIGNATOR build` is to build single components
-            - ex: To build the stw, execute `scons --targets=stw build`. Build is the default action for a target and therefore does not need to be specified
-            - Note: `build` is the default target, so `scons --target=bmsb` is analogous to `scons --target=bmsb build`
-            - Build targets can be seperated by a pound `#`
-            - The config ID of a component can be specified with a colon `:` and can be seperated with a comma `,`
-            - An example of a complex build is `scons --targetsbmsb:0#bmsw:1,2`
-        - `scons --platform=$PLATFORM_DESIGNATOR` is to build an entire platform
-2. Uploading the program over SWD (Optional)
-    - The SCons build environment has an optional upload command that flashes the device and holds
-    - To flash and verify, execute `scons --targets=$COMPONENT_DESIGNATOR --upload` from the env
-3. Debugging the program
-    - _More information and better debugging workflows can be found by researching OpenOCD and GDB commands_
-    - Debugging in the env is done through GDB and OpenOCD
-    - To start the OpenOCD server and connect to the remote host in GDB, execute:
-        - `scons --targets=$COMPONENT_DESIGNATOR --debugger` from the env
-        - You can chain multiple commands together. For example: 'scons --target=stw upload openocd-gdb' will build, upload, and start the debugger
-    - The standard GDB commands apply. To reset or halt the MCU through the SWD connection, execute:
-        - `monitor reset`, `monitor reset halt`
-    - _It is always good when you first open the env to execute `st-info --probe` to see if the ST-LINK is recognized_
-
-### 3. Buck2 Usage
-
-_Currently, the `buck2` build system is being brought up for better homogeneity across build targets and as an improvement to SCons_
+### 2. Buck2 Usage
 
 1. Build a target with `buck2 build //$TARGET_PATH:$TARGET_NAME`
     - You can specify a specific local output directory with `buck2 build ... --out $SOME_LOCAL_PATH`
@@ -132,32 +87,8 @@ _Currently, the `buck2` build system is being brought up for better homogeneity 
 2. Run software locally with `buck2 build //$TARGET_PATH:$TARGET_NAME`
     - Software must be compatible with your host system
 
-## Sections
-
-1. SCons Tools
-    - Located in `./site_scons/site_tools/`
-    - Custom python scripts added to the SCons build environment
-2. Embedded Systems
-    1. Toolchains
-        - Downloaded from ARM Developper
-        - Located in `./embedded/toolchains`
-    2. USB Loader/Debugger
-        - Located in `./embedded/openocd`
-        - Interfaces and stores configurations of different chips/boards
-    3. Platforms
-        - Supported hardware platforms
-        - Located in `./embedded/platforms/`
-4. SCons related scripts
-    - `./SConstruct`
-    - `./components/$DESIGNATOR/Sconscript`
-5. Buck2 related files
-    - `./.buck*`
-    - `./$PATH/BUCK`
-
 ## Notes
 
-- The script will set up the env for compiling - no need to run twice.
-- Due to the mounting feature of the docker container, anytime the container is open the changes applied to the files will automatically and immediately be accessible to the SCons tool
-    - This also means that, once built, the build dir will be on your local machine as well. Run scons --clean in container if you want to re-build from scratch
+- To clean your current directory, run `buck2 clean`
 - If doing loading/debugging of physical hardware, the ST-LINK or other interface must be plugged in by USB before starting the container. Docker containers do not support dynamic loading of USB peripherals
     - Note: This only works if no bootloader is installed. If a bootloader is installed and you are debugging through JTAG, you should still flash over CAN
