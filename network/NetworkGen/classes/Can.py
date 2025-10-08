@@ -76,7 +76,8 @@ class NativeRepresentation:
     Takes in a dictionary parsed from YAML
     """
 
-    def __init__(self, signal_def=dict()):
+    def __init__(self, signal_def=None):
+        signal_def = signal_def or {}
         NATREP_SCHEMA.validate(signal_def)
         if "endianness" in signal_def:
             try:
@@ -94,12 +95,25 @@ class NativeRepresentation:
         if "signedness" in signal_def:
             self.signedness = Signedness[signal_def["signedness"]]
         else:
-            self.signedness = Signedness.unsigned
+            self.signedness = (
+                Signedness.signed
+                if (self.range is not None and getattr(self.range, "min", 0) < 0)
+                else Signedness.unsigned
+            )
+
         if "endianness" in signal_def:
             self.endianness = Endianess[signal_def["endianness"]]
         else:
             self.endianness = Endianess.little
         self.resolution = get_if_exists(signal_def, "resolution", float, None)
+        if (
+            self.signedness == Signedness.unsigned
+            and self.range is not None
+            and getattr(self.range, "min", 0) < 0
+        ):
+            raise Exception(
+                f"Native representation cannot be unsigned when the range minimum is negative (min={self.range.min})"
+            )
 
         if self.bit_width is not None and (self.bit_width < 1 or self.bit_width > 64):
             raise Exception(f"Native representation bit width must be between 1 and 64 bits")
