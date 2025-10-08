@@ -4,6 +4,7 @@ use std::io::SeekFrom;
 use std::io::Read;
 use std::error::Error;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
@@ -14,6 +15,15 @@ use conUDS::config::Config;
 use conUDS::modules::uds::UdsSession;
 
 const UDS_DID_CRC: u16 = 0x03;
+
+#[derive(Debug)]
+struct NodeUpdateResult {
+    node: String,
+    bin: PathBuf,
+    success: bool,
+    error: Option<String>,
+    duration: Duration,
+}
 
 #[tokio::main]
 async fn main() {
@@ -59,14 +69,33 @@ async fn main() {
                 std::process::exit(1);
             }
 
+            let overall_start = Instant::now();
+            let mut results: Vec<NodeUpdateResult> = Vec::with_capacity(batch.targets.len());
+
             for upd in &batch.targets {
                 let Some((node, bin)) = parse_update_pair(upd) else {
-                    error!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
+                    let msg = format!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
+                    error!("{}", msg);
+                    results.push(NodeUpdateResult {
+                        node: "<unknown>".into(),
+                        bin: PathBuf::from("<unknown>"),
+                        success: false,
+                        error: Some(msg),
+                        duration: Duration::from_secs(0),
+                    });
                     continue;
                 };
 
                 let Some(uds_node) = cfg.nodes.get(&node) else {
-                    error!("UDS node '{}' not defined in manifest", node);
+                    let msg = format!("UDS node '{}' not defined in manifest", node);
+                    error!("{}", msg);
+                    results.push(NodeUpdateResult {
+                        node: node.clone(),
+                        bin: bin.clone(),
+                        success: false,
+                        error: Some(msg),
+                        duration: Duration::from_secs(0),
+                    });
                     continue;
                 };
 
@@ -77,16 +106,38 @@ async fn main() {
                     std::process::exit(1)
                 });
 
+                let node_start = Instant::now();
+                let mut success = false;
+                let mut err_msg: Option<String> = None;
+
                 let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, false).await;
                 info!("Downloading binary {:?} to node '{}'", bin, node);
 
-                if let Err(e) = download_app_to_target(&bin, &mut uds, false).await {
-                    error!("Download failed for node '{}': {}", node, e);
-                } else {
-                    info!("Download successful for node '{}'...", node);
+                match download_app_to_target(&bin, &mut uds, false).await {
+                    Ok(_) => {
+                        info!("Download successful for node '{}'...", node);
+                        success = true;
+                    }
+                    Err(e) => {
+                        error!("Download failed for node '{}': {}", node, e);
+                        err_msg = Some(e.to_string());
+                    }
                 }
+
                 uds.teardown().await;
+
+                let node_dur = node_start.elapsed();
+                results.push(NodeUpdateResult {
+                    node: node.clone(),
+                    bin: bin.clone(),
+                    success,
+                    error: err_msg,
+                    duration: node_dur,
+                });
             }
+
+            let total_dur = overall_start.elapsed();
+            print_deployment_report(&results, total_dur);
         }
 
         ArgSubCommands::Reset(reset) => {
@@ -241,4 +292,82 @@ fn parse_update_pair(s: &str) -> Option<(String, PathBuf)> {
     // expects "node:/path/to/bin"
     let (node, path) = s.split_once(':')?;
     Some((node.to_string(), PathBuf::from(path)))
+}
+
+fn fmt_dur(d: Duration) -> String {
+    let secs = d.as_secs();
+    let ms = d.subsec_millis();
+    format!("{secs}.{ms:03}s")
+}
+
+fn print_deployment_report(results: &[NodeUpdateResult], total_dur: Duration) {
+    let total = results.len() as u64;
+    let successes = results.iter().filter(|r| r.success).count() as u64;
+    let failures = total - successes;
+    let avg = average_duration(&results.iter().map(|r| r.duration).collect::<Vec<_>>());
+    let success_rate = if total > 0 {
+        (successes as f64) * 100.0 / (total as f64)
+    } else {
+        0.0
+    };
+
+    info!("");
+    info!("===================== Deployment Report =====================");
+    info!("Total nodes      : {}", total);
+    info!("Succeeded        : {}", successes);
+    info!("Failed           : {}", failures);
+    info!("Success rate     : {:.1}%", success_rate);
+    info!("Total time       : {}", fmt_dur(total_dur));
+    info!("Avg per-node time: {}", fmt_dur(avg));
+    info!("=============================================================");
+    info!("{:<18}  {:<28}  {:<10}  {:>10}  {}", "Node", "Binary", "Status", "Elapsed", "Error");
+    info!("{}", "-".repeat(18 + 2 + 28 + 2 + 10 + 2 + 10 + 2 + 5 + 16));
+
+    for r in results {
+        let status = if r.success { "OK" } else { "FAIL" };
+        let err = r.error.as_deref().unwrap_or("");
+        let bin_str = r.bin.to_string_lossy();
+        info!(
+            "{:<18}  {:<28}  {:<10}  {:>10}  {}",
+            r.node,
+            truncate(&bin_str, 28),
+            status,
+            fmt_dur(r.duration),
+            err
+        );
+    }
+
+    if failures > 0 {
+        info!("");
+        info!("--- Failure details ---");
+        for r in results.iter().filter(|r| !r.success) {
+            info!("node='{}' bin='{}' error='{}'",
+                r.node,
+                r.bin.to_string_lossy(),
+                r.error.as_deref().unwrap_or("<unknown error>")
+            );
+        }
+    }
+}
+
+/// Helper to keep table columns tidy without extra crates
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else if max > 1 {
+        let mut t = s.chars().take(max - 1).collect::<String>();
+        t.push('…');
+        t
+    } else {
+        "…".to_string()
+    }
+}
+
+fn average_duration(durations: &[Duration]) -> Duration {
+    if durations.is_empty() {
+        return Duration::from_secs(0);
+    }
+    let total_nanos: u128 = durations.iter().map(|d| d.as_nanos()).sum();
+    let avg_nanos = total_nanos / (durations.len() as u128);
+    Duration::from_nanos(avg_nanos as u64)
 }
