@@ -10,6 +10,12 @@ messages:
     id: 0x553
     sourceBuses: veh
     template: rtosTaskInfo
+  
+  rtosTaskMemInfo:
+    description: VCPDU rtos task stack usage information
+    id: 0x5a1
+    sourceBuses: veh
+    template: rtosTaskMemInfo
 
   vehicleState:
     description: Current state of the vehicle

@@ -140,3 +140,9 @@ messages:
     id: 0x560
     sourceBuses: veh
     template: rtosTaskInfo
+
+  rtosTaskMemInfo:
+    description: BMSW rtos task stack usage information
+    id: 0x571
+    sourceBuses: veh
+    template: rtosTaskMemInfo
