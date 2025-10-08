@@ -7,7 +7,7 @@ use argh::FromArgs;
 
 use crate::SupportedResetTypes;
 
-/// conUDS - a UDS client deigned for use by Concordia FSAE to interact with ECUs on their vehicles
+/// canUDS - a UDS client deigned for use by Concordia FSAE to interact with ECUs on their vehicles
 /// using the UDS protocol
 #[derive(Debug, FromArgs)]
 pub struct Arguments {
@@ -18,6 +18,10 @@ pub struct Arguments {
     /// the CAN device to use. `can0` is used if this option is not provided
     #[argh(option, short = 't', default = "String::from(\"can0\")")]
     pub device: String,
+
+    /// the manifest of UDS can nodes on the bus
+    #[argh(option, short = 'm', default = "String::from(\"drive-stack/conUDS/nodes.yml\")")]
+    pub node_manifest: String,
 
     #[argh(subcommand)]
     pub subcmd: ArgSubCommands,

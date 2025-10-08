@@ -6,18 +6,18 @@ use std::sync::Mutex;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use conuds::config::Config;
-use conuds::modules::uds::UdsClient;
+use conUDS::config::Config;
+use conUDS::modules::uds::UdsClient;
 use ecu_diagnostics::dynamic_diag::DiagProtocol;
 use ecu_diagnostics::uds::UDSProtocol;
 use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 use tokio::sync::mpsc;
 
-use conuds::SupportedResetTypes;
-use conuds::arguments::{ArgSubCommands, Arguments};
-use conuds::modules::canio::CANIO;
-use conuds::{CanioCmd, PrdCmd};
+use conUDS::SupportedResetTypes;
+use conUDS::arguments::{ArgSubCommands, Arguments};
+use conUDS::modules::canio::CANIO;
+use conUDS::{CanioCmd, PrdCmd};
 
 struct App {
     exit: bool,
@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
                 .set_target_level(log::LevelFilter::Info)
                 .set_thread_mode(simplelog::ThreadLogMode::Names)
                 .build(),
-            File::create("conuds.log").unwrap(),
+            File::create("conUDS.log").unwrap(),
         ),
     ])?;
 
@@ -57,11 +57,11 @@ async fn main() -> Result<()> {
     let args: Arguments = argh::from_env();
     debug!("Command-line arguments processed: {:#?}", args);
 
-    let cfg = Config::new()?;
+    let cfg = Config::new(&args.node_manifest)?;
     debug!("Configuration initialized: {:#?}", cfg);
 
     let uds_node = cfg.nodes.get(&args.node).unwrap_or_else(|| {
-        error!("UDS node not defined in `assets/nodes.yml`");
+        error!("UDS node not defined in ``");
         std::process::exit(1)
     });
     debug!("UDS node identified: {:#?}", uds_node);

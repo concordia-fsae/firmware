@@ -26,19 +26,19 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Config> {
-        debug!("Attempting to load `assets/nodes.yml`");
-        if let Ok(file) = File::open("assets/nodes.yml") {
+    pub fn new(filename: &str) -> Result<Config> {
+        debug!("Attempting to load `{}`", filename);
+        if let Ok(file) = File::open(filename) {
             let reader = BufReader::new(file);
             let cfg_yaml: CfgYaml = serde_yaml::from_reader(reader)?;
-            debug!("Successfully loaded `assets/nodes.yml`\n{:#?}", cfg_yaml);
+            debug!("Successfully loaded `{}`\n{:#?}", filename, cfg_yaml);
 
             return Ok(Self {
                 nodes: cfg_yaml.nodes,
             });
         } else {
-            error!("Couldn't open `assets/nodes.yml`");
-            Err(anyhow!("Couldn't open `assets/nodes.yml`"))
+            error!("Couldn't open `{}`", filename);
+            Err(anyhow!("Couldn't open `{}`", filename))
         }
     }
 }
