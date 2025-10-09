@@ -1,36 +1,32 @@
-use core::time;
 use std::fs::File;
-use std::io::stdin;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Read;
+use std::error::Error;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
-use anyhow::anyhow;
-use anyhow::Result;
-use conuds::config::Config;
-use conuds::modules::uds::UdsClient;
-use ecu_diagnostics::dynamic_diag::DiagProtocol;
-use ecu_diagnostics::uds::UDSProtocol;
 use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
-use tokio::sync::mpsc;
 
-use conuds::SupportedResetTypes;
-use conuds::arguments::{ArgSubCommands, Arguments};
-use conuds::modules::canio::CANIO;
-use conuds::{CanioCmd, PrdCmd};
+use conUDS::SupportedResetTypes;
+use conUDS::arguments::{ArgSubCommands, Arguments};
+use conUDS::config::Config;
+use conUDS::modules::uds::UdsSession;
 
-struct App {
-    exit: bool,
-}
+const UDS_DID_CRC: u16 = 0x03;
 
-impl App {
-    fn new() -> Self {
-        Self { exit: false }
-    }
+#[derive(Debug)]
+struct NodeUpdateResult {
+    node: String,
+    bin: PathBuf,
+    success: bool,
+    error: Option<String>,
+    duration: Duration,
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     // initialize logging
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -48,201 +44,331 @@ async fn main() -> Result<()> {
                 .set_target_level(log::LevelFilter::Info)
                 .set_thread_mode(simplelog::ThreadLogMode::Names)
                 .build(),
-            File::create("conuds.log").unwrap(),
+            File::create("conUDS.log").unwrap(),
         ),
-    ])?;
+    ]).unwrap_or_else(|e| {
+        error!("Initialization error: {:?}", e);
+        std::process::exit(1)
+    });
 
     debug!("App Startup");
 
     let args: Arguments = argh::from_env();
     debug!("Command-line arguments processed: {:#?}", args);
 
-    let cfg = Config::new()?;
-    debug!("Configuration initialized: {:#?}", cfg);
-
-    let uds_node = cfg.nodes.get(&args.node).unwrap_or_else(|| {
-        error!("UDS node not defined in `assets/nodes.yml`");
+    let cfg = Config::new(&args.node_manifest).unwrap_or_else(|e| {
+        error!("Configuration error: {:?}", e);
         std::process::exit(1)
     });
-    debug!("UDS node identified: {:#?}", uds_node);
-
-    let app = Arc::new(Mutex::new(App::new()));
-    let app_canio = Arc::clone(&app);
-    let app_10ms = Arc::clone(&app);
-
-    let (uds_queue_tx, uds_queue_rx) = mpsc::channel::<CanioCmd>(100);
-    let (cmd_queue_tx, mut cmd_queue_rx) = mpsc::channel::<PrdCmd>(10);
-
-    let mut uds_client = UdsClient::new(cmd_queue_tx.clone(), uds_queue_tx.clone());
-    debug!("UDS client initialized: {:#?}", uds_client);
-
-    let canio = {
-        match CANIO::new(
-            &args.device,
-            uds_node.request_id,
-            uds_node.response_id,
-            uds_queue_rx,
-        ) {
-            Ok(canio) => {
-                debug!("CANIO object initialized: {}", canio);
-                canio
-            }
-            Err(e) => {
-                error!("Failed to initialize CANIO object! {:#?}", e);
-                return Err(anyhow!("Error initializing CANIO object! {:#?}", e));
-            }
-        }
-    };
-
-    debug!("Sawning threads");
-    let t1 = tokio::spawn(async move { tsk_canio(app_canio, canio).await });
-    let t2 = tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx).await });
+    debug!("Configuration initialized: {:#?}", cfg);
 
     match args.subcmd {
+        ArgSubCommands::Batch(batch) => {
+            if batch.targets.is_empty() {
+                error!("No targets provided. Use -u node:/path/to/bin (repeatable).");
+                std::process::exit(1);
+            }
+
+            let overall_start = Instant::now();
+            let mut results: Vec<NodeUpdateResult> = Vec::with_capacity(batch.targets.len());
+
+            for upd in &batch.targets {
+                let Some((node, bin)) = parse_update_pair(upd) else {
+                    let msg = format!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
+                    error!("{}", msg);
+                    results.push(NodeUpdateResult {
+                        node: "<unknown>".into(),
+                        bin: PathBuf::from("<unknown>"),
+                        success: false,
+                        error: Some(msg),
+                        duration: Duration::from_secs(0),
+                    });
+                    continue;
+                };
+
+                let Some(uds_node) = cfg.nodes.get(&node) else {
+                    let msg = format!("UDS node '{}' not defined in manifest", node);
+                    error!("{}", msg);
+                    results.push(NodeUpdateResult {
+                        node: node.clone(),
+                        bin: bin.clone(),
+                        success: false,
+                        error: Some(msg),
+                        duration: Duration::from_secs(0),
+                    });
+                    continue;
+                };
+
+                info!("Batch update: node='{}', binary='{:?}'", node, bin);
+
+                let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                    error!("UDS node '{}' not defined", node);
+                    std::process::exit(1)
+                });
+
+                let node_start = Instant::now();
+                let mut success = false;
+                let mut err_msg: Option<String> = None;
+
+                let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, false).await;
+                info!("Downloading binary {:?} to node '{}'", bin, node);
+
+                match download_app_to_target(&bin, &mut uds, false).await {
+                    Ok(_) => {
+                        info!("Download successful for node '{}'...", node);
+                        success = true;
+                    }
+                    Err(e) => {
+                        error!("Download failed for node '{}': {}", node, e);
+                        err_msg = Some(e.to_string());
+                    }
+                }
+
+                uds.teardown().await;
+
+                let node_dur = node_start.elapsed();
+                results.push(NodeUpdateResult {
+                    node: node.clone(),
+                    bin: bin.clone(),
+                    success,
+                    error: err_msg,
+                    duration: node_dur,
+                });
+            }
+
+            let total_dur = overall_start.elapsed();
+            print_deployment_report(&results, total_dur);
+        }
+
         ArgSubCommands::Reset(reset) => {
-            debug!(
-                "Performing {:#?} reset for node `{}`",
-                reset.reset_type, args.node
-            );
-            uds_client.ecu_reset(reset.reset_type).await;
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'reset'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Performing {:?} reset for node '{}'", reset.reset_type, node);
+            if let Err(e) = uds.reset_node(reset.reset_type).await {
+                error!("Error while resetting ecu: {}", e);
+            }
+            uds.teardown().await;
         }
+
         ArgSubCommands::Download(dl) => {
-            debug!(
-                "Downloading binary at '{:#?}' to node `{}`",
-                dl.binary, args.node
-            );
-            let _ = uds_client.ecu_reset(SupportedResetTypes::Hard).await;
-            uds_client.start_persistent_tp().await?;
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'download'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
 
-            info!("Waiting for the user to hit enter before continuing with download");
-            let mut garbage = String::new();
-            while stdin().read_line(&mut garbage).is_err() {
-                // wait for user to hit enter
-            }
-            info!("Enter key detected, proceeding with download");
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, !dl.no_skip).await;
+            info!("Downloading binary {:?} to node '{}'", dl.binary, node);
 
-            if let Err(e) = uds_client.app_download(dl.binary, 0x08002000).await {
-                error!("While downloading app: {}", e);
+            if let Err(e) = download_app_to_target(&dl.binary, &mut uds, dl.no_skip).await {
+                error!("Download failed for node '{}': {}", node, e);
+            } else {
+                info!("Download successful for node '{}'...", node);
             }
+            uds.teardown().await;
         }
+
         ArgSubCommands::BootloaderDownload(dl) => {
-            debug!(
-                "Downloading binary at '{:#?}' to node `{}`",
-                dl.binary, args.node
-            );
-            uds_client.start_persistent_tp().await?;
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'bootloader-download'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
 
-            info!("Waiting for the user to hit enter before continuing with download");
-            let mut garbage = String::new();
-            while stdin().read_line(&mut garbage).is_err() {
-                // wait for user to hit enter
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Downloading bootloader {:?} to node '{}'", dl.binary, node);
+            if let Err(e) = uds.file_download(&dl.binary, 0x08000000).await {
+                error!("While downloading bootloader: {}", e);
             }
-            info!("Enter key detected, proceeding with download");
-
-            if let Err(e) = uds_client.app_download(dl.binary, 0x08000000).await {
-                error!("While downloading app: {}", e);
-            }
+            uds.teardown().await;
         }
+
         ArgSubCommands::ReadDID(did) => {
-            info!("Performing DID read on id {:#?} for node `{}`", did.id, args.node);
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'readDID'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Performing DID read on id {:#?} for node '{}'", did.id, node);
             let id = u16::from_str_radix(&did.id, 16).unwrap();
-            let _ = uds_client.did_read(id).await;
+            let resp = uds.client.did_read(id).await;
+            uds.teardown().await;
+            println!("{:?}", resp);
         }
+
         ArgSubCommands::NVMHardReset(_) => {
-            info!(
-                "Performing NVM hard reset for node `{}`",
-                args.node
-            );
-            if let Err(e) = uds_client.routine_start(0xf0f0, None).await {
-                error!("While downloading app: {}", e);
-            }
-            else {
-                let result = uds_client.routine_get_results(0xf0f0).await;
-                /// TODO: Implement error checking
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'nvmHardReset'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            info!("Performing NVM hard reset for node '{}'", node);
+            if let Err(e) = uds.client.routine_start(0xf0f0, None).await {
+                error!("While starting NVM erase: {}", e);
+            } else {
+                let _result = uds.client.routine_get_results(0xf0f0).await;
+                // TODO: Implement error checking
                 info!("Successful NVM erase");
             }
+            uds.teardown().await;
+        }
+    }
+}
+
+async fn verify_app_crc(uds_session: &mut UdsSession) -> Result<u32, String> {
+    let resp = uds_session.client.did_read(UDS_DID_CRC).await;
+    if let Ok(node_crc) = resp {
+        if let Ok(arr) = <[u8; 4]>::try_from(node_crc.as_slice()) {
+            return Ok(u32::from_le_bytes(arr));
+        } else {
+            return Err(format!("Invalid response length for CRC"));
         }
     }
 
-    app.lock().unwrap().exit = true;
-
-    debug!("Main app logic done, joining threads");
-    let _ = t1.await.unwrap();
-    let _ = t2.await.unwrap();
-    debug!("Threads finished, exiting");
-
-    // fixme: probably wait for shutdown signal here, then signal threads to exit
-
-    // for handle in handles {
-    //     let res = handle.await.unwrap().await;
-    //     if !res.is_ok() {
-    //         println!("{:?}", res);
-    //         app.lock().unwrap().exit = true;
-    //     }
-    // }
-
-    Ok(())
+    return Err("CRC read failure".to_string());
 }
 
-/// CANIO task
-///
-/// Owns the CAN hardware and handles all transmitting and receiving functions
-async fn tsk_canio(app: Arc<Mutex<App>>, mut canio: CANIO<'_>) -> Result<()> {
-    debug!("CANIO thread starting");
+async fn download_app_to_target(
+        binary_path: &PathBuf,
+        uds_session: &mut UdsSession,
+        no_skip: bool
+    ) -> Result<(), String> {
+    if !no_skip {
+        let mut file = File::open(binary_path).expect("Binary does not exist!");
+        file.seek(SeekFrom::End(-4)).expect("Seek failed");
+        let mut buffer = [0u8; 4];
+        file.read_exact(&mut buffer).expect("CRC read failed");
+        let app_crc = u32::from_le_bytes(buffer);
+        println!("Application CRC to download: 0x{:08X}", app_crc);
 
-    while !app.try_lock().is_ok_and(|app| app.exit) {
-        if let Err(e) = canio.process().await {
-            error!("In CANIO process: {}", e);
-            return Err(e);
-        }
-    }
-
-    debug!("CANIO thread exiting");
-    Ok(())
-}
-
-/// 10ms(100Hz) periodic task
-///
-/// This task will run at 100Hz in order to handle periodic actions
-async fn tsk_10ms(
-    app: Arc<Mutex<App>>,
-    cmd_queue: &mut mpsc::Receiver<PrdCmd>,
-    uds_queue: mpsc::Sender<CanioCmd>,
-) -> Result<()> {
-    debug!("10ms thread starting");
-
-    let mut send_tp = false;
-
-    while !app.try_lock().is_ok_and(|app| app.exit) {
-        if let Ok(cmd) = cmd_queue.try_recv() {
-            match cmd {
-                PrdCmd::PersistentTesterPresent(state) => {
-                    if state {
-                        info!("Enabling persistent TP");
-                    } else {
-                        info!("Disabling persistent TP");
-                    }
-                    send_tp = state
+        match verify_app_crc(uds_session).await {
+            Ok(crc) => {
+                if crc == app_crc {
+                    info!("Application CRC match, skipping download.");
+                    return Ok(());
+                } else {
+                    info!(
+                        "CRC mismatch: node=0x{:08X}, app=0x{:08X}. Downloading...",
+                        crc, app_crc
+                    );
                 }
-            }
+            },
+            Err(e) => error!("{}", e),
         }
-
-        if send_tp {
-            if let Err(e) = uds_queue
-                .clone()
-                .send(CanioCmd::UdsCmdNoResponse(
-                    UDSProtocol::create_tp_msg(false).to_bytes(),
-                ))
-                .await
-            {
-                error!(target: "10ms thread", "Failed to add to CANIO queue from 10ms task: {}", e);
-                return Err(e.into());
-            }
-        }
-
-        tokio::time::sleep(time::Duration::from_millis(10)).await;
     }
 
-    debug!("10ms thread exiting");
-    Ok(())
+    uds_session.client.start_persistent_tp().await;
+    let _ = uds_session.reset_node(SupportedResetTypes::Hard).await;
+    match uds_session.file_download(&binary_path, 0x08002000).await {
+        Ok(()) => return Ok(()),
+        Err(e) => return Err(format!("Error downloading binary: '{}'", e)),
+    }
+}
+
+fn parse_update_pair(s: &str) -> Option<(String, PathBuf)> {
+    // expects "node:/path/to/bin"
+    let (node, path) = s.split_once(':')?;
+    Some((node.to_string(), PathBuf::from(path)))
+}
+
+fn fmt_dur(d: Duration) -> String {
+    let secs = d.as_secs();
+    let ms = d.subsec_millis();
+    format!("{secs}.{ms:03}s")
+}
+
+fn print_deployment_report(results: &[NodeUpdateResult], total_dur: Duration) {
+    let total = results.len() as u64;
+    let successes = results.iter().filter(|r| r.success).count() as u64;
+    let failures = total - successes;
+    let avg = average_duration(&results.iter().map(|r| r.duration).collect::<Vec<_>>());
+    let success_rate = if total > 0 {
+        (successes as f64) * 100.0 / (total as f64)
+    } else {
+        0.0
+    };
+
+    info!("");
+    info!("===================== Deployment Report =====================");
+    info!("Total nodes      : {}", total);
+    info!("Succeeded        : {}", successes);
+    info!("Failed           : {}", failures);
+    info!("Success rate     : {:.1}%", success_rate);
+    info!("Total time       : {}", fmt_dur(total_dur));
+    info!("Avg per-node time: {}", fmt_dur(avg));
+    info!("=============================================================");
+    info!("{:<18}  {:<28}  {:<10}  {:>10}  {}", "Node", "Binary", "Status", "Elapsed", "Error");
+    info!("{}", "-".repeat(18 + 2 + 28 + 2 + 10 + 2 + 10 + 2 + 5 + 16));
+
+    for r in results {
+        let status = if r.success { "OK" } else { "FAIL" };
+        let err = r.error.as_deref().unwrap_or("");
+        let bin_str = r.bin.to_string_lossy();
+        info!(
+            "{:<18}  {:<28}  {:<10}  {:>10}  {}",
+            r.node,
+            truncate(&bin_str, 28),
+            status,
+            fmt_dur(r.duration),
+            err
+        );
+    }
+
+    if failures > 0 {
+        info!("");
+        info!("--- Failure details ---");
+        for r in results.iter().filter(|r| !r.success) {
+            info!("node='{}' bin='{}' error='{}'",
+                r.node,
+                r.bin.to_string_lossy(),
+                r.error.as_deref().unwrap_or("<unknown error>")
+            );
+        }
+    }
+}
+
+/// Helper to keep table columns tidy without extra crates
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else if max > 1 {
+        let mut t = s.chars().take(max - 1).collect::<String>();
+        t.push('…');
+        t
+    } else {
+        "…".to_string()
+    }
+}
+
+fn average_duration(durations: &[Duration]) -> Duration {
+    if durations.is_empty() {
+        return Duration::from_secs(0);
+    }
+    let total_nanos: u128 = durations.iter().map(|d| d.as_nanos()).sum();
+    let avg_nanos = total_nanos / (durations.len() as u128);
+    Duration::from_nanos(avg_nanos as u64)
 }
