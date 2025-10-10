@@ -1,0 +1,12 @@
+[Unit]
+Description=Carputer Device Discovery Service
+After=network.target
+
+[Service]
+
+ExecStart=/bin/cfr/net-detec -i eth0 -H carputer.local. -s _carputer._tcp.local. server
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
