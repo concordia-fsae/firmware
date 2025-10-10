@@ -41,6 +41,6 @@ rust_binary(
 configured_alias(
     name = "bin-arm64",
     actual = ":conUDS",
-    platform = "//buck/platforms:arm64-linux",
+    platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
 )
