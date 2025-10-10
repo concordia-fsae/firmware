@@ -4,6 +4,9 @@ config:
 defs:
   lib_enabled:
   block_size:
+  task:
+    requires:
+      nvm_lib_enabled:
   flash_backed:
     requires:
       - nvm_lib_enabled

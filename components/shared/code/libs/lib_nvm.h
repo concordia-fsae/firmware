@@ -15,6 +15,10 @@
 #include "stdbool.h"
 #include "stdint.h"
 #include "lib_nvm_componentSpecific.h"
+#include "Module.h"
+#if FEATURE_IS_ENABLED(NVM_SWI)
+#include "FreeRTOS_SWI.h"
+#endif
 
 /******************************************************************************
  *                              D E F I N E S
@@ -27,6 +31,14 @@
                                  x
 #define LIB_NVM_MEMORY_REGION_ARRAY(x, size) __attribute__((section(".nvm"))) x##_nvm[size] = { 0U }; \
                                              x[size]
+
+/******************************************************************************
+ *                              E X T E R N S
+ ******************************************************************************/
+
+#if FEATURE_IS_ENABLED(NVM_SWI)
+extern RTOS_swiHandle_T *NVM_swi;
+#endif
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -42,6 +54,11 @@ typedef uint16_t storage_t;
 
 typedef uint8_t lib_nvm_entry_t;
 
+typedef enum
+{
+    NVM_ACTION_WRITE,
+} lib_nvm_entryAction_E;
+
 typedef struct
 {
     const uint16_t version;
@@ -51,6 +68,12 @@ typedef struct
     const uint16_t minTimeBetweenWritesMs;
     bool (*versionHandler_Fn)(const uint16_t version, const storage_t* const entry_Ptr);
 } lib_nvm_entry_S;
+
+typedef struct
+{
+    const lib_nvm_entryId_E entryId;
+    const lib_nvm_entryAction_E action;
+} lib_nvm_entryAction_S;
 
 typedef struct
 {
@@ -91,11 +114,14 @@ static const lib_nvm_nvmCycleLog_S cycleLogDefault = {
  ******************************************************************************/
 
 void lib_nvm_init(void);
+void lib_nvm_check(void);
 void lib_nvm_run(void);
 void lib_nvm_cleanUp(void);
 
 bool lib_nvm_nvmInitializeNewBlock(void);
-void lib_nvm_requestWrite(lib_nvm_entryId_E entryId);
+bool lib_nvm_requestWrite(lib_nvm_entryId_E entryId);
+bool lib_nvm_writesRequired(void);
+bool lib_nvm_writeRequired(lib_nvm_entry_t entryId);
 
 uint32_t lib_nvm_getTotalRecordWrites(void);
 uint32_t lib_nvm_getTotalFailedCrc(void);

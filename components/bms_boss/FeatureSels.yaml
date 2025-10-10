@@ -1,9 +1,13 @@
 featureDefs: 
   - "#/components/bms_boss/FeatureDefs.yaml"
   - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
+  - "#/components/shared/code/HW/hw_FeatureDefs.yaml"
 features:
   feature_cantx_swi:
   feature_canrx_swi:
   nvm_lib_enabled: true
   nvm_flash_backed: true
   nvm_block_size: 2048
+  app_rtos: true
+  nvm_task: true
+  hw_flash_delay: true

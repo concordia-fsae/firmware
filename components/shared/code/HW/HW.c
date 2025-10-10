@@ -12,6 +12,7 @@
 
 // System Includes
 #include "stdbool.h"
+#include "string.h"
 
 // Firmware Includes
 #include "stm32f1xx.h"
@@ -47,6 +48,13 @@ typedef struct
 #error "Chipset not supported"
 #endif
 
+typedef struct
+{
+    bool mcuShuttingDown;
+} data_S;
+
+static data_S data;
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -58,6 +66,7 @@ typedef struct
  */
 HW_StatusTypeDef_E HW_init(void) 
 {
+    memset(&data, 0x00, sizeof(data));
     return HAL_Init() == HAL_OK ? HW_OK : HW_ERROR;
 }
 
@@ -95,6 +104,7 @@ void HW_usDelay(uint8_t us)
 
 void HW_systemHardReset(void)
 {
+    data.mcuShuttingDown = true;
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
     lib_nvm_cleanUp();
 #endif
@@ -105,4 +115,9 @@ void HW_systemHardReset(void)
 #else
 #error "Chipset not supported"
 #endif
+}
+
+bool HW_mcuShuttingDown(void)
+{
+    return data.mcuShuttingDown;
 }

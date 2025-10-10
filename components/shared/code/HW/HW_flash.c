@@ -14,6 +14,10 @@
 
 #include "stdbool.h"
 #include "string.h"
+#if FEATURE_IS_ENABLED(APP_RTOS)
+#include "FreeRTOS.h"
+#include "task.h"
+#endif
 
 #if FEATURE_IS_DISABLED(MCU_STM32_USE_HAL)
 # define FLASH_R_BASE      (0x40022000UL)        // base address of flash registers
@@ -116,7 +120,11 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
         uint32_t currPageAddr = startPageAddr + (page * flash.pageSize);
         uint32_t currPageEnd  = currPageAddr + flash.pageSize;
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
 
         // set the page address to erase
         SET_REG(FLASH_AR, currPageAddr);
@@ -124,7 +132,11 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
         SET_REG(FLASH_CR, GET_REG(FLASH_CR) | FLASH_CR_START);
 
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
 
         // verify page has been erased
         // verify 64 bits at a time
@@ -141,7 +153,11 @@ bool FLASH_erasePages(uint32_t startPageAddr, uint16_t pages)
     SET_REG(FLASH_CR, GET_REG(FLASH_CR) & ~FLASH_CR_PER);
 
     while (FLASH_BUSY())
-    {}
+    {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+        vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+    }
 
     FLASH_lock();
     return ret;
@@ -176,15 +192,27 @@ bool FLASH_writeWords(uint32_t addr, uint32_t *data, uint16_t dataLen)
         data_16 = &(((volatile uint16_t*)data)[dataOffset * 2U]);
 
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
         addr_16[0] = data_16[0];
 
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
         addr_16[1] = data_16[1];
 
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
 
         // verify the data in flash,
         // compare as words
@@ -221,12 +249,20 @@ bool FLASH_writeHalfwords(uint32_t addr, uint16_t *data, uint16_t dataLen)
     for (uint16_t dataIdx = 0U; dataIdx < dataLen; dataIdx++)
     {
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
         volatile uint16_t* addr_16 = (volatile uint16_t*)(addr + dataIdx * sizeof(uint16_t));
         *addr_16 = data[dataIdx];
 
         while (FLASH_BUSY())
-        {}
+        {
+#if FEATURE_IS_ENABLED(HW_FLASH_DELAY)
+            vTaskDelay(pdMS_TO_TICKS(1));
+#endif
+        }
 
         // verify the data in flash,
         // compare as halfwords
