@@ -106,8 +106,8 @@ system_rust_toolchain(
 toolchain_alias(
     name = "cxx",
     actual = select({
-        "root//buck/constraints:arm32-none": ":gcc-14.2.rel1-arm-none-eabi",
-        "root//buck/constraints:arm64-linux": ":gcc-14.2.rel1-aarch64-linux-gnu",
+        "root//buck2/constraints:arm32-none": ":gcc-14.2.rel1-arm-none-eabi",
+        "root//buck2/constraints:arm64-linux": ":gcc-14.2.rel1-aarch64-linux-gnu",
         "prelude//os/constraints:linux": ":cxx-host",
         "DEFAULT": ":cxx-host",
     }),
@@ -117,7 +117,7 @@ toolchain_alias(
 toolchain_alias(
     name = "rust",
     actual = select({
-        "root//buck/constraints:arm64-linux": ":rust-linux-aarch64",
+        "root//buck2/constraints:arm64-linux": ":rust-linux-aarch64",
         "DEFAULT": ":rust-host",
     }),
     visibility = ["PUBLIC"],
