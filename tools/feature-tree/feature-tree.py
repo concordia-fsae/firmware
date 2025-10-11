@@ -130,6 +130,12 @@ def GenerateFeatures(selection_files: List[str], features_dict: List[dict] = lis
                         if feature_values[feature] is not None and feature_values[feature] is not False and feature_values[feature] != -1:
                             if feature_values[requirement] is None or feature_values[requirement] == -1 or feature_values[requirement] is False:
                                 raise Exception(f"FeatureDefs: Required feature {requirement} is disabled.")
+                if "restricts" in features[feature] and feature_values[feature] is not False:
+                    for requirement in features[feature]["restricts"]:
+                        if requirement not in features.keys():
+                            raise Exception(f"FeatureDefs: Restricted feature {requirement} is not specified.")
+                        if requirement in feature_values.keys() and feature_values[requirement] is not False:
+                            raise Exception(f"FeatureDefs: Restricted feature {requirement} is enabled.")
 
     features["defs"] = feature_values
     features["discreteValues"] = discreteValues

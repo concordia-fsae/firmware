@@ -1,0 +1,7 @@
+config:
+  prefix: hw
+  description: General definitions for hardware drivers
+defs:
+  flash_delay:
+    requires:
+      - app_rtos
