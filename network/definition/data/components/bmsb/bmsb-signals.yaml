@@ -173,6 +173,16 @@ signals:
         max: 100
       resolution: 1
     continuous: true
+  
+  mcuTemperature:
+    description: BMSB mcu temperature
+    unit: "degC"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
 
   tsmsChg:
     description: "Status of the BMSB TSMS CHG Master Switch"
