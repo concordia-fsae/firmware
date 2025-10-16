@@ -20,10 +20,10 @@
 #include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
 
-#define CURRENT_SENSE_V_per_A 0.0025f
+#define CURRENT_SENSE_V_per_A -0.0025f
 #define PRECHARGE_MIN_TIME_MS 1320U
 
-#define PACK_CS_0_OFFSET 0.06521f
+#define PACK_CS_0_OFFSET 0.0f
 
 BMSB_S BMS;
 
@@ -36,6 +36,8 @@ static void BMS_init(void)
     memset(&BMS, 0x00, sizeof(BMSB_S));
     IMD_init();
     drv_timer_init(&precharge_timer);
+    BMS.counted_coulombs.last_step_us = HW_TIM_getBaseTick();
+    BMS.counted_coulombs.reset = true;
 }
 
 static void BMS10Hz_PRD(void)
@@ -106,9 +108,6 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
-    BMS.pack_current = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
-    BMS.pack_voltage_measured = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK);
-
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {
         SYS_SFT_openShutdown();
@@ -162,10 +161,40 @@ static void BMS100Hz_PRD(void)
     }
 }
 
+static void BMS1kHz_PRD(void)
+{
+    const uint64_t this_step = HW_TIM_getBaseTick();
+    const uint32_t delta_t = (uint32_t)(this_step - BMS.counted_coulombs.last_step_us);
+
+    BMS.pack_current = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
+    BMS.pack_voltage_measured = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK);
+    BMS.pack_voltage_sense_fault = drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_VPACK_DIAG) == DRV_IO_ACTIVE;
+
+    // TODO: Update coulomb count in cells
+    if ((SYS.contacts == SYS_CONTACTORS_PRECHARGE) ||
+        (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED) ||
+        (SYS.contacts == SYS_CONTACTORS_CLOSED))
+    {
+        const float32_t delta_amp_hr = BMS.pack_current * (((float32_t)delta_t) / 1000000.0f) * (1.0f /  3600.0f);
+        BMS.counted_coulombs.reset = false;
+        BMS.counted_coulombs.amp_hr += delta_amp_hr;
+        current_data.pack_amp_hours += delta_amp_hr;
+    }
+    else if (BMS.counted_coulombs.reset == false)
+    {
+        lib_nvm_requestWrite(NVM_ENTRYID_COULOMB_COUNT);
+        BMS.counted_coulombs.amp_hr = 0.0f;
+        BMS.counted_coulombs.reset = true;
+    }
+
+    BMS.counted_coulombs.last_step_us = this_step;
+}
+
 const ModuleDesc_S BMS_desc = {
-    .moduleInit       = &BMS_init,
-    .periodic10Hz_CLK = &BMS10Hz_PRD,
+    .moduleInit        = &BMS_init,
+    .periodic10Hz_CLK  = &BMS10Hz_PRD,
     .periodic100Hz_CLK = &BMS100Hz_PRD,
+    .periodic1kHz_CLK  = &BMS1kHz_PRD,
 };
 
 void BMS_workerWatchdog(void)

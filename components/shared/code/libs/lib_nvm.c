@@ -460,6 +460,16 @@ void lib_nvm_cleanUp(void)
         }
     }
 
+    // There may be upstream failures - if there are wait until the queue is
+    // empty and double check if any still need to be written
+    while(uxQueueMessagesWaiting(data.queue_handle));
+
+    // Force write any outstanding items
+    for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
+    {
+        recordWrite(index);
+    }
+
     // This loop will block until all NVM entries are written to storage.
     // If the calling task has higher priority than the NVM task, this
     // operation will cause a deadlock
@@ -532,7 +542,7 @@ static bool evaluateWriteRequired(lib_nvm_entry_t entryId)
     // 3. There is no current NVM record for the entry
     if ((records[entryId].currentNvmAddr_Ptr == NULL) ||
         (getBlockBaseAddress((uint32_t)records[entryId].currentNvmAddr_Ptr) != getBlockBaseAddress((uint32_t)data.currentPtr)) ||
-        ((ms < (records[entryId].lastWrittenTimeMs + lib_nvm_entries[entryId].minTimeBetweenWritesMs)) &&
+        (((ms < (records[entryId].lastWrittenTimeMs + lib_nvm_entries[entryId].minTimeBetweenWritesMs)) || (HW_mcuShuttingDown())) &&
          (memcmp((storage_t*)lib_nvm_entries[entryId].entryRam_Ptr, (storage_t*)(hdr + 1), lib_nvm_entries[entryId].entrySize))))
     {
         records[entryId].writeRequired = true;
@@ -544,14 +554,6 @@ static bool evaluateWriteRequired(lib_nvm_entry_t entryId)
 static void recordWrite(const lib_nvm_entry_t entryId)
 {
     // Validate that the record write is not egregious
-    if ((lib_nvm_entries[entryId].minTimeBetweenWritesMs != 0U) &&
-        (records[entryId].lastWrittenTimeMs != 0U) &&
-        (LIB_NVM_GET_TIME_MS() > (records[entryId].lastWrittenTimeMs + lib_nvm_entries[entryId].minTimeBetweenWritesMs)) &&
-        (HW_mcuShuttingDown() == false))
-    {
-        return;
-    }
-
     lib_nvm_recordHeader_S recordHeader = { 0U };
     lib_nvm_recordHeader_S * const currentRecord = (lib_nvm_recordHeader_S*)records[entryId].currentNvmAddr_Ptr;
     uint16_t entrySize = lib_nvm_entries[entryId].entrySize;
@@ -641,6 +643,10 @@ static void initializeNVMBlock(uint32_t addr)
     for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
     {
         records[index].writeRequired = true;
+        if (HW_mcuShuttingDown())
+        {
+            recordWrite(index);
+        }
     }
 
     LIB_NVM_WRITE_TO_FLASH(page_base,

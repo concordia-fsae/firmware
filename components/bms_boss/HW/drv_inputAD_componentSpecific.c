@@ -69,6 +69,13 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
+    [DRV_INPUTAD_DIGITAL_VPACK_DIAG] = {
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_VPACK_DIAG,
+            .active_level = DRV_IO_LOGIC_LOW,
+        },
+    },
 };
 
 /******************************************************************************
