@@ -29,10 +29,10 @@
 #define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
 #define ADC_CALIBRATION_TIMEOUT                 10U
 
-#define ADC_CS_N_CHANNEL ADC_CHANNEL_8
+#define ADC_CS_P_CHANNEL ADC_CHANNEL_9
 #define ADC_PACK_P_CHANNEL ADC_CHANNEL_11
 
-#define ADC_CS_P_CHANNEL ADC_CHANNEL_9
+#define ADC_CS_N_CHANNEL ADC_CHANNEL_8
 #define ADC_PACK_N_CHANNEL ADC_CHANNEL_12
 
 /******************************************************************************
@@ -85,7 +85,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
 
     // Configure Regular Channels
 
-    sConfig.Channel      = ADC_CS_N_CHANNEL;
+    sConfig.Channel      = ADC_CS_P_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
@@ -122,16 +122,16 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
 #if BMSB_CONFIG_ID == 1U
-    hadc1.Init.NbrOfConversion = 3;
+    hadc2.Init.NbrOfConversion = 3;
 #else
-    hadc1.Init.NbrOfConversion = 1;
+    hadc2.Init.NbrOfConversion = 1;
 #endif
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
         Error_Handler();
     }
 
-    sConfig.Channel      = ADC_CS_P_CHANNEL;
+    sConfig.Channel      = ADC_CS_N_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_1;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
@@ -147,7 +147,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     {
         Error_Handler();
     }
-    sConfig.Channel      = ADC_PACK_N_CHANNEL;
+    sConfig.Channel      = ADC_CS_N_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_3; // Third to ensure both buffers are synchronized
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
     if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
