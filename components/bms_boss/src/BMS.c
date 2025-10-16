@@ -20,7 +20,7 @@
 #include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
 
-#define CURRENT_SENSE_V_per_A 0.005f
+#define CURRENT_SENSE_V_per_A 0.0025f
 #define PRECHARGE_MIN_TIME_MS 1320U
 
 #define PACK_CS_0_OFFSET 0.06521f
