@@ -11,6 +11,7 @@ messages:
       packChargeLimit:
       packDischargeLimit:
       packVoltage:
+      packAmpHours:
 
   information:
     description: BMS Boss Information
@@ -109,3 +110,5 @@ messages:
       mcuTemperature:
       packVoltageCalculated:
       packVoltageMeasured:
+      packVoltageMeasurementFault:
+      packCycleCountedCoulombs:
