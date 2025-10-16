@@ -18,26 +18,20 @@
 #define ADC_REF_VOLTAGE 3.0f
 #define HW_ADC_BUF_LEN  96U
 
+#define ADC_BANK1_CHANNEL_COUNT ADC_BANK_CHANNEL_COUNT
+#define ADC_BANK2_CHANNEL_COUNT ADC_BANK_CHANNEL_COUNT
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef enum
 {
-    ADC_BANK1_CHANNEL_CS_N,
+    ADC_BANK_CHANNEL_CS,
 #if BMSB_CONFIG_ID == 1U
-    ADC_BANK1_CHANNEL_VPACK_P,
+    ADC_BANK_CHANNEL_VPACK,
 #endif
-    ADC_BANK1_CHANNEL_MCU_TEMP,
-    ADC_BANK1_CHANNEL_COUNT,
+    ADC_BANK_CHANNEL_MCU_TEMP,
+    ADC_BANK_CHANNEL_COUNT,
 } HW_adcChannels_bank1_E;
-
-typedef enum
-{
-    ADC_BANK2_CHANNEL_CS_P = 0x00U,
-#if BMSB_CONFIG_ID == 1U
-    ADC_BANK2_CHANNEL_VPACK_N,
-#endif
-    // All empty values should be disregarded because of simultaneous current sense sampling
-    ADC_BANK2_CHANNEL_COUNT = ADC_BANK1_CHANNEL_COUNT,
-} HW_adcChannels_bank2_E;
+typedef HW_adcChannels_bank1_E HW_adcChannels_bank2_E;

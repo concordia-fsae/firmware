@@ -73,6 +73,28 @@ signals:
         max: 450
     continuous: true
 
+  packVoltageCalculated:
+    unit: 'V'
+    description: BMS Boss Pack Voltage Calculated
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true
+
+  packVoltageMeasured:
+    unit: 'V'
+    description: BMS Boss Pack Voltage Measured
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 450
+    continuous: true
+
   packCurrent:
     unit: 'A'
     description: BMS Boss Pack Current

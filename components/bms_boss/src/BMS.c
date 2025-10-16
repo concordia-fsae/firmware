@@ -20,10 +20,10 @@
 #include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
 
-#define CURRENT_SENSE_V_per_A 0.005f
+#define CURRENT_SENSE_V_per_A 0.0025f
 #define PRECHARGE_MIN_TIME_MS 1320U
 
-#define PACK_CS_0_OFFSET 0.269531f
+#define PACK_CS_0_OFFSET 0.06521f
 
 BMSB_S BMS;
 
@@ -40,14 +40,15 @@ static void BMS_init(void)
 
 static void BMS10Hz_PRD(void)
 {
-    BMSB_S tmp               = { 0x00 };
-    tmp.fault                = false;
-    tmp.pack_voltage         = 0.0f;
-    tmp.voltages.max         = 0.0f;
-    tmp.voltages.min         = 5.0f;
-    tmp.max_temp             = 0.0f;
-    tmp.pack_charge_limit    = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    tmp.pack_discharge_limit = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    BMSB_S tmp                  = { 0x00 };
+    tmp.fault                   = false;
+    tmp.pack_voltage_calculated = 0.0f;
+    tmp.pack_voltage_measured   = 0.0f;
+    tmp.voltages.max            = 0.0f;
+    tmp.voltages.min            = 5.0f;
+    tmp.max_temp                = 0.0f;
+    tmp.pack_charge_limit       = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    tmp.pack_discharge_limit    = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 
     for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
     {
@@ -76,7 +77,7 @@ static void BMS10Hz_PRD(void)
         tmp.pack_charge_limit    = (charge_limit < tmp.pack_charge_limit) ? charge_limit : tmp.pack_charge_limit;
         tmp.pack_discharge_limit = (discharge_limit < tmp.pack_discharge_limit) ? discharge_limit : tmp.pack_discharge_limit;
 
-        tmp.pack_voltage += pack_voltage;
+        tmp.pack_voltage_calculated += pack_voltage;
 
         tmp.voltages.max = (max_voltage > tmp.voltages.max) ? max_voltage : tmp.voltages.max;
         tmp.voltages.min = (min_voltage < tmp.voltages.min) ? min_voltage : tmp.voltages.min;
@@ -97,7 +98,7 @@ static void BMS10Hz_PRD(void)
         BMS.pack_discharge_limit = tmp.pack_discharge_limit;
     }
 
-    BMS.pack_voltage = tmp.pack_voltage;
+    BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
     BMS.fault        = tmp.fault;
     BMS.voltages     = tmp.voltages;
     BMS.max_temp     = tmp.max_temp;
@@ -106,6 +107,7 @@ static void BMS10Hz_PRD(void)
 static void BMS100Hz_PRD(void)
 {
     BMS.pack_current = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
+    BMS.pack_voltage_measured = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK);
 
     if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {
@@ -149,8 +151,8 @@ static void BMS100Hz_PRD(void)
                 const bool mc_valid = (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage, &ts_voltage) == CANRX_MESSAGE_VALID);
                 const bool chg_valid = (CANRX_get_signal(VEH, BRUSA513_dcBusVoltage, &chg_voltage) == CANRX_MESSAGE_VALID);
 
-                if ((((mc_valid == true) && (ts_voltage > 0.95f * BMS.pack_voltage)) ||
-                     ((chg_valid == true) && (chg_voltage > 0.95f * BMS.pack_voltage)))  &&
+                if ((((mc_valid == true) && (ts_voltage > 0.95f * BMS_VPACK_SOURCE)) ||
+                     ((chg_valid == true) && (chg_voltage > 0.95f * BMS_VPACK_SOURCE)))  &&
                     (drv_timer_getState(&precharge_timer) == DRV_TIMER_EXPIRED))
                 {
                     SYS_SFT_cycleContacts();

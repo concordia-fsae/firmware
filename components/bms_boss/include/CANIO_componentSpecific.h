@@ -45,7 +45,9 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 
 #define set_packChargeLimit(m, b, n, s)             set(m, b, n, s, BMS.pack_charge_limit)
 #define set_packDischargeLimit(m, b, n, s)          set(m, b, n, s, BMS.pack_discharge_limit)
-#define set_packVoltage(m, b, n, s)                 set(m, b, n, s, BMS.pack_voltage)
+#define set_packVoltage(m, b, n, s)                 set(m, b, n, s, BMS_VPACK_SOURCE)
+#define set_packVoltageCalculated(m, b, n, s)       set(m, b, n, s, BMS.pack_voltage_calculated)
+#define set_packVoltageMeasured(m, b, n, s)         set(m, b, n, s, BMS.pack_voltage_measured)
 #define set_packCurrent(m, b, n, s)                 set(m, b, n, s, BMS.pack_current)
 #define set_packContactorState(m, b, n, s)          set(m, b, n, s, CANIO_tx_getContactorState())
 #define set_nlg513ControlByte(m, b, n, s)           set(m, b, n, s, CANIO_tx_getNLG513ControlByte())
@@ -90,10 +92,10 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_imdStatus(m, b, n, s)                   set(m, b, n, s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ? \
                                                         CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_packCSVoltage(m, b, n, s)               set(m, b, n, s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS))
-#define set_packCSPVoltage(m, b, n, s)              set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_CS_P))
-#define set_packCSNVoltage(m, b, n, s)              set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_CS_N))
-#define set_packVPackPVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_VPACK_N))
-#define set_packVPackNVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_VPACK_P))
+#define set_packCSPVoltage(m, b, n, s)              set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_CS))
+#define set_packCSNVoltage(m, b, n, s)              set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_CS))
+#define set_packVPackPVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_VPACK))
+#define set_packVPackNVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK))
 #define set_mcuTemperature(m, b, n, s)              set(m, b, n, s, ENV.board.mcu_temp)
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
