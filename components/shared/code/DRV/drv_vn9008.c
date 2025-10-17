@@ -68,6 +68,10 @@ void drv_vn9008_run(void)
             {
                 drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERCURRENT;
             }
+            else
+            {
+                drv_timer_stop(&drv_vn9008_data.oc_timer[i]);
+            }
         }
 
         switch (drv_vn9008_data.state[i])
