@@ -68,10 +68,10 @@ void drv_vn9008_run(void)
             {
                 drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERCURRENT;
             }
-            else
-            {
-                drv_timer_stop(&drv_vn9008_data.oc_timer[i]);
-            }
+        }
+        else
+        {
+            drv_timer_stop(&drv_vn9008_data.oc_timer[i]);
         }
 
         switch (drv_vn9008_data.state[i])
@@ -106,6 +106,12 @@ void drv_vn9008_run(void)
                 }
                 break;
 
+            case DRV_HSD_STATE_OVERTEMP:
+                if ((is_overcurrent == false) && (drv_vn9008_data.request_enabled[i] == false))
+                {
+                    drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
+                }
+                break;
 
             default:
                 // FIXME: This should only occur if it is safe to reset
