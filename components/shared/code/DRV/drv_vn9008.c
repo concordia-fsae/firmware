@@ -56,7 +56,7 @@ void drv_vn9008_run(void)
         drv_vn9008_data.current[i] = diagnostic ? current : drv_vn9008_data.current[i];
         //
         const bool      is_overcurrent = drv_vn9008_data.current[i] > drv_vn9008_channels[i].current_limit_amp;
-        
+
         if (is_overcurrent)
         {
             const drv_timer_state_E state = drv_timer_getState(&drv_vn9008_data.oc_timer[i]);
@@ -64,9 +64,12 @@ void drv_vn9008_run(void)
             {
                 drv_timer_start(&drv_vn9008_data.oc_timer[i], drv_vn9008_channels[i].oc_timeout_ms);
             }
-
+            else if (state == DRV_TIMER_EXPIRED)
+            {
+                drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERCURRENT;
+            }
         }
-        
+
         switch (drv_vn9008_data.state[i])
         {
             // TODO: Handle state transitions
