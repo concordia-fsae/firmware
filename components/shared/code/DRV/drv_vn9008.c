@@ -101,6 +101,7 @@ void drv_vn9008_run(void)
                     }
                     else
                     {
+                        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
                         drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                     }
                 }
@@ -109,6 +110,7 @@ void drv_vn9008_run(void)
             case DRV_HSD_STATE_OVERTEMP:
                 if ((is_overcurrent == false) && (drv_vn9008_data.request_enabled[i] == false))
                 {
+                    drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                 }
                 break;
