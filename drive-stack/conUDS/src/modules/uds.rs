@@ -1,10 +1,16 @@
 use core::time;
 use std::borrow::Cow;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::Read;
 use std::io::stdin;
+use std::fs::File;
 use std::fs::read;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -27,6 +33,15 @@ use crate::CRC8;
 use crate::{CanioCmd, PrdCmd};
 use crate::modules::canio::CANIO;
 
+const UDS_DID_CRC: u16 = 0x03;
+
+#[derive(Debug)]
+pub struct UpdateResult {
+    pub bin: PathBuf,
+    pub result: FlashStatus,
+    pub duration: Duration,
+}
+
 #[derive(Debug)]
 pub struct UdsClient {
     cmd_queue_tx: mpsc::Sender<PrdCmd>,
@@ -38,6 +53,13 @@ pub struct UdsSession {
     exit: Arc::<Mutex::<bool>>,
     threads: [JoinHandle<Result<()>>; 2],
     interactive_session: bool,
+}
+
+#[derive(Debug)]
+pub enum FlashStatus {
+    Failed(String),
+    CrcMatch,
+    DownloadSuccess,
 }
 
 impl UdsSession {
@@ -86,29 +108,24 @@ impl UdsSession {
     }
 
     pub async fn teardown(self) {
-        *self.exit.lock().unwrap() = true;
+        {
+            let mut guard = self.exit.lock().unwrap();
+            *guard = true;
+        }
 
-        debug!("Main app logic done, joining threads");
-        for thread in self.threads {
-            if let Ok(thandle) = thread.await {
-                thandle.unwrap();
-            }
+        for handle in self.threads.into_iter() {
+            let _ = handle.await;
         }
         debug!("Threads finished, exiting");
-
-        // fixme: probably wait for shutdown signal here, then signal threads to exit
-
-        // for handle in handles {
-        //     let res = handle.await.unwrap().await;
-        //     if !res.is_ok() {
-        //         println!("{:?}", res);
-        //         app.lock().unwrap().exit = true;
-        //     } tk
-        // }
     }
 
     pub async fn reset_node(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
-        self.client.ecu_reset(reset_type).await
+        let resp = self.client.ecu_reset(reset_type, self.interactive_session).await;
+        if self.interactive_session {
+            Ok(())
+        } else {
+            resp
+        }
     }
 
     pub async fn file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
@@ -125,6 +142,74 @@ impl UdsSession {
 
         self.client.app_download(path.to_path_buf(), address).await
     }
+
+    pub async fn download_app_to_target(&mut self, binary_path: &PathBuf, skip: bool) -> UpdateResult {
+        let node_start = Instant::now();
+        let mut err_msg: Option<String> = None;
+
+        if skip {
+            let mut file = File::open(binary_path).expect("Binary does not exist!");
+            file.seek(SeekFrom::End(-4)).expect("Seek failed");
+            let mut buffer = [0u8; 4];
+            file.read_exact(&mut buffer).expect("CRC read failed");
+            let app_crc = u32::from_le_bytes(buffer);
+            info!("Application CRC to download: 0x{:08X}", app_crc);
+
+            let crc = match get_app_crc(self).await {
+                Err(e) => {
+                    let node_dur = node_start.elapsed();
+                    return UpdateResult{
+                        bin: binary_path.to_path_buf(),
+                        result: FlashStatus::Failed(format!("{:?}", e)),
+                        duration: node_dur,
+                    };
+                },
+                Ok(crc) => crc,
+            };
+
+            if crc == app_crc {
+                let node_dur = node_start.elapsed();
+                return UpdateResult{
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::CrcMatch,
+                    duration: node_dur,
+                };
+            } else {
+                info!(
+                    "CRC mismatch: node=0x{:08X}, app=0x{:08X}. Downloading...",
+                    crc, app_crc
+                );
+            }
+        }
+
+        self.client.start_persistent_tp().await;
+        if !self.interactive_session && let Err(_) = self.client.ecu_reset(SupportedResetTypes::Hard, self.interactive_session).await {
+            let node_dur = node_start.elapsed();
+            return UpdateResult{
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
+                    duration: node_dur,
+                };
+        }
+        match self.file_download(&binary_path, 0x08002000).await {
+            Ok(()) => {
+                let node_dur = node_start.elapsed();
+                return UpdateResult{
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::DownloadSuccess,
+                    duration: node_dur,
+                };
+            },
+            Err(e) => {
+                let node_dur = node_start.elapsed();
+                return UpdateResult{
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::Failed(format!("Error downloading binary: '{}'", e)),
+                    duration: node_dur,
+                };
+            },
+        }
+    }
 }
 
 /// CANIO task
@@ -136,7 +221,6 @@ async fn tsk_canio(exit: Arc<Mutex<bool>>, mut canio: CANIO<'_>) -> Result<()> {
     while !exit.try_lock().is_ok_and(|exit| *exit) {
         if let Err(e) = canio.process().await {
             error!("In CANIO process: {}", e);
-            return Err(e);
         }
     }
 
@@ -168,18 +252,13 @@ async fn tsk_10ms(
                     send_tp = state
                 }
             }
-        }
-
-        if send_tp {
-            if let Err(e) = uds_queue
-                .clone()
-                .send(CanioCmd::UdsCmdNoResponse(
-                    UDSProtocol::create_tp_msg(false).to_bytes(),
-                ))
-                .await
-            {
-                error!(target: "10ms thread", "Failed to add to CANIO queue from 10ms task: {}", e);
-                return Err(e.into());
+        } else {
+            if send_tp {
+                let _resp = CanioCmd::send_recv(
+                        &UDSProtocol::create_tp_msg(true).to_bytes(),
+                        uds_queue.clone(),
+                        10
+                    ).await;
             }
         }
 
@@ -205,7 +284,6 @@ impl UdsClient {
     }
 
     pub async fn start_persistent_tp(&mut self) -> Result<()> {
-        info!("Starting persistent TP");
         Ok(self.send_cmd(PrdCmd::PersistentTesterPresent(true)).await?)
     }
 
@@ -216,7 +294,7 @@ impl UdsClient {
             .await?)
     }
 
-    pub async fn did_read(&mut self, did: u16) -> Result<Vec<u8>, UdsError> {
+    pub async fn did_read(&mut self, did: u16) -> Result<Vec<u8>, Option<UdsError>> {
         let id: [u8; 2] = [
             (did & 0xff).try_into().unwrap(),
             (did >> 8).try_into().unwrap(),
@@ -229,28 +307,23 @@ impl UdsClient {
 
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
             .await
-            .map_err(|e| {
-                error!("send_recv failed: {e}");
-                UdsError::GeneralReject
-            })?
-            .await
         {
             Ok(resp) => {
                 if resp.is_empty() {
                     error!("Empty ECU response");
-                    return Err(UdsError::GeneralReject);
+                    return Err(Some(UdsError::IncorrectMessageLengthOrInvalidFormat));
                 }
 
                 // Negative response? 0x7F, <requested SID>, <NRC>
                 if resp[0] == 0x7F {
                     if resp.len() < 3 {
                         error!("Malformed negative response: {:02X?}", resp);
-                        return Err(UdsError::GeneralReject);
+                        return Err(None);
                     }
                     let nrc_byte = resp[2];
                     let uds_err = match UdsError::try_from(nrc_byte) {
-                        Ok(wrapped) => wrapped.into(),
-                        Err(_) => UdsError::GeneralReject,
+                        Ok(wrapped) => Some(wrapped.into()),
+                        Err(_) => None,
                     };
                     return Err(uds_err);
                 }
@@ -258,13 +331,13 @@ impl UdsClient {
                 // Positive response for 0x22 is 0x62
                 if resp[0] != (u8::from(UdsCommand::ReadDataByIdentifier) + 0x40) {
                     error!("Unexpected positive SID: {:02X?}", resp);
-                    return Err(UdsError::GeneralReject);
+                    return Err(None);
                 }
 
                 // We dont echo the DID
                 if resp.len() < 2 {
                     error!("Positive response too short: {:02X?}", resp);
-                    return Err(UdsError::GeneralReject);
+                    return Err(None);
                 }
 
                 let data = resp[1..].to_vec();
@@ -272,26 +345,28 @@ impl UdsClient {
             }
             Err(e) => {
                 error!("Waiting for ECU response failed: {}", e);
-                Err(UdsError::GeneralReject)
+                Err(None)
             }
         }
     }
 
-    pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
+    pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes, recoverable: bool) -> Result<()> {
         let buf = [
             UdsCommand::ECUReset.into(),
             <SupportedResetTypes as Into<ResetType>>::into(reset_type).into(),
         ];
 
-        info!("Sending ECU reset command: {:02x?}", buf);
+        info!("Resetting ECU...");
 
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
-            .await?;
-        info!("ECU Reset results: {:02x?}", resp);
-        let nrc = UdsErrorByte::from(*resp.last().unwrap());
-        if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
-            error!("ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex.");
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
+        debug!("ECU Reset results: {:02x?}", resp);
+        if resp.len() > 0 {
+            let nrc = UdsErrorByte::from(*resp.last().unwrap());
+            if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
+                error!("ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex.");
+            }
+        } else if !recoverable {
+            return Err(anyhow!("ECU reset failed"));
         }
         Ok(())
     }
@@ -312,10 +387,9 @@ impl UdsClient {
         debug!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
 
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
             .await
         {
-            Ok(resp) => info!("Start routine response: {:02x?}", resp),
+            Ok(resp) => debug!("Start routine response: {:02x?}", resp),
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
                 return Err(e.into());
@@ -339,9 +413,7 @@ impl UdsClient {
             routine_id, buf
         );
 
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
-            .await?;
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
 
         debug!(
             "Routine results response for 0x{:02x}: {:02x?}",
@@ -406,8 +478,8 @@ impl UdsClient {
                             ))?);
                             pg.tick();
                             pg.finish();
-                            error!("App erase failed, unexpected response from ECU");
-                            return Err(anyhow!("App erase failed, unexpected response from ECU"));
+                            return Err(anyhow!("App erase failed, unexpected response '{:02x}' from ECU for SID '{:02}'",
+                                resp[2], sid));
                         }
                     }
                 } else {
@@ -427,8 +499,8 @@ impl UdsClient {
                 ))?);
                 pg.tick();
                 pg.finish();
-                error!("Response is not a positive response for this SID");
-                return Err(anyhow!("Response is not a positive response for this SID"));
+                return Err(anyhow!("Response '0x{:02x}' is not a positive response for SID '0x{:02}'",
+                    resp[0], sid));
             }
 
             retries -= 1;
@@ -456,9 +528,7 @@ impl UdsClient {
 
         debug!("Starting UDS download: {:02x?}", buf);
 
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
-            .await?;
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
         debug!("Download start response: {:02x?}", resp);
 
         if resp[0] == 0x7F {
@@ -488,9 +558,7 @@ impl UdsClient {
         let buf = [UdsCommand::RequestTransferExit.into()];
         debug!("Stopping UDS transfer: {:02x?}", buf);
 
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
-            .await?;
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
         debug!("Transfer stop response: {:02x?}", resp);
 
         Ok(())
@@ -508,9 +576,7 @@ impl UdsClient {
         debug!("Transferring data over UDS: {:02x?}", buf);
 
         // send the frame
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await?
-            .await?;
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
         debug!("Transfer payload response: {:02x?}", resp);
 
         if resp[0] == 0x7f {
@@ -595,4 +661,18 @@ impl UdsClient {
 
         Ok(())
     }
+}
+
+async fn get_app_crc(uds_session: &mut UdsSession) -> Result<u32> {
+    debug!("Getting app crc");
+    let resp = uds_session.client.did_read(UDS_DID_CRC).await;
+    if let Ok(node_crc) = resp {
+        if let Ok(arr) = <[u8; 4]>::try_from(node_crc.as_slice()) {
+            return Ok(u32::from_le_bytes(arr));
+        } else {
+            return Err(anyhow!("Invalid response length for CRC"));
+        }
+    }
+
+    return Err(anyhow!("CRC read failure"));
 }

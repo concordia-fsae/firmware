@@ -42,7 +42,7 @@ pub enum ArgSubCommands {
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "download")]
 pub struct SubArgDownload {
-    /// dont skip downloading if there is a CRC mismatch
+    /// dont skip downloading if there isn't a CRC mismatch
     #[argh(switch, short = 's')]
     pub no_skip: bool,
     /// path to the binary file to flash

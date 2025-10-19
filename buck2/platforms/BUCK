@@ -60,8 +60,8 @@ conUDS_batch(
         "//components/bms_worker:deploy-node-4",
         "//components/bms_worker:deploy-node-5",
         "//components/vc/front:deploy-0",
-        "//components/vc/pdu:deploy-0",
         "//components/vc/rear:deploy-0",
+        "//components/vc/pdu:deploy-0",
     ],
     manifest = "//network:manifest-uds",
 )

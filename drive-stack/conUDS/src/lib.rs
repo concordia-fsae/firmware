@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use crc::Crc;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -16,7 +16,7 @@ pub enum CanioCmd {
     UdsCmdNoResponse(Vec<u8>),
     UdsCmdWithResponse {
         buf: Vec<u8>,
-        resp_channel: oneshot::Sender<Vec<u8>>,
+        resp_channel: oneshot::Sender<Option<Vec<u8>>>,
         timeout_ms: u32,
     },
 }
@@ -26,7 +26,7 @@ impl CanioCmd {
         buf: &[u8],
         queue: mpsc::Sender<CanioCmd>,
         timeout_ms: u32,
-    ) -> Result<oneshot::Receiver<Vec<u8>>> {
+    ) -> Result<Vec<u8>> {
         let (tx, rx) = oneshot::channel();
         match queue
             .send(Self::UdsCmdWithResponse {
@@ -36,7 +36,18 @@ impl CanioCmd {
             })
             .await
         {
-            Ok(_) => Ok(rx),
+            Ok(_) => {
+                return match rx.await {
+                    Err(_) => Err(anyhow!("Unable to receive response")),
+                    Ok(resp) => {
+                        if let None = resp {
+                            Err(anyhow!("No responses received"))
+                        } else {
+                            Ok(resp.expect("Illegal state"))
+                        }
+                    }
+                };
+            },
             Err(e) => Err(e.into()),
         }
     }
