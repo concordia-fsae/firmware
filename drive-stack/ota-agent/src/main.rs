@@ -9,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use argh::FromArgs;
 use bytes::Buf; // for chunk.chunk()
 use chrono::Utc;
@@ -17,7 +17,7 @@ use futures_util::{StreamExt, TryStreamExt};
 use hex;
 use hostname::get as get_hostname;
 use if_addrs::get_if_addrs;
-use reqwest::{Client, Error, multipart};
+use reqwest::{Client, Error, multipart, Url};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -28,6 +28,7 @@ use warp::{http::StatusCode, Filter};
 
 #[cfg(target_os = "linux")]
 use conUDS::modules::uds::{FlashStatus, UdsSession};
+use conUDS::modules::uds::UpdateResult;
 use net_detec::Server as MdnsServer;
 use net_detec::Client as MdnsClient;
 use net_detec::{DiscoveryFilter, DiscoveredService};
@@ -62,19 +63,48 @@ pub struct SubArgClient {
 #[derive(Debug, FromArgs)]
 #[argh(subcommand)]
 pub enum SubAction {
+    Stage(SubActionStage),
     Flash(SubActionFlash),
+    Ota(SubActionOta),
 }
 
-/// Start an OTA agent server
+/// Stage a binary to a node
 #[derive(Debug, FromArgs)]
-#[argh(subcommand, name = "flash")]
-pub struct SubActionFlash {
+#[argh(subcommand, name = "stage")]
+pub struct SubActionStage {
     /// the node to flash
     #[argh(option, short = 'n')]
     pub node: String,
     /// the binary to flash
     #[argh(option, short = 'b')]
     binary: PathBuf,
+}
+
+/// Flash a staged binary onto a node
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "flash")]
+pub struct SubActionFlash {
+    /// the node to flash
+    #[argh(option, short = 'n')]
+    pub node: String,
+    /// force flashing even if there is a binary match
+    #[argh(switch, short = 'f')]
+    force: bool,
+}
+
+/// Stage and flash a binary to a node
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "ota")]
+pub struct SubActionOta {
+    /// the node to flash
+    #[argh(option, short = 'n')]
+    pub node: String,
+    /// the binary to flash
+    #[argh(option, short = 'b')]
+    binary: PathBuf,
+    /// force flashing even if there is a binary match
+    #[argh(switch, short = 'f')]
+    force: bool,
 }
 
 #[cfg(target_os = "linux")]
@@ -123,14 +153,24 @@ struct AppState {
     manifest_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct FlashParams {
     node: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    force: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 struct BinariesManifest {
-    nodes: HashMap<String, BinaryEntry>,
+    /// Per-node staged and production binaries
+    nodes: HashMap<String, NodeBinaries>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+struct NodeBinaries {
+    flashing: bool,
+    staged: Option<BinaryEntry>,
+    production: Option<BinaryEntry>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -148,6 +188,8 @@ enum ManifestError {
     NodeMismatch { existing: String, incoming: String },
     #[error("filename already associated with node '{existing}', cannot reassign to '{incoming}'")]
     FilenameError { existing: String, incoming: String },
+    #[error("no staged binary for node '{0}'")]
+    NoStaged(String),
 }
 
 #[tokio::main]
@@ -197,15 +239,37 @@ async fn main() -> Result<()> {
 
             let state_filter = warp::any().map(move || Arc::clone(&state));
 
-            let flash_route = warp::path("update-binary")
+            // POST /firmware/stage  (multipart form: file)
+            let stage_route = warp::path("firmware")
+                .and(warp::path("stage"))
                 .and(warp::post())
                 .and(warp::query::<FlashParams>())
-                .and(state_filter)
+                .and(state_filter.clone())
                 .and(warp::multipart::form().max_length(1024 * 1024 * 512)) // 512MB cap
-                .and_then(update_handler)
-                .recover(recover_json); // make our JSON errors show up
+                .and_then(stage_handler);
 
-            warp::serve(flash_route).run(addr).await;
+            // POST /firmware/flash  (no body; uses staged manifest)
+            let flash_route = warp::path("firmware")
+                .and(warp::path("flash"))
+                .and(warp::post())
+                .and(warp::query::<FlashParams>())
+                .and(state_filter.clone())
+                .and_then(flash_handler);
+
+            // POST /firmware/promote (no body; move staged -> production)
+            let promote_route = warp::path("firmware")
+                .and(warp::path("promote"))
+                .and(warp::post())
+                .and(warp::query::<FlashParams>())
+                .and(state_filter.clone())
+                .and_then(promote_handler);
+
+            let routes = stage_route
+                .or(flash_route)
+                .or(promote_route)
+                .recover(recover_json);
+
+            warp::serve(routes).run(addr).await;
         }
         ArgSubCommands::Client(client) => {
             let mdns_client = MdnsClient::new(None, Some(Duration::from_secs(2)))?;
@@ -236,7 +300,7 @@ async fn main() -> Result<()> {
             };
 
             match client.action {
-                SubAction::Flash(flash) => {
+                SubAction::Stage(flash) => {
                     // Build multipart form with the file
                     let mut file = File::open(&flash.binary)?;
                     let mut buffer = Vec::new();
@@ -247,20 +311,71 @@ async fn main() -> Result<()> {
                     let part = multipart::Part::bytes(buffer)
                         .file_name(fname.clone())
                         .mime_str("application/octet-stream")?;
-
                     let form = multipart::Form::new().part("file", part);
 
-                    info!("Uploading {} to the agent...", &fname);
+                    // TODO: Improve this to detect if the file hash already exists in the agent
+                    // Stage
+                    info!("Staging {} to the agent...", &fname);
                     let rest_client = Client::new();
-                    // Send POST request with query parameter
+                    let url = build_url(result.addresses[0], result.port, "/firmware/stage");
                     let response = rest_client
-                        .post(format!("http://{:?}:{}/update-binary", result.addresses[0], result.port))
-                        .query(&[("node", flash.node)])
+                        .post(url)
+                        .query(&[("node", flash.node.clone())])
                         .multipart(form)
                         .send().await?;
 
-                    info!("Status: {}", response.status());
-                    info!("Body: {}", response.text().await?);
+                    info!("Stage status: {}", response.status());
+                    let stage_body = response.text().await?;
+                    info!("Stage body: {}", stage_body);
+                }
+                SubAction::Flash(flash) => {
+                    // Flash
+                    info!("Requesting flash of staged binary...");
+                    let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
+                    let resp_flash = Client::new()
+                        .post(url_flash)
+                        .query(&[("node", flash.node), ("force", if flash.force { "true".into() } else { "false".into() })])
+                        .send().await?;
+                    info!("Flash status: {}", resp_flash.status());
+                    info!("Flash body: {}", resp_flash.text().await?);
+                }
+                SubAction::Ota(flash) => {
+                    // Build multipart form with the file
+                    let mut file = File::open(&flash.binary)?;
+                    let mut buffer = Vec::new();
+                    let fname: String = Path::new(&flash.binary)
+                        .file_name()
+                        .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
+                    file.read_to_end(&mut buffer)?;
+                    let part = multipart::Part::bytes(buffer)
+                        .file_name(fname.clone())
+                        .mime_str("application/octet-stream")?;
+                    let form = multipart::Form::new().part("file", part);
+
+                    // TODO: Improve this to detect if the file hash already exists in the agent
+                    // Stage
+                    info!("Staging {} to the agent...", &fname);
+                    let rest_client = Client::new();
+                    let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                    let response = rest_client
+                        .post(url)
+                        .query(&[("node", flash.node.clone())])
+                        .multipart(form)
+                        .send().await?;
+
+                    info!("Stage status: {}", response.status());
+                    let stage_body = response.text().await?;
+                    info!("Stage body: {}", stage_body);
+
+                    // Flash
+                    info!("Requesting flash of staged binary...");
+                    let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
+                    let resp_flash = Client::new()
+                        .post(url_flash)
+                        .query(&[("node", flash.node), ("force", if flash.force { "true".into() } else { "false".into() })])
+                        .send().await?;
+                    info!("Flash status: {}", resp_flash.status());
+                    info!("Flash body: {}", resp_flash.text().await?);
                 }
             }
         }
@@ -268,7 +383,16 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn update_handler(
+fn build_url(ip: std::net::IpAddr, port: u16, path: &str) -> Url {
+    let host = match ip {
+        std::net::IpAddr::V4(v4) => v4.to_string(),
+        std::net::IpAddr::V6(v6) => format!("[{}]", v6),
+    };
+    Url::parse(&format!("http://{}:{}{}", host, port, path)).unwrap()
+}
+
+// POST /firmware/stage?node=...   (multipart form with part name "file")
+async fn stage_handler(
     p: FlashParams,
     state: Arc<AppState>,
     form: warp::multipart::FormData,
@@ -278,6 +402,7 @@ async fn update_handler(
         .nodes
         .get(&p.node)
         .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+    let _ = uds_node; // only verifying existence here
 
     let mut saved_path: Option<PathBuf> = None;
     let mut total: u64 = 0;
@@ -340,7 +465,7 @@ async fn update_handler(
 
     {
         let _guard = state.manifest_lock.lock().await;
-        if let Err(e) = update_binaries_manifest_exclusive(
+        if let Err(e) = update_manifest_stage(
             &state.manifest_path,
             &sha256_hex,
             &filename,
@@ -360,6 +485,16 @@ async fn update_handler(
                     ),
                 )));
             }
+            if let Some(ManifestError::FilenameError { existing, incoming }) =
+                e.downcast_ref::<ManifestError>().cloned()
+            {
+                return Err(warp::reject::custom(HttpError(
+                    StatusCode::CONFLICT,
+                    format!(
+                        "filename already associated with node '{existing}', cannot reassign to '{incoming}'"
+                    ),
+                )));
+            }
             return Err(warp::reject::custom(HttpError(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 e.to_string(),
@@ -367,14 +502,119 @@ async fn update_handler(
         }
     }
 
+    let body = serde_json::json!({
+        "status": "staged",
+        "node": p.node,
+        "filename": filename,
+        "bytes_saved": total,
+        "sha256": sha256_hex,
+    });
+    Ok(warp::reply::with_status(
+        warp::reply::json(&body),
+        StatusCode::OK,
+    ))
+}
+
+async fn flash_node(
+    bus: &str,
+    binary: &Path,
+    node: &str,
+    request_id: u32,
+    response_id: u32,
+    manifest_path: &Path,
+    lock: &Arc<tokio::sync::Mutex<()>>,
+    force: bool,
+) -> UpdateResult {
+    if let Err(e) = lock_manifest_node(&manifest_path, &node, &lock).await {
+        return UpdateResult{
+            bin: binary.into(),
+            result: FlashStatus::Failed(e.to_string()),
+            duration: Duration::from_secs(0),
+        };
+    }
+    let mut uds = UdsSession::new(bus, request_id, response_id, false).await;
+    let result = uds.download_app_to_target(&binary.into(), !force).await;
+    unlock_manifest_node(&manifest_path, &node, &lock).await;
+
+    result
+}
+
+async fn lock_manifest_node(
+    manifest_path: &Path,
+    node: &str,
+    lock: &Arc<tokio::sync::Mutex<()>>,
+) -> anyhow::Result<()> {
+    let _guard = lock.lock().await;
+    let mut manifest = read_manifest_compat(manifest_path).await?;
+    if !manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing {
+        manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing = true;
+        return Ok(write_manifest(manifest_path, &manifest).await?);
+    } else {
+        return Err(anyhow!("Node {} is already being flashed", node));
+    }
+}
+
+async fn unlock_manifest_node(
+    manifest_path: &Path,
+    node: &str,
+    lock: &Arc<tokio::sync::Mutex<()>>,
+) -> anyhow::Result<()> {
+    let _guard = lock.lock().await;
+    let mut manifest = read_manifest_compat(manifest_path).await?;
+    if manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing {
+        manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing = false;
+        return Ok(write_manifest(manifest_path, &manifest).await?);
+    } else {
+        return Err(anyhow!("Node {} is not being flashed", node));
+    }
+}
+
+// POST /firmware/flash?node=...
+async fn flash_handler(
+    p: FlashParams,
+    state: Arc<AppState>,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let uds_node = state
+        .cfg
+        .nodes
+        .get(&p.node)
+        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+
+    let entry = {
+        let _guard = state.manifest_lock.lock().await; // just to serialize reads/writes
+        match read_manifest_compat(&state.manifest_path).await {
+            Ok(m) => m.nodes.get(&p.node).and_then(|nb| nb.staged.clone()),
+            Err(e) => {
+                return Err(warp::reject::custom(HttpError(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to read manifest: {}", e),
+                )))
+            }
+        }
+    };
+
+    let staged = entry.ok_or_else(|| warp::reject::custom(HttpError(
+        StatusCode::BAD_REQUEST,
+        ManifestError::NoStaged(p.node.clone()).to_string(),
+    )))?;
+
     info!(
-        "Starting flash on device '{}' with node '{}'",
-        &state.can_device, &p.node
+        "Starting flash on device '{}' with node '{}' (file: {})",
+        &state.can_device, &p.node, &staged.filename
     );
 
-    let mut uds =
-        UdsSession::new(&state.can_device, uds_node.request_id, uds_node.response_id, false).await;
-    let result = uds.download_app_to_target(&bin_path, true).await;
+    println!("{:?}", p);
+    let result = flash_node(
+        &state.can_device,
+        &Path::new(&staged.path),
+        &p.node,
+        uds_node.request_id,
+        uds_node.response_id,
+        &state.manifest_path,
+        &state.manifest_lock,
+        if let Some(force) = p.force { force } else { false },
+    ).await;
+
     match result.result {
         FlashStatus::Failed(e) => {
             error!("Flash failed: {e}");
@@ -385,13 +625,13 @@ async fn update_handler(
             ))
         }
         _ => {
-            info!("Flash status: {:?}", result.result);
+            info!("Flash result: {:?}", result);
             let body = serde_json::json!({
-                "status": format!("{:?}", result.result),
+                "result": format!("{:?}", result),
                 "node": p.node,
-                "filename": filename,
-                "bytes_saved": total,
-                "sha256": sha256_hex,
+                "filename": staged.filename,
+                "bytes": staged.size,
+                "sha256": staged.hash,
             });
             Ok(warp::reply::with_status(
                 warp::reply::json(&body),
@@ -399,6 +639,142 @@ async fn update_handler(
             ))
         }
     }
+}
+
+// POST /firmware/promote?node=...
+async fn promote_handler(
+    p: FlashParams,
+    state: Arc<AppState>,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let _ = state
+        .cfg
+        .nodes
+        .get(&p.node)
+        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+
+    {
+        let _guard = state.manifest_lock.lock().await;
+        if let Err(e) = promote_staged_to_production(&state.manifest_path, &p.node).await {
+            if let Some(ManifestError::NoStaged(_)) = e.downcast_ref::<ManifestError>() {
+                return Err(warp::reject::custom(HttpError(
+                    StatusCode::BAD_REQUEST,
+                    e.to_string(),
+                )));
+            }
+            return Err(warp::reject::custom(HttpError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                e.to_string(),
+            )));
+        }
+    }
+
+    let body = serde_json::json!({
+        "status": "promoted",
+        "node": p.node,
+    });
+    Ok(warp::reply::with_status(
+        warp::reply::json(&body),
+        StatusCode::OK,
+    ))
+}
+
+async fn read_manifest_compat(path: &Path) -> anyhow::Result<BinariesManifest> {
+    match fs::read(path).await {
+        Ok(bytes) => {
+            if let Ok(new) = serde_yaml::from_slice::<BinariesManifest>(&bytes) {
+                return Ok(new);
+            } else {
+                Err(anyhow!("Invalid binary manifest"))
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(BinariesManifest::default()),
+        Err(e) => Err(e).context("reading binaries manifest"),
+    }
+}
+
+async fn write_manifest(path: &Path, manifest: &BinariesManifest) -> anyhow::Result<()> {
+    let tmp_path = path.with_extension("yaml.tmp");
+    let yaml = serde_yaml::to_string(&manifest).context("serializing binaries manifest")?;
+    fs::write(&tmp_path, yaml.as_bytes())
+        .await
+        .context("writing temp manifest")?;
+    fs::rename(&tmp_path, path)
+        .await
+        .context("renaming temp manifest")?;
+    Ok(())
+}
+
+async fn update_manifest_stage(
+    manifest_path: &Path,
+    sha256_hex: &str,
+    filename: &str,
+    file_path: &Path,
+    size: u64,
+    node: &str,
+) -> anyhow::Result<()> {
+    let mut manifest = read_manifest_compat(manifest_path).await?;
+
+    // Cross-node uniqueness checks for staged+production
+    for (saved_node, bins) in &manifest.nodes {
+        if node != saved_node {
+            if let Some(ref b) = bins.staged {
+                if sha256_hex == b.hash {
+                    return Err(ManifestError::NodeMismatch {
+                        existing: saved_node.to_string(),
+                        incoming: node.to_string(),
+                    }
+                    .into());
+                }
+                if filename == b.filename {
+                    return Err(ManifestError::FilenameError {
+                        existing: saved_node.to_string(),
+                        incoming: node.to_string(),
+                    }
+                    .into());
+                }
+            }
+            if let Some(ref b) = bins.production {
+                if sha256_hex == b.hash {
+                    return Err(ManifestError::NodeMismatch {
+                        existing: saved_node.to_string(),
+                        incoming: node.to_string(),
+                    }
+                    .into());
+                }
+                if filename == b.filename {
+                    return Err(ManifestError::FilenameError {
+                        existing: saved_node.to_string(),
+                        incoming: node.to_string(),
+                    }
+                    .into());
+                }
+            }
+        }
+    }
+
+    let entry = BinaryEntry {
+        filename: filename.to_string(),
+        path: file_path.to_string_lossy().into_owned(),
+        size,
+        hash: sha256_hex.to_string(),
+        updated_at: Utc::now().to_rfc3339(),
+    };
+
+    manifest
+        .nodes
+        .entry(node.to_string())
+        .and_modify(|nb| nb.staged = Some(entry.clone()))
+        .or_insert_with(|| NodeBinaries { flashing: false, staged: Some(entry), production: None });
+
+    write_manifest(manifest_path, &manifest).await
+}
+
+async fn promote_staged_to_production(manifest_path: &Path, node: &str) -> anyhow::Result<()> {
+    let mut manifest = read_manifest_compat(manifest_path).await?;
+    let nb = manifest.nodes.get_mut(node).ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
+    let staged = nb.staged.clone().ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
+    nb.production = Some(staged);
+    write_manifest(manifest_path, &manifest).await
 }
 
 async fn load_manifest(path: &str) -> Result<Config> {
@@ -417,7 +793,7 @@ fn start_mdns_advertisement(interface: String, service_type: String, ip: IpAddr,
     let host_name = format!("{}.local.", instance_name);
 
     let mut txt: HashMap<String, String> = HashMap::new();
-    txt.insert("api".to_string(), "/flash".to_string());
+    txt.insert("api".to_string(), "/firmware".to_string());
     txt.insert("proto".to_string(), "http".to_string());
 
     let mdns = MdnsServer {
@@ -438,59 +814,6 @@ fn start_mdns_advertisement(interface: String, service_type: String, ip: IpAddr,
             let _ = dns_server.try_exit();
         }
     });
-}
-
-async fn update_binaries_manifest_exclusive(
-    manifest_path: &Path,
-    sha256_hex: &str,
-    filename: &str,
-    file_path: &Path,
-    size: u64,
-    node: &str,
-) -> anyhow::Result<()> {
-    let mut manifest: BinariesManifest = match fs::read(manifest_path).await {
-        Ok(bytes) => serde_yaml::from_slice(&bytes).context("parsing binaries manifest")?,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => BinariesManifest::default(),
-        Err(e) => return Err(e).context("reading binaries manifest")?,
-    };
-
-    for (saved_node, binary) in &manifest.nodes {
-        if node != saved_node && sha256_hex == binary.hash {
-            return Err(ManifestError::NodeMismatch {
-                existing: saved_node.to_string(),
-                incoming: node.to_string(),
-            }
-            .into());
-        }
-        if node != saved_node && filename == binary.filename {
-            return Err(ManifestError::FilenameError {
-                existing: saved_node.to_string(),
-                incoming: node.to_string(),
-            }
-            .into());
-        }
-    }
-
-    manifest.nodes.insert(
-        node.to_string(),
-        BinaryEntry {
-            filename: filename.to_string(),
-            path: file_path.to_string_lossy().into_owned(),
-            size,
-            hash: sha256_hex.to_string(),
-            updated_at: Utc::now().to_rfc3339(),
-        },
-    );
-
-    let tmp_path = manifest_path.with_extension("yaml.tmp");
-    let yaml = serde_yaml::to_string(&manifest).context("serializing binaries manifest")?;
-    fs::write(&tmp_path, yaml.as_bytes())
-        .await
-        .context("writing temp manifest")?;
-    fs::rename(&tmp_path, manifest_path)
-        .await
-        .context("renaming temp manifest")?;
-    Ok(())
 }
 
 fn find_interface_ipv4(ifname: &str) -> Result<Ipv4Addr> {
@@ -551,15 +874,58 @@ impl From<HttpError> for warp::reply::WithStatus<warp::reply::Json> {
 async fn recover_json(
     err: warp::Rejection,
 ) -> Result<impl warp::Reply, std::convert::Infallible> {
+    use warp::reject;
+
+    // Known custom error
     if let Some(HttpError(code, msg)) = err.find::<HttpError>() {
-        Ok(warp::reply::with_status(
+        return Ok(warp::reply::with_status(
             warp::reply::json(&serde_json::json!({ "error": msg })),
             *code,
-        ))
-    } else {
-        Ok(warp::reply::with_status(
-            warp::reply::json(&serde_json::json!({ "error": "unhandled error" })),
-            StatusCode::INTERNAL_SERVER_ERROR,
-        ))
+        ));
     }
+
+    // Common Warp rejections we want to surface with clearer messages
+    if err.is_not_found() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({ "error": "not found" })),
+            StatusCode::NOT_FOUND,
+        ));
+    }
+    if let Some(_) = err.find::<reject::MethodNotAllowed>() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({ "error": "method not allowed" })),
+            StatusCode::METHOD_NOT_ALLOWED,
+        ));
+    }
+    if let Some(_) = err.find::<reject::PayloadTooLarge>() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({ "error": "payload too large" })),
+            StatusCode::PAYLOAD_TOO_LARGE,
+        ));
+    }
+    if let Some(_) = err.find::<reject::LengthRequired>() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({ "error": "content-length required" })),
+            StatusCode::LENGTH_REQUIRED,
+        ));
+    }
+    if let Some(_) = err.find::<reject::UnsupportedMediaType>() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({ "error": "unsupported media type (expect multipart/form-data)" })),
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        ));
+    }
+    if let Some(e) = err.find::<warp::reject::InvalidQuery>() {
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&serde_json::json!({ "error": format!("invalid query: {}", e) })),
+            StatusCode::BAD_REQUEST,
+        ));
+    }
+
+    // Fallback: dump a debug-ish string to help diagnose during development
+    let msg = format!("unhandled rejection: {:?}", err);
+    Ok(warp::reply::with_status(
+        warp::reply::json(&serde_json::json!({ "error": msg })),
+        StatusCode::INTERNAL_SERVER_ERROR,
+    ))
 }

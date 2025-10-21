@@ -522,6 +522,7 @@ impl UdsClient {
 
     /// Negotiate the start of a download with the ECU
     async fn download_start(&mut self, data: UdsDownloadStart) -> Result<DownloadParams> {
+        info!("Starting UDS download...");
         let mut buf = vec![UdsCommand::RequestDownload.into()];
 
         buf.extend_from_slice(&data.to_bytes());
