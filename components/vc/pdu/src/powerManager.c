@@ -99,6 +99,7 @@ static void powerManager_periodic_100Hz(void)
         }
     }
     drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_MC_VCU3, app_vehicleState_getState() != VEHICLESTATE_INIT);
+    drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_VCU1_VCU2, app_vehicleState_getState() != VEHICLESTATE_INIT);
 
     drv_tps2hb16ab_run();
     drv_vn9008_run();
