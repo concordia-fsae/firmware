@@ -195,7 +195,7 @@ signals:
         max: 100
       resolution: 1
     continuous: true
-  
+
   mcuTemperature:
     description: BMSB mcu temperature
     unit: "degC"
@@ -272,4 +272,28 @@ signals:
       range:
         min: 0
         max: 3
+    continuous: true
+
+  packVoltageMeasurementFault:
+    description: "Status of the BMSB Pack Voltage Sense Fault"
+    discreteValues: "flag"
+
+  packCycleCountedCoulombs:
+    unit: 'Ah'
+    description: Coulombs counted by the pack during this contactor cycle
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 25
+    continuous: true
+
+  packAmpHours:
+    unit: 'Ah'
+    description: Current Amp hours stored in Tractive System Battery
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 25
     continuous: true

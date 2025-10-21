@@ -48,7 +48,7 @@ static bool version_handler_current(const uint16_t version, const storage_t* con
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 static const nvm_bms_data_S current_data_default = {
     .pack_amp_hours = 0U,
-    .cell_soc = { 0 },
+    .cell_amp_hours = { 0 },
     .spare = { 0U },
 };
 LIB_NVM_MEMORY_REGION(nvm_bms_data_S current_data) = { 0U };

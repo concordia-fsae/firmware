@@ -39,6 +39,7 @@ typedef struct {
 
 typedef struct {
     bool fault :1;
+    bool pack_voltage_sense_fault :1;
     bool charging_paused :1;
     uint8_t connected_segments;
     float32_t pack_charge_limit; // [A] precision 1A
@@ -49,6 +50,12 @@ typedef struct {
     float32_t max_temp; // [deg C] precision 1degC
     struct
     {
+        bool reset :1;
+        uint64_t last_step_us;
+        float32_t amp_hr;
+    } counted_coulombs;
+    struct
+    {
         float32_t max; // [V] precision 1mv
         float32_t min; // [V] precision 1mv
     } voltages;
@@ -57,7 +64,7 @@ typedef struct {
 typedef struct
 {
     float32_t pack_amp_hours;
-    float32_t cell_soc[BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS];
+    float32_t cell_amp_hours[BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS];
     uint8_t spare[16U];
 } LIB_NVM_STORAGE(nvm_bms_data_S);
 extern nvm_bms_data_S current_data;

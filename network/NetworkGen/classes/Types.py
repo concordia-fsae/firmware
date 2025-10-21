@@ -90,6 +90,7 @@ class Units(Enum):
     volts = "V"
     degC = "degC"
     amps = "A"
+    amp_hours = "Ah"
     rpm = "RPM"
     pct = "%"
     mm = "mm"
