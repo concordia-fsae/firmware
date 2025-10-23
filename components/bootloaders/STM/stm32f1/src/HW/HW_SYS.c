@@ -192,6 +192,7 @@ void SYS_resetSoft(void)
  */
 void SYS_resetHard(void)
 {
+    NVIC_disableInterrupts();
     // Reset
     pSCB->AIRCR = AIRCR_RESET_REQ;
 

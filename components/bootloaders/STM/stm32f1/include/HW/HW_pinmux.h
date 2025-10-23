@@ -28,4 +28,12 @@ const GPIO_config_S pinmux [] = {
 #if CAN_SLEEP
     { .port = CAN_SLEEP_PORT, .pin = CAN_SLEEP_PIN, .alternate_function = false, .mode = GPIO_MODE_OUTPUT_LOW_SPEED,  .config = GPIO_CFG_OUTPUT_OPEN_DRAIN,},
 #endif
+#if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU)
+#if (APP_PCBA_ID == 0U)
+    { .port = CARCOMP_CONTROL_EN_PORT, .pin = CARCOMP_CONTROL_EN, .alternate_function = false, .mode = GPIO_MODE_OUTPUT_LOW_SPEED,  .config = GPIO_CFG_OUTPUT_PUSH_PULL,},
+    { .port = POE_PORT, .pin = POE_EN, .alternate_function = false, .mode = GPIO_MODE_OUTPUT_LOW_SPEED,  .config = GPIO_CFG_OUTPUT_PUSH_PULL,},
+#else
+#error "Unsupported VCPDU variant"
+#endif
+#endif
 };

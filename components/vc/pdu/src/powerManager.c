@@ -61,6 +61,11 @@ static void powerManager_init(void)
 
     // Power of pump controlled by the cooling manager
     drv_vn9008_setCSEnabled(DRV_VN9008_CHANNEL_PUMP, true); // All sense enable pins are set to the same gpio
+
+    drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_VCU1_VCU2, true);
+    drv_tps2hb16ab_setEnabled(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1, true);
+    drv_tps2hb16ab_setEnabled(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2, true);
+    drv_tps2hb16ab_run();
 }
 
 static void powerManager_periodic_100Hz(void)
