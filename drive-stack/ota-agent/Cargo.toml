@@ -1,0 +1,26 @@
+# Cargo.toml
+[package]
+name = { workspace = true }
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+argh = { workspace = true }
+anyhow = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+serde_json = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+get_if_addrs = { workspace = true }
+net_detec = { workspace = true }
+if_addrs = { workspace = true }
+hostname = { workspace = true }
+reqwest = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }

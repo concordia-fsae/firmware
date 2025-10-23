@@ -14,23 +14,33 @@ path = "/dev/null"
 anyhow = "1.0.80"
 argh = "0.1.12"
 automotive_diag = { version = "0.1.6", features = ["display", "std", "with-uds"], default-features = false }
+bytes = "1"
 clap = { version = "4", features = ["derive"] }
 can-dbc = "6"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 crc = "3.2.1"
 ecu_diagnostics = "0.99"
 env_logger = "0.11"
 futures = "0.3.30"
+futures-util = "0.3"
+hex = "0.4"
+hostname = "0.3"
 if-addrs = "0.14"
 indicatif = "0.17.8"
 log = { version = "0.4.21", features = ["std"] }
 libc = "0.2.175"
 mdns-sd = "0.15.1"
 ratatui = "0.29.0"
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1"
+reqwest = { version = "0.12", default-features = false, features = ["multipart"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.143"
 serde_derive = { version = "1.0.197" }
 serde_yaml = { version = "0.9.34" }
+sha2 = "0.10"
 simplelog = "0.12.2"
 socketcan = "3.5.0"
 tokio = { version = "1.36.0", features = ["full", "macros", "tokio-macros", "rt", "rt-multi-thread", "time", "sync"] }
 thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+warp = { version = "0.3", features = ["multipart"] }

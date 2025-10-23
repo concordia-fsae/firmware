@@ -1,0 +1,12 @@
+[Unit]
+Description=Carputer OTA agent
+After=network.target
+
+[Service]
+
+ExecStart=/bin/cfr/ota_agent -i eth0 --save-dir /application/firmware/ -m /application/firmware/manifest-uds.yaml
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

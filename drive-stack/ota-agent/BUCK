@@ -1,0 +1,35 @@
+rust_binary(
+    name = "ota-agent",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        "//drive-stack/conUDS:lib",
+        "//drive-stack/net-detec:lib",
+        "//third_party:anyhow",
+        "//third_party:argh",
+        "//third_party:bytes",
+        "//third_party:chrono",
+        "//third_party:futures-util",
+        "//third_party:hostname",
+        "//third_party:hex",
+        "//third_party:if-addrs",
+        "//third_party:reqwest",
+        "//third_party:serde",
+        "//third_party:serde_yaml",
+        "//third_party:serde_json",
+        "//third_party:sha2",
+        "//third_party:thiserror",
+        "//third_party:tokio",
+        "//third_party:tracing",
+        "//third_party:tracing-subscriber",
+        "//third_party:warp",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":ota-agent",
+    platform = "//buck2/platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)

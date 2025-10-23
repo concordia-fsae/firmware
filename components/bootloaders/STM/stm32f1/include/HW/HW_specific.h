@@ -61,6 +61,20 @@
 
 #endif
 
+#if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU)
+#if (APP_PCBA_ID == 0U)
+
+# define CARCOMP_CONTROL_EN 9U
+# define CARCOMP_CONTROL_EN_PORT GPIOC
+
+# define POE_EN 8U
+# define POE_PORT GPIOC
+
+#else
+#error "Unsupported VCPDU variant"
+#endif
+#endif
+
 // Use Boot1 (PB2)
 #define BUTTON_PORT             GPIOB
 #define BUTTON_PIN              2U

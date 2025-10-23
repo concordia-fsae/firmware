@@ -116,15 +116,7 @@ impl<'a> CANIO<'a> {
         if let Ok(cmd) = self.uds_queue.try_recv() {
             match cmd {
                 CanioCmd::UdsCmdNoResponse(msg) => {
-                    if let Err(_) = self.uds_send(&msg, 5) {
-                        // FIXME: these should be uncommented, but they will cause the program to
-                        // error out early if the bus is down
-                        // error!("Failed to send UDS message (no response expected): {}", e);
-                        // return Err(anyhow!(
-                        //     "Failed to send UDS message (no response expected): {}",
-                        //     e
-                        // ));
-                    }
+                    let _ = self.uds_send(&msg, 5);
                 }
                 CanioCmd::UdsCmdWithResponse {
                     buf,
@@ -133,27 +125,17 @@ impl<'a> CANIO<'a> {
                 } => {
                     let resp = self.uds_send_recv(&buf, 5, timeout_ms);
                     match resp {
+                        Err(e) => {
+                            resp_channel.send(None);
+                        },
                         Ok(b) => {
-                            if let Err(e) = resp_channel.send(b) {
-                                error!("Failed to send UDS response back to caller: {:?}", e);
-                                return Err(anyhow!(
-                                    "Failed to send UDS response back to caller: {:?}",
-                                    e
-                                ));
-                            }
-                        }
-                        Err(_) => {
-                            // FIXME: these should be uncommented, but they will cause the program to
-                            // error out early if the bus is down
-                            // error!("Failed to send UDS message (response expected): {}", e);
-                            // return Err(anyhow!(
-                            //     "Failed to send UDS message (response expected): {}",
-                            //     e
-                            // ));
+                            let _ = resp_channel.send(Some(b));
                         }
                     }
                 }
             }
+        } else {
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
         }
 
         Ok(())
