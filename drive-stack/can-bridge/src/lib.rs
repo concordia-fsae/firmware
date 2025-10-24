@@ -18,6 +18,8 @@ use libc::{
     SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
 };
 use can_dbc::{ByteOrder, DBC, Message, MessageId, MultiplexIndicator, Signal, ValueType};
+use serde::Serialize;
+use serde_json::{json, Map, Value};
 
 // ---------------- Types ----------------
 
@@ -45,6 +47,69 @@ pub struct Filters {
     pub id_ranges: Vec<IdRange>,
     pub msg_filters: Vec<String>, // lowercased substrings
     pub sig_filters: Vec<String>, // lowercased substrings
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct SignalMeasurement {
+    pub name: String,
+    pub value: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct DecodedMessage {
+    pub message_name: String,
+    /// All message members (signals) that passed filters, with their measurements.
+    pub members: Vec<SignalMeasurement>,
+}
+
+impl DecodedMessage {
+    /// Pretty-print (same shape you had before). When `allow_empty` is false and there are no members, returns None.
+    pub fn to_pretty(&self, allow_empty: bool) -> Option<String> {
+        if self.members.is_empty() {
+            return if allow_empty {
+                Some(format!("{}", self.message_name))
+            } else {
+                None
+            };
+        }
+
+        let mut parts = String::new();
+        for m in &self.members {
+            match m.unit.as_deref() {
+                Some(u) if !u.is_empty() => {
+                    parts.push_str(&format!("  {}={} {}\n", m.name, m.value, u));
+                }
+                _ => {
+                    parts.push_str(&format!("  {}={}\n", m.name, m.value));
+                }
+            }
+        }
+        Some(format!("{}:\n{}", self.message_name, parts))
+    }
+
+    /// Build the `"measurements"` JSON object `{ name: number | {value, unit}, ... }`.
+    pub fn to_measurements_map(&self) -> Map<String, Value> {
+        let mut map = Map::new();
+        for m in &self.members {
+            if let Some(u) = m.unit.as_deref() {
+                if !u.is_empty() {
+                    let mut obj = Map::new();
+                    obj.insert("value".into(), Value::from(m.value));
+                    obj.insert("unit".into(), Value::from(u));
+                    map.insert(m.name.clone(), Value::Object(obj));
+                    continue;
+                }
+            }
+            map.insert(m.name.clone(), Value::from(m.value));
+        }
+        map
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.members.is_empty()
+    }
 }
 
 impl Filters {
@@ -107,12 +172,13 @@ fn parse_u32_id(tok: &str) -> Result<u32, Box<dyn Error>> {
 
 // ---------------- Formatter ----------------
 
-/// Pretty-print one CAN frame, similar to candump, plus decoded signals if available.
+/// Pretty-print one CAN frame, similar to candump, or emit JSON with decoded signals.
 pub fn format_can_line(
     bus: &str,
     f: &CanFrame,
     ts_opt: Option<(u64, u32)>,
-    decoded: Option<String>,
+    decoded: Option<DecodedMessage>, // <— struct-based
+    json: bool,
 ) -> String {
     let is_eff = (f.can_id & CAN_EFF_FLAG) != 0;
     let is_rtr = (f.can_id & CAN_RTR_FLAG) != 0;
@@ -130,22 +196,65 @@ pub fn format_can_line(
         .map(|(s, ns)| format!("{}.{}", s, ns / 1_000))
         .unwrap_or_else(|| "-".to_string());
 
-    if is_rtr {
-        format!("[{}] {} ID={}{flags} DLC={}", ts_str, bus, id_str, f.can_dlc)
-    } else {
+    if !json {
+        // ----- Pretty-print path (build only what we need)
+        if is_rtr {
+            return format!("[{}] {} ID={}{flags} DLC={}", ts_str, bus, id_str, f.can_dlc);
+        }
+
         let bytes = &f.data[..(f.can_dlc as usize).min(8)];
         let payload = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
-        match decoded {
-            Some(dec) if !dec.is_empty() => format!(
-                "[{}] {} ID={}{flags} DLC={} DATA={}\n{}",
-                ts_str, bus, id_str, f.can_dlc, payload, dec
-            ),
-            _ => format!(
-                "[{}] {} ID={}{flags} DLC={} DATA={}",
-                ts_str, bus, id_str, f.can_dlc, payload
-            ),
+
+        if let Some(dm) = decoded {
+            if let Some(dec_str) = dm.to_pretty(true) {
+                return format!(
+                    "[{}] {} ID={}{flags} DLC={} DATA={}\n{}",
+                    ts_str, bus, id_str, f.can_dlc, payload, dec_str
+                );
+            }
         }
+
+        return format!(
+            "[{}] {} ID={}{flags} DLC={} DATA={}",
+            ts_str, bus, id_str, f.can_dlc, payload
+        );
     }
+
+    // ----- JSON path (no pretty string creation)
+    let (sec, nsec) = ts_opt.unwrap_or_default();
+    let data_vec = if is_rtr {
+        Vec::<String>::new()
+    } else {
+        let bytes = &f.data[..(f.can_dlc as usize).min(8)];
+        bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>()
+    };
+
+    let (msg_name, measurements) = if let Some(dm) = decoded {
+        (Some(dm.message_name.clone()), Value::Object(dm.clone().to_measurements_map()))
+    } else {
+        (None, Value::Object(Map::new()))
+    };
+
+    let obj = json!({
+        "message": msg_name,
+        "bus": bus,
+        "timestamp": {
+            "sec": if ts_opt.is_some() { Value::from(sec) } else { Value::Null },
+            "nsec": if ts_opt.is_some() { Value::from(nsec) } else { Value::Null }
+        },
+        "id": {
+            "value": id_val,
+            "hex": id_str,
+            "is_extended": is_eff,
+            "is_rtr": is_rtr,
+            "is_error": is_err
+        },
+        "dlc": f.can_dlc,
+        "data": data_vec,
+        "measurements": measurements,          // object of name -> number | {value, unit}
+    });
+
+    obj.to_string()
 }
 
 // ---------------- DBC bundle & parsing ----------------
@@ -310,7 +419,6 @@ fn is_signal_active(sig: &Signal, mux: Option<u64>) -> bool {
     }
 }
 
-/// Try to decode and apply filters.
 pub fn maybe_decode(
     bundle_opt: Option<&Arc<BusDbc>>,
     frame: &CanFrame,
@@ -319,7 +427,7 @@ pub fn maybe_decode(
     ignore_msg_filter: bool,
     msg_filters: &[String],
     sig_filters: &[String],
-) -> Option<String> {
+) -> Option<DecodedMessage> {
     let b = bundle_opt?;
     let &msg_idx = b.id_index.get(&id_masked)?;
     let msg = &b.dbc.messages()[msg_idx];
@@ -331,19 +439,23 @@ pub fn maybe_decode(
         }
     }
 
-    render_decoded_with_optional_sig_filter(msg, frame, sig_filters, allow_empty_signals)
+    render_members_with_optional_sig_filter(msg, frame, sig_filters, allow_empty_signals)
+        .map(|members| DecodedMessage {
+            message_name: msg.message_name().to_string(),
+            members,
+        })
 }
 
-fn render_decoded_with_optional_sig_filter(
+fn render_members_with_optional_sig_filter(
     msg: &Message,
     f: &CanFrame,
     sig_filters: &[String],
     allow_empty: bool,
-) -> Option<String> {
+) -> Option<Vec<SignalMeasurement>> {
     let data: [u8; 8] = f.data;
     let mux = find_mux_value(msg, &data);
 
-    let mut parts: Vec<String> = Vec::new();
+    let mut out: Vec<SignalMeasurement> = Vec::new();
     for sig in msg.signals() {
         if !is_signal_active(sig, mux) { continue; }
         if !sig_filters.is_empty() {
@@ -352,17 +464,18 @@ fn render_decoded_with_optional_sig_filter(
         }
         let v = decode_signal(sig, &data);
         let unit = sig.unit();
-        if unit.is_empty() {
-            parts.push(format!("  {}={}\n", sig.name(), v));
-        } else {
-            parts.push(format!("  {}={} {}\n", sig.name(), v, unit));
-        }
+        let unit_opt = if unit.is_empty() { None } else { Some(unit.to_string()) };
+        out.push(SignalMeasurement {
+            name: sig.name().to_string(),
+            value: v,
+            unit: unit_opt,
+        });
     }
 
-    if parts.is_empty() {
-        if allow_empty { Some(format!("{}", msg.message_name())) } else { None }
+    if out.is_empty() {
+        if allow_empty { Some(Vec::new()) } else { None }
     } else {
-        Some(format!("{}:\n{}", msg.message_name(), parts.join("")))
+        Some(out)
     }
 }
 

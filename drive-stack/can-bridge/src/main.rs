@@ -36,6 +36,10 @@ struct Args {
     #[arg(long, short, default_value_t = false)]
     quiet: bool,
 
+    /// Output JSON to stdout
+    #[arg(long, short, default_value_t = false)]
+    json: bool,
+
     /// Enable terminal UI mode
     #[arg(long, default_value_t = false)]
     tui: bool,
@@ -120,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             args.max_msgs,
         )?;
     } else {
-        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet);
+        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet, args.json);
     }
 
     Ok(())
@@ -180,7 +184,7 @@ fn run_tui(
                         &[],
                         &[],
                     );
-                    Some(format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded))
+                    Some(format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded, false))
                 }
             } else {
                 let decoded = maybe_decode(
@@ -192,7 +196,7 @@ fn run_tui(
                     &filters.msg_filters,
                     &filters.sig_filters,
                 );
-                decoded.map(|d| format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(d)))
+                decoded.map(|d| format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(d), false))
             };
 
             if let Some(line) = maybe_line {
@@ -291,6 +295,7 @@ pub fn run_headless(
     per_bus_bundles: HashMap<String, Arc<BusDbc>>,
     filters: Filters,
     quiet: bool,
+    json: bool,
 ) {
     let mut last_cycle = Instant::now();
     let mut bandwidth: HashMap<String, u32> = HashMap::new();
@@ -349,7 +354,7 @@ pub fn run_headless(
                     &[],   // sig filters
                 );
 
-                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
+                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded, json);
                 if !quiet { println!("{line}"); }
             } else {
                 let decoded = maybe_decode(
@@ -365,7 +370,7 @@ pub fn run_headless(
                     continue;
                 }
 
-                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded);
+                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded, json);
                 if !quiet { println!("{line}"); }
             }
         }
