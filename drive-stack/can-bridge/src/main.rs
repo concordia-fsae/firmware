@@ -1,20 +1,33 @@
 use std::collections::{HashMap, VecDeque};
+use std::fs::OpenOptions;
+use std::io::BufWriter;
+use std::io::Write;
+use std::fs::{create_dir_all, read_dir, remove_file, metadata};
+use std::fs::File;
+use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
-use std::time::{Instant, Duration};
+use std::time::{Instant, Duration, SystemTime};
+use std::thread;
 
 use clap::Parser;
+use chrono::Local;
 use libc::{CAN_EFF_FLAG, CAN_EFF_MASK, CAN_SFF_MASK};
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use ratatui::crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEventKind, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
 use ratatui::prelude::{Constraint, CrosstermBackend, Direction, Layout, Rect, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap};
 use ratatui::Terminal;
+use tar::Builder;
 
 use can_bridge::{
     BusDbc, BusState, Event, Filters,
     parse_bus_specs, spawn_workers, maybe_decode, format_can_line,
 };
+
+const LOG_BUS_LABEL: &str = "can-all";
 
 /// Read multiple CAN buses; each input may be IFACE or IFACE=DBC.
 /// Filters:
@@ -68,6 +81,36 @@ struct Args {
     /// Max messages kept in the UI scrollback
     #[arg(long, default_value_t = 2000)]
     max_msgs: usize,
+
+    /// If set, write rolling per-bus logs to this directory
+    #[arg(long = "log-dir")]
+    log_dir: Option<PathBuf>,
+
+    /// Maximum size before rolling (bytes)
+    #[arg(long = "log-max-bytes")]
+    log_max_bytes: Option<u64>,
+
+    /// Maximum time before rolling (e.g. 15m, 1h, 1d)
+    #[arg(long = "log-rollover-mins", default_value_t = 15)]
+    log_rollover: u32,
+
+    /// Maximum total size of the log directory in GB (decimal GB = 1_000_000_000 bytes)
+    #[arg(long = "log-dir-max-gb")]
+    log_dir_max_gb: Option<f64>,
+}
+
+struct LogConfig {
+    dir: PathBuf,
+    max_bytes: Option<u64>,
+    max_age: Duration,
+    max_dir_gb: Option<f64>,
+}
+
+struct BusLog {
+    opened_at: Instant,
+    current_size: u64,
+    writer: BufWriter<File>,
+    path: PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -124,7 +167,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             args.max_msgs,
         )?;
     } else {
-        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet, args.json);
+        let log_cfg = match args.log_dir {
+            Some(_) => {
+                args.log_dir.as_ref().map(|dir| LogConfig {
+                    dir: dir.clone(),
+                    max_bytes: args.log_max_bytes,
+                    max_age: Duration::from_secs((args.log_rollover * 60).into()),
+                    max_dir_gb: args.log_dir_max_gb,
+                })
+            }
+            _ => None,
+        };
+        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet, args.json, log_cfg);
     }
 
     Ok(())
@@ -184,7 +238,14 @@ fn run_tui(
                         &[],
                         &[],
                     );
-                    Some(format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded, false))
+                    Some(format_can_line(
+                            &ev.bus,
+                            per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
+                            &ev.frame,
+                            ev.ts_opt,
+                            decoded,
+                            false
+                            ))
                 }
             } else {
                 let decoded = maybe_decode(
@@ -196,7 +257,14 @@ fn run_tui(
                     &filters.msg_filters,
                     &filters.sig_filters,
                 );
-                decoded.map(|d| format_can_line(&ev.bus, &ev.frame, ev.ts_opt, Some(d), false))
+                decoded.map(|d| format_can_line(
+                        &ev.bus,
+                        per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
+                        &ev.frame,
+                        ev.ts_opt,
+                        Some(d),
+                        false
+                        ))
             };
 
             if let Some(line) = maybe_line {
@@ -288,7 +356,43 @@ fn run_tui(
     Ok(())
 }
 
-/// Headless (non-TUI) output loop; used when `--tui` is not set.
+fn log_file_path(base: &Path, bus: &str) -> PathBuf {
+    let stamp = Local::now().format("%Y-%m-%d_%H%M%S");
+    base.join(format!("{bus}-{stamp}.log"))
+}
+
+fn open_bus_log(base: &Path, bus: &str) -> std::io::Result<BusLog> {
+    create_dir_all(base)?;
+    let path = log_file_path(base, bus);
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
+    eprintln!("log: opening file {:?}", path);
+    let size = file.metadata().ok().map(|m| m.len()).unwrap_or(0);
+    Ok(BusLog {
+        opened_at: Instant::now(),
+        current_size: size,
+        writer: BufWriter::new(file),
+        path,
+    })
+}
+
+/// Only respect time/size for rollovers (no daily rotation)
+fn should_roll(bl: &BusLog, cfg: &LogConfig) -> bool {
+    if let Some(max_bytes) = cfg.max_bytes {
+        if bl.current_size >= max_bytes {
+            return true;
+        }
+    }
+    if bl.opened_at.elapsed() >= cfg.max_age {
+        return true;
+    }
+    false
+}
+
+/// Headless (non-TUI) output loop
+/// Single rolling log for ALL buses. The log file contains ONLY data lines, one per message
 pub fn run_headless(
     rx: mpsc::Receiver<Event>,
     bus_states: mpsc::Receiver<(String, BusState)>,
@@ -296,34 +400,78 @@ pub fn run_headless(
     filters: Filters,
     quiet: bool,
     json: bool,
+    log_cfg: Option<LogConfig>,
 ) {
     let mut last_cycle = Instant::now();
     let mut bandwidth: HashMap<String, u32> = HashMap::new();
+
+    // Use a single BusLog for ALL buses. We do not change the BusLog type or helpers.
+    let mut global_log: Option<BusLog> = None;
+
+    if let Some(cfg) = log_cfg.as_ref() {
+        match find_uncompressed_logs(&cfg.dir) {
+            Ok(paths) => {
+                if !paths.is_empty() {
+                    println!("log: startup: found {} uncompressed logs; compressing...", paths.len());
+                }
+                for p in paths.iter() {
+                    let p = p.clone();
+                    if let Err(e) = thread::Builder::new()
+                        .name("log-compress".into())
+                        .spawn(move || {
+                            let start_time = Instant::now();
+                            match compress_and_remove(&p) {
+                                Ok(gz) => {
+                                    // Best-effort size reporting
+                                    let size_mb = metadata(&gz)
+                                        .map(|m| m.len() / (1024 * 1024))
+                                        .unwrap_or(0);
+                                    println!(
+                                        "log: compressed '{}' → '{}', size: {}MB duration: {:?}",
+                                        p.display(),
+                                        gz.display(),
+                                        size_mb,
+                                        start_time.elapsed(),
+                                    );
+                                }
+                                Err(e) => eprintln!("log: compression failed for '{}': {e}", p.display()),
+                            }
+                        })
+                    {
+                        eprintln!("log: failed to spawn compression thread: {e}");
+                    }
+                }
+            }
+            Err(e) => eprintln!("log: startup: failed to enumerate '{}': {e}", cfg.dir.display()),
+        }
+    }
 
     loop {
         let time_delta = Instant::now() - last_cycle;
         if time_delta >= Duration::from_secs(60) {
             for (bus, bps) in bandwidth.drain() {
-                println!("[{}] transmits {:.3} bits/s in {:?}s", bus, bps as f64 / time_delta.as_secs_f64(), time_delta);
+                println!(
+                    "[{}] transmits {:.3} bits/s in {:?}",
+                    bus,
+                    bps as f64 / time_delta.as_secs_f64(),
+                    time_delta
+                );
             }
             last_cycle = Instant::now();
         }
 
         while let Ok((node, state)) = bus_states.try_recv() {
             let s = match state {
-                BusState::Active => "Active".to_string(),
-                BusState::Failed => "Failed".to_string(),
-                BusState::Error => "Error".to_string(),
-                _ => "Starting".to_string(),
+                BusState::Active => "Active",
+                BusState::Failed => "Failed",
+                BusState::Error => "Error",
+                _ => "Starting",
             };
             println!("[{}] reported: {}", node, s);
         }
 
         while let Ok(ev) = rx.try_recv() {
-            // SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
-            // DEL(1), ACK(1), DEL(1), EOF(7), ITM(11)
-            let mut bit_length = 43;
-            bit_length += ev.frame.can_dlc as u32 * 8;
+            let mut bit_length = 43 + ev.frame.can_dlc as u32 * 8;
             let id_masked = if (ev.frame.can_id & CAN_EFF_FLAG) != 0 {
                 bit_length += 29;
                 ev.frame.can_id & CAN_EFF_MASK
@@ -340,39 +488,280 @@ pub fn run_headless(
                 None => { bandwidth.insert(ev.bus.clone(), bit_length.into()); }
             }
 
-            if !has_msg_sig_filters {
-                if has_id_filters && !filters.match_id(id_masked) {
-                    continue;
-                }
+            let line = if !has_msg_sig_filters {
+                if has_id_filters && !filters.match_id(id_masked) { continue; }
                 let decoded = maybe_decode(
                     per_bus_bundles.get(&ev.bus),
                     &ev.frame,
                     id_masked,
-                    true,  // allow empty signals
-                    true,  // ignore msg filter
-                    &[],   // msg filters
-                    &[],   // sig filters
+                    true,
+                    true,
+                    &[],
+                    &[],
                 );
-
-                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded, json);
-                if !quiet { println!("{line}"); }
+                format_can_line(
+                    &ev.bus,
+                    per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
+                    &ev.frame,
+                    ev.ts_opt,
+                    decoded,
+                    json,
+                )
             } else {
                 let decoded = maybe_decode(
                     per_bus_bundles.get(&ev.bus),
                     &ev.frame,
                     id_masked,
-                    false, // don't allow empty results
-                    false, // enforce message filter
+                    false,
+                    false,
                     &filters.msg_filters,
                     &filters.sig_filters,
                 );
-                if decoded.is_none() {
-                    continue;
+                if decoded.is_none() { continue; }
+                format_can_line(
+                    &ev.bus,
+                    per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
+                    &ev.frame,
+                    ev.ts_opt,
+                    decoded,
+                    json,
+                )
+            };
+
+            if !quiet {
+                println!("{line}");
+            }
+
+            // ---- Single rolling log (size/time only); rollover info -> stdout only ----
+            if let Some(cfg) = log_cfg.as_ref() {
+                let old_path = match &global_log {
+                    Some(bl) => Some(bl.path.clone()),
+                    None => None,
+                };
+
+                // Determine if we need to (re)open due to size/time threshold
+                let need_open = match global_log.as_ref() {
+                    None => {
+                        println!("log: creating new log...");
+                        true
+                    }
+                    Some(bl) => should_roll(bl, cfg),
+                };
+
+                if need_open {
+                    // If this is a rollover (not the initial open), announce why on stdout
+                    if let Some(bl) = &global_log {
+                        let elapsed = bl.opened_at.elapsed();
+                        let secs = elapsed.as_secs_f64();
+                        let size = bl.current_size / (1024*1024);
+                        let time_triggered = elapsed >= cfg.max_age;
+                        let size_triggered = if let Some(max_bytes) = cfg.max_bytes {
+                            size >= max_bytes
+                        } else {
+                            false
+                        };
+                        let reason = match (time_triggered, size_triggered) {
+                            (true, true) => "time and size",
+                            (true, false) => "time",
+                            (false, true) => "size",
+                            (false, false) => "policy",
+                        };
+                        println!(
+                            "log: opening new log (reason: {reason}, duration: {:.1}s, size: {} MB)",
+                            secs, size
+                        );
+                    }
+
+                    // Drop old and open new single shared log file
+                    global_log = match open_bus_log(&cfg.dir, LOG_BUS_LABEL) {
+                        Ok(new_log) => Some(new_log),
+                        Err(e) => {
+                            eprintln!("log: failed to open global log: {e}");
+                            // Skip logging this line; try again on the next message
+                            continue;
+                        }
+                    };
+                    if let Some(path) = old_path.clone() {
+                        if let Err(e) = thread::Builder::new()
+                            .name("log-compress".into())
+                            .spawn(move || {
+                                let start_time = Instant::now();
+                                match compress_and_remove(&path) {
+                                    Ok(gz) => {
+                                        // Best-effort size reporting
+                                        let size_mb = metadata(&gz)
+                                            .map(|m| m.len() / (1024 * 1024))
+                                            .unwrap_or(0);
+                                        println!(
+                                            "log: compressed '{}' → '{}', size: {}MB duration: {:?}",
+                                            path.display(),
+                                            gz.display(),
+                                            size_mb,
+                                            start_time.elapsed(),
+                                        );
+                                    }
+                                    Err(e) => eprintln!("log: compression failed for '{}': {e}", path.display()),
+                                }
+                            })
+                        {
+                            eprintln!("log: failed to spawn compression thread: {e}");
+                        }
+                    }
                 }
 
-                let line = format_can_line(&ev.bus, &ev.frame, ev.ts_opt, decoded, json);
-                if !quiet { println!("{line}"); }
+                // Write the data line to the single file (no headers/markers)
+                if let Some(bl) = global_log.as_mut() {
+                    if let Err(e) = writeln!(bl.writer, "{line}") {
+                        eprintln!("log: write failed for single log: {e}");
+                        // Drop writer so the next message reopens
+                        global_log = None;
+                    } else {
+                        bl.current_size = bl.current_size.saturating_add((line.len() + 1) as u64);
+                    }
+                }
+
+                if let Some(max_gb) = cfg.max_dir_gb {
+                    let max_bytes_u128 = gb_to_bytes(max_gb);
+
+                    match dir_usage_bytes(&cfg.dir) {
+                        Ok(total) => {
+                            if total > max_bytes_u128 {
+                                println!(
+                                    "log: dir cap exceeded (used: {:.3} GB > limit: {:.3} GB)",
+                                    (total as f64) / 1e9,
+                                    max_gb
+                                );
+                                let _ = prune_dir_if_needed(&cfg.dir, max_bytes_u128, None);
+                            }
+                        }
+                        Err(e) => eprintln!("log: failed to compute dir usage: {e}"),
+                    }
+                }
             }
         }
     }
+}
+
+fn gb_to_bytes(gb: f64) -> u128 {
+    // Decimal GB as requested: 1 GB = 1_000_000_000 bytes
+    (gb * 1_000_000_000f64) as u128
+}
+
+fn list_log_files(dir: &Path) -> std::io::Result<Vec<(PathBuf, u64, SystemTime)>> {
+    let mut files = Vec::new();
+    for entry in read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_file() { continue; }
+        if path.extension().and_then(|s| s.to_str()) != Some("log") { continue; }
+        let md = entry.metadata()?;
+        let len = md.len();
+        let modified = md.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+        files.push((path, len, modified));
+    }
+    // Oldest first
+    files.sort_by_key(|(_, _, m)| *m);
+    Ok(files)
+}
+
+fn dir_usage_bytes(dir: &Path) -> std::io::Result<u128> {
+    let mut total: u128 = 0;
+    for entry in read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if !path.is_file() { continue; }
+        if path.extension().and_then(|s| s.to_str()) != Some("log") { continue; }
+        if let Ok(md) = entry.metadata() {
+            total = total.saturating_add(md.len() as u128);
+        }
+    }
+    Ok(total)
+}
+
+/// Prune oldest .log files until within max_dir_bytes. Never deletes `current_log_path`.
+fn prune_dir_if_needed(dir: &Path, max_dir_bytes: u128, current_log_path: Option<&Path>) -> std::io::Result<()> {
+    let mut files = list_log_files(dir)?;
+    let mut total = files.iter().fold(0u128, |acc, (_, sz, _)| acc.saturating_add(*sz as u128));
+
+    if total <= max_dir_bytes {
+        return Ok(());
+    }
+
+    println!(
+        "log: directory size exceeded (used: {:.3} GB > limit: {:.3} GB); pruning oldest logs",
+        (total as f64) / 1e9,
+        (max_dir_bytes as f64) / 1e9
+    );
+
+    for (path, sz, _) in files.iter() {
+        // Skip currently open file (if known)
+        if let Some(cur) = current_log_path {
+            if path == cur {
+                continue;
+            }
+        }
+        match remove_file(path) {
+            Ok(_) => {
+                total = total.saturating_sub(*sz as u128);
+                println!(
+                    "log: deleted oldest log '{}' ({} bytes); remaining: {:.3} GB",
+                    path.display(),
+                    sz,
+                    (total as f64) / 1e9
+                );
+                if total <= max_dir_bytes {
+                    break;
+                }
+            }
+            Err(e) => {
+                eprintln!("log: failed to delete '{}': {}", path.display(), e);
+                // keep trying next files
+            }
+        }
+    }
+    Ok(())
+}
+
+fn compress_and_remove(orig_path: &Path) -> std::io::Result<PathBuf> {
+    // new path: "<name>.tar.gz"
+    let mut gz_path = orig_path.to_path_buf();
+    gz_path.set_extension("log.tar.gz"); // if original ends with .log, this becomes .log.tar.gz
+
+    // Create gzip stream wrapped in a tar builder
+    let out = File::create(&gz_path)?;
+    let enc = GzEncoder::new(out, Compression::default());
+    let mut tar = Builder::new(enc);
+
+    // Add the file under its base name inside the archive
+    let base_name = orig_path.file_name().unwrap_or_default();
+    tar.append_path_with_name(orig_path, base_name)?;
+    tar.finish()?; // finish tar
+    // finalize gzip (drop GzEncoder via into_inner chain)
+    let _enc = tar.into_inner()?; // GzEncoder<File>
+    let mut _out = _enc.finish()?; // File
+
+    // Delete original .log
+    remove_file(orig_path)?;
+
+    Ok(gz_path)
+}
+
+fn find_uncompressed_logs(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
+    let mut out = Vec::new();
+    for entry in read_dir(dir)? {
+        let entry = entry?;
+        let p = entry.path();
+        if !p.is_file() { continue; }
+
+        // true if the extension is ".log"
+        let is_log = p.extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s == "log")
+            .unwrap_or(false);
+
+        if is_log {
+            out.push(p);
+        }
+    }
+    Ok(out)
 }

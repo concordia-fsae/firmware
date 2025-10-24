@@ -175,6 +175,7 @@ fn parse_u32_id(tok: &str) -> Result<u32, Box<dyn Error>> {
 /// Pretty-print one CAN frame, similar to candump, or emit JSON with decoded signals.
 pub fn format_can_line(
     bus: &str,
+    bus_name: Option<&str>,
     f: &CanFrame,
     ts_opt: Option<(u64, u32)>,
     decoded: Option<DecodedMessage>, // <— struct-based
@@ -236,22 +237,21 @@ pub fn format_can_line(
     };
 
     let obj = json!({
-        "message": msg_name,
-        "bus": bus,
-        "timestamp": {
-            "sec": if ts_opt.is_some() { Value::from(sec) } else { Value::Null },
-            "nsec": if ts_opt.is_some() { Value::from(nsec) } else { Value::Null }
+        "msg": msg_name,
+        "bus": {
+            "iface": bus,
+            "name": bus_name,
         },
+        "time": Value::from(sec as f64 + (nsec as f64 / 1e9)),
         "id": {
-            "value": id_val,
-            "hex": id_str,
-            "is_extended": is_eff,
-            "is_rtr": is_rtr,
-            "is_error": is_err
+            "val": id_val,
+            "ext": is_eff,
+            "rtr": is_rtr,
+            "err": is_err
         },
         "dlc": f.can_dlc,
         "data": data_vec,
-        "measurements": measurements,          // object of name -> number | {value, unit}
+        "meas": measurements,          // object of name -> number | {value, unit}
     });
 
     obj.to_string()
@@ -308,9 +308,10 @@ pub fn parse_bus_specs(
                 .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("{e:?}")))?;
             let id_index = build_id_index(&dbc);
             let dbc_name = Path::new(dbc_path)
-                .file_name()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| dbc_path.to_string());
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(dbc_path)
+                .to_string();
             bundles.insert(
                 bus.to_string(),
                 Arc::new(BusDbc { dbc, id_index, dbc_name }),

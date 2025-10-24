@@ -23,9 +23,12 @@ rust_binary(
     deps = [
         ":lib",
         "//third_party:clap",
+        "//third_party:chrono",
         "//third_party:can-dbc",
+        "//third_party:flate2",
         "//third_party:libc",
         "//third_party:ratatui",
+        "//third_party:tar",
     ],
     visibility = ["PUBLIC"],
 )

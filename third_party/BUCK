@@ -4,6 +4,23 @@ load("@prelude//rust:cargo_buildscript.bzl", "buildscript_run")
 load("@prelude//rust:cargo_package.bzl", "cargo")
 
 http_archive(
+    name = "adler2-2.0.1.crate",
+    sha256 = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa",
+    strip_prefix = "adler2-2.0.1",
+    urls = ["https://static.crates.io/crates/adler2/2.0.1/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "adler2-2.0.1",
+    srcs = [":adler2-2.0.1.crate"],
+    crate = "adler2",
+    crate_root = "adler2-2.0.1.crate/src/lib.rs",
+    edition = "2021",
+    visibility = [],
+)
+
+http_archive(
     name = "aho-corasick-1.1.3.crate",
     sha256 = "8e60d3430d3a69478ad0993f19238d2df97c507009a52b3c10addcd7f6bcb916",
     strip_prefix = "aho-corasick-1.1.3",
@@ -967,6 +984,28 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "crc32fast-1.5.0.crate",
+    sha256 = "9481c1c90cbf2ac953f07c8d4a58aa3945c425b7185c9154d67a65e4230da511",
+    strip_prefix = "crc32fast-1.5.0",
+    urls = ["https://static.crates.io/crates/crc32fast/1.5.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "crc32fast-1.5.0",
+    srcs = [":crc32fast-1.5.0.crate"],
+    crate = "crc32fast",
+    crate_root = "crc32fast-1.5.0.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "default",
+        "std",
+    ],
+    visibility = [],
+    deps = [":cfg-if-1.0.3"],
+)
+
+http_archive(
     name = "crossterm-0.28.1.crate",
     sha256 = "829d955a0bb380ef178a640b91779e3987da38c9aea133b20614cfed8cdea9c6",
     strip_prefix = "crossterm-0.28.1",
@@ -1598,6 +1637,77 @@ cargo.rust_library(
         "std",
     ],
     visibility = [],
+)
+
+http_archive(
+    name = "filetime-0.2.26.crate",
+    sha256 = "bc0505cd1b6fa6580283f6bdf70a73fcf4aba1184038c90902b92b3dd0df63ed",
+    strip_prefix = "filetime-0.2.26",
+    urls = ["https://static.crates.io/crates/filetime/0.2.26/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "filetime-0.2.26",
+    srcs = [":filetime-0.2.26.crate"],
+    crate = "filetime",
+    crate_root = "filetime-0.2.26.crate/src/lib.rs",
+    edition = "2018",
+    platform = {
+        "linux-arm64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "linux-x86_64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "macos-arm64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "macos-x86_64": dict(
+            deps = [":libc-0.2.175"],
+        ),
+        "windows-gnu": dict(
+            deps = [":windows-sys-0.60.2"],
+        ),
+        "windows-msvc": dict(
+            deps = [":windows-sys-0.60.2"],
+        ),
+    },
+    visibility = [],
+    deps = [":cfg-if-1.0.3"],
+)
+
+alias(
+    name = "flate2",
+    actual = ":flate2-1.1.5",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "flate2-1.1.5.crate",
+    sha256 = "bfe33edd8e85a12a67454e37f8c75e730830d83e313556ab9ebf9ee7fbeb3bfb",
+    strip_prefix = "flate2-1.1.5",
+    urls = ["https://static.crates.io/crates/flate2/1.1.5/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "flate2-1.1.5",
+    srcs = [":flate2-1.1.5.crate"],
+    crate = "flate2",
+    crate_root = "flate2-1.1.5.crate/src/lib.rs",
+    edition = "2018",
+    features = [
+        "any_impl",
+        "default",
+        "miniz_oxide",
+        "rust_backend",
+    ],
+    visibility = [],
+    deps = [
+        ":crc32fast-1.5.0",
+        ":miniz_oxide-0.8.9",
+    ],
 )
 
 http_archive(
@@ -3140,6 +3250,31 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "linux-raw-sys-0.11.0.crate",
+    sha256 = "df1d3c3b53da64cf5760482273a98e575c651a67eec7f77df96b5b642de8f039",
+    strip_prefix = "linux-raw-sys-0.11.0",
+    urls = ["https://static.crates.io/crates/linux-raw-sys/0.11.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "linux-raw-sys-0.11.0",
+    srcs = [":linux-raw-sys-0.11.0.crate"],
+    crate = "linux_raw_sys",
+    crate_root = "linux-raw-sys-0.11.0.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "auxvec",
+        "elf",
+        "errno",
+        "general",
+        "ioctl",
+        "no_std",
+    ],
+    visibility = [],
+)
+
+http_archive(
     name = "linux-raw-sys-0.4.15.crate",
     sha256 = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab",
     strip_prefix = "linux-raw-sys-0.4.15",
@@ -3558,6 +3693,32 @@ cargo.rust_library(
     edition = "2018",
     features = ["std"],
     visibility = [],
+)
+
+http_archive(
+    name = "miniz_oxide-0.8.9.crate",
+    sha256 = "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316",
+    strip_prefix = "miniz_oxide-0.8.9",
+    urls = ["https://static.crates.io/crates/miniz_oxide/0.8.9/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "miniz_oxide-0.8.9",
+    srcs = [":miniz_oxide-0.8.9.crate"],
+    crate = "miniz_oxide",
+    crate_root = "miniz_oxide-0.8.9.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "simd",
+        "simd-adler32",
+        "with-alloc",
+    ],
+    visibility = [],
+    deps = [
+        ":adler2-2.0.1",
+        ":simd-adler32-0.3.7",
+    ],
 )
 
 http_archive(
@@ -4773,6 +4934,79 @@ buildscript_run(
 )
 
 http_archive(
+    name = "rustix-1.1.2.crate",
+    sha256 = "cd15f8a2c5551a84d56efdc1cd049089e409ac19a3072d5037a17fd70719ff3e",
+    strip_prefix = "rustix-1.1.2",
+    urls = ["https://static.crates.io/crates/rustix/1.1.2/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "rustix-1.1.2",
+    srcs = [":rustix-1.1.2.crate"],
+    crate = "rustix",
+    crate_root = "rustix-1.1.2.crate/src/lib.rs",
+    edition = "2021",
+    env = {
+        "OUT_DIR": "$(location :rustix-1.1.2-build-script-run[out_dir])",
+    },
+    features = [
+        "alloc",
+        "fs",
+        "std",
+    ],
+    platform = {
+        "linux-arm64": dict(
+            deps = [":linux-raw-sys-0.11.0"],
+        ),
+        "linux-x86_64": dict(
+            deps = [":linux-raw-sys-0.11.0"],
+        ),
+        "macos-arm64": dict(
+            named_deps = {
+                "libc_errno": ":errno-0.3.13",
+            },
+            deps = [":libc-0.2.175"],
+        ),
+        "macos-x86_64": dict(
+            named_deps = {
+                "libc_errno": ":errno-0.3.13",
+            },
+            deps = [":libc-0.2.175"],
+        ),
+    },
+    rustc_flags = ["@$(location :rustix-1.1.2-build-script-run[rustc_flags])"],
+    visibility = [],
+    deps = [":bitflags-2.9.4"],
+)
+
+cargo.rust_binary(
+    name = "rustix-1.1.2-build-script-build",
+    srcs = [":rustix-1.1.2.crate"],
+    crate = "build_script_build",
+    crate_root = "rustix-1.1.2.crate/build.rs",
+    edition = "2021",
+    features = [
+        "alloc",
+        "fs",
+        "std",
+    ],
+    visibility = [],
+)
+
+buildscript_run(
+    name = "rustix-1.1.2-build-script-run",
+    package_name = "rustix",
+    buildscript_rule = ":rustix-1.1.2-build-script-build",
+    features = [
+        "alloc",
+        "fs",
+        "std",
+    ],
+    version = "1.1.2",
+)
+
+http_archive(
     name = "rustversion-1.0.22.crate",
     sha256 = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d",
     strip_prefix = "rustversion-1.0.22",
@@ -5282,6 +5516,23 @@ cargo.rust_library(
     edition = "2015",
     visibility = [],
     deps = [":libc-0.2.175"],
+)
+
+http_archive(
+    name = "simd-adler32-0.3.7.crate",
+    sha256 = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe",
+    strip_prefix = "simd-adler32-0.3.7",
+    urls = ["https://static.crates.io/crates/simd-adler32/0.3.7/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "simd-adler32-0.3.7",
+    srcs = [":simd-adler32-0.3.7.crate"],
+    crate = "simd_adler32",
+    crate_root = "simd-adler32-0.3.7.crate/src/lib.rs",
+    edition = "2018",
+    visibility = [],
 )
 
 alias(
@@ -5935,6 +6186,60 @@ cargo.rust_library(
         ":quote-1.0.40",
         ":syn-2.0.106",
     ],
+)
+
+alias(
+    name = "tar",
+    actual = ":tar-0.4.44",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "tar-0.4.44.crate",
+    sha256 = "1d863878d212c87a19c1a610eb53bb01fe12951c0501cf5a0d65f724914a667a",
+    strip_prefix = "tar-0.4.44",
+    urls = ["https://static.crates.io/crates/tar/0.4.44/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "tar-0.4.44",
+    srcs = [":tar-0.4.44.crate"],
+    crate = "tar",
+    crate_root = "tar-0.4.44.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "default",
+        "xattr",
+    ],
+    platform = {
+        "linux-arm64": dict(
+            deps = [
+                ":libc-0.2.175",
+                ":xattr-1.6.1",
+            ],
+        ),
+        "linux-x86_64": dict(
+            deps = [
+                ":libc-0.2.175",
+                ":xattr-1.6.1",
+            ],
+        ),
+        "macos-arm64": dict(
+            deps = [
+                ":libc-0.2.175",
+                ":xattr-1.6.1",
+            ],
+        ),
+        "macos-x86_64": dict(
+            deps = [
+                ":libc-0.2.175",
+                ":xattr-1.6.1",
+            ],
+        ),
+    },
+    visibility = [],
+    deps = [":filetime-0.2.26"],
 )
 
 http_archive(
@@ -7395,6 +7700,28 @@ cargo.rust_library(
     crate_root = "writeable-0.6.1.crate/src/lib.rs",
     edition = "2021",
     visibility = [],
+)
+
+http_archive(
+    name = "xattr-1.6.1.crate",
+    sha256 = "32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156",
+    strip_prefix = "xattr-1.6.1",
+    urls = ["https://static.crates.io/crates/xattr/1.6.1/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "xattr-1.6.1",
+    srcs = [":xattr-1.6.1.crate"],
+    crate = "xattr",
+    crate_root = "xattr-1.6.1.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "default",
+        "unsupported",
+    ],
+    visibility = [],
+    deps = [":rustix-1.1.2"],
 )
 
 http_archive(
