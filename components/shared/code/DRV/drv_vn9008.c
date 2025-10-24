@@ -94,18 +94,20 @@ void drv_vn9008_run(void)
 
             case DRV_HSD_STATE_ON:
                 if (drv_vn9008_data.request_enabled[i] == false)
-                {
+                {                 
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                 }
                 break;
 
             case DRV_HSD_STATE_OVERCURRENT:
-                const bool is_overcurrent2 = drv_vn9008_data.current[i] > drv_vn9008_channels[i].current_limit_amp;
                 if (drv_vn9008_data.request_enabled[i] == false)
                 {
+                    const bool is_overcurrent2 = drv_vn9008_data.current[i] > drv_vn9008_channels[i].current_limit_amp;
                     if (is_overcurrent2)
                     {
                         drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
+                        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable,      DRV_IO_INACTIVE);
+                        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable_cs,   DRV_IO_INACTIVE);
                         drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERTEMP;
                     }
                     else
@@ -119,7 +121,14 @@ void drv_vn9008_run(void)
             case DRV_HSD_STATE_OVERTEMP:
                 if (drv_vn9008_data.request_enabled[i] == false)
                 {
-                    drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
+                    if (drv_outputAD_getDigitalActiveState(drv_vn9008_channels[i].fault_reset) == DRV_IO_ACTIVE)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
+                    }
                 }
                 break;
 
@@ -136,6 +145,7 @@ void drv_vn9008_run(void)
         if (drv_vn9008_data.state[i] == DRV_HSD_STATE_ON)
         {
             drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable, DRV_IO_ACTIVE);
+            drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable_cs,   DRV_IO_ACTIVE);
         }
         else
         {
