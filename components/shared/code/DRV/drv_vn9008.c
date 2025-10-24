@@ -78,6 +78,7 @@ void drv_vn9008_run(void)
         else
         {
             drv_timer_stop(&drv_vn9008_data.oc_timer[i]);
+            drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
         }
 
         switch (drv_vn9008_data.state[i])
@@ -99,10 +100,12 @@ void drv_vn9008_run(void)
                 break;
 
             case DRV_HSD_STATE_OVERCURRENT:
+                const bool is_overcurrent2 = drv_vn9008_data.current[i] > drv_vn9008_channels[i].current_limit_amp;
                 if (drv_vn9008_data.request_enabled[i] == false)
                 {
-                    if (is_overcurrent)
+                    if (is_overcurrent2)
                     {
+                        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
                         drv_vn9008_data.state[i] = DRV_HSD_STATE_OVERTEMP;
                     }
                     else
@@ -114,10 +117,9 @@ void drv_vn9008_run(void)
                 break;
 
             case DRV_HSD_STATE_OVERTEMP:
-                if ((is_overcurrent == false) && (drv_vn9008_data.request_enabled[i] == false))
+                if (drv_vn9008_data.request_enabled[i] == false)
                 {
                     drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_ACTIVE);
-                    drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                 }
                 break;
 
