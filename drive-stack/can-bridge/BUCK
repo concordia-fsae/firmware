@@ -7,6 +7,8 @@ rust_library(
         "//third_party:can-dbc",
         "//third_party:libc",
         "//third_party:socketcan",
+        "//third_party:serde",
+        "//third_party:serde_json",
     ],
     target_compatible_with = [
         "prelude//os/constraints:linux",
@@ -21,9 +23,12 @@ rust_binary(
     deps = [
         ":lib",
         "//third_party:clap",
+        "//third_party:chrono",
         "//third_party:can-dbc",
+        "//third_party:flate2",
         "//third_party:libc",
         "//third_party:ratatui",
+        "//third_party:tar",
     ],
     visibility = ["PUBLIC"],
 )
