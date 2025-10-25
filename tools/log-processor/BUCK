@@ -1,0 +1,50 @@
+rust_library(
+    name = "lib",
+    crate = "log_processor",
+    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
+    edition = "2024",
+    deps = [
+        "//third_party:anyhow",
+        "//third_party:clap",
+        "//third_party:flate2",
+        "//third_party:futures",
+        "//third_party:indicatif",
+        "//third_party:serde",
+        "//third_party:serde_json",
+        "//third_party:reqwest",
+        "//third_party:tar",
+        "//third_party:tokio",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "log-processor",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        ":lib",
+        "//drive-stack/net-detec:lib",
+        "//third_party:anyhow",
+        "//third_party:clap",
+        "//third_party:indicatif",
+        "//third_party:flate2",
+        "//third_party:futures",
+        "//third_party:reqwest",
+        "//third_party:serde",
+        "//third_party:serde_json",
+        "//third_party:tar",
+        "//third_party:tokio",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":log-processor",
+    platform = "//buck2/platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
