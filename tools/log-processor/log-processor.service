@@ -1,0 +1,11 @@
+[Unit]
+Description=Log processor
+After=network.target
+
+[Service]
+ExecStart=/bin/cfr/log_processor /application/logs/* --url http://baseputer:8086 --token I6-01gwJym0GAAKd2A2ZJzCHuV_8swths_kksr4ocCyfAGsy99qGfBkDCJNyuXBLGQln7gnhNh3mcWZUr0gcNw== --org FormulaTeam --bucket CarTelemetry --delete
+Restart=always
+RestartSec=600s
+
+[Install]
+WantedBy=multi-user.target
