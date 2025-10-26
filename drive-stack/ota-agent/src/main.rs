@@ -6,7 +6,7 @@ use std::{
     fs::File,
     sync::Arc,
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::{anyhow, bail, Context, Result};
@@ -17,7 +17,7 @@ use futures_util::{StreamExt, TryStreamExt};
 use hex;
 use hostname::get as get_hostname;
 use if_addrs::get_if_addrs;
-use reqwest::{Client, Error, multipart, Url};
+use reqwest::{Client, multipart, Url};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -66,6 +66,7 @@ pub enum SubAction {
     Stage(SubActionStage),
     Flash(SubActionFlash),
     Ota(SubActionOta),
+    Batch(SubActionBatch),
 }
 
 /// Stage a binary to a node
@@ -102,6 +103,19 @@ pub struct SubActionOta {
     /// the binary to flash
     #[argh(option, short = 'b')]
     binary: PathBuf,
+    /// force flashing even if there is a binary match
+    #[argh(switch, short = 'f')]
+    force: bool,
+}
+
+/// OTA a set of applications to their ECUs
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "batch")]
+pub struct SubActionBatch {
+    /// repeatable node-to-binary pairs in the form `-u node:/path/to/bin`
+    /// example: -u mcu:build/app_mcu.bin -u imu:build/app_imu.bin
+    #[argh(option, short = 'u')]
+    pub targets: Vec<String>,
     /// force flashing even if there is a binary match
     #[argh(switch, short = 'f')]
     force: bool,
@@ -180,6 +194,19 @@ struct BinaryEntry {
     size: u64,
     hash: String,
     updated_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct FlashReply {
+    node: String,
+    filename: String,
+    bytes: u64,
+    sha256: String,
+    bin: String,
+    duration_ms: u128,
+    status: String, // "download_success" | "crc_match" | "failed" | "skipped" | etc.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 #[derive(Error, Debug, Clone)]
@@ -376,6 +403,113 @@ async fn main() -> Result<()> {
                         .send().await?;
                     info!("Flash status: {}", resp_flash.status());
                     info!("Flash body: {}", resp_flash.text().await?);
+                }
+                SubAction::Batch(batch) => {
+                    if batch.targets.is_empty() {
+                        error!("No targets provided. Use -u node:/path/to/bin (repeatable).");
+                        std::process::exit(1);
+                    }
+
+                    let overall_start = Instant::now();
+                    let mut results: Vec<(String, UpdateResult)> = Vec::with_capacity(batch.targets.len());
+
+                    for upd in &batch.targets {
+                        let node_start = Instant::now();
+                        let Some((node, bin)) = parse_update_pair(upd) else {
+                            let msg = format!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
+                            error!("{}", msg);
+                            results.push(("<unknown>".to_string(), UpdateResult {
+                                bin: PathBuf::from("<unknown>".to_string()),
+                                result: FlashStatus::Failed(msg),
+                                duration: Duration::from_secs(0),
+                            }));
+                            continue;
+                        };
+
+                        info!("Downloading binary {:?} to node '{}'", bin, node);
+
+                        // Build multipart form with the file
+                        let mut file = File::open(&bin)?;
+                        let mut buffer = Vec::new();
+                        let fname: String = Path::new(&bin)
+                            .file_name()
+                            .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
+                        file.read_to_end(&mut buffer)?;
+                        let part = multipart::Part::bytes(buffer)
+                            .file_name(fname.clone())
+                            .mime_str("application/octet-stream")?;
+                        let form = multipart::Form::new().part("file", part);
+
+                        // TODO: Improve this to detect if the file hash already exists in the agent
+                        // Stage
+                        info!("Staging {} to the agent...", &fname);
+                        let rest_client = Client::new();
+                        let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                        let response = rest_client
+                            .post(url)
+                            .query(&[("node", node.clone())])
+                            .multipart(form)
+                            .send().await?;
+
+                        info!("Stage status: {}", response.status());
+                        let stage_body = response.text().await?;
+                        info!("Stage body: {}", stage_body);
+
+                        // Flash
+                        info!("Requesting flash of staged binary...");
+                        let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
+                        let resp_flash = Client::new()
+                            .post(url_flash)
+                            .query(&[("node", node.clone()), ("force", if batch.force { "true".into() } else { "false".into() })])
+                            .send().await?;
+
+                        // Try to parse JSON regardless of status code
+                        let status = resp_flash.status();
+                        let flash_body = resp_flash.text().await?;
+                        info!("Flash status: {}", status);
+                        info!("Flash body: {}", &flash_body);
+
+                        // Parse into FlashReply if possible; if not, mark as failure with the raw body
+                        let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
+
+                        let (final_status, bin_for_report, dur_for_report) = match parsed {
+                            Ok(fr) => {
+                                // Map API status to our reporting enum
+                                let fs = match fr.status.as_str() {
+                                    "failed" => {
+                                        let msg = fr.error.unwrap_or_else(|| "unknown error".to_string());
+                                        FlashStatus::Failed(msg)
+                                    }
+                                    // Treat both "download_success" and "crc_match" as success for overall reporting
+                                    "download_success" => FlashStatus::DownloadSuccess,
+                                    "crc_match" => FlashStatus::CrcMatch,
+                                    other => FlashStatus::Failed(format!("unexpected status '{}'", other)),
+                                };
+                                (fs, PathBuf::from(fr.bin), Duration::from_millis(fr.duration_ms as u64))
+                            }
+                            Err(e) => {
+                                // Non-JSON or unexpected shape
+                                let msg = format!("unparseable flash reply: {} | body: {}", e, flash_body);
+                                (FlashStatus::Failed(msg), PathBuf::from("<unknown>"), Duration::from_secs(0))
+                            }
+                        };
+
+                        let is_failed = matches!(final_status, FlashStatus::Failed(_));
+                        let duration = if dur_for_report.is_zero() { node_start.elapsed() } else { dur_for_report };
+
+                        // Record the node result using what we parsed
+                        results.push((
+                            node.clone(),
+                            UpdateResult {
+                                bin: bin_for_report,
+                                result: final_status,
+                                duration: duration,
+                            },
+                        ));
+                    }
+
+                    let total_dur = overall_start.elapsed();
+                    print_deployment_report(&results, total_dur);
                 }
             }
         }
@@ -615,28 +749,37 @@ async fn flash_handler(
         if let Some(force) = p.force { force } else { false },
     ).await;
 
+    let status_str = match &result.result {
+        FlashStatus::DownloadSuccess => "download_success",
+        FlashStatus::CrcMatch        => "crc_match",
+        FlashStatus::Failed(_)       => "failed",
+        _                            => "unknown",
+    }.to_string();
+
+    let make_body = |error: Option<String>| {
+        let duration_ms = result.duration.as_millis();
+        serde_json::json!(FlashReply {
+            node: p.node.clone(),
+            filename: staged.filename.clone(),
+            bytes: staged.size,
+            sha256: staged.hash.clone(),
+            bin: result.bin.to_string_lossy().into_owned(),
+            duration_ms,
+            status: status_str.clone(),
+            error
+        })
+    };
+
     match result.result {
-        FlashStatus::Failed(e) => {
+        FlashStatus::Failed(ref e) => {
             error!("Flash failed: {e}");
-            let body = serde_json::json!({ "error": format!("flash failed: {e}") });
-            Ok(warp::reply::with_status(
-                warp::reply::json(&body),
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ))
+            let body = make_body(Some(format!("flash failed: {e}")));
+            Ok(warp::reply::with_status(warp::reply::json(&body), StatusCode::INTERNAL_SERVER_ERROR))
         }
         _ => {
             info!("Flash result: {:?}", result);
-            let body = serde_json::json!({
-                "result": format!("{:?}", result),
-                "node": p.node,
-                "filename": staged.filename,
-                "bytes": staged.size,
-                "sha256": staged.hash,
-            });
-            Ok(warp::reply::with_status(
-                warp::reply::json(&body),
-                StatusCode::OK,
-            ))
+            let body = make_body(None);
+            Ok(warp::reply::with_status(warp::reply::json(&body), StatusCode::OK))
         }
     }
 }
@@ -928,4 +1071,86 @@ async fn recover_json(
         warp::reply::json(&serde_json::json!({ "error": msg })),
         StatusCode::INTERNAL_SERVER_ERROR,
     ))
+}
+
+fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Duration) {
+    let total = results.len() as u64;
+    let successes = results.iter().filter(|(_node, r)| !matches!(r.result, FlashStatus::Failed(_))).count() as u64;
+    let failures = total - successes;
+    let avg = average_duration(&results.iter().map(|(_node, r)| r.duration).collect::<Vec<_>>());
+    let success_rate = if total > 0 {
+        (successes as f64) * 100.0 / (total as f64)
+    } else {
+        0.0
+    };
+
+    info!("");
+    info!("===================== Deployment Report =====================");
+    info!("Total nodes      : {}", total);
+    info!("Succeeded        : {}", successes);
+    info!("Failed           : {}", failures);
+    info!("Success rate     : {:.1}%", success_rate);
+    info!("Total time       : {}", fmt_dur(total_dur));
+    info!("Avg per-node time: {}", fmt_dur(avg));
+    info!("=============================================================");
+    info!("{:<18}  {:<28}  {:<10}  {}", "Node", "Binary", "Elapsed", "Status");
+    info!("{}", "-".repeat(18 + 2 + 28 + 2 + 10 + 2 + 10 + 2 + 5 + 16));
+
+    for (node, r) in results {
+        let status = format!("{:?}", r.result);
+        let bin_str = r.bin.to_string_lossy();
+        info!(
+            "{:<18}  {:<28}  {:<10}  {}",
+            node,
+            truncate(&bin_str, 28),
+            fmt_dur(r.duration),
+            status,
+        );
+    }
+
+    if failures > 0 {
+        info!("");
+        info!("--- Failure details ---");
+        for (node, r) in results.iter().filter(|(_node, r)| matches!(r.result, FlashStatus::Failed(_))) {
+            info!("node='{}' bin='{}' error='{:?}'",
+                node,
+                r.bin.to_string_lossy(),
+                r.result
+            );
+        }
+    }
+}
+
+/// Helper to keep table columns tidy without extra crates
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else if max > 1 {
+        let mut t = s.chars().take(max - 1).collect::<String>();
+        t.push('…');
+        t
+    } else {
+        "…".to_string()
+    }
+}
+
+fn average_duration(durations: &[Duration]) -> Duration {
+    if durations.is_empty() {
+        return Duration::from_secs(0);
+    }
+    let total_nanos: u128 = durations.iter().map(|d| d.as_nanos()).sum();
+    let avg_nanos = total_nanos / (durations.len() as u128);
+    Duration::from_nanos(avg_nanos as u64)
+}
+
+fn parse_update_pair(s: &str) -> Option<(String, PathBuf)> {
+    // expects "node:/path/to/bin"
+    let (node, path) = s.split_once(':')?;
+    Some((node.to_string(), PathBuf::from(path)))
+}
+
+fn fmt_dur(d: Duration) -> String {
+    let secs = d.as_secs();
+    let ms = d.subsec_millis();
+    format!("{secs}.{ms:03}s")
 }

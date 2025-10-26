@@ -20,3 +20,25 @@ ota_agent = rule(
         "tool": attrs.exec_dep(default = "//drive-stack/ota-agent:ota-agent"),
     },
 )
+
+def _ota_agent_batch(ctx: AnalysisContext):
+    tool = ctx.attrs.tool[RunInfo]
+
+    argv = cmd_args(tool)
+    argv.add("client")
+    argv.add("batch")
+
+    for dep in ctx.attrs.srcs:
+        asset = dep[DeployableFirmwareAsset]
+        node_colon_path = cmd_args(asset.binary, format = asset.node + ":{}")
+        argv.add(["-u", node_colon_path])
+
+    return [RunInfo(args = argv), DefaultInfo()]
+
+ota_agent_batch = rule(
+    impl = _ota_agent_batch,
+    attrs = {
+        "srcs": attrs.list(attrs.dep(providers = [DeployableFirmwareAsset])),
+        "tool": attrs.exec_dep(default = "//drive-stack/ota-agent:ota-agent"),
+    },
+)
