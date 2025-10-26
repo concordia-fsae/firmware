@@ -5,5 +5,7 @@ filegroup(
         "//drive-stack/conUDS:bin-arm64",
         "//drive-stack/net-detec:bin-arm64",
         "//drive-stack/ota-agent:bin-arm64",
+        "//drive-stack/can-bridge:bin-arm64",
+        "//tools/log-processor:bin-arm64",
     ],
 )
