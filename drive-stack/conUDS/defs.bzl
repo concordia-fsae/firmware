@@ -1,32 +1,4 @@
-DeployableAsset = provider(
-    # @unsorted-dict-items
-    fields = {
-        "node": provider_field(str),
-        "binary": provider_field(typing.Any),
-    },
-)
-
-def _deployable_target(ctx: AnalysisContext) -> list[Provider]:
-    di = ctx.attrs.src[DefaultInfo]
-    if not di.default_outputs:
-        fail("`src` dep must produce at least one output file")
-    binary_art = di.default_outputs[0]
-
-    return [
-        DefaultInfo(default_output = binary_art),
-        DeployableAsset(
-            node = ctx.attrs.target_node,
-            binary = binary_art,
-        ),
-    ]
-
-deployable_target = rule(
-    impl = _deployable_target,
-    attrs = {
-        "target_node": attrs.string(),
-        "src": attrs.dep(),
-    },
-)
+load("//drive-stack/defs.bzl", "deployable_target", "DeployableFirmwareAsset")
 
 def _conUDS_batch(ctx: AnalysisContext):
     tool = ctx.attrs.tool[RunInfo]
@@ -41,7 +13,7 @@ def _conUDS_batch(ctx: AnalysisContext):
     argv.add("batch")
 
     for dep in ctx.attrs.srcs:
-        asset = dep[DeployableAsset]
+        asset = dep[DeployableFirmwareAsset]
         node_colon_path = cmd_args(asset.binary, format = asset.node + ":{}")
         argv.add(["-u", node_colon_path])
 
@@ -50,7 +22,7 @@ def _conUDS_batch(ctx: AnalysisContext):
 conUDS_batch = rule(
     impl = _conUDS_batch,
     attrs = {
-        "srcs": attrs.list(attrs.dep(providers = [DeployableAsset])),
+        "srcs": attrs.list(attrs.dep(providers = [DeployableFirmwareAsset])),
         "manifest": attrs.dep(providers = [DefaultInfo]),
         "tool": attrs.exec_dep(default = "//drive-stack/conUDS:conUDS"),
     },

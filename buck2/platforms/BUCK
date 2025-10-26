@@ -1,4 +1,5 @@
 load("//drive-stack/conUDS/defs.bzl", "conUDS_batch")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent_batch")
 
 [
     platform(
@@ -50,7 +51,7 @@ filegroup(
 )
 
 conUDS_batch(
-    name = "cfr25-deploy",
+    name = "cfr25-download",
     srcs = [
         "//components/bms_boss:deploy-1",
         "//components/bms_worker:deploy-node-0",
@@ -64,4 +65,20 @@ conUDS_batch(
         "//components/vc/pdu:deploy-0",
     ],
     manifest = "//network:manifest-uds",
+)
+
+ota_agent_batch(
+    name = "cfr25-ota",
+    srcs = [
+        "//components/bms_boss:deploy-1",
+        "//components/bms_worker:deploy-node-0",
+        "//components/bms_worker:deploy-node-1",
+        "//components/bms_worker:deploy-node-2",
+        "//components/bms_worker:deploy-node-3",
+        "//components/bms_worker:deploy-node-4",
+        "//components/bms_worker:deploy-node-5",
+        "//components/vc/front:deploy-0",
+        "//components/vc/rear:deploy-0",
+        "//components/vc/pdu:deploy-0",
+    ],
 )

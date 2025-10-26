@@ -1,6 +1,8 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
-load("//drive-stack/conUDS/defs.bzl", "conUDS_download", "deployable_target")
+load("//drive-stack/defs.bzl", "deployable_target")
+load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//network/NetworkGen/defs.bzl", "generate_code")
@@ -506,6 +508,14 @@ alias(
         name = "deploy-node-{}".format(node),
         src = ":crc-node-{}".format(node),
         target_node = APP_NAME + "{}".format(node),
+        visibility = ["PUBLIC"],
+    )
+    for node in range(NUMBER_NODES)
+]
+[
+    ota_agent(
+        name = "ota-node-{}".format(node),
+        src = ":deploy-node-{}".format(node),
         visibility = ["PUBLIC"],
     )
     for node in range(NUMBER_NODES)
