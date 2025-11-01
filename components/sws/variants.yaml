@@ -1,6 +1,6 @@
 configs:
   0:
-    description: Steering Wheel Switchs
+    description: Steering Wheel Switches
     options:
     features:
       selections:

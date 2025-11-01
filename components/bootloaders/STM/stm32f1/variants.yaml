@@ -322,14 +322,14 @@ configs:
         app_pcba_id: 0
         app_component_id: sws
   1021:
-    description: Steering Wheel Switches Bootloader
+    description: Steering Wheel Switches Bootloader Updater
     options:
       udsRequestId: 0x651
       udsResponseId: 0x691
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
