@@ -103,6 +103,7 @@ typedef struct
     storage_t initialized;
     storage_t discarded;
 } LIB_NVM_STORAGE(lib_nvm_recordHeader_S);
+_Static_assert(sizeof(lib_nvm_recordHeader_S) % sizeof(storage_t) == 0, "Header must be word-aligned");
 
 typedef struct
 {
@@ -148,6 +149,7 @@ LIB_NVM_MEMORY_REGION(lib_nvm_nvmCycleLog_S cycleLog) = { 0U };
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+static void seed_queue_from_flags(void);
 static void initializeEmptyRecords(void);
 static bool evaluateWriteRequired(lib_nvm_entry_t entryId);
 static void recordPopulateDefault(lib_nvm_entry_t entryId);
@@ -158,6 +160,7 @@ static void invalidateBlock(lib_nvm_blockHeader_S * const block);
 static void initializeNVMBlock(uint32_t addr);
 static uint32_t getBlockBaseAddress(uint32_t addr);
 static uint32_t getNextBlockStart(uint32_t addr);
+static inline uint32_t align_up_bytes(uint32_t bytes);
 #endif
 
 /******************************************************************************
@@ -244,7 +247,7 @@ void lib_nvm_init(void)
 
             // Every NVM is comprised of a record header and the record data which is
             // has entrySize size
-            hdr = (lib_nvm_recordHeader_S*)((uint32_t)hdr + hdr->entrySize);
+            hdr = (lib_nvm_recordHeader_S*)((uint32_t)hdr + align_up_bytes(hdr->entrySize));
             hdr += 1;
         }
     }
@@ -301,10 +304,13 @@ void lib_nvm_init(void)
  */
 void lib_nvm_run(void)
 {
+    seed_queue_from_flags();
+
     for (;;)
     {
         lib_nvm_entryAction_S action;
         const uint32_t drain_at = HW_TIM_getTimeMS() + NVM_COALESCE_PERIOD_MS;
+        bool wrote_any = false;
 
         // Block until there is an element in the queue
         // If were not shutting down, wait for a record to be writable and
@@ -323,28 +329,26 @@ void lib_nvm_run(void)
                             &action,
                             0))
         {
-            // We only want to record NVM logs at the end of a queueing cycle
-            // since additional writes will increase the number of logs written
-            // and therefore require more writes to memory
-            if ((action.entryId == NVM_ENTRYID_LOG) &&
-                uxQueueMessagesWaiting(data.queue_handle))
-            {
-                // Since we just dequeued an action and the NVM task is the highest
-                // priority, this will never block
-                xQueueSend(data.queue_handle,
-                           (void*)&action,
-                           0);
-                continue;
-            }
-
             switch (action.action)
             {
                 case NVM_ACTION_WRITE:
                     recordWrite(action.entryId);
+                    if (action.entryId != NVM_ENTRYID_LOG) {
+                        wrote_any = true;
+                    }
                     break;
                 default:
                     break;
             }
+        }
+
+        if (wrote_any)
+        {
+            recordWrite(NVM_ENTRYID_LOG);
+        }
+
+        if (uxQueueMessagesWaiting(data.queue_handle) == 0) {
+            seed_queue_from_flags();
         }
     }
 }
@@ -379,33 +383,29 @@ bool lib_nvm_requestWrite(lib_nvm_entryId_E entryId)
         return true;
     }
 
+    records[entryId].writeRequired = true;
 #if FEATURE_IS_ENABLED(NVM_TASK)
     lib_nvm_entryAction_S action = {
         .entryId = entryId,
         .action = NVM_ACTION_WRITE,
     };
+
     // Let the NVM task handle the entry write due to blocking flash
     // operations. Queue a write operation on the provided entryId
     // If the queue is full, block until it is available (this condition
     // should never occur)
-    if (xQueueSend(data.queue_handle,
-                   (void*)&action,
-                   portMAX_DELAY) == errQUEUE_FULL)
+    const bool enqueue = xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
+    if (enqueue && (xQueueSend(data.queue_handle,
+                               (void*)&action,
+                               0) == errQUEUE_FULL))
     {
         return false;
     }
 #endif
 
-    records[entryId].writeRequired = true;
-
 #if FEATURE_IS_DISABLED(NVM_TASK)
     recordWrite(entryId);
 #endif
-
-    if (entryId != NVM_ENTRYID_LOG)
-    {
-        lib_nvm_requestWrite(NVM_ENTRYID_LOG);
-    }
 
     return true;
 }
@@ -462,7 +462,11 @@ void lib_nvm_cleanUp(void)
 
     // There may be upstream failures - if there are wait until the queue is
     // empty and double check if any still need to be written
-    while(uxQueueMessagesWaiting(data.queue_handle));
+    const bool scheduler_running =  xTaskGetSchedulerState() == taskSCHEDULER_RUNNING;
+    while(scheduler_running && uxQueueMessagesWaiting(data.queue_handle))
+    {
+        vTaskDelay(1);
+    }
 
     // Force write any outstanding items
     for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
@@ -506,6 +510,18 @@ bool lib_nvm_writeRequired(lib_nvm_entry_t entryId)
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+#if FEATURE_IS_ENABLED(NVM_TASK)
+static void seed_queue_from_flags(void)
+{
+    for (lib_nvm_entry_t i = 0; i < NVM_ENTRYID_COUNT; i++) {
+        if (records[i].writeRequired) {
+            lib_nvm_entryAction_S a = { .entryId = i, .action = NVM_ACTION_WRITE };
+            (void)xQueueSend(data.queue_handle, &a, 0);
+        }
+    }
+}
+#endif
+
 static void recordPopulateDefault(lib_nvm_entry_t entryId)
 {
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
@@ -542,7 +558,7 @@ static bool evaluateWriteRequired(lib_nvm_entry_t entryId)
     // 3. There is no current NVM record for the entry
     if ((records[entryId].currentNvmAddr_Ptr == NULL) ||
         (getBlockBaseAddress((uint32_t)records[entryId].currentNvmAddr_Ptr) != getBlockBaseAddress((uint32_t)data.currentPtr)) ||
-        (((ms < (records[entryId].lastWrittenTimeMs + lib_nvm_entries[entryId].minTimeBetweenWritesMs)) || (HW_mcuShuttingDown())) &&
+        ((((ms - records[entryId].lastWrittenTimeMs) >= (lib_nvm_entries[entryId].minTimeBetweenWritesMs)) || (HW_mcuShuttingDown())) &&
          (memcmp((storage_t*)lib_nvm_entries[entryId].entryRam_Ptr, (storage_t*)(hdr + 1), lib_nvm_entries[entryId].entrySize))))
     {
         records[entryId].writeRequired = true;
@@ -553,65 +569,70 @@ static bool evaluateWriteRequired(lib_nvm_entry_t entryId)
 
 static void recordWrite(const lib_nvm_entry_t entryId)
 {
-    // Validate that the record write is not egregious
-    lib_nvm_recordHeader_S recordHeader = { 0U };
-    lib_nvm_recordHeader_S * const currentRecord = (lib_nvm_recordHeader_S*)records[entryId].currentNvmAddr_Ptr;
-    uint16_t entrySize = lib_nvm_entries[entryId].entrySize;
+    const uint32_t data_bytes = align_up_bytes(lib_nvm_entries[entryId].entrySize);
+
+    for (;;) {
+        // Validate that the record write is not egregious
+        lib_nvm_recordHeader_S recordHeader = { 0U };
+        lib_nvm_recordHeader_S * const currentRecord = (lib_nvm_recordHeader_S*)records[entryId].currentNvmAddr_Ptr;
+        uint16_t entrySize = lib_nvm_entries[entryId].entrySize;
 
 #if FEATURE_IS_ENABLED(NVM_TASK)
-    taskENTER_CRITICAL();
+        taskENTER_CRITICAL();
 #endif
-    // Obtain the current pointer into NVM with a space for this entry
-    uint32_t current_hdr = (uint32_t)data.currentPtr;
-    uint32_t current_record = (uint32_t)((lib_nvm_recordHeader_S*)data.currentPtr + 1);
-    lib_nvm_blockHeader_S * const block_header = (lib_nvm_blockHeader_S * const)getBlockBaseAddress(current_hdr);
-    data.currentPtr += sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t);
-    data.currentPtr += lib_nvm_entries[entryId].entrySize / sizeof(storage_t);
+        // Obtain the current pointer into NVM with a space for this entry
+        uint32_t current_hdr = (uint32_t)data.currentPtr;
+        uint32_t current_record = (uint32_t)((lib_nvm_recordHeader_S*)data.currentPtr + 1);
+        lib_nvm_blockHeader_S * const block_header = (lib_nvm_blockHeader_S * const)getBlockBaseAddress(current_hdr);
+        data.currentPtr += sizeof(lib_nvm_recordHeader_S) / sizeof(storage_t);
+        data.currentPtr += data_bytes / sizeof(storage_t);
 #if FEATURE_IS_ENABLED(NVM_TASK)
-    taskEXIT_CRITICAL();
+        taskEXIT_CRITICAL();
 #endif
-    if ((uint32_t)block_header != getBlockBaseAddress((uint32_t)data.currentPtr))
-    {
-        initializeNVMBlock(getNextBlockStart((uint32_t)current_hdr));
-        invalidateBlock(block_header);
+        if ((uint32_t)block_header != getBlockBaseAddress((uint32_t)data.currentPtr))
+        {
+            initializeNVMBlock(getNextBlockStart((uint32_t)current_hdr));
+            invalidateBlock(block_header);
+            continue;
+        }
+
+
+        // Create and write the entry to NVM
+        records[entryId].currentNvmAddr_Ptr = (storage_t*)current_hdr;
+        recordHeader.entryId = entryId;
+        recordHeader.entrySize = entrySize;
+        recordHeader.initialized = SET_STATE;
+        recordHeader.discarded = (storage_t)~SET_STATE;
+
+        recordLog.totalRecordWrites++;
+
+#if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
+        LIB_NVM_WRITE_TO_FLASH(current_record,
+                            lib_nvm_entries[entryId].entryRam_Ptr,
+                            lib_nvm_entries[entryId].entrySize);
+        recordHeader.entry_version = lib_nvm_entries[entryId].version;
+        recordHeader.crc = (storage_t)crc8_calculate(0xff,
+                                                    (uint8_t*)current_record,
+                                                    lib_nvm_entries[entryId].entrySize);
+        LIB_NVM_WRITE_TO_FLASH(current_hdr,
+                            (storage_t*)&recordHeader,
+                            sizeof(lib_nvm_recordHeader_S));
+#endif // NVM_FLASH_BACKED
+
+#if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
+        // Once the record has been written to NVM, set the record as valid in flash
+        if (currentRecord != NULL)
+        {
+            storage_t disc = SET_STATE;
+            LIB_NVM_WRITE_TO_FLASH((uint32_t)&currentRecord->discarded,
+                                &disc,
+                                sizeof(storage_t));
+        }
+#endif // NVM_FLASH_BACKED
+        records[entryId].writeRequired = false;
+        records[entryId].lastWrittenTimeMs = LIB_NVM_GET_TIME_MS();
         return;
     }
-
-
-    // Create and write the entry to NVM
-    records[entryId].currentNvmAddr_Ptr = (storage_t*)current_hdr;
-    recordHeader.entryId = entryId;
-    recordHeader.entrySize = entrySize;
-    recordHeader.initialized = SET_STATE;
-    recordHeader.discarded = (storage_t)~SET_STATE;
-
-    recordLog.totalRecordWrites++;
-
-#if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
-    LIB_NVM_WRITE_TO_FLASH(current_record,
-                           lib_nvm_entries[entryId].entryRam_Ptr,
-                           lib_nvm_entries[entryId].entrySize);
-    recordHeader.entry_version = lib_nvm_entries[entryId].version;
-    recordHeader.crc = (storage_t)crc8_calculate(0xff,
-                                                 (uint8_t*)current_record,
-                                                 lib_nvm_entries[entryId].entrySize);
-    LIB_NVM_WRITE_TO_FLASH(current_hdr,
-                           (storage_t*)&recordHeader,
-                           sizeof(lib_nvm_recordHeader_S));
-#endif // NVM_FLASH_BACKED
-
-#if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
-    // Once the record has been written to NVM, set the record as valid in flash
-    if (currentRecord != NULL)
-    {
-        storage_t disc = SET_STATE;
-        LIB_NVM_WRITE_TO_FLASH((uint32_t)&currentRecord->discarded,
-                               &disc,
-                               sizeof(storage_t));
-    }
-#endif // NVM_FLASH_BACKED
-    records[entryId].writeRequired = false;
-    records[entryId].lastWrittenTimeMs = LIB_NVM_GET_TIME_MS();
 }
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
@@ -666,5 +687,11 @@ static uint32_t getNextBlockStart(uint32_t addr)
     return ((getBlockBaseAddress(addr + NVM_BLOCK_SIZE) < (uint32_t)NVM_END) ?
             (uint32_t)((addr + NVM_BLOCK_SIZE) - (addr % NVM_BLOCK_SIZE)) :
             (uint32_t)NVM_ORIGIN);
+}
+
+static inline uint32_t align_up_bytes(uint32_t bytes)
+{
+    const uint32_t w = sizeof(storage_t);
+    return (bytes + (w - 1U)) & ~(w - 1U);
 }
 #endif
