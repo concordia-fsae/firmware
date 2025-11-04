@@ -172,3 +172,20 @@ signals:
     nativeRepresentation:
       bitWidth: 8
       resolution: 1
+  energyMeterTemp:
+    unit: 'degC'
+    description: Measured temperature
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 8
+      resolution: 0.5
+      range:
+        min: 0
+        max: 63
+  bigEndian32bit:
+    unit: ''
+    description: 32bit big endian value
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 32
+      resolution: 1

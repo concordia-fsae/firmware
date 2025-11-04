@@ -1,0 +1,63 @@
+messages:
+  measurement:
+    description: Energy Meter status
+    id: 0x10D
+    cycleTimeMs: 20
+    signals:
+      current:
+        startBit: 0
+      voltage:
+        startBit: 32
+
+  status:
+    description: Energy Meter status
+    id: 0x40D
+    cycleTimeMs: 100
+    signals:
+      violation:
+        startBit: 0
+      logging:
+        startBit: 1
+      energy:
+        startBit: 8
+  temperature:
+    description: Energy Meter measured temperatures
+    id: 0x60D
+    cycleTimeMs: 250
+    signals:
+      multiplexor:
+        startBit: 0
+      totalSensors:
+        startBit: 3
+      minTemp:
+        template: energyMeterTemp
+      maxTemp:
+        template: energyMeterTemp
+      temp1:
+        template: energyMeterTemp
+      temp2:
+        template: energyMeterTemp
+      temp3:
+        template: energyMeterTemp
+      temp4:
+        template: energyMeterTemp
+      temp5:
+        template: energyMeterTemp
+  teamData1:
+    description: Energy Meter team transmitted message 1
+    id: 0x30D
+    cycleTimeMs: 1000
+    signals:
+      payload1:
+        template: bigEndian32bit
+      payload2:
+        template: bigEndian32bit
+  teamData2:
+    description: Energy Meter team transmitted message 2
+    id: 0x30E
+    cycleTimeMs: 1000
+    signals:
+      payload3:
+        template: bigEndian32bit
+      payload4:
+        template: bigEndian32bit
