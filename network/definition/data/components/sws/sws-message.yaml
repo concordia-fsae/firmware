@@ -12,17 +12,36 @@ messages:
     template: rtosTaskInfo
 
   inputDebugStatus:
-    description: Status of SWS inputs
+    description: Status of all SWS inputs and debounce states
     id: 0x599
     cycleTimeMs: 100
     signals:
-      din1Debug:
-      din2Debug:
-      din3Debug:
-      din4Debug:
-      din5Debug:
-      din6Debug:
-      din7Debug:
-      din8Debug:
-      din9Debug:
-      din10Debug:
+      leftTop:
+      leftTopDebounce:
+      leftMid:
+      leftMidDebounce:
+      leftBot:
+      leftBotDebounce:
+      rightTop:
+      rightTopDebounce:
+      rightMid:
+      rightMidDebounce:
+      rightBot:
+      rightBotDebounce:
+      leftToggle:
+      leftToggleDebounce:
+      rightToggle:
+      rightToggleDebounce:
+
+  driverRequest:
+    description: Status of driver state change requests
+    id: 0x8f
+    cycleTimeMs: 50
+    signals:
+      requestRun:
+      requestReverse:
+      requestRaceMode:
+      requestTorqueInc:
+      requestTorqueDec:
+      validatorRequest:
+        template: criticalDataChecksum

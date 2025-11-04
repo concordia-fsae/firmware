@@ -74,4 +74,24 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
             },
         },
     },
+    [USERINPUT_BUTTON_RIGHT_TOGGLE] = {
+        .type = USERINPUT_TYPE_GPIO,
+        .config = {
+            .gpio = {
+                .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN7,
+                .debounce_on_ms = 50,
+                .debounce_off_ms = 50,
+            },
+        },
+    },
+    [USERINPUT_BUTTON_LEFT_TOGGLE] = {
+        .type = USERINPUT_TYPE_GPIO,
+        .config = {
+            .gpio = {
+                .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN8,
+                .debounce_on_ms = 50,
+                .debounce_off_ms = 50,
+            },
+        },
+    },
 };
