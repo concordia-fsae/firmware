@@ -103,6 +103,7 @@ class Units(Enum):
     mps2 = "m/s2"
     mps = "m/s"
     bytes = "B"
+    Whr = "Whr"
 
 
 class ValidationRole(Enum):

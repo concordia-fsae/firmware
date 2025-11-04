@@ -1,0 +1,57 @@
+signals:
+  current:
+    unit: 'A'
+    description: Measured current
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 32
+      resolution: 1
+      range:
+        min: 0
+        max: 1000
+  voltage:
+    unit: 'V'
+    description: Measured voltage
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 32
+      resolution: 1
+      range:
+        min: 0
+        max: 600
+  violation:
+    description: Violation detected by energy meter
+    discreteValues: simpleStatus
+  logging:
+    description: Violation detected by energy meter
+    discreteValues: simpleStatus
+  energy:
+    unit: 'Whr'
+    description: Measured energy transfer
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 32
+      resolution: 1
+      range:
+        min: 0
+        max: 10000
+  multiplexor:
+    unit: ''
+    description: Multiplexor Value
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 3
+      resolution: 1
+      range:
+        min: 0
+        max: 6
+  totalSensors:
+    unit: ''
+    description: Total identified sensors
+    nativeRepresentation:
+      endianness: big
+      bitWidth: 5
+      resolution: 1
+      range:
+        min: 0
+        max: 32
