@@ -13,7 +13,7 @@ signals:
     sourceBuses: veh
   BMSB_tsmsChg:
     sourceBuses: veh
-  STW_runButton:
+  SWS_requestRun:
     sourceBuses: veh
   VCFRONT_brakePosition:
     sourceBuses: veh

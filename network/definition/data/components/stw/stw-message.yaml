@@ -31,8 +31,6 @@ messages:
         startBit: 0
       maxRequestCurrent:
         startBit: 8
-      runButton:
-        startBit: 16
       raceMode:
         startBit: 24
       gear:
