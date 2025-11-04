@@ -18,6 +18,18 @@ messages:
     sourceBuses: veh
     template: rtosTaskMemInfo
 
+  torqueManager:
+    description: Pedal position
+    id: 0x4f
+    cycleTimeMs: 10
+    signals:
+      torqueRequest:
+      torqueManagerState:
+      gear:
+      raceMode:
+      validatorTorque:
+        template: criticalDataChecksum
+
   pedalPosition:
     description: Pedal position
     id: 0x50
@@ -29,9 +41,7 @@ messages:
       brakePosition:
       acceleratorState:
       bppcState:
-      torqueRequest:
-      torqueManagerState:
-      validator:
+      validatorPedal:
         template: criticalDataChecksum
 
   pedalInformation:

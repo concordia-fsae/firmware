@@ -25,6 +25,18 @@ typedef enum
     TORQUE_ERROR,
 } torque_state_E;
 
+typedef enum
+{
+    GEAR_F = 0x00U,
+    GEAR_R,
+} torque_gear_E;
+
+typedef enum
+{
+    RACEMODE_PIT = 0x00U,
+    RACEMODE_ENABLED,
+} torque_raceMode_E;
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -32,3 +44,7 @@ typedef enum
 float32_t                torque_getTorqueRequest(void);
 torque_state_E           torque_getState(void);
 CAN_torqueManagerState_E torque_getStateCAN(void);
+torque_gear_E            torque_getGear(void);
+CAN_gear_E               torque_getGearCAN(void);
+torque_raceMode_E        torque_getRaceMode(void);
+CAN_raceMode_E           torque_getRaceModeCAN(void);
