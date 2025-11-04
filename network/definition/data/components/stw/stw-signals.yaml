@@ -33,10 +33,6 @@ signals:
         min: 0
         max: 18446744073709551615
 
-  runButton:
-    description: State of the steering wheel run button
-    discreteValues: digitalStatus
-
   raceMode:
     description: State of the steering wheel race mode
     discreteValues: raceMode

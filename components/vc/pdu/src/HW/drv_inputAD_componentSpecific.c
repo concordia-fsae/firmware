@@ -35,7 +35,7 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
     },
     [DRV_INPUTAD_RUN_BUTTON] = {
         .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, STW_runButton),
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, SWS_requestRun),
     },
     [DRV_INPUTAD_IMD_SAFETY_EN] = {
         .type = INPUT_DIGITAL_CAN,
