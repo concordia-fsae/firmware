@@ -20,18 +20,3 @@ messages:
     lengthBytes: 8
     signals:
       udsPayload:
-
-  driverControls:
-    description: Status of the driver controls
-    cycleTimeMs: 100
-    id: 0x502
-    sourceBuses: veh
-    signals:
-      maxRequestTorque:
-        startBit: 0
-      maxRequestCurrent:
-        startBit: 8
-      raceMode:
-        startBit: 24
-      gear:
-        startBit: 32
