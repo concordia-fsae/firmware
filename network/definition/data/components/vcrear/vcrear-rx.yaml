@@ -30,6 +30,9 @@ messages:
     sourceBuses: veh
   PM100DX_internalStates:
     sourceBuses: ass
+  UDSCLIENT_bmsbUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
 
 signals:
   VCPDU_vehicleState:

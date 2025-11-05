@@ -85,9 +85,12 @@ static void tssi_periodic_10Hz(void)
     const bool reset_valid = (CANRX_get_signal(VEH, BMSB_bmsIMDReset, &reset_sig) == CANRX_MESSAGE_VALID);
     const bool imd_valid = (CANRX_get_signal(VEH, BMSB_imdStatusMem, &imdStatus) == CANRX_MESSAGE_VALID);
     const bool bms_valid = (CANRX_get_signal(VEH, BMSB_bmsStatusMem, &bmsStatus) == CANRX_MESSAGE_VALID);
+    const bool bms_uds_valid = CANRX_validate(VEH, UDSCLIENT_bmsbUdsRequest) == CANRX_MESSAGE_VALID;
 
-    if (tssi_data.state == TSSI_INIT)
+    if (bms_uds_valid || tssi_data.state == TSSI_INIT)
     {
+        setGreen();
+        tssi_data.state = TSSI_INIT;
         if (reset_valid && (reset_sig == CAN_DIGITALSTATUS_ON))
         {
             // This will delay the next run of the TSSI by 100ms, allowing enough time for the state of the
