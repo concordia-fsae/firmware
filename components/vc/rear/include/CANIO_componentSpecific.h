@@ -27,8 +27,6 @@
 #include "shockpot.h"
 #include "Module.h"
 #include "wheelSpeed.h"
-#include "NetworkDefines_generated.h"
-#include "BuildInfo.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -68,8 +66,6 @@
 #define set_wheelSpeedRotationalRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RL))
 #define set_wheelSpeedRotationalRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RR))
 
-#define set_crcRepo(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_SHA_CRC)
-#define set_repoDirty(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_DIRTY)
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
 #define set_taskStack10Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))

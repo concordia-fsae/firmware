@@ -45,10 +45,3 @@ messages:
       requestTorqueDec:
       validatorRequest:
         template: criticalDataChecksum
-
-  buildInfo:
-    description: SWS build info
-    id: 0x2fa
-    cycleTimeMs: 1000
-    sourceBuses: veh
-    template: buildInfo

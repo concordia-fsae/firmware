@@ -189,12 +189,3 @@ signals:
       endianness: big
       bitWidth: 32
       resolution: 1
-  crc32:
-    unit: ''
-    description: 32bit CRC
-    nativeRepresentation:
-      bitWidth: 32
-      resolution: 1
-  repoDirty:
-    description: State of the repository which built this application
-    discreteValues: flag
