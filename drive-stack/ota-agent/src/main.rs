@@ -703,6 +703,17 @@ async fn unlock_manifest_node(
     }
 }
 
+#[cfg(target_os = "linux")]
+async fn systemd_service(action: &str, unit: &str) -> anyhow::Result<()> {
+    use tokio::process::Command;
+    let status = Command::new("systemctl").arg(action).arg(unit).status().await?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!("systemctl {} {} exited with {:?}", action, unit, status))
+    }
+}
+
 // POST /firmware/flash?node=...
 async fn flash_handler(
     p: FlashParams,
@@ -737,6 +748,10 @@ async fn flash_handler(
         &state.can_device, &p.node, &staged.filename
     );
 
+    let bridge_unit = "can-bridge.service";
+    if let Err(e) = systemd_service("stop", bridge_unit).await {
+        error!("Failed to stop {}: {}", bridge_unit, e);
+    }
     println!("{:?}", p);
     let result = flash_node(
         &state.can_device,
@@ -748,6 +763,9 @@ async fn flash_handler(
         &state.manifest_lock,
         if let Some(force) = p.force { force } else { false },
     ).await;
+    if let Err(e) = systemd_service("start", bridge_unit).await {
+        error!("Failed to start {}: {}", bridge_unit, e);
+    }
 
     let status_str = match &result.result {
         FlashStatus::DownloadSuccess => "download_success",
