@@ -506,6 +506,7 @@ async fn main() -> Result<()> {
                                 duration: duration,
                             },
                         ));
+                        thread::sleep(Duration::from_secs(1));
                     }
 
                     let total_dur = overall_start.elapsed();
