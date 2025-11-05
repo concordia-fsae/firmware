@@ -30,6 +30,8 @@
 #include "shockpot.h"
 #include "Module.h"
 #include "wheelSpeed.h"
+#include "NetworkDefines_generated.h"
+#include "BuildInfo.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -87,6 +89,8 @@
 #define set_wheelSpeedRotationalFL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_FL))
 #define set_wheelSpeedRotationalFR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_FR))
 
+#define set_crcRepo(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_SHA_CRC)
+#define set_repoDirty(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_DIRTY)
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
 #define set_taskStack10Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))

@@ -1,17 +1,17 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
-load("//drive-stack/defs.bzl", "deployable_target")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
-load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
+load("//drive-stack/defs.bzl", "deployable_target")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//network/NetworkGen/defs.bzl", "generate_code")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
-APP_NAME = "vcfront"
+APP_NAME = "sws"
 
 variants = [
     0,
@@ -124,13 +124,11 @@ cxx_library(
         config_id = variant,
         srcs = {
             "variants.yaml": "variants.yaml",
-            "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",
+            "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
             "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
             "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
             "SharedApp_FeatureDefs.yaml": "//components/shared/code:SharedApp_FeatureDefs.yaml",
-            "VC_FeatureSels.yaml": "//components/vc/shared/features:VC_FeatureSels.yaml",
-            "VC_FeatureDefs.yaml": "//components/vc/shared/features:VC_FeatureDefs.yaml",
             "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
@@ -314,14 +312,11 @@ cxx_binary(
     executable_name = APP_NAME + ".elf",
     srcs =
         glob(["src/*.c", "src/HW/*.c"]) + [
-            "//components/shared/code:DRV/drv_hsd.c",
             "//components/shared/code:DRV/drv_inputAD.c",
             "//components/shared/code:DRV/drv_io.c",
-            "//components/shared/code:DRV/drv_mux.c",
             "//components/shared/code:DRV/drv_outputAD.c",
-            "//components/shared/code:DRV/drv_pedalMonitor.c",
             "//components/shared/code:DRV/drv_timer.c",
-            "//components/shared/code:DRV/drv_tps20xx.c",
+            "//components/shared/code:DRV/drv_userInput.c",
             "//components/shared/code:HW/HW.c",
             "//components/shared/code:HW/HW_adc.c",
             "//components/shared/code:HW/HW_can.c",
@@ -329,15 +324,11 @@ cxx_binary(
             "//components/shared/code:HW/HW_tim.c",
             "//components/shared/code:app/CAN/CANIO-rx.c",
             "//components/shared/code:app/CAN/CANIO-tx.c",
-            "//components/shared/code:app/app_vehicleState.c",
             ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/LIB_simpleFilter.c",
-            "//components/shared/code:libs/lib_interpolation.c",
-            "//components/vc/shared:HW/HW_tim_vcSpecific.c",
-            "//components/vc/shared:wheelSpeed/wheelSpeed.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),

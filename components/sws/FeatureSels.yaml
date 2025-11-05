@@ -1,6 +1,7 @@
 featureDefs: 
   - "#/components/stw_switch/FeatureDefs.yaml"
   - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
+  - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
   feature_canrx_swi: true

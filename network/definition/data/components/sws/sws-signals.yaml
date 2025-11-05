@@ -1,31 +1,72 @@
 signals:
-  din1Debug:
-    description: Status of DIN1 button
+  leftTop:
+    description: Status of left top steering wheel button
     discreteValues: digitalStatus
-  din2Debug:
-    description: Status of DIN2 button
+  leftTopDebounce:
+    description: Debounce state of left top steering wheel button (1 = debouncing)
     discreteValues: digitalStatus
-  din3Debug:
-    description: Status of DIN3 button
+
+  leftMid:
+    description: Status of left middle steering wheel button
     discreteValues: digitalStatus
-  din4Debug:
-    description: Status of DIN4 button
+  leftMidDebounce:
+    description: Debounce state of left middle steering wheel button (1 = debouncing)
     discreteValues: digitalStatus
-  din5Debug:
-    description: Status of DIN5 button
+
+  leftBot:
+    description: Status of left bottom steering wheel button
     discreteValues: digitalStatus
-  din6Debug:
-    description: Status of DIN6 button
+  leftBotDebounce:
+    description: Debounce state of left bottom steering wheel button (1 = debouncing)
     discreteValues: digitalStatus
-  din7Debug:
-    description: Status of DIN7 button
+
+  rightTop:
+    description: Status of right top steering wheel button
     discreteValues: digitalStatus
-  din8Debug:
-    description: Status of DIN8 button
+  rightTopDebounce:
+    description: Debounce state of right top steering wheel button (1 = debouncing)
     discreteValues: digitalStatus
-  din9Debug:
-    description: Status of DIN9 button
+
+  rightMid:
+    description: Status of right middle steering wheel button
     discreteValues: digitalStatus
-  din10Debug:
-    description: Status of DIN10 button
+  rightMidDebounce:
+    description: Debounce state of right middle steering wheel button (1 = debouncing)
+    discreteValues: digitalStatus
+
+  rightBot:
+    description: Status of right bottom steering wheel button
+    discreteValues: digitalStatus
+  rightBotDebounce:
+    description: Debounce state of right bottom steering wheel button (1 = debouncing)
+    discreteValues: digitalStatus
+
+  leftToggle:
+    description: Status of left toggle switch
+    discreteValues: digitalStatus
+  leftToggleDebounce:
+    description: Debounce state of left toggle switch (1 = debouncing)
+    discreteValues: digitalStatus
+
+  rightToggle:
+    description: Status of right toggle switch
+    discreteValues: digitalStatus
+  rightToggleDebounce:
+    description: Debounce state of right toggle switch (1 = debouncing)
+    discreteValues: digitalStatus
+
+  requestRun:
+    description: Status of run request
+    discreteValues: digitalStatus
+  requestReverse:
+    description: Status of reverse request
+    discreteValues: digitalStatus
+  requestRaceMode:
+    description: Status of race mode request
+    discreteValues: digitalStatus
+  requestTorqueInc:
+    description: Status of torque increase request
+    discreteValues: digitalStatus
+  requestTorqueDec:
+    description: Status of torque decrease request
     discreteValues: digitalStatus

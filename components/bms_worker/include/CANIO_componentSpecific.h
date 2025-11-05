@@ -19,6 +19,8 @@
 #include "BatteryMonitoring.h"
 #include "Module.h"
 #include "drv_tempSensors.h"
+#include "NetworkDefines_generated.h"
+#include "BuildInfo.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -105,5 +107,7 @@
 #define set_taskStack100Hz(m,b,n,s)              set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
 #define set_taskStack10Hz(m,b,n,s)               set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))
 #define set_taskStack1Hz(m,b,n,s)                set(m,b,n,s, Module_getMinStackLeft(MODULE_1Hz_TASK))
+#define set_crcRepo(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_SHA_CRC)
+#define set_repoDirty(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_DIRTY)
 
 #include "TemporaryStubbing.h"

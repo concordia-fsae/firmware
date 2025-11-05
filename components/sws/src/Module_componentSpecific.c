@@ -10,6 +10,7 @@
 /**< Module Header */
 #include "Module.h"
 #include "drv_inputAD.h"
+#include "drv_userInput.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -33,7 +34,7 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
-
+    drv_userInput_init();
 }
 
 /**
@@ -51,4 +52,5 @@ void Module_componentSpecific_10Hz(void)
 void Module_componentSpecific_1kHz(void)
 {
     drv_inputAD_1kHz_componentSpecific();
+    drv_userInput_run();
 }
