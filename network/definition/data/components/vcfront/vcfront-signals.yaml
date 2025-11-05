@@ -116,3 +116,31 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  brakeTempVoltFL:
+    description: Front Left brake temperature Voltage
+    template: voltsPrecise
+
+  brakeTemptempFL:
+    unit: degC
+    description: "brake temperature front left"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 800
+    continuous: true
+
+  brakeTempVoltFR:
+    description: Front right brake temperature Voltage
+    template: voltsPrecise
+
+  brakeTemptempFR:
+    unit: degC
+    description: "Brake temperature front right"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 800
+    continuous: true

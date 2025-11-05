@@ -28,7 +28,7 @@ extern const ModuleDesc_S tssi_desc;
 extern const ModuleDesc_S brakePressure_desc;
 extern const ModuleDesc_S shockpot_desc;
 extern const ModuleDesc_S CANIO_tx;
-
+extern const ModuleDesc_S brakeTemp_desc;
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -46,6 +46,7 @@ typedef enum
     MODULE_WHEELSPEED,
     MODULE_BRAKEPRESSURE,
     MODULE_SHOCKPOT,
+ 	MODULE_BRAKETEMP,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;

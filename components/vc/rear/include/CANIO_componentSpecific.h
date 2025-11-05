@@ -27,6 +27,7 @@
 #include "shockpot.h"
 #include "Module.h"
 #include "wheelSpeed.h"
+#include "brakeTemp.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -43,6 +44,10 @@
 #define set_hornState(m,b,n,s) set(m,b,n,s, horn_getStateCAN())
 #define set_tssiState(m,b,n,s) set(m,b,n,s, tssi_getStateCAN())
 #define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
+#define set_brakeTemptempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLtemp())
+#define set_brakeTemptempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRtemp())
+#define set_brakeTempVoltRL(m,b,n,s) set(m,b,n,s, brakeTemp_getRLVoltage())
+#define set_brakeTempVoltRR(m,b,n,s) set(m,b,n,s, brakeTemp_getRRVoltage())
 #define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
 #define set_torqueCommand(m,b,n,s) set(m,b,n,s, mcManager_getTorqueCommand())

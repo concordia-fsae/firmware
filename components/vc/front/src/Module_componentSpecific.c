@@ -34,6 +34,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &brakePressure_desc,
     &steeringAngle_desc,
     &shockpot_desc,
+    &brakeTemp_desc,
     &CANIO_tx,
 };
 
