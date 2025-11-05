@@ -108,7 +108,7 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
-    if (BMS.fault || (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
+    if (BMS.fault)
     {
         SYS_SFT_openShutdown();
     }
@@ -129,7 +129,8 @@ static void BMS100Hz_PRD(void)
 
     if (BMS.fault ||
         (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW) ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW))
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW) ||
+        (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
     {
         SYS_SFT_openContactors();
         drv_timer_stop(&precharge_timer);
