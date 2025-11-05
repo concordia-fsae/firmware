@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::Write;
-use std::fs::{create_dir_all, read_dir, remove_file, metadata};
+use std::fs::{create_dir_all, read_dir, rename, remove_file, metadata};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
@@ -27,7 +27,7 @@ use can_bridge::{
     parse_bus_specs, spawn_workers, maybe_decode, format_can_line,
 };
 
-const LOG_BUS_LABEL: &str = "can-all";
+const LOG_BUS_LABEL: &str = "can";
 
 /// Read multiple CAN buses; each input may be IFACE or IFACE=DBC.
 /// Filters:
@@ -82,28 +82,29 @@ struct Args {
     #[arg(long, default_value_t = 2000)]
     max_msgs: usize,
 
+    /// Write rolling logs here prior to compression and moving into the log-dir
+    #[arg(long = "tmp-dir")]
+    tmp_dir: Option<PathBuf>,
+
     /// If set, write rolling per-bus logs to this directory
     #[arg(long = "log-dir")]
     log_dir: Option<PathBuf>,
 
-    /// Maximum size before rolling (bytes)
-    #[arg(long = "log-max-bytes")]
-    log_max_bytes: Option<u64>,
-
-    /// Maximum time before rolling (e.g. 15m, 1h, 1d)
-    #[arg(long = "log-rollover-mins", default_value_t = 15)]
+    /// Maximum time before rolling in minutes
+    #[arg(long = "log-mins", default_value_t = 15)]
     log_rollover: u32,
 
-    /// Maximum total size of the log directory in GB (decimal GB = 1_000_000_000 bytes)
-    #[arg(long = "log-dir-max-gb")]
-    log_dir_max_gb: Option<f64>,
+    /// Maximum time before rolling in minutes
+    #[arg(long = "log-size", default_value_t = 250000)]
+    log_size: u64,
 }
 
+#[derive(Clone)]
 struct LogConfig {
     dir: PathBuf,
-    max_bytes: Option<u64>,
+    tmp: PathBuf,
+    max_bytes: u64,
     max_age: Duration,
-    max_dir_gb: Option<f64>,
 }
 
 struct BusLog {
@@ -171,9 +172,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(_) => {
                 args.log_dir.as_ref().map(|dir| LogConfig {
                     dir: dir.clone(),
-                    max_bytes: args.log_max_bytes,
+                    tmp: args.tmp_dir.clone().expect("tmp folder must be specified when logging"),
                     max_age: Duration::from_secs((args.log_rollover * 60).into()),
-                    max_dir_gb: args.log_dir_max_gb,
+                    max_bytes: args.log_size,
                 })
             }
             _ => None,
@@ -380,10 +381,8 @@ fn open_bus_log(base: &Path, bus: &str) -> std::io::Result<BusLog> {
 
 /// Only respect time/size for rollovers (no daily rotation)
 fn should_roll(bl: &BusLog, cfg: &LogConfig) -> bool {
-    if let Some(max_bytes) = cfg.max_bytes {
-        if bl.current_size >= max_bytes {
-            return true;
-        }
+    if bl.current_size >= cfg.max_bytes {
+        return true;
     }
     if bl.opened_at.elapsed() >= cfg.max_age {
         return true;
@@ -408,19 +407,20 @@ pub fn run_headless(
     // Use a single BusLog for ALL buses. We do not change the BusLog type or helpers.
     let mut global_log: Option<BusLog> = None;
 
-    if let Some(cfg) = log_cfg.as_ref() {
-        match find_uncompressed_logs(&cfg.dir) {
+    if let Some(cfg) = log_cfg.clone() {
+        match find_uncompressed_logs(&cfg.tmp) {
             Ok(paths) => {
                 if !paths.is_empty() {
                     println!("log: startup: found {} uncompressed logs; compressing...", paths.len());
                 }
                 for p in paths.iter() {
                     let p = p.clone();
+                    let cfg_cloned = cfg.clone();
                     if let Err(e) = thread::Builder::new()
                         .name("log-compress".into())
                         .spawn(move || {
                             let start_time = Instant::now();
-                            match compress_and_remove(&p) {
+                            match compress_and_remove(&p, &cfg_cloned.dir) {
                                 Ok(gz) => {
                                     // Best-effort size reporting
                                     let size_mb = metadata(&gz)
@@ -533,7 +533,7 @@ pub fn run_headless(
             }
 
             // ---- Single rolling log (size/time only); rollover info -> stdout only ----
-            if let Some(cfg) = log_cfg.as_ref() {
+            if let Some(cfg) = &log_cfg {
                 let old_path = match &global_log {
                     Some(bl) => Some(bl.path.clone()),
                     None => None,
@@ -545,7 +545,7 @@ pub fn run_headless(
                         println!("log: creating new log...");
                         true
                     }
-                    Some(bl) => should_roll(bl, cfg),
+                    Some(bl) => should_roll(bl, &cfg),
                 };
 
                 if need_open {
@@ -555,11 +555,7 @@ pub fn run_headless(
                         let secs = elapsed.as_secs_f64();
                         let size = bl.current_size / (1024*1024);
                         let time_triggered = elapsed >= cfg.max_age;
-                        let size_triggered = if let Some(max_bytes) = cfg.max_bytes {
-                            size >= max_bytes
-                        } else {
-                            false
-                        };
+                        let size_triggered = size >= cfg.max_bytes;
                         let reason = match (time_triggered, size_triggered) {
                             (true, true) => "time and size",
                             (true, false) => "time",
@@ -573,7 +569,7 @@ pub fn run_headless(
                     }
 
                     // Drop old and open new single shared log file
-                    global_log = match open_bus_log(&cfg.dir, LOG_BUS_LABEL) {
+                    global_log = match open_bus_log(&cfg.tmp, LOG_BUS_LABEL) {
                         Ok(new_log) => Some(new_log),
                         Err(e) => {
                             eprintln!("log: failed to open global log: {e}");
@@ -582,11 +578,12 @@ pub fn run_headless(
                         }
                     };
                     if let Some(path) = old_path.clone() {
+                        let cfg_cloned = cfg.clone();
                         if let Err(e) = thread::Builder::new()
                             .name("log-compress".into())
                             .spawn(move || {
                                 let start_time = Instant::now();
-                                match compress_and_remove(&path) {
+                                match compress_and_remove(&path, &cfg_cloned.dir) {
                                     Ok(gz) => {
                                         // Best-effort size reporting
                                         let size_mb = metadata(&gz)
@@ -617,24 +614,6 @@ pub fn run_headless(
                         global_log = None;
                     } else {
                         bl.current_size = bl.current_size.saturating_add((line.len() + 1) as u64);
-                    }
-                }
-
-                if let Some(max_gb) = cfg.max_dir_gb {
-                    let max_bytes_u128 = gb_to_bytes(max_gb);
-
-                    match dir_usage_bytes(&cfg.dir) {
-                        Ok(total) => {
-                            if total > max_bytes_u128 {
-                                println!(
-                                    "log: dir cap exceeded (used: {:.3} GB > limit: {:.3} GB)",
-                                    (total as f64) / 1e9,
-                                    max_gb
-                                );
-                                let _ = prune_dir_if_needed(&cfg.dir, max_bytes_u128, None);
-                            }
-                        }
-                        Err(e) => eprintln!("log: failed to compute dir usage: {e}"),
                     }
                 }
             }
@@ -678,51 +657,7 @@ fn dir_usage_bytes(dir: &Path) -> std::io::Result<u128> {
     Ok(total)
 }
 
-/// Prune oldest .log files until within max_dir_bytes. Never deletes `current_log_path`.
-fn prune_dir_if_needed(dir: &Path, max_dir_bytes: u128, current_log_path: Option<&Path>) -> std::io::Result<()> {
-    let mut files = list_log_files(dir)?;
-    let mut total = files.iter().fold(0u128, |acc, (_, sz, _)| acc.saturating_add(*sz as u128));
-
-    if total <= max_dir_bytes {
-        return Ok(());
-    }
-
-    println!(
-        "log: directory size exceeded (used: {:.3} GB > limit: {:.3} GB); pruning oldest logs",
-        (total as f64) / 1e9,
-        (max_dir_bytes as f64) / 1e9
-    );
-
-    for (path, sz, _) in files.iter() {
-        // Skip currently open file (if known)
-        if let Some(cur) = current_log_path {
-            if path == cur {
-                continue;
-            }
-        }
-        match remove_file(path) {
-            Ok(_) => {
-                total = total.saturating_sub(*sz as u128);
-                println!(
-                    "log: deleted oldest log '{}' ({} bytes); remaining: {:.3} GB",
-                    path.display(),
-                    sz,
-                    (total as f64) / 1e9
-                );
-                if total <= max_dir_bytes {
-                    break;
-                }
-            }
-            Err(e) => {
-                eprintln!("log: failed to delete '{}': {}", path.display(), e);
-                // keep trying next files
-            }
-        }
-    }
-    Ok(())
-}
-
-fn compress_and_remove(orig_path: &Path) -> std::io::Result<PathBuf> {
+fn compress_and_remove(orig_path: &Path, dest_folder: &Path) -> std::io::Result<PathBuf> {
     // new path: "<name>.tar.gz"
     let mut gz_path = orig_path.to_path_buf();
     gz_path.set_extension("log.tar.gz"); // if original ends with .log, this becomes .log.tar.gz
@@ -740,10 +675,13 @@ fn compress_and_remove(orig_path: &Path) -> std::io::Result<PathBuf> {
     let _enc = tar.into_inner()?; // GzEncoder<File>
     let mut _out = _enc.finish()?; // File
 
+    // Move log to log folder
+    let dest_path = dest_folder.join(gz_path.file_name().unwrap_or_default());
+    rename(&gz_path, &dest_path)?;
     // Delete original .log
     remove_file(orig_path)?;
 
-    Ok(gz_path)
+    Ok(dest_path)
 }
 
 fn find_uncompressed_logs(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
