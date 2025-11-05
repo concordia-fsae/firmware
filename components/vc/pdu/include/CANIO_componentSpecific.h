@@ -23,8 +23,6 @@
 #include "drv_tps2hb16ab.h"
 #include "powerManager.h"
 #include "Module.h"
-#include "NetworkDefines_generated.h"
-#include "BuildInfo.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -105,7 +103,5 @@
                                                   CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
 #define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
                                                     CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
-#define set_crcRepo(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_SHA_CRC)
-#define set_repoDirty(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_DIRTY)
 
 #include "TemporaryStubbing.h"

@@ -61,9 +61,3 @@ messages:
         template: nvmRecordFailedInit
       nvmRecordsVersionFailed:
         template: nvmRecordsVersionFailed
-  buildInfo:
-    signals:
-      crcRepo:
-        template: crc32
-      repoDirty:
-        template: repoDirty

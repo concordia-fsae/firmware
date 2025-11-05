@@ -96,10 +96,3 @@ messages:
         template: wheelSpeedRotational
       wheelSpeedRotationalFR:
         template: wheelSpeedRotational
-
-  buildInfo:
-    description: VCFRONT build info
-    id: 0x2f1
-    cycleTimeMs: 1000
-    sourceBuses: veh
-    template: buildInfo

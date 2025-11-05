@@ -177,9 +177,6 @@ generate_code(
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
     ],
-    exported_deps = [
-        "//tools/build-info:build-info",
-    ],
 )
 
 cxx_library(

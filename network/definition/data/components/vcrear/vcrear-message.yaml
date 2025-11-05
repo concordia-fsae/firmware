@@ -96,10 +96,3 @@ messages:
         template: wheelSpeedRotational
       wheelSpeedRotationalRR:
         template: wheelSpeedRotational
-
-  buildInfo:
-    description: VCREAR build info
-    id: 0x2f2
-    cycleTimeMs: 1000
-    sourceBuses: veh
-    template: buildInfo

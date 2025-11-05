@@ -146,10 +146,3 @@ messages:
     id: 0x571
     sourceBuses: veh
     template: rtosTaskMemInfo
-
-  buildInfo:
-    description: BMSW build info
-    id: 0x2e0
-    cycleTimeMs: 1000
-    sourceBuses: veh
-    template: buildInfo

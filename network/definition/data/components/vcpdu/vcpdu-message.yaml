@@ -139,10 +139,3 @@ messages:
         template: ampPreciseLarge
       hveCurrent:
         template: ampPreciseSmall
-
-  buildInfo:
-    description: VCPDU build info
-    id: 0x2f0
-    cycleTimeMs: 1000
-    sourceBuses: veh
-    template: buildInfo

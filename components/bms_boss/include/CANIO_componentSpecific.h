@@ -27,8 +27,6 @@
 #include "lib_nvm.h"
 #include "Module.h"
 #include "Sys.h"
-#include "NetworkDefines_generated.h"
-#include "BuildInfo.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -103,8 +101,6 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packVPackNVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK))
 #define set_mcuTemperature(m, b, n, s)              set(m, b, n, s, ENV.board.mcu_temp)
 
-#define set_crcRepo(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_SHA_CRC)
-#define set_repoDirty(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_DIRTY)
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
 # define set_nvmRecordWrites(m, b, n, s)            set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())

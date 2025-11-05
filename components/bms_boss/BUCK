@@ -197,9 +197,6 @@ generate_code(
         ":FreeRTOS",
         "//components/shared/code:headers",
     ],
-    exported_deps = [
-        "//tools/build-info:build-info",
-    ],
 )
 
 cxx_library(

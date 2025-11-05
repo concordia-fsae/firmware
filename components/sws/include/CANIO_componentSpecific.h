@@ -21,8 +21,6 @@
 #include "drv_inputAD.h"
 #include "drv_userInput.h"
 #include "driverInput.h"
-#include "NetworkDefines_generated.h"
-#include "BuildInfo.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -40,8 +38,6 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_crcRepo(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_SHA_CRC)
-#define set_repoDirty(m,b,n,s) set(m,b,n,s, BUILDINFO_REPO_DIRTY)
 #define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
 #define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
 #define set_taskUsage10Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));

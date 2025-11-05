@@ -7,6 +7,7 @@ After=network.target
 ExecStart=/bin/cfr/can_bridge can0=/application/network/dbc/veh.dbc -j --log-dir /application/logs/can/ --log-rollover-mins 5 --log-max-bytes 250000000 -q --log-dir-max-gb 100
 Restart=always
 RestartSec=5s
+StartLimitBurst=0
 
 [Install]
 WantedBy=multi-user.target

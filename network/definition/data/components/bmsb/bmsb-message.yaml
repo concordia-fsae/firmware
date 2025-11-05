@@ -112,10 +112,3 @@ messages:
       packVoltageMeasured:
       packVoltageMeasurementFault:
       packCycleCountedCoulombs:
-
-  buildInfo:
-    description: BMSB build info
-    id: 0x2ef
-    cycleTimeMs: 1000
-    sourceBuses: veh
-    template: buildInfo

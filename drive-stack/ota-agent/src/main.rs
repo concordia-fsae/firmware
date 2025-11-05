@@ -506,6 +506,7 @@ async fn main() -> Result<()> {
                                 duration: duration,
                             },
                         ));
+                        thread::sleep(Duration::from_secs(1));
                     }
 
                     let total_dur = overall_start.elapsed();
@@ -752,6 +753,10 @@ async fn flash_handler(
     if let Err(e) = systemd_service("stop", bridge_unit).await {
         error!("Failed to stop {}: {}", bridge_unit, e);
     }
+    let processor_unit = "log-processor.service";
+    if let Err(e) = systemd_service("stop", processor_unit).await {
+        error!("Failed to stop {}: {}", processor_unit, e);
+    }
     println!("{:?}", p);
     let result = flash_node(
         &state.can_device,
@@ -765,6 +770,9 @@ async fn flash_handler(
     ).await;
     if let Err(e) = systemd_service("start", bridge_unit).await {
         error!("Failed to start {}: {}", bridge_unit, e);
+    }
+    if let Err(e) = systemd_service("start", processor_unit).await {
+        error!("Failed to stop {}: {}", processor_unit, e);
     }
 
     let status_str = match &result.result {
