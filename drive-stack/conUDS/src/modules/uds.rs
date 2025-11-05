@@ -577,7 +577,7 @@ impl UdsClient {
         debug!("Transferring data over UDS: {:02x?}", buf);
 
         // send the frame
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 100).await?;
         debug!("Transfer payload response: {:02x?}", resp);
 
         if resp[0] == 0x7f {
