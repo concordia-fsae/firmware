@@ -748,7 +748,7 @@ async fn flash_handler(
         &state.can_device, &p.node, &staged.filename
     );
 
-    let bridge_unit = "can-bridge.service";
+    let bridge_unit = "log-processor.service";
     if let Err(e) = systemd_service("stop", bridge_unit).await {
         error!("Failed to stop {}: {}", bridge_unit, e);
     }
