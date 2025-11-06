@@ -32,3 +32,5 @@ typedef enum
 float32_t                torque_getTorqueRequest(void);
 torque_state_E           torque_getState(void);
 CAN_torqueManagerState_E torque_getStateCAN(void);
+torque_state_E torque_getTractionControlState(void);
+CAN_torqueManagerState_E torque_getTractionControlStateCAN(void);

@@ -70,3 +70,6 @@ signals:
   requestTorqueDec:
     description: Status of torque decrease request
     discreteValues: digitalStatus
+  requestTractionControl:
+    description: Status of traction control request
+    discreteValues: digitalStatus

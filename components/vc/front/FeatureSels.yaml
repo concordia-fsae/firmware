@@ -9,3 +9,4 @@ features:
   app_uds: true
   feature_vehicleState_mode: follower
   feature_wiggly_pedal: true
+  feature_traction_control: false
