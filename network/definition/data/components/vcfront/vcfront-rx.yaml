@@ -15,3 +15,5 @@ signals:
     sourceBuses: veh
   VCREAR_wheelSpeedRotationalR:
     sourceBuses: veh
+  SWS_requestTractionControl:
+    sourceBuses: veh
