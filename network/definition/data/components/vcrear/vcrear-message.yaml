@@ -85,14 +85,5 @@ messages:
 
   wheelSpeed:
     description: Rear wheel speeds
-    id: 0x460
-    cycleTimeMs: 50
-    signals:
-      wheelSpeedLinearRL:
-        template: wheelSpeedLinear
-      wheelSpeedLinearRR:
-        template: wheelSpeedLinear
-      wheelSpeedRotationalRL:
-        template: wheelSpeedRotational
-      wheelSpeedRotationalRR:
-        template: wheelSpeedRotational
+    id: 0x461
+    template: wheelSpeed

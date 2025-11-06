@@ -61,3 +61,18 @@ messages:
         template: nvmRecordFailedInit
       nvmRecordsVersionFailed:
         template: nvmRecordsVersionFailed
+  wheelSpeed:
+    cycleTimeMs: 50
+    signals:
+      wheelSpeedLinearL:
+        template: wheelSpeedLinear
+      wheelSpeedLinearR:
+        template: wheelSpeedLinear
+      wheelSpeedRotationalL:
+        template: wheelSpeedRotational
+      wheelSpeedRotationalR:
+        template: wheelSpeedRotational
+      slip:
+        template: slip
+      vehicleSpeed:
+        template: wheelSpeedLinear

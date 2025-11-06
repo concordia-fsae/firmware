@@ -11,3 +11,7 @@ signals:
     sourceBuses: veh
   BMSB_imdStatusMem:
     sourceBuses: veh
+  VCREAR_wheelSpeedRotationalL:
+    sourceBuses: veh
+  VCREAR_wheelSpeedRotationalR:
+    sourceBuses: veh
