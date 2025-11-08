@@ -45,6 +45,12 @@ static const lib_thermistors_BParameter_S NCP21_bParam = { // For the NCP21XV103
     .R0 = 10000U,
 };
 
+static const lib_thermistors_BParameter_S NTC103JT_bParam = { // For the 103JT-100 and 103JT-050
+    .B = 3435U,
+    .T0 = 25U + KELVIN_OFFSET,
+    .R0 = 10000U,
+};
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
