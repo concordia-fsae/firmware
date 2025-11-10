@@ -1,6 +1,6 @@
 /**
  * @file shockpot.c
- * @brief Module source for steering angle sensor
+ * @brief Module source for Linear Potentiometer
  */
 
 /******************************************************************************
@@ -91,7 +91,7 @@ static void shockpot_init(void)
     lib_interpolation_init(&shockpot_map2, 0.0f);
 }
 
-static void shockpot_periodic_10Hz(void)
+static void shockpot_periodic_100Hz(void)
 {
     shockpot_FL.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_L_SHK_DISP);
     shockpot_FR.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_R_SHK_DISP);
@@ -102,5 +102,5 @@ static void shockpot_periodic_10Hz(void)
 
 const ModuleDesc_S shockpot_desc = {
     .moduleInit = &shockpot_init,
-    .periodic10Hz_CLK = &shockpot_periodic_10Hz,
+    .periodic100Hz_CLK = &shockpot_periodic_100Hz,
 };
