@@ -1,0 +1,9 @@
+load("//tools/uv/defs.bzl", "uv_tool")
+
+uv_tool(
+    name = "configurator_tool",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = glob(["**/*.py"]) + ["//embedded/tools/configurator/templates:templates",],
+    visibility = ["PUBLIC"],
+)

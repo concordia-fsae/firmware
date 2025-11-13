@@ -1,0 +1,45 @@
+templates:
+  - drv_inputAD_config.h.mako
+  - drv_inputAD_config.c.mako
+
+channels: 
+  MUX_LP1_SNS:
+   multiplier: 1.0 
+  MUX_LP2_SNS:
+   multiplier: 1.0
+  MUX_LP3_SNS:
+   multiplier: 1.0
+  MUX_LP4_SNS:
+   multiplier: 1.0
+  5V_VOLTAGE:
+   multiplier: 3.61
+  UVL_BATT:
+   multiplier: 6.62
+  MCU_TEMP:
+   multiplier: 1.0
+  MUX_LP5_SNS:
+   multiplier: 1.0 
+  MUX_LP6_SNS:
+   multiplier: 1.0
+  MUX_LP7_SNS:
+   multiplier: 1.0
+  MUX_LP8_SNS:
+   multiplier: 1.0
+  MUX_LP9_SNS:
+   multiplier: 1.0
+  MUX2_HP_CS:
+   multiplier: 1.0
+  MUX2_THERMISTORS:
+   multiplier: 1.0
+  DEMUX2_PUMP:
+   multiplier: 1.0
+  DEMUX2_FAN:
+   multiplier: 1.0
+  DEMUX2_5V_SNS:
+   multiplier: 0.20 # PDU_CS_AMPS_PER_VOLT
+  DEMUX2_THERM_MCU:
+   multiplier: 1.0
+  DEMUX2_THERM_HSD1:
+   multiplier: 1.0
+  DEMUX2_THERM_HSD2:
+   multiplier: 1.0

@@ -1,0 +1,11 @@
+templates:
+  - drv_inputAD_config.h.mako
+  - drv_inputAD_config.c.mako
+
+channels: 
+  CS: 
+    multiplier: 16.0
+  MCU_TEMP:
+    multiplier: 1.0
+  VPACK: 
+    multiplier: 1.0

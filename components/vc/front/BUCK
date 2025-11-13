@@ -5,6 +5,7 @@ load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load("//embedded/tools/configurator:defs.bzl", "generate_adc_config")
 load("//network/NetworkGen/defs.bzl", "generate_code")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
@@ -81,6 +82,12 @@ linker_flags = [
     "-Wl,--print-memory-usage",
     "-Wl,--stats",
 ]
+
+generate_adc_config(
+    name = "adc-config",
+    adc_config = "config/adc.yaml",
+    component = "vc-front",
+)
 
 cxx_library(
     name = "FreeRTOS",
