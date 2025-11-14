@@ -177,7 +177,7 @@ static void mcManager_periodic_100Hz(void)
 
 #if FEATURE_IS_ENABLED(FEATURE_REVERSE)
     CAN_gear_E direction = CAN_GEAR_FORWARD;
-    const bool direction_valid = CANRX_get_signal(VEH, STW_gear, &direction) == CANRX_MESSAGE_VALID;
+    const bool direction_valid = CANRX_get_signal(VEH, VCFRONT_gear, &direction) == CANRX_MESSAGE_VALID;
     if (direction_valid && (direction == CAN_GEAR_REVERSE))
     {
         mcManager_data.direction = MCMANAGER_REVERSE;
