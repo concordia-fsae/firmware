@@ -12,10 +12,13 @@
   fbcode_macros = none
   buck2 = none
 
-# Uses a copy of the prelude bundled with the buck2 binary. You can alternatively delete this
-# section and vendor a copy of the prelude to the `prelude` directory of your project.
+# Vendor specific external cells
 [external_cells]
-  prelude = bundled
+  prelude = git
+
+[external_cell_prelude]
+  git_origin = https://github.com/facebook/buck2-prelude
+  commit_hash = 2fe244dbb154df0ca053e12df88aa9bddcf29407
 
 [parser]
   target_platform_detector_spec = target:root//...->prelude//platforms:default
