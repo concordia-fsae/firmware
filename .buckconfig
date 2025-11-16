@@ -13,12 +13,15 @@
   fbcode_macros = none
   buck2 = none
 
-# Uses a copy of the prelude bundled with the buck2 binary. You can alternatively delete this
-# section and vendor a copy of the prelude to the `prelude` directory of your project.
+# Vendor prelude and rustc bootstrap
 [external_cells]
-  prelude = bundled
-# Uncomment following line prior to running `buck2 expand-external-cell rustc`
-#  rustc = git
+  prelude = git
+  rustc = git
+
+[external_cell_prelude]
+  git_origin = https://github.com/facebook/buck2-prelude
+  commit_hash = 1449150aa3d3f9f1df44f45889615636ce721dbc
+
 
 [external_cell_rustc]
   git_origin = https://github.com/dtolnay/buck2-rustc-bootstrap
