@@ -13,7 +13,8 @@ use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 use conUDS::SupportedResetTypes;
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
-use conUDS::modules::uds::{UdsSession, UpdateResult, FlashStatus};
+use conUDS::modules::uds::UdsSession;
+use conUDS::{UpdateResult, FlashStatus};
 
 #[tokio::main]
 async fn main() {

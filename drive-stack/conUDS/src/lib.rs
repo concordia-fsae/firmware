@@ -1,4 +1,6 @@
+use std::path::PathBuf;
 use std::str::FromStr;
+use::std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use crc::Crc;
@@ -7,6 +9,7 @@ use tokio::sync::oneshot;
 
 pub mod arguments;
 pub mod config;
+#[cfg(target_os = "linux")]
 pub mod modules;
 
 const CRC8: Crc<u8> = Crc::<u8>::new(&crc::CRC_8_SAE_J1850);
@@ -51,6 +54,20 @@ impl CanioCmd {
             Err(e) => Err(e.into()),
         }
     }
+}
+
+#[derive(Debug)]
+pub struct UpdateResult {
+    pub bin: PathBuf,
+    pub result: FlashStatus,
+    pub duration: Duration,
+}
+
+#[derive(Debug)]
+pub enum FlashStatus {
+    Failed(String),
+    CrcMatch,
+    DownloadSuccess,
 }
 
 pub enum PrdCmd {
