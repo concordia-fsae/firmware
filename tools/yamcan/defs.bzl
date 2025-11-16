@@ -13,7 +13,7 @@ def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: lis
 
     return uv_genrule(
         name = name,
-        tool = "//network/NetworkGen:yamcan",
+        tool = "//tools/yamcan:yamcan",
         # Named output dir called "include"
         out = "manifest.yaml",
         cmd = (
@@ -32,7 +32,7 @@ def generate_code(name: str, network_dep: str, node: str, library_deps: list[str
     return [
         uv_genrule(
             name = uv_name,
-            tool = "//network/NetworkGen:yamcan",
+            tool = "//tools/yamcan:yamcan",
             # Named output dir called "include"
             outs = {
                 "CANTypes_generated.h": ["generated/CANTypes_generated.h"],
@@ -81,7 +81,7 @@ def generate_stats(
         **kwargs):
     uv_genrule(
         name = name,
-        tool = "//network/NetworkGen:yamcan",
+        tool = "//tools/yamcan:yamcan",
         out = "network",
         cmd = "$(python) ${TOOLDIR}/NetworkGen.py --output-dir ${OUT} --cache-dir ${SRCS} --gen-stats",
         srcs = [dep],
@@ -94,7 +94,7 @@ def generate_dbcs(
         **kwargs):
     uv_genrule(
         name = name,
-        tool = "//network/NetworkGen:yamcan",
+        tool = "//tools/yamcan:yamcan",
         out = "network",
         cmd = "$(python) ${TOOLDIR}/NetworkGen.py --output-dir ${OUT} --cache-dir ${SRCS} --gen-dbc",
         srcs = [dep],
@@ -112,7 +112,7 @@ def build_network(
     )
     uv_genrule(
         name = name,
-        tool = "//network/NetworkGen:yamcan",
+        tool = "//tools/yamcan:yamcan",
         srcs = [":network-defs"],
         out = "network-cache",
         cmd = "$(python) ${TOOLDIR}/NetworkGen.py --data-dir ${SRCS} --cache-dir ${OUT} --build",

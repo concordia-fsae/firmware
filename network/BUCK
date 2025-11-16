@@ -1,5 +1,5 @@
 load(
-    "//network/NetworkGen/defs.bzl",
+    "//tools/yamcan/defs.bzl",
     "build_network",
     "generate_code",
     "generate_dbcs",
