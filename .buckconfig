@@ -2,6 +2,7 @@
   root = .
   prelude = prelude
   toolchains = buck2/toolchains
+  rustc = rustc
   none = none
 
 [cell_aliases]
@@ -16,6 +17,12 @@
 # section and vendor a copy of the prelude to the `prelude` directory of your project.
 [external_cells]
   prelude = bundled
+# Uncomment following line prior to running `buck2 expand-external-cell rustc`
+#  rustc = git
+
+[external_cell_rustc]
+  git_origin = https://github.com/dtolnay/buck2-rustc-bootstrap
+  commit_hash = 074332d90e3fe1c63f76dbd7e8e71d569a853e57
 
 [parser]
   target_platform_detector_spec = target:root//...->prelude//platforms:default
