@@ -27,8 +27,8 @@ use tracing_subscriber::EnvFilter;
 use warp::{http::StatusCode, Filter};
 
 #[cfg(target_os = "linux")]
-use conUDS::modules::uds::{FlashStatus, UdsSession};
-use conUDS::modules::uds::UpdateResult;
+use conUDS::modules::uds::UdsSession;
+use conUDS::{FlashStatus, UpdateResult};
 use net_detec::Server as MdnsServer;
 use net_detec::Client as MdnsClient;
 use net_detec::{DiscoveryFilter, DiscoveredService};
@@ -153,11 +153,13 @@ struct UdsNode {
     response_id: u32,
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Clone, Debug, Deserialize)]
 struct Config {
     nodes: HashMap<String, UdsNode>,
 }
 
+#[cfg(target_os = "linux")]
 #[derive(Clone)]
 struct AppState {
     cfg: Arc<Config>,
@@ -526,6 +528,7 @@ fn build_url(ip: std::net::IpAddr, port: u16, path: &str) -> Url {
     Url::parse(&format!("http://{}:{}{}", host, port, path)).unwrap()
 }
 
+#[cfg(target_os = "linux")]
 // POST /firmware/stage?node=...   (multipart form with part name "file")
 async fn stage_handler(
     p: FlashParams,
@@ -650,6 +653,7 @@ async fn stage_handler(
     ))
 }
 
+#[cfg(target_os = "linux")]
 async fn flash_node(
     bus: &str,
     binary: &Path,
@@ -674,6 +678,7 @@ async fn flash_node(
     result
 }
 
+#[cfg(target_os = "linux")]
 async fn lock_manifest_node(
     manifest_path: &Path,
     node: &str,
@@ -689,6 +694,7 @@ async fn lock_manifest_node(
     }
 }
 
+#[cfg(target_os = "linux")]
 async fn unlock_manifest_node(
     manifest_path: &Path,
     node: &str,
@@ -715,6 +721,7 @@ async fn systemd_service(action: &str, unit: &str) -> anyhow::Result<()> {
     }
 }
 
+#[cfg(target_os = "linux")]
 // POST /firmware/flash?node=...
 async fn flash_handler(
     p: FlashParams,
@@ -810,6 +817,7 @@ async fn flash_handler(
     }
 }
 
+#[cfg(target_os = "linux")]
 // POST /firmware/promote?node=...
 async fn promote_handler(
     p: FlashParams,
@@ -847,6 +855,7 @@ async fn promote_handler(
     ))
 }
 
+#[cfg(target_os = "linux")]
 async fn read_manifest_compat(path: &Path) -> anyhow::Result<BinariesManifest> {
     match fs::read(path).await {
         Ok(bytes) => {
@@ -861,6 +870,7 @@ async fn read_manifest_compat(path: &Path) -> anyhow::Result<BinariesManifest> {
     }
 }
 
+#[cfg(target_os = "linux")]
 async fn write_manifest(path: &Path, manifest: &BinariesManifest) -> anyhow::Result<()> {
     let tmp_path = path.with_extension("yaml.tmp");
     let yaml = serde_yaml::to_string(&manifest).context("serializing binaries manifest")?;
@@ -873,6 +883,7 @@ async fn write_manifest(path: &Path, manifest: &BinariesManifest) -> anyhow::Res
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 async fn update_manifest_stage(
     manifest_path: &Path,
     sha256_hex: &str,
@@ -938,6 +949,7 @@ async fn update_manifest_stage(
     write_manifest(manifest_path, &manifest).await
 }
 
+#[cfg(target_os = "linux")]
 async fn promote_staged_to_production(manifest_path: &Path, node: &str) -> anyhow::Result<()> {
     let mut manifest = read_manifest_compat(manifest_path).await?;
     let nb = manifest.nodes.get_mut(node).ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
@@ -946,6 +958,7 @@ async fn promote_staged_to_production(manifest_path: &Path, node: &str) -> anyho
     write_manifest(manifest_path, &manifest).await
 }
 
+#[cfg(target_os = "linux")]
 async fn load_manifest(path: &str) -> Result<Config> {
     let data = fs::read(path)
         .await
@@ -954,6 +967,7 @@ async fn load_manifest(path: &str) -> Result<Config> {
     Ok(cfg)
 }
 
+#[cfg(target_os = "linux")]
 fn start_mdns_advertisement(interface: String, service_type: String, ip: IpAddr, port: u16) {
     let instance_name = get_hostname()
         .ok()

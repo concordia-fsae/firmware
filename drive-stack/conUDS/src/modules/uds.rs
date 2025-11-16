@@ -26,6 +26,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
+use crate::{FlashStatus, UpdateResult};
 use crate::DownloadParams;
 use crate::SupportedResetTypes;
 use crate::UdsDownloadStart;
@@ -34,13 +35,6 @@ use crate::{CanioCmd, PrdCmd};
 use crate::modules::canio::CANIO;
 
 const UDS_DID_CRC: u16 = 0x03;
-
-#[derive(Debug)]
-pub struct UpdateResult {
-    pub bin: PathBuf,
-    pub result: FlashStatus,
-    pub duration: Duration,
-}
 
 #[derive(Debug)]
 pub struct UdsClient {
@@ -53,13 +47,6 @@ pub struct UdsSession {
     exit: Arc::<Mutex::<bool>>,
     threads: [JoinHandle<Result<()>>; 2],
     interactive_session: bool,
-}
-
-#[derive(Debug)]
-pub enum FlashStatus {
-    Failed(String),
-    CrcMatch,
-    DownloadSuccess,
 }
 
 impl UdsSession {

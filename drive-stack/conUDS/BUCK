@@ -16,9 +16,6 @@ rust_library(
         "//third_party:serde_yaml",
         "//third_party:tokio",
     ],
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
     visibility = ["PUBLIC"],
 )
 
@@ -34,6 +31,9 @@ rust_binary(
         "//third_party:log",
         "//third_party:simplelog",
         "//third_party:tokio",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
     ],
     visibility = ["PUBLIC"],
 )
