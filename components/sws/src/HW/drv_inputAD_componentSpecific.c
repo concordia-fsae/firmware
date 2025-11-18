@@ -31,70 +31,70 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN1,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN2] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN2,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN3] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN3,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN4] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN4,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN5] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN5,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN6] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN6,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN7] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN7,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN8] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN8,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN9] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN9,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
     [DRV_INPUTAD_DIGITAL_CHANNEL_DIN10] = {
         .type = INPUT_DIGITAL,
         .config.gpio = {
             .pin = HW_GPIO_DIN10,
-            .active_level = DRV_IO_LOGIC_HIGH,
+            .active_level = DRV_IO_LOGIC_LOW,
         },
     },
 };
