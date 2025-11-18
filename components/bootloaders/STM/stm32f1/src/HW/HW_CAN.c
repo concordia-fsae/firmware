@@ -328,7 +328,7 @@ CAN_exitCode_E CAN_init(void)
     NVIC_EnableIRQ(CAN1_TX_IRQn);
 
 #if CAN_SLEEP
-    GPIO_assignPin(CAN_SLEEP_PORT, CAN_SLEEP_PIN, true);
+    GPIO_assignPin(CAN_SLEEP_PORT, CAN_SLEEP_PIN, false);
 #endif
 
     return HAL_CAN_ERROR_NONE;
@@ -343,7 +343,7 @@ CAN_exitCode_E CAN_init(void)
 void CAN_destroy(void)
 {
 #if CAN_SLEEP
-    GPIO_assignPin(CAN_SLEEP_PORT, CAN_SLEEP_PIN, false);
+    GPIO_assignPin(CAN_SLEEP_PORT, CAN_SLEEP_PIN, true);
 #endif
 
     // Disable CAN1 clock

@@ -246,21 +246,21 @@ cxx_library(
         },
     )
     for name, variant in [
-        ("f105", "stm32f105"),
+        ("f103", "stm32f103"),
     ]
 ]
 
 alias(
     name = "hal",
     actual = select({
-        "DEFAULT": ":hal-f105",
+        "DEFAULT": ":hal-f103",
     }),
 )
 
 alias(
     name = "CMSIS",
     actual = select({
-        "DEFAULT": ":CMSIS-hal-f105",
+        "DEFAULT": ":CMSIS-hal-f103",
     }),
 )
 
@@ -280,14 +280,14 @@ alias(
         },
     )
     for variant, script in [
-        ("f105", "stm32f105vc.ld"),
+        ("f103", "stm32f103c8.ld"),
     ]
 ]
 
 alias(
     name = "linkscript",
     actual = select({
-        "DEFAULT": ":linkscript-f105",
+        "DEFAULT": ":linkscript-f103",
     }),
 )
 
@@ -327,7 +327,7 @@ cxx_binary(
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/LIB_simpleFilter.c",
             select({
-                "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
+                "DEFAULT": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
             }),
         ],
     header_namespace = "",
