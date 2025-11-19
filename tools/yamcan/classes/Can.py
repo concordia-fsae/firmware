@@ -312,7 +312,81 @@ class CanSignal(CanObject):
                 print(
                     f"Signal '{self.name}' uses discrete value table '{dv}' which has an invalid range"
                 )
-                self.is_valid = False
+            nat_rep.signedness = Signedness.unsigned
+        
+            if not nat_rep.range or not nat_rep.range.is_valid:
+                raise Exception(
+                    f"Signal '{self.name}' uses discrete value tables '{dv.name}' which has an invalid range"
+                    f"({dv.min_val}..{dv.max_val})"
+                )
+            if not isinstance(nat_rep.bit_width, int) or not (1 <= nat_rep.bit_width <= 64):
+                
+                raise Exception(
+                    f"Signal '{self.name}' uses discrete value table '{dv}' with invalid bitWidth={dv.bit_width}."
+                )
+            
+            rmin = float(nat_rep.range.min)
+            rmax = float(nat_rep.range.max)
+
+            if rmax is None or rmin == rmax:
+                raise Exception(
+                    f"Signal '{self.name}' has invalid range: min == max ({rmin}). Cannot compute scale (would cause division by zero)."
+                )
+
+
+            sig_range = rmax - rmin
+            N = nat_rep.bit_width
+            expected_count = 2 ** N
+            if expected_count < 2:
+                raise Exception(
+                    f"Signal '{self.name}' uses discreteValues but bitWidth={N} "
+                    "does not provide at least 2 codes"
+                )
+
+            scale_from_range = sig_range / (expected_count - 1)
+            nat_rep.resolution = getattr(dv, "resolution", None) or scale_from_range
+
+            self.offset = rmin
+            self.scale = float(nat_rep.resolution)
+            if not self.scale:
+                raise Exception(
+                    f"Signal '{self.name}' computed scale == 0 from discreteValues; "
+                    "check DV resolution or range."
+                )
+
+            vals = getattr(dv, "values", None) or getattr(dv, "codes", None)
+            if vals:
+                tol = 1e-6
+                #filters out the non-numeric values so we can convert to a float
+                numeric_vals = [
+                    v for v in vals
+                    if isinstance(v, (int, float)) or (
+                        isinstance(v, str)
+                        and (
+                            v.replace('.', '', 1).isdigit()
+                            or (v.startswith('-') and v[1:].replace('.', '', 1).isdigit())
+                        )
+                    )
+                ]
+                numeric_vals = [float(v) for v in numeric_vals]
+
+                for i, v in enumerate(sorted(numeric_vals)):
+                    expected = rmin + i * self.scale
+                    if abs(v - expected) > tol:
+                        raise Exception(
+                            f"Signal '{self.name}' discrete table '{dv}' is not linear: "
+                            f"index {i} value={v} expected≈{expected} (scale={self.scale})."
+                        )
+
+            assert self.native_representation, "native_representation missing for DV signal"
+            assert self.native_representation.bit_width, "bit_width missing for DV signal"
+            self.datatype = CType.from_val(
+                self.native_representation.bit_width,
+                self.native_representation.signedness == Signedness.signed,
+                self.continuous == Continuous.continuous,
+            )
+            return
+
         # handle case where nativeRepresentation is provided
         elif nat_rep := self.native_representation:
             if nat_rep.range:
@@ -326,7 +400,7 @@ class CanSignal(CanObject):
                     sig_range = nat_rep.range.max - nat_rep.range.min
                 elif nat_rep.signedness == Signedness.signed:
                     self.offset = 0
-                    sig_range = 2* max(nat_rep.range.max, nat_rep.range.min)
+                    sig_range = 2* max(nat_rep.range.max, -nat_rep.range.min)
 
                 if nat_rep.resolution:
                     self.scale = nat_rep.resolution
@@ -342,11 +416,12 @@ class CanSignal(CanObject):
                 nat_rep.range = Range(
                     {"min": 0, "max": 2**nat_rep.bit_width * nat_rep.resolution}
                 )
+                self.offset = nat_rep.range.min
+                self.scale = nat_rep.resolution
         else:
-            nat_rep = NativeRepresentation()
-            nat_rep.bit_width = 1
-            nat_rep.resolution = 1
-            nat_rep.range = Range({"min": 0, "max": 1})
+            raise Exception(
+                f"Signal '{self.name}' has neither discreteValues nor nativeRepresentation defined;"
+            )
 
         assert (
             self.native_representation
