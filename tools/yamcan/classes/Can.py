@@ -306,13 +306,60 @@ class CanSignal(CanObject):
         if dv := self.discrete_values:
             self.native_representation = NativeRepresentation()
             nat_rep = self.native_representation
+
             nat_rep.bit_width = dv.bit_width
+            nat_rep.signedness = Signedness.unsigned
+
+            
             nat_rep.range = Range({"min": dv.min_val, "max": dv.max_val})
             if not nat_rep.range.is_valid:
-                print(
-                    f"Signal '{self.name}' uses discrete value table '{dv}' which has an invalid range"
+                raise Exception(
+                    f"Signal '{self.name}' uses discrete value table '{dv.name}' with invalid range "
+                    f"({dv.min_val}..{dv.max_val})"
                 )
-                self.is_valid = False
+
+            if not isinstance(nat_rep.bit_width, int) or not (1 <= nat_rep.bit_width <= 64):
+                raise Exception(
+                    f"Signal '{self.name}' uses discrete value table '{dv.name}' with invalid bitWidth={dv.bit_width}."
+                )
+
+            # validate nummeric mapping fits bitWidth.
+            codes = getattr(dv, "codes", None) or getattr(dv, "values", None)
+            if codes:
+                max_states = 1 << nat_rep.bit_width
+                if isinstance(codes, dict):
+                    numeric_codes = list(codes.values())
+                    max_code = max_states - 1
+                    bad = [c for c in numeric_codes if not isinstance(c, int)]
+                    if bad:
+                        raise Exception(
+                            f"Signal '{self.name}' discrete value table '{dv.name}' has non-int numeric codes: {bad[:5]}"
+                        )
+                    out_of_range = [c for c in numeric_codes if c < 0 or c > max_code]
+                    if out_of_range:
+                        raise Exception(
+                            f"Signal '{self.name}' discrete value table '{dv.name}' has numeric codes outside 0..{max_code}: "
+                            f"{out_of_range[:5]}"
+                        )
+                # validate count fits bitWidth
+                elif isinstance(codes, (list, tuple)):
+                    if len(codes) > max_states:
+                        raise Exception(
+                            f"Signal '{self.name}' discrete value table '{dv.name}' has {len(codes)} states but bitWidth={nat_rep.bit_width} "
+                            f"only supports {max_states}"
+                        )
+
+            self.offset = 0
+            self.scale = 1
+
+            self.datatype = CType.from_val(
+                nat_rep.bit_width,
+                False,  # unsigned
+                False,  # discrete
+            )
+            return
+
+
         # handle case where nativeRepresentation is provided
         elif nat_rep := self.native_representation:
             if nat_rep.range:
@@ -326,7 +373,7 @@ class CanSignal(CanObject):
                     sig_range = nat_rep.range.max - nat_rep.range.min
                 elif nat_rep.signedness == Signedness.signed:
                     self.offset = 0
-                    sig_range = 2* max(nat_rep.range.max, nat_rep.range.min)
+                    sig_range = 2* max(abs(nat_rep.range.max), abs(nat_rep.range.min))
 
                 if nat_rep.resolution:
                     self.scale = nat_rep.resolution
@@ -342,11 +389,11 @@ class CanSignal(CanObject):
                 nat_rep.range = Range(
                     {"min": 0, "max": 2**nat_rep.bit_width * nat_rep.resolution}
                 )
+                self.scale = nat_rep.resolution
         else:
-            nat_rep = NativeRepresentation()
-            nat_rep.bit_width = 1
-            nat_rep.resolution = 1
-            nat_rep.range = Range({"min": 0, "max": 1})
+            raise Exception(
+                f"Signal '{self.name}' has neither discreteValues nor nativeRepresentation defined;"
+            )
 
         assert (
             self.native_representation
