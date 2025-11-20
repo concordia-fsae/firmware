@@ -66,6 +66,16 @@ messages:
       shockpotVoltFR:
       shockpotdispFR:
 
+  brakeTemp:
+    description: Data from front brake temperature sensors
+    id: 0x456
+    cycleTimeMs: 100
+    signals:
+      brakeTempVoltFL:
+      brakeTemptempFL:
+      brakeTempVoltFR:
+      brakeTemptempFR:
+
   cockpitLightStatus:
     description: Status of the cockpit lights
     id: 0x402

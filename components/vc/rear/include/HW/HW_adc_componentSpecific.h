@@ -33,6 +33,7 @@ typedef enum
     ADC_BANK1_CHANNEL_APPS_P1,
     ADC_BANK1_CHANNEL_MCU_TEMP,
     ADC_BANK1_CHANNEL_COUNT,
+    ADC_BANK2_CHANNEL_BRK_TEMP,
 } HW_adcChannels_bank1_E;
 
 typedef enum
