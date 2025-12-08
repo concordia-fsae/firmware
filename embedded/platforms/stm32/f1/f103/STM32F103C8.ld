@@ -61,7 +61,7 @@ MEMORY
 {
     RAM         (rwx)    : ORIGIN = RAM_ORIGIN,                          LENGTH = RAM_SIZE
     FLASH       (rx)     : ORIGIN = APP_START_ADDR,                      LENGTH = __APP_SIZE
-#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+#if NVM_LIB_ENABLED
     NVM_BLOCK   (rw)     : ORIGIN = __FLASH_NVM_ORIGIN,                  LENGTH = NVM_BLOCK_SIZE
 #endif
 }
@@ -173,7 +173,7 @@ SECTIONS
   /*   *(.ARM.attributes) */
   /* } */
 
-#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+#if NVM_LIB_ENABLED
   .nvm(NOLOAD) :
   {
     . = ALIGN(4);

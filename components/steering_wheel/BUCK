@@ -147,24 +147,19 @@ stm32f1_hal(
 cxx_genrule(
     name = "linkscript",
     _cxx_toolchain = TOOLCHAIN,
-    cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) + " ${SRCS} | sed -e '/^#.\\+$/d' > ${OUT}",
+    cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) +
+          " linkscript.ld | sed -e '/^#.\\+$/d' > ${OUT}",
     out = "stm32f103c8.ld",
-    srcs = ["//embedded/platforms/stm32/f1/f103:stm32f103c8.ld"],
+    srcs = {
+        "linkscript.ld": "//embedded/platforms/stm32/f1/f103:stm32f103c8.ld",
+    },
 )
 
 cxx_binary(
     name = "elf",
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
-    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"] + [
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/croutine.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/event_groups.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/list.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/queue.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/tasks.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/timers.c.o])",
-        # "$(location :FreeRTOS[objects][FreeRTOS/Source/portable/GCC/ARM_CM3/port.c.o])",
-    ],
+    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"],
     executable_name = "stw.elf",
     srcs = [
         "src/SystemManager.c",
