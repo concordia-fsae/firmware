@@ -4,7 +4,6 @@ srcs = glob(["**/*.c", "**/*_FeatureDefs.yaml"])
 [
     export_file(
         name = file,
-        src = file,
         visibility = ["//components/..."],
     )
     for file in srcs

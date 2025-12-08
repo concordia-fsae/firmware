@@ -1,5 +1,3 @@
-load("//tools/defs.bzl", "strip_prefix")
-
 shared_sels = glob(["**/*FeatureSels.yaml"])
 [
     export_file(

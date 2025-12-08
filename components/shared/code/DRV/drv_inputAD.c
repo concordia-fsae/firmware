@@ -7,11 +7,13 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_inputAD.h"
-#include "drv_inputAD_private.h"
 #include <string.h>
-#include "HW_gpio.h"
+
 #include "HW_adc.h"
+#include "HW_gpio.h"
+#include "drv_inputAD.h"
+#include "drv_inputAD_config.h"
+#include "drv_inputAD_private.h"
 #include "drv_io.h"
 
 /******************************************************************************
@@ -93,9 +95,11 @@ void drv_inputAD_private_runDigital(void)
  * @param channel Analog channel to update
  * @param voltage Measured voltage
  */
-void drv_inputAD_private_setAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage)
+void drv_inputAD_private_setRawAnalogVoltage(drv_inputAD_channelAnalog_E channel, float32_t voltage)
 {
-    inputs.voltages[channel] = voltage;
+    //apply voltage divider multiplier from configuration
+    float32_t divided_voltage = voltage * drv_inputAD_configAnalog[channel].multiplier;
+    inputs.voltages[channel] = divided_voltage;
 }
 
 /**

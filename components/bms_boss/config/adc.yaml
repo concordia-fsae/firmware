@@ -1,0 +1,12 @@
+templates:
+  - drv_inputAD_config.h.mako
+  - drv_inputAD_config.c.mako
+
+channels:
+  CS:
+    multiplier: 16.0
+  MCU_TEMP:
+    multiplier: 1.0
+  #double check this with the drv_inputAD_componentSpecific.h DRV_INPUTAD_ANALOG_VPACK
+  VPACK:
+    multiplier: 1.0

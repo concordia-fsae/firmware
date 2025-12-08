@@ -39,8 +39,8 @@ static void brakePressure_init(void)
 
 static void brakePressure_periodic_100Hz(void){
 
-    brakePressure_data.voltage = 1.681f * drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_BR_PR); 
-    /** Voltage division compensation: 1/(681/1k) = 1.681    */
+    brakePressure_data.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_BR_PR); 
+
     if (brakePressure_data.voltage <= 0.5f)
     {
         brakePressure_data.pressure = 0.0f;
