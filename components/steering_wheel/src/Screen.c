@@ -15,9 +15,12 @@
 #include <string.h>
 
 // other includes
+#include "EVE.h"
 #include "EVE_commands.h"
 #include "IO.h"
+#include "microui.h"
 #include "ModuleDesc.h"
+#include "Utility.h"
 
 
 /******************************************************************************
@@ -83,6 +86,9 @@ static void      (*pageFunctions[SCR_PAGE_COUNT])(void) = {
     // define pages here
 };
 
+// defined statically in microui.c which is annoying
+static mu_Rect   unclipped_rect = { 0, 0, 0x1000000, 0x1000000 };
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
@@ -100,10 +106,94 @@ static ScrState_E process_running(void)
         timer = 0;
 
         // display the current page
-        if (pageFunctions[scr.page] != NULL)
-        {
-            pageFunctions[scr.page]();
-        }
+        // if (pageFunctions[scr.page] != NULL)
+        // {
+            mu_begin(&scr.ctx);
+
+            if (mu_begin_window(&scr.ctx, "main", mu_rect(0, 0, 480, 270)))
+            {
+                mu_layout_row(&scr.ctx, 2, (int[]) { 60, -1 }, 0);
+
+                mu_label(&scr.ctx, "First:");
+                if (mu_button(&scr.ctx, "Button1"))
+                {
+                    // printf("Button1 pressed\n");
+                }
+
+                mu_label(&scr.ctx, "Second:");
+                if (mu_button(&scr.ctx, "Button2"))
+                {
+                    mu_open_popup(&scr.ctx, "My Popup");
+                }
+
+                if (mu_begin_popup(&scr.ctx, "My Popup"))
+                {
+                    mu_label(&scr.ctx, "Hello world!");
+                    mu_end_popup(&scr.ctx);
+                }
+
+                mu_end_window(&scr.ctx);
+
+                // pageFunctions[scr.page]();
+            }
+            mu_end(&scr.ctx);
+
+            mu_Command *cmd = NULL;
+            while (mu_next_command(&scr.ctx, &cmd))
+            {
+                switch (cmd->type)
+                {
+                    case MU_COMMAND_TEXT:
+                        // render_text(cmd->text.font, cmd->text.str, cmd->text.pos.x, cmd->text.pos.y, cmd->text.color);
+                        EVE_cmd_dl_burst(DL_COLOR_RGB |
+                                         (uint32_t)(
+                                             ((uint8_t)cmd->text.color.r < 4)
+                                             & ((uint8_t)cmd->text.color.g < 2)
+                                             & ((uint8_t)cmd->text.color.b))
+                                         );
+                        EVE_cmd_dl_burst(0x10000000 | cmd->text.color.a);
+                        EVE_cmd_text_burst(cmd->text.pos.x,
+                                           cmd->text.pos.y,
+                                           21U,
+                                           EVE_OPT_CENTER,
+                                           cmd->text.str);
+                        break;
+
+                    case MU_COMMAND_RECT:
+                        // render_rect(cmd->rect.rect, cmd->rect.color);
+                        EVE_cmd_dl_burst(DL_COLOR_RGB |
+                                         (uint32_t)(
+                                             ((uint8_t)cmd->rect.color.r < 4)
+                                             & ((uint8_t)cmd->rect.color.g < 2)
+                                             & ((uint8_t)cmd->rect.color.b))
+                                         );
+                        EVE_cmd_dl_burst(0x10000000 | cmd->rect.color.a);
+                        EVE_cmd_dl_burst(DL_BEGIN | EVE_RECTS);
+                        EVE_cmd_dl_burst(VERTEX2F(cmd->rect.rect.x, cmd->rect.rect.y));
+                        EVE_cmd_dl_burst(VERTEX2F(cmd->rect.rect.x + cmd->rect.rect.w, cmd->rect.rect.y + cmd->rect.rect.h));
+                        EVE_cmd_dl_burst(DL_END);
+                        break;
+
+                    case MU_COMMAND_ICON:
+                        // render_icon(cmd->icon.id, cmd->icon.rect, cmd->icon.color);
+                        break;
+
+                    case MU_COMMAND_CLIP:
+                        // set_clip_rect(cmd->clip.rect);
+                        if (memcmp(&cmd->clip.rect, &unclipped_rect, sizeof(mu_Rect)))
+                        {
+                            EVE_cmd_dl_burst(SCISSOR_SIZE(2048, 2048));
+                            EVE_cmd_dl_burst(SCISSOR_XY(0, 0));
+                        }
+                        else
+                        {
+                            EVE_cmd_dl_burst(SCISSOR_SIZE(cmd->clip.rect.w, cmd->clip.rect.h));
+                            EVE_cmd_dl_burst(SCISSOR_XY(cmd->clip.rect.x, cmd->clip.rect.y));
+                        }
+                        break;
+                }
+            }
+        // }
     }
 
     return SCR_STATE_RUNNING;
@@ -215,11 +305,26 @@ static void updateBrightness_10Hz()
 {
     if ((SCR.brightness != scr.currentBrightness)
         && (SCR.brightness >= 0x00)
-        && (SCR.brightness <= BRIGHTNESS_MAX))
+        && (SCR.brightness <= BRIGHTNESS_MAX)
+        )
     {
         EVE_memWrite8(REG_PWM_DUTY, SCR.brightness);    // setup backlight, range is from 0 = off to 0x80 = max
         scr.currentBrightness = SCR.brightness;
     }
+}
+
+
+static int text_width(mu_Font font, const char *str, int len)
+{
+    UNUSED(font);
+    UNUSED(str);
+    return len * 20;
+}
+
+static int text_height(mu_Font font)
+{
+    UNUSED(font);
+    return 30;
 }
 
 
@@ -232,6 +337,8 @@ static void Screen_init(void)
     // initialize structs
     memset(&scr, 0x00, sizeof(scr));
     memset(&SCR, 0x00, sizeof(SCR));
+
+    mu_init(&scr.ctx);
 
     scr.ctx.text_height = text_height;
     scr.ctx.text_width  = text_width;
@@ -282,4 +389,3 @@ const ModuleDesc_S Screen_desc = {
     .periodic10Hz_CLK  = &Screen10Hz_PRD,
     .periodic100Hz_CLK = &Screen100Hz_PRD,
 };
-
