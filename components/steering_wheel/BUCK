@@ -183,6 +183,7 @@ cxx_binary(
         ("//embedded/libs:lib_FTDI_FT81x[src/EVE_commands.c]", ["-Wno-inline"]),
         ("//embedded/libs:lib_FTDI_FT81x[src/EVE_target.c]", ["-Wno-inline"]),
         "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
+        ("src/microui.c", ["-Wno-cast-align", "-Wno-float-equal", "-Wno-shadow"]),
     ],
     header_namespace = "",
     headers = {
@@ -193,6 +194,7 @@ cxx_binary(
         "printf/printf.h": "//embedded/libs:printf[src/printf/printf.h]",
         "printf.h": "//embedded/libs:printf[src/printf/printf.h]",
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+        "microui.h": "include/microui.h",
     },
     include_directories = [
         "include",
