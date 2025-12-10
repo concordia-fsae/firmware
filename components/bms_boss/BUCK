@@ -427,11 +427,6 @@ inject_crc(
 ]
 
 alias(
-    name = "compdb",
-    actual = ":elf[full-compilation-database]",
-)
-
-alias(
     name = APP_NAME,
     actual = ":bin",
 )

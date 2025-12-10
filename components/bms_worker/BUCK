@@ -489,11 +489,6 @@ filegroup(
     visibility = ["PUBLIC"],
 )
 
-alias(
-    name = "compdb",
-    actual = ":elf[full-compilation-database]",
-)
-
 [
     conUDS_download(
         name = "download-node-{}".format(node),

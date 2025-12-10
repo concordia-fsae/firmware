@@ -92,3 +92,36 @@ See below for programming guidelines for this repository.
 - To clean your current directory, run `buck2 clean`
 - If doing loading/debugging of physical hardware, the ST-LINK or other interface must be plugged in by USB before starting the container. Docker containers do not support dynamic loading of USB peripherals
     - Note: This only works if no bootloader is installed. If a bootloader is installed and you are debugging through JTAG, you should still flash over CAN
+
+##### Compilation Database
+
+Tools like `clangd` use a compilation database (typically `compile_commands.json`)to provide lots of useful functionality like jump-to-def, show-refs, etc.
+
+We support building compilation databases for our components! For example, to build the compilation database for the steering wheel, you would run:
+`buck2 bxl buck2/tools/comp_db.bxl:gen -- --targets //components/steering_wheel:elf`
+
+This will produce a `compile_commands.json` file in directory such as `buck-out/v2/gen-bxl/root/7439b47151304f30/buck2/tools/comp_db.bxl/__gen__/fe0a63d85e25de4b/compile_commands.json`
+
+You probably want to symlink this into the root of the repo so that tools like `clangd` can find it. You can do this with a single command pretty easily like this:
+
+`ln -sf $(buck2 bxl buck2/tools/comp_db.bxl:gen -- --targets //components/steering_wheel:elf) $(git rev-parse --show-toplevel)`
+
+If you like, you can take this a step further by defining an alias for this in your shell (~/.bashrc, ~/.zshrc, etc.), for example:
+
+```bash
+compdb() {
+    local targets
+    targets=$1
+
+    local root
+    root=$(git rev-parse --show-toplevel)`
+
+    ln -sf $(buck2 bxl buck2/tools/comp_db.bxl:gen -- --targets "$1") "$root"
+}
+```
+
+Which you can them simply run directly as: `compdb //components/steering_wheel:elf`!
+
+Relevant links:
+Implementation in buck2: https://github.com/facebook/buck2/pull/810
+Discussion around improving user experience around running BXLs: https://github.com/facebook/buck2/issues/86
