@@ -40,6 +40,7 @@ typedef struct
     uint16_t   errorCount;
 
     ScrPages_E page;
+    mu_Context ctx;
 } scr_S;
 
 typedef ScrState_E (*stateFn_t)(void);
@@ -231,6 +232,9 @@ static void Screen_init(void)
     // initialize structs
     memset(&scr, 0x00, sizeof(scr));
     memset(&SCR, 0x00, sizeof(SCR));
+
+    scr.ctx.text_height = text_height;
+    scr.ctx.text_width  = text_width;
 }
 
 

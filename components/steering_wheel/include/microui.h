@@ -10,13 +10,13 @@
 
 #define MU_VERSION "2.02"
 
-#define MU_COMMANDLIST_SIZE     (256 * 1024)
+#define MU_COMMANDLIST_SIZE     (4 * 1024)
 #define MU_ROOTLIST_SIZE        32
 #define MU_CONTAINERSTACK_SIZE  32
 #define MU_CLIPSTACK_SIZE       32
 #define MU_IDSTACK_SIZE         32
-#define MU_LAYOUTSTACK_SIZE     16
-#define MU_CONTAINERPOOL_SIZE   48
+#define MU_LAYOUTSTACK_SIZE     8
+#define MU_CONTAINERPOOL_SIZE   16
 #define MU_TREENODEPOOL_SIZE    48
 #define MU_MAX_WIDTHS           16
 #define MU_REAL                 float

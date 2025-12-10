@@ -20,10 +20,15 @@
 ** IN THE SOFTWARE.
 */
 
-#include <stdio.h>
+// #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "microui.h"
+#include "printf_config.h"
+#include "printf.h"
+
+#define fprintf(...)
+#define abort(...)
 
 #define unused(x) ((void) (x))
 
