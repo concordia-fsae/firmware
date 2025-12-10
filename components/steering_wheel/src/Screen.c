@@ -15,14 +15,9 @@
 #include <string.h>
 
 // other includes
+#include "EVE_commands.h"
+#include "IO.h"
 #include "ModuleDesc.h"
-#include "Types.h"
-
-// display includes
-#include "Display/CommonDisplay.h"
-#include "Display/MainDisplay.h"
-#include "Display/DiagDisplay.h"
-#include "Display/LaunchDisplay.h"
 
 
 /******************************************************************************
@@ -84,9 +79,7 @@ static stateFn_t stateFunctions[SCR_STATE_COUNT] = {
 
 
 static void      (*pageFunctions[SCR_PAGE_COUNT])(void) = {
-    [SCR_PAGE_MAIN]           = &main_display,
-    [SCR_PAGE_LAUNCH_CONTROL] = &launch_display,
-    [SCR_PAGE_DIAG]           = &diag_display,
+    // define pages here
 };
 
 /******************************************************************************
@@ -105,14 +98,11 @@ static ScrState_E process_running(void)
     {
         timer = 0;
 
-        display_start();     // start the display generation
-        common_display();    // common display elements shared on all screens
         // display the current page
         if (pageFunctions[scr.page] != NULL)
         {
             pageFunctions[scr.page]();
         }
-        display_end();    // end the display generation and tell the screen to show it
     }
 
     return SCR_STATE_RUNNING;

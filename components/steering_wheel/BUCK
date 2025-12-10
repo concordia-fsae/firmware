@@ -168,8 +168,6 @@ cxx_binary(
         "src/CAN/CANIO-rx.c",
         "src/IO.c",
         "src/Screen.c",
-        "src/Display/Pills.c",
-        "src/Display/Dots.c",
         "src/UDS.c",
         "src/HW/HW_adc.c",
         "src/HW/HW_can.c",
