@@ -231,12 +231,12 @@ static void update_combos(const bool pg_next, const bool pg_prev,
 
     // require stability for the involved buttons to progress debounce timers
     const bool run_stable  = run_combo  && !(db_pg_next || db_pg_prev);
-    const bool race_stable = race_combo && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
     const bool rev_stable  = rev_combo  && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool race_stable = race_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
 
     data.run_active = run_stable;
-    data.race_active = race_stable;
     data.reverse_active = rev_stable;
+    data.race_active = race_stable;
 }
 
 static void update_page_nav(const bool pg_next, const bool pg_prev,
