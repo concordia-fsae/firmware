@@ -176,3 +176,10 @@ gear:
   "SNA": 0
   "FORWARD": 1
   "REVERSE": 2
+
+screenPage:
+  "SNA": 0
+  "HOME": 1
+  "BUTTONS": 2
+  "DATA1": 3
+  "DATA2": 4

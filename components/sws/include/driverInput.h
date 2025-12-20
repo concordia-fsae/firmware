@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 #include "stdbool.h"
+#include "CANTypes_generated.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -43,4 +44,5 @@ typedef enum
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool driverInput_getDigital(driverInput_inputDigital_E input);
+bool             driverInput_getDigital(driverInput_inputDigital_E input);
+CAN_screenPage_E driverInput_getScreenCAN(void);

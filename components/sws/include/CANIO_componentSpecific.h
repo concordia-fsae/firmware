@@ -67,4 +67,6 @@
 #define set_requestTorqueInc(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTorqueDec(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
+#define set_requestScreen(m,b,n,s) set(m,b,n,s, driverInput_getScreenCAN())
+
 #include "TemporaryStubbing.h"
