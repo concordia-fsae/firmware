@@ -32,7 +32,7 @@
 
 #define DEFAULT_BOOT_TORQUE 110.0f
 
-#define TORQUE_CHANGE_DELAY 333
+#define TORQUE_CHANGE_DELAY 250
 
 /******************************************************************************
  *                             T Y P E D E F S
