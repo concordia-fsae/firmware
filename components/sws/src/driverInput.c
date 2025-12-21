@@ -94,12 +94,6 @@ typedef struct
 
     // Timers
     drv_timer_S nav_timer;
-    drv_timer_S run_timer;
-    drv_timer_S race_timer;
-    drv_timer_S rev_timer;
-    drv_timer_S race_lockout_timer;
-    drv_timer_S torque_guard_timer; // guard axis action until stable
-    drv_timer_S slip_guard_timer;   // guard axis action until stable
 
     // Latched combo state
     bool run_active;
@@ -144,76 +138,28 @@ static void update_params(const bool tq_inc, const bool tq_dec,
     const bool axis_any_db = db_tq_inc || db_tq_dec || db_sl_inc || db_sl_dec;
 
     // Torque axis
-    if (!(tq_inc && tq_dec))
+    if (!axis_any_db && (tq_inc ^ tq_dec))
     {
         if (tq_inc && !tq_dec)
         {
-            if (!axis_any_db)
-            {
-                if (drv_timer_getState(&data.torque_guard_timer) == DRV_TIMER_STOPPED)
-                    drv_timer_start(&data.torque_guard_timer, ADJUST_GUARD_MS);
-                if (drv_timer_getState(&data.torque_guard_timer) == DRV_TIMER_EXPIRED)
-                    status[DRIVERINPUT_REQUEST_TORQUE_INC] = true;
-            }
-            else
-            {
-                drv_timer_stop(&data.torque_guard_timer);
-            }
+            status[DRIVERINPUT_REQUEST_TORQUE_INC] = true;
         }
         else if (tq_dec && !tq_inc)
         {
-            if (!axis_any_db)
-            {
-                if (drv_timer_getState(&data.torque_guard_timer) == DRV_TIMER_STOPPED)
-                    drv_timer_start(&data.torque_guard_timer, ADJUST_GUARD_MS);
-                if (drv_timer_getState(&data.torque_guard_timer) == DRV_TIMER_EXPIRED)
-                    status[DRIVERINPUT_REQUEST_TORQUE_DEC] = true;
-            }
-            else
-            {
-                drv_timer_stop(&data.torque_guard_timer);
-            }
-        }
-        else
-        {
-            drv_timer_stop(&data.torque_guard_timer);
+            status[DRIVERINPUT_REQUEST_TORQUE_DEC] = true;
         }
     }
 
     // Slip axis (independent of torque axis, but uses the same stability gate)
-    if (!(sl_inc && sl_dec))
+    if (!axis_any_db && (sl_inc ^ sl_dec))
     {
         if (sl_inc && !sl_dec)
         {
-            if (!axis_any_db)
-            {
-                if (drv_timer_getState(&data.slip_guard_timer) == DRV_TIMER_STOPPED)
-                    drv_timer_start(&data.slip_guard_timer, ADJUST_GUARD_MS);
-                if (drv_timer_getState(&data.slip_guard_timer) == DRV_TIMER_EXPIRED)
-                    status[DRIVERINPUT_REQUEST_TC_SLIP_INC] = true;
-            }
-            else
-            {
-                drv_timer_stop(&data.slip_guard_timer);
-            }
+            status[DRIVERINPUT_REQUEST_TC_SLIP_INC] = true;
         }
         else if (sl_dec && !sl_inc)
         {
-            if (!axis_any_db)
-            {
-                if (drv_timer_getState(&data.slip_guard_timer) == DRV_TIMER_STOPPED)
-                    drv_timer_start(&data.slip_guard_timer, ADJUST_GUARD_MS);
-                if (drv_timer_getState(&data.slip_guard_timer) == DRV_TIMER_EXPIRED)
-                    status[DRIVERINPUT_REQUEST_TC_SLIP_DEC] = true;
-            }
-            else
-            {
-                drv_timer_stop(&data.slip_guard_timer);
-            }
-        }
-        else
-        {
-            drv_timer_stop(&data.slip_guard_timer);
+            status[DRIVERINPUT_REQUEST_TC_SLIP_DEC] = true;
         }
     }
 }
@@ -245,22 +191,9 @@ static void update_page_nav(const bool pg_next, const bool pg_prev,
     // Only act when both buttons are stable (not in debounce)
     if (!(db_pg_next || db_pg_prev) && (pg_next ^ pg_prev))
     {
-        if (drv_timer_getState(&data.nav_timer) == DRV_TIMER_STOPPED)
+        if (drv_timer_getState(&data.nav_timer) != DRV_TIMER_RUNNING)
         {
             // initial step immediately
-            if (pg_prev && data.page > 0)
-            {
-                data.page = (driverInput_page_E)(data.page - 1);
-            }
-            else if (pg_next && data.page < (driverInput_page_E)(DRIVERINPUT_PAGE_COUNT - 1))
-            {
-                data.page = (driverInput_page_E)(data.page + 1);
-            }
-
-            drv_timer_start(&data.nav_timer, NAV_DEBOUNCE_MS);
-        }
-        else if (drv_timer_getState(&data.nav_timer) == DRV_TIMER_EXPIRED)
-        {
             if (pg_prev && data.page > 0)
             {
                 data.page = (driverInput_page_E)(data.page - 1);
