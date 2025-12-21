@@ -66,6 +66,15 @@ float32_t torque_getTorqueRequest(void)
 }
 
 /**
+ * @brief Get the max torque request
+ * @return Max torque request in Nm
+ */
+float32_t torque_getTorqueRequestMax(void)
+{
+    return torque_data.torque_request_max;
+}
+
+/**
  * @brief Get current torque manager state
  * @return CAN state of the torque manager
  */

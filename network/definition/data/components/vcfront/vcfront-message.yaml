@@ -27,6 +27,7 @@ messages:
       torqueManagerState:
       gear:
       raceMode:
+      torqueRequestMaxDebug:
       validatorTorque:
         template: criticalDataChecksum
 
