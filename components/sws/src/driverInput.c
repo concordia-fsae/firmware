@@ -78,10 +78,10 @@
 #define TOGGLE_TC   USERINPUT_BUTTON_RIGHT_TOGGLE
 #define TOGGLE_REGEN USERINPUT_BUTTON_LEFT_TOGGLE
 
-#define COMBO_DEBOUNCE_MS   120
-#define NAV_DEBOUNCE_MS     220
-#define RACE_EXIT_LOCKOUT_MS 150
-#define ADJUST_GUARD_MS 50   // delay for axis actions when related buttons are debouncing
+#define NAV_DEBOUNCE_MS     250
+#define RUN_DEBOUNCE_MS     250
+#define RACE_DEBOUNCE_MS    500
+#define REVERSE_DEBOUNCE_MS 2500
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -94,12 +94,14 @@ typedef struct
 
     // Timers
     drv_timer_S nav_timer;
+    drv_timer_S run_timer;
+    drv_timer_S race_timer;
+    drv_timer_S reverse_timer;
 
     // Latched combo state
     bool run_active;
     bool race_active;
     bool reverse_active;
-    bool race_lockout;
 
     struct {
         bool is_set;
@@ -118,10 +120,16 @@ static data_S data;
 
 static void driverInput_init(void)
 {
+    drv_timer_init(&data.nav_timer);
+    drv_timer_init(&data.run_timer);
+    drv_timer_init(&data.race_timer);
+    drv_timer_init(&data.reverse_timer);
+
     for (uint8_t i = 0; i < DRIVERINPUT_REQUEST_COUNT; i++)
     {
         data.digital[i].is_set = false;
     }
+
     data.page = DRIVERINPUT_PAGE_HOME;
     data.run_active = false;
     data.race_active = false;
@@ -180,9 +188,49 @@ static void update_combos(const bool pg_next, const bool pg_prev,
     const bool rev_stable  = rev_combo  && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
     const bool race_stable = race_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
 
-    data.run_active = run_stable;
-    data.reverse_active = rev_stable;
-    data.race_active = race_stable;
+    const drv_timer_state_E timer_state_run = drv_timer_getState(&data.run_timer);
+    const drv_timer_state_E timer_state_race = drv_timer_getState(&data.race_timer);
+    const drv_timer_state_E timer_state_reverse = drv_timer_getState(&data.reverse_timer);
+
+    if (run_stable)
+    {
+        if (timer_state_run == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&data.run_timer, RUN_DEBOUNCE_MS);
+        }
+    }
+    else
+    {
+        drv_timer_stop(&data.run_timer);
+    }
+
+    if (rev_stable)
+    {
+        if (timer_state_reverse == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&data.reverse_timer, REVERSE_DEBOUNCE_MS);
+        }
+    }
+    else
+    {
+        drv_timer_stop(&data.reverse_timer);
+    }
+
+    if (race_stable)
+    {
+        if (timer_state_race == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&data.race_timer, RACE_DEBOUNCE_MS);
+        }
+    }
+    else
+    {
+        drv_timer_stop(&data.race_timer);
+    }
+
+    data.run_active = timer_state_run == DRV_TIMER_EXPIRED;
+    data.reverse_active = timer_state_reverse == DRV_TIMER_EXPIRED;
+    data.race_active = timer_state_race == DRV_TIMER_EXPIRED;
 }
 
 static void update_page_nav(const bool pg_next, const bool pg_prev,
