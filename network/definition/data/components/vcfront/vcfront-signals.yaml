@@ -116,3 +116,11 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  gear:
+    description: State of the torque manager gear
+    discreteValues: gear
+
+  raceMode:
+    description: State of the torque manager race mode
+    discreteValues: raceMode

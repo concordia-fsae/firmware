@@ -3,6 +3,8 @@ messages:
     unrecorded: true
   VCFRONT_pedalPosition:
     sourceBuses: veh
+  VCFRONT_torqueManager:
+    sourceBuses: veh
   BMSB_ioStatus:
     sourceBuses: veh
   PM100DX_criticalData:
@@ -26,8 +28,6 @@ messages:
   PM100DX_currentInfo:
     destBuses: veh
     sourceBuses: ass
-  STW_driverControls:
-    sourceBuses: veh
   PM100DX_internalStates:
     sourceBuses: ass
   UDSCLIENT_bmsbUdsRequest:
@@ -35,6 +35,10 @@ messages:
     unrecorded: true
 
 signals:
+  VCFRONT_gear:
+    sourceBuses: veh
+  VCFRONT_raceMode:
+    sourceBuses: veh
   VCPDU_vehicleState:
     sourceBuses: veh
   BMSB_packContactorState:
