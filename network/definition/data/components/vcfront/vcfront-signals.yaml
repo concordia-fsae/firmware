@@ -81,6 +81,17 @@ signals:
       resolution: 1
     continuous: true
 
+  torqueRequestMaxDebug:
+    description: Torque request limit
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: -100
+        max: 150
+      resolution: 1
+    continuous: true
+
   bmsLightState:
     description: "State of the BMS light"
     discreteValues: digitalStatus

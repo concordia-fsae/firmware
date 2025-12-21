@@ -66,6 +66,15 @@ float32_t torque_getTorqueRequest(void)
 }
 
 /**
+ * @brief Get the max torque request
+ * @return Max torque request in Nm
+ */
+float32_t torque_getTorqueRequestMax(void)
+{
+    return torque_data.torque_request_max;
+}
+
+/**
  * @brief Get current torque manager state
  * @return CAN state of the torque manager
  */
@@ -202,47 +211,37 @@ static void torque_periodic_100Hz(void)
         torque_data.race_mode = torque_data.race_mode == RACEMODE_ENABLED ? RACEMODE_PIT : RACEMODE_ENABLED;
     }
 
-    if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
+    torque_data.state = app_vehicleState_getState() == VEHICLESTATE_TS_RUN ? TORQUE_ACTIVE : TORQUE_INACTIVE;
+
+    if (torque_inc_active ^ torque_dec_active)
     {
-        torque_data.state = TORQUE_ACTIVE;
+        const drv_timer_state_E timer_state = drv_timer_getState(&torque_data.torque_change_timer);
+        if (timer_state == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&torque_data.torque_change_timer, TORQUE_CHANGE_DELAY);
+            torque_request_max = torque_inc_active ? torque_request_max + 1 : torque_request_max - 1;
+            torque_request_max = SATURATE(MIN_TORQUE_RANGE, torque_request_max, ABSOLUTE_MAX_TORQUE);
+        }
+        else if (timer_state == DRV_TIMER_EXPIRED)
+        {
+            drv_timer_stop(&torque_data.torque_change_timer);
+        }
+
+        torque_data.torque_request_max = torque_request_max;
     }
     else
     {
-        torque_data.state = TORQUE_INACTIVE;
+        drv_timer_stop(&torque_data.torque_change_timer);
+    }
+
+    if (torque_data.race_mode != RACEMODE_ENABLED)
+    {
+        torque_request_max = DEFAULT_TORQUE_PITS;
     }
 
     if (torque_data.gear != GEAR_F)
     {
-            torque_request_max = DEFAULT_TORQUE_LIMIT_REVERSE;
-    }
-    else
-    {
-        if (torque_data.race_mode == RACEMODE_ENABLED)
-        {
-            if (torque_inc_active ^ torque_dec_active)
-            {
-                const drv_timer_state_E timer_state = drv_timer_getState(&torque_data.torque_change_timer);
-                if (timer_state == DRV_TIMER_STOPPED)
-                {
-                    drv_timer_start(&torque_data.torque_change_timer, TORQUE_CHANGE_DELAY);
-                    torque_request_max = torque_inc_active ? torque_request_max + 1 : torque_request_max - 1;
-                    torque_request_max = SATURATE(MIN_TORQUE_RANGE, torque_request_max, ABSOLUTE_MAX_TORQUE);
-                }
-                else if (timer_state == DRV_TIMER_EXPIRED)
-                {
-                    drv_timer_stop(&torque_data.torque_change_timer);
-                }
-                torque_data.torque_request_max = torque_request_max;
-            }
-            else
-            {
-                drv_timer_stop(&torque_data.torque_change_timer);
-            }
-        }
-        else
-        {
-            torque_request_max = DEFAULT_TORQUE_PITS;
-        }
+        torque_request_max = DEFAULT_TORQUE_LIMIT_REVERSE;
     }
 
     torque = (bppc_getState() == BPPC_OK) ?

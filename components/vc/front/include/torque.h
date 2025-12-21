@@ -42,6 +42,7 @@ typedef enum
  ******************************************************************************/
 
 float32_t                torque_getTorqueRequest(void);
+float32_t                torque_getTorqueRequestMax(void);
 torque_state_E           torque_getState(void);
 CAN_torqueManagerState_E torque_getStateCAN(void);
 torque_gear_E            torque_getGear(void);
