@@ -26,6 +26,7 @@
 
 struct
 {
+    bool                     run_was_requested;
     app_vehicleState_state_E state;
     drv_timer_S              timer;
 } vehicleState_data;
@@ -85,6 +86,8 @@ void app_vehicleState_init(void)
 void app_vehicleState_run100Hz(void)
 {
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
+    const bool run_requested = (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE);
+
     switch (vehicleState_data.state)
     {
         case VEHICLESTATE_INIT:
@@ -114,16 +117,22 @@ void app_vehicleState_run100Hz(void)
                 {
                     break;
                 }
-                else if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE && ((VEHICLESTATE_CANRX_BRAKEPOSITION(&percentage) == CANRX_MESSAGE_VALID) && (percentage > 10.0f)))
+                else if (run_requested && !vehicleState_data.run_was_requested &&
+                         ((VEHICLESTATE_CANRX_BRAKEPOSITION(&percentage) == CANRX_MESSAGE_VALID) &&
+                          (percentage > 10.0f)))
                 {
                     vehicleState_data.state = VEHICLESTATE_TS_RUN;
                 }
-            }   
+            }
             break;
         case VEHICLESTATE_TS_RUN:
             if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_TSMS) == DRV_IO_INACTIVE)
             {
                 vehicleState_data.state = VEHICLESTATE_ON_GLV;
+            }
+            else if (!vehicleState_data.run_was_requested && run_requested)
+            {
+                vehicleState_data.state = VEHICLESTATE_ON_HV;
             }
             break;
     }
@@ -160,6 +169,8 @@ void app_vehicleState_run100Hz(void)
         drv_timer_stop(&vehicleState_data.timer);
     }
 #endif
+
+    vehicleState_data.run_was_requested = run_requested;
 }
 
 /**
