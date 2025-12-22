@@ -143,3 +143,7 @@ signals:
   apps2State:
     description: "State of the second accelerator sensor"
     discreteValues: pedalState
+
+  brakeState:
+    description: "State of the brake pedal sensor"
+    discreteValues: pedalState
