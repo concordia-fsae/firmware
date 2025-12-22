@@ -81,6 +81,7 @@
 #define NAV_DEBOUNCE_MS     250
 #define RUN_DEBOUNCE_MS     250
 #define RACE_DEBOUNCE_MS    500
+#define LAUNCH_DEBOUNCE_MS  500
 #define REVERSE_DEBOUNCE_MS 2500
 
 /******************************************************************************
@@ -97,11 +98,13 @@ typedef struct
     drv_timer_S run_timer;
     drv_timer_S race_timer;
     drv_timer_S reverse_timer;
+    drv_timer_S launch_timer;
 
     // Latched combo state
     bool run_active;
     bool race_active;
     bool reverse_active;
+    bool launch_active;
 
     struct {
         bool is_set;
@@ -124,6 +127,7 @@ static void driverInput_init(void)
     drv_timer_init(&data.run_timer);
     drv_timer_init(&data.race_timer);
     drv_timer_init(&data.reverse_timer);
+    drv_timer_init(&data.launch_timer);
 
     for (uint8_t i = 0; i < DRIVERINPUT_REQUEST_COUNT; i++)
     {
@@ -134,6 +138,7 @@ static void driverInput_init(void)
     data.run_active = false;
     data.race_active = false;
     data.reverse_active = false;
+    data.launch_active = false;
 }
 
 static void update_params(const bool tq_inc, const bool tq_dec,
@@ -181,16 +186,19 @@ static void update_combos(const bool pg_next, const bool pg_prev,
 {
     const bool run_combo = pg_next && pg_prev;
     const bool race_combo = sl_inc && sl_dec;
+    const bool launch_combo = tq_inc && tq_dec;
     const bool rev_combo = race_combo && tq_inc && tq_dec; // highest priority
 
     // require stability for the involved buttons to progress debounce timers
-    const bool run_stable  = run_combo  && !(db_pg_next || db_pg_prev);
-    const bool rev_stable  = rev_combo  && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
-    const bool race_stable = race_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool run_stable    = run_combo    && !(db_pg_next || db_pg_prev);
+    const bool rev_stable    = rev_combo    && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool race_stable   = race_combo   && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool launch_stable = launch_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
 
     const drv_timer_state_E timer_state_run = drv_timer_getState(&data.run_timer);
     const drv_timer_state_E timer_state_race = drv_timer_getState(&data.race_timer);
     const drv_timer_state_E timer_state_reverse = drv_timer_getState(&data.reverse_timer);
+    const drv_timer_state_E timer_state_launch = drv_timer_getState(&data.launch_timer);
 
     if (run_stable)
     {
@@ -228,9 +236,22 @@ static void update_combos(const bool pg_next, const bool pg_prev,
         drv_timer_stop(&data.race_timer);
     }
 
+    if (launch_stable)
+    {
+        if (timer_state_launch == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&data.launch_timer, RACE_DEBOUNCE_MS);
+        }
+    }
+    else
+    {
+        drv_timer_stop(&data.launch_timer);
+    }
+
     data.run_active = timer_state_run == DRV_TIMER_EXPIRED;
     data.reverse_active = timer_state_reverse == DRV_TIMER_EXPIRED;
     data.race_active = timer_state_race == DRV_TIMER_EXPIRED;
+    data.launch_active = timer_state_race == DRV_TIMER_EXPIRED;
 }
 
 static void update_page_nav(const bool pg_next, const bool pg_prev,
@@ -288,11 +309,12 @@ static void driverInput_10Hz(void)
                   (bool*)&status);
 
     // Build status each tick
-    status[DRIVERINPUT_REQUEST_REVERSE] = data.reverse_active;
-    status[DRIVERINPUT_REQUEST_RUN]     = data.run_active;
-    status[DRIVERINPUT_REQUEST_RACE]    = data.race_active;
-    status[DRIVERINPUT_REQUEST_REGEN]   = drv_userInput_buttonPressed(TOGGLE_REGEN);
-    status[DRIVERINPUT_REQUEST_TC]      = drv_userInput_buttonPressed(TOGGLE_TC);
+    status[DRIVERINPUT_REQUEST_REVERSE]        = data.reverse_active;
+    status[DRIVERINPUT_REQUEST_RUN]            = data.run_active;
+    status[DRIVERINPUT_REQUEST_RACE]           = data.race_active;
+    status[DRIVERINPUT_REQUEST_REGEN]          = drv_userInput_buttonPressed(TOGGLE_REGEN);
+    status[DRIVERINPUT_REQUEST_TC]             = drv_userInput_buttonPressed(TOGGLE_TC);
+    status[DRIVERINPUT_REQUEST_LAUNCH_CONTROL] = data.launch_active;
 
     for (uint8_t i = 0; i < DRIVERINPUT_REQUEST_COUNT; i++)
     {

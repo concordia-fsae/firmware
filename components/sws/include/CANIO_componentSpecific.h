@@ -61,11 +61,12 @@
 #define set_leftToggleDebounce(m,b,n,s)  set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_LEFT_TOGGLE)  ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_rightToggleDebounce(m,b,n,s) set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_RIGHT_TOGGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
-#define set_requestRun(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RUN)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestReverse(m,b,n,s)    set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_REVERSE)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestRaceMode(m,b,n,s)   set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RACE)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestTorqueInc(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestTorqueDec(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestRun(m,b,n,s)           set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RUN)            ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestReverse(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_REVERSE)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestRaceMode(m,b,n,s)      set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RACE)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTorqueInc(m,b,n,s)     set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTorqueDec(m,b,n,s)     set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestLaunchControl(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_LAUNCH_CONTROL) ? CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m,b,n,s) set(m,b,n,s, driverInput_getScreenCAN())
 

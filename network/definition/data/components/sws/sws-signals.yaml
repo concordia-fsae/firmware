@@ -70,6 +70,9 @@ signals:
   requestTorqueDec:
     description: Status of torque decrease request
     discreteValues: digitalStatus
+  requestLaunchControl:
+    description: Status of launch control request
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested
