@@ -44,6 +44,7 @@ messages:
       brakePosition:
       acceleratorState:
       bppcState:
+      brakeState:
       validatorPedal:
         template: criticalDataChecksum
 
