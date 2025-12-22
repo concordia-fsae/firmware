@@ -110,8 +110,8 @@ pedalState:
 appsState:
   "SNA": 0
   "OK": 1
-  "FAULT": 5
-  "ERROR": 6
+  "DISAGREEMENT": 2
+  "ERROR": 3
 
 bppcState:
   "SNA": 0
