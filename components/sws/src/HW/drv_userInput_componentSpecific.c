@@ -9,6 +9,9 @@
 
 #include "drv_userInput.h"
 
+#define DEBOUNCE_ON_MS 40
+#define DEBOUNCE_OFF_MS 15
+
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -19,8 +22,8 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
         .config = {
             .gpio = {
                 .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN1,
-                .debounce_on_ms = 250,
-                .debounce_off_ms = 100,
+                .debounce_on_ms = DEBOUNCE_ON_MS,
+                .debounce_off_ms = DEBOUNCE_OFF_MS,
             },
         },
     },
@@ -29,8 +32,8 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
         .config = {
             .gpio = {
                 .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN2,
-                .debounce_on_ms = 250,
-                .debounce_off_ms = 100,
+                .debounce_on_ms = DEBOUNCE_ON_MS,
+                .debounce_off_ms = DEBOUNCE_OFF_MS,
             },
         },
     },
@@ -39,8 +42,8 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
         .config = {
             .gpio = {
                 .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN3,
-                .debounce_on_ms = 250,
-                .debounce_off_ms = 100,
+                .debounce_on_ms = DEBOUNCE_ON_MS,
+                .debounce_off_ms = DEBOUNCE_OFF_MS,
             },
         },
     },
@@ -49,8 +52,8 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
         .config = {
             .gpio = {
                 .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN4,
-                .debounce_on_ms = 250,
-                .debounce_off_ms = 100,
+                .debounce_on_ms = DEBOUNCE_ON_MS,
+                .debounce_off_ms = DEBOUNCE_OFF_MS,
             },
         },
     },
@@ -59,8 +62,8 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
         .config = {
             .gpio = {
                 .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN5,
-                .debounce_on_ms = 250,
-                .debounce_off_ms = 100,
+                .debounce_on_ms = DEBOUNCE_ON_MS,
+                .debounce_off_ms = DEBOUNCE_OFF_MS,
             },
         },
     },
@@ -69,9 +72,9 @@ drv_userInput_configButton_S userInput_configButtons[USERINPUT_BUTTON_COUNT] = {
         .config = {
             .gpio = {
                 .pin = DRV_INPUTAD_DIGITAL_CHANNEL_DIN6,
-                .debounce_on_ms = 250,
-                .debounce_off_ms = 100,
-            },
+                .debounce_on_ms = DEBOUNCE_ON_MS,
+                .debounce_off_ms = DEBOUNCE_OFF_MS,
+           },
         },
     },
     [USERINPUT_BUTTON_LEFT_TOGGLE] = {
