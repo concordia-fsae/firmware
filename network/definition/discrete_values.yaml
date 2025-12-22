@@ -104,7 +104,8 @@ pm100dxFaultStatus:
 pedalState:
   SNA: 0
   OK: 1
-  FAULT: 2
+  SHORTED: 2
+  DISCONNECTED: 3
 
 appsState:
   "SNA": 0

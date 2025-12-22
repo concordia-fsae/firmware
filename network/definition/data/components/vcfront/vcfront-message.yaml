@@ -38,6 +38,8 @@ messages:
     signals:
       apps1:
       apps2:
+      apps1State:
+      apps2State:
       acceleratorPosition:
       brakePosition:
       acceleratorState:
