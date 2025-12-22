@@ -173,6 +173,8 @@ struct AppState {
 struct FlashParams {
     node: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    sha: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     force: Option<bool>,
 }
 
@@ -209,6 +211,14 @@ struct FlashReply {
     status: String, // "download_success" | "crc_match" | "failed" | "skipped" | etc.
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct VerifyReply {
+    node: String,
+    filename: String,
+    sha256: String,
+    matched: bool,
 }
 
 #[derive(Error, Debug, Clone)]
@@ -268,6 +278,14 @@ async fn main() -> Result<()> {
 
             let state_filter = warp::any().map(move || Arc::clone(&state));
 
+            // POST /firmware/verify
+            let verify_route = warp::path("firmware")
+                .and(warp::path("verify"))
+                .and(warp::post())
+                .and(warp::query::<FlashParams>())
+                .and(state_filter.clone())
+                .and_then(verify_handler);
+
             // POST /firmware/stage  (multipart form: file)
             let stage_route = warp::path("firmware")
                 .and(warp::path("stage"))
@@ -294,6 +312,7 @@ async fn main() -> Result<()> {
                 .and_then(promote_handler);
 
             let routes = stage_route
+                .or(verify_route)
                 .or(flash_route)
                 .or(promote_route)
                 .recover(recover_json);
@@ -342,7 +361,6 @@ async fn main() -> Result<()> {
                         .mime_str("application/octet-stream")?;
                     let form = multipart::Form::new().part("file", part);
 
-                    // TODO: Improve this to detect if the file hash already exists in the agent
                     // Stage
                     info!("Staging {} to the agent...", &fname);
                     let rest_client = Client::new();
@@ -365,8 +383,8 @@ async fn main() -> Result<()> {
                         .post(url_flash)
                         .query(&[("node", flash.node), ("force", if flash.force { "true".into() } else { "false".into() })])
                         .send().await?;
-                    info!("Flash status: {}", resp_flash.status());
-                    info!("Flash body: {}", resp_flash.text().await?);
+                    let flash_body = resp_flash.text().await?;
+                    let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
                 }
                 SubAction::Ota(flash) => {
                     // Build multipart form with the file
@@ -376,25 +394,45 @@ async fn main() -> Result<()> {
                         .file_name()
                         .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
                     file.read_to_end(&mut buffer)?;
-                    let part = multipart::Part::bytes(buffer)
+                    let part = multipart::Part::bytes(buffer.clone())
                         .file_name(fname.clone())
                         .mime_str("application/octet-stream")?;
                     let form = multipart::Form::new().part("file", part);
 
-                    // TODO: Improve this to detect if the file hash already exists in the agent
-                    // Stage
-                    info!("Staging {} to the agent...", &fname);
                     let rest_client = Client::new();
-                    let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+
+                    // Verify staged binary differs
+                    info!("Verifying {} with the agent...", &fname);
+                    let mut sha = Sha256::new();
+                    sha.update(&buffer);
+                    let sha256_hex = hex::encode(sha.finalize());
+                    let url = build_url(result.addresses[0], result.port, "/firmware/verify");
                     let response = rest_client
                         .post(url)
-                        .query(&[("node", flash.node.clone())])
-                        .multipart(form)
+                        .query(&[("node", flash.node.clone()), ("sha", sha256_hex)])
                         .send().await?;
+                    let parsed: Result<VerifyReply, _> = serde_json::from_str(&response.text().await?);
 
-                    info!("Stage status: {}", response.status());
-                    let stage_body = response.text().await?;
-                    info!("Stage body: {}", stage_body);
+                    let mut staged = false;
+                    if let Ok(parsed) = parsed {
+                        if parsed.matched {
+                            info!("Binary verified on ota-agent, skipping staging...");
+                            staged = true;
+                        }
+                    }
+
+                    // Stage
+                    if !staged {
+                        info!("Staging {} to the agent...", &fname);
+                        let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                        let response = rest_client
+                            .post(url)
+                            .query(&[("node", flash.node.clone())])
+                            .multipart(form)
+                            .send().await?;
+
+                        let stage_body = response.text().await?;
+                    }
 
                     // Flash
                     info!("Requesting flash of staged binary...");
@@ -403,8 +441,9 @@ async fn main() -> Result<()> {
                         .post(url_flash)
                         .query(&[("node", flash.node), ("force", if flash.force { "true".into() } else { "false".into() })])
                         .send().await?;
-                    info!("Flash status: {}", resp_flash.status());
-                    info!("Flash body: {}", resp_flash.text().await?);
+                    let flash_body = resp_flash.text().await?;
+                    let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
+                    info!("Flash status: {}", parsed.unwrap().status);
                 }
                 SubAction::Batch(batch) => {
                     if batch.targets.is_empty() {
@@ -414,6 +453,7 @@ async fn main() -> Result<()> {
 
                     let overall_start = Instant::now();
                     let mut results: Vec<(String, UpdateResult)> = Vec::with_capacity(batch.targets.len());
+                    let rest_client = Client::new();
 
                     for upd in &batch.targets {
                         let node_start = Instant::now();
@@ -428,7 +468,7 @@ async fn main() -> Result<()> {
                             continue;
                         };
 
-                        info!("Downloading binary {:?} to node '{}'", bin, node);
+                        info!("OTAing binary {:?} to node '{}'", bin, node);
 
                         // Build multipart form with the file
                         let mut file = File::open(&bin)?;
@@ -437,25 +477,43 @@ async fn main() -> Result<()> {
                             .file_name()
                             .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
                         file.read_to_end(&mut buffer)?;
-                        let part = multipart::Part::bytes(buffer)
+                        let part = multipart::Part::bytes(buffer.clone())
                             .file_name(fname.clone())
                             .mime_str("application/octet-stream")?;
                         let form = multipart::Form::new().part("file", part);
 
-                        // TODO: Improve this to detect if the file hash already exists in the agent
-                        // Stage
-                        info!("Staging {} to the agent...", &fname);
-                        let rest_client = Client::new();
-                        let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                        // Verify staged binary differs
+                        info!("Verifying {} with the agent...", &fname);
+                        let mut sha = Sha256::new();
+                        sha.update(&buffer);
+                        let sha256_hex = hex::encode(sha.finalize());
+                        let url = build_url(result.addresses[0], result.port, "/firmware/verify");
                         let response = rest_client
                             .post(url)
-                            .query(&[("node", node.clone())])
-                            .multipart(form)
+                            .query(&[("node", node.clone()), ("sha", sha256_hex)])
                             .send().await?;
+                        let parsed: Result<VerifyReply, _> = serde_json::from_str(&response.text().await?);
 
-                        info!("Stage status: {}", response.status());
-                        let stage_body = response.text().await?;
-                        info!("Stage body: {}", stage_body);
+                        let mut staged = false;
+                        if let Ok(parsed) = parsed {
+                            if parsed.matched {
+                                info!("Binary verified on ota-agent, skipping staging...");
+                                staged = true;
+                            }
+                        }
+
+                        if !staged {
+                            // Stage
+                            info!("Staging {} to the agent...", &fname);
+                            let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                            let response = rest_client
+                                .post(url)
+                                .query(&[("node", node.clone())])
+                                .multipart(form)
+                                .send().await?;
+
+                            let stage_body = response.text().await?;
+                        }
 
                         // Flash
                         info!("Requesting flash of staged binary...");
@@ -468,8 +526,6 @@ async fn main() -> Result<()> {
                         // Try to parse JSON regardless of status code
                         let status = resp_flash.status();
                         let flash_body = resp_flash.text().await?;
-                        info!("Flash status: {}", status);
-                        info!("Flash body: {}", &flash_body);
 
                         // Parse into FlashReply if possible; if not, mark as failure with the raw body
                         let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
@@ -484,7 +540,13 @@ async fn main() -> Result<()> {
                                     }
                                     // Treat both "download_success" and "crc_match" as success for overall reporting
                                     "download_success" => FlashStatus::DownloadSuccess,
-                                    "crc_match" => FlashStatus::CrcMatch,
+                                    "crc_match" => {
+                                        if !staged {
+                                            FlashStatus::CrcMatch
+                                        } else {
+                                            FlashStatus::Skipped
+                                        }
+                                    }
                                     other => FlashStatus::Failed(format!("unexpected status '{}'", other)),
                                 };
                                 (fs, PathBuf::from(fr.bin), Duration::from_millis(fr.duration_ms as u64))
@@ -646,6 +708,55 @@ async fn stage_handler(
         "filename": filename,
         "bytes_saved": total,
         "sha256": sha256_hex,
+    });
+    Ok(warp::reply::with_status(
+        warp::reply::json(&body),
+        StatusCode::OK,
+    ))
+}
+
+#[cfg(target_os = "linux")]
+// POST /firmware/stage?node=...
+async fn verify_handler(
+    p: FlashParams,
+    state: Arc<AppState>,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let uds_node = state
+        .cfg
+        .nodes
+        .get(&p.node)
+        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+
+    let mut manifest = match read_manifest_compat(&state.manifest_path).await {
+        Ok(m) => m,
+        Err(e) => {
+            return Err(warp::reject::custom(HttpError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to read manifest: {}", e),
+            )))
+        }
+    };
+    if let Some(node) = manifest.nodes.get(&p.node) {
+        if let Some(binary) = &node.staged {
+            let matched = binary.hash == p.sha.unwrap_or_default();
+            let body = serde_json::json!({
+                "node": p.node,
+                "filename": binary.filename,
+                "sha256": binary.hash,
+                "matched": matched,
+            });
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&body),
+                StatusCode::OK,
+            ));
+        }
+    }
+
+    let body = serde_json::json!({
+        "node": p.node,
+        "filename": "",
+        "sha256": "",
+        "matched": false,
     });
     Ok(warp::reply::with_status(
         warp::reply::json(&body),

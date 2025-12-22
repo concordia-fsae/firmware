@@ -68,6 +68,7 @@ pub enum FlashStatus {
     Failed(String),
     CrcMatch,
     DownloadSuccess,
+    Skipped,
 }
 
 pub enum PrdCmd {
