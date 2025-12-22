@@ -57,11 +57,11 @@ signals:
             min: -173
             max: 173
         continuous: true
-  
+
   steeringAngleVoltage:
     description: Steering Angle Voltage
     template: voltsPrecise
-        
+
   5vCriticalHsdState:
     description: "Current state of the 5V HSD for critical loads"
     discreteValues: hsdState
@@ -99,7 +99,7 @@ signals:
   imdLightState:
     description: "State of the IMD light"
     discreteValues: digitalStatus
-  
+
   shockpotVoltFL:
     description: Front Left shock pot Voltage
     template: voltsPrecise
@@ -135,3 +135,11 @@ signals:
   raceMode:
     description: State of the torque manager race mode
     discreteValues: raceMode
+
+  apps1State:
+    description: "State of the first accelerator sensor"
+    discreteValues: pedalState
+
+  apps2State:
+    description: "State of the second accelerator sensor"
+    discreteValues: pedalState

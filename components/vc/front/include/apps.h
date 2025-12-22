@@ -22,7 +22,7 @@ typedef enum
 {
     APPS_INIT = 0x00U,
     APPS_OK,
-    APPS_FAULT,
+    APPS_DISAGREEMENT,
     APPS_ERROR, // Sensor failure
 } apps_state_E;
 

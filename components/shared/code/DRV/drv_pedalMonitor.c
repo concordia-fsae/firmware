@@ -86,6 +86,14 @@ void drv_pedalMonitor_run(void)
                         percentage = lib_interpolation_interpolate(&drv_pedalMonitor_channels[i].input.analog.pedal_map,
                                                                    pedals[i].voltage);
                     }
+                    else if (pedals[i].voltage > drv_pedalMonitor_channels[i].input.analog.fault_high)
+                    {
+                        state = DRV_PEDALMONITOR_FAULT_DISCONNECTED;
+                    }
+                    else if (pedals[i].voltage < drv_pedalMonitor_channels[i].input.analog.fault_low)
+                    {
+                        state = DRV_PEDALMONITOR_FAULT_SHORTED;
+                    }
                 }
                 break;
             case DRV_PEDALMONITOR_TYPE_CAN:
@@ -139,8 +147,11 @@ CAN_pedalState_E drv_pedalMonitor_getPedalStateCAN(drv_pedalMonitor_channel_E ch
         case DRV_PEDALMONITOR_OK:
             ret = CAN_PEDALSTATE_OK;
             break;
-        case DRV_PEDALMONITOR_FAULT:
-            ret = CAN_PEDALSTATE_FAULT;
+        case DRV_PEDALMONITOR_FAULT_SHORTED:
+            ret = CAN_PEDALSTATE_SHORTED;
+            break;
+        case DRV_PEDALMONITOR_FAULT_DISCONNECTED:
+            ret = CAN_PEDALSTATE_DISCONNECTED;
             break;
         default:
             break;

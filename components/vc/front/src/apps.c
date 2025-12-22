@@ -59,8 +59,8 @@ CAN_appsState_E apps_getStateCAN(void)
         case APPS_OK:
             ret = CAN_APPSSTATE_OK;
             break;
-        case APPS_FAULT:
-            ret = CAN_APPSSTATE_FAULT;
+        case APPS_DISAGREEMENT:
+            ret = CAN_APPSSTATE_DISAGREEMENT;
             break;
         case APPS_ERROR:
             ret = CAN_APPSSTATE_ERROR;
@@ -92,7 +92,7 @@ static void apps_periodic_100Hz(void)
 
         if ((apps_difference > PEDAL_TOLERANCE)  || (apps_difference < -PEDAL_TOLERANCE))
         {
-            state = APPS_FAULT;
+            state = APPS_DISAGREEMENT;
         }
         else
         {
