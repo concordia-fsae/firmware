@@ -34,6 +34,13 @@
 
 #define TORQUE_CHANGE_DELAY 250
 
+#define LAUNCH_CONTROL_SETTLING_MS 500
+#define LAUNCH_CONTROL_REJECTED_MS 5000
+
+#define LAUNCH_CONTROL_BRAKE_THRESHOLD 0.30
+#define LAUNCH_CONTROL_THROTTLE_THRESHOLD 0.50
+#define LAUNCH_CONTROL_THROTTLE_START_CUTOFF 0.10
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -47,9 +54,11 @@ static struct
     float32_t         torque_request_max;
 
     bool gear_change_active;
+    bool torque_control_request_active;
     bool race_mode_change_active;
 
     drv_timer_S torque_change_timer;
+    drv_timer_S launch_control_timer;
 
     torque_launchControl_E launch_control_state;
 } torque_data;
@@ -124,6 +133,13 @@ CAN_gear_E torque_getGearCAN(void)
 torque_launchControl_E torque_getLaunchControlState(void)
 {
     return torque_data.launch_control_state;
+}
+
+bool torque_isLaunching(void)
+{
+    const bool launching = (torque_data.launch_control_state != LAUNCHCONTROL_INACTIVE) &&
+                           (torque_data.launch_control_state != LAUNCHCONTROL_REJECTED);
+    return launching;
 }
 
 /**
@@ -220,6 +236,9 @@ static void torque_init(void)
 {
     memset(&torque_data, 0x00U, sizeof(torque_data));
 
+    drv_timer_init(&torque_data.torque_change_timer);
+    drv_timer_init(&torque_data.launch_control_timer);
+
     torque_data.state = TORQUE_INACTIVE;
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
     torque_data.gear = GEAR_F;
@@ -230,6 +249,7 @@ static void torque_periodic_100Hz(void)
 {
     CAN_digitalStatus_E gear_change_request = CAN_DIGITALSTATUS_SNA;
     CAN_digitalStatus_E race_mode_change_requested = CAN_DIGITALSTATUS_SNA;
+    CAN_digitalStatus_E launch_control_requested = CAN_DIGITALSTATUS_SNA;
     float32_t torque_request_max = torque_data.torque_request_max;
     float32_t torque = 0.0f;
 
@@ -248,6 +268,88 @@ static void torque_periodic_100Hz(void)
                                    (torque_change_request == CAN_DIGITALSTATUS_ON);
     const bool torque_dec_active = (CANRX_get_signal(VEH, SWS_requestTorqueDec, &torque_change_request) != CANRX_MESSAGE_SNA) &&
                                    (torque_change_request == CAN_DIGITALSTATUS_ON);
+
+    const float32_t accelerator_position = apps_getPedalPosition();
+
+#if FEATURE_IS_ENABLED(FEATURE_LAUNCH_CONTROL)
+    const bool launch_control_request_was_active = torque_data.torque_control_request_active;
+    torque_data.torque_control_request_active = (CANRX_get_signal(VEH, SWS_requestLaunchControl, &launch_control_requested) != CANRX_MESSAGE_SNA) &&
+                                                (launch_control_requested == CAN_DIGITALSTATUS_ON);
+    const bool launch_control_request_rising = !launch_control_request_was_active && torque_data.torque_control_request_active;
+
+    const float32_t brake_position = bppc_getPedalPosition();
+
+    switch (torque_data.launch_control_state)
+    {
+        case LAUNCHCONTROL_REJECTED:
+            if (drv_timer_getState(&torque_data.launch_control_timer) == DRV_TIMER_EXPIRED)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+            }
+            __attribute__((fallthrough));
+        case LAUNCHCONTROL_INACTIVE:
+            if (launch_control_request_rising)
+            {
+                if ((brake_position > LAUNCH_CONTROL_BRAKE_THRESHOLD) &&
+                    (accelerator_position < LAUNCH_CONTROL_THROTTLE_START_CUTOFF))
+                {
+                    torque_data.launch_control_state = LAUNCHCONTROL_HOLDING;
+                    drv_timer_stop(&torque_data.launch_control_timer);
+                }
+                else
+                {
+                    torque_data.launch_control_state = LAUNCHCONTROL_REJECTED;
+                    drv_timer_start(&torque_data.launch_control_timer, LAUNCH_CONTROL_REJECTED_MS);
+                }
+            }
+            break;
+        case LAUNCHCONTROL_HOLDING:
+            if (brake_position < LAUNCH_CONTROL_BRAKE_THRESHOLD)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+            }
+            else if (accelerator_position > LAUNCH_CONTROL_THROTTLE_THRESHOLD)
+            {
+                drv_timer_start(&torque_data.launch_control_timer, LAUNCH_CONTROL_SETTLING_MS);
+                torque_data.launch_control_state = LAUNCHCONTROL_SETTLING;
+            }
+            break;
+        case LAUNCHCONTROL_SETTLING:
+            if (drv_timer_getState(&torque_data.launch_control_timer) == DRV_TIMER_EXPIRED)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_PRELOAD;
+                drv_timer_stop(&torque_data.launch_control_timer);
+            }
+            else if (accelerator_position < LAUNCH_CONTROL_THROTTLE_THRESHOLD)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_HOLDING;
+            }
+            else if (brake_position < LAUNCH_CONTROL_BRAKE_THRESHOLD)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+            }
+            break;
+        case LAUNCHCONTROL_PRELOAD:
+            if (accelerator_position < LAUNCH_CONTROL_THROTTLE_THRESHOLD)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+            }
+            else if (brake_position < LAUNCH_CONTROL_BRAKE_THRESHOLD)
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_LAUNCH;
+            }
+            break;
+        case LAUNCHCONTROL_LAUNCH:
+            if ((accelerator_position < LAUNCH_CONTROL_THROTTLE_THRESHOLD) ||
+                (brake_position > LAUNCH_CONTROL_BRAKE_THRESHOLD))
+            {
+                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+            }
+            break;
+        default:
+            break;
+    }
+#endif
 
 #if FEATURE_IS_ENABLED(FEATURE_REVERSE)
     if (gear_change_rising)
@@ -295,7 +397,7 @@ static void torque_periodic_100Hz(void)
     }
 
     torque = (bppc_getState() == BPPC_OK) ?
-              apps_getPedalPosition() * torque_request_max :
+              accelerator_position * torque_request_max :
               0.0f;
 
     torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);

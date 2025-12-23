@@ -63,3 +63,4 @@ torque_raceMode_E        torque_getRaceMode(void);
 CAN_raceMode_E           torque_getRaceModeCAN(void);
 torque_launchControl_E   torque_getLaunchControlState(void);
 CAN_launchControlState_E torque_getLaunchControlStateCAN(void);
+bool                     torque_isLaunching(void);
