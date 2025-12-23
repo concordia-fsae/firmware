@@ -49,6 +49,7 @@
 #define set_directionCommand(m,b,n,s) set(m,b,n,s, mcManager_getDirectionCommand())
 #define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
 #define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
+#define set_axleRPM(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
 
 // TODO: Improve this interface to support other parameters
 #define transmit_VCREAR_mcEepromCommand mcManager_clearEepromCommand()

@@ -96,3 +96,5 @@ messages:
         template: wheelSpeedRotational
       wheelSpeedRotationalRR:
         template: wheelSpeedRotational
+      axleRPM:
+        template: wheelSpeedRotational

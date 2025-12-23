@@ -73,6 +73,9 @@ signals:
   requestLaunchControl:
     description: Status of launch control request
     discreteValues: digitalStatus
+  requestTractionControl:
+    description: Status of traction control request
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested
