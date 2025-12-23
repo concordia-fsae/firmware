@@ -147,3 +147,7 @@ signals:
   brakeState:
     description: "State of the brake pedal sensor"
     discreteValues: pedalState
+
+  launchControlState:
+    description: State of the launch control system
+    discreteValues: launchControlState

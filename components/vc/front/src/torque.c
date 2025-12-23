@@ -50,6 +50,8 @@ static struct
     bool race_mode_change_active;
 
     drv_timer_S torque_change_timer;
+
+    torque_launchControl_E launch_control_state;
 } torque_data;
 
 /******************************************************************************
@@ -107,6 +109,53 @@ CAN_gear_E torque_getGearCAN(void)
             break;
         case GEAR_R:
             ret = CAN_GEAR_REVERSE;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
+/**
+ * @brief Get current launch control state
+ * @return Launch Control State
+ */
+torque_launchControl_E torque_getLaunchControlState(void)
+{
+    return torque_data.launch_control_state;
+}
+
+/**
+ * @brief Translate launch control state to CAN
+ * @return CAN state of the launch control state
+ */
+CAN_launchControlState_E torque_getLaunchControlStateCAN(void)
+{
+    CAN_launchControlState_E ret = CAN_LAUNCHCONTROLSTATE_SNA;
+
+    switch (torque_data.launch_control_state)
+    {
+        case LAUNCHCONTROL_INACTIVE:
+            ret = CAN_LAUNCHCONTROLSTATE_INACTIVE;
+            break;
+        case LAUNCHCONTROL_HOLDING:
+            ret = CAN_LAUNCHCONTROLSTATE_HOLDING;
+            break;
+        case LAUNCHCONTROL_SETTLING:
+            ret = CAN_LAUNCHCONTROLSTATE_SETTLING;
+            break;
+        case LAUNCHCONTROL_PRELOAD:
+            ret = CAN_LAUNCHCONTROLSTATE_PRELOAD;
+            break;
+        case LAUNCHCONTROL_LAUNCH:
+            ret = CAN_LAUNCHCONTROLSTATE_LAUNCH;
+            break;
+        case LAUNCHCONTROL_REJECTED:
+            ret = CAN_LAUNCHCONTROLSTATE_REJECTED;
+            break;
+        case LAUNCHCONTROL_ERROR:
+            ret = CAN_LAUNCHCONTROLSTATE_ERROR;
             break;
         default:
             break;
@@ -174,6 +223,7 @@ static void torque_init(void)
     torque_data.state = TORQUE_INACTIVE;
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
     torque_data.gear = GEAR_F;
+    torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
 }
 
 static void torque_periodic_100Hz(void)
