@@ -19,6 +19,7 @@
 #include "MessageUnpack_generated.h"
 #include "drv_timer.h"
 #include "lib_rateLimit.h"
+#include "pid.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -35,13 +36,20 @@
 
 #define TORQUE_CHANGE_DELAY 250
 
-#define LAUNCH_CONTROL_SETTLING_MS 500
-#define LAUNCH_CONTROL_REJECTED_MS 5000
+#define LC_SETTLING_MS 500
+#define LC_REJECTED_MS 5000
+#define LC_BRAKE_THRESHOLD 0.30
+#define LC_BRAKE_THRESHOLD_LAUNCH 0.05
+#define LC_THROTTLE_THRESHOLD 0.50
+#define LC_THROTTLE_START_CUTOFF 0.10
 
-#define LAUNCH_CONTROL_BRAKE_THRESHOLD 0.30
-#define LAUNCH_CONTROL_BRAKE_THRESHOLD_LAUNCH 0.05
-#define LAUNCH_CONTROL_THROTTLE_THRESHOLD 0.50
-#define LAUNCH_CONTROL_THROTTLE_START_CUTOFF 0.10
+#define TC_MAX 0.9f
+#define TC_MIN 0.0f
+#define TC_TARGET_SLIP 0.10f
+#define TC_KP 0.4f
+#define TC_KI 0.00065f
+#define TC_ILIM 0.4f
+#define TC_AXLE_THRESHOLD_RPM 60 // Roughly a 0.5m/s vehicle speed
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -64,7 +72,13 @@ static struct
     drv_timer_S torque_change_timer;
     drv_timer_S launch_control_timer;
 
-    torque_launchControl_E launch_control_state;
+    torque_launchControlState_E launchControlState;
+    torque_tractionControlState_E tractionControlState;
+
+    float32_t slipRear;
+    float32_t torqueCorrection;
+    float32_t torqueReduction;
+    epid_t tractionControlPID;
 } torque_data;
 
 /******************************************************************************
@@ -145,10 +159,10 @@ static float32_t evaluate_torque_max(void)
 static void evaluate_launch_control(float32_t accelerator_position, float32_t brake_position)
 {
 #if FEATURE_IS_ENABLED(FEATURE_LAUNCH_CONTROL)
-    switch (torque_data.launch_control_state)
+    switch (torque_data.launchControlState)
     {
-        case LAUNCHCONTROL_REJECTED:
-        case LAUNCHCONTROL_INACTIVE:
+        case LC_STATE_REJECTED:
+        case LC_STATE_INACTIVE:
             {
                 CAN_digitalStatus_E launch_control_requested = CAN_DIGITALSTATUS_SNA;
                 const bool launch_control_request_was_active = torque_data.torque_control_request_active;
@@ -158,66 +172,66 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 
                 if (drv_timer_getState(&torque_data.launch_control_timer) == DRV_TIMER_EXPIRED)
                 {
-                    torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+                    torque_data.launchControlState = LC_STATE_INACTIVE;
                     drv_timer_stop(&torque_data.launch_control_timer);
                 }
                 else if (launch_control_request_rising)
                 {
-                    if ((brake_position > LAUNCH_CONTROL_BRAKE_THRESHOLD) &&
-                        (accelerator_position < LAUNCH_CONTROL_THROTTLE_START_CUTOFF))
+                    if ((brake_position > LC_BRAKE_THRESHOLD) &&
+                        (accelerator_position < LC_THROTTLE_START_CUTOFF))
                     {
-                        torque_data.launch_control_state = LAUNCHCONTROL_HOLDING;
+                        torque_data.launchControlState = LC_STATE_HOLDING;
                         drv_timer_stop(&torque_data.launch_control_timer);
                     }
                     else
                     {
-                        torque_data.launch_control_state = LAUNCHCONTROL_REJECTED;
-                        drv_timer_start(&torque_data.launch_control_timer, LAUNCH_CONTROL_REJECTED_MS);
+                        torque_data.launchControlState = LC_STATE_REJECTED;
+                        drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
                     }
                 }
             }
             break;
-        case LAUNCHCONTROL_HOLDING:
-            if (brake_position < LAUNCH_CONTROL_BRAKE_THRESHOLD)
+        case LC_STATE_HOLDING:
+            if (brake_position < LC_BRAKE_THRESHOLD)
             {
-                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+                torque_data.launchControlState = LC_STATE_INACTIVE;
             }
-            else if (accelerator_position > LAUNCH_CONTROL_THROTTLE_THRESHOLD)
+            else if (accelerator_position > LC_THROTTLE_THRESHOLD)
             {
-                drv_timer_start(&torque_data.launch_control_timer, LAUNCH_CONTROL_SETTLING_MS);
-                torque_data.launch_control_state = LAUNCHCONTROL_SETTLING;
+                drv_timer_start(&torque_data.launch_control_timer, LC_SETTLING_MS);
+                torque_data.launchControlState = LC_STATE_SETTLING;
             }
             break;
-        case LAUNCHCONTROL_SETTLING:
+        case LC_STATE_SETTLING:
             if (drv_timer_getState(&torque_data.launch_control_timer) == DRV_TIMER_EXPIRED)
             {
-                torque_data.launch_control_state = LAUNCHCONTROL_PRELOAD;
+                torque_data.launchControlState = LC_STATE_PRELOAD;
                 drv_timer_stop(&torque_data.launch_control_timer);
             }
-            else if (accelerator_position < LAUNCH_CONTROL_THROTTLE_THRESHOLD)
+            else if (accelerator_position < LC_THROTTLE_THRESHOLD)
             {
-                torque_data.launch_control_state = LAUNCHCONTROL_HOLDING;
+                torque_data.launchControlState = LC_STATE_HOLDING;
             }
-            else if (brake_position < LAUNCH_CONTROL_BRAKE_THRESHOLD)
+            else if (brake_position < LC_BRAKE_THRESHOLD)
             {
-                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
-            }
-            break;
-        case LAUNCHCONTROL_PRELOAD:
-            if (accelerator_position < LAUNCH_CONTROL_THROTTLE_THRESHOLD)
-            {
-                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
-            }
-            else if (brake_position < LAUNCH_CONTROL_BRAKE_THRESHOLD_LAUNCH)
-            {
-                torque_data.launch_control_state = LAUNCHCONTROL_LAUNCH;
+                torque_data.launchControlState = LC_STATE_INACTIVE;
             }
             break;
-        case LAUNCHCONTROL_LAUNCH:
-            if ((accelerator_position < LAUNCH_CONTROL_THROTTLE_THRESHOLD) ||
-                (brake_position > LAUNCH_CONTROL_BRAKE_THRESHOLD))
+        case LC_STATE_PRELOAD:
+            if (accelerator_position < LC_THROTTLE_THRESHOLD)
             {
-                torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+                torque_data.launchControlState = LC_STATE_INACTIVE;
+            }
+            else if (brake_position < LC_BRAKE_THRESHOLD_LAUNCH)
+            {
+                torque_data.launchControlState = LC_STATE_LAUNCH;
+            }
+            break;
+        case LC_STATE_LAUNCH:
+            if ((accelerator_position < LC_THROTTLE_THRESHOLD) ||
+                (brake_position > LC_BRAKE_THRESHOLD))
+            {
+                torque_data.launchControlState = LC_STATE_INACTIVE;
             }
             break;
         default:
@@ -227,6 +241,72 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
     UNUSED(accelerator_position);
     UNUSED(brake_position);
 #endif
+}
+
+static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip)
+{
+    epid_pi_calc(&torque_data.tractionControlPID, target_slip, actual_slip);
+    epid_util_ilim(&torque_data.tractionControlPID, 0.0f, TC_ILIM);
+    epid_pi_sum(&torque_data.tractionControlPID, TC_MIN, TC_MAX);
+
+    return torque_data.tractionControlPID.y_out;
+}
+
+static float32_t evaluate_traction_control(void)
+{
+    uint16_t rear_axle_rpm = 0;
+    uint16_t front_axle_rpm = wheelSpeed_getAxleRPM(AXLE_FRONT);
+    bool speed_valid = CANRX_get_signal(VEH, VCREAR_axleSpeedRear, &rear_axle_rpm) != CANRX_MESSAGE_SNA;
+
+    float32_t slip = (float32_t)(rear_axle_rpm - front_axle_rpm) / (float32_t)front_axle_rpm;
+    float32_t multiplier = 0.0f;
+
+    if (speed_valid)
+    {
+        torque_tractionControlState_E nextState = TC_STATE_ERROR;
+        if ((rear_axle_rpm > TC_AXLE_THRESHOLD_RPM) &&
+            (front_axle_rpm > TC_AXLE_THRESHOLD_RPM) &&
+            (torque_data.gear == GEAR_F) &&
+            (torque_data.race_mode == RACEMODE_ENABLED))
+        {
+#if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
+            CAN_digitalStatus_E traction_control_requested = CAN_DIGITALSTATUS_SNA;
+            bool requested = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
+                              (traction_control_requested == CAN_DIGITALSTATUS_ON);
+            if (requested)
+            {
+                nextState = TC_STATE_ACTIVE;
+            }
+            else
+#endif
+            {
+                nextState = TC_STATE_INACTIVE;
+            }
+        }
+        else
+        {
+            nextState = TC_STATE_LOCKOUT;
+        }
+
+        torque_data.tractionControlState = nextState;
+    }
+    else
+    {
+        torque_data.tractionControlState = TC_STATE_FAULT_SENSOR;
+    }
+
+    if (torque_data.tractionControlState == TC_STATE_ACTIVE)
+    {
+        multiplier = calc_traction_control_reduction(TC_TARGET_SLIP, slip);
+    }
+    else
+    {
+        epid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, 0.0f,
+                  TC_KP, TC_KI, 0.0f);
+    }
+
+    torque_data.slipRear = slip;
+    return multiplier;
 }
 
 /******************************************************************************
@@ -261,12 +341,46 @@ float32_t torque_getTorqueDriverInput(void)
 }
 
 /**
+ * @brief Get the max torque request
+ * @return Max torque request in Nm
+ */
+float32_t torque_getTorqueRequestCorrection(void)
+{
+    return torque_data.torqueCorrection;
+}
+
+/**
  * @brief Get current torque manager state
  * @return CAN state of the torque manager
  */
 torque_state_E torque_getState(void)
 {
     return torque_data.state;
+}
+
+float32_t torque_getSlipRaw(void)
+{
+    return torque_data.slipRear;
+}
+
+float32_t torque_getSlipErrorP(void)
+{
+    return torque_data.tractionControlPID.p_term;
+}
+
+float32_t torque_getSlipErrorI(void)
+{
+    return torque_data.tractionControlPID.i_term;
+}
+
+float32_t torque_getSlipErrorD(void)
+{
+    return torque_data.tractionControlPID.d_term;
+}
+
+float32_t torque_getTorqueReduction(void)
+{
+    return torque_data.torqueReduction;
 }
 
 /**
@@ -305,17 +419,17 @@ CAN_gear_E torque_getGearCAN(void)
  * @brief Get current launch control state
  * @return Launch Control State
  */
-torque_launchControl_E torque_getLaunchControlState(void)
+torque_launchControlState_E torque_getLaunchControlState(void)
 {
-    return torque_data.launch_control_state;
+    return torque_data.launchControlState;
 }
 
 bool torque_isLaunching(void)
 {
-    const bool launching = (torque_data.launch_control_state == LAUNCHCONTROL_HOLDING) ||
-                           (torque_data.launch_control_state == LAUNCHCONTROL_SETTLING) ||
-                           (torque_data.launch_control_state == LAUNCHCONTROL_PRELOAD) ||
-                           (torque_data.launch_control_state == LAUNCHCONTROL_LAUNCH);
+    const bool launching = (torque_data.launchControlState == LC_STATE_HOLDING) ||
+                           (torque_data.launchControlState == LC_STATE_SETTLING) ||
+                           (torque_data.launchControlState == LC_STATE_PRELOAD) ||
+                           (torque_data.launchControlState == LC_STATE_LAUNCH);
     return launching;
 }
 
@@ -327,27 +441,27 @@ CAN_launchControlState_E torque_getLaunchControlStateCAN(void)
 {
     CAN_launchControlState_E ret = CAN_LAUNCHCONTROLSTATE_SNA;
 
-    switch (torque_data.launch_control_state)
+    switch (torque_data.launchControlState)
     {
-        case LAUNCHCONTROL_INACTIVE:
+        case LC_STATE_INACTIVE:
             ret = CAN_LAUNCHCONTROLSTATE_INACTIVE;
             break;
-        case LAUNCHCONTROL_HOLDING:
+        case LC_STATE_HOLDING:
             ret = CAN_LAUNCHCONTROLSTATE_HOLDING;
             break;
-        case LAUNCHCONTROL_SETTLING:
+        case LC_STATE_SETTLING:
             ret = CAN_LAUNCHCONTROLSTATE_SETTLING;
             break;
-        case LAUNCHCONTROL_PRELOAD:
+        case LC_STATE_PRELOAD:
             ret = CAN_LAUNCHCONTROLSTATE_PRELOAD;
             break;
-        case LAUNCHCONTROL_LAUNCH:
+        case LC_STATE_LAUNCH:
             ret = CAN_LAUNCHCONTROLSTATE_LAUNCH;
             break;
-        case LAUNCHCONTROL_REJECTED:
+        case LC_STATE_REJECTED:
             ret = CAN_LAUNCHCONTROLSTATE_REJECTED;
             break;
-        case LAUNCHCONTROL_ERROR:
+        case LC_STATE_ERROR:
             ret = CAN_LAUNCHCONTROLSTATE_ERROR;
             break;
         default:
@@ -409,6 +523,39 @@ CAN_raceMode_E torque_getRaceModeCAN(void)
     return ret;
 }
 
+torque_tractionControlState_E torque_getTractionControlState(void)
+{
+    return torque_data.tractionControlState;
+}
+
+CAN_tractionControlState_E torque_getTractionControlStateCAN(void)
+{
+    CAN_tractionControlState_E ret = CAN_TRACTIONCONTROLSTATE_SNA;
+
+    switch (torque_data.tractionControlState)
+    {
+        case TC_STATE_INACTIVE:
+            ret = CAN_TRACTIONCONTROLSTATE_INACTIVE;
+            break;
+        case TC_STATE_ACTIVE:
+            ret = CAN_TRACTIONCONTROLSTATE_ACTIVE;
+            break;
+        case TC_STATE_FAULT_SENSOR:
+            ret = CAN_TRACTIONCONTROLSTATE_FAULT_SENSOR;
+            break;
+        case TC_STATE_ERROR:
+            ret = CAN_TRACTIONCONTROLSTATE_ERROR;
+            break;
+        case TC_STATE_LOCKOUT:
+            ret = CAN_TRACTIONCONTROLSTATE_LOCKOUT;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
 static void torque_init(void)
 {
     memset(&torque_data, 0x00U, sizeof(torque_data));
@@ -419,10 +566,14 @@ static void torque_init(void)
     torque_data.state = TORQUE_INACTIVE;
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
     torque_data.gear = GEAR_F;
-    torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+    torque_data.launchControlState   = LC_STATE_INACTIVE;
+    torque_data.tractionControlState = TC_STATE_INACTIVE;
 
     torque_data.torqueRateLimit.y_n          = 0.0f;
     torque_data.torqueRateLimit.maxStepDelta = MAX_TORQUE_NM_PER_S / 100;
+
+    epid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, 0.0f,
+              TC_KP, TC_KI, 0.0f);
 }
 
 static void torque_periodic_100Hz(void)
@@ -435,6 +586,7 @@ static void torque_periodic_100Hz(void)
     const bool gear_change = evaluate_gear_change();
     const bool mode_change = evaluate_mode_change();
     evaluate_launch_control(accelerator_position, brake_position);
+    torque_data.torqueReduction = evaluate_traction_control();
 
     float32_t torque_request_max = evaluate_torque_max();
     if (torque_data.race_mode != RACEMODE_ENABLED)
@@ -453,8 +605,10 @@ static void torque_periodic_100Hz(void)
 
     float32_t torque = (bppc_ok) ? accelerator_position * torque_request_max : 0.0f;
     torque_data.torqueDriverInput = torque;
-    torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
+    torque_data.torqueCorrection = torque_data.torqueReduction * torque;
 
+    torque -= torque_data.torqueCorrection;
+    torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);
 }
 
