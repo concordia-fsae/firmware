@@ -27,6 +27,18 @@ typedef enum
 
 typedef enum
 {
+    LAUNCHCONTROL_INIT = 0x00U,
+    LAUNCHCONTROL_INACTIVE,
+    LAUNCHCONTROL_HOLDING,
+    LAUNCHCONTROL_SETTLING,
+    LAUNCHCONTROL_PRELOAD,
+    LAUNCHCONTROL_LAUNCH,
+    LAUNCHCONTROL_REJECTED,
+    LAUNCHCONTROL_ERROR,
+} torque_launchControl_E;
+
+typedef enum
+{
     GEAR_F = 0x00U,
     GEAR_R,
 } torque_gear_E;
@@ -49,3 +61,5 @@ torque_gear_E            torque_getGear(void);
 CAN_gear_E               torque_getGearCAN(void);
 torque_raceMode_E        torque_getRaceMode(void);
 CAN_raceMode_E           torque_getRaceModeCAN(void);
+torque_launchControl_E   torque_getLaunchControlState(void);
+CAN_launchControlState_E torque_getLaunchControlStateCAN(void);

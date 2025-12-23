@@ -184,3 +184,14 @@ screenPage:
   "BUTTONS": 2
   "DATA1": 3
   "DATA2": 4
+  "LAUNCH": 5
+
+launchControlState:
+  SNA: 0
+  INACTIVE: 1
+  HOLDING: 2
+  SETTLING: 3
+  PRELOAD: 4
+  LAUNCH: 5
+  REJECTED: 6
+  ERROR: 7

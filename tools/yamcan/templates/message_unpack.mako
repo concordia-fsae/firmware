@@ -103,7 +103,7 @@
     %if "float" in signal.datatype.value:
     sigrx->${sig_name} = (${signal.datatype.value})(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
     %elif "int" in signal.datatype.value:
-    sigrx->${sig_name} = (tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)});
+    sigrx->${sig_name} = (int${math.ceil(signal.native_representation.bit_width / 8) * 8}_t)((tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)}));
     %endif
 %else:
     (void)m;
