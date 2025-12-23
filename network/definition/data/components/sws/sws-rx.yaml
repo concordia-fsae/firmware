@@ -3,3 +3,4 @@ messages:
     sourceBuses: veh
     unrecorded: true
 signals:
+  VCFRONT_launchControlState:

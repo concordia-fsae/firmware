@@ -3,3 +3,4 @@ config:
   description: Feature definitions for the VCs
 defs:
   reverse:
+  launch_control:

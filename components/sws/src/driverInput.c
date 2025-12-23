@@ -63,6 +63,7 @@
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "drv_timer.h"
+#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -340,25 +341,39 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
 {
     CAN_screenPage_E page = CAN_SCREENPAGE_SNA;
 
-    switch (data.page)
+    CAN_launchControlState_E launch_control = CAN_LAUNCHCONTROLSTATE_SNA;
+    const bool launch_control_active = (CANRX_get_signal(VEH, VCFRONT_launchControlState, &launch_control) != CANRX_MESSAGE_SNA) &&
+                                        ((launch_control == CAN_LAUNCHCONTROLSTATE_HOLDING) ||
+                                         (launch_control == CAN_LAUNCHCONTROLSTATE_SETTLING) ||
+                                         (launch_control == CAN_LAUNCHCONTROLSTATE_PRELOAD) ||
+                                         (launch_control == CAN_LAUNCHCONTROLSTATE_LAUNCH));
+
+    if (launch_control_active)
     {
-        case DRIVERINPUT_PAGE_HOME:
-            page = CAN_SCREENPAGE_HOME;
-            break;
-        case DRIVERINPUT_PAGE_BUTTONS:
-            page = CAN_SCREENPAGE_BUTTONS;
-            break;
-        case DRIVERINPUT_PAGE_DATA1:
-            page = CAN_SCREENPAGE_DATA1;
-            break;
-        case DRIVERINPUT_PAGE_DATA2:
-            page = CAN_SCREENPAGE_DATA2;
-            break;
-        case DRIVERINPUT_PAGE_LAUNCH:
-            page = CAN_SCREENPAGE_LAUNCH;
-            break;
-        default:
-            break;
+        page = CAN_SCREENPAGE_LAUNCH;
+    }
+    else
+    {
+        switch (data.page)
+        {
+            case DRIVERINPUT_PAGE_HOME:
+                page = CAN_SCREENPAGE_HOME;
+                break;
+            case DRIVERINPUT_PAGE_BUTTONS:
+                page = CAN_SCREENPAGE_BUTTONS;
+                break;
+            case DRIVERINPUT_PAGE_DATA1:
+                page = CAN_SCREENPAGE_DATA1;
+                break;
+            case DRIVERINPUT_PAGE_DATA2:
+                page = CAN_SCREENPAGE_DATA2;
+                break;
+            case DRIVERINPUT_PAGE_LAUNCH:
+                page = CAN_SCREENPAGE_LAUNCH;
+                break;
+            default:
+                break;
+        }
     }
 
     return page;
