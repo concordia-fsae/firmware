@@ -84,10 +84,9 @@ pm100dxInverterLockoutState:
   "CANNOT_BE_ENABLED": 1
 
 # 0= Reverse if inverter enabled & 0= stopped if inverter disabled.
-# I'm not sure how to implement that condition in yaml
 pm100dxDirectionCommand:
-  "FORWARD": 0
-  "REVERSE": 1
+  "REVERSE": 0
+  "FORWARD": 1
 
 pm100dxBmsActive:
   "BMS_NOT_RECEIVED": 0

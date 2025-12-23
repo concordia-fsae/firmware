@@ -25,6 +25,12 @@
 #define LASH_TORQUE_RPM_DISABLE 180.0f
 #define LASH_TORQUE_RPM_ENABLE 2 * LASH_TORQUE_RPM_DISABLE
 
+#define DRIVETRAIN_MULTIPLIER 4.6f
+
+#define MOTOR_BACKWARDS true
+#define MC_COMMAND_REVERSE (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_FORWARD : CAN_PM100DXDIRECTIONCOMMAND_REVERSE)
+#define MC_COMMAND_FORWARD (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_REVERSE : CAN_PM100DXDIRECTIONCOMMAND_FORWARD)
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -38,6 +44,8 @@ static struct
     CAN_prechargeContactorState_E last_contactor_state;
     bool clear_faults;
     bool lash_enabled;
+
+    float32_t axle_rpm;
 } mcManager_data;
 
 /******************************************************************************
@@ -49,14 +57,19 @@ float32_t mcManager_getTorqueCommand(void)
     return mcManager_data.torque_command;
 }
 
+float32_t mcManager_getAxleRPM(void)
+{
+    return mcManager_data.axle_rpm;
+}
+
 CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void)
 {
     switch (mcManager_data.direction)
     {
         case MCMANAGER_REVERSE:
-            return CAN_PM100DXDIRECTIONCOMMAND_REVERSE;
+            return MC_COMMAND_REVERSE;
         default:
-            return CAN_PM100DXDIRECTIONCOMMAND_FORWARD;
+            return MC_COMMAND_FORWARD;
     }
 }
 
@@ -120,6 +133,17 @@ static void mcManager_periodic_100Hz(void)
     float32_t torque_command = 0.0f;
     mcManager_enable_E enable = MCMANAGER_DISABLE;
     CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
+    float32_t motor_rpm = 0.0f;
+    const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
+
+    if (speed_valid)
+    {
+        mcManager_data.axle_rpm = motor_rpm * (1 / DRIVETRAIN_MULTIPLIER) * (MOTOR_BACKWARDS ? -1 : 1);
+    }
+    else
+    {
+        mcManager_data.axle_rpm = 0.0f;
+    }
 
     (void)CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state);
 
@@ -131,9 +155,6 @@ static void mcManager_periodic_100Hz(void)
 
                 const bool command_valid = CANRX_get_signal(VEH, VCFRONT_torqueRequest, &torque_command) == CANRX_MESSAGE_VALID;
                 (void)CANRX_get_signal(VEH, VCFRONT_torqueManagerState, &manager_state);
-
-                float32_t motor_rpm = 0.0f;
-                const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
 
                 if (!mcManager_data.lash_enabled)
                 {
