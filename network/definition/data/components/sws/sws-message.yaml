@@ -44,5 +44,6 @@ messages:
       requestTorqueInc:
       requestTorqueDec:
       requestScreen:
+      requestLaunchControl:
       validatorRequest:
         template: criticalDataChecksum
