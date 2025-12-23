@@ -4,3 +4,4 @@ config:
 defs:
   reverse:
   launch_control:
+  traction_control:
