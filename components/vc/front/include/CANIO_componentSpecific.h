@@ -67,6 +67,7 @@
 #define set_bppcState(m,b,n,s) set(m,b,n,s, bppc_getStateCAN())
 #define set_torqueRequest(m,b,n,s) set(m,b,n,s, torque_getTorqueRequest())
 #define set_torqueRequestMaxDebug(m,b,n,s) set(m,b,n,s, torque_getTorqueRequestMax())
+#define set_torqueRequestCorrectionDebug(m,b,n,s) set(m,b,n,s, torque_getTorqueRequestCorrection())
 #define set_torqueManagerState(m,b,n,s) set(m,b,n,s, torque_getStateCAN())
 #define set_runButtonStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
                                                    CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)

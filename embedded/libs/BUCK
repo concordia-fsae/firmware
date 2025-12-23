@@ -109,3 +109,14 @@ git_fetch(
     ],
     visibility = ["PUBLIC"],
 )
+
+git_fetch(
+    name = "EPID",
+    repo = "https://github.com/abderraouf-adjal/Embedded-PID.git",
+    rev = "8e62073d1c9cd3f7f65642654b024f9eb2b27382",
+    sub_targets = [
+        "src/pid.h",
+        "src/pid.c",
+    ],
+    visibility = ["PUBLIC"],
+)

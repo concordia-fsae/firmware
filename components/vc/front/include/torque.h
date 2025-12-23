@@ -39,6 +39,16 @@ typedef enum
 
 typedef enum
 {
+    TRACTIONCONTROL_INIT = 0x00U,
+    TRACTIONCONTROL_INACTIVE,
+    TRACTIONCONTROL_ACTIVE,
+    TRACTIONCONTROL_FAULT_SENSOR,
+    TRACTIONCONTROL_ERROR,
+    TRACTIONCONTROL_LOCKOUT,
+} torque_tractionControl_E;
+
+typedef enum
+{
     GEAR_F = 0x00U,
     GEAR_R,
 } torque_gear_E;
@@ -55,6 +65,7 @@ typedef enum
 
 float32_t                torque_getTorqueRequest(void);
 float32_t                torque_getTorqueRequestMax(void);
+float32_t                torque_getTorqueRequestCorrection(void);
 torque_state_E           torque_getState(void);
 CAN_torqueManagerState_E torque_getStateCAN(void);
 torque_gear_E            torque_getGear(void);

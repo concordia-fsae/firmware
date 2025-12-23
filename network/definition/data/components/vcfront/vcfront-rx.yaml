@@ -11,3 +11,5 @@ signals:
     sourceBuses: veh
   BMSB_imdStatusMem:
     sourceBuses: veh
+  VCREAR_axleRPM:
+    sourceBuses: veh

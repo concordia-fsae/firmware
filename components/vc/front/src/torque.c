@@ -18,6 +18,7 @@
 #include "app_vehicleState.h"
 #include "MessageUnpack_generated.h"
 #include "drv_timer.h"
+#include "pid.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -42,6 +43,14 @@
 #define LAUNCH_CONTROL_THROTTLE_THRESHOLD 0.50
 #define LAUNCH_CONTROL_THROTTLE_START_CUTOFF 0.10
 
+#define TRACTION_CONTROL_TARGET_SLIP 0.10f
+
+#define TRACTION_CONTROL_KP 800 // Starting Number: If we slip 1% extra, reduce 8Nm
+#define TRACTION_CONTROL_KI 1000   // Starting Number: If we integrate 1% slip error, reduce 10Nm
+#define TRACTION_CONTROL_ILIM (MIN_TORQUE_RANGE / TRACTION_CONTROL_KI)
+
+#define TRACTIONCONTROL_RAXLE_THRESHOLD_RPM 60
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -62,6 +71,10 @@ static struct
     drv_timer_S launch_control_timer;
 
     torque_launchControl_E launch_control_state;
+    torque_tractionControl_E traction_control_state;
+
+    float32_t torque_correction;
+    epid_t traction_control_pid;
 } torque_data;
 
 /******************************************************************************
@@ -218,6 +231,53 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 #endif
 }
 
+static float32_t calc_torque_correction(float32_t target_slip, float32_t actual_slip, float32_t max_torque)
+{
+    epid_pi_calc(&torque_data.traction_control_pid, target_slip, actual_slip);
+    epid_pi_sum(&torque_data.traction_control_pid, 0.0f, max_torque);
+    epid_util_ilim(&torque_data.traction_control_pid, 0.0f, TRACTION_CONTROL_ILIM);
+
+    return torque_data.traction_control_pid.y_out;
+}
+
+static void evaluate_traction_control(void)
+{
+    CAN_digitalStatus_E traction_control_requested = CAN_DIGITALSTATUS_SNA;
+    float32_t rear_axle_rpm = 0.0f;
+
+    bool requested = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
+                      (traction_control_requested == CAN_DIGITALSTATUS_ON);
+    bool speed_valid = CANRX_get_signal(VEH, VCREAR_axleRPM, &rear_axle_rpm) != CANRX_MESSAGE_SNA;
+
+    if (speed_valid)
+    {
+        torque_tractionControl_E desired_state = TRACTIONCONTROL_ERROR;
+        if (requested)
+        {
+            if (rear_axle_rpm > TRACTIONCONTROL_RAXLE_THRESHOLD_RPM)
+            {
+#if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
+                desired_state = TRACTIONCONTROL_ACTIVE;
+#endif
+            }
+            else
+            {
+                desired_state = TRACTIONCONTROL_LOCKOUT;
+            }
+        }
+        else
+        {
+            desired_state = TRACTIONCONTROL_INACTIVE;
+        }
+
+        torque_data.traction_control_state = desired_state;
+    }
+    else
+    {
+        torque_data.traction_control_state = TRACTIONCONTROL_FAULT_SENSOR;
+    }
+}
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -238,6 +298,15 @@ float32_t torque_getTorqueRequest(void)
 float32_t torque_getTorqueRequestMax(void)
 {
     return torque_data.torque_request_max;
+}
+
+/**
+ * @brief Get the max torque request
+ * @return Max torque request in Nm
+ */
+float32_t torque_getTorqueRequestCorrection(void)
+{
+    return torque_data.torque_correction;
 }
 
 /**
@@ -400,6 +469,10 @@ static void torque_init(void)
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
     torque_data.gear = GEAR_F;
     torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+    torque_data.traction_control_state = TRACTIONCONTROL_INACTIVE;
+
+    epid_init(&torque_data.traction_control_pid, 0.0f, 0.0f, 0.0f,
+              TRACTION_CONTROL_KP, TRACTION_CONTROL_KI, 0.0f);
 }
 
 static void torque_periodic_100Hz(void)
@@ -411,6 +484,7 @@ static void torque_periodic_100Hz(void)
     evaluate_gear_change();
     evaluate_mode_change();
     evaluate_launch_control(accelerator_position, brake_position);
+    evaluate_traction_control();
 
     float32_t torque_request_max = evaluate_torque_max();
     if (torque_data.race_mode != RACEMODE_ENABLED)
@@ -421,9 +495,19 @@ static void torque_periodic_100Hz(void)
     {
         torque_request_max = DEFAULT_TORQUE_LIMIT_REVERSE;
     }
+
     float32_t torque = (bppc_getState() == BPPC_OK) ?
                         accelerator_position * torque_request_max :
                         0.0f;
+    torque_data.torque_correction = calc_torque_correction(TRACTION_CONTROL_TARGET_SLIP,
+                                                           TRACTION_CONTROL_TARGET_SLIP,
+                                                           torque);
+#if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
+    if (torque_data.traction_control_state == TRACTIONCONTROL_ACTIVE)
+    {
+        torque -= torque_data.torque_correction;
+    }
+#endif
 
     torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);
 }
