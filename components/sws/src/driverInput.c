@@ -187,7 +187,7 @@ static void update_combos(const bool pg_next, const bool pg_prev,
     const bool run_combo = pg_next && pg_prev;
     const bool race_combo = sl_inc && sl_dec;
     const bool launch_combo = tq_inc && tq_dec;
-    const bool rev_combo = race_combo && tq_inc && tq_dec; // highest priority
+    const bool rev_combo = race_combo && launch_combo; // highest priority
 
     // require stability for the involved buttons to progress debounce timers
     const bool run_stable    = run_combo    && !(db_pg_next || db_pg_prev);
@@ -251,7 +251,7 @@ static void update_combos(const bool pg_next, const bool pg_prev,
     data.run_active = timer_state_run == DRV_TIMER_EXPIRED;
     data.reverse_active = timer_state_reverse == DRV_TIMER_EXPIRED;
     data.race_active = timer_state_race == DRV_TIMER_EXPIRED;
-    data.launch_active = timer_state_race == DRV_TIMER_EXPIRED;
+    data.launch_active = timer_state_launch == DRV_TIMER_EXPIRED;
 }
 
 static void update_page_nav(const bool pg_next, const bool pg_prev,
