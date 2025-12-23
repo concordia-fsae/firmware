@@ -184,6 +184,7 @@ screenPage:
   "BUTTONS": 2
   "DATA1": 3
   "DATA2": 4
+  "LAUNCH": 5
 
 launchControlState:
   SNA: 0

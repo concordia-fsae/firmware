@@ -354,6 +354,9 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
         case DRIVERINPUT_PAGE_DATA2:
             page = CAN_SCREENPAGE_DATA2;
             break;
+        case DRIVERINPUT_PAGE_LAUNCH:
+            page = CAN_SCREENPAGE_LAUNCH;
+            break;
         default:
             break;
     }
