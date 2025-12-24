@@ -62,10 +62,10 @@
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
 
-#define set_wheelSpeedLinearRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEEL_RL))
-#define set_wheelSpeedLinearRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEEL_RR))
-#define set_wheelSpeedRotationalRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RL))
-#define set_wheelSpeedRotationalRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RR))
+#define set_wheelSpeedLinearL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEEL_RL))
+#define set_wheelSpeedLinearR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedLinear(WHEEL_RR))
+#define set_wheelSpeedRotationalL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RL))
+#define set_wheelSpeedRotationalR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RR))
 
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
