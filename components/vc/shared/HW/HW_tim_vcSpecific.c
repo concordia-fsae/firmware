@@ -139,6 +139,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel)
 {
     return (wheelSpeed.lastSample[channel][CURRENT_SAMPLE] > (HW_TIM_getBaseTick() - SEC_TO_BASETICK(1U))) ?
-           (((float32_t)(SEC_TO_BASETICK(1U) / (UPDATE_PER_REV * 2.0f))) / (float32_t)(wheelSpeed.lastSample[channel][CURRENT_SAMPLE] - wheelSpeed.lastSample[channel][LAST_SAMPLE])) :
+           (((float32_t)(SEC_TO_BASETICK(1U) / (UPDATE_PER_REV))) / (float32_t)(wheelSpeed.lastSample[channel][CURRENT_SAMPLE] - wheelSpeed.lastSample[channel][LAST_SAMPLE])) :
            0.0f;
 }
