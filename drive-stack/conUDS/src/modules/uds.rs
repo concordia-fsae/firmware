@@ -647,6 +647,10 @@ impl UdsClient {
         // early
         self.transfer_stop().await?;
 
+        if error {
+            return Err(anyhow!("Download failed!"));
+        }
+
         Ok(())
     }
 }
