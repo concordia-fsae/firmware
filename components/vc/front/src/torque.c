@@ -243,7 +243,7 @@ static float32_t calc_torque_correction(float32_t target_slip, float32_t actual_
 static void evaluate_traction_control(void)
 {
     CAN_digitalStatus_E traction_control_requested = CAN_DIGITALSTATUS_SNA;
-    float32_t rear_axle_rpm = 0.0f;
+    uint16_t rear_axle_rpm = 0;
 
     bool requested = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
                       (traction_control_requested == CAN_DIGITALSTATUS_ON);

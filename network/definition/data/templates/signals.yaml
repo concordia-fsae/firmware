@@ -106,11 +106,8 @@ signals:
   wheelSpeedRotational:
     unit: 'RPM'
     nativeRepresentation:
-      bitWidth: 12
-      range:
-        min: 0
-        max: 2000
-    continuous: true
+      bitWidth: 11
+      resolution: 1
   criticalDataChecksum:
     description: Critical Data Checksum
     nativeRepresentation:
