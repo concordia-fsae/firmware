@@ -26,13 +26,11 @@ typedef struct
         WS_SENSORTYPE_UNKNOWN = 0x00U,
         WS_SENSORTYPE_TIM_CHANNEL,
         WS_SENSORTYPE_CAN_RPM,
-        WS_SENSORTYPE_CAN_MPS,
     } sensorType[WHEEL_CNT];
     union
     {
         HW_TIM_channelFreq_E channel_freq;
-        CANRX_MESSAGE_health_E (*rpm)(float32_t* rpm);
-        CANRX_MESSAGE_health_E (*mps)(float32_t* mps);
+        CANRX_MESSAGE_health_E (*rpm)(uint16_t* rpm);
     } config[WHEEL_CNT];
 } wheelSpeed_config_E;
 
@@ -47,5 +45,6 @@ extern const ModuleDesc_S wheelSpeed_desc;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
+uint16_t  wheelSpeed_getAxleRPM(axle_E axle);
 uint16_t  wheelSpeed_getSpeedRotational(wheel_E wheel);
 float32_t wheelSpeed_getSpeedLinear(wheel_E wheel);

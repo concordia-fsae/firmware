@@ -45,7 +45,7 @@ static struct
     bool clear_faults;
     bool lash_enabled;
 
-    float32_t axle_rpm;
+    uint16_t axle_rpm;
 } mcManager_data;
 
 /******************************************************************************
@@ -133,8 +133,9 @@ static void mcManager_periodic_100Hz(void)
     float32_t torque_command = 0.0f;
     mcManager_enable_E enable = MCMANAGER_DISABLE;
     CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
-    float32_t motor_rpm = 0.0f;
+    int16_t motor_rpm = 0;
     const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
+    (void)CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state);
 
     motor_rpm = (int16_t)(motor_rpm < 0 ? -motor_rpm : motor_rpm);
     mcManager_data.axle_rpm = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
