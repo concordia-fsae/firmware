@@ -18,7 +18,7 @@
 #define SEC_TO_BASETICK(s) ((s) * TIMER_BASE_TICK)
 
 #define TICK_PER_REV 16U
-#define UPDATE_PER_REV 4U
+#define UPDATE_PER_REV 8U
 
 #define NUM_TIM_SAMPLES 2U
 #define CURRENT_SAMPLE (NUM_TIM_SAMPLES - 1U)
@@ -76,7 +76,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     }
     sConfigIC.ICPolarity  = TIM_INPUTCHANNELPOLARITY_RISING;
     sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-    sConfigIC.ICPrescaler = TIM_ICPSC_DIV4; // Driven by WHEELSPEED_TICK_PER_REV / UPDATE_PER_REV
+    sConfigIC.ICPrescaler = TIM_ICPSC_DIV2; // Driven by WHEELSPEED_TICK_PER_REV / UPDATE_PER_REV
     sConfigIC.ICFilter    = 0;
     if (HAL_TIM_IC_ConfigChannel(&htim[HW_TIM_PORT_WHEELSPEED], &sConfigIC, TIM_CHANNEL_3) != HAL_OK)
     {
