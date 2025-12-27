@@ -194,3 +194,11 @@ launchControlState:
   LAUNCH: 5
   REJECTED: 6
   ERROR: 7
+
+tractionControlState:
+  SNA: 0
+  INACTIVE: 1
+  ACTIVE: 2
+  FAULT_SENSOR: 3
+  ERROR: 4
+  LOCKOUT: 5

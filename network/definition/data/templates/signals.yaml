@@ -186,3 +186,21 @@ signals:
       endianness: big
       bitWidth: 32
       resolution: 1
+  percentageAccurate:
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+      resolution: 0.1
+    continuous: true
+  percentageLargeAccurate:
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 400
+      resolution: 0.1
+    continuous: true
