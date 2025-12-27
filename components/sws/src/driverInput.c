@@ -69,15 +69,15 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUTTON_PAGE_PREV USERINPUT_BUTTON_LEFT_TOP
-#define BUTTON_PAGE_NEXT USERINPUT_BUTTON_RIGHT_TOP
+#define BUTTON_PAGE_PREV  USERINPUT_BUTTON_LEFT_TOP
+#define BUTTON_PAGE_NEXT  USERINPUT_BUTTON_RIGHT_TOP
 #define BUTTON_TORQUE_DEC USERINPUT_BUTTON_LEFT_MID
 #define BUTTON_TORQUE_INC USERINPUT_BUTTON_RIGHT_MID
-#define BUTTON_SLIP_DEC USERINPUT_BUTTON_LEFT_BOT
-#define BUTTON_SLIP_INC USERINPUT_BUTTON_RIGHT_BOT
+#define BUTTON_SLIP_DEC   USERINPUT_BUTTON_LEFT_BOT
+#define BUTTON_SLIP_INC   USERINPUT_BUTTON_RIGHT_BOT
 
-#define TOGGLE_TC   USERINPUT_BUTTON_RIGHT_TOGGLE
-#define TOGGLE_REGEN USERINPUT_BUTTON_LEFT_TOGGLE
+#define TOGGLE_TC    USERINPUT_BUTTON_LEFT_TOGGLE
+#define TOGGLE_REGEN USERINPUT_BUTTON_RIGHT_TOGGLE
 
 #define NAV_DEBOUNCE_MS     250
 #define RUN_DEBOUNCE_MS     250
@@ -313,9 +313,9 @@ static void driverInput_10Hz(void)
     status[DRIVERINPUT_REQUEST_REVERSE]        = data.reverse_active;
     status[DRIVERINPUT_REQUEST_RUN]            = data.run_active;
     status[DRIVERINPUT_REQUEST_RACE]           = data.race_active;
-    status[DRIVERINPUT_REQUEST_REGEN]          = drv_userInput_buttonPressed(TOGGLE_REGEN);
-    status[DRIVERINPUT_REQUEST_TC]             = drv_userInput_buttonPressed(TOGGLE_TC);
     status[DRIVERINPUT_REQUEST_LAUNCH_CONTROL] = data.launch_active;
+    status[DRIVERINPUT_REQUEST_TC]             = drv_userInput_buttonPressed(TOGGLE_TC);
+    status[DRIVERINPUT_REQUEST_REGEN]          = drv_userInput_buttonPressed(TOGGLE_REGEN);
 
     for (uint8_t i = 0; i < DRIVERINPUT_REQUEST_COUNT; i++)
     {

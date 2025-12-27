@@ -66,8 +66,8 @@
 #define set_requestRaceMode(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RACE)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTorqueInc(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTorqueDec(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestLaunchControl(m,b,n,s)   set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_LAUNCH_CONTROL) ? CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
-#define set_requestTractionControl(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC)             ? CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_requestLaunchControl(m,b,n,s)   set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_LAUNCH_CONTROL) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTractionControl(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC)             ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m,b,n,s) set(m,b,n,s, driverInput_getScreenCAN())
 
