@@ -184,11 +184,6 @@ def _bootloader_impl(
         visibility = ["PUBLIC"],
     )
 
-    __rules__["alias"](
-        name = name_prefix.format("compdb"),
-        actual = ":" + name_prefix.format("elf") + "[full-compilation-database]",
-    )
-
     openocd_run(
         name = "gdb-{}-{}".format(config_id, "blu" if is_updater else "bl"),
         toolchain = toolchain,
