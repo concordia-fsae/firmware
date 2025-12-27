@@ -27,8 +27,10 @@ messages:
       torqueManagerState:
       gear:
       raceMode:
-      torqueRequestMaxDebug:
       launchControlState:
+      tractionControlState:
+      torqueReduction:
+        template: percentageAccurate
       validatorTorque:
         template: criticalDataChecksum
 
@@ -109,3 +111,19 @@ messages:
         template: wheelSpeedRotational
       axleSpeedFront:
         template: wheelSpeedRotational
+
+  tractionControlDebug:
+    description: Traction Control Debug
+    id: 0x4e0
+    cycleTimeMs: 10
+    signals:
+      torqueRequestCorrectionDebug:
+      torqueRequestMaxDebug:
+      slipRaw:
+        template: percentageLargeAccurate
+      slipErrorP:
+        template: percentageAccurate
+      slipErrorI:
+        template: percentageAccurate
+      slipErrorD:
+        template: percentageAccurate

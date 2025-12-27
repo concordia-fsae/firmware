@@ -92,6 +92,17 @@ signals:
       resolution: 1
     continuous: true
 
+  torqueRequestCorrectionDebug:
+    description: Torque request limit
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 150
+      resolution: 1
+    continuous: true
+
   bmsLightState:
     description: "State of the BMS light"
     discreteValues: digitalStatus
@@ -151,3 +162,7 @@ signals:
   launchControlState:
     description: State of the launch control system
     discreteValues: launchControlState
+
+  tractionControlState:
+    description: State of the traction control system
+    discreteValues: tractionControlState
