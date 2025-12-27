@@ -79,7 +79,7 @@
 %>\
 %if signal.native_representation.bit_width == 1:
     sigrx->${sig_name} = (m->u8[${int(signal.start_bit / 8)}U] & (1U << ${signal.start_bit % 8}U)) != 0U;
-%elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
+%elif signal.datatype is not None and ("float" in signal.datatype.value or "int" in signal.datatype.value): # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
         %if dtype == 64:
     uint64_t tmp_${signal.name} = (m->u64 >> ${signal.start_bit}U) & ${(2**signal.native_representation.bit_width) - 1}U;
@@ -101,7 +101,10 @@
     tmp_${signal.name} = (int${math.ceil(signal.native_representation.bit_width / 8) * 8}_t)(tmp_${signal.name} | (((tmp_${signal.name} & (1U << ${(signal.native_representation.bit_width - 1)})) != 0U) ? ~${(2**signal.native_representation.bit_width - 1)} : 0));
     %endif
     %if "float" in signal.datatype.value:
-    sigrx->${sig_name} = (${signal.datatype.value})(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
+    sigrx->${sig_name} = (${signal.datatype.value})(
+        ((${signal.datatype.value})tmp_${signal.name}) * ${float(signal.scale)}f
+        + ${float(signal.offset)}f
+    );
     %elif "int" in signal.datatype.value:
       %if signal.native_representation.signedness == Signedness.unsigned:
     sigrx->${sig_name} = (uint${math.ceil(signal.native_representation.bit_width / 8) * 8}_t)((tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)}));
@@ -110,7 +113,6 @@
       %endif
     %endif
 %else:
-    (void)m;
-    (void)val;
+  (void)m;
 %endif
 </%def>\
