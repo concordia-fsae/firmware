@@ -18,19 +18,20 @@
 #include "app_vehicleState.h"
 #include "MessageUnpack_generated.h"
 #include "drv_timer.h"
+#include "lib_rateLimit.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
+#define DEFAULT_BOOT_TORQUE 110.0f
 #define DEFAULT_TORQUE_PITS 25.0f
 #define DEFAULT_TORQUE_LIMIT_REVERSE 20.0f
 
 #define ABSOLUTE_MAX_TORQUE 130.0f
 #define ABSOLUTE_MIN_TORQUE 0.0f
-#define MIN_TORQUE_RANGE 90.0f
-
-#define DEFAULT_BOOT_TORQUE 110.0f
+#define MIN_TORQUE_RANGE    90.0f
+#define MAX_TORQUE_NM_PER_S 500
 
 #define TORQUE_CHANGE_DELAY 250
 
@@ -48,11 +49,13 @@
 
 static struct
 {
-    torque_state_E    state;
-    torque_gear_E     gear;
-    torque_raceMode_E race_mode;
-    float32_t         torque;
-    float32_t         torque_request_max;
+    torque_state_E         state;
+    torque_gear_E          gear;
+    torque_raceMode_E      race_mode;
+    float32_t              torque;
+    float32_t              torqueDriverInput;
+    float32_t              torque_request_max;
+    lib_rateLimit_linear_S torqueRateLimit;
 
     bool gear_change_active;
     bool torque_control_request_active;
@@ -68,8 +71,9 @@ static struct
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static void evaluate_gear_change(void)
+static bool evaluate_gear_change(void)
 {
+    bool ret = false;
     CAN_digitalStatus_E gear_change_request = CAN_DIGITALSTATUS_SNA;
     const bool gear_change_was_requested = torque_data.gear_change_active;
     torque_data.gear_change_active = (CANRX_get_signal(VEH, SWS_requestReverse, &gear_change_request) != CANRX_MESSAGE_SNA) &&
@@ -79,13 +83,17 @@ static void evaluate_gear_change(void)
 #if FEATURE_IS_ENABLED(FEATURE_REVERSE)
     if (gear_change_rising)
     {
+        ret = true;
         torque_data.gear = torque_data.gear == GEAR_F ? GEAR_R : GEAR_F;
     }
 #endif
+
+    return ret;
 }
 
-static void evaluate_mode_change(void)
+static bool evaluate_mode_change(void)
 {
+    bool ret = false;
     CAN_digitalStatus_E race_mode_change_requested = CAN_DIGITALSTATUS_SNA;
     const bool race_mode_change_was_requested = torque_data.race_mode_change_active;
     torque_data.race_mode_change_active = (CANRX_get_signal(VEH, SWS_requestRaceMode, &race_mode_change_requested) != CANRX_MESSAGE_SNA) &&
@@ -94,8 +102,11 @@ static void evaluate_mode_change(void)
 
     if (race_mode_change_rising)
     {
+        ret = true;
         torque_data.race_mode = torque_data.race_mode == RACEMODE_ENABLED ? RACEMODE_PIT : RACEMODE_ENABLED;
     }
+
+    return ret;
 }
 
 static float32_t evaluate_torque_max(void)
@@ -238,6 +249,15 @@ float32_t torque_getTorqueRequest(void)
 float32_t torque_getTorqueRequestMax(void)
 {
     return torque_data.torque_request_max;
+}
+
+/**
+ * @brief Get the raw driver input torque
+ * @return Raw driver input torque
+ */
+float32_t torque_getTorqueDriverInput(void)
+{
+    return torque_data.torqueDriverInput;
 }
 
 /**
@@ -400,16 +420,20 @@ static void torque_init(void)
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
     torque_data.gear = GEAR_F;
     torque_data.launch_control_state = LAUNCHCONTROL_INACTIVE;
+
+    torque_data.torqueRateLimit.y_n          = 0.0f;
+    torque_data.torqueRateLimit.maxStepDelta = MAX_TORQUE_NM_PER_S / 100;
 }
 
 static void torque_periodic_100Hz(void)
 {
     const float32_t accelerator_position = apps_getPedalPosition();
     const float32_t brake_position = bppc_getPedalPosition();
-
+    const bppc_state_E bppc_ok = bppc_getState() == BPPC_OK;
     torque_data.state = app_vehicleState_getState() == VEHICLESTATE_TS_RUN ? TORQUE_ACTIVE : TORQUE_INACTIVE;
-    evaluate_gear_change();
-    evaluate_mode_change();
+
+    const bool gear_change = evaluate_gear_change();
+    const bool mode_change = evaluate_mode_change();
     evaluate_launch_control(accelerator_position, brake_position);
 
     float32_t torque_request_max = evaluate_torque_max();
@@ -421,9 +445,15 @@ static void torque_periodic_100Hz(void)
     {
         torque_request_max = DEFAULT_TORQUE_LIMIT_REVERSE;
     }
-    float32_t torque = (bppc_getState() == BPPC_OK) ?
-                        accelerator_position * torque_request_max :
-                        0.0f;
+
+    if (gear_change || mode_change || !bppc_ok)
+    {
+        torque_data.torqueRateLimit.y_n = 0.0f;
+    }
+
+    float32_t torque = (bppc_ok) ? accelerator_position * torque_request_max : 0.0f;
+    torque_data.torqueDriverInput = torque;
+    torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
 
     torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);
 }

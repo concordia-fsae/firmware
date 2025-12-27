@@ -333,6 +333,7 @@ cxx_binary(
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/LIB_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
+            "//components/shared/code:libs/lib_rateLimit.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
             "//components/vc/shared:wheelSpeed/wheelSpeed.c",
             select({
