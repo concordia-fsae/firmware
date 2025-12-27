@@ -85,11 +85,20 @@ signals:
     description: Torque request limit
     unit: Nm
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 7
       range:
-        min: -100
+        min: 0
         max: 150
-      resolution: 1
+    continuous: true
+
+  torqueDriverInput:
+    description: Driver raw torque request
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 150
     continuous: true
 
   torqueRequestCorrectionDebug:
