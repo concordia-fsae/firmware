@@ -170,13 +170,15 @@ impl UdsSession {
         }
 
         self.client.start_persistent_tp().await;
-        if !self.interactive_session && let Err(_) = self.client.ecu_reset(SupportedResetTypes::Hard, self.interactive_session).await {
-            let node_dur = node_start.elapsed();
-            return UpdateResult{
-                    bin: binary_path.to_path_buf(),
-                    result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
-                    duration: node_dur,
-                };
+        if !self.interactive_session {
+            if let Err(_) = self.client.ecu_reset(SupportedResetTypes::Hard, self.interactive_session).await {
+                let node_dur = node_start.elapsed();
+                return UpdateResult{
+                        bin: binary_path.to_path_buf(),
+                        result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
+                        duration: node_dur,
+                    };
+            }
         }
         match self.file_download(&binary_path, 0x08002000).await {
             Ok(()) => {
