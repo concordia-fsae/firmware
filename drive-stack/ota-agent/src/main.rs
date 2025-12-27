@@ -371,9 +371,9 @@ async fn main() -> Result<()> {
                         .multipart(form)
                         .send().await?;
 
-                    info!("Stage status: {}", response.status());
                     let stage_body = response.text().await?;
-                    info!("Stage body: {}", stage_body);
+                    let parsed: Result<FlashReply, _> = serde_json::from_str(&stage_body);
+                    info!("Flash status: {}", parsed.unwrap().status);
                 }
                 SubAction::Flash(flash) => {
                     // Flash
@@ -385,6 +385,7 @@ async fn main() -> Result<()> {
                         .send().await?;
                     let flash_body = resp_flash.text().await?;
                     let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
+                    info!("Flash status: {}", parsed.unwrap().status);
                 }
                 SubAction::Ota(flash) => {
                     // Build multipart form with the file
@@ -533,6 +534,7 @@ async fn main() -> Result<()> {
                         let (final_status, bin_for_report, dur_for_report) = match parsed {
                             Ok(fr) => {
                                 // Map API status to our reporting enum
+                                info!("Flash status: {}", fr.status);
                                 let fs = match fr.status.as_str() {
                                     "failed" => {
                                         let msg = fr.error.unwrap_or_else(|| "unknown error".to_string());
