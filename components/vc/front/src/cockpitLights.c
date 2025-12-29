@@ -56,8 +56,9 @@ static void cockpitLights_periodic_10Hz(void)
     CAN_digitalStatus_E can_bms_status;
     const bool imd_light_valid = (CANRX_get_signal(VEH, BMSB_imdStatusMem, &can_imd_status) == CANRX_MESSAGE_VALID);
     const bool bms_light_valid = (CANRX_get_signal(VEH, BMSB_bmsStatusMem, &can_bms_status) == CANRX_MESSAGE_VALID);
+    const bool sleeping = app_vehicleState_sleeping();
 
-    if (imd_light_valid == true && (can_imd_status == CAN_DIGITALSTATUS_ON))
+    if (sleeping || (imd_light_valid && (can_imd_status == CAN_DIGITALSTATUS_ON)))
     {
         cockpitLights_data.imdState = false;
     }
@@ -66,7 +67,7 @@ static void cockpitLights_periodic_10Hz(void)
         cockpitLights_data.imdState = true;
     }
 
-    if (bms_light_valid == true && (can_bms_status == CAN_DIGITALSTATUS_ON))
+    if (sleeping || (bms_light_valid && (can_bms_status == CAN_DIGITALSTATUS_ON)))
     {
         cockpitLights_data.bmsState = false;
     }

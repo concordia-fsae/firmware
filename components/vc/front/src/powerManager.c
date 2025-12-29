@@ -35,10 +35,12 @@ static void powerManager_init(void)
 
 static void powerManager_periodic_10Hz(void)
 {
+    const bool sleeping = app_vehicleState_sleeping();
+
     // TODO: Improve
     for (uint8_t i = 0; i < DRV_TPS20XX_CHANNEL_COUNT; i++)
     {
-        drv_tps20xx_setEnabled(i, true);
+        drv_tps20xx_setEnabled(i, !sleeping);
     }
 
     drv_tps20xx_run();
