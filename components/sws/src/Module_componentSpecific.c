@@ -11,6 +11,7 @@
 #include "Module.h"
 #include "drv_inputAD.h"
 #include "drv_userInput.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -22,6 +23,7 @@
 const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
+    &app_vehicleState_desc,
     &driverInput_desc,
     &light_desc,
     &CANIO_tx,
