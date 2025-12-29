@@ -79,3 +79,14 @@ time_t drv_timer_getElapsedTimeMs(drv_timer_S *timer)
 
     return delta;
 }
+
+/**
+ * @brief Get the end time of a timer
+ * @param timer The timer to get the elapsed time of
+ * @return The time in ms at which point the timer will expire
+ */
+time_t drv_timer_getEndTimeMS(drv_timer_S *timer)
+{
+    return timer->time_start_ms + timer->runtime_ms;
+}
+

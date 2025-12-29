@@ -61,3 +61,4 @@ void              drv_timer_start(drv_timer_S * timer, time_t runtime_ms);
 void              drv_timer_stop(drv_timer_S * timer);
 drv_timer_state_E drv_timer_getState(drv_timer_S * timer);
 time_t            drv_timer_getElapsedTimeMs(drv_timer_S *timer);
+time_t            drv_timer_getEndTimeMS(drv_timer_S *timer);
