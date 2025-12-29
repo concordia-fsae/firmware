@@ -21,6 +21,7 @@
 #include "drv_inputAD.h"
 #include "drv_userInput.h"
 #include "driverInput.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -70,5 +71,7 @@
 #define set_requestTractionControl(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC)             ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m,b,n,s) set(m,b,n,s, driverInput_getScreenCAN())
+
+#define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
 
 #include "TemporaryStubbing.h"
