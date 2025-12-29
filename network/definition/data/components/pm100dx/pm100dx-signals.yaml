@@ -621,224 +621,224 @@ signals:
   #POST Fault Lo
   postHWGateFault:
     description: POST HW Gate Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postHWOverCurrentFault:
     description: POST HW Overcurrent Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postAcceleratorShorted:
     description: POST HW Accelerator Shorted Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postAcceleratorOpen:
     description: POST HW Accelerator Open Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postCurrentSensorLo:
     description: POST Current Sensor Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postCurrentSensorHi:
     description: POST Current Sensor High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postModuleTempLo:
     description: POST Module Temp Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postModuleTempHi:
     description: POST Module Temp High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postControlPCBTempLo:
     description: POST Control PCB Temp Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postControlPCBTempHi:
     description: POST Control PCB Temp High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postGateDrivePCBTempLo:
     description: POST Gate Drive PCB Temp Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postGateDrivePCBTempHi:
     description: POST Gate Drive PCB Temp High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post5VSenseVoltageLo:
     description: POST 5V Sense Voltage Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post5VSenseVoltageHi:
     description: POST 5V Sense Voltage High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post12VSenseVoltageLo:
     description: POST 12V Sense Voltage Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post12VSenseVoltageHi:
     description: POST 12V Sense Voltage High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   #POST Fault Hi
   post2V5SenseVoltageLo:
     description: POST 2V5V Sense Voltage Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post2V5SenseVoltageHi:
     description: POST 2V5V Sense Voltage High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post1V5SenseVoltageLo:
     description: POST 1V5V Sense Voltage Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   post1V5SenseVoltageHi:
     description: POST 1V5V Sense Voltage High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postDCBusVoltageHi:
     description: POST DC Bus Votlage High Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postDCBusVoltageLo:
     description: POST DC Bus Voltage Low Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postPreChargeTimeOut:
     description: POST Precharge Timeout Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postPreChargeVoltageFailure:
     description: POST Precharge Voltage Failure Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postEepromChecksumInvalid:
     description: POST EEPROM Checksum Invalid Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postEepromDataOutOfRange:
     description: POST EEPROM Data Out of Range Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postEepromUpdateRequired:
     description: POST EEPROM Update Required Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postHWDCBusOverVoltageDuringInit:
     description: POST HW DC Bus Over Voltage During Init Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postBrakeShorted:
     description: POST Brake Shorted Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   postBrakeOpen:
     description: POST Brake Open Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runMotorOverSpeedFault:
     description: RUN Motor Over Speed Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runOverCurrentFault:
     description: RUN Over Current Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runOverVoltageFault:
     description: RUN Over Voltage Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runInverterOverTempFault:
     description: RUN Inverter Over Temperature Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runAcceleratorInputShortedFault:
     description: RUN Accelerator Input Shorted Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runAcceleratorInputOpenFault:
     description: RUN Accelerator Input Open Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runDirectionCommandFault:
     description: RUN Direction Command Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runInverterResponseTimeOutFault:
     description: RUN Inverter Response Timeout Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runHWGateFault:
     description: RUN HW Gate Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runHWOverCurrentFault:
     description: RUN HW Over Current Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runUnderVoltageFault:
     description: RUN Under Voltage Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runCanCommandMessageLostFault:
     description: RUN CAN Command Message Lost Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runMotorOverTempFault:
     description: RUN Motor Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runBrakeInputShortedFault:
     description: RUN Brake Input Shorted Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runBrakeInputOpenFault:
     description: RUN Brake Input Open Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runModuleAOverTempFault:
     description: RUN Module A Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runModuleBOverTempFault:
     description: RUN Module B Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runModuleCOverTempFault:
     description: RUN Module C Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runPcbOverTempFault:
     description: RUN PCB Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runGateDriveBoard1OverTempFault:
     description: RUN Gate Drive Board 1 Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runGateDriveBoard2OverTempFault:
     description: RUN Gate Drive Board 2 Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runGateDriveBoard3OverTempFault:
     description: RUN Gate Drive Board 3 Over Temp Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runCurrentSensorFault:
     description: RUN Current Sensor Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runHwDCBusOverVoltageFault:
     description: RUN HW DC Bus Over Voltage Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   runResolverNotConnected:
     description: RUN Resolver Not Connected Fault
-    discreteValues: pm100dxFaultStatus
+    discreteValues: faultStatus
 
   commandedTorque:
     description: Commanded Torque

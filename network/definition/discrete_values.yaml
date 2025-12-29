@@ -96,7 +96,7 @@ pm100dxIsLimited:
   "NOT_LIMITED": 0
   "LIMITED": 1
 
-pm100dxFaultStatus:
+faultStatus:
   "OK": 0
   "FAULT": 1
 
