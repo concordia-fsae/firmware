@@ -3,8 +3,10 @@
 <%def name="make_structdef_message(node, message)">\
     struct {
         uint32_t timestamp;
-%if node.received_msgs[message].bridged:
+%if node.received_msgs[message].bridged or node.received_msgs[message].fault_message:
         CAN_data_T raw;
+%endif
+%if node.received_msgs[message].bridged:
         bool new_message;
 %endif
     } ${node.received_msgs[message].name};

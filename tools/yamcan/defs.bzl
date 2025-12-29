@@ -17,7 +17,7 @@ def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: lis
         # Named output dir called "include"
         out = "manifest.yaml",
         cmd = (
-            "$(python) ${TOOLDIR}/NetworkGen.py" +
+            "$(python) ${TOOLDIR}/yamcan.py" +
             " --cache-dir ${SRCS}" +
             " --manifest-output ${OUT}" +
             args
@@ -48,7 +48,7 @@ def generate_code(name: str, network_dep: str, node: str, library_deps: list[str
                 ],
             },
             cmd = (
-                "$(python) ${TOOLDIR}/NetworkGen.py" +
+                "$(python) ${TOOLDIR}/yamcan.py" +
                 " --cache-dir ${SRCS}" +
                 " --node {}".format(node) +
                 " --codegen-dir ${OUT}/generated/"
@@ -83,7 +83,7 @@ def generate_stats(
         name = name,
         tool = "//tools/yamcan:yamcan",
         out = "network",
-        cmd = "$(python) ${TOOLDIR}/NetworkGen.py --output-dir ${OUT} --cache-dir ${SRCS} --gen-stats",
+        cmd = "$(python) ${TOOLDIR}/yamcan.py --output-dir ${OUT} --cache-dir ${SRCS} --gen-stats",
         srcs = [dep],
         **kwargs
     )
@@ -96,7 +96,7 @@ def generate_dbcs(
         name = name,
         tool = "//tools/yamcan:yamcan",
         out = "network",
-        cmd = "$(python) ${TOOLDIR}/NetworkGen.py --output-dir ${OUT} --cache-dir ${SRCS} --gen-dbc",
+        cmd = "$(python) ${TOOLDIR}/yamcan.py --output-dir ${OUT} --cache-dir ${SRCS} --gen-dbc",
         srcs = [dep],
         **kwargs
     )
@@ -115,6 +115,6 @@ def build_network(
         tool = "//tools/yamcan:yamcan",
         srcs = [":network-defs"],
         out = "network-cache",
-        cmd = "$(python) ${TOOLDIR}/NetworkGen.py --data-dir ${SRCS} --cache-dir ${OUT} --build",
+        cmd = "$(python) ${TOOLDIR}/yamcan.py --data-dir ${SRCS} --cache-dir ${OUT} --build",
         **kwargs
     )

@@ -14,6 +14,9 @@ static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t c
 
     *message = CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.raw;
     CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message = false;
+  %elif msg.fault_message:
+  (void)counter;
+  *message = set_fault_message;
   %else:
     if (transmit_${msg.name} == false)
     {

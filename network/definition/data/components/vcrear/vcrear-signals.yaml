@@ -1,4 +1,10 @@
 signals:
+  # Faults
+  mcFaulted:
+    description: The motor controller is showing a fault
+    discreteValues: faultStatus
+
+  # Signals
   brakeLightState:
     description: 'State of the break light'
     discreteValues: brakeLightState
