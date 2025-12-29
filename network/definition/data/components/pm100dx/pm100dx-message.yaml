@@ -179,6 +179,7 @@ messages:
     description: PM100DXR POST & Run Fault Codes
     idOffset: 0x0B
     lengthBytes: 8
+    messageType: faults
     signals:
         postHWGateFault:
         postHWOverCurrentFault:

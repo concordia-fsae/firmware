@@ -63,6 +63,7 @@ MESSAGE_SCHEMA = Schema({
     Optional("id"): int,
     Optional("idOffset"): int,
     Optional("lengthBytes"): int,
+    Optional("messageType"): str,
     Optional("sourceBuses"): Or(str, list[str]),
     Optional("signals"): dict,
     Optional("unscheduled"): bool,
@@ -703,7 +704,7 @@ def process_receivers(bus: CanBus, node: CanNode):
         for sig_name in bus.messages[msg_name].signals:
             rxed_sig = bus.signals[sig_name]
 
-            if rxed_sig not in node.received_sigs:
+            if rxed_sig not in node.received_sigs and not rxed_sig.message_ref.fault_message:
                 node.received_sigs[sig_name] = rxed_sig
                 bus.messages[msg_name].add_receiver(node, rxed_sig.name)
 

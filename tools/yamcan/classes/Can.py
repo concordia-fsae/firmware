@@ -147,11 +147,11 @@ class CanSignal(CanObject):
             get_if_exists(signal_def, "continuous", bool, Continuous.discrete)
         )
         self.description = get_if_exists(signal_def, "description", str, None)
-        dv = get_if_exists(signal_def, "discreteValues", str, "")
-        if dv != "" and not any([ dv in key for key, _ in self.DISC ]):
-            raise Exception(f"Invalid discrete value '{dv}' in signal '{name}'")
+        self.dv = get_if_exists(signal_def, "discreteValues", str, "")
+        if self.dv != "" and not any([ self.dv in key for key, _ in self.DISC ]):
+            raise Exception(f"Invalid discrete value '{self.dv}' in signal '{name}'")
         self.discrete_values = getattr(
-            self.DISC, dv, None
+            self.DISC, self.dv, None
         )
         try:
             self.native_representation = get_if_exists(
@@ -388,6 +388,7 @@ class CanMessage(CanObject):
         self.origin_bus = None
         self.source_buses: List[str]
         self.crc = -1
+        self.fault_message = get_if_exists(msg_def, "messageType", str, None) == "faults"
 
         if source_buses := msg_def.get("sourceBuses"):
             if isinstance(source_buses, list):
@@ -450,6 +451,8 @@ class CanMessage(CanObject):
         sig_objs = self.signal_objs.values()
         first = True
         for signal in sig_objs:
+            if self.fault_message and signal.dv != "faultStatus":
+                raise Exception(f"Signal '{signal.name}' in fault message '{self.name}' is a '{signal.dv}' not a 'faultStatus' discrete value.")
             if first:
                 signal.start_bit = bit_count
                 bit_count += signal.native_representation.bit_width
