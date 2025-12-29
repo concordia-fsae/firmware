@@ -81,7 +81,15 @@ typedef enum
     VEHICLESTATE_ON_GLV,
     VEHICLESTATE_ON_HV,
     VEHICLESTATE_TS_RUN,
+    VEHICLESTATE_SLEEP,
 } app_vehicleState_state_E;
+
+typedef enum
+{
+    SLEEPABLE_OK = 0x00U,
+    SLEEPABLE_NOK,
+    SLEEPABLE_ALARM,
+} app_vehicleState_sleepable_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -90,9 +98,11 @@ typedef enum
 // Functionality
 void app_vehicleState_init(void);
 void app_vehicleState_run100Hz(void);
-
+void app_vehicleState_delaySleep(uint32_t ms);
 // Accessors
+bool                     app_vehicleState_sleeping(void);
 app_vehicleState_state_E app_vehicleState_getState(void);
+CAN_sleepFollowerState_E app_vehicleState_getSleepableStateCAN(void);
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
 CAN_vehicleState_E       app_vehicleState_getStateCAN(void);
 #endif
