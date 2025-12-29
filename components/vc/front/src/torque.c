@@ -51,6 +51,9 @@
 #define TC_ILIM 0.4f
 #define TC_AXLE_THRESHOLD_RPM 60 // Roughly a 0.5m/s vehicle speed
 
+#define PEDAL_SLEEP_THRESHOLD 0.02f
+#define SLEEP_TIMEOUT_MS 60000
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -308,6 +311,15 @@ static float32_t evaluate_traction_control(void)
     torque_data.slipRear = slip;
     return multiplier;
 }
+
+static void evaluate_sleepable(float32_t accelerator_position, float32_t brake_position)
+{
+    if ((accelerator_position > PEDAL_SLEEP_THRESHOLD) || (brake_position > PEDAL_SLEEP_THRESHOLD))
+    {
+        app_vehicleState_delaySleep(SLEEP_TIMEOUT_MS);
+    }
+}
+
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -582,6 +594,7 @@ static void torque_periodic_100Hz(void)
     const float32_t brake_position = bppc_getPedalPosition();
     const bppc_state_E bppc_ok = bppc_getState() == BPPC_OK;
     torque_data.state = app_vehicleState_getState() == VEHICLESTATE_TS_RUN ? TORQUE_ACTIVE : TORQUE_INACTIVE;
+    evaluate_sleepable(accelerator_position, brake_position);
 
     const bool gear_change = evaluate_gear_change();
     const bool mode_change = evaluate_mode_change();

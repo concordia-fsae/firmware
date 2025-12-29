@@ -30,6 +30,7 @@
 #include "shockpot.h"
 #include "Module.h"
 #include "wheelSpeed.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -105,5 +106,7 @@
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
 #define set_taskStack10Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_10Hz_TASK))
 #define set_taskStack1Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1Hz_TASK))
+
+#define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
 
 #include "TemporaryStubbing.h"

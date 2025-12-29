@@ -48,3 +48,8 @@ messages:
       requestTractionControl:
       validatorRequest:
         template: criticalDataChecksum
+
+  sleep:
+    description: SWS sleep information
+    id: 0x7b0
+    template: sleepableNode

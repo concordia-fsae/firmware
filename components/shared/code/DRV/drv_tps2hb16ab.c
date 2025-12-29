@@ -89,7 +89,9 @@ void drv_tps2hb16ab_run(void)
             }
             else
             {
-                const float32_t current = cs_voltage * drv_tps2hb16ab_ics[i].cs_amp_per_volt;
+                const float32_t current = drv_tps2hb16ab_data.state[i][selected_channel] == DRV_HSD_STATE_ON ?
+                                          cs_voltage * drv_tps2hb16ab_ics[i].cs_amp_per_volt :
+                                          0.0f;
                 drv_tps2hb16ab_data.current[i][selected_channel] = current;
             }
         }

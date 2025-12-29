@@ -36,6 +36,7 @@
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
 #define set_vehicleState(m,b,n,s) set(m,b,n,s, app_vehicleState_getStateCAN())
+#define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
 #define set_pumpHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP)))
 #define set_fanHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN)))
 #define set_bms1HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1)))

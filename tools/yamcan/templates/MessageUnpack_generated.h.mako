@@ -20,7 +20,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define CANRX_validate(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_validate),_,signal)())
+#define CANRX_validate_func(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_validate),_,signal))
+#define CANRX_validate(bus, signal) (CANRX_validate_func(bus, signal)())
 #define CANRX_validateDuplicate(bus, signal, nodeId) (JOIN3(JOIN3(CANRX_,bus,_validate),_,signal)(nodeId))
 #define CANRX_get_signal_func(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))
 #define CANRX_get_signal(bus, signal, val) CANRX_get_signal_func(bus, signal)(val)
@@ -124,4 +125,3 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
     %endfor
   %endfor
 %endfor
-

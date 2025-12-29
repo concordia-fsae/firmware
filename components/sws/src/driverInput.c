@@ -64,6 +64,7 @@
 #include "ModuleDesc.h"
 #include "drv_timer.h"
 #include "MessageUnpack_generated.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -84,6 +85,8 @@
 #define RACE_DEBOUNCE_MS    500
 #define LAUNCH_DEBOUNCE_MS  500
 #define REVERSE_DEBOUNCE_MS 2500
+
+#define SLEEP_TIMEOUT_MS 60000
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -299,6 +302,12 @@ static void driverInput_10Hz(void)
     const bool db_tq_dec  = drv_userInput_buttonInDebounce(BUTTON_TORQUE_DEC);
     const bool db_sl_inc  = drv_userInput_buttonInDebounce(BUTTON_SLIP_INC);
     const bool db_sl_dec  = drv_userInput_buttonInDebounce(BUTTON_SLIP_DEC);
+
+    if (pg_next || pg_prev || tq_inc || tq_dec || sl_inc || sl_dec)
+    {
+        app_vehicleState_delaySleep(SLEEP_TIMEOUT_MS);
+    }
+
 
     bool status[DRIVERINPUT_REQUEST_COUNT] = { false };
 

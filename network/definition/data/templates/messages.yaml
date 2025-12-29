@@ -61,3 +61,8 @@ messages:
         template: nvmRecordFailedInit
       nvmRecordsVersionFailed:
         template: nvmRecordsVersionFailed
+  sleepableNode:
+    cycleTimeMs: 1000
+    signals:
+      sleepable:
+        template: sleepFollowerState

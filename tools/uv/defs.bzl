@@ -66,14 +66,14 @@ def _uv_tool_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         DefaultInfo(default_outputs = [venv_artifact]),
         UvTool(
-            srcs = ctx.attrs.srcs + ctx.attrs.deps,
+            srcs = ctx.attrs.srcs,
             venv = venv_artifact,
             python = RunInfo(cmd_args(script_args, hidden = [venv_artifact, srcs])),
             tooldir = cmd_args(venv_artifact, format = "{}/srcs", parent = 2),
         ),
         TemplatePlaceholderInfo(
             unkeyed_variables = {
-                "python": cmd_args(genrule_script_args),
+                "python": cmd_args(genrule_script_args, hidden = [venv_artifact, srcs]),
             },
         ),
     ]
@@ -90,7 +90,14 @@ uv_tool = rule(
 )
 
 def _uv_genrule_impl(ctx: AnalysisContext) -> list[Provider]:
-    env = {"TOOLDIR": cmd_args(ctx.attrs.tool[UvTool].tooldir)}
+    tool = ctx.attrs.tool[UvTool]
+
+    env = {
+        "TOOLDIR": cmd_args(
+            tool.tooldir,
+            hidden = [tool.venv, tool.srcs],
+        ),
+    }
 
     return process_genrule(ctx, ctx.attrs.out, ctx.attrs.outs, extra_env_vars = env)
 

@@ -128,3 +128,8 @@ messages:
       slipErrorD:
         template: percentageAccurate
       torqueDriverInput:
+
+  sleep:
+    description: VCFRONT sleep information
+    id: 0x7b1
+    template: sleepableNode
