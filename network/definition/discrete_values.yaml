@@ -136,6 +136,7 @@ vehicleState:
   "ON_GLV": 1
   "ON_HV": 2
   "TS_RUN": 3
+  "SLEEP": 4
 
 hsdState:
   "SNA": 0
@@ -202,3 +203,9 @@ tractionControlState:
   FAULT_SENSOR: 3
   ERROR: 4
   LOCKOUT: 5
+
+sleepFollowerState:
+  SNA: 0
+  OK_TO_SLEEP: 1
+  NOK_TO_SLEEP: 2
+  ALARM: 3

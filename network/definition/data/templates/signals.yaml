@@ -204,3 +204,5 @@ signals:
         max: 400
       resolution: 0.1
     continuous: true
+  sleepFollowerState:
+    discreteValues: sleepFollowerState

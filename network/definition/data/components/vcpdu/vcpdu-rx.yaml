@@ -17,3 +17,7 @@ signals:
     sourceBuses: veh
   VCFRONT_brakePosition:
     sourceBuses: veh
+  SWS_sleepable:
+    sourceBuses: veh
+  VCFRONT_sleepable:
+    sourceBuses: veh

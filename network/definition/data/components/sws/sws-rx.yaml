@@ -4,3 +4,4 @@ messages:
     unrecorded: true
 signals:
   VCFRONT_launchControlState:
+  VCPDU_vehicleState:
