@@ -37,6 +37,7 @@ static const ModuleDesc_S* modules[] = {
     &ENV_desc,
     &BMS_desc,
     &SYS_desc,
+    &BMS_Alarm_desc,
 #if APP_UDS
     &UDS_desc,
 #endif

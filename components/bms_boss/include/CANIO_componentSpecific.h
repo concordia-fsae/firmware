@@ -27,6 +27,7 @@
 #include "lib_nvm.h"
 #include "Module.h"
 #include "Sys.h"
+#include "BMS_alarm.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -100,6 +101,8 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packVPackPVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_VPACK))
 #define set_packVPackNVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK))
 #define set_mcuTemperature(m, b, n, s)              set(m, b, n, s, ENV.board.mcu_temp)
+#define set_MaxPackTemp(m, b, n, s)                 set(m, b, n, s, Return_MaxPackTemp())
+#define set_BMSTempAlarm(m, b, n, s)                set(m, b, n, s, Return_AlarmState())
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())

@@ -21,3 +21,15 @@ messages:
     sourceBuses: veh
     unrecorded: true
 signals:
+  BMSW0_tempMax:
+    sourceBuses: veh
+  BMSW1_tempMax:
+    sourceBuses: veh
+  BMSW2_tempMax:
+    sourceBuses: veh
+  BMSW3_tempMax:
+    sourceBuses: veh
+  BMSW4_tempMax:
+    sourceBuses: veh
+  BMSW5_tempMax:
+    sourceBuses: veh    

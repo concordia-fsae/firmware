@@ -28,6 +28,15 @@ messages:
       packVPackNVoltage:
       packVPackPVoltage:
 
+  BMSAlarm:
+    description: BMS Boss Alarm Status
+    cycleTimeMs: 500
+    id: 0x97
+    sourceBuses: veh
+    signals:
+      MaxPackTemp:
+      BMSTempAlarm:
+
   brusaChargeCommand:
     description: Brusa Charge Command
     cycleTimeMs: 100

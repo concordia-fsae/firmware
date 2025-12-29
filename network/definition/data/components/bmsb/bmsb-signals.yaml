@@ -16,6 +16,21 @@ signals:
         max: 32
     continuous: true
 
+  MaxPackTemp:
+    unit: 'degC'
+    description: Maximum temperature measured in Pack
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 0.1
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  BMSTempAlarm:
+    description: Is the pack at alarm temp
+    discreteValues: "alarmState"
+
   nlg513MaxChargeVoltage:
     unit: 'V'
     description: Brusa NLG513 Max Battery Voltage During Charging
@@ -100,6 +115,7 @@ signals:
     description: BMS Boss Pack Current
     nativeRepresentation:
       bitWidth: 15
+      resolution: 0.1
       range:
         min: -100
         max: 400

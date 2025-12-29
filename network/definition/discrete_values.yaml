@@ -202,3 +202,7 @@ tractionControlState:
   FAULT_SENSOR: 3
   ERROR: 4
   LOCKOUT: 5
+
+alarmState:
+  ALARM: 1
+  NO_ALARM: 2
