@@ -54,6 +54,9 @@
 #define PEDAL_SLEEP_THRESHOLD 0.02f
 #define SLEEP_TIMEOUT_MS 60000
 
+#define PEDAL_APPLIED_THRESHOLD 0.10f
+#define VEHICLE_STOPPED_THRESHOLD 60
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -88,7 +91,7 @@ static struct
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static bool evaluate_gear_change(void)
+static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake_position)
 {
     bool ret = false;
     CAN_digitalStatus_E gear_change_request = CAN_DIGITALSTATUS_SNA;
@@ -96,9 +99,13 @@ static bool evaluate_gear_change(void)
     torque_data.gear_change_active = (CANRX_get_signal(VEH, SWS_requestReverse, &gear_change_request) != CANRX_MESSAGE_SNA) &&
                                      (gear_change_request == CAN_DIGITALSTATUS_ON);
     const bool gear_change_rising = !gear_change_was_requested && torque_data.gear_change_active;
+    const float32_t vehicleSpeed = wheelSpeed_getAxleRPM(AXLE_FRONT);
+    const bool ok_to_change = (accelerator_position < PEDAL_APPLIED_THRESHOLD) &&
+                              (brake_position > PEDAL_APPLIED_THRESHOLD) &&
+                              (vehicleSpeed < VEHICLE_STOPPED_THRESHOLD);
 
 #if FEATURE_IS_ENABLED(FEATURE_REVERSE)
-    if (gear_change_rising)
+    if (gear_change_rising && ok_to_change)
     {
         ret = true;
         torque_data.gear = torque_data.gear == GEAR_F ? GEAR_R : GEAR_F;
@@ -596,7 +603,7 @@ static void torque_periodic_100Hz(void)
     torque_data.state = app_vehicleState_getState() == VEHICLESTATE_TS_RUN ? TORQUE_ACTIVE : TORQUE_INACTIVE;
     evaluate_sleepable(accelerator_position, brake_position);
 
-    const bool gear_change = evaluate_gear_change();
+    const bool gear_change = evaluate_gear_change(accelerator_position, brake_position);
     const bool mode_change = evaluate_mode_change();
     evaluate_launch_control(accelerator_position, brake_position);
     torque_data.torqueReduction = evaluate_traction_control();
