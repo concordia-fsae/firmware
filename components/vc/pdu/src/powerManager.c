@@ -75,6 +75,7 @@ static void powerManager_periodic_100Hz(void)
     const bool enable_shutdown = glv_voltage > 9.0f;
     const float32_t pdu_current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
     const float32_t pdu_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
+    const bool sleeping = app_vehicleState_sleeping();
     powerManager_data.glv_voltage = glv_voltage;
     powerManager_data.pdu.current = pdu_current;
     powerManager_data.pdu.rail_5v_voltage = pdu_5v_voltage;
@@ -91,15 +92,21 @@ static void powerManager_periodic_100Hz(void)
     {
         for (uint8_t n = 0; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
         {
+            // Handle specific HSDs by sleep state
+            const bool requiredLoad = (((i == DRV_TPS2HB16AB_IC_VC1_VC2) && (n == DRV_TPS2HB16AB_OUT_1)) ||
+                                       (i == DRV_TPS2HB16AB_IC_VCU1_VCU2) ||
+                                       ((i == DRV_TPS2HB16AB_IC_HVE_COCKPIT) && (n == DRV_TPS2HB16AB_OUT_2)));
+            const bool enableLoad = enable_loads && (!sleeping || requiredLoad);
+
             drv_hsd_state_E state = drv_tps2hb16ab_getState(i, n);
             if (state == DRV_HSD_STATE_OVERCURRENT)
             {
                 // TODO: Set alarm
                 drv_tps2hb16ab_setEnabled(i, n, false);
             }
-            else if (state == DRV_HSD_STATE_OFF)
+            else if ((state == DRV_HSD_STATE_OFF) || (state == DRV_HSD_STATE_ON))
             {
-                drv_tps2hb16ab_setEnabled(i, n, enable_loads);
+                drv_tps2hb16ab_setEnabled(i, n, enableLoad);
             }
         }
     }
