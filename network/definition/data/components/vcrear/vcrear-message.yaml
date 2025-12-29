@@ -1,4 +1,13 @@
 messages:
+  faults:
+    description: VCREAR Faults
+    cycleTimeMs: 1000
+    id: 0x3a0
+    sourceBuses: veh
+    messageType: faults
+    signals:
+      mcFaulted:
+
   udsResponse:
     description: UDS response message from the VCREAR
     id: 0x671

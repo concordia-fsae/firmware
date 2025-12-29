@@ -13,6 +13,7 @@
 #include "string.h"
 #include "MessageUnpack_generated.h"
 #include "lib_utility.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -136,6 +137,9 @@ static void mcManager_periodic_100Hz(void)
     int16_t motor_rpm = 0;
     const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
     (void)CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state);
+
+    bool mcFaulted = app_faultManager_getNetworkedFault_anySet(ASS, PM100DX_faults);
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_MCFAULTED, mcFaulted);
 
     motor_rpm = (int16_t)(motor_rpm < 0 ? -motor_rpm : motor_rpm);
     mcManager_data.axle_rpm = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
