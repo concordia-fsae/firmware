@@ -2,6 +2,36 @@ messages:
   UDSCLIENT_vcpduUdsRequest:
     sourceBuses: veh
     unrecorded: true
+  UDSCLIENT_bmsbUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw0UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw1UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw2UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw3UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw4UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw5UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_vcfrontUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_vcrearUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_swsUdsRequest:
+    sourceBuses: veh
+    unrecorded: true
 signals:
   BMSB_packContactorState:
     sourceBuses: veh
