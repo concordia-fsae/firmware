@@ -102,6 +102,8 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
   }                                   \
  } while (zero())
 
+#define FLAG_getFirst(name, size)         FLAG_getNext_uncast((uint16_t*)name, size, 0)
+#define FLAG_getNext(name, size, current) FLAG_getNext_uncast((uint16_t*)name, size, current)
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -195,6 +197,27 @@ static inline bool FLAG_none(uint16_t* name, uint16_t count)
         }
     }
     return true;
+}
+
+/*
+ * FLAG_getNext
+ * @brief Gets the index of the next flag set
+ * @param name Flag word name
+ * @param count Number of bits in the given flag word
+ * @param current Flag index to start from
+ *
+ * @return 0 or the index of the first bit set
+ */
+static inline uint16_t FLAG_getNext_uncast(uint16_t* name, uint16_t count, uint16_t current)
+{
+    for (uint16_t i = current; i < count; i++)
+    {
+        if (FLAG_get(name, i))
+        {
+            return i;
+        }
+    }
+    return count;
 }
 
 static inline uint8_t reverse_byte(uint8_t x)
