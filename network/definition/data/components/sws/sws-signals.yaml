@@ -80,3 +80,10 @@ signals:
   requestScreen:
     description: Current STW screen page being requested
     discreteValues: screenPage
+
+  screenAlert:
+    description: Alerts to show the driver
+    discreteValues: screenAlerts
+  screenWarning:
+    description: Warning to show the driver
+    discreteValues: screenWarnings

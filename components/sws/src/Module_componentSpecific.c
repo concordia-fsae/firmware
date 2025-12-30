@@ -26,6 +26,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &app_vehicleState_desc,
     &driverInput_desc,
     &light_desc,
+    &screenManager_desc,
     &CANIO_tx,
 };
 

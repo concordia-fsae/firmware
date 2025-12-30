@@ -22,6 +22,8 @@
 #include "drv_userInput.h"
 #include "driverInput.h"
 #include "app_vehicleState.h"
+#include "app_faultManager.h"
+#include "screenManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -38,6 +40,11 @@
 
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+
+#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+
+#define set_screenAlert(m,b,n,s) set(m,b,n,s, screenManager_getAlertCAN())
+#define set_screenWarning(m,b,n,s) set(m,b,n,s, screenManager_getWarningCAN())
 
 #define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
 #define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));

@@ -51,7 +51,7 @@ pm100dxInverterState:
   "WAIT": 4
   "IDLE_RUN": 8
   "IDLE_STOP": 9
-  
+
 pm100dxActiveStatus:
   "ACTIVE": 1
   "INACTIVE": 0
@@ -70,7 +70,7 @@ pm100dxInverterActiveDischargeState:
   "SPEED_CHECK": 2
   "DISCHARGE_OCCURRING": 3
   "DISCHARGE_COMPLETED": 4
-  
+
 pm100dxInverterCommandMode:
   "CAN_MODE": 0
   "VSM_MODE": 1
@@ -209,3 +209,21 @@ sleepFollowerState:
   OK_TO_SLEEP: 1
   NOK_TO_SLEEP: 2
   ALARM: 3
+
+screenAlerts:
+  NONE: 0
+  FAULT_MC: 1
+  FAULT_VCFRONT: 2
+  FAULT_VCREAR: 3
+  FAULT_VCPDU: 4
+  FAULT_BMSB: 5
+  FAULT_GLV: 6
+  FAULT_EM: 7
+  REVERSE: 8
+
+screenWarnings:
+  NONE: 0
+  HOT_CELL: 1
+  HOT_POWERTRAIN: 2
+  LOW_CELL: 3
+  LOW_GLV: 4

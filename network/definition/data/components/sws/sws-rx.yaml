@@ -2,7 +2,9 @@ messages:
   UDSCLIENT_swsUdsRequest:
     sourceBuses: veh
     unrecorded: true
+  VCPDU_faults:
 signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:
   VCPDU_safetyReset:
+  VCFRONT_gear:
