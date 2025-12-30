@@ -16,8 +16,8 @@
 #include "string.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
-#include "app_vehicleState.h"
 #include "app_faultManager.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -89,19 +89,17 @@ static void evalAbilities(void)
     const bool lowBattery = pm_data.glv_voltage < BATTERY_RECHARGED;
     const bool charged = pm_data.charged ?
                          pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO :
-                         pm_data.glv_voltage > BATTERY_RECHARGED && resetFaults;
-    bool okBattery = pm_data.okBattery ?
-                     pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO :
-                     pm_data.glv_voltage > BATTERY_CUTOFF_ANY_HI && resetFaults;
-    bool okLoads = pm_data.okLoads ?
-                   pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_LO :
-                   pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_HI && resetFaults;
-    bool okSafety = pm_data.okSafety ?
-                    pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_LO :
-                    pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_HI && resetFaults;
-    bool overvoltage = pm_data.overvoltage ?
-                       pm_data.glv_voltage > BATTERY_OVERVOLTAGE :
-                       pm_data.glv_voltage > BATTERY_OVERVOLTAGE && resetFaults;
+                         pm_data.glv_voltage > BATTERY_RECHARGED;
+    const bool okBattery = pm_data.okBattery ?
+                           pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO :
+                           pm_data.glv_voltage > BATTERY_CUTOFF_ANY_HI;
+    const bool okLoads = pm_data.okLoads ?
+                         pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_LO :
+                         pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_HI;
+    const bool okSafety = pm_data.okSafety ?
+                          pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_LO :
+                          pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_HI && resetFaults;
+    const bool overvoltage = pm_data.glv_voltage > BATTERY_OVERVOLTAGE;
 
     pm_data.lowBattery = lowBattery;
     pm_data.charged = charged;
