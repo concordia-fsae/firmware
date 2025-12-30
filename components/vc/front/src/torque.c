@@ -19,7 +19,7 @@
 #include "MessageUnpack_generated.h"
 #include "drv_timer.h"
 #include "lib_rateLimit.h"
-#include "pid.h"
+#include "lib_pid.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -43,12 +43,12 @@
 #define LC_THROTTLE_THRESHOLD 0.50
 #define LC_THROTTLE_START_CUTOFF 0.10
 
-#define TC_MAX 0.9f
+#define TC_MAX 0.7f
 #define TC_MIN 0.0f
 #define TC_TARGET_SLIP 0.10f
-#define TC_KP 0.4f
-#define TC_KI 0.00065f
-#define TC_ILIM 0.4f
+#define TC_KP 0.325f
+#define TC_KI 0.44f
+#define TC_ILIM 0.55f
 #define TC_AXLE_THRESHOLD_RPM 60 // Roughly a 0.5m/s vehicle speed
 
 #define PEDAL_SLEEP_THRESHOLD 0.02f
@@ -81,10 +81,11 @@ static struct
     torque_launchControlState_E launchControlState;
     torque_tractionControlState_E tractionControlState;
 
+    uint32_t  lastTimeampMS;
     float32_t slipRear;
     float32_t torqueCorrection;
     float32_t torqueReduction;
-    epid_t tractionControlPID;
+    lib_pid_S tractionControlPID;
 } torque_data;
 
 /******************************************************************************
@@ -253,13 +254,13 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 #endif
 }
 
-static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip)
+static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
 {
-    epid_pi_calc(&torque_data.tractionControlPID, target_slip, actual_slip);
-    epid_util_ilim(&torque_data.tractionControlPID, 0.0f, TC_ILIM);
-    epid_pi_sum(&torque_data.tractionControlPID, TC_MIN, TC_MAX);
+    lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
+    lib_pid_util_ilim(&torque_data.tractionControlPID, 0.0f, TC_ILIM);
+    lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_MAX);
 
-    return torque_data.tractionControlPID.y_out;
+    return torque_data.tractionControlPID.y;
 }
 
 static float32_t evaluate_traction_control(void)
@@ -267,6 +268,10 @@ static float32_t evaluate_traction_control(void)
     uint16_t rear_axle_rpm = 0;
     uint16_t front_axle_rpm = wheelSpeed_getAxleRPM(AXLE_FRONT);
     bool speed_valid = CANRX_get_signal(VEH, VCREAR_axleSpeedRear, &rear_axle_rpm) != CANRX_MESSAGE_SNA;
+
+    const uint32_t timestamp = HW_TIM_getTimeMS();
+    const float32_t dt = ((float32_t)(timestamp - torque_data.lastTimeampMS)) / 1000.0f;
+    torque_data.lastTimeampMS = timestamp;
 
     float32_t slip = (float32_t)(rear_axle_rpm - front_axle_rpm) / (float32_t)front_axle_rpm;
     float32_t multiplier = 0.0f;
@@ -307,12 +312,11 @@ static float32_t evaluate_traction_control(void)
 
     if (torque_data.tractionControlState == TC_STATE_ACTIVE)
     {
-        multiplier = calc_traction_control_reduction(TC_TARGET_SLIP, slip);
+        multiplier = calc_traction_control_reduction(TC_TARGET_SLIP, slip, dt);
     }
     else
     {
-        epid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, 0.0f,
-                  TC_KP, TC_KI, 0.0f);
+        lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, 0.0f);
     }
 
     torque_data.slipRear = slip;
@@ -591,8 +595,7 @@ static void torque_init(void)
     torque_data.torqueRateLimit.y_n          = 0.0f;
     torque_data.torqueRateLimit.maxStepDelta = MAX_TORQUE_NM_PER_S / 100;
 
-    epid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, 0.0f,
-              TC_KP, TC_KI, 0.0f);
+    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, 0.0f);
 }
 
 static void torque_periodic_100Hz(void)
