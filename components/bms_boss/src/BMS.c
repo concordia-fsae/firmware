@@ -38,6 +38,8 @@ static void BMS_init(void)
     drv_timer_init(&precharge_timer);
     BMS.counted_coulombs.last_step_us = HW_TIM_getBaseTick();
     BMS.counted_coulombs.reset = true;
+
+    lib_simpleFilter_lpf_calcSmoothingFactor(&BMS.lpfCurrent, 10.0f, 0.001f);
 }
 
 static void BMS10Hz_PRD(void)
@@ -167,7 +169,10 @@ static void BMS1kHz_PRD(void)
     const uint64_t this_step = HW_TIM_getBaseTick();
     const uint32_t delta_t = (uint32_t)(this_step - BMS.counted_coulombs.last_step_us);
 
-    BMS.pack_current = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
+    float32_t tmpCurrent =  (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
+    BMS.packCurrentRaw = tmpCurrent;
+    tmpCurrent = lib_simpleFilter_lpf_step(&BMS.lpfCurrent, tmpCurrent);
+    BMS.pack_current = tmpCurrent;
     BMS.pack_voltage_measured = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK);
     BMS.pack_voltage_sense_fault = drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_VPACK_DIAG) == DRV_IO_ACTIVE;
 

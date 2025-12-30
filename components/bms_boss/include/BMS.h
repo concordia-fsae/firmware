@@ -8,6 +8,7 @@
 #include "stdbool.h"
 #include "stdint.h"
 #include "lib_nvm.h"
+#include "lib_simpleFilter.h"
 
 #include "FloatTypes.h"
 
@@ -47,6 +48,7 @@ typedef struct {
     float32_t pack_voltage_calculated;
     float32_t pack_voltage_measured;
     float32_t pack_current;
+    float32_t packCurrentRaw;
     float32_t max_temp; // [deg C] precision 1degC
     struct
     {
@@ -59,6 +61,8 @@ typedef struct {
         float32_t max; // [V] precision 1mv
         float32_t min; // [V] precision 1mv
     } voltages;
+
+    lib_simpleFilter_lpf_S lpfCurrent;
 } BMSB_S;
 
 typedef struct
