@@ -285,7 +285,7 @@ static void update_page_nav(const bool pg_next, const bool pg_prev,
     }
 }
 
-static void driverInput_10Hz(void)
+static void driverInput_100Hz(void)
 {
     // Pressed levels
     const bool pg_next = drv_userInput_buttonPressed(BUTTON_PAGE_NEXT);
@@ -334,7 +334,7 @@ static void driverInput_10Hz(void)
 
 const ModuleDesc_S driverInput_desc = {
     .moduleInit = &driverInput_init,
-    .periodic10Hz_CLK = &driverInput_10Hz,
+    .periodic100Hz_CLK = &driverInput_100Hz,
 };
 
 /******************************************************************************
