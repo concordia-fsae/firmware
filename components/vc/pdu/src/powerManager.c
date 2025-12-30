@@ -166,8 +166,7 @@ static void powerManager_periodic_100Hz(void)
         {
             // Handle specific HSDs by sleep state
             const bool requiredLoad = (((i == DRV_TPS2HB16AB_IC_VC1_VC2) && (n == DRV_TPS2HB16AB_OUT_1)) ||
-                                       (i == DRV_TPS2HB16AB_IC_VCU1_VCU2) ||
-                                       ((i == DRV_TPS2HB16AB_IC_HVE_COCKPIT) && (n == DRV_TPS2HB16AB_OUT_2)));
+                                       (i == DRV_TPS2HB16AB_IC_VCU1_VCU2));
             const bool enableLoad = pm_data.okLoads || (requiredLoad && pm_data.okBattery);
 
             drv_hsd_state_E state = drv_tps2hb16ab_getState(i, n);
