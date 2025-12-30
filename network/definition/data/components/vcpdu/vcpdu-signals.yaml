@@ -1,4 +1,24 @@
 signals:
+  overvoltage:
+    description: Overvoltage fault
+    discreteValues: faultStatus
+
+  lowVoltage:
+    description: Low voltage fault
+    discreteValues: faultStatus
+
+  batteryNOK:
+    description: Undervoltage fault
+    discreteValues: faultStatus
+
+  loadsNOK:
+    description: Brownout fault
+    discreteValues: faultStatus
+
+  safetyNOK:
+    description: Safety circuit brownout fault
+    discreteValues: faultStatus
+
   vehicleState:
     description: "Current state of the vehicle"
     discreteValues: vehicleState
