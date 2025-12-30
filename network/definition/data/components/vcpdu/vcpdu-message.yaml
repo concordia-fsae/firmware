@@ -1,4 +1,17 @@
 messages:
+  faults:
+    description: VCPDU Faults
+    cycleTimeMs: 1000
+    id: 0x3a1
+    sourceBuses: veh
+    messageType: faults
+    signals:
+      overvoltage:
+      lowVoltage:
+      batteryNOK:
+      loadsNOK:
+      safetyNOK:
+
   udsResponse:
     description: UDS response message from the VCPDU
     id: 0x672

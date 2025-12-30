@@ -23,6 +23,7 @@
 #include "drv_tps2hb16ab.h"
 #include "powerManager.h"
 #include "Module.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -34,6 +35,8 @@
 
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+
+#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
 
 #define set_vehicleState(m,b,n,s) set(m,b,n,s, app_vehicleState_getStateCAN())
 #define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())

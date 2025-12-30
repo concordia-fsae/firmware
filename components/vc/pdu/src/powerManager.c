@@ -17,6 +17,7 @@
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "app_vehicleState.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -67,6 +68,7 @@ static struct
     bool charged:1;
     bool sleeping:1;
     bool lowBattery:1;
+    bool overvoltage:1;
 } pm_data;
 
 /******************************************************************************
@@ -83,26 +85,35 @@ static void getInputs(void)
 
 static void evalAbilities(void)
 {
+    const bool resetFaults = app_vehicleState_getFaultReset();
     const bool lowBattery = pm_data.glv_voltage < BATTERY_RECHARGED;
     const bool charged = pm_data.charged ?
                          pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO :
-                         pm_data.glv_voltage > BATTERY_RECHARGED;
+                         pm_data.glv_voltage > BATTERY_RECHARGED && resetFaults;
     bool okBattery = pm_data.okBattery ?
                      pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO :
-                     pm_data.glv_voltage > BATTERY_CUTOFF_ANY_HI;
+                     pm_data.glv_voltage > BATTERY_CUTOFF_ANY_HI && resetFaults;
     bool okLoads = pm_data.okLoads ?
                    pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_LO :
-                   pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_HI;
+                   pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_HI && resetFaults;
     bool okSafety = pm_data.okSafety ?
                     pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_LO :
-                    pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_HI;
-    bool overvoltage = pm_data.glv_voltage > BATTERY_OVERVOLTAGE;
+                    pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_HI && resetFaults;
+    bool overvoltage = pm_data.overvoltage ?
+                       pm_data.glv_voltage > BATTERY_OVERVOLTAGE :
+                       pm_data.glv_voltage > BATTERY_OVERVOLTAGE && resetFaults;
 
     pm_data.lowBattery = lowBattery;
     pm_data.charged = charged;
     pm_data.okBattery = okBattery && !overvoltage;
     pm_data.okLoads = okLoads && !pm_data.sleeping && !overvoltage && charged;
     pm_data.okSafety = okSafety && !pm_data.sleeping && !overvoltage && charged;
+
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_LOWVOLTAGE, lowBattery);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_OVERVOLTAGE, overvoltage);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_BATTERYNOK, !okBattery);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_LOADSNOK, !okLoads);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_SAFETYNOK, !okSafety);
 }
 
 /******************************************************************************
