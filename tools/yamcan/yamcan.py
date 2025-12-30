@@ -932,29 +932,101 @@ def calculate_bus_load(bus, output_dir):
 
 
 def generate_manifest(bus: str, manifest: str, filters: list[str], ignore_nodes: list[str]):
-    nodes = {}
+    nodes: dict[str, dict[str, int]] = {}
 
-    for node, node_def in can_nodes.items():
-        if node in ignore_nodes:
+    # ---- preprocess filters ----
+    # specific: "node:filter" or "node:filter=alt"
+    # general:  "filter" or "filter=alt"
+    specific: dict[str, list[tuple[str, str | None]]] = {}
+    general: list[tuple[str, str | None]] = []
+
+    def parse(tok: str) -> tuple[str | None, str, str | None]:
+        node = None
+        filt = tok
+        if ":" in tok:
+            node, filt = tok.split(":", 1)
+        alt = None
+        if "=" in filt:
+            filt, alt = filt.split("=", 1)
+        return node, filt, alt
+
+    for tok in filters:
+        node, filt, alt = parse(tok)
+        if node is None:
+            general.append((filt, alt))
+        else:
+            specific.setdefault(node, []).append((filt, alt))
+
+    def add_mapping(node_alias: str, filt: str, out_name: str, msg_id: int):
+        if node_alias not in nodes:
+            nodes[node_alias] = {}
+
+        # Ignore exact duplicate inserts (can happen when same filter is applied twice)
+        if out_name in nodes[node_alias]:
+            if nodes[node_alias][out_name] == msg_id:
+                return
+
+            print(f"Signal filter '{filt}' has multiple matches in node '{node_alias}'.")
+            print("Consider using a 'node:filter=alt' format.")
+            exit(1)
+
+        nodes[node_alias][out_name] = msg_id
+
+    def apply_filter_list(
+        node_alias: str,
+        messages: dict[str, object],
+        flist: list[tuple[str, str | None]],
+        *,
+        fatal_on_ambiguous: bool,
+    ):
+        # Apply per-filter so ambiguity can be resolved correctly
+        for filt, alt in flist:
+            matches = [(msg, defs) for msg, defs in messages.items() if filt in msg]
+            if not matches:
+                continue
+
+            if len(matches) == 1:
+                chosen_msg, chosen_defs = matches[0]
+            else:
+                # Prefer exact match when multiple substring matches exist
+                exact = [(msg, defs) for msg, defs in matches if msg == filt]
+                if len(exact) == 1:
+                    chosen_msg, chosen_defs = exact[0]
+                else:
+                    if fatal_on_ambiguous:
+                        print(f"Signal filter '{filt}' has multiple matches in node '{node_alias}'.")
+                        print("Consider using a 'node:filter=alt' format.")
+                        exit(1)
+                    # Generic filter is ambiguous for this node: skip it.
+                    continue
+
+            out_name = alt or filt
+            add_mapping(node_alias, filt, out_name, chosen_defs.id)
+
+    # ---- build manifest ----
+    for can_node_name, node_def in can_nodes.items():
+        if can_node_name in ignore_nodes:
             continue
-        for message, defs in { **node_def.messages, **node_def.received_msgs }.items():
-            for filter in filters:
-                alt = None
-                if '=' in filter:
-                    alt = filter.split('=')[1]
-                    filter = filter.split('=')[0]
-                if filter in message:
-                    node = node_def.alias
-                    if node not in nodes:
-                        nodes[node] = {}
 
-                    if nodes[node]:
-                        nodes[node][alt or filter] = defs.id
-                    else:
-                        nodes[node] = { alt or filter: defs.id }
+        node_alias = node_def.alias
+        messages = {**node_def.messages, **node_def.received_msgs}
 
-    with open(manifest, 'w') as fd:
-        yaml.dump({ "nodes": nodes }, fd, default_flow_style=False)
+        # Collect node-specific filters (avoid double-adding when name == alias)
+        spec_list: list[tuple[str, str | None]] = []
+        spec_list.extend(specific.get(can_node_name, []))
+        if node_alias != can_node_name:
+            spec_list.extend(specific.get(node_alias, []))
+
+        # Apply node-specific filters first (fatal if ambiguous)
+        if spec_list:
+            apply_filter_list(node_alias, messages, spec_list, fatal_on_ambiguous=True)
+
+        # Apply general filters (non-fatal if ambiguous)
+        apply_filter_list(node_alias, messages, general, fatal_on_ambiguous=False)
+
+    with open(manifest, "w") as fd:
+        yaml.dump({"nodes": nodes}, fd, default_flow_style=False)
+
 
 def main():
     """Main function"""

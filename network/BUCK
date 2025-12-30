@@ -27,7 +27,14 @@ generate_stats(
 generate_manifest(
     name = "manifest-uds",
     dep = ":network",
-    filters = ["UdsRequest=request_id", "udsResponse=response_id"],
+    filters = [
+        #node specific filters
+        "vcrear:vcrearUdsRequest=request_id",
+        "vcpdu:vcpduUdsRequest=request_id",
+        # generic filters
+        "UdsRequest=request_id",
+        "udsResponse=response_id"
+    ],
     ignore_nodes = ["udsClient"],
     visibility = ["PUBLIC"],
 )
