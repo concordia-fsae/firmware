@@ -244,10 +244,10 @@ void app_vehicleState_run100Hz(void)
         {
             vehicleState_data.state = VEHICLESTATE_SLEEP;
         }
-        else
-        {
-            app_vehicleState_init();
-        }
+    }
+    else if (app_vehicleState_sleeping())
+    {
+        app_vehicleState_init();
     }
 #endif // FDEFS_MODE_LEADER
 }
