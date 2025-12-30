@@ -5,3 +5,4 @@ messages:
 signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:
+  VCPDU_safetyReset:

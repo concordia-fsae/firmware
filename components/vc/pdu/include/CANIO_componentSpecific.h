@@ -91,9 +91,7 @@
                                                  CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 #define set_bmsSafetyReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_RESET) == DRV_IO_ACTIVE) ? \
                                                  CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
-#define set_safetyReset(m,b,n,s) set(m,b,n,s, ((drv_inputAD_getDigitalActiveState(DRV_INPUTAD_VCU_SFTY_RESET) == DRV_IO_ACTIVE) && \
-                                               (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_RESET) == DRV_IO_ACTIVE)) ? \
-                                               CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_safetyReset(m,b,n,s) set(m,b,n,s,  app_vehicleState_getFaultReset() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_bmsbSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_SAFETY_EN) == DRV_IO_ACTIVE) ? \
                                                     CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
 #define set_imdSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_IMD_SAFETY_EN) == DRV_IO_ACTIVE) ? \
