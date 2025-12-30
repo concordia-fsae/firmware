@@ -88,6 +88,54 @@ static CAN_sleepFollowerState_E translateToCANSleepableState(app_vehicleState_sl
     return ret;
 }
 
+static void eval_sleep(void)
+{
+    const bool sleepExpired = drv_timer_getState(&vehicleState_data.sleepTimeout) == DRV_TIMER_EXPIRED;
+    vehicleState_data.sleepState = sleepExpired ? SLEEPABLE_OK : SLEEPABLE_NOK;
+
+#if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
+    CAN_sleepFollowerState_E swsSleepable = CAN_SLEEPFOLLOWERSTATE_SNA;
+    CAN_sleepFollowerState_E vcfrontSleepable = CAN_SLEEPFOLLOWERSTATE_SNA;
+    const bool canSleepSWS = (CANRX_get_signal(VEH, SWS_sleepable, &swsSleepable) == CANRX_MESSAGE_VALID) &&
+                             (swsSleepable == CAN_SLEEPFOLLOWERSTATE_OK_TO_SLEEP);
+    const bool canSleepVCFRONT = (CANRX_get_signal(VEH, VCFRONT_sleepable, &vcfrontSleepable) == CANRX_MESSAGE_VALID) &&
+                                 (vcfrontSleepable == CAN_SLEEPFOLLOWERSTATE_OK_TO_SLEEP);
+
+    CANRX_MESSAGE_health_E (*uds_clients[])(void) = {
+        CANRX_validate_func(VEH, UDSCLIENT_bmsbUdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsbUdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsw0UdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsw1UdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsw2UdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsw3UdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsw4UdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_bmsw5UdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_vcfrontUdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_vcrearUdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_swsUdsRequest),
+        CANRX_validate_func(VEH, UDSCLIENT_vcpduUdsRequest),
+    };
+    bool canSleepUDS = true;
+
+    for (uint8_t i = 0; (i < COUNTOF(uds_clients)) && canSleepUDS; i++)
+    {
+        if (uds_clients[i]() == CANRX_MESSAGE_VALID)
+        {
+            canSleepUDS = false;
+        }
+    }
+
+    if (sleepExpired && canSleepSWS && canSleepVCFRONT && canSleepUDS)
+    {
+        vehicleState_data.state = VEHICLESTATE_SLEEP;
+    }
+    else if (app_vehicleState_sleeping())
+    {
+        app_vehicleState_init();
+    }
+#endif // FDEFS_MODE_LEADER
+}
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -203,53 +251,7 @@ void app_vehicleState_run100Hz(void)
     }
 #endif // !FDEFS_MODE_LEADER
 
-    const bool sleepExpired = drv_timer_getState(&vehicleState_data.sleepTimeout) == DRV_TIMER_EXPIRED;
-    vehicleState_data.sleepState = sleepExpired ? SLEEPABLE_OK : SLEEPABLE_NOK;
-
-#if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
-    if (sleepExpired)
-    {
-        CAN_sleepFollowerState_E swsSleepable = CAN_SLEEPFOLLOWERSTATE_SNA;
-        CAN_sleepFollowerState_E vcfrontSleepable = CAN_SLEEPFOLLOWERSTATE_SNA;
-        const bool canSleepSWS = (CANRX_get_signal(VEH, SWS_sleepable, &swsSleepable) == CANRX_MESSAGE_VALID) &&
-                                 (swsSleepable == CAN_SLEEPFOLLOWERSTATE_OK_TO_SLEEP);
-        const bool canSleepVCFRONT = (CANRX_get_signal(VEH, VCFRONT_sleepable, &vcfrontSleepable) == CANRX_MESSAGE_VALID) &&
-                                     (vcfrontSleepable == CAN_SLEEPFOLLOWERSTATE_OK_TO_SLEEP);
-        bool canSleepUDS = true;
-
-        CANRX_MESSAGE_health_E (*uds_clients[])(void) = {
-            CANRX_validate_func(VEH, UDSCLIENT_bmsbUdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsbUdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsw0UdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsw1UdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsw2UdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsw3UdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsw4UdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_bmsw5UdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_vcfrontUdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_vcrearUdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_swsUdsRequest),
-            CANRX_validate_func(VEH, UDSCLIENT_vcpduUdsRequest),
-        };
-
-        for (uint8_t i = 0; (i < COUNTOF(uds_clients)) && canSleepUDS; i++)
-        {
-            if (uds_clients[i]() == CANRX_MESSAGE_VALID)
-            {
-                canSleepUDS = false;
-            }
-        }
-
-        if (canSleepSWS && canSleepVCFRONT && canSleepUDS)
-        {
-            vehicleState_data.state = VEHICLESTATE_SLEEP;
-        }
-    }
-    else if (app_vehicleState_sleeping())
-    {
-        app_vehicleState_init();
-    }
-#endif // FDEFS_MODE_LEADER
+    eval_sleep();
 }
 
 /**
