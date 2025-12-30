@@ -9,10 +9,12 @@
 <%
   faults_sent = []
   faults_received = {}
+  has_faults = False
 
   for node in nodes:
     for message in node.messages.values():
       if message.fault_message and not message.from_bridge:
+        has_faults = True
         for signal, data in message.signal_objs.items():
           faults_sent.append((signal, data.start_bit))
     for message, mdata in node.received_msgs.items():
@@ -46,7 +48,7 @@ typedef enum
     CANRX_MESSAGE_VALID,
     CANRX_MESSAGE_MIA,
 } CANRX_MESSAGE_health_E;
-%if len(faults_sent) > 0:
+%if has_faults:
 
 typedef enum
 {
