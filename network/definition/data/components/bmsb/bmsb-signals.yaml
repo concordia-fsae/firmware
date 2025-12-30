@@ -293,7 +293,7 @@ signals:
     unit: 'Ah'
     description: Current Amp hours stored in Tractive System Battery
     nativeRepresentation:
-    resolution: 0.025
+      resolution: 0.025
       bitWidth: 10
       range:
         min: 0
