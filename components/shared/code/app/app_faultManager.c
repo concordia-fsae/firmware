@@ -45,7 +45,7 @@ void app_faultManager_setFaultState(FM_fault_E fault, bool faulted)
     const uint32_t bit = 1 << (fault % 32U);
     fm_data.faultBits[fault / 32U] = faulted ? fm_data.faultBits[fault / 32U] | bit :
                                                fm_data.faultBits[fault / 32U] & ~bit;
-    fm_data.waiting[fault / 32U] |= bit;
+    fm_data.waiting[fault / 32U] |= faulted ? bit : 0U;
 }
 
 bool app_faultManager_getFaultState(FM_fault_E fault)
