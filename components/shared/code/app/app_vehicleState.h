@@ -101,6 +101,7 @@ void app_vehicleState_run100Hz(void);
 void app_vehicleState_delaySleep(uint32_t ms);
 // Accessors
 bool                     app_vehicleState_sleeping(void);
+bool                     app_vehicleState_getFaultReset(void);
 app_vehicleState_state_E app_vehicleState_getState(void);
 CAN_sleepFollowerState_E app_vehicleState_getSleepableStateCAN(void);
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER

@@ -32,6 +32,8 @@ struct
 
     drv_timer_S                  sleepTimeout;
     app_vehicleState_sleepable_E sleepState;
+
+    bool faultReset;
 } vehicleState_data;
 
 /******************************************************************************
@@ -215,13 +217,23 @@ void app_vehicleState_run100Hz(void)
         app_vehicleState_delaySleep(BOOT_SLEEP_DISABLE_MS);
     }
 #else // FDEFS_MODE_LEADER
-    CAN_vehicleState_E state = translateToCANState(vehicleState_data.state);
+    CAN_vehicleState_E vehicleState = translateToCANState(vehicleState_data.state);
+    CAN_digitalStatus_E resetState = CAN_DIGITALSTATUS_SNA;
 
-    if (VEHICLESTATE_CANRX_SIGNAL(&state) == CANRX_MESSAGE_VALID)
+    if (VEHICLESTATE_CANRX_RESET_SWITCH(&resetState) == CANRX_MESSAGE_VALID)
+    {
+        vehicleState_data.faultReset = resetState == CAN_DIGITALSTATUS_ON;
+    }
+    else
+    {
+        vehicleState_data.faultReset = false;
+    }
+
+    if (VEHICLESTATE_CANRX_SIGNAL(&vehicleState) == CANRX_MESSAGE_VALID)
     {
         drv_timer_stop(&vehicleState_data.bootTimer);
 
-        switch (state)
+        switch (vehicleState)
         {
             case CAN_VEHICLESTATE_INIT:
                 vehicleState_data.state = VEHICLESTATE_INIT;
@@ -291,6 +303,16 @@ bool app_vehicleState_sleeping(void)
 CAN_sleepFollowerState_E app_vehicleState_getSleepableStateCAN(void)
 {
     return translateToCANSleepableState(vehicleState_data.sleepState);
+}
+
+bool app_vehicleState_getFaultReset(void)
+{
+#if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
+    return ((drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RESET_REMOTE) == DRV_IO_ACTIVE) && 
+            (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RESET_LOCAL) == DRV_IO_ACTIVE));
+#else
+    return vehicleState_data.faultReset;
+#endif
 }
 
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER

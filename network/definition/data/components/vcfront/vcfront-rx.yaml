@@ -17,3 +17,5 @@ signals:
     sourceBuses: veh
   VCREAR_wheelSpeedRR:
     sourceBuses: veh
+  VCPDU_safetyReset:
+    sourceBuses: veh

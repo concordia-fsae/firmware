@@ -52,3 +52,5 @@ signals:
     sourceBuses: veh
   VCFRONT_wheelSpeedFR:
     sourceBuses: veh
+  VCPDU_safetyReset:
+    sourceBuses: veh
