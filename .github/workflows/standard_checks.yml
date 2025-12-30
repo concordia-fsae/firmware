@@ -24,6 +24,25 @@ jobs:
         with:
           name: dbc
           path: dbc/
+  generate-manifest-uds:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Buck2
+        uses: dtolnay/install-buck2@latest
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Build Stack
+        run: buck2 build //network:manifest-uds --out manifest-uds.yaml
+      - name: Archive Artifacts
+        id: archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-uds.yaml
+          path: manifest-uds.yaml
   cfr-firmware:
     strategy:
       fail-fast: false
