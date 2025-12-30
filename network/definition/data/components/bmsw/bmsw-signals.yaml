@@ -37,6 +37,7 @@ signals:
     unit: degC
     nativeRepresentation:
       bitWidth: 7
+      resolution: 1
       range:
         min: 0
         max: 127
