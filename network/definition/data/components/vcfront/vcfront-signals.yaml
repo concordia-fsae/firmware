@@ -86,6 +86,7 @@ signals:
     unit: Nm
     nativeRepresentation:
       bitWidth: 7
+      resolution: 1
       range:
         min: 0
         max: 150
@@ -95,6 +96,7 @@ signals:
     description: Driver raw torque request
     unit: Nm
     nativeRepresentation:
+      resolution: 1
       bitWidth: 7
       range:
         min: 0
