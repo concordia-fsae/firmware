@@ -331,7 +331,7 @@ cxx_binary(
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",
             "//components/shared/code:libs/LIB_app.c",
-            "//components/shared/code:libs/LIB_simpleFilter.c",
+            "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
             "//components/vc/shared:wheelSpeed/wheelSpeed.c",

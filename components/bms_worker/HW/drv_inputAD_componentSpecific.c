@@ -24,7 +24,7 @@
 
 /**< Other Includes */
 #include "ModuleDesc.h"
-#include "LIB_simpleFilter.h"
+#include "lib_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S

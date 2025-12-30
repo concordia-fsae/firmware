@@ -13,7 +13,7 @@
 // System Includes
 #include "HW.h"
 #include "string.h"
-#include "LIB_simpleFilter.h"
+#include "lib_simpleFilter.h"
 
 _Static_assert(HW_ADC_BUF_LEN % ADC_BANK1_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((HW_ADC_BUF_LEN / 2) % ADC_BANK1_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
@@ -27,8 +27,8 @@ _Static_assert((HW_ADC_BUF_LEN / 2) % ADC_BANK2_CHANNEL_COUNT == 0, "ADC Buffer 
 typedef struct
 {
     uint32_t           adcBuffer[HW_ADC_BUF_LEN];
-    LIB_simpleFilter_S adcData_bank1[ADC_BANK1_CHANNEL_COUNT];
-    LIB_simpleFilter_S adcData_bank2[ADC_BANK2_CHANNEL_COUNT];
+    lib_simpleFilter_cumAvg_S adcData_bank1[ADC_BANK1_CHANNEL_COUNT];
+    lib_simpleFilter_cumAvg_S adcData_bank2[ADC_BANK2_CHANNEL_COUNT];
     float32_t          voltages1[ADC_BANK1_CHANNEL_COUNT];
     float32_t          voltages2[ADC_BANK2_CHANNEL_COUNT];
 } inputs_S;
@@ -110,27 +110,27 @@ void HW_ADC_unpackADCBuffer(void)
 {
     for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        LIB_simpleFilter_clear(&inputs.adcData_bank1[i]);
+        lib_simpleFilter_cumAvg_clear(&inputs.adcData_bank1[i]);
     }
     for (uint8_t i = 0; i < ADC_BANK2_CHANNEL_COUNT; i++)
     {
-        LIB_simpleFilter_clear(&inputs.adcData_bank2[i]);
+        lib_simpleFilter_cumAvg_clear(&inputs.adcData_bank2[i]);
     }
 
     for (uint16_t i = 0; i < HW_ADC_BUF_LEN; i++)
     {
-        LIB_simpleFilter_increment(&inputs.adcData_bank1[i % ADC_BANK1_CHANNEL_COUNT], (inputs.adcBuffer[i] & 0xffff));
-        LIB_simpleFilter_increment(&inputs.adcData_bank2[i % ADC_BANK2_CHANNEL_COUNT], (inputs.adcBuffer[i] >> 16U));
+        lib_simpleFilter_cumAvg_increment(&inputs.adcData_bank1[i % ADC_BANK1_CHANNEL_COUNT], (inputs.adcBuffer[i] & 0xffff));
+        lib_simpleFilter_cumAvg_increment(&inputs.adcData_bank2[i % ADC_BANK2_CHANNEL_COUNT], (inputs.adcBuffer[i] >> 16U));
     }
 
     for (uint8_t i = 0; i < ADC_BANK1_CHANNEL_COUNT; i++)
     {
-        LIB_simpleFilter_average(&inputs.adcData_bank1[i]);
+        lib_simpleFilter_cumAvg_average(&inputs.adcData_bank1[i]);
         inputs.voltages1[i] = HW_ADC_private_getVFromCount((uint16_t)inputs.adcData_bank1[i].value);
     }
     for (uint8_t i = 0; i < ADC_BANK2_CHANNEL_COUNT; i++)
     {
-        LIB_simpleFilter_average(&inputs.adcData_bank2[i]);
+        lib_simpleFilter_cumAvg_average(&inputs.adcData_bank2[i]);
         inputs.voltages2[i] = HW_ADC_private_getVFromCount((uint16_t)inputs.adcData_bank2[i].value);
     }
 }

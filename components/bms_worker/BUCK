@@ -394,7 +394,7 @@ cxx_binary(
             "//components/shared/code:app/CAN/CANIO-tx.c",
             "//components/shared/code:app/app_cooling.c",
             "//components/shared/code:libs/LIB_app.c",
-            "//components/shared/code:libs/LIB_simpleFilter.c",
+            "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/shared/code:libs/lib_thermistors.c",
             "//embedded/libs/cells:P42A.c",
