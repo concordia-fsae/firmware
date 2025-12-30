@@ -37,3 +37,6 @@ typedef struct
 void      lib_simpleFilter_cumAvg_clear(lib_simpleFilter_cumAvg_S* filter);
 void      lib_simpleFilter_cumAvg_increment(lib_simpleFilter_cumAvg_S* filter, uint32_t sum);
 float32_t lib_simpleFilter_cumAvg_average(lib_simpleFilter_cumAvg_S* filter);
+
+void      lib_simpleFilter_lpf_calcSmoothingFactor(lib_simpleFilter_lpf_S* filter, float32_t cutoffFreq, float32_t dt);
+float32_t lib_simpleFilter_lpf_step(lib_simpleFilter_lpf_S* filter, float32_t x_n);
