@@ -329,7 +329,7 @@ cxx_binary(
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",
             "//components/shared/code:libs/LIB_app.c",
-            "//components/shared/code:libs/LIB_simpleFilter.c",
+            "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
