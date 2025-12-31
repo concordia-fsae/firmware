@@ -49,6 +49,7 @@ typedef struct {
     float32_t pack_voltage_measured;
     float32_t pack_current;
     float32_t packCurrentRaw;
+    float32_t packPowerKW;
     float32_t max_temp; // [deg C] precision 1degC
     struct
     {

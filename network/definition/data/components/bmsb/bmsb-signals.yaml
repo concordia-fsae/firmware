@@ -315,3 +315,16 @@ signals:
         min: 0
         max: 25
     continuous: true
+
+  packPower:
+    unit: 'kW'
+    description: Pack power
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 11
+      resolution: 0.1
+      range:
+        min: -100
+        max: 40
+      signedness: unsigned
+    continuous: true

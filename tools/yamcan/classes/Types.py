@@ -104,6 +104,7 @@ class Units(Enum):
     mps = "m/s"
     bytes = "B"
     Whr = "Whr"
+    kW = "kW"
 
 
 class ValidationRole(Enum):

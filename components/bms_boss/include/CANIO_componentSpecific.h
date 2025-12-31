@@ -55,6 +55,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packCycleCountedCoulombs(m, b, n, s)    set(m, b, n, s, BMS.counted_coulombs.amp_hr)
 #define set_packAmpHours(m, b, n, s)                set(m, b, n, s, current_data.pack_amp_hours)
 #define set_packCurrent(m, b, n, s)                 set(m, b, n, s, BMS.pack_current)
+#define set_packPower(m, b, n, s)                   set(m, b, n, s, BMS.packPowerKW)
 #define set_packContactorState(m, b, n, s)          set(m, b, n, s, CANIO_tx_getContactorState())
 #define set_nlg513ControlByte(m, b, n, s)           set(m, b, n, s, CANIO_tx_getNLG513ControlByte())
 #define set_nlg513MaxMainsCurrent(m, b, n, s)       set(m, b, n, s, 16.0f)
