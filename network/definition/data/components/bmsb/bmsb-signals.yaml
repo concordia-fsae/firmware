@@ -118,8 +118,8 @@ signals:
       bitWidth: 15
       resolution: 0.1
       range:
-        min: -100
-        max: 400
+        min: -400
+        max: 100
     continuous: true
 
   packContactorState:
