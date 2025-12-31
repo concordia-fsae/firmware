@@ -92,6 +92,17 @@ signals:
         max: 150
     continuous: true
 
+  preloadTorqueDebug:
+    description: Preload torque request
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 1
+      range:
+        min: 0
+        max: 100
+    continuous: true
+
   torqueDriverInput:
     description: Driver raw torque request
     unit: Nm

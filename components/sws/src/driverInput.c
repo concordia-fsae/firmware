@@ -6,7 +6,11 @@
  * -------------------------------------------------
  * Buttons:
  *   - LEFT_TOP  = PAGE_PREV  (previous page)
+ *     Note: this button changes when in launch control. In launch control,
+ *     it acts like the torque inc/dec buttons for preload torque
  *   - RIGHT_TOP = PAGE_NEXT  (next page)
+ *     Note: this button changes when in launch control. In launch control,
+ *     it acts like the torque inc/dec buttons for preload torque
  *   - LEFT_MID  = TORQUE_DEC
  *   - RIGHT_MID = TORQUE_INC
  *   - LEFT_BOT  = SLIP_DEC
@@ -258,30 +262,65 @@ static void update_combos(const bool pg_next, const bool pg_prev,
     data.launch_active = timer_state_launch == DRV_TIMER_EXPIRED;
 }
 
-static void update_page_nav(const bool pg_next, const bool pg_prev,
-                            const bool db_pg_next, const bool db_pg_prev)
+static bool getLaunchControlActive(void)
 {
-    // Only act when both buttons are stable (not in debounce)
-    if (!(db_pg_next || db_pg_prev) && (pg_next ^ pg_prev))
-    {
-        if (drv_timer_getState(&data.nav_timer) != DRV_TIMER_RUNNING)
-        {
-            // initial step immediately
-            if (pg_prev && data.page > 0)
-            {
-                data.page = (driverInput_page_E)(data.page - 1);
-            }
-            else if (pg_next && data.page < (driverInput_page_E)(DRIVERINPUT_PAGE_COUNT - 1))
-            {
-                data.page = (driverInput_page_E)(data.page + 1);
-            }
+    CAN_launchControlState_E launchControl = CAN_LAUNCHCONTROLSTATE_SNA;
+    const bool launchControlActive = (CANRX_get_signal(VEH, VCFRONT_launchControlState, &launchControl) != CANRX_MESSAGE_SNA) &&
+                                        ((launchControl == CAN_LAUNCHCONTROLSTATE_HOLDING) ||
+                                         (launchControl == CAN_LAUNCHCONTROLSTATE_SETTLING) ||
+                                         (launchControl == CAN_LAUNCHCONTROLSTATE_PRELOAD) ||
+                                         (launchControl == CAN_LAUNCHCONTROLSTATE_LAUNCH));
 
-            drv_timer_start(&data.nav_timer, NAV_DEBOUNCE_MS);
+    return launchControlActive;
+}
+
+static void update_page_nav(const bool pg_next, const bool pg_prev,
+                            const bool db_pg_next, const bool db_pg_prev,
+                            bool status[DRIVERINPUT_REQUEST_TORQUE_INC])
+{
+    const bool launchControlActive = getLaunchControlActive();
+
+    if (!launchControlActive)
+    {
+        // Only act when both buttons are stable (not in debounce)
+        if (!(db_pg_next || db_pg_prev) && (pg_next ^ pg_prev))
+        {
+            if (drv_timer_getState(&data.nav_timer) != DRV_TIMER_RUNNING)
+            {
+                // initial step immediately
+                if (pg_prev && data.page > 0)
+                {
+                    data.page = (driverInput_page_E)(data.page - 1);
+                }
+                else if (pg_next && data.page < (driverInput_page_E)(DRIVERINPUT_PAGE_COUNT - 1))
+                {
+                    data.page = (driverInput_page_E)(data.page + 1);
+                }
+
+                drv_timer_start(&data.nav_timer, NAV_DEBOUNCE_MS);
+            }
+        }
+        else
+        {
+            drv_timer_stop(&data.nav_timer);
         }
     }
     else
     {
-        drv_timer_stop(&data.nav_timer);
+        // Page buttons change preload torque when in launch
+        const bool axis_any_db = db_pg_next | db_pg_prev;
+
+        if (!axis_any_db && (pg_next ^ pg_prev))
+        {
+            if (pg_next && !pg_prev)
+            {
+                status[DRIVERINPUT_REQUEST_PRELOAD_TORQUE_INC] = true;
+            }
+            else if (pg_prev && !pg_next)
+            {
+                status[DRIVERINPUT_REQUEST_PRELOAD_TORQUE_DEC] = true;
+            }
+        }
     }
 }
 
@@ -308,12 +347,11 @@ static void driverInput_100Hz(void)
         app_vehicleState_delaySleep(SLEEP_TIMEOUT_MS);
     }
 
-
     bool status[DRIVERINPUT_REQUEST_COUNT] = { false };
 
     update_combos(pg_next, pg_prev, tq_inc, tq_dec, sl_inc, sl_dec,
                   db_pg_next, db_pg_prev, db_tq_inc, db_tq_dec, db_sl_inc, db_sl_dec);
-    update_page_nav(pg_next, pg_prev, db_pg_next, db_pg_prev);
+    update_page_nav(pg_next, pg_prev, db_pg_next, db_pg_prev, (bool*)&status);
     update_params(tq_inc, tq_dec, sl_inc, sl_dec,
                   db_tq_inc, db_tq_dec, db_sl_inc, db_sl_dec,
                   (bool*)&status);
@@ -349,15 +387,9 @@ bool driverInput_getDigital(driverInput_inputDigital_E input)
 CAN_screenPage_E driverInput_getScreenCAN(void)
 {
     CAN_screenPage_E page = CAN_SCREENPAGE_SNA;
+    const bool launchControlActive = getLaunchControlActive();
 
-    CAN_launchControlState_E launch_control = CAN_LAUNCHCONTROLSTATE_SNA;
-    const bool launch_control_active = (CANRX_get_signal(VEH, VCFRONT_launchControlState, &launch_control) != CANRX_MESSAGE_SNA) &&
-                                        ((launch_control == CAN_LAUNCHCONTROLSTATE_HOLDING) ||
-                                         (launch_control == CAN_LAUNCHCONTROLSTATE_SETTLING) ||
-                                         (launch_control == CAN_LAUNCHCONTROLSTATE_PRELOAD) ||
-                                         (launch_control == CAN_LAUNCHCONTROLSTATE_LAUNCH));
-
-    if (launch_control_active)
+    if (launchControlActive)
     {
         page = CAN_SCREENPAGE_LAUNCH;
     }

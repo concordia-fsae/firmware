@@ -70,6 +70,12 @@ signals:
   requestTorqueDec:
     description: Status of torque decrease request
     discreteValues: digitalStatus
+  requestPreloadTorqueInc:
+    description: Status of preload torque increase request
+    discreteValues: digitalStatus
+  requestPreloadTorqueDec:
+    description: Status of preload torque decrease request
+    discreteValues: digitalStatus
   requestLaunchControl:
     description: Status of launch control request
     discreteValues: digitalStatus

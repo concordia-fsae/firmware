@@ -33,11 +33,16 @@
 #define ABSOLUTE_MIN_TORQUE 0.0f
 #define MIN_TORQUE_RANGE    90.0f
 #define MAX_TORQUE_NM_PER_S 500
+#define MAX_LAUNCH_NM_PER_S 1000
+#define PRELOAD_NM_PER_S    100
 
 #define TORQUE_CHANGE_DELAY 250
 
+#define LC_PRELOAD_TORQUE_INIT 30
+#define LC_PRELOAD_TORQUE_MIN 10
+#define LC_PRELOAD_TORQUE_MAX 75
 #define LC_SETTLING_MS 500
-#define LC_REJECTED_MS 5000
+#define LC_REJECTED_MS 2000
 #define LC_BRAKE_THRESHOLD 0.30
 #define LC_BRAKE_THRESHOLD_LAUNCH 0.05
 #define LC_THROTTLE_THRESHOLD 0.50
@@ -67,9 +72,12 @@ static struct
     torque_gear_E          gear;
     torque_raceMode_E      race_mode;
     float32_t              torque;
+    float32_t              torquePreload;
     float32_t              torqueDriverInput;
     float32_t              torque_request_max;
     lib_rateLimit_linear_S torqueRateLimit;
+    lib_rateLimit_linear_S launchRateLimit;
+    lib_rateLimit_linear_S preloadRateLimit;
 
     bool gear_change_active;
     bool torque_control_request_active;
@@ -77,6 +85,7 @@ static struct
 
     drv_timer_S torque_change_timer;
     drv_timer_S launch_control_timer;
+    drv_timer_S preloadChangeTimer;
 
     torque_launchControlState_E launchControlState;
     torque_tractionControlState_E tractionControlState;
@@ -331,6 +340,35 @@ static void evaluate_sleepable(float32_t accelerator_position, float32_t brake_p
     }
 }
 
+static void evaluate_preload_torque(void)
+{
+    float32_t torque_request = torque_data.torquePreload;
+    CAN_digitalStatus_E torque_change_request = CAN_DIGITALSTATUS_SNA;
+    const bool torque_inc_active = (CANRX_get_signal(VEH, SWS_requestPreloadTorqueInc, &torque_change_request) != CANRX_MESSAGE_SNA) &&
+                                   (torque_change_request == CAN_DIGITALSTATUS_ON);
+    const bool torque_dec_active = (CANRX_get_signal(VEH, SWS_requestPreloadTorqueDec, &torque_change_request) != CANRX_MESSAGE_SNA) &&
+                                   (torque_change_request == CAN_DIGITALSTATUS_ON);
+
+    if (torque_inc_active ^ torque_dec_active)
+    {
+        const drv_timer_state_E timer_state = drv_timer_getState(&torque_data.preloadChangeTimer);
+        if (timer_state == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&torque_data.preloadChangeTimer, TORQUE_CHANGE_DELAY);
+            torque_request = torque_inc_active ? torque_request + 1 : torque_request - 1;
+        }
+        else if (timer_state == DRV_TIMER_EXPIRED)
+        {
+            drv_timer_stop(&torque_data.preloadChangeTimer);
+        }
+
+        torque_data.torquePreload = SATURATE(LC_PRELOAD_TORQUE_MIN, torque_request, LC_PRELOAD_TORQUE_MAX);
+    }
+    else
+    {
+        drv_timer_stop(&torque_data.preloadChangeTimer);
+    }
+}
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -404,6 +442,11 @@ float32_t torque_getSlipErrorD(void)
 float32_t torque_getTorqueReduction(void)
 {
     return torque_data.torqueReduction;
+}
+
+float32_t torque_getPreloadTorque(void)
+{
+    return torque_data.torquePreload;
 }
 
 /**
@@ -585,6 +628,7 @@ static void torque_init(void)
 
     drv_timer_init(&torque_data.torque_change_timer);
     drv_timer_init(&torque_data.launch_control_timer);
+    drv_timer_init(&torque_data.preloadChangeTimer);
 
     torque_data.state = TORQUE_INACTIVE;
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
@@ -594,6 +638,12 @@ static void torque_init(void)
 
     torque_data.torqueRateLimit.y_n          = 0.0f;
     torque_data.torqueRateLimit.maxStepDelta = MAX_TORQUE_NM_PER_S / 100;
+    torque_data.launchRateLimit.y_n          = 0.0f;
+    torque_data.launchRateLimit.maxStepDelta = MAX_LAUNCH_NM_PER_S / 100;
+    torque_data.preloadRateLimit.y_n          = 0.0f;
+    torque_data.preloadRateLimit.maxStepDelta = PRELOAD_NM_PER_S / 100;
+
+    torque_data.torquePreload = LC_PRELOAD_TORQUE_INIT;
 
     lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, 0.0f);
 }
@@ -612,6 +662,8 @@ static void torque_periodic_100Hz(void)
     torque_data.torqueReduction = evaluate_traction_control();
 
     float32_t torque_request_max = evaluate_torque_max();
+    evaluate_preload_torque();
+
     if (torque_data.race_mode != RACEMODE_ENABLED)
     {
         torque_request_max = DEFAULT_TORQUE_PITS;
@@ -630,8 +682,31 @@ static void torque_periodic_100Hz(void)
     torque_data.torqueDriverInput = torque;
     torque_data.torqueCorrection = torque_data.torqueReduction * torque;
 
-    torque -= torque_data.torqueCorrection;
-    torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
+    if ((torque_data.launchControlState == LC_STATE_HOLDING) ||
+        (torque_data.launchControlState == LC_STATE_SETTLING))
+    {
+        torque = 0.0f;
+        torque_data.torqueRateLimit.y_n = 0.0f;
+        torque_data.launchRateLimit.y_n = 0.0f;
+        torque_data.preloadRateLimit.y_n = 0.0f;
+    }
+    else if (torque_data.launchControlState == LC_STATE_PRELOAD)
+    {
+        torque = torque_data.torquePreload;
+        torque = lib_rateLimit_linear_update(&torque_data.preloadRateLimit, torque);
+        torque_data.launchRateLimit.y_n = torque;
+    }
+    else if (torque_data.launchControlState == LC_STATE_LAUNCH)
+    {
+        torque = lib_rateLimit_linear_update(&torque_data.launchRateLimit, torque);
+        torque_data.torqueRateLimit.y_n = torque;
+    }
+    else
+    {
+        torque -= torque_data.torqueCorrection;
+        torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
+    }
+
     torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);
 }
 

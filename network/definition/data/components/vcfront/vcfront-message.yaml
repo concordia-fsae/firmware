@@ -129,6 +129,13 @@ messages:
         template: percentageAccurate
       torqueDriverInput:
 
+  launchControlDebug:
+    description: Launch Control Debug
+    id: 0x4e1
+    cycleTimeMs: 100
+    signals:
+      preloadTorqueDebug:
+
   sleep:
     description: VCFRONT sleep information
     id: 0x7b1
