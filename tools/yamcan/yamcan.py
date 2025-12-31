@@ -60,6 +60,7 @@ SIGNAL_SCHEMA = Schema({
 MESSAGE_SCHEMA = Schema({
     Optional("description"): str,
     Optional("cycleTimeMs"): int,
+    Optional("timeoutPeriodMs"): int,
     Optional("id"): int,
     Optional("idOffset"): int,
     Optional("lengthBytes"): int,
