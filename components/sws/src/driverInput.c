@@ -86,7 +86,7 @@
 #define LAUNCH_DEBOUNCE_MS  500
 #define REVERSE_DEBOUNCE_MS 500
 
-#define SLEEP_TIMEOUT_MS 60000
+#define SLEEP_TIMEOUT_MS 15*60000
 
 /******************************************************************************
  *                             T Y P E D E F S
