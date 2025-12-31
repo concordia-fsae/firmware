@@ -14,6 +14,15 @@ signals:
   timeoutOpenedContactors:
     description: Timed out TS nodes caused contactors to open
     discreteValues: faultStatus
+  bmsFault:
+    description: BMS Fault
+    discreteValues: faultStatus
+  imdNOK:
+    description: IMD NOK
+    discreteValues: faultStatus
+  timeout:
+    description: Timed out TS nodes
+    discreteValues: faultStatus
 
   nlg513ControlByte:
     description: Brusa NLG513 Control Byte

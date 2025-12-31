@@ -128,6 +128,9 @@ static void BMS100Hz_PRD(void)
     app_faultManager_setFaultState(FM_FAULT_BMSB_TSMSOPENEDCONTACTORS, tsmsOpen && contactorsClosed);
     app_faultManager_setFaultState(FM_FAULT_BMSB_IMDOPENEDCONTACTORS, imdOpen && contactorsClosed);
     app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUTOPENEDCONTACTORS, timeout && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULT, bmsFault);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_IMDNOK, imdOpen);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUT, timeout);
 
     if (bmsFault)
     {
