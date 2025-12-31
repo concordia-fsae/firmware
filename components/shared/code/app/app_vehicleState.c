@@ -19,7 +19,7 @@
 
 #define BOOT_TIME_MS 250U
 #define VEHICLESTATE_TIMEOUT_MS 1000U
-#define BOOT_SLEEP_DISABLE_MS 60000U
+#define BOOT_SLEEP_DISABLE_MS 15*60000U
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
