@@ -264,6 +264,7 @@ messages:
 
   criticalData:
     cycleTimeMs: 3
+    timeoutPeriodMs: 100
     description: PM100DXR Critical Data
     idOffset: 0x10
     lengthBytes: 8

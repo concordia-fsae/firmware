@@ -226,3 +226,4 @@ screenWarnings:
   HOT_POWERTRAIN: 2
   LOW_CELL: 3
   LOW_GLV: 4
+  CONTACTS_OPEN_IN_RUN: 5

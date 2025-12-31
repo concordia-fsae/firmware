@@ -45,6 +45,7 @@ typedef enum
     WARN_HOT_CELL,
     WARN_HOT_POWERTRAIN,
     WARN_LOW_CELL,
+    WARN_CONTACTS_OPEN_IN_RUN,
     WARN_COUNT,
 } warnings_E;
 
@@ -122,6 +123,9 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_LOW_CELL:
             ret = CAN_SCREENWARNINGS_LOW_CELL;
             break;
+        case WARN_CONTACTS_OPEN_IN_RUN:
+            ret = CAN_SCREENWARNINGS_CONTACTS_OPEN_IN_RUN;
+            break;
         default:
             break;
     }
@@ -152,8 +156,10 @@ static void determineActiveAlert(void)
 static void getWarnings(void)
 {
     const bool lowGLV = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
+    const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
 
     FLAG_assign(sm.setWarnings, WARN_LOW_GLV, lowGLV);
+    FLAG_assign(sm.setWarnings, WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
 }
 
 static void determineActiveWarning(void)

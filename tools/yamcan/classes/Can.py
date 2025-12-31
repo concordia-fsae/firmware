@@ -370,6 +370,7 @@ class CanMessage(CanObject):
     def __init__(self, node: "CanNode", name: str, msg_def: dict):
         self.name = name
         self.cycle_time_ms = get_if_exists(msg_def, "cycleTimeMs", int, None)
+        self.timeout_period_ms = get_if_exists(msg_def, "timeoutPeriodMs", int, None)
         self.description = get_if_exists(msg_def, "description", str, "")
         self.node_name = self.name.split("_")[0]
         self.id = get_if_exists(msg_def, "id", int, None)
@@ -402,10 +403,20 @@ class CanMessage(CanObject):
         else:
             self.source_buses = node.on_buses
 
-        if self.cycle_time_ms is None and not self.unscheduled:
-            raise Exception(
-                    f"Message '{self.name}' has no specified cycle time"
-            )
+        if not self.unscheduled:
+            if self.cycle_time_ms is None:
+                raise Exception(
+                        f"Message '{self.name}' has no specified cycle time"
+                )
+            elif not self.timeout_period_ms:
+                self.timeout_period_ms = self.cycle_time_ms * 10
+            elif self.cycle_time_ms > self.timeout_period_ms:
+                raise Exception(
+                        f"Message '{self.name}' has a timeout less than its transmit period"
+                )
+        elif not self.timeout_period_ms:
+            self.timeout_period_ms = 1000
+
         # Assigned later
         self.node_ref = None
         self.is_valid = False

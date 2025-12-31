@@ -134,7 +134,7 @@ CANRX_MESSAGE_health_E CANRX_${bus.upper()}_validate_${msg_name}(${arg})
     {
         // Stays SNA
     }
-    if (CANRX_${bus.upper()}_messages.${msg_name}${index}.timestamp < (CANIO_getTimeMs() - ${int(node.received_msgs[message].cycle_time_ms * 10)}U))
+    if (CANRX_${bus.upper()}_messages.${msg_name}${index}.timestamp < (CANIO_getTimeMs() - ${int(node.received_msgs[message].timeout_period_ms)}U))
     {
         ret = CANRX_MESSAGE_MIA;
     }

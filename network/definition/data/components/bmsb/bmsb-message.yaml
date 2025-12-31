@@ -11,6 +11,9 @@ messages:
       tsmsOpenedContactors:
       imdOpenedContactors:
       timeoutOpenedContactors:
+      bmsFault:
+      imdNOK:
+      timeout:
 
   criticalData:
     description: BMS Boss Critical Data
