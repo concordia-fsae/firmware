@@ -356,6 +356,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_nvm.c",
             "//components/shared/code:libs/lib_swFuse.c",
             "//components/shared/code:libs/lib_thermistors.c",
+            "//components/shared/code:app/app_faultManager.c",
             "//components/shared/code:libs/Utility.c",
             "//embedded/libs:libcrc.c",
             ("RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),

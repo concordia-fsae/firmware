@@ -27,6 +27,7 @@
 #include "lib_nvm.h"
 #include "Module.h"
 #include "Sys.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -42,6 +43,8 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 
 #define CANIO_UDS_BUFFER_LENGTH                     8U
 #define CANIO_getTimeMs()                           (HW_TIM_getTimeMS())
+
+#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
 
 #define set_packChargeLimit(m, b, n, s)             set(m, b, n, s, BMS.pack_charge_limit)
 #define set_packDischargeLimit(m, b, n, s)          set(m, b, n, s, BMS.pack_discharge_limit)

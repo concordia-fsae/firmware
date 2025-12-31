@@ -1,4 +1,17 @@
 messages:
+  faults:
+    description: BMSB Faults
+    cycleTimeMs: 1000
+    id: 0x3a3
+    sourceBuses: veh
+    messageType: faults
+    signals:
+      contactorsOpenedUnderLoad:
+      bmsFaultOpenedContactors:
+      tsmsOpenedContactors:
+      imdOpenedContactors:
+      timeoutOpenedContactors:
+
   criticalData:
     description: BMS Boss Critical Data
     cycleTimeMs: 10

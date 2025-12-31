@@ -25,6 +25,8 @@
 
 #define PACK_CS_0_OFFSET 0.0f
 
+#define LOAD_CURRENT_THRESHOLD 5
+
 BMSB_S BMS;
 
 static drv_timer_S precharge_timer;
@@ -110,7 +112,24 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
-    if (BMS.fault)
+    const bool bmsFault = BMS.fault;
+    const bool tsmsOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW;
+    const bool imdOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW;
+    const bool timeout = SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout();
+    const bool openContactors = bmsFault || tsmsOpen || imdOpen || timeout;
+
+    const bool underLoad = (BMS.pack_current > LOAD_CURRENT_THRESHOLD) || (BMS.pack_current < -LOAD_CURRENT_THRESHOLD);
+    const bool contactorsClosed = (SYS.contacts == SYS_CONTACTORS_PRECHARGE) ||
+                                  (SYS.contacts == SYS_CONTACTORS_CLOSED) ||
+                                  (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED);
+
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORSOPENEDUNDERLOAD, openContactors && underLoad);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULTOPENEDCONTACTORS, bmsFault && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_TSMSOPENEDCONTACTORS, tsmsOpen && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_IMDOPENEDCONTACTORS, imdOpen && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUTOPENEDCONTACTORS, timeout && contactorsClosed);
+
+    if (bmsFault)
     {
         SYS_SFT_openShutdown();
     }
@@ -129,10 +148,7 @@ static void BMS100Hz_PRD(void)
     }
 #endif
 
-    if (BMS.fault ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW) ||
-        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW) ||
-        (SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout()))
+    if (openContactors)
     {
         SYS_SFT_openContactors();
         drv_timer_stop(&precharge_timer);

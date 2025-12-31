@@ -1,4 +1,20 @@
 signals:
+  contactorsOpenedUnderLoad:
+    description: Contactors opened while current was not 0
+    discreteValues: faultStatus
+  bmsFaultOpenedContactors:
+    description: BMS Fault caused contactors to open
+    discreteValues: faultStatus
+  tsmsOpenedContactors:
+    description: TSMS caused contactors to open
+    discreteValues: faultStatus
+  imdOpenedContactors:
+    description: IMD OK caused contactors to open
+    discreteValues: faultStatus
+  timeoutOpenedContactors:
+    description: Timed out TS nodes caused contactors to open
+    discreteValues: faultStatus
+
   nlg513ControlByte:
     description: Brusa NLG513 Control Byte
     nativeRepresentation:
