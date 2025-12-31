@@ -125,3 +125,11 @@ messages:
       packVoltageMeasured:
       packVoltageMeasurementFault:
       packCycleCountedCoulombs:
+
+  packData:
+    description: BMS Boss debug information
+    cycleTimeMs: 100
+    id: 0x5b0
+    sourceBuses: veh
+    signals:
+      packPower:
