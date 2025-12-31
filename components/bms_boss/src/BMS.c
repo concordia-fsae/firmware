@@ -191,6 +191,7 @@ static void BMS1kHz_PRD(void)
     BMS.pack_current = tmpCurrent;
     BMS.pack_voltage_measured = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK);
     BMS.pack_voltage_sense_fault = drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_VPACK_DIAG) == DRV_IO_ACTIVE;
+    BMS.packPowerKW = (BMS.pack_voltage_measured * BMS.pack_current) / 1000.0f;
 
     // TODO: Update coulomb count in cells
     if ((SYS.contacts == SYS_CONTACTORS_PRECHARGE) ||
