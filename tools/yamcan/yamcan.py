@@ -65,7 +65,7 @@ MESSAGE_SCHEMA = Schema({
     Optional("lengthBytes"): int,
     Optional("messageType"): str,
     Optional("sourceBuses"): Or(str, list[str]),
-    Optional("signals"): dict,
+    Optional("signals"): Or(dict, None),
     Optional("unscheduled"): bool,
     Optional("template"): str,
 })

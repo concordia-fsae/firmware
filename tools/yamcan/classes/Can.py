@@ -378,7 +378,7 @@ class CanMessage(CanObject):
         self.signals = {
             f"{self.node_name}_{sig_name}": sig
             for sig_name, sig in msg_def["signals"].items()
-        }
+        } if msg_def["signals"] else {}
         self.signal_objs = {}
         self.counter_sig: Optional[CanSignal] = None
         self.checksum_sig: Optional[CanSignal] = None
@@ -445,7 +445,7 @@ class CanMessage(CanObject):
             valid = False
 
         # this works because dictionaries are ordered now
-        first_signal_loc = list(self.signal_objs.values())[0].start_bit
+        first_signal_loc = list(self.signal_objs.values())[0].start_bit if len(self.signal_objs.values()) else 0
         bit_count = first_signal_loc
 
         sig_objs = self.signal_objs.values()

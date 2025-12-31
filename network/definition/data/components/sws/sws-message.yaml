@@ -1,4 +1,12 @@
 messages:
+  faults:
+    description: SWS Faults
+    cycleTimeMs: 1000
+    id: 0x3a2
+    sourceBuses: veh
+    messageType: faults
+    signals:
+
   udsResponse:
     description: UDS response message from the SWS
     id: 0x691
@@ -53,3 +61,11 @@ messages:
     description: SWS sleep information
     id: 0x7b0
     template: sleepableNode
+
+  screenManager:
+    description: SWS screen manager
+    id: 0x5e0
+    cycleTimeMs: 200
+    signals:
+      screenAlert:
+      screenWarning:
