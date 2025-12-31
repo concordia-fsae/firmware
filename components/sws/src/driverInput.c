@@ -403,11 +403,8 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
             case DRIVERINPUT_PAGE_BUTTONS:
                 page = CAN_SCREENPAGE_BUTTONS;
                 break;
-            case DRIVERINPUT_PAGE_DATA1:
-                page = CAN_SCREENPAGE_DATA1;
-                break;
-            case DRIVERINPUT_PAGE_DATA2:
-                page = CAN_SCREENPAGE_DATA2;
+            case DRIVERINPUT_PAGE_DATA:
+                page = CAN_SCREENPAGE_DATA;
                 break;
             case DRIVERINPUT_PAGE_LAUNCH:
                 page = CAN_SCREENPAGE_LAUNCH;
