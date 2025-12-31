@@ -77,6 +77,13 @@ static struct
 
 static void getInputs(void)
 {
+    CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
+    const bool contactorsValid = CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state) == CANRX_MESSAGE_VALID;
+    const bool contactorsOpen = contactor_state != CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED;
+    const bool inRunMode = app_vehicleState_getState() == VEHICLESTATE_TS_RUN;
+
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_CONTACTSOPENINRUN, inRunMode && (!contactorsValid || contactorsOpen));
+
     pm_data.glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
     pm_data.pdu.current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
     pm_data.pdu.rail_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;

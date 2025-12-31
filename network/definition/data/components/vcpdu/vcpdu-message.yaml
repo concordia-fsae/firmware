@@ -11,6 +11,7 @@ messages:
       batteryNOK:
       loadsNOK:
       safetyNOK:
+      contactsOpenInRun:
 
   udsResponse:
     description: UDS response message from the VCPDU
