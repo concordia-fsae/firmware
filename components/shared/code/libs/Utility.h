@@ -101,6 +101,13 @@ static inline uint16_t u32CountLeadingZeroes(uint32_t x)
    FLAG_clear(name, pos);             \
   }                                   \
  } while (zero())
+#define FLAG_or(name, pos, value) \
+ do {                                 \
+  if (value)                          \
+  {                                   \
+   FLAG_set(name, pos);               \
+  }                                   \
+ } while (zero())
 
 #define FLAG_getFirst(name, size)         FLAG_getNext_uncast((uint16_t*)name, size, 0)
 #define FLAG_getNext(name, size, current) FLAG_getNext_uncast((uint16_t*)name, size, current)
@@ -139,7 +146,7 @@ static inline void FLAG_setAll(uint16_t* name, uint16_t count)
  */
 static inline void FLAG_clearAll(uint16_t* name, uint16_t count)
 {
-    memset(name, 0x00, (uint16_t)(WORDS_FROM_COUNT(count) * FLAG_bits_each));
+    memset(name, 0x00, WORDS_FROM_COUNT(count) * sizeof(uint16_t));
 }
 
 
