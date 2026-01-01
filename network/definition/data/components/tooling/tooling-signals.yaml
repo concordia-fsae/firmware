@@ -19,3 +19,18 @@ signals:
         min: 0
         max: 5
     continuous: true
+
+  eepromAddress:
+    description: Address for eeprom write
+    discreteValues: pm100dxEepromAddress
+
+  eepromCommand:
+    description: Command for eeprom write
+    discreteValues: pm100dxEepromRWCommand
+
+  eepromDataRaw:
+    description: Raw data payload for PM100DX eeprom
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 1
+      endianness: little

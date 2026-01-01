@@ -1,4 +1,5 @@
 messages:
   BMSB_currentLimit:
   VCREAR_mcCommand:
+  TOOLING_mcEepromCommand:
 signals:

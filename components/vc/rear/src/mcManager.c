@@ -14,6 +14,8 @@
 #include "MessageUnpack_generated.h"
 #include "lib_utility.h"
 #include "app_faultManager.h"
+#include "MessageUnpack_generated.h"
+#include "SigTx.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -109,14 +111,6 @@ float32_t mcManager_getTorqueLimit(void)
     return mcManager_data.torque_limit;
 }
 
-bool mcManager_clearEepromCommand(void)
-{
-    const bool ret = mcManager_data.clear_faults;
-    mcManager_data.clear_faults = false;
-
-    return ret;
-}
-
 static void mcManager_init(void)
 {
     memset(&mcManager_data, 0x00, sizeof(mcManager_data));
@@ -186,6 +180,23 @@ static void mcManager_periodic_100Hz(void)
                     (contactor_state == CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
                 {
                     mcManager_data.clear_faults = true;
+                }
+                if (mcManager_data.clear_faults)
+                {
+                    const bool bridgeWaiting = CANRX_get_bridgeWaiting(VEH, TOOLING_mcEepromCommand);
+
+                    if (!bridgeWaiting)
+                    {
+                        CAN_data_T message = { 0 };
+                        set(&message,ASS,TOOLING,eepromAddress, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR);
+                        set(&message,ASS,TOOLING,eepromCommand, CAN_PM100DXEEPROMRWCOMMAND_WRITE);
+                        set(&message,ASS,TOOLING,eepromDataRaw, 0U);
+                        *CANRX_get_rawMessage(VEH, TOOLING_mcEepromCommand) = message;
+                        CANRX_set_bridgeWaiting(VEH, TOOLING_mcEepromCommand, true);
+
+                        // TODO: Only clear faults when they actually clear
+                        mcManager_data.clear_faults = false;
+                    }
                 }
                 break;
             }

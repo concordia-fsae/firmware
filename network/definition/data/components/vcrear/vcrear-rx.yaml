@@ -36,6 +36,14 @@ messages:
   PM100DX_faults:
     destBuses: veh
     sourceBuses: ass
+  PM100DX_eepromResponse:
+    destBuses: veh
+    sourceBuses: ass
+    unrecorded: true
+  TOOLING_mcEepromCommand:
+    sourceBuses: veh
+    destBuses: ass
+    unrecorded: true
 
 signals:
   VCFRONT_gear:
