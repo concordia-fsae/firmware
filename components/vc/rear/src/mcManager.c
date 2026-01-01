@@ -19,8 +19,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define MCMANAGER_TORQUE_LIMIT 130.0f
-#define MCMANAGER_TORQUE_LIMIT_REVERSE 15.0f
+#define MCMANAGER_TORQUE_LIMIT 150.0f
+#define MCMANAGER_TORQUE_LIMIT_REVERSE 25.0f
 
 #define LASH_TORQUE 2.0f
 #define LASH_TORQUE_RPM_DISABLE 180.0f
