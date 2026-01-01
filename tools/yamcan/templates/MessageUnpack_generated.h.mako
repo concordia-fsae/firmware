@@ -27,8 +27,9 @@
 #define CANRX_get_signal(bus, signal, val) CANRX_get_signal_func(bus, signal)(val)
 #define CANRX_get_signalDuplicate(bus, signal, val, nodeId) (JOIN3(JOIN3(CANRX_,bus,_get),_,signal))(val, nodeId)
 #define CANRX_get_signal_timeSinceLastMessageMS(bus, signal) (JOIN3(JOIN3(CANRX_,bus,_get),_,JOIN(signal,_timeSinceLastMessageMS)))()
-#define CANRX_get_rawMessage(bus, message) (JOIN3(JOIN3(CANRX_,bus,_raw),_,message)())
-
+#define CANRX_get_rawMessage(bus, message) (JOIN3(JOIN3(CANRX_,bus,_rawMessage),_,message)())
+#define CANRX_get_bridgeWaiting(bus, message) (JOIN3(JOIN3(CANRX_,bus,_rawBridgeWaiting),_,message)())
+#define CANRX_set_bridgeWaiting(bus, message, val) (JOIN3(JOIN3(CANRX_,bus,_setRawBridgeWaiting),_,message)(val))
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -134,11 +135,23 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
 %for node in nodes:
   %for bus in node.on_buses:
     %for message in node.received_msgs:
-        %if bus in node.received_msgs[message].source_buses and node.received_msgs[message].fault_message:
+        %if bus in node.received_msgs[message].source_buses and (node.received_msgs[message].fault_message or node.received_msgs[message].bridged):
 
-inline CAN_data_T* CANRX_${bus.upper()}_raw_${message}(void)
+inline CAN_data_T* CANRX_${bus.upper()}_rawMessage_${message}(void)
 {
     return &CANRX_${bus.upper()}_messages.${message}.raw;
+}
+      %endif
+      %if bus in node.received_msgs[message].source_buses and node.received_msgs[message].bridged:
+
+inline bool CANRX_${bus.upper()}_rawBridgeWaiting_${message}(void)
+{
+    return CANRX_${bus.upper()}_messages.${message}.new_message;
+}
+
+inline void CANRX_${bus.upper()}_setRawBridgeWaiting_${message}(bool val)
+{
+    CANRX_${bus.upper()}_messages.${message}.new_message = val;
 }
       %endif
     %endfor

@@ -14,3 +14,16 @@ messages:
     lengthBytes: 1
     signals:
       commandedFansDutyCycle:
+
+  mcEepromCommand:
+    description: Command for the PM100DX eeprom
+    cycleTimeMs: 10
+    id: 0x22
+    sourceBuses: veh
+    signals:
+      eepromAddress:
+        startBit: 0
+      eepromCommand:
+        startBit: 16
+      eepromDataRaw:
+        startBit: 32

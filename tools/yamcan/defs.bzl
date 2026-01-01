@@ -40,11 +40,11 @@ def generate_code(name: str, network_dep: str, node: str, library_deps: list[str
                 "MessageUnpack_generated.h": ["generated/MessageUnpack_generated.h"],
                 "NetworkDefines_generated.h": ["generated/NetworkDefines_generated.h"],
                 "SigRx.h": ["generated/SigRx.h"],
+                "SigTx.h": ["generated/SigTx.h"],
                 "TemporaryStubbing.h": ["generated/TemporaryStubbing.h"],
                 "sources": [
                     "generated/MessagePack_generated.c",
                     "generated/MessageUnpack_generated.c",
-                    "generated/SigTx.c",
                 ],
             },
             cmd = (
@@ -66,6 +66,7 @@ def generate_code(name: str, network_dep: str, node: str, library_deps: list[str
                 "MessageUnpack_generated.h": ":" + uv_name + "[MessageUnpack_generated.h]",
                 "NetworkDefines_generated.h": ":" + uv_name + "[NetworkDefines_generated.h]",
                 "SigRx.h": ":" + uv_name + "[SigRx.h]",
+                "SigTx.h": ":" + uv_name + "[SigTx.h]",
                 "TemporaryStubbing.h": ":" + uv_name + "[TemporaryStubbing.h]",
             },
             headers = {
