@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 #include "app_faultManager.h"
+#include "Utility.h"
 
 _Static_assert(MAX_FAULTS > FM_FAULT_COUNT, "Number of faults must be less than 64");
 
@@ -25,9 +26,9 @@ _Static_assert(MAX_FAULTS > FM_FAULT_COUNT, "Number of faults must be less than 
 
 typedef struct
 {
-    uint32_t faultBits[BUFFERSIZE];
-    uint32_t waiting[BUFFERSIZE];
-    uint32_t buffer[BUFFERSIZE];
+    FLAG_create(faultBits, MAX_FAULTS);
+    FLAG_create(waiting, MAX_FAULTS);
+    FLAG_create(buffer, MAX_FAULTS);
 } fm_data_S;
 
 /******************************************************************************
@@ -42,24 +43,22 @@ static fm_data_S fm_data;
 
 void app_faultManager_setFaultState(FM_fault_E fault, bool faulted)
 {
-    const uint32_t bit = 1 << (fault % 32U);
-    fm_data.faultBits[fault / 32U] = faulted ? fm_data.faultBits[fault / 32U] | bit :
-                                               fm_data.faultBits[fault / 32U] & ~bit;
-    fm_data.waiting[fault / 32U] |= faulted ? bit : 0U;
+    FLAG_assign(fm_data.faultBits, fault, faulted);
+    FLAG_or(fm_data.waiting, fault, faulted);
 }
 
 bool app_faultManager_getFaultState(FM_fault_E fault)
 {
-    return (fm_data.faultBits[fault / 32U] & (1U << (fault % 32U))) != 0U;
+    return FLAG_get(fm_data.faultBits, fault);
 }
 
-uint32_t* app_faultManager_transmit(void)
+uint8_t* app_faultManager_transmit(void)
 {
-    for (uint8_t i = 0U; i < BUFFERSIZE; i++)
+    for (uint8_t i = 0U; i < WORDS_FROM_COUNT(MAX_FAULTS); i++)
     {
-        fm_data.buffer[i] = fm_data.waiting[i] | fm_data.faultBits[i];
-        fm_data.waiting[i] = 0U;
+        fm_data.buffer[i] = FLAG_GET_WORD(fm_data.waiting, i) | FLAG_GET_WORD(fm_data.faultBits, i);
+        FLAG_clearAll(fm_data.waiting, MAX_FAULTS);
     }
 
-    return (uint32_t*)&fm_data.buffer;
+    return (uint8_t*)&fm_data.buffer;
 }

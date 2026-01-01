@@ -2,7 +2,7 @@
 .git/
 .vim/
 .sconsign.dblite
-compile_commands.json
+*compile_commands.json
 dbc/
 generated/
 **/html/**

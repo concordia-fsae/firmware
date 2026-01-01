@@ -29,14 +29,14 @@
 
 // Note: The following function must have a fault_index < 64U
 #define app_faultManager_getNetworkedFault_state(bus, msg, fault_index) \
-    (CANRX_get_rawMessage(bus, msg)->u32[fault_index / 32U] & (1U << (fault_index % 32U)))
+    (FLAG_get(CANRX_get_rawMessage(bus, msg)->u16, fault_index))
 #define app_faultManager_getNetworkedFault_anySet(bus, msg) \
-    ((CANRX_get_rawMessage(bus, msg)->u32[0U] | CANRX_get_rawMessage(bus, msg)->u32[1U]) != 0U)
+    (FLAG_any(CANRX_get_rawMessage(bus, msg)->u16, MAX_FAULTS))
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void      app_faultManager_setFaultState(FM_fault_E fault, bool faulted);
-bool      app_faultManager_getFaultState(FM_fault_E fault);
-uint32_t* app_faultManager_transmit(void);
+void     app_faultManager_setFaultState(FM_fault_E fault, bool faulted);
+bool     app_faultManager_getFaultState(FM_fault_E fault);
+uint8_t* app_faultManager_transmit(void);
