@@ -1,6 +1,6 @@
 <%namespace file="message_pack.mako" import = "*"/>\
 /*
- * SigTx.c
+* SigTx.h
  * Signal packing function definitions
  */
  

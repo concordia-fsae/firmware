@@ -744,7 +744,7 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
                 }
             }],
             ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
-            ["SigTx.c.mako", {"nodes": [can_nodes[node]]}],
+            ["SigTx.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],
             ["TemporaryStubbing.h.mako", {"nodes": [can_nodes[node]]}],
         ]

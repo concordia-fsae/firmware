@@ -11,7 +11,7 @@
 #include "CAN/CanTypes.h"
 #include "MessagePack_generated.h"
 #include "NetworkDefines_generated.h"
-#include "SigTx.c"
+#include "SigTx.h"
 #include "MessageUnpack_generated.h"
 
 /******************************************************************************
