@@ -1,0 +1,15 @@
+load("//tools/uv/defs.bzl", "uv_tool", "uv_binary")
+
+uv_tool(
+    name = "cascadia-programmer-tool",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = ["cascadia-programmer.py"],
+    visibility = ["PUBLIC"],
+)
+
+uv_binary(
+    name = "cascadia-programmer",
+    tool = ":cascadia-programmer-tool",
+    entrypoint = "cascadia-programmer.py",
+)

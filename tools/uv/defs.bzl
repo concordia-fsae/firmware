@@ -138,3 +138,35 @@ uv_genrule = rule(
         }
     ),
 )
+
+UvBinary = provider(fields = {
+    "run": provider_field(typing.Any),
+})
+
+def _uv_binary_impl(ctx: AnalysisContext) -> list[Provider]:
+    tool = ctx.attrs.tool[UvTool]
+
+    # Program args: run python inside uv venv, then script
+    # Use the genrule wrapper (it activates venv then `uv run ...`)
+    argv = cmd_args(
+        tool.python,  # this is already a RunInfo(cmd_args(...)) in your UvTool
+        cmd_args(tool.tooldir, format = "{}/{}".format("{}", ctx.attrs.entrypoint)),
+        ctx.attrs.args,
+        hidden = [tool.venv, tool.srcs],
+    )
+
+    return [
+        DefaultInfo(),
+        RunInfo(argv),
+        UvBinary(run = argv),
+    ]
+
+uv_binary = rule(
+    impl = _uv_binary_impl,
+    attrs = {
+        "tool": attrs.toolchain_dep(providers = [UvTool]),
+        # path relative to tool.tooldir (which points at .../srcs)
+        "entrypoint": attrs.string(),
+        "args": attrs.list(attrs.string(), default = []),
+    },
+)
