@@ -20,6 +20,13 @@
 
 #define WARN_TIMER_CYCLE_MS 2000U
 
+#define WARNING_INGRESS(warning, state) \
+    if (state && !FLAG_get(sm.setWarnings, warning)) \
+    { \
+        FLAG_assign(sm.unseenWarnings, warning, state); \
+    } \
+    FLAG_assign(sm.setWarnings, warning, state);
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -62,6 +69,7 @@ static struct
 
     FLAG_create(setAlerts, ALERT_COUNT);
     FLAG_create(setWarnings, WARN_COUNT);
+    FLAG_create(unseenWarnings, WARN_COUNT);
 } sm;
 
 /******************************************************************************
@@ -158,31 +166,42 @@ static void getWarnings(void)
     const bool lowGLV = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
     const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
 
-    FLAG_assign(sm.setWarnings, WARN_LOW_GLV, lowGLV);
-    FLAG_assign(sm.setWarnings, WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
+    WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
+    WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
 }
 
 static void determineActiveWarning(void)
 {
-    if (FLAG_any(sm.setWarnings, WARN_COUNT))
+    if (FLAG_any(sm.setWarnings, WARN_COUNT) || FLAG_any(sm.unseenWarnings, WARN_COUNT))
     {
         const drv_timer_state_E cycleState = drv_timer_getState(&sm.warningTimer);
+        const uint16_t unseenWarning = FLAG_getFirst(sm.unseenWarnings, WARN_COUNT);
+        uint16_t new_warning;
 
         if (cycleState == DRV_TIMER_EXPIRED)
         {
             drv_timer_start(&sm.warningTimer, WARN_TIMER_CYCLE_MS);
-            uint16_t new_warning = FLAG_getNext(sm.setWarnings, WARN_COUNT, sm.warning + 1U);
 
-            if (new_warning == WARN_COUNT)
-                new_warning = FLAG_getFirst(sm.setWarnings, WARN_COUNT);
+            if (unseenWarning == WARN_COUNT)
+            {
+                new_warning = FLAG_getNext(sm.setWarnings, WARN_COUNT, sm.warning + 1U);
+                if (new_warning == WARN_COUNT)
+                    new_warning = FLAG_getFirst(sm.setWarnings, WARN_COUNT);
+            }
+            else
+            {
+                new_warning = unseenWarning;
+            }
 
-            sm.warning = new_warning;
+            sm.warning = (warnings_E)new_warning;
         }
         else if (cycleState == DRV_TIMER_STOPPED)
         {
-            sm.warning = FLAG_getFirst(sm.setWarnings, WARN_COUNT);
+            sm.warning = FLAG_getFirst(sm.unseenWarnings, WARN_COUNT);
             drv_timer_start(&sm.warningTimer, WARN_TIMER_CYCLE_MS);
         }
+
+        FLAG_clear(sm.unseenWarnings, sm.warning);
     }
     else
     {
