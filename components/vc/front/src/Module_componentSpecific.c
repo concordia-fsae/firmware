@@ -12,7 +12,7 @@
 #include "drv_tps20xx.h"
 #include "drv_inputAD.h"
 #include "drv_pedalMonitor.h"
-#include "wheelSpeed.h"
+#include "app_vehicleSpeed.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -30,7 +30,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &torque_desc,
     &powerManager_desc,
     &cockpitLights_desc,
-    &wheelSpeed_desc,
+    &app_vehicleSpeed_desc,
     &brakePressure_desc,
     &steeringAngle_desc,
     &shockpot_desc,

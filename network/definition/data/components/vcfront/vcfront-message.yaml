@@ -111,6 +111,8 @@ messages:
         template: wheelSpeedRotational
       axleSpeedFront:
         template: wheelSpeedRotational
+      vehicleSpeed:
+        template: linearVelocity
 
   tractionControlDebug:
     description: Traction Control Debug

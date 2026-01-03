@@ -26,7 +26,7 @@
 #include "mcManager.h"
 #include "shockpot.h"
 #include "Module.h"
-#include "wheelSpeed.h"
+#include "app_vehicleSpeed.h"
 #include "app_faultManager.h"
 
 /******************************************************************************
@@ -58,8 +58,8 @@
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
 
-#define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RL))
-#define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_RR))
+#define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RL))
+#define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RR))
 #define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
 
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))

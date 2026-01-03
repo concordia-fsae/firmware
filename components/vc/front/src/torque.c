@@ -54,13 +54,13 @@
 #define TC_KP 0.325f
 #define TC_KI 0.44f
 #define TC_ILIM 0.55f
-#define TC_AXLE_THRESHOLD_RPM 60 // Roughly a 0.5m/s vehicle speed
+#define TC_VEHICLESPEED_THRESHOLD_MPS VEHICLE_STOPPED_THRESHOLD
 
 #define PEDAL_SLEEP_THRESHOLD 0.02f
 #define SLEEP_TIMEOUT_MS 15*60000
 
 #define PEDAL_APPLIED_THRESHOLD 0.10f
-#define VEHICLE_STOPPED_THRESHOLD 60
+#define VEHICLE_STOPPED_THRESHOLD 0.5
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -109,7 +109,7 @@ static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake
     torque_data.gear_change_active = (CANRX_get_signal(VEH, SWS_requestReverse, &gear_change_request) != CANRX_MESSAGE_SNA) &&
                                      (gear_change_request == CAN_DIGITALSTATUS_ON);
     const bool gear_change_rising = !gear_change_was_requested && torque_data.gear_change_active;
-    const float32_t vehicleSpeed = wheelSpeed_getAxleRPM(AXLE_FRONT);
+    const float32_t vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
     const bool ok_to_change = (accelerator_position < PEDAL_APPLIED_THRESHOLD) &&
                               (brake_position > PEDAL_APPLIED_THRESHOLD) &&
                               (vehicleSpeed < VEHICLE_STOPPED_THRESHOLD);
@@ -274,50 +274,39 @@ static float32_t calc_traction_control_reduction(float32_t target_slip, float32_
 
 static float32_t evaluate_traction_control(void)
 {
-    uint16_t rear_axle_rpm = 0;
-    uint16_t front_axle_rpm = wheelSpeed_getAxleRPM(AXLE_FRONT);
-    bool speed_valid = CANRX_get_signal(VEH, VCREAR_axleSpeedRear, &rear_axle_rpm) != CANRX_MESSAGE_SNA;
-
     const uint32_t timestamp = HW_TIM_getTimeMS();
     const float32_t dt = ((float32_t)(timestamp - torque_data.lastTimeampMS)) / 1000.0f;
     torque_data.lastTimeampMS = timestamp;
 
-    float32_t slip = (float32_t)(rear_axle_rpm - front_axle_rpm) / (float32_t)front_axle_rpm;
+    const float32_t vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
+    const float32_t slip = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
     float32_t multiplier = 0.0f;
 
-    if (speed_valid)
+    torque_tractionControlState_E nextState = TC_STATE_ERROR;
+    if ((vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS) &&
+        (torque_data.gear == GEAR_F) &&
+        (torque_data.race_mode == RACEMODE_ENABLED))
     {
-        torque_tractionControlState_E nextState = TC_STATE_ERROR;
-        if ((rear_axle_rpm > TC_AXLE_THRESHOLD_RPM) &&
-            (front_axle_rpm > TC_AXLE_THRESHOLD_RPM) &&
-            (torque_data.gear == GEAR_F) &&
-            (torque_data.race_mode == RACEMODE_ENABLED))
-        {
 #if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
-            CAN_digitalStatus_E traction_control_requested = CAN_DIGITALSTATUS_SNA;
-            bool requested = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
-                              (traction_control_requested == CAN_DIGITALSTATUS_ON);
-            if (requested)
-            {
-                nextState = TC_STATE_ACTIVE;
-            }
-            else
-#endif
-            {
-                nextState = TC_STATE_INACTIVE;
-            }
+        CAN_digitalStatus_E traction_control_requested = CAN_DIGITALSTATUS_SNA;
+        bool requested = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
+                            (traction_control_requested == CAN_DIGITALSTATUS_ON);
+        if (requested)
+        {
+            nextState = TC_STATE_ACTIVE;
         }
         else
+#endif
         {
-            nextState = TC_STATE_LOCKOUT;
+            nextState = TC_STATE_INACTIVE;
         }
-
-        torque_data.tractionControlState = nextState;
     }
     else
     {
-        torque_data.tractionControlState = TC_STATE_FAULT_SENSOR;
+        nextState = TC_STATE_LOCKOUT;
     }
+
+    torque_data.tractionControlState = nextState;
 
     if (torque_data.tractionControlState == TC_STATE_ACTIVE)
     {

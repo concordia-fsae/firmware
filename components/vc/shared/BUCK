@@ -12,7 +12,6 @@ srcs = glob(["**/*.c"])
 
 folders = [
     "HW/",
-    "wheelSpeed/",
 ]
 exported_headers = remap_headers(folders)
 

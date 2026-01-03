@@ -327,6 +327,7 @@ cxx_binary(
             "//components/shared/code:app/CAN/CANIO-tx.c",
             "//components/shared/code:app/app_vehicleState.c",
             "//components/shared/code:app/app_faultManager.c",
+            "//components/shared/code:app/app_vehicleSpeed.c",
             ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",
@@ -334,7 +335,6 @@ cxx_binary(
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
-            "//components/vc/shared:wheelSpeed/wheelSpeed.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),

@@ -62,3 +62,5 @@ signals:
     sourceBuses: veh
   VCPDU_safetyReset:
     sourceBuses: veh
+  VCFRONT_vehicleSpeed:
+    sourceBuses: veh
