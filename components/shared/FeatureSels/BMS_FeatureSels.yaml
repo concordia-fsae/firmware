@@ -8,3 +8,4 @@ features:
   bms_configured_pack_max_voltage: 352.8
   bms_max_cont_discharge_current: 45
   bms_max_cont_charge_current: 3.5
+  bms_cell_rated_amphours: 4.2

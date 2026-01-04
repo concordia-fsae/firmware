@@ -19,6 +19,7 @@
 #include "MessageUnpack_generated.h"
 #include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
+#include "lib_utility.h"
 
 #define CURRENT_SENSE_V_per_A -0.0025f
 #define PRECHARGE_MIN_TIME_MS 1320U
@@ -204,7 +205,9 @@ static void BMS1kHz_PRD(void)
         const float32_t delta_amp_hr = BMS.pack_current * (((float32_t)delta_t) / 1000000.0f) * (1.0f /  3600.0f);
         BMS.counted_coulombs.reset = false;
         BMS.counted_coulombs.amp_hr += delta_amp_hr;
-        current_data.pack_amp_hours += delta_amp_hr;
+        current_data.pack_amp_hours = SATURATE(0.0f,
+                                               current_data.pack_amp_hours + delta_amp_hr,
+                                               BMS_CONFIGURED_PARALLEL_CELLS * BMS_CELL_RATED_AMPHOURS * 1.5f);
     }
     else if (BMS.counted_coulombs.reset == false)
     {
