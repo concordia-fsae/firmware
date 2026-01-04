@@ -30,6 +30,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &torque_desc,
     &powerManager_desc,
     &cockpitLights_desc,
+    &app_gps_desc,
     &app_vehicleSpeed_desc,
     &brakePressure_desc,
     &steeringAngle_desc,

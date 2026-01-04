@@ -329,6 +329,7 @@ cxx_binary(
             "//components/shared/code:HW/HW_tim.c",
             "//components/shared/code:app/CAN/CANIO-rx.c",
             "//components/shared/code:app/CAN/CANIO-tx.c",
+            "//components/shared/code:app/app_gps.c",
             "//components/shared/code:app/app_vehicleState.c",
             "//components/shared/code:app/app_vehicleSpeed.c",
             ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
@@ -342,6 +343,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_nvm.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
             "//embedded/libs:libcrc.c",
+            ("//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]", ["-Wno-conversion"]),
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),
@@ -350,6 +352,9 @@ cxx_binary(
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
         "libcrc.h": "//embedded/libs:libcrc.h",
+        "lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+        "lwgps/lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+        "lwgps/lwgps_opt.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps_opt.h]",
     } | component_headers,
     include_directories = [
         "include/",
