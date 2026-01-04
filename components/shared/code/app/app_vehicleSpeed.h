@@ -13,6 +13,7 @@
 #include "ModuleDesc.h"
 #include "CANTypes_generated.h"
 #include "HW_tim.h"
+#include "lib_nvm.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -49,6 +50,15 @@ typedef struct
     } config[WHEEL_CNT];
 } app_wheelSpeed_config_S;
 
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+typedef struct
+{
+    float32_t km;
+    uint32_t spare[5];
+} LIB_NVM_STORAGE(nvm_odometer_S);
+extern nvm_odometer_S odometer_data;
+#endif
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -63,6 +73,8 @@ extern const ModuleDesc_S app_vehicleSpeed_desc;
 uint16_t  app_vehicleSpeed_getAxleSpeedRotational(axle_E axle);
 uint16_t  app_vehicleSpeed_getWheelSpeedRotational(wheel_E wheel);
 float32_t app_vehicleSpeed_getWheelSpeedLinear(wheel_E wheel);
-float32_t app_vehicleSpeed_getVehicleSpeed(void);
 float32_t app_vehicleSpeed_getTireSlip(wheel_E wheel);
 float32_t app_vehicleSpeed_getAxleSlip(axle_E axle);
+
+float32_t app_vehicleSpeed_getVehicleSpeed(void);
+float32_t app_vehicleSpeed_getOdometer(void);

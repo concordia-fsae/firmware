@@ -107,6 +107,7 @@ cxx_library(
         "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
         "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
         "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
+        "semphr.h": "//embedded/libs:FreeRTOS.git[Source/include/semphr.h]",
         "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
         "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
         "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
@@ -132,6 +133,7 @@ cxx_library(
             "VC_FeatureSels.yaml": "//components/vc/shared/features:VC_FeatureSels.yaml",
             "VC_FeatureDefs.yaml": "//components/vc/shared/features:VC_FeatureDefs.yaml",
             "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
+            "hw_FeatureDefs.yaml": "//components/shared/code:HW/hw_FeatureDefs.yaml",
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
         },
@@ -322,6 +324,7 @@ cxx_binary(
             "//components/shared/code:HW/HW.c",
             "//components/shared/code:HW/HW_adc.c",
             "//components/shared/code:HW/HW_can.c",
+            "//components/shared/code:HW/HW_flash.c",
             "//components/shared/code:HW/HW_gpio.c",
             "//components/shared/code:HW/HW_tim.c",
             "//components/shared/code:app/CAN/CANIO-rx.c",
@@ -336,7 +339,9 @@ cxx_binary(
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/shared/code:libs/lib_rateLimit.c",
             "//components/shared/code:libs/lib_pid.c",
+            "//components/shared/code:libs/lib_nvm.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
+            "//embedded/libs:libcrc.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),
@@ -344,6 +349,7 @@ cxx_binary(
     header_namespace = "",
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+        "libcrc.h": "//embedded/libs:libcrc.h",
     } | component_headers,
     include_directories = [
         "include/",

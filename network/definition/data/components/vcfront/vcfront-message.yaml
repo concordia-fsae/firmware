@@ -142,3 +142,9 @@ messages:
     description: VCFRONT sleep information
     id: 0x7b1
     template: sleepableNode
+
+  nvmInformation:
+    description: Information relating to the NVM manager
+    id: 0x7fa
+    sourceBuses: veh
+    template: nvmInformation

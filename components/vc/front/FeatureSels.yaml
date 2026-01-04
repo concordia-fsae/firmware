@@ -2,6 +2,7 @@ featureDefs:
   - "#/components/vc/front/FeatureDefs.yaml"
   - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
   - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
+  - "#/components/shared/code/HW/hw_FeatureDefs.yaml"
 features:
   feature_cantx_swi: true
   feature_canrx_swi: true
@@ -10,3 +11,9 @@ features:
   feature_vehicleState_mode: follower
   feature_wiggly_pedal: true
   feature_vehicleSpeed_leader: true
+  nvm_lib_enabled: true
+  nvm_flash_backed: true
+  nvm_block_size: 2048
+  app_rtos: true
+  nvm_task: true
+  hw_flash_delay: true

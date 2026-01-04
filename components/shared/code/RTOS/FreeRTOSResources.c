@@ -64,12 +64,19 @@ static StaticTask_t Task10Hz;
 static StackType_t  task10HzStack[configMINIMAL_STACK_SIZE];
 static StaticTask_t Task1Hz;
 static StackType_t  task1HzStack[configMINIMAL_STACK_SIZE];
+#if FEATURE_IS_ENABLED(NVM_TASK)
+static StaticTask_t TaskNvm;
+static StackType_t  taskNvmStack[configMINIMAL_STACK_SIZE];
+#endif
 
 // module periodic tasks, defined in Module.h
 extern void Module_1kHz_TSK(void);
 extern void Module_100Hz_TSK(void);
 extern void Module_10Hz_TSK(void);
 extern void Module_1Hz_TSK(void);
+#if FEATURE_IS_ENABLED(NVM_TASK)
+extern void lib_nvm_run(void);
+#endif
 extern void Module_ApplicationIdleHook(void);
 
 // SWIs
@@ -81,7 +88,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
     {
         .function    = &Module_1kHz_TSK,
         .name        = "Task 1kHz",
-        .priority    = 4U,
+        .priority    = 7U,
         .parameters  = NULL,
         .stack       = task1kHzStack,
         .stackSize   = sizeof(task1kHzStack) / sizeof(StackType_t),
@@ -95,7 +102,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
     {
         .function    = &Module_100Hz_TSK,
         .name        = "Task 100Hz",
-        .priority    = 3U,
+        .priority    = 6U,
         .parameters  = NULL,
         .stack       = task100HzStack,
         .stackSize   = sizeof(task100HzStack) / sizeof(StackType_t),
@@ -109,7 +116,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
     {
         .function    = &Module_10Hz_TSK,
         .name        = "Task 10Hz",
-        .priority    = 2U,
+        .priority    = 5U,
         .stack       = task10HzStack,
         .stackSize   = sizeof(task10HzStack) / sizeof(StackType_t),
         .stateBuffer = &Task10Hz,
@@ -123,7 +130,7 @@ RTOS_taskDesc_t ModuleTasks[] = {
     {
         .function    = &Module_1Hz_TSK,
         .name        = "Task 1Hz",
-        .priority    = 1U,
+        .priority    = 4U,
         .stack       = task1HzStack,
         .stackSize   = sizeof(task1HzStack) / sizeof(StackType_t),
         .stateBuffer = &Task1Hz,
@@ -134,6 +141,19 @@ RTOS_taskDesc_t ModuleTasks[] = {
         },
         .periodMs = pdMS_TO_TICKS(1000U),
     },
+};
+RTOS_taskDesc_t FreerunTasks[] = {
+#if FEATURE_IS_ENABLED(NVM_TASK)
+    {
+        .function    = &lib_nvm_run,
+        .name        = "NVM Task",
+        .priority    = 8U,
+        .stack       = taskNvmStack,
+        .stackSize   = sizeof(taskNvmStack) / sizeof(StackType_t),
+        .stateBuffer = &TaskNvm,
+        .parameters  = NULL,
+    },
+#endif
 };
 
 
@@ -202,6 +222,25 @@ static void taskFxn(void* parameters)
     }
 }
 
+/*
+ * Freerun Task Function
+ * This function is called by FreeRTOS for each task. Each task will then,
+ * in turn, check to see if it is time to execute based on its period and
+ * time since last execution. If it's time to execute, this function will call
+ * the function pointer associated with the task
+ */
+static void freerunTaskFxn(void* parameters)
+{
+    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;    // convert the parameter back into a task description
+
+    void (*const function)(void)    = task->function;       // get the function that will be called for this task
+
+    // if the processor has a floating point unit, uncomment the following line
+    // portTASK_USES_FLOATING_POINT();
+
+    (*function)();
+}
+
 /**
  * vApplicationIdleHook
  * @brief function that runs when the scheduler is idle
@@ -260,6 +299,17 @@ void RTOS_createResources(void)
                                          task->priority,
                                          task->stack,
                                          task->stateBuffer);
+    }
+    for (uint16_t i = 0U; i < COUNTOF(FreerunTasks); i++)
+    {
+        RTOS_taskDesc_t* const task = &FreerunTasks[i];
+        task->handle = xTaskCreateStatic(&freerunTaskFxn,
+                                            task->name,
+                                            task->stackSize,
+                                            task,
+                                            task->priority,
+                                            task->stack,
+                                            task->stateBuffer);
     }
 
     /*
