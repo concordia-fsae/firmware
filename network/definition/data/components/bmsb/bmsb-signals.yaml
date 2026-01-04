@@ -309,8 +309,9 @@ signals:
     description: Coulombs counted by the pack during this contactor cycle
     nativeRepresentation:
       bitWidth: 10
+      resolution: 0.05
       range:
-        min: 0
+        min: -25
         max: 25
     continuous: true
 
