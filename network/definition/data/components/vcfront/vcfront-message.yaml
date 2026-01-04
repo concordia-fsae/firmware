@@ -113,6 +113,7 @@ messages:
         template: wheelSpeedRotational
       vehicleSpeed:
         template: linearVelocity
+      odometer:
 
   tractionControlDebug:
     description: Traction Control Debug

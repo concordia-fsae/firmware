@@ -77,4 +77,6 @@ float32_t app_vehicleSpeed_getTireSlip(wheel_E wheel);
 float32_t app_vehicleSpeed_getAxleSlip(axle_E axle);
 
 float32_t app_vehicleSpeed_getVehicleSpeed(void);
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER) || FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_USEODOMETER)
 float32_t app_vehicleSpeed_getOdometer(void);
+#endif

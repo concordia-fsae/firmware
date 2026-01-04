@@ -188,3 +188,14 @@ signals:
   tractionControlState:
     description: State of the traction control system
     discreteValues: tractionControlState
+
+  odometer:
+    description: Vehicle odometer
+    unit: km
+    nativeRepresentation:
+      bitWidth: 15
+      range:
+        min: 0
+        max: 3000
+      resolution: 0.1
+    continuous: true

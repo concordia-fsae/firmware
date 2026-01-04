@@ -105,6 +105,7 @@ class Units(Enum):
     bytes = "B"
     Whr = "Whr"
     kW = "kW"
+    km = "km"
 
 
 class ValidationRole(Enum):

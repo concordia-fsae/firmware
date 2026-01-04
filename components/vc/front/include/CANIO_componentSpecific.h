@@ -104,6 +104,7 @@
 #define set_wheelSpeedFR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_FR))
 #define set_axleSpeedFront(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT))
 #define set_vehicleSpeed(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getVehicleSpeed())
+#define set_odometer(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getOdometer())
 
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))

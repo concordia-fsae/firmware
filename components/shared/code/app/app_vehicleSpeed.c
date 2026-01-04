@@ -28,6 +28,7 @@
 
 #if FEATURE_IS_DISABLED(FEATURE_VEHICLESPEED_LEADER)
 #define CANRX_VEHICLESPEED(val) CANRX_get_signal(VEH, VCFRONT_vehicleSpeed, val)
+#define CANRX_ODOMETER(val) CANRX_get_signal(VEH, VCFRONT_odometer, val)
 #endif
 
 /******************************************************************************
@@ -39,6 +40,11 @@ typedef struct
     uint16_t rpm_wheel[WHEEL_CNT];
     uint16_t rpm_axle[AXLE_CNT];
     float32_t vehicleSpeedLinear;
+
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+    uint32_t lastTimestampMS;
+    bool odoSaved;
+#endif // FEATURE_VEHICLEPEED_LEADER
 } vehicle_S;
 
 /******************************************************************************
@@ -55,6 +61,32 @@ static void calculateAxleSpeed(void)
 {
     vehicle.rpm_axle[AXLE_FRONT] = (uint16_t)(vehicle.rpm_wheel[WHEEL_FL] + vehicle.rpm_wheel[WHEEL_FR]) / 2;
     vehicle.rpm_axle[AXLE_REAR] = (uint16_t)(vehicle.rpm_wheel[WHEEL_RL] + vehicle.rpm_wheel[WHEEL_RR]) / 2;
+}
+
+static void calculateVehicleSpeed(void)
+{
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+    const uint32_t currentTime = HW_TIM_getTimeMS();
+    const float32_t delta_t = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
+
+    vehicle.vehicleSpeedLinear = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
+
+    if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
+    {
+        vehicle.odoSaved = false;
+        odometer_data.km += (vehicle.vehicleSpeedLinear * delta_t) / 100.0f;
+    }
+    else if (!vehicle.odoSaved)
+    {
+        lib_nvm_requestWrite(NVM_ENTRYID_ODOMETER);
+    }
+
+    vehicle.lastTimestampMS = currentTime;
+#else // FEATURE_VEHICLEPEED_LEADER
+    float32_t tmp = 0.0f;
+    const bool valid = CANRX_VEHICLESPEED(&tmp) == CANRX_MESSAGE_VALID;
+    vehicle.vehicleSpeedLinear = valid ? tmp : 0.0f;
+#endif // !FEATURE_VEHICLEPEED_LEADER
 }
 
 /******************************************************************************
@@ -115,9 +147,28 @@ float32_t app_vehicleSpeed_getAxleSlip(axle_E axle)
     return (vel_axle - vel_veh) / vel_veh;
 }
 
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER) || FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_USEODOMETER)
+float32_t app_vehicleSpeed_getOdometer(void)
+{
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+    return odometer_data.km;
+#else
+    float32_t tmp = 0.0f;
+    const bool valid = CANRX_ODOMETER(&tmp) == CANRX_MESSAGE_VALID;
+
+    return valid ? tmp : 0.0f;
+#endif
+}
+#endif
+
 static void app_vehicleSpeed_init(void)
 {
     memset(&vehicle, 0x00U, sizeof(vehicle));
+
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+    vehicle.lastTimestampMS = HW_TIM_getTimeMS();
+    vehicle.odoSaved = true;
+#endif
 }
 
 static void app_vehicleSpeed_periodic_100Hz(void)
@@ -135,14 +186,7 @@ static void app_vehicleSpeed_periodic_100Hz(void)
     }
 
     calculateAxleSpeed();
-
-#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
-    vehicle.vehicleSpeedLinear = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
-#else // FEATURE_vehiclePEED_LEADER
-    float32_t tmp = 0.0f;
-    const bool valid = CANRX_VEHICLESPEED(&tmp) == CANRX_MESSAGE_VALID;
-    vehicle.vehicleSpeedLinear = valid ? tmp : 0.0f;
-#endif // !FEATURE_vehiclePEED_LEADER
+    calculateVehicleSpeed();
 }
 
 const ModuleDesc_S app_vehicleSpeed_desc = {
