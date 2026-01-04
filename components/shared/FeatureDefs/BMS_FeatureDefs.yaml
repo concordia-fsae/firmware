@@ -10,3 +10,4 @@ defs:
   configured_pack_max_voltage:
   max_cont_discharge_current:
   max_cont_charge_current:
+  cell_rated_amphours:
