@@ -207,3 +207,75 @@ signals:
     continuous: true
   sleepFollowerState:
     discreteValues: sleepFollowerState
+  latitude:
+    unit: "deg"
+    nativeRepresentation:
+      bitWidth: 25
+      range:
+        min: -90
+        max: 90
+      resolution: 0.0001 # ~10m
+    continuous: true
+  longitude:
+    unit: "deg"
+    nativeRepresentation:
+      bitWidth: 26
+      range:
+        min: -180
+        max: 180
+      resolution: 0.0001 # ~10m
+    continuous: true
+  altitude:
+    unit: "m"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 1000
+      resolution: 1
+    continuous: true
+  course:
+    unit: "deg"
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 360
+      resolution: 0.1
+    continuous: true
+  date:
+    unit: ""
+    nativeRepresentation:
+      range:
+        min: 1
+        max: 31
+  month:
+    unit: ""
+    nativeRepresentation:
+      range:
+        min: 1
+        max: 12
+  year:
+    unit: ""
+    nativeRepresentation:
+      range:
+        min: 2020
+        max: 2030
+  hour:
+    unit: ""
+    nativeRepresentation:
+      range:
+        min: 0
+        max: 24
+  minute:
+    unit: ""
+    nativeRepresentation:
+      range:
+        min: 0
+        max: 59
+  second:
+    unit: ""
+    nativeRepresentation:
+      range:
+        min: 0
+        max: 59

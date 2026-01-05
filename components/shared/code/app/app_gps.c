@@ -95,6 +95,21 @@ void app_gps_getTime(app_gps_time_S* time)
     taskEXIT_CRITICAL();
 }
 
+app_gps_pos_S* app_gps_getPosRef(void)
+{
+     return &gps.pos;
+}
+
+app_gps_heading_S* app_gps_getHeadingRef(void)
+{
+     return &gps.heading;
+}
+
+app_gps_time_S* app_gps_getTimeRef(void)
+{
+     return &gps.time;
+}
+
 bool app_gps_isValid(void)
 {
     return drv_timer_getState(&gps.timeout) != DRV_TIMER_RUNNING;

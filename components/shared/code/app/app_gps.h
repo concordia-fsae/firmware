@@ -53,4 +53,10 @@ extern const ModuleDesc_S app_gps_desc;
 void app_gps_getPos(app_gps_pos_S* pos);
 void app_gps_getHeading(app_gps_heading_S* heading);
 void app_gps_getTime(app_gps_time_S* time);
+
+// Not thread safe
+app_gps_pos_S*  app_gps_getPosRef(void);
+app_gps_heading_S*  app_gps_getHeadingRef(void);
+app_gps_time_S* app_gps_getTimeRef(void);
+
 bool app_gps_isValid(void);

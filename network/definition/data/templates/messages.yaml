@@ -66,3 +66,40 @@ messages:
     signals:
       sleepable:
         template: sleepFollowerState
+
+  position:
+    description: Position
+    cycleTimeMs: 100
+    signals:
+      lat:
+        template: latitude
+      lon:
+        template: longitude
+      alt:
+        template: altitude
+
+  heading:
+    description: Heading
+    cycleTimeMs: 100
+    signals:
+      course:
+        template: course
+      speed:
+        template: linearVelocity
+
+  date:
+    description: Date
+    cycleTimeMs: 1000
+    signals:
+      day:
+        template: date
+      month:
+        template: month
+      year:
+        template: year
+      hour:
+        template: hour
+      minute:
+        template: minute
+      second:
+        template: second
