@@ -334,8 +334,8 @@ class CanSignal(CanObject):
                     if nat_rep.bit_width:
                         self.scale = sig_range / (2**nat_rep.bit_width)
                     else:
+                        nat_rep.resolution = 1
                         assert sig_range, "Signal range was not defined somehow"
-                        assert nat_rep.resolution, "Resolution was not defined somehow"
                         nat_rep.bit_width = ceil(log(sig_range / nat_rep.resolution, 2))
             elif nat_rep.bit_width:
                 nat_rep.resolution = nat_rep.resolution or 1.0
