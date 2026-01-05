@@ -29,7 +29,7 @@
 #include "steeringAngle.h"
 #include "shockpot.h"
 #include "Module.h"
-#include "wheelSpeed.h"
+#include "app_vehicleSpeed.h"
 #include "app_vehicleState.h"
 
 /******************************************************************************
@@ -100,9 +100,11 @@
 #define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getFLVoltage())
 #define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getFRVoltage())
 
-#define set_wheelSpeedFL(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_FL))
-#define set_wheelSpeedFR(m,b,n,s) set(m,b,n,s, wheelSpeed_getSpeedRotational(WHEEL_FR))
-#define set_axleSpeedFront(m,b,n,s) set(m,b,n,s, wheelSpeed_getAxleRPM(AXLE_FRONT))
+#define set_wheelSpeedFL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_FL))
+#define set_wheelSpeedFR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_FR))
+#define set_axleSpeedFront(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT))
+#define set_vehicleSpeed(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getVehicleSpeed())
+#define set_odometer(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getOdometer())
 
 #define set_taskStack1kHz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1kHz_TASK))
 #define set_taskStack100Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_100Hz_TASK))
@@ -110,5 +112,17 @@
 #define set_taskStack1Hz(m,b,n,s) set(m,b,n,s, Module_getMinStackLeft(MODULE_1Hz_TASK))
 
 #define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
+
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+# define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
+# define set_nvmRecordWrites(m, b, n, s)            set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())
+# define set_nvmBlockErases(m, b, n, s)             set(m, b, n, s, (uint8_t)lib_nvm_getTotalBlockErases())
+# define set_nvmFailedCrc(m, b, n, s)               set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedCrc())
+# define set_nvmRecordFailedInit(m, b, n, s)        set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedRecordInit())
+# define set_nvmRecordEmptyInit(m, b, n, s)         set(m, b, n, s, (uint8_t)lib_nvm_getTotalEmptyRecordInit())
+# define set_nvmRecordsVersionFailed(m, b, n, s)    set(m, b, n, s, (uint8_t)lib_nvm_getTotalRecordsVersionFailed())
+#else
+# define transmit_VCFRONT_nvmInformation               false
+#endif
 
 #include "TemporaryStubbing.h"

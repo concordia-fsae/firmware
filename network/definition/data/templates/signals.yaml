@@ -95,10 +95,11 @@ signals:
         min: 0.0
         max: 15
     continuous: true
-  wheelSpeedLinear:
+  linearVelocity:
     unit: 'm/s'
     nativeRepresentation:
       bitWidth: 10
+      resolution: 0.01
       range:
         min: 0
         max: 50

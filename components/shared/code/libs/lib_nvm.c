@@ -52,7 +52,7 @@
 #include "lib_utility.h"
 #include "libcrc.h"
 #include "string.h"
-#include "rtos.h"
+#include "FreeRTOS.h"
 #include "semphr.h"
 
 #if FEATURE_IS_DISABLED(NVM_LIB_ENABLED)

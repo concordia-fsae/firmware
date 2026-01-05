@@ -7,14 +7,14 @@
  *                             I N C L U D E S
 ******************************************************************************/
 
-#include "wheelSpeed.h"
+#include "app_vehicleSpeed.h"
 #include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-const wheelSpeed_config_E wheelSpeed_config = {
+const app_wheelSpeed_config_S app_wheelSpeed_config = {
     .sensorType = {
         [WHEEL_FL] = WS_SENSORTYPE_TIM_CHANNEL,
         [WHEEL_FR] = WS_SENSORTYPE_TIM_CHANNEL,

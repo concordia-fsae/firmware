@@ -4,6 +4,9 @@ config:
 defs:
   vehicleState_mode:
     discreteValue: mode
+  vehicleSpeed_leader:
+  vehicleSpeed_useOdometer:
+    restricts: vehicleSpeed_leader
 discreteValues:
   mode:
     - leader
