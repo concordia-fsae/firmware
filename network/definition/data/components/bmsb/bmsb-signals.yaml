@@ -91,7 +91,7 @@ signals:
     unit: 'V'
     description: BMS Boss Pack Voltage
     nativeRepresentation:
-      bitWidth: 16
+      bitWidth: 15
       resolution: 0.1
       range:
         min: 0
@@ -102,7 +102,7 @@ signals:
     unit: 'V'
     description: BMS Boss Pack Voltage Calculated
     nativeRepresentation:
-      bitWidth: 16
+      bitWidth: 15
       resolution: 0.1
       range:
         min: 0
@@ -113,7 +113,7 @@ signals:
     unit: 'V'
     description: BMS Boss Pack Voltage Measured
     nativeRepresentation:
-      bitWidth: 16
+      bitWidth: 15
       resolution: 0.1
       range:
         min: 0
