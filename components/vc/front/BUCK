@@ -332,6 +332,7 @@ cxx_binary(
             "//components/shared/code:app/app_gps.c",
             "//components/shared/code:app/app_vehicleState.c",
             "//components/shared/code:app/app_vehicleSpeed.c",
+            "//components/shared/code:app/app_faultManager.c",
             ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",

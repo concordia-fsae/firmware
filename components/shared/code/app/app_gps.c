@@ -14,6 +14,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "lib_buffer.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -22,6 +23,8 @@
 #define BUFFER_SIZE 2048U
 #define MAX_NMEA_SENTENCE 82U
 #define GPS_TIMEOUT_MS 2000U
+
+#define GPS_DEVICE_ERROR FM_FAULT_VCFRONT_GPSDEVICEERROR
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -136,6 +139,8 @@ static void app_gps_periodic_100Hz(void)
             LIB_BUFFER_FIFO_CLEAR(&gps.sentence);
         }
     }
+
+    app_faultManager_setFaultState(GPS_DEVICE_ERROR, app_gps_isValid());
 #else // FEATURE_GPSTRANSCEIVER
     // TODO: Implement GPS listener
 #endif // !FEATURE_GPSTRANSCEIVER
