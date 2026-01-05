@@ -28,6 +28,7 @@ messages:
       packDischargeLimit:
       packVoltage:
       packAmpHours:
+      packCurrent:
 
   information:
     description: BMS Boss Information
@@ -35,7 +36,6 @@ messages:
     id: 0x98
     sourceBuses: veh
     signals:
-      packCurrent:
       packContactorState:
       packRH:
       packAmbient:
