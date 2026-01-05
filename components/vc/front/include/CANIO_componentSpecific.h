@@ -31,6 +31,7 @@
 #include "Module.h"
 #include "app_vehicleSpeed.h"
 #include "app_vehicleState.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -52,6 +53,8 @@
 
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+
+#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
 
 #define set_apps1(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1) * 100)
 #define set_apps2(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2) * 100)

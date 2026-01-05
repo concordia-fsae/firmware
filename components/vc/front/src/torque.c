@@ -114,13 +114,24 @@ static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake
                               (brake_position > PEDAL_APPLIED_THRESHOLD) &&
                               (vehicleSpeed < VEHICLE_STOPPED_THRESHOLD);
 
-#if FEATURE_IS_ENABLED(FEATURE_REVERSE)
-    if (gear_change_rising && ok_to_change)
+    if (gear_change_rising)
     {
-        ret = true;
-        torque_data.gear = torque_data.gear == GEAR_F ? GEAR_R : GEAR_F;
-    }
+#if FEATURE_IS_ENABLED(FEATURE_REVERSE)
+        if (ok_to_change)
+        {
+            ret = true;
+            torque_data.gear = torque_data.gear == GEAR_F ? GEAR_R : GEAR_F;
+        }
+        else
 #endif
+        {
+            app_faultManager_setFaultState(FM_FAULT_VCFRONT_GEARCHANGEREJECTED, true);
+        }
+    }
+    else
+    {
+        app_faultManager_setFaultState(FM_FAULT_VCFRONT_GEARCHANGEREJECTED, false);
+    }
 
     return ret;
 }
@@ -178,10 +189,14 @@ static float32_t evaluate_torque_max(void)
 
 static void evaluate_launch_control(float32_t accelerator_position, float32_t brake_position)
 {
+    bool launchRejected = false;
+
 #if FEATURE_IS_ENABLED(FEATURE_LAUNCH_CONTROL)
     switch (torque_data.launchControlState)
     {
         case LC_STATE_REJECTED:
+            launchRejected = true;
+            __attribute__((fallthrough));
         case LC_STATE_INACTIVE:
             {
                 CAN_digitalStatus_E launch_control_requested = CAN_DIGITALSTATUS_SNA;
@@ -261,6 +276,8 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
     UNUSED(accelerator_position);
     UNUSED(brake_position);
 #endif
+
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_LAUNCHREJECTED, launchRejected);
 }
 
 static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)

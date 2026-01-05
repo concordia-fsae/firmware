@@ -1,4 +1,14 @@
 messages:
+  faults:
+    description: BMSB Faults
+    cycleTimeMs: 1000
+    id: 0x3a4
+    sourceBuses: veh
+    messageType: faults
+    signals:
+      launchRejected:
+      gearChangeRejected:
+
   udsResponse:
     description: UDS response message from the VCFRONT
     id: 0x670

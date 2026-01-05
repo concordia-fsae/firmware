@@ -1,4 +1,14 @@
 signals:
+  # Faults
+  launchRejected:
+    description: Driver launch request rejected
+    discreteValues: faultStatus
+
+  gearChangeRejected:
+    description: Driver reverse request rejected
+    discreteValues: faultStatus
+
+  # Signals
   apps1:
     description: "Accelerator pedal 1 position"
     template: percentage
