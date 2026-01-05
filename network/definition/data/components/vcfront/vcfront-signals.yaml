@@ -8,6 +8,10 @@ signals:
     description: Driver reverse request rejected
     discreteValues: faultStatus
 
+  gpsDeviceError:
+    description: Device is in an error state
+    discreteValues: faultStatus
+
   # Signals
   apps1:
     description: "Accelerator pedal 1 position"

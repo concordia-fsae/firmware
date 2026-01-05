@@ -8,6 +8,7 @@ messages:
     signals:
       launchRejected:
       gearChangeRejected:
+      gpsDeviceError:
 
   udsResponse:
     description: UDS response message from the VCFRONT
