@@ -12,6 +12,7 @@
 // System Includes
 #include "ModuleDesc.h"
 #include "app_vehicleState.h"
+#include "app_gps.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -44,6 +45,7 @@ typedef enum
     MODULE_TORQUE,
     MODULE_POWERMANAGER,
     MODULE_COCKPITLIGHTS,
+    MODULE_GPS,
     MODULE_WHEELSPEED,
     MODULE_BRAKEPRESSURE,
     MODULE_STEERINGANGLE,

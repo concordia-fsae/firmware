@@ -7,6 +7,7 @@ defs:
   vehicleSpeed_leader:
   vehicleSpeed_useOdometer:
     restricts: vehicleSpeed_leader
+  gpsTransceiver:
 discreteValues:
   mode:
     - leader

@@ -120,3 +120,15 @@ git_fetch(
     ],
     visibility = ["PUBLIC"],
 )
+
+git_fetch(
+    name = "lwgps",
+    repo = "https://github.com/MaJerle/lwgps.git",
+    rev = "e35f27ab6f134328822c9fab304a2b8b6b757da2",
+    sub_targets = [
+        "lwgps/src/include/lwgps/lwgps.h",
+        "lwgps/src/include/lwgps/lwgps_opt.h",
+        "lwgps/src/lwgps/lwgps.c",
+    ],
+    visibility = ["PUBLIC"],
+)

@@ -113,6 +113,20 @@
 
 #define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
 
+#define set_lat(m,b,n,s) set(m,b,n,s, app_gps_getPosRef()->lat)
+#define set_lon(m,b,n,s) set(m,b,n,s, app_gps_getPosRef()->lon)
+#define set_alt(m,b,n,s) set(m,b,n,s, app_gps_getPosRef()->alt)
+
+#define set_course(m,b,n,s) set(m,b,n,s, app_gps_getHeadingRef()->course)
+#define set_speed(m,b,n,s) set(m,b,n,s, app_gps_getHeadingRef()->speedMps)
+
+#define set_day(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->date)
+#define set_month(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->month)
+#define set_year(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->year)
+#define set_hour(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->hours)
+#define set_minute(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->minutes)
+#define set_second(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->seconds)
+
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
 # define set_nvmRecordWrites(m, b, n, s)            set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())

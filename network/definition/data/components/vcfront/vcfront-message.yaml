@@ -149,3 +149,18 @@ messages:
     id: 0x7fa
     sourceBuses: veh
     template: nvmInformation
+
+  gpsPosition:
+    id: 0x310
+    sourceBuses: veh
+    template: position
+
+  gpsHeading:
+    id: 0x311
+    sourceBuses: veh
+    template: heading
+
+  gpsDate:
+    id: 0x312
+    sourceBuses: veh
+    template: date

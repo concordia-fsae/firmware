@@ -59,11 +59,22 @@ const packTable_S ${bus.upper()}_packTable_${cycle_time}ms[] = {
 </%def>
 
 <%def name="make_sigpack(bus, node, signal)">
+<%
+  bit_width = math.ceil(signal.native_representation.bit_width / 32) * 32
+  native_type = ""
+
+  if "float" in signal.datatype.value:
+    native_type = f"float{bit_width}_t"
+  elif signal.native_representation.range.min < 0:
+    native_type = f"int{bit_width}_t"
+  else:
+    native_type = f"uint{bit_width}_t"
+%>\
 %if signal.discrete_values:
 __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, CAN_${signal.discrete_values.name}_E val)
 {
 %else:
-__attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, ${signal.datatype.value} val)
+__attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.message_ref.node_name}_${signal.get_name_nodeless()}(CAN_data_T* m, ${native_type} val)
 {
 %endif
 <%

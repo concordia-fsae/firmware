@@ -17,3 +17,4 @@ features:
   app_rtos: true
   nvm_task: true
   hw_flash_delay: true
+  feature_gpsTransceiver: true
