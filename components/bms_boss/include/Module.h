@@ -29,6 +29,7 @@ extern const ModuleDesc_S drv_inputAD_desc;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S CANIO_tx;
+extern const ModuleDesc_S socEstimation_desc;
 
 /**< Module tasks to get called by the RTOS */
 extern void Module_Init(void);

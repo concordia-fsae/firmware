@@ -69,7 +69,6 @@ typedef struct {
 typedef struct
 {
     float32_t pack_amp_hours;
-    float32_t cell_amp_hours[BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS];
     uint8_t spare[16U];
 } LIB_NVM_STORAGE(nvm_bms_data_S);
 extern nvm_bms_data_S current_data;

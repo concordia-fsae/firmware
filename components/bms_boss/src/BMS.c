@@ -19,6 +19,7 @@
 #include "MessageUnpack_generated.h"
 #include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
+#include "socEstimation.h"
 
 #define CURRENT_SENSE_V_per_A -0.0025f
 #define PRECHARGE_MIN_TIME_MS 1320U
@@ -201,10 +202,7 @@ static void BMS1kHz_PRD(void)
         (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED) ||
         (SYS.contacts == SYS_CONTACTORS_CLOSED))
     {
-        const float32_t delta_amp_hr = BMS.pack_current * (((float32_t)delta_t) / 1000000.0f) * (1.0f /  3600.0f);
-        BMS.counted_coulombs.reset = false;
-        BMS.counted_coulombs.amp_hr += delta_amp_hr;
-        current_data.pack_amp_hours += delta_amp_hr;
+        SOCestimation(&current_data.pack_amp_hours, &BMS.pack_voltage_calculated, &BMS.pack_current, &delta_t);
     }
     else if (BMS.counted_coulombs.reset == false)
     {

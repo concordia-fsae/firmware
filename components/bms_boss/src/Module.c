@@ -42,6 +42,7 @@ static const ModuleDesc_S* modules[] = {
 #endif
     &CANIO_rx,
     &CANIO_tx,
+    &socEstimation_desc
 };
 
 static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
