@@ -20,3 +20,5 @@ messages:
 signals:
   TOOLING_commandedFansDutyCycle:
   TOOLING_targetBalancingVoltage:
+  BMSB_packCurrent:
+  BMSB_packAmpHours:
