@@ -66,7 +66,7 @@ typedef struct
     const void * const entryDefault_Ptr;
     void * const entryRam_Ptr;
     const uint16_t minTimeBetweenWritesMs;
-    bool (*versionHandler_Fn)(const uint16_t version, const storage_t* const entry_Ptr);
+    uint16_t (*versionHandler_Fn)(const uint16_t version, const storage_t* const entry_Ptr);
 } lib_nvm_entry_S;
 
 typedef struct

@@ -273,11 +273,11 @@ void lib_nvm_init(void)
             // If the version is different, handle the update
             // If the update fails, set the entry to the default value
             if (!entry->versionHandler_Fn ||
-                !entry->versionHandler_Fn(
+                !(entry->versionHandler_Fn(
                     hdr->entry_version,
-                    (storage_t*)(hdr + 1)))
+                    (storage_t*)(hdr + 1)) == entry->version))
             {
-                record->currentNvmAddr_Ptr = NULL;
+                recordPopulateDefault(id);
                 failed_records++;
             }
             lib_nvm_requestWrite(id);
