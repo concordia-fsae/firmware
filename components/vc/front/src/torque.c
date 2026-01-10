@@ -12,6 +12,7 @@
 #include "apps.h"
 #include "bppc.h"
 #include "Module.h"
+#include "app_vehicleSpeed.h"
 #include "ModuleDesc.h"
 #include "string.h"
 #include "lib_utility.h"
@@ -136,7 +137,7 @@ static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake
     return ret;
 }
 
-static bool evaluate_mode_change(void)
+static bool evaluate_mode_change(float32_t brake_position)
 {
     bool ret = false;
     CAN_digitalStatus_E race_mode_change_requested = CAN_DIGITALSTATUS_SNA;
@@ -145,7 +146,12 @@ static bool evaluate_mode_change(void)
                                           (race_mode_change_requested == CAN_DIGITALSTATUS_ON);
     const bool race_mode_change_rising = !race_mode_change_was_requested && torque_data.race_mode_change_active;
 
-    if (race_mode_change_rising)
+    const float32_t vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
+
+    const bool brakePedalPressed = brake_position >= PEDAL_APPLIED_THRESHOLD;
+    const bool vehicleStationary = vehicleSpeed < VEHICLE_STOPPED_THRESHOLD;
+
+    if (race_mode_change_rising && brakePedalPressed && vehicleStationary)
     {
         ret = true;
         torque_data.race_mode = torque_data.race_mode == RACEMODE_ENABLED ? RACEMODE_PIT : RACEMODE_ENABLED;
@@ -663,7 +669,7 @@ static void torque_periodic_100Hz(void)
     evaluate_sleepable(accelerator_position, brake_position);
 
     const bool gear_change = evaluate_gear_change(accelerator_position, brake_position);
-    const bool mode_change = evaluate_mode_change();
+    const bool mode_change = evaluate_mode_change(brake_position);
     evaluate_launch_control(accelerator_position, brake_position);
     torque_data.torqueReduction = evaluate_traction_control();
 
