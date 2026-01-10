@@ -23,7 +23,7 @@ extern lib_nvm_nvmCycleLog_S cycleLog;
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-static bool version_handler_current(const uint16_t version, const storage_t* const entry_Ptr)
+static uint16_t version_handler_current(const uint16_t version, const storage_t* const entry_Ptr)
 {
     UNUSED(entry_Ptr);
     uint16_t new_version = version;
@@ -31,13 +31,13 @@ static bool version_handler_current(const uint16_t version, const storage_t* con
     if (new_version == 0U)
     {
         // Example: NVM uprec
-        // nvm_bms_data_S flash;
-        // memcpy(&flash, entry_Ptr, sizeof(flash.pack_amp_hours));
-        // current_data.pack_amp_hours = flash.pack_amp_hours;
-        // new_version = 1;
+        nvm_bms_data_S flash;
+        memcpy(&flash, entry_Ptr, sizeof(flash.pack_amp_hours));
+        current_data.pack_amp_hours = flash.pack_amp_hours;
+        new_version = 1;
     }
 
-    return version != new_version;
+    return new_version;
 }
 #endif
 
