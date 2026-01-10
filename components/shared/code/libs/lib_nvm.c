@@ -212,8 +212,8 @@ void lib_nvm_init(void)
     {
         // While the current record in NVM is initialized and we remain in the same block
         // bounds, continue iterating and updating the current record of each entry
-        while ((hdr->initialized == SET_STATE) &&
-            (getBlockBaseAddress((uint32_t)block_hdr) == getBlockBaseAddress((uint32_t)(hdr))))
+        while ((getBlockBaseAddress((uint32_t)block_hdr) == getBlockBaseAddress((uint32_t)(hdr) + sizeof(*hdr))) &&
+               (hdr->initialized == SET_STATE))
         {
             storage_t* record = (storage_t*)(hdr + 1);
 
