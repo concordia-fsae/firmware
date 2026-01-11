@@ -221,7 +221,7 @@ cxx_library(
     stm32f1_hal(
         name = "hal-" + name,
         toolchain = TOOLCHAIN,
-        compiler_flags = compiler_flags,
+        compiler_flags = compiler_flags + [ "-Wno-cast-align" ],
         variant = variant,
         hal_conf_header = "include/HW/stm32f1xx_hal_conf.h",
         additional_deps = [
@@ -246,6 +246,7 @@ cxx_library(
                 "rcc_ex": {},  # required
                 "tim": {},
                 "tim_ex": {},  # required with tim,
+                "uart": {},
             },
         },
     )
@@ -327,6 +328,7 @@ cxx_binary(
             "//components/shared/code:HW/HW_flash.c",
             "//components/shared/code:HW/HW_gpio.c",
             "//components/shared/code:HW/HW_tim.c",
+            "//components/shared/code:HW/HW_uart.c",
             "//components/shared/code:app/CAN/CANIO-rx.c",
             "//components/shared/code:app/CAN/CANIO-tx.c",
             "//components/shared/code:app/app_gps.c",

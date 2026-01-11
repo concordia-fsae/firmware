@@ -16,6 +16,7 @@
 #include "HW_gpio.h"
 #include "HW_tim.h"
 #include "HW_flash.h"
+#include "HW_uart.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -76,6 +77,7 @@ int main(void)
     HW_CAN_init();
     HW_DMA_init();
     HW_ADC_init();
+    HW_UART_init();
     FLASH_init();
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
     lib_nvm_init(); // Must be done early in the boot stage following flash bringup
