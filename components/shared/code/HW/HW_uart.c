@@ -24,6 +24,11 @@ HW_StatusTypeDef_E HW_UART_startDMARX(HW_UART_port_E port, uint32_t* data, uint3
     return HAL_UART_Receive_DMA(&huart[port], (uint8_t*)data, (uint16_t)size) == HAL_OK ? HW_OK : HW_ERROR;
 }
 
+HW_StatusTypeDef_E HW_UART_stopDMA(HW_UART_port_E port)
+{
+    return HAL_UART_DMAStop(&huart[port]) == HAL_OK ? HW_OK : HW_ERROR;
+}
+
 HW_StatusTypeDef_E HW_UART_init(void)
 {
     HW_StatusTypeDef_E status = HW_UART_init_componentSpecific();

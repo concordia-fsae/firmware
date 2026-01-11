@@ -27,3 +27,4 @@ HW_StatusTypeDef_E HW_UART_init(void);
 HW_StatusTypeDef_E HW_UART_init_componentSpecific(void);
 HW_StatusTypeDef_E HW_UART_deInit(void);
 HW_StatusTypeDef_E HW_UART_startDMARX(HW_UART_port_E huart, uint32_t* data, uint32_t size);
+HW_StatusTypeDef_E HW_UART_stopDMA(HW_UART_port_E port);
