@@ -24,6 +24,9 @@
         size_t currentPos; \
     } name
 #define LIB_BUFFER_CIRC_PEEK(name) (name)->buffer[(name)->currentPos]
+#define LIB_BUFFER_CIRC_PEEKN(name, index) (name)->buffer[((int32_t)(name)->currentPos) + index > 0 ? \
+                                           ((int32_t)(name)->currentPos) % COUNTOF((name)->buffer) : \
+                                           COUNTOF((name)->buffer) - ((-((int32_t)((name)->currentPos) + index)) % COUNTOF((name)->buffer))]
 #define LIB_BUFFER_CIRC_GET(name) LIB_BUFFER_CIRC_PEEK(name); \
                                   (name)->currentPos = LIB_BUFFER_GETNEXTINDEX(name, (name)->currentPos)
 #define LIB_BUFFER_CIRC_GETSET(name, newVal) LIB_BUFFER_CIRC_PEEK(name); \
