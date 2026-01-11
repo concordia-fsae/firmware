@@ -103,3 +103,9 @@ messages:
         template: minute
       second:
         template: second
+      crcFailures:
+        template: count9Bit
+      invalidTransactions:
+        template: count9Bit
+      numberSamples:
+        template: count9Bit

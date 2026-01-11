@@ -44,6 +44,9 @@ static struct
     LIB_BUFFER_CIRC_CREATE(dmaBuffer, uint8_t, BUFFER_SIZE);
     LIB_BUFFER_FIFO_CREATE(sentence, uint8_t, MAX_NMEA_SENTENCE);
     lwgps_t currentGPS;
+    uint16_t crcFailures;
+    uint16_t invalidTransactions;
+    uint16_t samples;
 #endif
 } gps;
 
@@ -56,21 +59,33 @@ static void parse(uint8_t* sentence, size_t len)
 {
     if (lwgps_process(&gps.currentGPS, sentence, len))
     {
-        taskENTER_CRITICAL();
-        gps.pos.lat = gps.currentGPS.latitude;
-        gps.pos.lon = gps.currentGPS.longitude;
-        gps.pos.alt = gps.currentGPS.altitude;
+        if (gps.currentGPS.p.stat == STAT_UNKNOWN)
+        {
+            gps.invalidTransactions++;
+        }
+        else if (gps.currentGPS.p.stat == STAT_CHECKSUM_FAIL)
+        {
+            gps.crcFailures++;
+        }
+        else
+        {
+            taskENTER_CRITICAL();
+            gps.pos.lat = gps.currentGPS.latitude;
+            gps.pos.lon = gps.currentGPS.longitude;
+            gps.pos.alt = gps.currentGPS.altitude;
 
-        gps.heading.course = gps.currentGPS.course;
-        gps.heading.speedMps = lwgps_to_speed(gps.currentGPS.speed, LWGPS_SPEED_MPS);
+            gps.heading.course = gps.currentGPS.course;
+            gps.heading.speedMps = lwgps_to_speed(gps.currentGPS.speed, LWGPS_SPEED_MPS);
 
-        gps.time.date = gps.currentGPS.date;
-        gps.time.month = gps.currentGPS.month;
-        gps.time.year = gps.currentGPS.year;
-        gps.time.hours = gps.currentGPS.hours;
-        gps.time.seconds = gps.currentGPS.seconds;
-        taskEXIT_CRITICAL();
-        drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
+            gps.time.date = gps.currentGPS.date;
+            gps.time.month = gps.currentGPS.month;
+            gps.time.year = gps.currentGPS.year;
+            gps.time.hours = gps.currentGPS.hours;
+            gps.time.seconds = gps.currentGPS.seconds;
+            taskEXIT_CRITICAL();
+            drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
+            gps.samples++;
+        }
     }
 }
 #endif
@@ -118,6 +133,21 @@ app_gps_time_S* app_gps_getTimeRef(void)
 bool app_gps_isValid(void)
 {
     return drv_timer_getState(&gps.timeout) != DRV_TIMER_RUNNING;
+}
+
+uint16_t app_gps_getCrcFailures(void)
+{
+    return gps.crcFailures;
+}
+
+uint16_t app_gps_getInvalidTransactions(void)
+{
+    return gps.invalidTransactions;
+}
+
+uint16_t app_gps_getNumberSamples(void)
+{
+    return gps.samples;
 }
 
 static void app_gps_init(void)

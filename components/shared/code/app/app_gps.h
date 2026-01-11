@@ -60,3 +60,6 @@ app_gps_heading_S*  app_gps_getHeadingRef(void);
 app_gps_time_S* app_gps_getTimeRef(void);
 
 bool app_gps_isValid(void);
+uint16_t app_gps_getCrcFailures(void);
+uint16_t app_gps_getInvalidTransactions(void);
+uint16_t app_gps_getNumberSamples(void);
