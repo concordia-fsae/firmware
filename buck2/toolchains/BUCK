@@ -102,6 +102,20 @@ system_rust_toolchain(
     visibility = ["PUBLIC"],
 )
 
+load("@toolchains//rust:defs.bzl", "rust_toolchain")
+
+rust_toolchain(
+    name = "hermetic",
+    rustc = "rustc//stage2:rustc",
+    rustdoc = "rustc//stage2:rustdoc",
+    clippy_driver = "rustc//stage2:clippy-driver",
+    rustfmt = "rustc//stage2:rustfmt",
+    cargo = "rustc//stage2:cargo",
+    default_edition = "2021",
+    rustc_target_triple = "x86_64-unknown-linux-gnu",
+    visibility = ["PUBLIC"],
+)
+
 # default toolchains
 toolchain_alias(
     name = "cxx",
@@ -118,7 +132,7 @@ toolchain_alias(
     name = "rust",
     actual = select({
         "root//buck2/constraints:arm64-linux": ":rust-linux-aarch64",
-        "DEFAULT": ":rust-host",
+        "DEFAULT": ":hermetic",
     }),
     visibility = ["PUBLIC"],
 )
