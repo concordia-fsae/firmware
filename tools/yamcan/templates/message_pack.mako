@@ -115,6 +115,19 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
 %>\
 %if signal.native_representation.bit_width == 1:
     atomicXorU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)((val ? 1U : 0U) << ${signal.start_bit % 8}U));
+    %elif signal.discrete_values:
+    uint${dtype}_t tmp_${signal.name} = (uint${dtype}_t)val;
+    %if signal.native_representation.endianness.value == 0 and signal.native_representation.bit_width > 8:
+    reverse_bytes((uint8_t*)&tmp_${signal.name}, ${int(signal.native_representation.bit_width / 8)}U);
+      tmp_${signal.name} = (uint${dtype}_t)(
+      ((tmp_${signal.name} & (uint${dtype}_t)(~255U)) >> ${(8 - signal.native_representation.bit_width % 8) % 8}U)        | (tmp_${signal.name} & (uint${dtype}_t)${(2**(8 - (signal.native_representation.bit_width % 8))) - 1}U)
+    );
+    %endif
+    %if dtype == 64:
+    atomicXorU64(&m->u64, (uint64_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit}U);
+    %else: 
+    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], (uint${dtype}_t)((uint${dtype}_t)(tmp_${signal.name}) & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
+    %endif 
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
     uint${dtype}_t tmp_${signal.name};
