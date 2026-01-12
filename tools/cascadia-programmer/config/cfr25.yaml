@@ -1,0 +1,269 @@
+id_offset: '0x1'
+params:
+  10:
+    name: Flux command
+    value: 0.26
+  11:
+    name: Resolver PWM Delay Command
+    value: 1100.0
+  20:
+    name: Fault Clear
+    value: false
+  21:
+    name: Set PWM Frequency
+    value: 21.0
+  23:
+    name: Shudder Compensation Gain Control
+    value: 20.0
+  30:
+    name: OBD2 Enable Command
+    value: 30.0
+  100:
+    name: Iq Limit
+    value: 400.0
+  101:
+    name: Id Limit
+    value: 15.0
+  102:
+    name: DC Voltage Limit
+    value: 450.0
+  103:
+    name: DC Voltage Hysteresis
+    value: 10.0
+  104:
+    name: DC Under-voltage Limit
+    value: 100.0
+  106:
+    name: Vehicle Flux Command
+    value: 0.26
+  107:
+    name: Ia Offset EEPROM
+    value: 2048.0
+  108:
+    name: Ib Offset EEPROM
+    value: 2048.0
+  109:
+    name: Ic Offset EEPROM
+    value: 2048.0
+  111:
+    name: Motor Over-speed
+    value: 6500.0
+  112:
+    name: Inverter Over-Temperature
+    value: 100.0
+  113:
+    name: Motor Over-Temperature
+    value: 76.0
+  114:
+    name: Zero Torque Temperature
+    value: 105.0
+  115:
+    name: Full Torque Temperature
+    value: 104.0
+  120:
+    name: ACCEL Pedal Low
+    value: 0.0
+  121:
+    name: ACCEL Pedal Min
+    value: 0.0
+  122:
+    name: ACCEL Coast Low
+    value: 0.0
+  123:
+    name: ACCEL Coast High
+    value: 0.04
+  124:
+    name: ACCEL Pedal Max
+    value: 4.9
+  125:
+    name: ACCEL Pedal High
+    value: 4.99
+  126:
+    name: REGEN Fade Speed
+    value: 200.0
+  127:
+    name: Break Speed
+    value: 6500.0
+  128:
+    name: Max Speed
+    value: 6000.0
+  129:
+    name: Motor Torque Limit
+    value: 160.0
+  130:
+    name: REGEN Torque Limit
+    value: 100.0
+  131:
+    name: Braking Torque Limit
+    value: 100.0
+  132:
+    name: Accel Pedal Flipped
+    value: false
+  140:
+    name: Pre-charge Bypassed
+    value: true
+  141:
+    name: CAN ID Offset
+    value: 1.0
+  142:
+    name: Inverter Run Mode
+    value: Torque Mode
+  143:
+    name: Inverter Command Mode
+    value: CAN Mode
+  144:
+    name: CAN Extended Message Identifier
+    value: Standard
+  145:
+    name: CAN Term Resistor Present
+    value: false
+  146:
+    name: CAN Command Message Active
+    value: true
+  147:
+    name: CAN Bit Rate
+    value: 1Mbps
+  148:
+    name: CAN Active Messages Lo Word
+    value: 49127.0
+  149:
+    name: Key Switch Mode
+    value: Simple on/off switch
+  150:
+    name: Motor Parameter Set
+    value: 117.0
+  151:
+    name: Resolver PWM Delay
+    value: 1100.0
+  152:
+    name: Gamma Adjust
+    value: 278.0
+  154:
+    name: Sin Offset
+    value: 2.5
+  155:
+    name: Cos Offset
+    value: 2.5
+  158:
+    name: CAN Diagnostic Data Transmit Active
+    value: true
+  159:
+    name: CAN Inverter Enable Switch Active
+    value: false
+  160:
+    name: Kp Speed
+    value: 1600.0
+  161:
+    name: Ki Speed
+    value: 8.0
+  162:
+    name: Kd Speed
+    value: 0.0
+  163:
+    name: Klp Speed
+    value: 0.0
+  164:
+    name: Kp Torque
+    value: 0.01
+  165:
+    name: Ki Torque
+    value: 0.0004
+  166:
+    name: Kd Torque
+    value: 0.0
+  167:
+    name: Klp Torque
+    value: 0.0
+  168:
+    name: Torque Rate Limit
+    value: 5.0
+  169:
+    name: Speed Rate Limit
+    value: 100.0
+  170:
+    name: Relay Output State
+    value: 0.0
+  171:
+    name: CAN J1939 Option Active
+    value: Not active
+  172:
+    name: CAN Timeout
+    value: 300.0
+  173:
+    name: Discharge Enable
+    value: 0.0
+  174:
+    name: Serial Number
+    value: 1702.0
+  177:
+    name: CAN OBD2 Enable
+    value: 0.0
+  178:
+    name: CAN BMS Limit Enable
+    value: true
+  180:
+    name: Brake Mode
+    value: Brake switch mode
+  181:
+    name: Brake Low
+    value: 0.0
+  182:
+    name: Brake Min
+    value: 2.0
+  183:
+    name: Brake Max
+    value: 3.0
+  184:
+    name: Brake High
+    value: 5.0
+  185:
+    name: REGEN Ramp Period
+    value: 2000.0
+  186:
+    name: Brake Pedal Flipped
+    value: false
+  187:
+    name: Shudder Compensation Enable
+    value: Enabled
+  188:
+    name: Kp Shudder
+    value: 20.0
+  189:
+    name: TCLAMP Shudder
+    value: 19.1
+  190:
+    name: Shudder Filter Frequency
+    value: 30.0
+  191:
+    name: Shudder Speed Fade
+    value: 20.0
+  192:
+    name: Shudder Speed Low
+    value: 300.0
+  193:
+    name: Shudder Speed High
+    value: 400.0
+  199:
+    name: Brake Input Bypassed
+    value: false
+  203:
+    name: RTD Selection
+    value: true
+  204:
+    name: Analog Output Function Select
+    value: 0.0
+  233:
+    name: CAN Slave Cmd ID
+    value: 0.0
+  234:
+    name: CAN Slave Dir
+    value: Same as Master
+  235:
+    name: CAN Fast Msg Rate
+    value: 10.0
+  236:
+    name: CAN Slow Msg Rate
+    value: 100.0
+  237:
+    name: CAN Active Messages Hi Word
+    value: 65534.0
