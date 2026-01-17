@@ -55,6 +55,24 @@ static struct
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
+static void updateGPS(void)
+{
+    taskENTER_CRITICAL();
+    gps.pos.lat = gps.currentGPS.latitude;
+    gps.pos.lon = gps.currentGPS.longitude;
+    gps.pos.alt = gps.currentGPS.altitude;
+
+    gps.heading.course = gps.currentGPS.course;
+    gps.heading.speedMps = lwgps_to_speed(gps.currentGPS.speed, LWGPS_SPEED_MPS);
+
+    gps.time.date = gps.currentGPS.date;
+    gps.time.month = gps.currentGPS.month;
+    gps.time.year = gps.currentGPS.year;
+    gps.time.hours = gps.currentGPS.hours;
+    gps.time.seconds = gps.currentGPS.seconds;
+    taskEXIT_CRITICAL();
+}
+
 static void parse(uint8_t* sentence, size_t len)
 {
     if (lwgps_process(&gps.currentGPS, sentence, len))
@@ -69,20 +87,7 @@ static void parse(uint8_t* sentence, size_t len)
         }
         else
         {
-            taskENTER_CRITICAL();
-            gps.pos.lat = gps.currentGPS.latitude;
-            gps.pos.lon = gps.currentGPS.longitude;
-            gps.pos.alt = gps.currentGPS.altitude;
-
-            gps.heading.course = gps.currentGPS.course;
-            gps.heading.speedMps = lwgps_to_speed(gps.currentGPS.speed, LWGPS_SPEED_MPS);
-
-            gps.time.date = gps.currentGPS.date;
-            gps.time.month = gps.currentGPS.month;
-            gps.time.year = gps.currentGPS.year;
-            gps.time.hours = gps.currentGPS.hours;
-            gps.time.seconds = gps.currentGPS.seconds;
-            taskEXIT_CRITICAL();
+            updateGPS();
             drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
             gps.samples++;
         }
