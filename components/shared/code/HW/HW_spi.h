@@ -27,9 +27,15 @@ typedef SPI_TypeDef HW_SPI_Handle_T;
 typedef struct
 {
     HW_SPI_Handle_T* handle;
+} HW_spi_port_S;
+
+typedef struct
+{
+    HW_spi_port_E    port;
     HW_GPIO_pinmux_E ncs_pin;
 } HW_SPI_Device_S;
 
+extern const HW_spi_port_S   HW_spi_ports[HW_SPI_PORT_COUNT];
 extern const HW_SPI_Device_S HW_spi_devices[HW_SPI_DEV_COUNT];
 
 /******************************************************************************

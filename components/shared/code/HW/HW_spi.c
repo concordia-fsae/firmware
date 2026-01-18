@@ -9,6 +9,8 @@
 
 // System Includes
 #include "string.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 // Firmware Includes
 #include "HW_gpio.h"
@@ -26,7 +28,7 @@ typedef struct
     HW_spi_device_E owner;
 } HW_SPI_Lock_S;
 
-static HW_SPI_Lock_S lock = { 0 };
+static HW_SPI_Lock_S lock[HW_SPI_PORT_COUNT] = { 0 };
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -47,14 +49,15 @@ bool HW_SPI_verifyLock(HW_spi_device_E dev);
  */
 bool HW_SPI_lock(HW_spi_device_E dev)
 {
-    if (lock.locked)
+    taskENTER_CRITICAL();
+    if (lock[HW_spi_devices[dev].port].locked)
     {
         return false;
     }
 
-    lock.locked = true;
-    lock.owner  = dev;
-
+    lock[HW_spi_devices[dev].port].locked = true;
+    lock[HW_spi_devices[dev].port].owner  = dev;
+    taskEXIT_CRITICAL();
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, false);
 
     return true;
@@ -74,10 +77,9 @@ bool HW_SPI_release(HW_spi_device_E dev)
         return false;
     }
 
-    lock.locked = false;
-    lock.owner  = 0x00;
-
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, true);
+    lock[HW_spi_devices[dev].port].owner  = HW_SPI_DEV_COUNT;
+    lock[HW_spi_devices[dev].port].locked = false;
 
     return true;
 }
@@ -91,12 +93,7 @@ bool HW_SPI_release(HW_spi_device_E dev)
  */
 bool HW_SPI_verifyLock(HW_spi_device_E dev)
 {
-    if (lock.owner != dev)
-    {
-        return false;
-    }
-
-    return true;
+    return lock[HW_spi_devices[dev].port].owner == dev;
 }
 
 /**
@@ -111,25 +108,25 @@ bool HW_SPI_verifyLock(HW_spi_device_E dev)
  */
 bool HW_SPI_transmit8(HW_spi_device_E dev, uint8_t data)
 {
-    if (lock.owner != dev)
+    if (lock[HW_spi_devices[dev].port].owner != dev)
     {
         return false;
     }
 
-    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
     {
         ;
     }
-    LL_SPI_TransmitData8(HW_spi_devices[dev].handle, data);
-    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
+    LL_SPI_TransmitData8(HW_spi_ports[HW_spi_devices[dev].port].handle, data);
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
     {
         ;
     }
-    while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_devices[dev].handle))
+    while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_ports[HW_spi_devices[dev].port].handle))
     {
         ;
     }
-    LL_SPI_ReceiveData8(HW_spi_devices[dev].handle);    /**< Dummy read to clear RXNE and prevent OVR */
+    LL_SPI_ReceiveData8(HW_spi_ports[HW_spi_devices[dev].port].handle);    /**< Dummy read to clear RXNE and prevent OVR */
 
     return true;
 }
@@ -146,25 +143,25 @@ bool HW_SPI_transmit8(HW_spi_device_E dev, uint8_t data)
  */
 bool HW_SPI_transmitReceive8(HW_spi_device_E dev, uint8_t wdata, uint8_t* rdata)
 {
-    if (lock.owner != dev)
+    if (lock[HW_spi_devices[dev].port].owner != dev)
     {
         return false;
     }
 
-    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
     {
         ;
     }
-    LL_SPI_TransmitData8(HW_spi_devices[dev].handle, wdata);
-    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
+    LL_SPI_TransmitData8(HW_spi_ports[HW_spi_devices[dev].port].handle, wdata);
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
     {
         ;
     }
-    while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_devices[dev].handle))
+    while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_ports[HW_spi_devices[dev].port].handle))
     {
         ;
     }
-    *rdata = LL_SPI_ReceiveData8(HW_spi_devices[dev].handle);
+    *rdata = LL_SPI_ReceiveData8(HW_spi_ports[HW_spi_devices[dev].port].handle);
 
     return true;
 }
