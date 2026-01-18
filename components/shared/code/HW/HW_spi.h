@@ -46,5 +46,5 @@ HW_StatusTypeDef_E HW_SPI_init(void);
 HW_StatusTypeDef_E HW_SPI_deInit(void);
 bool HW_SPI_lock(HW_spi_device_E dev);
 bool HW_SPI_release(HW_spi_device_E dev);
-bool HW_SPI_transmit8(HW_spi_device_E dev, uint8_t data);
-bool HW_SPI_transmitReceive8(HW_spi_device_E dev, uint8_t wdata, uint8_t* rdata);
+bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint8_t len);
+bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint8_t len);

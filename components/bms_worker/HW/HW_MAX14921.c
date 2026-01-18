@@ -83,20 +83,11 @@ bool MAX_readWriteToChip(void)
         return false;
     }
 
-    uint8_t wdata[3] = { 0x00 };
-    uint8_t rdata[3] = { 0x00 };
+    uint8_t data[3] = { 0x00 };
 
-    MAX_translateConfig(&max_chip.config, (uint8_t*)&wdata);
-
-    for (uint8_t i = 0; i < 3; i++)
-    {
-        /**< Bits must be reversed because SPI bus transmits MSB first whereas MAX takes LSB first */
-        wdata[i] = reverse_byte(wdata[i]);
-        HW_SPI_transmitReceive8(max_chip.dev, wdata[i], &rdata[i]);
-        rdata[i] = reverse_byte(rdata[i]);
-    }
-
-    MAX_decodeResponse(&max_chip.state, (uint8_t*)&rdata);
+    MAX_translateConfig(&max_chip.config, (uint8_t*)&data);
+    HW_SPI_transmitReceive(max_chip.dev, (uint8_t*)&data, sizeof(data));
+    MAX_decodeResponse(&max_chip.state, (uint8_t*)&data);
 
     HW_SPI_release(max_chip.dev);
 
@@ -169,6 +160,12 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
         data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;
     }
     data[2] |= (config->low_power_mode) ? 1 << 7 : 0;
+
+    for (uint8_t i = 0; i < 3U; i++)
+    {
+        /**< Bits must be reversed because SPI bus transmits MSB first whereas MAX takes LSB first */
+        data[i] = reverse_byte(data[i]);
+    }
 }
 
 /**
@@ -179,6 +176,12 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
  */
 void MAX_decodeResponse(MAX_response_S* chip, uint8_t* data)
 {
+    for (uint8_t i = 0; i < 3U; i++)
+    {
+        /**< Bits must be reversed because SPI bus transmits MSB first whereas MAX takes LSB first */
+        data[i] = reverse_byte(data[i]);
+    }
+
     chip->cell_undervoltage = (uint16_t)data[1] << 8 | data[0];
     if ((data[2] & 0x03) == 0x3)
     {
