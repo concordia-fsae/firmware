@@ -5,11 +5,11 @@ messages:
     cycleTimeMs: 2
     signals:
       lateral:
-        template: imuLinearAcceleration
+        template: imuLinearAccelerationBE
       longitudinal:
-        template: imuLinearAcceleration
+        template: imuLinearAccelerationBE
       vertical:
-        template: imuLinearAcceleration
+        template: imuLinearAccelerationBE
 
   linearRotation:
     description: IMU Rotational Acceleration
@@ -17,8 +17,8 @@ messages:
     cycleTimeMs: 10
     signals:
       yaw:
-        template: imuRotationalAcceleration
+        template: imuRotationalAccelerationBE
       pitch:
-        template: imuRotationalAcceleration
+        template: imuRotationalAccelerationBE
       roll:
-        template: imuRotationalAcceleration
+        template: imuRotationalAccelerationBE

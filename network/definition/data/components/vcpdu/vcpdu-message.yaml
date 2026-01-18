@@ -12,6 +12,8 @@ messages:
       loadsNOK:
       safetyNOK:
       contactsOpenInRun:
+      imuOverrun:
+      imuError:
 
   udsResponse:
     description: UDS response message from the VCPDU
@@ -24,7 +26,7 @@ messages:
     id: 0x553
     sourceBuses: veh
     template: rtosTaskInfo
-  
+
   rtosTaskMemInfo:
     description: VCPDU rtos task stack usage information
     id: 0x5a1
@@ -158,3 +160,27 @@ messages:
     description: VCPDU sleep information
     id: 0x7b2
     template: sleepableNode
+
+  imuAccel:
+    description: VCPDU IMU linear accel
+    id: 0x3f0
+    cycleTimeMs: 1
+    signals:
+      lon:
+        template: imuLinearAcceleration
+      lat:
+        template: imuLinearAcceleration
+      vert:
+        template: imuLinearAcceleration
+
+  imuGyro:
+    description: VCPDU IMU rotational accel
+    id: 0x3f1
+    cycleTimeMs: 1
+    signals:
+      yaw:
+        template: imuRotationalAcceleration
+      roll:
+        template: imuRotationalAcceleration
+      pitch:
+        template: imuRotationalAcceleration

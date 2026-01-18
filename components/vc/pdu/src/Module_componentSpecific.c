@@ -23,6 +23,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &UDS_desc,
     &app_vehicleState_desc,
     &powerManager_desc,
+    &imu_desc,
     &cooling_desc,
     &CANIO_tx,
 };

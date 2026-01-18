@@ -339,14 +339,6 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-    [HW_GPIO_SPI_NCS_SD] = {
-        .port = GPIOD,
-        .pin = GPIO_PIN_12, // Based on PD12
-        .mode = GPIO_MODE_OUTPUT_OD, //OD
-        .speed = GPIO_SPEED_FREQ_HIGH,
-        .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
-    },
     [HW_GPIO_SHUTDOWN_EN] = {
         .port = GPIOD,
         .pin = GPIO_PIN_13, // Based on PD13
@@ -442,10 +434,18 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     [HW_GPIO_SPI_NCS_IMU] = {
         .port = GPIOA,
         .pin = GPIO_PIN_15, // Based on PA15
-        .mode = GPIO_MODE_OUTPUT_PP,
+        .mode = GPIO_MODE_OUTPUT_OD,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
+        .resetState = HW_GPIO_PINSET,
+    },
+    [HW_GPIO_SPI_NCS_SD] = {
+        .port = GPIOD,
+        .pin = GPIO_PIN_12, // Based on PD12
+        .mode = GPIO_MODE_OUTPUT_OD, //OD
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_PINSET,
     },
     [HW_GPIO_UART_TX_MCU] = {
         .port = GPIOC,
@@ -541,7 +541,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .mode = GPIO_MODE_AF_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
+        .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_SPI_MISO_MCU] = {
         .port = GPIOB,
@@ -557,7 +557,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .mode = GPIO_MODE_AF_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
+        .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_SENSOR_EN] = {
         .port = GPIOB,
