@@ -21,19 +21,16 @@
 #include "Utility.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define SPI_MAX HW_SPI_DEV_BMS
+
+/******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
 MAX_S max_chip;
-
-/******************************************************************************
- *                         P R I V A T E  V A R S
- ******************************************************************************/
-
-HW_SPI_Device_S SPI_MAX = {
-    .handle  = SPI1,
-    .ncs_pin = HW_GPIO_SPI1_MAX_NCS,
-};
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -55,7 +52,7 @@ bool MAX_init(void)
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
-    max_chip.dev                         = &SPI_MAX;
+    max_chip.dev                         = SPI_MAX;
     max_chip.config.low_power_mode       = false;
     max_chip.config.diagnostic_enabled   = false;
     max_chip.config.sampling             = false;

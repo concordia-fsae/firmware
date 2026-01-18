@@ -23,16 +23,16 @@
 typedef struct
 {
     bool            locked;
-    HW_SPI_Device_S * owner;
+    HW_spi_device_E owner;
 } HW_SPI_Lock_S;
 
-static HW_SPI_Lock_S      lock = { 0 };
+static HW_SPI_Lock_S lock = { 0 };
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool        HW_SPI_verifyLock(HW_SPI_Device_S* dev);
+bool HW_SPI_verifyLock(HW_spi_device_E dev);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -45,7 +45,7 @@ bool        HW_SPI_verifyLock(HW_SPI_Device_S* dev);
  *
  * @retval true = Device was able to lock, false = Failure
  */
-bool HW_SPI_lock(HW_SPI_Device_S* dev)
+bool HW_SPI_lock(HW_spi_device_E dev)
 {
     if (lock.locked)
     {
@@ -55,7 +55,7 @@ bool HW_SPI_lock(HW_SPI_Device_S* dev)
     lock.locked = true;
     lock.owner  = dev;
 
-    HW_GPIO_writePin(dev->ncs_pin, false);
+    HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, false);
 
     return true;
 }
@@ -67,7 +67,7 @@ bool HW_SPI_lock(HW_SPI_Device_S* dev)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_release(HW_SPI_Device_S* dev)
+bool HW_SPI_release(HW_spi_device_E dev)
 {
     if (!HW_SPI_verifyLock(dev))
     {
@@ -77,7 +77,7 @@ bool HW_SPI_release(HW_SPI_Device_S* dev)
     lock.locked = false;
     lock.owner  = 0x00;
 
-    HW_GPIO_writePin(dev->ncs_pin, true);
+    HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, true);
 
     return true;
 }
@@ -89,7 +89,7 @@ bool HW_SPI_release(HW_SPI_Device_S* dev)
  *
  * @retval true = Device is owner of bus, false = Failure
  */
-bool HW_SPI_verifyLock(HW_SPI_Device_S* dev)
+bool HW_SPI_verifyLock(HW_spi_device_E dev)
 {
     if (lock.owner != dev)
     {
@@ -109,67 +109,27 @@ bool HW_SPI_verifyLock(HW_SPI_Device_S* dev)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_transmit8(HW_SPI_Device_S* dev, uint8_t data)
+bool HW_SPI_transmit8(HW_spi_device_E dev, uint8_t data)
 {
     if (lock.owner != dev)
     {
         return false;
     }
 
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
     {
         ;
     }
-    LL_SPI_TransmitData8(dev->handle, data);
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    LL_SPI_TransmitData8(HW_spi_devices[dev].handle, data);
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
     {
         ;
     }
-    while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
+    while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_devices[dev].handle))
     {
         ;
     }
-    LL_SPI_ReceiveData8(dev->handle);    /**< Dummy read to clear RXNE and prevent OVR */
-
-    return true;
-}
-
-/* @note The bus must be under ownerhsip of the device
- *
- * @brief  Transmit 16 bits of data to peripheral
- *
- * @param dev SPI external peripherl
- * @param data Data to transmit
- *
- * @retval true = Success, false = Failure
- */
-bool HW_SPI_transmit16(HW_SPI_Device_S* dev, uint16_t data)
-{
-    if (!HW_SPI_transmit8(dev, (uint8_t)(data >> 8)))
-    {
-        return false;
-    }
-    HW_SPI_transmit8(dev, (uint8_t)data);
-
-    return true;
-}
-
-/* @note The bus must be under ownerhsip of the device
- *
- * @brief  Transmit 32 bits of data to peripheral
- *
- * @param dev SPI external peripherl
- * @param data Data to transmit
- *
- * @retval true = Success, false = Failure
- */
-bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data)
-{
-    if (!HW_SPI_transmit16(dev, (uint16_t)(data >> 16)))
-    {
-        return false;
-    }
-    HW_SPI_transmit16(dev, (uint16_t)data);
+    LL_SPI_ReceiveData8(HW_spi_devices[dev].handle);    /**< Dummy read to clear RXNE and prevent OVR */
 
     return true;
 }
@@ -184,27 +144,27 @@ bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_transmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata)
+bool HW_SPI_transmitReceive8(HW_spi_device_E dev, uint8_t wdata, uint8_t* rdata)
 {
     if (lock.owner != dev)
     {
         return false;
     }
 
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
     {
         ;
     }
-    LL_SPI_TransmitData8(dev->handle, wdata);
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    LL_SPI_TransmitData8(HW_spi_devices[dev].handle, wdata);
+    while (!LL_SPI_IsActiveFlag_TXE(HW_spi_devices[dev].handle))
     {
         ;
     }
-    while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
+    while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_devices[dev].handle))
     {
         ;
     }
-    *rdata = LL_SPI_ReceiveData8(dev->handle);
+    *rdata = LL_SPI_ReceiveData8(HW_spi_devices[dev].handle);
 
     return true;
 }
