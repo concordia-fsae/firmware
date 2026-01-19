@@ -48,3 +48,4 @@ bool HW_SPI_lock(HW_spi_device_E dev);
 bool HW_SPI_release(HW_spi_device_E dev);
 bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint8_t len);
 bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint8_t len);
+bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint8_t wLen, uint8_t* rData, uint8_t rLen);
