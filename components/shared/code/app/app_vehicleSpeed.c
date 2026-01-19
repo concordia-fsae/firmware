@@ -12,6 +12,7 @@
 #include "string.h"
 #include "HW_tim.h"
 #include "MessageUnpack_generated.h"
+#include "lib_simpleFilter.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -43,7 +44,9 @@ typedef struct
 
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
     uint32_t lastTimestampMS;
+    lib_simpleFilter_lpf_S lpfSpeed;
     bool odoSaved;
+    bool wasValidGPS;
 #endif // FEATURE_VEHICLEPEED_LEADER
 } vehicle_S;
 
@@ -68,8 +71,21 @@ static void calculateVehicleSpeed(void)
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
     const uint32_t currentTime = HW_TIM_getTimeMS();
     const float32_t delta_t = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
+    const bool validGPS = app_gps_isValid();
+    float32_t speed = app_gps_getHeadingRef()->speedMps;
 
-    vehicle.vehicleSpeedLinear = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
+    if (!vehicle.wasValidGPS && validGPS)
+    {
+        vehicle.lpfSpeed.y = speed;
+    }
+    else if (!validGPS)
+    {
+        // TODO: Handle degraded wheel speed sensors
+        speed = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
+    }
+
+    speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, speed);
+    vehicle.vehicleSpeedLinear = speed;
 
     if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
     {
@@ -82,6 +98,7 @@ static void calculateVehicleSpeed(void)
     }
 
     vehicle.lastTimestampMS = currentTime;
+    vehicle.wasValidGPS = validGPS;
 #else // FEATURE_VEHICLEPEED_LEADER
     float32_t tmp = 0.0f;
     const bool valid = CANRX_VEHICLESPEED(&tmp) == CANRX_MESSAGE_VALID;
@@ -166,6 +183,7 @@ static void app_vehicleSpeed_init(void)
     memset(&vehicle, 0x00U, sizeof(vehicle));
 
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+    lib_simpleFilter_lpf_calcSmoothingFactor(&vehicle.lpfSpeed, 100.0f, 0.01f);
     vehicle.lastTimestampMS = HW_TIM_getTimeMS();
     vehicle.odoSaved = true;
 #endif

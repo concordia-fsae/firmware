@@ -129,6 +129,9 @@
 #define set_hour(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->hours)
 #define set_minute(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->minutes)
 #define set_second(m,b,n,s) set(m,b,n,s, app_gps_getTimeRef()->seconds)
+#define set_crcFailures(m,b,n,s) set(m,b,n,s, app_gps_getCrcFailures())
+#define set_invalidTransactions(m,b,n,s) set(m,b,n,s, app_gps_getInvalidTransactions())
+#define set_numberSamples(m,b,n,s) set(m,b,n,s, app_gps_getNumberSamples())
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
