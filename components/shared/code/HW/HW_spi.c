@@ -9,6 +9,8 @@
 
 // System Includes
 #include "string.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
 // Firmware Includes
 #include "HW_gpio.h"
@@ -23,16 +25,26 @@
 typedef struct
 {
     bool            locked;
-    HW_SPI_Device_S * owner;
+    HW_spi_device_E owner;
 } HW_SPI_Lock_S;
 
-static HW_SPI_Lock_S      lock = { 0 };
+static HW_SPI_Lock_S lock[HW_SPI_PORT_COUNT] = { 0 };
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool        HW_SPI_verifyLock(HW_SPI_Device_S* dev);
+/**
+ * @brief  Verify if the SPI external peripheral has ownership of the SPI bus
+ *
+ * @param dev SPI external peripheral
+ *
+ * @retval true = Device is owner of bus, false = Failure
+ */
+static bool verifyLock(HW_spi_device_E dev)
+{
+    return lock[HW_spi_devices[dev].port].owner == dev;
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -45,17 +57,18 @@ bool        HW_SPI_verifyLock(HW_SPI_Device_S* dev);
  *
  * @retval true = Device was able to lock, false = Failure
  */
-bool HW_SPI_lock(HW_SPI_Device_S* dev)
+bool HW_SPI_lock(HW_spi_device_E dev)
 {
-    if (lock.locked)
+    taskENTER_CRITICAL();
+    if (lock[HW_spi_devices[dev].port].locked)
     {
         return false;
     }
 
-    lock.locked = true;
-    lock.owner  = dev;
-
-    HW_GPIO_writePin(dev->ncs_pin, false);
+    lock[HW_spi_devices[dev].port].locked = true;
+    lock[HW_spi_devices[dev].port].owner  = dev;
+    HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, false);
+    taskEXIT_CRITICAL();
 
     return true;
 }
@@ -67,34 +80,16 @@ bool HW_SPI_lock(HW_SPI_Device_S* dev)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_release(HW_SPI_Device_S* dev)
+bool HW_SPI_release(HW_spi_device_E dev)
 {
-    if (!HW_SPI_verifyLock(dev))
+    if (!verifyLock(dev))
     {
         return false;
     }
 
-    lock.locked = false;
-    lock.owner  = 0x00;
-
-    HW_GPIO_writePin(dev->ncs_pin, true);
-
-    return true;
-}
-
-/**
- * @brief  Verify if the SPI external peripheral has ownership of the SPI bus
- *
- * @param dev SPI external peripheral
- *
- * @retval true = Device is owner of bus, false = Failure
- */
-bool HW_SPI_verifyLock(HW_SPI_Device_S* dev)
-{
-    if (lock.owner != dev)
-    {
-        return false;
-    }
+    HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, true);
+    lock[HW_spi_devices[dev].port].owner  = HW_SPI_DEV_COUNT;
+    lock[HW_spi_devices[dev].port].locked = false;
 
     return true;
 }
@@ -109,67 +104,30 @@ bool HW_SPI_verifyLock(HW_SPI_Device_S* dev)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_transmit8(HW_SPI_Device_S* dev, uint8_t data)
+bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint8_t len)
 {
-    if (lock.owner != dev)
+    if (!verifyLock(dev))
     {
         return false;
     }
 
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    for (uint8_t i = 0; i < len; i++)
     {
-        ;
+        while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
+        {
+            ;
+        }
+        LL_SPI_TransmitData8(HW_spi_ports[HW_spi_devices[dev].port].handle, data[i]);
+        while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
+        {
+            ;
+        }
+        while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_ports[HW_spi_devices[dev].port].handle))
+        {
+            ;
+        }
+        LL_SPI_ReceiveData8(HW_spi_ports[HW_spi_devices[dev].port].handle);    /**< Dummy read to clear RXNE and prevent OVR */
     }
-    LL_SPI_TransmitData8(dev->handle, data);
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
-    {
-        ;
-    }
-    while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
-    {
-        ;
-    }
-    LL_SPI_ReceiveData8(dev->handle);    /**< Dummy read to clear RXNE and prevent OVR */
-
-    return true;
-}
-
-/* @note The bus must be under ownerhsip of the device
- *
- * @brief  Transmit 16 bits of data to peripheral
- *
- * @param dev SPI external peripherl
- * @param data Data to transmit
- *
- * @retval true = Success, false = Failure
- */
-bool HW_SPI_transmit16(HW_SPI_Device_S* dev, uint16_t data)
-{
-    if (!HW_SPI_transmit8(dev, (uint8_t)(data >> 8)))
-    {
-        return false;
-    }
-    HW_SPI_transmit8(dev, (uint8_t)data);
-
-    return true;
-}
-
-/* @note The bus must be under ownerhsip of the device
- *
- * @brief  Transmit 32 bits of data to peripheral
- *
- * @param dev SPI external peripherl
- * @param data Data to transmit
- *
- * @retval true = Success, false = Failure
- */
-bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data)
-{
-    if (!HW_SPI_transmit16(dev, (uint16_t)(data >> 16)))
-    {
-        return false;
-    }
-    HW_SPI_transmit16(dev, (uint16_t)data);
 
     return true;
 }
@@ -184,27 +142,30 @@ bool HW_SPI_transmit32(HW_SPI_Device_S* dev, uint32_t data)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_transmitReceive8(HW_SPI_Device_S* dev, uint8_t wdata, uint8_t* rdata)
+bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint8_t len)
 {
-    if (lock.owner != dev)
+    if (!verifyLock(dev))
     {
         return false;
     }
 
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
+    for (uint8_t i = 0; i < len; i++)
     {
-        ;
+        while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
+        {
+            ;
+        }
+        LL_SPI_TransmitData8(HW_spi_ports[HW_spi_devices[dev].port].handle, rwData[i]);
+        while (!LL_SPI_IsActiveFlag_TXE(HW_spi_ports[HW_spi_devices[dev].port].handle))
+        {
+            ;
+        }
+        while (!LL_SPI_IsActiveFlag_RXNE(HW_spi_ports[HW_spi_devices[dev].port].handle))
+        {
+            ;
+        }
+        rwData[i] = LL_SPI_ReceiveData8(HW_spi_ports[HW_spi_devices[dev].port].handle);
     }
-    LL_SPI_TransmitData8(dev->handle, wdata);
-    while (!LL_SPI_IsActiveFlag_TXE(dev->handle))
-    {
-        ;
-    }
-    while (!LL_SPI_IsActiveFlag_RXNE(dev->handle))
-    {
-        ;
-    }
-    *rdata = LL_SPI_ReceiveData8(dev->handle);
 
     return true;
 }

@@ -7,11 +7,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "string.h"
-
 // Firmware Includes
-#include "HW_gpio.h"
 #include "HW_spi.h"
 #include "stm32f1xx_ll_bus.h"
 
@@ -20,14 +16,18 @@
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-static LL_SPI_InitTypeDef hspi1;
+const HW_spi_port_S HW_spi_ports[HW_SPI_PORT_COUNT] = {
+    [HW_SPI_PORT_SPI1] = {
+        .handle  = SPI1,
+    },
+};
 
-/******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
-
-static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx);
-static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx);
+const HW_SPI_Device_S HW_spi_devices[HW_SPI_DEV_COUNT] = {
+    [HW_SPI_DEV_BMS] = {
+        .port  = HW_SPI_PORT_SPI1,
+        .ncs_pin = HW_GPIO_SPI1_MAX_NCS,
+    },
+};
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -40,8 +40,10 @@ static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx);
  */
 HW_StatusTypeDef_E HW_SPI_init(void)
 {
-    // initialize SPI pins
-    LL_SPI_GPIOInit(SPI1);
+    LL_SPI_InitTypeDef hspi1;
+
+    LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
+    __HAL_AFIO_REMAP_SPI1_ENABLE();
 
     hspi1.Mode              = LL_SPI_MODE_MASTER;
     hspi1.TransferDirection = LL_SPI_FULL_DUPLEX;
@@ -54,13 +56,13 @@ HW_StatusTypeDef_E HW_SPI_init(void)
     hspi1.CRCCalculation    = LL_SPI_CRCCALCULATION_DISABLE;
     hspi1.CRCPoly           = 0x00;
 
-    if (LL_SPI_Init(SPI1, &hspi1) != SUCCESS)
+    if (LL_SPI_Init(HW_spi_ports[HW_SPI_PORT_SPI1].handle, &hspi1) != SUCCESS)
     {
         Error_Handler();
     }
 
     // enable SPI
-    LL_SPI_Enable(SPI1);
+    LL_SPI_Enable(HW_spi_ports[HW_SPI_PORT_SPI1].handle);
 
     return HW_OK;
 }
@@ -72,41 +74,9 @@ HW_StatusTypeDef_E HW_SPI_init(void)
  */
 HW_StatusTypeDef_E HW_SPI_deInit(void)
 {
-    LL_SPI_GPIODeInit(SPI1);
+    LL_SPI_Disable(HW_spi_ports[HW_SPI_PORT_SPI1].handle);
+    __HAL_AFIO_REMAP_SPI1_DISABLE();
+    LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_SPI1);
 
     return HW_OK;
-}
-
-/**
- * @brief  Initializes SPI pins
- *
- * @param SPIx SPI peripheral
- */
-static void LL_SPI_GPIOInit(SPI_TypeDef* SPIx)
-{
-    if (SPIx == SPI1)
-    {
-        // __HAL_RCC_SPI1_CLK_ENABLE();
-        LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SPI1);
-        LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_GPIOB);
-
-	    __HAL_AFIO_REMAP_SPI1_ENABLE();
-    }
-}
-
-/**
- * @brief  Deinitializes ll SPI peripheral
- *
- * @param SPIx SPI peripheral
- */
-static void LL_SPI_GPIODeInit(SPI_TypeDef* SPIx)
-{
-    if (SPIx == SPI1)
-    {
-        // Peripheral clock disable
-        LL_SPI_Disable(SPI1);
-	    __HAL_AFIO_REMAP_SPI1_DISABLE();
-
-	    LL_APB2_GRP1_DisableClock(LL_APB2_GRP1_PERIPH_SPI1);
-    }
 }
