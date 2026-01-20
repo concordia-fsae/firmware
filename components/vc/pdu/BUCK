@@ -239,6 +239,9 @@ cxx_library(
                 "pwr": {},
                 "rcc": {},
                 "rcc_ex": {},  # required
+                "spi": {
+                    "use_ll": True,
+                },
                 "tim": {},
                 "tim_ex": {},  # required with tim,
             },
@@ -308,6 +311,7 @@ cxx_binary(
     executable_name = APP_NAME + ".elf",
     srcs =
         glob(["src/*.c", "src/HW/*.c"]) + [
+            "//components/shared/code:DRV/drv_asm330.c",
             "//components/shared/code:DRV/drv_hsd.c",
             "//components/shared/code:DRV/drv_inputAD.c",
             "//components/shared/code:DRV/drv_io.c",
@@ -320,6 +324,7 @@ cxx_binary(
             "//components/shared/code:HW/HW_adc.c",
             "//components/shared/code:HW/HW_can.c",
             "//components/shared/code:HW/HW_gpio.c",
+            "//components/shared/code:HW/HW_spi.c",
             "//components/shared/code:HW/HW_tim.c",
             "//components/shared/code:app/CAN/CANIO-rx.c",
             "//components/shared/code:app/CAN/CANIO-tx.c",
@@ -328,6 +333,7 @@ cxx_binary(
             ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",
+            "//components/shared/code:libs/Utility.c",
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
@@ -338,6 +344,7 @@ cxx_binary(
     header_namespace = "",
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+        "asm330lhb_reg.h": "//embedded/libs:asm330lhb[asm330lhb_reg.h]",
     } | component_headers,
     include_directories = [
         "include/",

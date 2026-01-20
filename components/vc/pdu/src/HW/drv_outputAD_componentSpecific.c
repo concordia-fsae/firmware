@@ -252,13 +252,6 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-    [DRV_OUTPUTAD_SPI_NCS_SD] = { 
-        .type = OUTPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_SPI_NCS_SD, 
-            .active_level = DRV_IO_LOGIC_LOW,
-        },
-    },
     [DRV_OUTPUTAD_SHUTDOWN_EN] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {

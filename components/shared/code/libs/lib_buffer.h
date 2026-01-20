@@ -41,14 +41,35 @@
         size_t startPos; \
         size_t endPos; \
     } name
-#define LIB_BUFFER_FIFO_INSERT(name, val) (name)->buffer[(name)->endPos] = val; \
-                                          (name)->endPos = LIB_BUFFER_GETNEXTINDEX(name, (name)->endPos)
-#define LIB_BUFFER_FIFO_PEEK(name) (name)->buffer[startPos];
-#define LIB_BUFFER_FIFO_POP(name) LIB_BUFFER_FIFO_PEEK(name); \
-                                  (name)->startPos = LIB_BUFFER_GETNEXTINDEX(name, (name)->startPos)
-#define LIB_BUFFER_FIFO_GETLENGTH(name) ((name)->startPos > (name)->endPos ? \
-                                         COUNTOF((name)->buffer) - ((name)->startPos - (name)->endPos) : \
-                                         (name)->endPos - (name)->startPos)
+
+#define LIB_BUFFER_FIFO_RESERVE(name, n) \
+    do { \
+        size_t _n = (size_t)(n); \
+        if (_n != 0U) { \
+            (name)->endPos = ((name)->endPos + _n) % COUNTOF((name)->buffer); \
+        } \
+    } while (0)
+
+#define LIB_BUFFER_FIFO_INSERT(name, val) \
+    do { \
+        (name)->buffer[(name)->endPos] = (val); \
+        (name)->endPos = ((name)->endPos + 1U) % COUNTOF((name)->buffer); \
+    } while (0)
+
+#define LIB_BUFFER_FIFO_PEEK(name) (name)->buffer[(name)->startPos]
+#define LIB_BUFFER_FIFO_PEEKEND(name) (name)->buffer[(name)->endPos]
+
+#define LIB_BUFFER_FIFO_POP(name) \
+        LIB_BUFFER_FIFO_PEEK(name); \
+        (name)->startPos = ((name)->startPos + 1U) % COUNTOF((name)->buffer) \
+
+#define LIB_BUFFER_FIFO_GETMAXCONTINUOUS(name) \
+    ((name)->endPos < (name)->startPos ? \
+        ((name)->startPos - (name)->endPos - 1U) : \
+        ((COUNTOF((name)->buffer) - (name)->endPos) - ((name)->startPos == 0U ? 1U : 0U)))
+
+#define LIB_BUFFER_FIFO_GETLENGTH(name) \
+    (((name)->endPos + COUNTOF((name)->buffer) - (name)->startPos) % COUNTOF((name)->buffer))
+
 #define LIB_BUFFER_FIFO_CLEAR(name) LIB_BUFFER_CLEAR(name); \
                                     (name)->endPos = 0U; (name)->startPos = 0U
-

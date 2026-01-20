@@ -132,3 +132,14 @@ git_fetch(
     ],
     visibility = ["PUBLIC"],
 )
+
+git_fetch(
+    name = "asm330lhb",
+    repo = "https://github.com/STMicroelectronics/asm330lhb-pid.git",
+    rev = "a1f432310c15d497dd6aa39ebf0bcb8cbd635847",
+    sub_targets = [
+        "asm330lhb_reg.h",
+        "asm330lhb_reg.c",
+    ],
+    visibility = ["PUBLIC"],
+)

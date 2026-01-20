@@ -14,6 +14,7 @@
 #include "HW_clock.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
+#include "HW_spi.h"
 #include "HW_tim.h"
 
 /**< FreeRTOS Includes */
@@ -74,6 +75,7 @@ int main(void)
     HW_CAN_init();
     HW_DMA_init();
     HW_ADC_init();
+    HW_SPI_init();
     HW_GPIO_init();
 
     ///**< Create RTOS Tasks, Timers, etc... */

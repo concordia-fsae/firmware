@@ -23,6 +23,14 @@ signals:
     description: Contacts opened while in run mode
     discreteValues: faultStatus
 
+  imuOverrun:
+    description: VCPDU IMU buffern overrun
+    discreteValues: faultStatus
+
+  imuError:
+    description: VCPDU IMU error
+    discreteValues: faultStatus
+
   vehicleState:
     description: "Current state of the vehicle"
     discreteValues: vehicleState

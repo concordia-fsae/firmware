@@ -24,11 +24,10 @@
 
 typedef struct
 {
-    bool            locked;
     HW_spi_device_E owner;
 } HW_SPI_Lock_S;
 
-static HW_SPI_Lock_S lock[HW_SPI_PORT_COUNT] = { 0 };
+static HW_SPI_Lock_S lock[HW_SPI_PORT_COUNT];
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -50,6 +49,16 @@ static bool verifyLock(HW_spi_device_E dev)
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+HW_StatusTypeDef_E  HW_SPI_init(void)
+{
+    for (uint8_t i = 0; i < HW_SPI_PORT_COUNT; i++)
+    {
+        lock[i].owner = HW_SPI_DEV_COUNT;
+    }
+
+    return HW_SPI_init_componentSpecific();
+}
+
 /**
  * @brief  Locks the SPI bus to a specific external peripheral
  *
@@ -59,18 +68,22 @@ static bool verifyLock(HW_spi_device_E dev)
  */
 bool HW_SPI_lock(HW_spi_device_E dev)
 {
+    bool locked = true;
+
     taskENTER_CRITICAL();
-    if (lock[HW_spi_devices[dev].port].locked)
+    if (lock[HW_spi_devices[dev].port].owner != HW_SPI_DEV_COUNT)
     {
-        return false;
+        locked = false;
+        goto out;
     }
 
-    lock[HW_spi_devices[dev].port].locked = true;
-    lock[HW_spi_devices[dev].port].owner  = dev;
+    lock[HW_spi_devices[dev].port].owner = dev;
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, false);
+
+out:
     taskEXIT_CRITICAL();
 
-    return true;
+    return locked;
 }
 
 /**
@@ -89,7 +102,6 @@ bool HW_SPI_release(HW_spi_device_E dev)
 
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, true);
     lock[HW_spi_devices[dev].port].owner  = HW_SPI_DEV_COUNT;
-    lock[HW_spi_devices[dev].port].locked = false;
 
     return true;
 }
@@ -101,6 +113,7 @@ bool HW_SPI_release(HW_spi_device_E dev)
  *
  * @param dev SPI external peripherl
  * @param data Data to transmit
+ * @param len Amount of sata to transmit
  *
  * @retval true = Success, false = Failure
  */
@@ -134,11 +147,11 @@ bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint8_t len)
 
 /* @note The bus must be under ownerhsip of the device
  *
- * @brief  Transmit 16 bits of data to peripheral
+ * @brief  Transmit n bytes of data to peripheral
  *
  * @param dev SPI external peripherl
- * @param wdata Data to transmit
- * @param rdata Data to receive
+ * @param rwdata Data to transmit and where to write received data
+ * @param len Amount of bytes to rw
  *
  * @retval true = Success, false = Failure
  */
@@ -165,6 +178,35 @@ bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint8_t len)
             ;
         }
         rwData[i] = LL_SPI_ReceiveData8(HW_spi_ports[HW_spi_devices[dev].port].handle);
+    }
+
+    return true;
+}
+
+/* @note The bus must be under ownerhsip of the device
+ *
+ * @brief  Transmit n bytes and receive m bytes of data to peripheral
+ *
+ * @param dev SPI external peripherl
+ * @param wdata Data to transmit
+ * @param wLen Amount of bytes to write
+ * @param rdata Data to receive
+ * @param rLen Amount of bytes to read
+ *
+ * @retval true = Success, false = Failure
+ */
+bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint8_t wLen, uint8_t* rData, uint16_t rLen)
+{
+    if (!verifyLock(dev))
+    {
+        return false;
+    }
+
+    HW_SPI_transmit(dev, wData, wLen);
+    for (uint16_t i = 0; i < rLen; i++)
+    {
+        rData[i] = 0xff;
+        HW_SPI_transmitReceive(dev, &rData[i], 1U);
     }
 
     return true;
