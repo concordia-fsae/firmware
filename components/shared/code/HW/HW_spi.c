@@ -24,11 +24,10 @@
 
 typedef struct
 {
-    bool            locked;
     HW_spi_device_E owner;
 } HW_SPI_Lock_S;
 
-static HW_SPI_Lock_S lock[HW_SPI_PORT_COUNT] = { 0 };
+static HW_SPI_Lock_S lock[HW_SPI_PORT_COUNT];
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -50,6 +49,16 @@ static bool verifyLock(HW_spi_device_E dev)
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+HW_StatusTypeDef_E  HW_SPI_init(void)
+{
+    for (uint8_t i = 0; i < HW_SPI_PORT_COUNT; i++)
+    {
+        lock[i].owner = HW_SPI_DEV_COUNT;
+    }
+
+    return HW_SPI_init_componentSpecific();
+}
+
 /**
  * @brief  Locks the SPI bus to a specific external peripheral
  *
@@ -60,13 +69,12 @@ static bool verifyLock(HW_spi_device_E dev)
 bool HW_SPI_lock(HW_spi_device_E dev)
 {
     taskENTER_CRITICAL();
-    if (lock[HW_spi_devices[dev].port].locked)
+    if (lock[HW_spi_devices[dev].port].owner != HW_SPI_DEV_COUNT)
     {
         return false;
     }
 
-    lock[HW_spi_devices[dev].port].locked = true;
-    lock[HW_spi_devices[dev].port].owner  = dev;
+    lock[HW_spi_devices[dev].port].owner = dev;
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, false);
     taskEXIT_CRITICAL();
 
@@ -89,7 +97,6 @@ bool HW_SPI_release(HW_spi_device_E dev)
 
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, true);
     lock[HW_spi_devices[dev].port].owner  = HW_SPI_DEV_COUNT;
-    lock[HW_spi_devices[dev].port].locked = false;
 
     return true;
 }
@@ -183,7 +190,7 @@ bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint8_t len)
  *
  * @retval true = Success, false = Failure
  */
-bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint8_t wLen, uint8_t* rData, uint8_t rLen)
+bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint8_t wLen, uint8_t* rData, uint16_t rLen)
 {
     if (!verifyLock(dev))
     {
@@ -191,7 +198,7 @@ bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint8_t wLe
     }
 
     HW_SPI_transmit(dev, wData, wLen);
-    for (uint8_t i = 0; i < rLen; i++)
+    for (uint16_t i = 0; i < rLen; i++)
     {
         rData[i] = 0xff;
         HW_SPI_transmitReceive(dev, &rData[i], 1U);

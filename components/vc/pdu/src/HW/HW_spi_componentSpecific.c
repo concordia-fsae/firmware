@@ -42,7 +42,7 @@ const HW_SPI_Device_S HW_spi_devices[HW_SPI_DEV_COUNT] = {
  *
  * @retval HW_OK
  */
-HW_StatusTypeDef_E HW_SPI_init(void)
+HW_StatusTypeDef_E HW_SPI_init_componentSpecific(void)
 {
     LL_SPI_InitTypeDef hspi;
 
