@@ -68,17 +68,22 @@ HW_StatusTypeDef_E  HW_SPI_init(void)
  */
 bool HW_SPI_lock(HW_spi_device_E dev)
 {
+    bool locked = true;
+
     taskENTER_CRITICAL();
     if (lock[HW_spi_devices[dev].port].owner != HW_SPI_DEV_COUNT)
     {
-        return false;
+        locked = false;
+        goto out;
     }
 
     lock[HW_spi_devices[dev].port].owner = dev;
     HW_GPIO_writePin(HW_spi_devices[dev].ncs_pin, false);
+
+out:
     taskEXIT_CRITICAL();
 
-    return true;
+    return locked;
 }
 
 /**
