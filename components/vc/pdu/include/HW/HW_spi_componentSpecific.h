@@ -11,7 +11,7 @@
 
 typedef enum
 {
-    HW_SPI_PORT_SPI1 = 0x00U,
+    HW_SPI_PORT_SPI3 = 0x00U,
     HW_SPI_PORT_COUNT,
 } HW_spi_port_E;
 

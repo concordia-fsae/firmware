@@ -17,6 +17,12 @@
 #include "lib_buffer.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define IMU_TIMEOUT_MS 1000U
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
@@ -31,9 +37,11 @@ drv_asm330_S asm330 = {
 struct imu_S {
     drv_imu_accel_S accel;
     drv_imu_gyro_S  gyro;
+    drv_timer_S     imuTimeout;
+
+    bool sleepCycle;
 } imu;
 
-// TODO: Handle in slack time with DMA
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
 
 /******************************************************************************
@@ -70,6 +78,7 @@ drv_imu_gyro_S* imu_getGyroRef(void)
 static void imu_init()
 {
     drv_asm330_init(&asm330);
+    drv_timer_init(&imu.imuTimeout);
 }
 
 /**
@@ -79,14 +88,20 @@ static void imu1kHz_PRD(void)
 {
     if (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING)
     {
+        const bool sleepCycle = imu.sleepCycle;
+        imu.sleepCycle = !imu.sleepCycle;
+        if (sleepCycle)
+        {
+            return;
+        }
+
         const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
 
         while (LIB_BUFFER_FIFO_GETLENGTH(&imuBuffer))
         {
-            drv_asm330_fifoElement_S* e = &LIB_BUFFER_FIFO_PEEK(&imuBuffer);
+            drv_asm330_fifoElement_S* e = &LIB_BUFFER_FIFO_POP(&imuBuffer);
             drv_imu_vector_S tmp = {0};
             asm330lhb_fifo_tag_t tag = drv_asm330_unpackElement(&asm330, e, &tmp);
-            (void)LIB_BUFFER_FIFO_POP(&imuBuffer);
             uint8_t* data = 0U;
 
             switch (tag)
@@ -108,18 +123,20 @@ static void imu1kHz_PRD(void)
             taskEXIT_CRITICAL();
         }
 
-        // TODO: Handle in slack time with DMA
         size_t maxContinuous = LIB_BUFFER_FIFO_GETMAXCONTINUOUS(&imuBuffer);
-        size_t freeTotal = (COUNTOF(imuBuffer.buffer) - 1U) - LIB_BUFFER_FIFO_GETLENGTH(&imuBuffer);
-        if (maxContinuous > freeTotal) maxContinuous = freeTotal;
-
         drv_asm330_fifoElement_S* reserveStart = &LIB_BUFFER_FIFO_PEEKEND(&imuBuffer);
-        uint16_t elements = drv_asm330_getFifoElements(&asm330, (uint8_t*)reserveStart,
-                                                      (uint16_t)(maxContinuous * sizeof(*reserveStart)));
+        uint16_t elements = drv_asm330_getFifoElementsReady(&asm330);
+        elements = elements > maxContinuous ? (uint16_t)maxContinuous : elements;
         LIB_BUFFER_FIFO_RESERVE(&imuBuffer, elements);
+        const bool imuRan = drv_asm330_getFifoElementsDMA(&asm330, (uint8_t*)reserveStart, (uint16_t)(elements * sizeof(*reserveStart)));
+
+        if (imuRan)
+        {
+            drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
+        }
 
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
-        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, false);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED);
     }
     else
     {
