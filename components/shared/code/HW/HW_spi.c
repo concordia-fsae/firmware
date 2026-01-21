@@ -170,7 +170,6 @@ bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint16_t len)
     for (uint8_t i = 0; i < len; i++)
     {
         while (!LL_SPI_IsActiveFlag_TXE(SPI_GET_PERIPH(dev)->handle));
-        }
         LL_SPI_TransmitData8(SPI_GET_PERIPH(dev)->handle, data[i]);
         while (!LL_SPI_IsActiveFlag_TXE(SPI_GET_PERIPH(dev)->handle));
         while (!LL_SPI_IsActiveFlag_RXNE(SPI_GET_PERIPH(dev)->handle));
