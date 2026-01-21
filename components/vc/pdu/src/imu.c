@@ -38,8 +38,6 @@ struct imu_S {
     drv_imu_accel_S accel;
     drv_imu_gyro_S  gyro;
     drv_timer_S     imuTimeout;
-
-    bool sleepCycle;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
@@ -82,50 +80,17 @@ static void imu_init()
 }
 
 /**
- * @brief  imu Module 1Hz periodic function
+ * @brief  imu Module 100Hz periodic function
  */
-static void imu1kHz_PRD(void)
+static void imu100Hz_PRD(void)
 {
     if (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING)
     {
-        const bool sleepCycle = imu.sleepCycle;
-        imu.sleepCycle = !imu.sleepCycle;
-        if (sleepCycle)
-        {
-            return;
-        }
-
         const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
-
-        while (LIB_BUFFER_FIFO_GETLENGTH(&imuBuffer))
-        {
-            drv_asm330_fifoElement_S* e = &LIB_BUFFER_FIFO_POP(&imuBuffer);
-            drv_imu_vector_S tmp = {0};
-            asm330lhb_fifo_tag_t tag = drv_asm330_unpackElement(&asm330, e, &tmp);
-            uint8_t* data = 0U;
-
-            switch (tag)
-            {
-                case ASM330LHB_GYRO_NC_TAG:
-                    data = (uint8_t*)&imu.gyro;
-                    break;
-                case ASM330LHB_XL_NC_TAG:
-                    data = (uint8_t*)&imu.accel;
-                    break;
-                case ASM330LHB_TEMPERATURE_TAG:
-                case ASM330LHB_TIMESTAMP_TAG:
-                case ASM330LHB_CFG_CHANGE_TAG:
-                    break;
-            }
-
-            taskENTER_CRITICAL();
-            if (data) memcpy(data, (uint8_t*)&tmp, sizeof(tmp));
-            taskEXIT_CRITICAL();
-        }
+        uint16_t elements = drv_asm330_getFifoElementsReady(&asm330);
 
         size_t maxContinuous = LIB_BUFFER_FIFO_GETMAXCONTINUOUS(&imuBuffer);
         drv_asm330_fifoElement_S* reserveStart = &LIB_BUFFER_FIFO_PEEKEND(&imuBuffer);
-        uint16_t elements = drv_asm330_getFifoElementsReady(&asm330);
         elements = elements > maxContinuous ? (uint16_t)maxContinuous : elements;
         LIB_BUFFER_FIFO_RESERVE(&imuBuffer, elements);
         const bool imuRan = drv_asm330_getFifoElementsDMA(&asm330, (uint8_t*)reserveStart, (uint16_t)(elements * sizeof(*reserveStart)));
@@ -146,9 +111,46 @@ static void imu1kHz_PRD(void)
 }
 
 /**
+ * @brief  imu Module 1kHz periodic function
+ */
+static void imu1kHz_PRD(void)
+{
+    if (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING)
+    {
+        while (LIB_BUFFER_FIFO_PEEK(&imuBuffer).tag)
+        {
+            drv_asm330_fifoElement_S* e = &LIB_BUFFER_FIFO_POP(&imuBuffer);
+            drv_imu_vector_S tmp = {0};
+            asm330lhb_fifo_tag_t tag = drv_asm330_unpackElement(&asm330, e, &tmp);
+            e->tag = 0U; // Clear the tag so its empty when we get back to this FIFO element
+            uint8_t* data = 0U;
+
+            switch (tag)
+            {
+                case ASM330LHB_GYRO_NC_TAG:
+                    data = (uint8_t*)&imu.gyro;
+                    break;
+                case ASM330LHB_XL_NC_TAG:
+                    data = (uint8_t*)&imu.accel;
+                    break;
+                case ASM330LHB_TEMPERATURE_TAG:
+                case ASM330LHB_TIMESTAMP_TAG:
+                case ASM330LHB_CFG_CHANGE_TAG:
+                    break;
+            }
+
+            taskENTER_CRITICAL();
+            if (data) memcpy(data, (uint8_t*)&tmp, sizeof(tmp));
+            taskEXIT_CRITICAL();
+        }
+    }
+}
+
+/**
  * @brief  imu Module descriptor
  */
 const ModuleDesc_S imu_desc = {
-    .moduleInit       = &imu_init,
-    .periodic1kHz_CLK = &imu1kHz_PRD,
+    .moduleInit        = &imu_init,
+    .periodic100Hz_CLK = &imu100Hz_PRD,
+    .periodic1kHz_CLK  = &imu1kHz_PRD,
 };
