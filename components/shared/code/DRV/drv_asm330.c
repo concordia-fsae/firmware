@@ -217,6 +217,15 @@ uint16_t drv_asm330_getFifoStatus(drv_asm330_S* dev)
     return response;
 }
 
+bool drv_asm330_getFifoElementsDMA(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen)
+{
+    uint16_t count = drv_asm330_getFifoElementsReady(dev);
+    count = count * sizeof(drv_asm330_fifoElement_S) < maxLen ? count : maxLen / sizeof(drv_asm330_fifoElement_S);
+    uint8_t command = genCommandHeader(true, ASM330LHB_FIFO_DATA_OUT_TAG);
+
+    return HW_SPI_dmaTransmitReceiveAsym(dev->dev, &command, sizeof(command), data, count * sizeof(drv_asm330_fifoElement_S));
+}
+
 uint16_t drv_asm330_getFifoElements(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen)
 {
     uint16_t count = drv_asm330_getFifoElementsReady(dev);

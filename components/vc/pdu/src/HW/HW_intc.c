@@ -18,6 +18,8 @@
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern DMA_HandleTypeDef hdma_adc1;
+extern DMA_HandleTypeDef hdma_spi_rx;
+extern DMA_HandleTypeDef hdma_spi_tx;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
@@ -94,6 +96,14 @@ void DebugMon_Handler(void)
 void DMA1_Channel1_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&hdma_adc1);
+}
+void DMA2_Channel1_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_spi_rx);
+}
+void DMA2_Channel2_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_spi_tx);
 }
 
 void ADC1_2_IRQHandler(void)

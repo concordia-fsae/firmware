@@ -87,4 +87,5 @@ drv_asm330_state_E drv_asm330_getState(drv_asm330_S* dev);
 
 uint16_t drv_asm330_getFifoStatus(drv_asm330_S* dev);
 uint16_t drv_asm330_getFifoElements(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen);
+bool drv_asm330_getFifoElementsDMA(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen);
 asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifoElement_S* pack, drv_imu_vector_S* vec);

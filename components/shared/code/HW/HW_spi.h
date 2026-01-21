@@ -27,6 +27,8 @@ typedef SPI_TypeDef HW_SPI_Handle_T;
 typedef struct
 {
     HW_SPI_Handle_T* handle;
+    DMA_HandleTypeDef* tx_dma;
+    DMA_HandleTypeDef* rx_dma;
 } HW_spi_port_S;
 
 typedef struct
@@ -45,8 +47,14 @@ extern const HW_SPI_Device_S HW_spi_devices[HW_SPI_DEV_COUNT];
 HW_StatusTypeDef_E HW_SPI_init(void);
 HW_StatusTypeDef_E HW_SPI_init_componentSpecific(void);
 HW_StatusTypeDef_E HW_SPI_deInit(void);
+
 bool HW_SPI_lock(HW_spi_device_E dev);
 bool HW_SPI_release(HW_spi_device_E dev);
-bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint8_t len);
-bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint8_t len);
-bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint8_t wLen, uint8_t* rData, uint16_t rLen);
+
+bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint16_t len);
+bool HW_SPI_receive(HW_spi_device_E dev, uint8_t* data, uint16_t len);
+bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint16_t len);
+bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint16_t wLen, uint8_t* rData, uint16_t rLen);
+
+bool HW_SPI_dmaTransmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint16_t len);
+bool HW_SPI_dmaTransmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint16_t wLen, uint8_t* rData, uint16_t rLen);
