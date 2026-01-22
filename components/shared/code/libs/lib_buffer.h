@@ -25,7 +25,7 @@
     } name
 #define LIB_BUFFER_CIRC_PEEK(name) (name)->buffer[(name)->currentPos]
 #define LIB_BUFFER_CIRC_PEEKN(name, index) (name)->buffer[((int32_t)(name)->currentPos) + index > 0 ? \
-                                           ((int32_t)(name)->currentPos) % COUNTOF((name)->buffer) : \
+                                           ((int32_t)(name)->currentPos + index) % COUNTOF((name)->buffer) : \
                                            COUNTOF((name)->buffer) - ((-((int32_t)((name)->currentPos) + index)) % COUNTOF((name)->buffer))]
 #define LIB_BUFFER_CIRC_GET(name) LIB_BUFFER_CIRC_PEEK(name); \
                                   (name)->currentPos = LIB_BUFFER_GETNEXTINDEX(name, (name)->currentPos)
@@ -57,6 +57,9 @@
     } while (0)
 
 #define LIB_BUFFER_FIFO_PEEK(name) (name)->buffer[(name)->startPos]
+#define LIB_BUFFER_FIFO_PEEKN(name, index) (name)->buffer[((int32_t)(name)->startPos) + index > 0 ? \
+                                           ((int32_t)(name)->startPos + index) % COUNTOF((name)->buffer) : \
+                                           COUNTOF((name)->buffer) - ((-((int32_t)((name)->startPos) + index)) % COUNTOF((name)->buffer))]
 #define LIB_BUFFER_FIFO_PEEKEND(name) (name)->buffer[(name)->endPos]
 
 #define LIB_BUFFER_FIFO_POP(name) \

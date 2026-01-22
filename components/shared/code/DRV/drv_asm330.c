@@ -14,16 +14,12 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define GRAVITY         9.81f
-#define G_TO_MPS2(g)   ((g) * GRAVITY)
-#define DPS_TO_HZ(dps) ((dps) / 360.0f)
+#define DEFAULT_SCALE_G        ((500.0f) / 65535.0f)
 
-#define DEFAULT_SCALE_G (500.0f / 65535.0f)
-
-#define DEFAULT_SCALE_A        (4.0f / 65535.0f)
-#define SCALE_A_16G            (32.0f / 65535.0f)
-#define SCALE_A_8G             (16.0f / 65535.0f)
-#define SCALE_A_4G             (8.0f / 65535.0f)
+#define DEFAULT_SCALE_A        ((4.0f * GRAVITY) / 65535.0f)
+#define SCALE_A_16G            ((32.0f * GRAVITY) / 65535.0f)
+#define SCALE_A_8G             ((16.0f * GRAVITY) / 65535.0f)
+#define SCALE_A_4G             ((8.0f * GRAVITY) / 65535.0f)
 
 #define CONFIG_ENTRY(param, val) genCommandHeader(false, param), (uint8_t)val
 
@@ -242,17 +238,17 @@ uint16_t drv_asm330_getFifoElements(drv_asm330_S* dev, uint8_t* data, uint16_t m
 
 void drv_asm330_getAccelFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_accel_S* accel)
 {
-    accel->accelX = G_TO_MPS2(vec->x * dev->state.scaleA);
-    accel->accelY = G_TO_MPS2(vec->y * dev->state.scaleA);
-    accel->accelZ = G_TO_MPS2(vec->z * dev->state.scaleA);
+    accel->accelX = vec->x * dev->state.scaleA;
+    accel->accelY = vec->y * dev->state.scaleA;
+    accel->accelZ = vec->z * dev->state.scaleA;
 }
 
 void drv_asm330_getGyroFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_gyro_S* gyro)
 {
     (void)dev;
-    gyro->rotX = DPS_TO_HZ(vec->x * DEFAULT_SCALE_G);
-    gyro->rotY = DPS_TO_HZ(vec->y * DEFAULT_SCALE_G);
-    gyro->rotZ = DPS_TO_HZ(vec->z * DEFAULT_SCALE_G);
+    gyro->rotX = vec->x * DEFAULT_SCALE_G;
+    gyro->rotY = vec->y * DEFAULT_SCALE_G;
+    gyro->rotZ = vec->z * DEFAULT_SCALE_G;
 }
 
 asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifoElement_S* pack, drv_imu_vector_S* vec)

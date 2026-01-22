@@ -106,6 +106,7 @@ class Units(Enum):
     Whr = "Whr"
     kW = "kW"
     km = "km"
+    dps = "deg/s"
 
 
 class ValidationRole(Enum):

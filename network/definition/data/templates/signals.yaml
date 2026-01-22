@@ -60,13 +60,13 @@ signals:
       signedness: signed
     continuous: true
   imuRotationalAcceleration:
-    unit: 'Hz'
+    unit: 'deg/s'
     nativeRepresentation:
       bitWidth: 16
-      resolution: 0.001
+      resolution: 0.01
       range:
-        min: -4
-        max: 4
+        min: -300
+        max: 300
       signedness: signed
     continuous: true
   imuLinearAccelerationBE:

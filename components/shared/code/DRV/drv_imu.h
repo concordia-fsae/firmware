@@ -10,6 +10,9 @@
  ******************************************************************************/
 
 #include "LIB_Types.h"
+#include "lib_linAlg.h"
+
+#define GRAVITY 9.81f
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -29,12 +32,9 @@ typedef struct
     float32_t rotZ;
 } drv_imu_gyro_S;
 
-typedef struct
-{
-    float32_t x;
-    float32_t y;
-    float32_t z;
-} drv_imu_vector_S;
+LIB_LINALG_DEFINE_N(imuVector, float32_t, 3U);
+typedef LIB_LINALG_INST_CVEC(imuVector) drv_imu_vector_S;
+typedef LIB_LINALG_INST_RMAT(imuVector) drv_imu_vectorTransform_S;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

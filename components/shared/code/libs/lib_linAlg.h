@@ -145,3 +145,23 @@
         LIB_LINALG_CLEAR_CVEC(out); \
         LIB_LINALG_MUL_RMATCVEC(rmat, col, out); \
     } while (0)
+
+#define LIB_LINALG_MUL_RMATRMAT_SET(rmatA, rmatB, out) \
+    _Static_assert(MCOLS(rmatA) == MROWS(rmatB), "Matrix/matrix size mismatch"); \
+    _Static_assert(MROWS(out) == MROWS(rmatA), "Output matrix row size mismatch"); \
+    _Static_assert(MCOLS(out) == MCOLS(rmatB), "Output matrix col size mismatch"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(out); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(out); _c++) { \
+                (out)->rows[_r][_c] = 0; \
+            } \
+        } \
+        for (uint8_t _r = 0U; _r < MROWS(rmatA); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(rmatB); _c++) { \
+                for (uint8_t _k = 0U; _k < MCOLS(rmatA); _k++) { \
+                    (out)->rows[_r][_c] += \
+                        (rmatA)->rows[_r][_k] * (rmatB)->rows[_k][_c]; \
+                } \
+            } \
+        } \
+    } while (0)
