@@ -1,5 +1,5 @@
 load("//tools/uv/defs.bzl", "uv_tool")
-load("//tools/build-info/defs.bzl", "generate_build_info")
+load("//tools/csv_import/defs.bzl", "generate_build_info")
 
 export_file(
     name = "BuildInfo.h.mako",

@@ -1,0 +1,15 @@
+load("//tools/uv/defs.bzl", "uv_tool")
+load("//tools/csv_import/defs.bzl", "CSVtoARRAY")
+
+uv_tool(
+    name = "CSV_ARRAY_tool",
+    pyproject_file = "pyproject.toml",
+    lock_file = "uv.lock",
+    srcs = ["CSV_integration.py"],
+    visibility = ["PUBLIC"],
+)
+
+CSVtoARRAY(
+    name = "battery_tables",
+    srcs = glob(["*.csv"]),
+)
