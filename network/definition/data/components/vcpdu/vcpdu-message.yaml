@@ -184,3 +184,8 @@ messages:
         template: imuRotationalAcceleration
       pitch:
         template: imuRotationalAcceleration
+      angleRoll:
+        template: preciseAngle
+      anglePitch:
+        template: preciseAngle
+

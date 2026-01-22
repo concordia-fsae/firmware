@@ -23,6 +23,8 @@
 #define IMU_TIMEOUT_MS 1000U
 #define BASELINE_SAMPLES 500U
 
+#define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
+
 /*
  * Produces a 3x3 rotation matrix R such that:
  *   R * normalize(meas) = (0,0,1)
@@ -85,9 +87,12 @@
 typedef enum
 {
     INIT = 0x00U,
+    INIT_VEHICLEANGLE,
     STABILIZING,
+    STABILIZING_VEHICLEANGLE,
     BASELINING,
     ZEROING,
+    GET_VEHICLEANGLE,
     RUNNING,
 } operatingMode_E;
 
@@ -106,6 +111,7 @@ drv_asm330_S asm330 = {
 struct imu_S {
     drv_imu_accel_S accel;
     drv_imu_gyro_S  gyro;
+    drv_imu_gyro_S  vehicleAngle;
     drv_timer_S     imuTimeout;
     operatingMode_E operatingMode;
 } imu;
@@ -167,6 +173,17 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
     }
 }
 
+static bool disregardSamples(void)
+{
+    static uint16_t countA = 0;
+    static uint16_t countG = 0;
+    drv_imu_vector_S tmp = {0};
+
+    averageSamples(&tmp, &countA, &tmp, &countG);
+
+    return countA + countG > BASELINE_SAMPLES;
+}
+
 static bool calculateTransform(void)
 {
     static drv_imu_vector_S sum = {0};
@@ -226,6 +243,51 @@ static bool calculateOffset(void)
     return valid;
 }
 
+static bool calculateVehicleAngle(void)
+{
+    static drv_imu_vector_S sum = {0};
+    static uint16_t count = 0;
+
+    drv_imu_vector_S tmp = {0};
+    drv_imu_vector_S gVeh = {0};
+
+    averageSamples(&tmp, &count, NULL, NULL);
+    LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
+    LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / 2.0f), &sum);
+
+    const bool valid = (count > BASELINE_SAMPLES);
+    if (!valid)
+    {
+        return false;
+    }
+
+    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sum, &gVeh);
+
+    const float32_t gx = gVeh.elemCol[0];
+    const float32_t gy = gVeh.elemCol[1];
+    const float32_t gz = gVeh.elemCol[2];
+
+    const float32_t n2 = gx*gx + gy*gy + gz*gz;
+    if (n2 <= (EPS * EPS))
+    {
+        return false;
+    }
+
+    const float32_t invn = 1.0f / sqrtf(n2);
+    const float32_t nx = gx * invn;
+    const float32_t ny = gy * invn;
+    const float32_t nz = gz * invn;
+
+    imu.vehicleAngle.rotX = atan2f(ny, nz) * RAD_TO_DEG;
+    imu.vehicleAngle.rotY = atan2f(-nx, sqrtf(ny*ny + nz*nz)) * RAD_TO_DEG;
+    imu.vehicleAngle.rotZ = 0.0f;
+
+    LIB_LINALG_CLEAR_CVEC(&sum);
+    count = 0;
+
+    return true;
+}
+
 static bool egressFifo(void)
 {
     uint16_t elements = drv_asm330_getFifoElementsReady(&asm330);
@@ -265,6 +327,18 @@ drv_imu_gyro_S* imu_getGyroRef(void)
     return &imu.gyro;
 }
 
+void imu_getVehicleAngle(drv_imu_gyro_S* gyro)
+{
+    taskENTER_CRITICAL();
+    memcpy(gyro, &imu.vehicleAngle, sizeof(*gyro));
+    taskEXIT_CRITICAL();
+}
+
+drv_imu_gyro_S* imu_getVehicleAngleRef(void)
+{
+    return &imu.vehicleAngle;
+}
+
 /**
  * @brief  imu Module Init function
  */
@@ -273,7 +347,7 @@ static void imu_init()
     drv_asm330_init(&asm330);
     drv_timer_init(&imu.imuTimeout);
 
-    imu.operatingMode = RUNNING;
+    imu.operatingMode = INIT_VEHICLEANGLE;
 }
 
 /**
@@ -284,15 +358,17 @@ static void imu100Hz_PRD(void)
     switch (imu.operatingMode)
     {
         case INIT:
+        case INIT_VEHICLEANGLE:
             if (egressFifo())
             {
-                imu.operatingMode = STABILIZING;
+                imu.operatingMode = imu.operatingMode == INIT_VEHICLEANGLE ? STABILIZING_VEHICLEANGLE : STABILIZING;
             }
             break;
         case STABILIZING:
-            if (calculateTransform())
+        case STABILIZING_VEHICLEANGLE:
+            if (disregardSamples())
             {
-                imu.operatingMode = BASELINING;
+                imu.operatingMode = imu.operatingMode == STABILIZING_VEHICLEANGLE ? GET_VEHICLEANGLE : BASELINING;
             }
             egressFifo();
             break;
@@ -305,6 +381,13 @@ static void imu100Hz_PRD(void)
             break;
         case ZEROING:
             if (calculateOffset())
+            {
+                imu.operatingMode = RUNNING;
+            }
+            egressFifo();
+            break;
+        case GET_VEHICLEANGLE:
+            if (calculateVehicleAngle())
             {
                 imu.operatingMode = RUNNING;
             }
@@ -354,8 +437,11 @@ static void imu1kHz_PRD(void)
             {
                case ASM330LHB_GYRO_NC_TAG:
                     data = (uint8_t*)&imu.gyro;
+                    drv_imu_vector_S integrated = {0};
                     LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmp, &rotated);
                     LIB_LINALG_SUM_CVEC(&rotated, &imuCalibration_data.zeroGyro, &rotated);
+                    LIB_LINALG_MUL_CVECSCALAR(&rotated, asm330.state.sampleTime, &integrated);
+                    LIB_LINALG_SUM_CVEC(&integrated, (drv_imu_vector_S*)&imu.vehicleAngle, (drv_imu_vector_S*)&imu.vehicleAngle);
                     break;
                 case ASM330LHB_XL_NC_TAG:
                     data = (uint8_t*)&imu.accel;

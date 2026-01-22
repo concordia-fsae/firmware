@@ -62,11 +62,21 @@ signals:
   imuRotationalAcceleration:
     unit: 'deg/s'
     nativeRepresentation:
-      bitWidth: 16
-      resolution: 0.01
+      bitWidth: 14
+      resolution: 0.05
       range:
-        min: -300
-        max: 300
+        min: -150
+        max: 150
+      signedness: signed
+    continuous: true
+  preciseAngle:
+    unit: 'deg'
+    nativeRepresentation:
+      bitWidth: 11
+      resolution: 0.1
+      range:
+        min: -90
+        max: 90
       signedness: signed
     continuous: true
   imuLinearAccelerationBE:

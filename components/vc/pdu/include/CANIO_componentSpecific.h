@@ -111,7 +111,9 @@
 #define set_lat(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelY)
 #define set_vert(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelZ)
 #define set_yaw(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotZ)
-#define set_roll(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)
-#define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotY)
+#define set_roll(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotY)
+#define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)
+#define set_angleRoll(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotY)
+#define set_anglePitch(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotX)
 
 #include "TemporaryStubbing.h"
