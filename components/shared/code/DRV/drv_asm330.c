@@ -163,6 +163,10 @@ bool drv_asm330_init(drv_asm330_S* dev)
                 dev->state.scaleA = DEFAULT_SCALE_A;
                 break;
         }
+
+        uint8_t freq = genCommandHeader(true, ASM330LHB_INTERNAL_FREQ_FINE);
+        getParam(dev, freq, &freq);
+        dev->state.sampleTime = 1.0f / (40000.0f + (0.0015f * freq * 40000.0f));
     }
     else
     {

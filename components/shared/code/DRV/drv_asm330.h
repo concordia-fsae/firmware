@@ -71,6 +71,7 @@ typedef struct
     struct {
         float32_t scaleA;
         drv_asm330_state_E state;
+        float32_t sampleTime;
     } state;
 } drv_asm330_S;
 
