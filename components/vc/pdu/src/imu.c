@@ -108,9 +108,6 @@ struct imu_S {
     drv_imu_gyro_S  gyro;
     drv_timer_S     imuTimeout;
     operatingMode_E operatingMode;
-
-    drv_imu_vector_S offset;
-    drv_imu_vectorTransform_S rotationMatrix;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
@@ -174,7 +171,7 @@ static bool calculateTransform(void)
     if (valid)
     {
         CALC_ROTMAX_TO_Z3(&sum, &tmpTransform);
-        LIB_LINALG_MUL_RMATRMAT_SET(&tmpTransform, &rotationToVehicleFrame, &imu.rotationMatrix);
+        LIB_LINALG_MUL_RMATRMAT_SET(&tmpTransform, &rotationToVehicleFrame, &imuCalibration_data.rotation);
         LIB_LINALG_CLEAR_CVEC(&sum);
         count = 0;
     }
@@ -196,9 +193,9 @@ static bool calculateOffset(void)
 
     if (valid)
     {
-        LIB_LINALG_MUL_RMATCVEC_SET(&imu.rotationMatrix, &sum, &imu.offset);
-        LIB_LINALG_MUL_CVECSCALAR(&imu.offset, -1.0f, &imu.offset);
-        ((drv_imu_accel_S*)&imu.offset)->accelZ += GRAVITY;
+        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sum, &imuCalibration_data.zeroAccel);
+        LIB_LINALG_MUL_CVECSCALAR(&imuCalibration_data.zeroAccel, -1.0f, &imuCalibration_data.zeroAccel);
+        ((drv_imu_accel_S*)&imuCalibration_data.zeroAccel)->accelZ += GRAVITY;
         LIB_LINALG_CLEAR_CVEC(&sum);
         count = 0;
     }
@@ -252,6 +249,8 @@ static void imu_init()
 {
     drv_asm330_init(&asm330);
     drv_timer_init(&imu.imuTimeout);
+
+    imu.operatingMode = RUNNING;
 }
 
 /**
@@ -332,12 +331,12 @@ static void imu1kHz_PRD(void)
             {
                case ASM330LHB_GYRO_NC_TAG:
                     data = (uint8_t*)&imu.gyro;
-                    LIB_LINALG_MUL_RMATCVEC_SET(&imu.rotationMatrix, &tmp, &rotated);
+                    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmp, &rotated);
                     break;
                 case ASM330LHB_XL_NC_TAG:
                     data = (uint8_t*)&imu.accel;
-                    LIB_LINALG_MUL_RMATCVEC_SET(&imu.rotationMatrix, &tmp, &rotated);
-                    LIB_LINALG_SUM_CVEC(&rotated, &imu.offset, &rotated);
+                    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmp, &rotated);
+                    LIB_LINALG_SUM_CVEC(&rotated, &imuCalibration_data.zeroAccel, &rotated);
                     break;
                 case ASM330LHB_TEMPERATURE_TAG:
                 case ASM330LHB_TIMESTAMP_TAG:

@@ -11,6 +11,7 @@
 
 #include "LIB_Types.h"
 #include "lib_linAlg.h"
+#include "lib_nvm.h"
 
 #define GRAVITY 9.81f
 
@@ -35,6 +36,18 @@ typedef struct
 LIB_LINALG_DEFINE_N(imuVector, float32_t, 3U);
 typedef LIB_LINALG_INST_CVEC(imuVector) drv_imu_vector_S;
 typedef LIB_LINALG_INST_RMAT(imuVector) drv_imu_vectorTransform_S;
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef struct
+{
+    drv_imu_vector_S          zeroAccel;
+    drv_imu_vector_S          zeroGyro;
+    drv_imu_vectorTransform_S rotation;
+} LIB_NVM_STORAGE(nvm_imuCalibration_S);
+extern nvm_imuCalibration_S imuCalibration_data;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

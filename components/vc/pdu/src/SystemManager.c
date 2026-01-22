@@ -13,6 +13,7 @@
 #include "HW_can.h"
 #include "HW_clock.h"
 #include "HW_dma.h"
+#include "HW_flash.h"
 #include "HW_gpio.h"
 #include "HW_spi.h"
 #include "HW_tim.h"
@@ -26,6 +27,7 @@
 #include "Module.h"
 
 #include "LIB_app.h"
+#include "lib_nvm.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -76,6 +78,10 @@ int main(void)
     HW_DMA_init();
     HW_ADC_init();
     HW_SPI_init();
+    FLASH_init();
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+    lib_nvm_init(); // Must be done early in the boot stage following flash bringup
+#endif
     HW_GPIO_init();
 
     ///**< Create RTOS Tasks, Timers, etc... */
