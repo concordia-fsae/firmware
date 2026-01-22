@@ -11,6 +11,7 @@ def CSVtoARRAY(name, srcs):
     uv_genrule(
         name = name,
         srcs = srcs,
+        outs = outs,
         tool = "//tools/csv_import:CSV_ARRAY_tool",
         cmd = (
             "$(location //tools/csv_import:CSV_ARRAY_tool) "
