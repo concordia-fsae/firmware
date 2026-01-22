@@ -124,9 +124,10 @@ const drv_imu_vectorTransform_S rotationToVehicleFrame = {
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static uint16_t averageSamples(drv_imu_vector_S* vec)
+static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vector_S* vecG, uint16_t* countG)
 {
-    uint16_t count = 0;
+    uint16_t iterA = 0;
+    uint16_t iterG = 0;
 
     // Wait until the next element is being filled so we know our current element is valid
     while (LIB_BUFFER_FIFO_PEEKN(&imuBuffer, 1).tag)
@@ -139,20 +140,31 @@ static uint16_t averageSamples(drv_imu_vector_S* vec)
         switch (tag)
         {
             case ASM330LHB_XL_NC_TAG:
-                LIB_LINALG_SUM_CVEC(vec, &tmp, vec);
-                count++;
+                LIB_LINALG_SUM_CVEC(vecA, &tmp, vecA);
+                iterA++;
+                break;
+            case ASM330LHB_GYRO_NC_TAG:
+                if (vecG && countG)
+                {
+                    LIB_LINALG_SUM_CVEC(vecG, &tmp, vecG);
+                    iterG++;
+                }
                 break;
             default:
                 break;
         }
     }
 
-    if (count)
+    if (iterA)
     {
-        LIB_LINALG_MUL_CVECSCALAR(vec, (1.0f / count), vec);
+        LIB_LINALG_MUL_CVECSCALAR(vecA, (1.0f / iterA), vecA);
+        *countA += iterA;
     }
-
-    return count;
+    if (iterG)
+    {
+        LIB_LINALG_MUL_CVECSCALAR(vecG, (1.0f / iterG), vecG);
+        *countG += iterG;
+    }
 }
 
 static bool calculateTransform(void)
@@ -162,7 +174,7 @@ static bool calculateTransform(void)
     drv_imu_vector_S tmp = {0};
     drv_imu_vectorTransform_S tmpTransform = {0};
 
-    count += averageSamples(&tmp);
+    averageSamples(&tmp, &count, NULL, NULL);
     LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
     LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / 2.0f), &sum);
 
@@ -181,23 +193,34 @@ static bool calculateTransform(void)
 
 static bool calculateOffset(void)
 {
-    static drv_imu_vector_S sum = {0};
-    static uint16_t count = 0;
-    drv_imu_vector_S tmp = {0};
+    static drv_imu_vector_S sumA = {0};
+    static uint16_t countA = 0;
+    static drv_imu_vector_S sumG = {0};
+    static uint16_t countG = 0;
+    drv_imu_vector_S tmpA = {0};
+    drv_imu_vector_S tmpG = {0};
 
-    count += averageSamples(&tmp);
-    LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
-    LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / 2.0f), &sum);
+    averageSamples(&tmpA, &countA, &tmpG, &countG);
+    LIB_LINALG_SUM_CVEC(&sumA, &tmpA, &sumA);
+    LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / 2.0f), &sumA);
+    LIB_LINALG_SUM_CVEC(&sumG, &tmpG, &sumG);
+    LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / 2.0f), &sumG);
 
-    const bool valid = count > BASELINE_SAMPLES;
+    const bool validA = countA > BASELINE_SAMPLES;
+    const bool validG = countG > BASELINE_SAMPLES;
+    const bool valid = validA && validG;
 
     if (valid)
     {
-        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sum, &imuCalibration_data.zeroAccel);
+        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sumA, &imuCalibration_data.zeroAccel);
         LIB_LINALG_MUL_CVECSCALAR(&imuCalibration_data.zeroAccel, -1.0f, &imuCalibration_data.zeroAccel);
         ((drv_imu_accel_S*)&imuCalibration_data.zeroAccel)->accelZ += GRAVITY;
-        LIB_LINALG_CLEAR_CVEC(&sum);
-        count = 0;
+        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sumG, &imuCalibration_data.zeroGyro);
+        LIB_LINALG_MUL_CVECSCALAR(&imuCalibration_data.zeroGyro, -1.0f, &imuCalibration_data.zeroGyro);
+        LIB_LINALG_CLEAR_CVEC(&sumA);
+        LIB_LINALG_CLEAR_CVEC(&sumG);
+        countA = 0;
+        countG = 0;
     }
 
     return valid;
@@ -332,6 +355,7 @@ static void imu1kHz_PRD(void)
                case ASM330LHB_GYRO_NC_TAG:
                     data = (uint8_t*)&imu.gyro;
                     LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmp, &rotated);
+                    LIB_LINALG_SUM_CVEC(&rotated, &imuCalibration_data.zeroGyro, &rotated);
                     break;
                 case ASM330LHB_XL_NC_TAG:
                     data = (uint8_t*)&imu.accel;
