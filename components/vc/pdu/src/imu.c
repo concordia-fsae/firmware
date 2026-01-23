@@ -219,9 +219,7 @@ static bool calculateOffset(void)
 
     averageSamples(&tmpA, &countA, &tmpG, &countG);
     LIB_LINALG_SUM_CVEC(&sumA, &tmpA, &sumA);
-    LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / 2.0f), &sumA);
     LIB_LINALG_SUM_CVEC(&sumG, &tmpG, &sumG);
-    LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / 2.0f), &sumG);
 
     const bool validA = countA > BASELINE_SAMPLES;
     const bool validG = countG > BASELINE_SAMPLES;
@@ -229,11 +227,15 @@ static bool calculateOffset(void)
 
     if (valid)
     {
+        LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / countA), &sumA);
         LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sumA, &imuCalibration_data.zeroAccel);
         LIB_LINALG_MUL_CVECSCALAR(&imuCalibration_data.zeroAccel, -1.0f, &imuCalibration_data.zeroAccel);
         ((drv_imu_accel_S*)&imuCalibration_data.zeroAccel)->accelZ += GRAVITY;
+
+        LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / countG), &sumG);
         LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sumG, &imuCalibration_data.zeroGyro);
         LIB_LINALG_MUL_CVECSCALAR(&imuCalibration_data.zeroGyro, -1.0f, &imuCalibration_data.zeroGyro);
+
         LIB_LINALG_CLEAR_CVEC(&sumA);
         LIB_LINALG_CLEAR_CVEC(&sumG);
         countA = 0;
@@ -241,6 +243,24 @@ static bool calculateOffset(void)
     }
 
     return valid;
+}
+
+static void estimateRotationFromGravity(drv_imu_vector_S* gVeh, drv_imu_gyro_S* vehicleAngle, const float32_t norm)
+{
+    if (norm <= EPS)
+    {
+        LIB_LINALG_CLEAR_CVEC((drv_imu_vector_S*)vehicleAngle);
+        return;
+    }
+
+    const float32_t invn = 1.0f / norm;
+    const float32_t nx = gVeh->elemCol[0] * invn;
+    const float32_t ny = gVeh->elemCol[1] * invn;
+    const float32_t nz = gVeh->elemCol[2] * invn;
+
+    vehicleAngle->rotX = atan2f(ny, nz) * RAD_TO_DEG;
+    vehicleAngle->rotY = atan2f(-nx, sqrtf(ny*ny + nz*nz)) * RAD_TO_DEG;
+    vehicleAngle->rotZ = 0.0f;
 }
 
 static bool calculateVehicleAngle(void)
@@ -262,25 +282,9 @@ static bool calculateVehicleAngle(void)
     }
 
     LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sum, &gVeh);
-
-    const float32_t gx = gVeh.elemCol[0];
-    const float32_t gy = gVeh.elemCol[1];
-    const float32_t gz = gVeh.elemCol[2];
-
-    const float32_t n2 = gx*gx + gy*gy + gz*gz;
-    if (n2 <= (EPS * EPS))
-    {
-        return false;
-    }
-
-    const float32_t invn = 1.0f / sqrtf(n2);
-    const float32_t nx = gx * invn;
-    const float32_t ny = gy * invn;
-    const float32_t nz = gz * invn;
-
-    imu.vehicleAngle.rotX = atan2f(ny, nz) * RAD_TO_DEG;
-    imu.vehicleAngle.rotY = atan2f(-nx, sqrtf(ny*ny + nz*nz)) * RAD_TO_DEG;
-    imu.vehicleAngle.rotZ = 0.0f;
+    float32_t norm = 0;
+    LIB_LINALG_GETNORM_CVEC(&gVeh, &norm);
+    estimateRotationFromGravity(&gVeh, &imu.vehicleAngle, norm);
 
     LIB_LINALG_CLEAR_CVEC(&sum);
     count = 0;
@@ -297,6 +301,40 @@ static bool egressFifo(void)
     elements = elements > maxContinuous ? (uint16_t)maxContinuous : elements;
     LIB_BUFFER_FIFO_RESERVE(&imuBuffer, elements);
     return drv_asm330_getFifoElementsDMA(&asm330, (uint8_t*)reserveStart, (uint16_t)(elements * sizeof(*reserveStart)));
+}
+
+static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out)
+{
+    drv_imu_vector_S rotated = {0};
+    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, in, &rotated);
+    LIB_LINALG_SUM_CVEC(&rotated, zero, &rotated);
+    taskENTER_CRITICAL();
+    LIB_LINALG_CVEC_EQ_CVEC(&rotated, out);
+    taskEXIT_CRITICAL();
+}
+
+static void estimateAngleFromGAndRot(drv_imu_accel_S* gravity, drv_imu_gyro_S* rotEst, drv_imu_gyro_S* angleEst)
+{
+    drv_imu_vector_S vehicleAngleEst = { 0 };
+    float32_t norm = 0;
+    LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)gravity, &norm);
+    if (norm >= EPS)
+    {
+        estimateRotationFromGravity((drv_imu_vector_S*)gravity, (drv_imu_gyro_S*)&vehicleAngleEst, norm);
+
+        norm /= GRAVITY;
+        SATURATE(0.0f, norm, 2.0);
+
+        const float32_t gravityConfidence = norm > 1.0f ? 2.0f - norm : norm;
+        LIB_LINALG_WEIGHTAVG_CVEC(&vehicleAngleEst,
+                                  (drv_imu_vector_S*)rotEst,
+                                  gravityConfidence,
+                                  (drv_imu_vector_S*)angleEst);
+    }
+    else
+    {
+        LIB_LINALG_CVEC_EQ_CVEC((drv_imu_vector_S*)rotEst, (drv_imu_vector_S*)angleEst);
+    }
 }
 
 /******************************************************************************
@@ -423,41 +461,33 @@ static void imu1kHz_PRD(void)
 {
     if ((imu.operatingMode == RUNNING) && (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
     {
-        // Wait until the next element is being filled so we know our current element is valid
-        while (LIB_BUFFER_FIFO_PEEKN(&imuBuffer, 1).tag)
+        drv_imu_vector_S vehicleAngleEstRot = *((drv_imu_vector_S*)&imu.vehicleAngle);
+        drv_imu_vector_S vehicleAngleEst = { 0 };
+        drv_imu_vector_S sumA = {0};
+        drv_imu_vector_S sumG = {0};
+        uint16_t countA = 0;
+        uint16_t countG = 0;
+
+        averageSamples(&sumA, &countA, &sumG, &countG);
+
+        if (countA)
         {
-            drv_asm330_fifoElement_S* e = &LIB_BUFFER_FIFO_POP(&imuBuffer);
-            drv_imu_vector_S tmp = {0};
-            drv_imu_vector_S rotated = {0};
-            asm330lhb_fifo_tag_t tag = drv_asm330_unpackElement(&asm330, e, &tmp);
-            e->tag = 0U; // Clear the tag so its empty when we get back to this FIFO element
-            uint8_t* data = 0U;
-
-            switch (tag)
-            {
-               case ASM330LHB_GYRO_NC_TAG:
-                    data = (uint8_t*)&imu.gyro;
-                    drv_imu_vector_S integrated = {0};
-                    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmp, &rotated);
-                    LIB_LINALG_SUM_CVEC(&rotated, &imuCalibration_data.zeroGyro, &rotated);
-                    LIB_LINALG_MUL_CVECSCALAR(&rotated, asm330.state.sampleTime, &integrated);
-                    LIB_LINALG_SUM_CVEC(&integrated, (drv_imu_vector_S*)&imu.vehicleAngle, (drv_imu_vector_S*)&imu.vehicleAngle);
-                    break;
-                case ASM330LHB_XL_NC_TAG:
-                    data = (uint8_t*)&imu.accel;
-                    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmp, &rotated);
-                    LIB_LINALG_SUM_CVEC(&rotated, &imuCalibration_data.zeroAccel, &rotated);
-                    break;
-                case ASM330LHB_TEMPERATURE_TAG:
-                case ASM330LHB_TIMESTAMP_TAG:
-                case ASM330LHB_CFG_CHANGE_TAG:
-                    break;
-            }
-
-            taskENTER_CRITICAL();
-            if (data) memcpy(data, (uint8_t*)&rotated, sizeof(rotated));
-            taskEXIT_CRITICAL();
+            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
         }
+        if (countG)
+        {
+            drv_imu_vector_S integratedG = {0};
+            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
+
+            LIB_LINALG_MUL_CVECSCALAR(&sumG, asm330.state.sampleTime * countG, &integratedG);
+            LIB_LINALG_SUM_CVEC(&integratedG, &vehicleAngleEstRot, &vehicleAngleEstRot);
+        }
+
+        estimateAngleFromGAndRot(&imu.accel, (drv_imu_gyro_S*)&vehicleAngleEstRot, (drv_imu_gyro_S*)&vehicleAngleEst);
+
+        taskENTER_CRITICAL();
+        LIB_LINALG_CVEC_EQ_CVEC(&vehicleAngleEst, (drv_imu_vector_S*)&imu.vehicleAngle);
+        taskEXIT_CRITICAL();
     }
 }
 
