@@ -337,6 +337,51 @@ static void estimateAngleFromGAndRot(drv_imu_accel_S* gravity, drv_imu_gyro_S* r
     }
 }
 
+static void transitionImuState(void)
+{
+    switch (imu.operatingMode)
+    {
+        case INIT:
+        case INIT_VEHICLEANGLE:
+            if (egressFifo())
+            {
+                imu.operatingMode = imu.operatingMode == INIT_VEHICLEANGLE ? STABILIZING_VEHICLEANGLE : STABILIZING;
+            }
+            break;
+        case STABILIZING:
+        case STABILIZING_VEHICLEANGLE:
+            if (disregardSamples())
+            {
+                imu.operatingMode = imu.operatingMode == STABILIZING_VEHICLEANGLE ? GET_VEHICLEANGLE : BASELINING;
+            }
+            egressFifo();
+            break;
+        case BASELINING:
+            if (calculateTransform())
+            {
+                imu.operatingMode = ZEROING;
+            }
+            egressFifo();
+            break;
+        case ZEROING:
+            if (calculateOffset())
+            {
+                imu.operatingMode = RUNNING;
+            }
+            egressFifo();
+            break;
+        case GET_VEHICLEANGLE:
+            if (calculateVehicleAngle())
+            {
+                imu.operatingMode = RUNNING;
+            }
+            egressFifo();
+            break;
+        case RUNNING:
+            break;
+    }
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -393,64 +438,33 @@ static void imu_init()
  */
 static void imu100Hz_PRD(void)
 {
-    switch (imu.operatingMode)
+    if (imu.operatingMode == RUNNING)
     {
-        case INIT:
-        case INIT_VEHICLEANGLE:
-            if (egressFifo())
-            {
-                imu.operatingMode = imu.operatingMode == INIT_VEHICLEANGLE ? STABILIZING_VEHICLEANGLE : STABILIZING;
-            }
-            break;
-        case STABILIZING:
-        case STABILIZING_VEHICLEANGLE:
-            if (disregardSamples())
-            {
-                imu.operatingMode = imu.operatingMode == STABILIZING_VEHICLEANGLE ? GET_VEHICLEANGLE : BASELINING;
-            }
-            egressFifo();
-            break;
-        case BASELINING:
-            if (calculateTransform())
-            {
-                imu.operatingMode = ZEROING;
-            }
-            egressFifo();
-            break;
-        case ZEROING:
-            if (calculateOffset())
-            {
-                imu.operatingMode = RUNNING;
-            }
-            egressFifo();
-            break;
-        case GET_VEHICLEANGLE:
-            if (calculateVehicleAngle())
-            {
-                imu.operatingMode = RUNNING;
-            }
-            egressFifo();
-            break;
-        case RUNNING:
-            if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
-            {
-                const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
-                const bool imuRan = egressFifo();
+        if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
+        {
+            const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
+            const bool imuRan = egressFifo();
 
-                if (imuRan)
-                {
-                    drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
-                }
-
-                app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
-                app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED);
-            }
-            else
+            if (imuRan)
             {
-                app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
-                app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, true);
+                drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
             }
-            break;
+
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED);
+        }
+        else
+        {
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, true);
+        }
+    }
+    else
+    {
+        transitionImuState();
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, false);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, true);
     }
 }
 

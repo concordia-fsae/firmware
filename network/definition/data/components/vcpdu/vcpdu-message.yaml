@@ -14,6 +14,7 @@ messages:
       contactsOpenInRun:
       imuOverrun:
       imuError:
+      imuSna:
 
   udsResponse:
     description: UDS response message from the VCPDU
