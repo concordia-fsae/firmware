@@ -4,11 +4,11 @@ from pathlib import Path
 
 args = sys.argv[1:]
 
-sep = args.index("--out")
+sep = args.index("--out") # is outs the keyword between csv files and output
 
 csv_files = [Path(p) for p in args[:sep]]
 outs = [Path(p) for p in args[sep + 1:]]
-assert len(outs) == len(csv_files) * 2
+assert len(outs) == len(csv_files) * 2 # make sure for each csv we generate a .h and .c
 
 for i, csv_file in enumerate(csv_files):
     out_h = outs[i * 2]
