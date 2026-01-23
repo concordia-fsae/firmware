@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 #include "lib_utility.h"
+#include "lib_simpleFilter.h"
 #include <math.h>
 
 /******************************************************************************
@@ -53,6 +54,24 @@
  *                          V E C T O R  O P S
  ******************************************************************************/
 
+#define LIB_LINALG_WEIGHTAVG_CVEC(a, b, weightA, out) \
+    _Static_assert(COLS(a) == COLS(b), "Vector size mismatch"); \
+    _Static_assert(COLS(a) == COLS(out), "Vector size mismatch"); \
+    do { \
+        SATURATE(0.0f, weightA, 1.0f); \
+        for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
+            LIB_SIMPLEFILTER_WEIGHTAVG(&(a)->elemCol[_i], &(b)->elemCol[_i], weightA, &(out)->elemCol[_i]); \
+        } \
+    } while (0)
+
+#define LIB_LINALG_CVEC_EQ_CVEC(in, out) \
+    _Static_assert(COLS(in) == COLS(out), "Vector size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(out); _i++) { \
+            (out)->elemCol[_i] = (in)->elemCol[_i]; \
+        } \
+    } while (0)
+
 #define LIB_LINALG_CLEAR_CVEC(a) \
     do { \
         for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
@@ -62,6 +81,7 @@
 
 #define LIB_LINALG_SUM_CVEC(a, b, out) \
     _Static_assert(COLS(a) == COLS(b), "Vector size mismatch"); \
+    _Static_assert(COLS(a) == COLS(out), "Vector size mismatch"); \
     do { \
         for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
             (out)->elemCol[_i] = (a)->elemCol[_i] + (b)->elemCol[_i]; \
