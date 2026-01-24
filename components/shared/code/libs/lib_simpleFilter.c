@@ -53,7 +53,7 @@ void lib_simpleFilter_lpf_calcSmoothingFactor(lib_simpleFilter_lpf_S* filter, fl
 float32_t lib_simpleFilter_lpf_step(lib_simpleFilter_lpf_S* filter, float32_t x_n)
 {
     filter->y_1 = filter->y;
-    filter->y = x_n * filter->smoothing_factor + (1 - filter->smoothing_factor) * filter->y_1;
+    LIB_SIMPLEFILTER_WEIGHTAVG(&x_n, &filter->y_1, filter->smoothing_factor, &filter->y);
 
     return filter->y;
 }

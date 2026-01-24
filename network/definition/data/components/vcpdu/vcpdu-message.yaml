@@ -14,6 +14,7 @@ messages:
       contactsOpenInRun:
       imuOverrun:
       imuError:
+      imuSna:
 
   udsResponse:
     description: UDS response message from the VCPDU
@@ -164,7 +165,7 @@ messages:
   imuAccel:
     description: VCPDU IMU linear accel
     id: 0x3f0
-    cycleTimeMs: 1
+    cycleTimeMs: 10
     signals:
       lon:
         template: imuLinearAcceleration
@@ -176,7 +177,7 @@ messages:
   imuGyro:
     description: VCPDU IMU rotational accel
     id: 0x3f1
-    cycleTimeMs: 1
+    cycleTimeMs: 10
     signals:
       yaw:
         template: imuRotationalAcceleration
@@ -184,3 +185,8 @@ messages:
         template: imuRotationalAcceleration
       pitch:
         template: imuRotationalAcceleration
+      angleRoll:
+        template: preciseAngle
+      anglePitch:
+        template: preciseAngle
+

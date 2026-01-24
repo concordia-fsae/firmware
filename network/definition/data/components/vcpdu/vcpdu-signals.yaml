@@ -31,6 +31,10 @@ signals:
     description: VCPDU IMU error
     discreteValues: faultStatus
 
+  imuSna:
+    description: VCPDU IMU is not available
+    discreteValues: faultStatus
+
   vehicleState:
     description: "Current state of the vehicle"
     discreteValues: vehicleState
