@@ -16,6 +16,14 @@
 #include "lib_interpolation.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define DEG90_V 0.78f
+#define OC_SC_V_MARGIN 0.025f
+#define MAX_VOLTAGE 3.0f
+
+/******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
@@ -25,29 +33,36 @@ static struct
     float32_t angle;
 } steeringAngle_data;
 
+// @note Interpolate voltage from zero-angle calibration voltage
 static lib_interpolation_point_S steering_angle[] = {
     {
-        .x = 0.345f, // voltage
-        .y = 102.0f, // right turned degrees
-    },  
+        .x = - DEG90_V, // voltage
+        .y = 90.0f, // right turned degrees
+    },
     {
-        .x = 1.414f, // sensor reference voltage
-        .y = -102.0f, // left turned degrees
+        .x = DEG90_V, // sensor reference voltage
+        .y = - 90.0f, // left turned degrees
     },
 };
 
 static lib_interpolation_mapping_S steering_map = {
     .points = (lib_interpolation_point_S*)&steering_angle,
     .number_points = COUNTOF(steering_angle),
-    .saturate_left = true,
-    .saturate_right = true,
+    .saturate_left = false,
+    .saturate_right = false,
 };
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+nvm_steeringCalibration_S steeringCalibration_data;
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-float32_t steeringAngle_getSteeringAngle(void) 
+float32_t steeringAngle_getSteeringAngle(void)
 {
     return steeringAngle_data.angle;
 }
@@ -60,7 +75,7 @@ float32_t steeringAngle_getSteeringVoltage(void){
  */
 static void steeringAngle_init(void)
 {
-    memset(&steeringAngle_data, 0x00U, sizeof(steeringAngle_data)); 
+    memset(&steeringAngle_data, 0x00U, sizeof(steeringAngle_data));
     lib_interpolation_init(&steering_map, 0.0f);
 }
 
@@ -71,8 +86,20 @@ static void steeringAngle_init(void)
  */
 static void steeringAngle_periodic_10Hz(void)
 {
+    bool faulted = false;
+
     steeringAngle_data.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_STR_ANGLE);
-    steeringAngle_data.angle = (lib_interpolation_interpolate(&steering_map, steeringAngle_data.voltage));
+
+    if ((steeringAngle_data.voltage < OC_SC_V_MARGIN) ||
+        (steeringAngle_data.voltage > (MAX_SENSOR_VOLTAGE - OC_SC_V_MARGIN)))
+    {
+        faulted = true;
+        steeringAngle_data.angle = 0.0f;
+    }
+    else
+    {
+        steeringAngle_data.angle = (lib_interpolation_interpolate(&steering_map, steeringAngle_data.voltage - steeringCalibration_data.zero));
+    }
 }
 
 /******************************************************************************
