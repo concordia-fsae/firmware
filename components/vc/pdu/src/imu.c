@@ -382,6 +382,40 @@ static void transitionImuState(void)
     }
 }
 
+static void handleImuSamples(void)
+{
+    if ((imu.operatingMode == RUNNING) && (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
+    {
+        drv_imu_vector_S vehicleAngleEstRot = *((drv_imu_vector_S*)&imu.vehicleAngle);
+        drv_imu_vector_S vehicleAngleEst = { 0 };
+        drv_imu_vector_S sumA = {0};
+        drv_imu_vector_S sumG = {0};
+        uint16_t countA = 0;
+        uint16_t countG = 0;
+
+        averageSamples(&sumA, &countA, &sumG, &countG);
+
+        if (countA)
+        {
+            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
+        }
+        if (countG)
+        {
+            drv_imu_vector_S integratedG = {0};
+            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
+
+            LIB_LINALG_MUL_CVECSCALAR(&sumG, asm330.state.sampleTime * countG, &integratedG);
+            LIB_LINALG_SUM_CVEC(&integratedG, &vehicleAngleEstRot, &vehicleAngleEstRot);
+        }
+
+        estimateAngleFromGAndRot(&imu.accel, (drv_imu_gyro_S*)&vehicleAngleEstRot, (drv_imu_gyro_S*)&vehicleAngleEst);
+
+        taskENTER_CRITICAL();
+        LIB_LINALG_CVEC_EQ_CVEC(&vehicleAngleEst, (drv_imu_vector_S*)&imu.vehicleAngle);
+        taskEXIT_CRITICAL();
+    }
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -444,6 +478,7 @@ static void imu100Hz_PRD(void)
         {
             const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
             const bool imuRan = egressFifo();
+            handleImuSamples();
 
             if (imuRan)
             {
@@ -469,47 +504,9 @@ static void imu100Hz_PRD(void)
 }
 
 /**
- * @brief  imu Module 1kHz periodic function
- */
-static void imu1kHz_PRD(void)
-{
-    if ((imu.operatingMode == RUNNING) && (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
-    {
-        drv_imu_vector_S vehicleAngleEstRot = *((drv_imu_vector_S*)&imu.vehicleAngle);
-        drv_imu_vector_S vehicleAngleEst = { 0 };
-        drv_imu_vector_S sumA = {0};
-        drv_imu_vector_S sumG = {0};
-        uint16_t countA = 0;
-        uint16_t countG = 0;
-
-        averageSamples(&sumA, &countA, &sumG, &countG);
-
-        if (countA)
-        {
-            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
-        }
-        if (countG)
-        {
-            drv_imu_vector_S integratedG = {0};
-            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
-
-            LIB_LINALG_MUL_CVECSCALAR(&sumG, asm330.state.sampleTime * countG, &integratedG);
-            LIB_LINALG_SUM_CVEC(&integratedG, &vehicleAngleEstRot, &vehicleAngleEstRot);
-        }
-
-        estimateAngleFromGAndRot(&imu.accel, (drv_imu_gyro_S*)&vehicleAngleEstRot, (drv_imu_gyro_S*)&vehicleAngleEst);
-
-        taskENTER_CRITICAL();
-        LIB_LINALG_CVEC_EQ_CVEC(&vehicleAngleEst, (drv_imu_vector_S*)&imu.vehicleAngle);
-        taskEXIT_CRITICAL();
-    }
-}
-
-/**
  * @brief  imu Module descriptor
  */
 const ModuleDesc_S imu_desc = {
     .moduleInit        = &imu_init,
     .periodic100Hz_CLK = &imu100Hz_PRD,
-    .periodic1kHz_CLK  = &imu1kHz_PRD,
 };
