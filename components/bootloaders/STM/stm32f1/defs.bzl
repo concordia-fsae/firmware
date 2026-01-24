@@ -65,7 +65,6 @@ def _bootloader_impl(
         build_renderer = "renderers/BuildDefines_generated.h.mako.buck2",
         srcs = {
             "variants.yaml": "variants.yaml",
-            "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
             "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
             "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
@@ -76,6 +75,12 @@ def _bootloader_impl(
                 "BOOTUPDATER_V1_FeatureSels.yaml": "//components/shared:FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml",
             } if is_updater else {
                 "BOOT_V1_FeatureSels.yaml": "//components/shared:FeatureSels/BOOT_V1_FeatureSels.yaml",
+            }
+        ) | (
+            {
+                "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",
+            } if variant.target == SupportedMicrocontrollers("f105") else {
+                "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             }
         ),
         **{"{}_config_id".format(app_name): "{}U".format(config_id)}
