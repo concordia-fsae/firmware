@@ -14,14 +14,15 @@
 #include "drv_inputAD.h"
 #include "MessageUnpack_generated.h"
 #include "lib_interpolation.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #define DEG90_V 0.78f
-#define OC_SC_V_MARGIN 0.025f
-#define MAX_VOLTAGE 3.0f
+#define OC_SC_V_MARGIN 0.250f
+#define MAX_SENSOR_VOLTAGE 3.0f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -100,6 +101,8 @@ static void steeringAngle_periodic_10Hz(void)
     {
         steeringAngle_data.angle = (lib_interpolation_interpolate(&steering_map, steeringAngle_data.voltage - steeringCalibration_data.zero));
     }
+
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_STEERINGSENSORFAULT, faulted);
 }
 
 /******************************************************************************

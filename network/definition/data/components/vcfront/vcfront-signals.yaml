@@ -12,6 +12,22 @@ signals:
     description: Device is in an error state
     discreteValues: faultStatus
 
+  steeringSensorFault:
+    description: Steering angle sensor is faulted
+    discreteValues: faultStatus
+
+  brakeSensorFault:
+    description: Brake sensor is faulted
+    discreteValues: faultStatus
+
+  apps1SensorFault:
+    description: APPS1 sensor is faulted
+    discreteValues: faultStatus
+
+  apps2SensorFault:
+    description: APPS2 sensor is faulted
+    discreteValues: faultStatus
+
   # Signals
   apps1:
     description: "Accelerator pedal 1 position"

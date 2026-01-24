@@ -9,6 +9,10 @@ messages:
       launchRejected:
       gearChangeRejected:
       gpsDeviceError:
+      steeringSensorFault:
+      brakeSensorFault:
+      apps1SensorFault:
+      apps2SensorFault:
 
   udsResponse:
     description: UDS response message from the VCFRONT

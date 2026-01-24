@@ -15,6 +15,7 @@
 #include "ModuleDesc.h"
 #include "string.h"
 #include "lib_utility.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -79,12 +80,14 @@ static void apps_init(void)
 
 static void apps_periodic_100Hz(void)
 {
+    const bool okApps1 = drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS1) == DRV_PEDALMONITOR_OK;
+    const bool okApps2 = drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS2) == DRV_PEDALMONITOR_OK;
+
     // Reset the pedal position unless set otherwise by the periodic
     float32_t pedal_position = 0.0f;
     apps_state_E state = APPS_ERROR;
 
-    if ((drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS1) == DRV_PEDALMONITOR_OK) &&
-        (drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS2) == DRV_PEDALMONITOR_OK))
+    if (okApps1 && okApps2)
     {
         const float32_t apps1 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1);
         const float32_t apps2 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2);
@@ -105,6 +108,8 @@ static void apps_periodic_100Hz(void)
 
     apps_data.pedal_position = SATURATE(0.0f, pedal_position, 1.0f);
     apps_data.state = state;
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_APPS1SENSORFAULT, !okApps1);
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_APPS2SENSORFAULT, !okApps2);
 }
 
 /******************************************************************************

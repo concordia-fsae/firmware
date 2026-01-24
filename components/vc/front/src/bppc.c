@@ -14,6 +14,7 @@
 #include "ModuleDesc.h"
 #include "string.h"
 #include "torque.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -113,6 +114,7 @@ static void bppc_periodic_100Hz(void)
     }
 
     bppc_data.state = state;
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_BRAKESENSORFAULT, state != BPPC_OK);
 }
 
 /******************************************************************************
