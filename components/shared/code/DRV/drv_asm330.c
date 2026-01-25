@@ -29,6 +29,7 @@
 #define BIT_POS_HP_EN_G        6U
 #define BIT_POS_BDU            6U
 #define BIT_POS_TIMESTAMP_EN   5U
+#define BIT_POS_HPCF_XL        5U
 #define BIT_POS_ODR            4U
 #define BIT_POS_FS_VL          2U
 #define BIT_POS_IF_INC         2U
@@ -36,10 +37,15 @@
 #define BIT_POS_I2C_DISABLE    2U
 #define BIT_POS_GDA            1U
 #define BIT_POS_I3C_DISABLE    1U
+#define BIT_POS_LPF2_XL_EN     1U
+#define BIT_POS_LPF1_SEL_G     1U
 #define BIT_POS_XLDA           0U
 #define BIT_POS_FIFO_MODE      0U
 #define BIT_POS_SW_RESET       0U
+#define BIT_POS_GYRO_FTYPE     0U
 
+#define PACK_IMU_FTYPE(dev)    (dev->config.accelLpfEnabled ? (uint8_t)(dev->config.accelFtype << BIT_POS_HPCF_XL) : 0U)
+#define PACK_GYRO_FTYPE(dev)   (dev->config.gyroLpfEnabled ? (uint8_t)(dev->config.gyroFtype << BIT_POS_GYRO_FTYPE) : 0U)
 #define PACK_ODR_FREQ(freq)    (freq << BIT_POS_ODR)
 #define PACK_ODR_SCALE(scale)  (scale << BIT_POS_FS_VL)
 #define PACK_FIFO_FREQ(freq)   ((freq) | (freq << BIT_POS_ODR))
@@ -56,6 +62,8 @@
 #define PACK_SW_RESET          (0b1 << BIT_POS_SW_RESET)
 #define PACK_CFG_ACCESS        (0b1 << BIT_POS_CFG_ACCESS)
 #define PACK_BDU               (0b1 << BIT_POS_BDU)
+#define PACK_LPF2_XL_EN        (0b1 << BIT_POS_LPF2_XL_EN)
+#define PACK_LPF1_SEL_G        (0b1 << BIT_POS_LPF1_SEL_G)
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -137,7 +145,13 @@ bool drv_asm330_init(drv_asm330_S* dev)
         // General configs to always apply
         uint8_t configs[][2U] = {
             { CONFIG_ENTRY(ASM330LHB_FIFO_CTRL3, PACK_FIFO_FREQ(dev->config.odr)) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL1_XL, PACK_ODR_FREQ(dev->config.odr) | PACK_ODR_SCALE(dev->config.scaleA)) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL1_XL, PACK_ODR_FREQ(dev->config.odr) |
+                                               PACK_ODR_SCALE(dev->config.scaleA) |
+                                               (uint8_t)(dev->config.accelLpfEnabled ? PACK_LPF2_XL_EN : 0U)) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL4_C, PACK_I2C_DISABLE |
+                                              (uint8_t)(dev->config.gyroLpfEnabled ? PACK_LPF1_SEL_G : 0U)) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL8_XL, PACK_IMU_FTYPE(dev)) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL6_C, PACK_GYRO_FTYPE(dev)) },
             { CONFIG_ENTRY(ASM330LHB_CTRL2_G, PACK_ODR_FREQ(dev->config.odr)) },
             { CONFIG_ENTRY(ASM330LHB_FIFO_CTRL4, PACK_FIFO_CONTINUOUS) },
             { CONFIG_ENTRY(ASM330LHB_CTRL3_C, PACK_IF_INC | PACK_BDU) },
