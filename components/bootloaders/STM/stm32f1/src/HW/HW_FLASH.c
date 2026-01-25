@@ -38,10 +38,13 @@ flash_S flash;
 
 static uint16_t getPageSize(void)
 {
-    uint16_t *flashSize = (uint16_t *)(FLASH_SIZE_REG);
-
+    // TODO: Identify different lines of ST devices, and handle their different page sizes
     // chips with more than 128 pages of flash have pages of size 2k
     // otherwise, pages are of size 1k
+#if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105)
+    return 2048U;
+#else
+    uint16_t *flashSize = (uint16_t *)(FLASH_SIZE_REG);
     if ((*flashSize & 0xFFFF) > 128U)
     {
         return 2048U;
@@ -50,6 +53,7 @@ static uint16_t getPageSize(void)
     {
         return 1024U;
     }
+#endif
 }
 
 
