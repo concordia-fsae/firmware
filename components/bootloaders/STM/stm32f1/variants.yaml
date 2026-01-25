@@ -5,8 +5,6 @@ configs:
       nodeId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -24,8 +22,6 @@ configs:
       nodeId: 0
       udsRequestId: 0x600
       udsResponseId: 0x640
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -43,8 +39,6 @@ configs:
       nodeId: 1
       udsRequestId: 0x601
       udsResponseId: 0x641
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -62,8 +56,6 @@ configs:
       nodeId: 1
       udsRequestId: 0x601
       udsResponseId: 0x641
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -81,8 +73,6 @@ configs:
       nodeId: 2
       udsRequestId: 0x602
       udsResponseId: 0x642
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -100,8 +90,6 @@ configs:
       nodeId: 2
       udsRequestId: 0x602
       udsResponseId: 0x642
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -119,8 +107,6 @@ configs:
       nodeId: 3
       udsRequestId: 0x603
       udsResponseId: 0x643
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -138,8 +124,6 @@ configs:
       nodeId: 3
       udsRequestId: 0x603
       udsResponseId: 0x643
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -157,8 +141,6 @@ configs:
       nodeId: 4
       udsRequestId: 0x604
       udsResponseId: 0x644
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -176,8 +158,6 @@ configs:
       nodeId: 4
       udsRequestId: 0x604
       udsResponseId: 0x644
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -195,8 +175,6 @@ configs:
       nodeId: 5
       udsRequestId: 0x605
       udsResponseId: 0x645
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -214,8 +192,6 @@ configs:
       nodeId: 5
       udsRequestId: 0x605
       udsResponseId: 0x645
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -232,8 +208,6 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -249,8 +223,6 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
@@ -266,8 +238,6 @@ configs:
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -278,13 +248,13 @@ configs:
         app_component_id: bmsb
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   1011:
     description: BMS Boss Bootloader Updater
     options:
       udsRequestId: 0x609
       udsResponseId: 0x649
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -295,6 +265,8 @@ configs:
         app_component_id: bmsb
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   20:
     description: Steering Wheel Bootloader
     options:
@@ -352,8 +324,6 @@ configs:
     options:
       udsRequestId: 0x630
       udsResponseId: 0x670
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -364,13 +334,13 @@ configs:
         app_component_id: vcfront
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   1030:
     description: VCFRONT Bootloader Updater
     options:
       udsRequestId: 0x630
       udsResponseId: 0x670
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -381,13 +351,13 @@ configs:
         app_component_id: vcfront
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   31:
     description: VCREAR Bootloader
     options:
       udsRequestId: 0x631
       udsResponseId: 0x671
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -398,13 +368,13 @@ configs:
         app_component_id: vcrear
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   1031:
     description: VCREAR Bootloader Updater
     options:
       udsRequestId: 0x631
       udsResponseId: 0x671
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -415,13 +385,13 @@ configs:
         app_component_id: vcrear
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   32:
     description: VCPDU Bootloader
     options:
       udsRequestId: 0x632
       udsResponseId: 0x672
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
@@ -432,13 +402,13 @@ configs:
         app_component_id: vcpdu
         app_validation_enabled: true
         feature_erase_invalid_app: false
+        nvm_lib_enabled: true
+        nvm_block_size: 2048
   1032:
     description: VCPDU Bootloader Updater
     options:
       udsRequestId: 0x632
       udsResponseId: 0x672
-      nvmLibEnabled:
-      nvmBlockSize: 2048
     features:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
