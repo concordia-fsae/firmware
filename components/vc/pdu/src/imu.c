@@ -105,6 +105,12 @@ drv_asm330_S asm330 = {
     .config = {
         .odr = ASM330LHB_XL_ODR_1667Hz,
         .scaleA = ASM330LHB_8g,
+        .accelLpfEnabled = true,
+        .gyroLpfEnabled = true,
+        // Accelerator LPF cutoff frequency 83Hz
+        .accelFtype = ASM330LHB_LIGHT,
+        // Gyroscope LPF cutoff frequency 99Hz
+        .gyroFtype = ASM330LHB_STRONG,
     },
 };
 
