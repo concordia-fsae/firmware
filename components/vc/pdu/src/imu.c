@@ -132,9 +132,6 @@ const drv_imu_vectorTransform_S rotationToVehicleFrame = {
 
 static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vector_S* vecG, uint16_t* countG)
 {
-    uint16_t iterA = 0;
-    uint16_t iterG = 0;
-
     // Wait until the next element is being filled so we know our current element is valid
     while (LIB_BUFFER_FIFO_PEEKN(&imuBuffer, 1).tag)
     {
@@ -147,29 +144,18 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
         {
             case ASM330LHB_XL_NC_TAG:
                 LIB_LINALG_SUM_CVEC(vecA, &tmp, vecA);
-                iterA++;
+                (*countA)++;
                 break;
             case ASM330LHB_GYRO_NC_TAG:
                 if (vecG && countG)
                 {
                     LIB_LINALG_SUM_CVEC(vecG, &tmp, vecG);
-                    iterG++;
+                    (*countG)++;
                 }
                 break;
             default:
                 break;
         }
-    }
-
-    if (iterA)
-    {
-        LIB_LINALG_MUL_CVECSCALAR(vecA, (1.0f / iterA), vecA);
-        *countA += iterA;
-    }
-    if (iterG)
-    {
-        LIB_LINALG_MUL_CVECSCALAR(vecG, (1.0f / iterG), vecG);
-        *countG += iterG;
     }
 }
 
@@ -181,7 +167,17 @@ static bool disregardSamples(void)
 
     averageSamples(&tmp, &countA, &tmp, &countG);
 
-    return countA + countG > BASELINE_SAMPLES;
+    if (countA + countG > BASELINE_SAMPLES)
+    {
+        countA = 0;
+        countG = 0;
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 static bool calculateTransform(void)
@@ -193,12 +189,12 @@ static bool calculateTransform(void)
 
     averageSamples(&tmp, &count, NULL, NULL);
     LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
-    LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / 2.0f), &sum);
 
     const bool valid = count > BASELINE_SAMPLES;
 
     if (valid)
     {
+        LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / count), &sum);
         CALC_ROTMAX_TO_Z3(&sum, &tmpTransform);
         LIB_LINALG_MUL_RMATRMAT_SET(&tmpTransform, &rotationToVehicleFrame, &imuCalibration_data.rotation);
         LIB_LINALG_CLEAR_CVEC(&sum);
@@ -273,7 +269,6 @@ static bool calculateVehicleAngle(void)
 
     averageSamples(&tmp, &count, NULL, NULL);
     LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
-    LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / 2.0f), &sum);
 
     const bool valid = (count > BASELINE_SAMPLES);
     if (!valid)
@@ -281,6 +276,7 @@ static bool calculateVehicleAngle(void)
         return false;
     }
 
+    LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / count), &sum);
     LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sum, &gVeh);
     float32_t norm = 0;
     LIB_LINALG_GETNORM_CVEC(&gVeh, &norm);
@@ -397,11 +393,13 @@ static void handleImuSamples(void)
 
         if (countA)
         {
+            LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / countA), &sumA);
             correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
         }
         if (countG)
         {
             drv_imu_vector_S integratedG = {0};
+            LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / countG), &sumG);
             correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
 
             LIB_LINALG_MUL_CVECSCALAR(&sumG, asm330.state.sampleTime * countG, &integratedG);
