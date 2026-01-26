@@ -156,6 +156,14 @@ messages:
     signals:
       preloadTorqueDebug:
 
+  tractionControlDebug2:
+    description: Traction Control Debug 2
+    id: 0x4e2
+    cycleTimeMs: 100
+    signals:
+      slipTarget:
+          template: percentageAccurate
+
   sleep:
     description: VCFRONT sleep information
     id: 0x7b1
