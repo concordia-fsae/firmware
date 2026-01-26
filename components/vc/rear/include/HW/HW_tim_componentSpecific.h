@@ -43,3 +43,4 @@ typedef enum
  ******************************************************************************/
 
 float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel);
+uint64_t  HW_TIM_getLastCaptureBaseTick(HW_TIM_channelFreq_E channel);
