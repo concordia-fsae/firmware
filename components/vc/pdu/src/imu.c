@@ -16,10 +16,16 @@
 #include "app_faultManager.h"
 #include "lib_buffer.h"
 #include "lib_madgwick.h"
+#include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
+
+#define IMU_WAKE_ACCEL_DELTA_MPS2 0.4f
+#define IMU_WAKE_GYRO_DPS 3.0f
+#define IMU_WAKE_HITS_REQUIRED 5U
+#define IMU_WAKE_DELAY_MS (15U * 60000U)
 
 #define IMU_TIMEOUT_MS 1000U
 #define BASELINE_SAMPLES 500U
@@ -127,6 +133,12 @@ struct imu_S {
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
+static struct
+{
+    drv_imu_accel_S prevAccel;
+    uint8_t         hitCount;
+    bool            hasPrev;
+} imuWake = { 0 };
 
 const drv_imu_vectorTransform_S rotationToVehicleFrame = {
     .rows = {
@@ -334,6 +346,53 @@ static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, d
     taskEXIT_CRITICAL();
 }
 
+static void resetWakeDetector(void)
+{
+    imuWake.hitCount = 0U;
+    imuWake.hasPrev = false;
+}
+
+static bool detectSleepWakeMovement(void)
+{
+    if (!imuWake.hasPrev)
+    {
+        imuWake.prevAccel = imu.accel;
+        imuWake.hasPrev = true;
+        return false;
+    }
+
+    const float32_t dAx = imu.accel.accelX - imuWake.prevAccel.accelX;
+    const float32_t dAy = imu.accel.accelY - imuWake.prevAccel.accelY;
+    const float32_t dAz = imu.accel.accelZ - imuWake.prevAccel.accelZ;
+    const float32_t accelDelta = sqrtf((dAx * dAx) + (dAy * dAy) + (dAz * dAz));
+
+    const float32_t gX = imu.gyro.rotX;
+    const float32_t gY = imu.gyro.rotY;
+    const float32_t gZ = imu.gyro.rotZ;
+    const float32_t gyroMag = sqrtf((gX * gX) + (gY * gY) + (gZ * gZ));
+
+    imuWake.prevAccel = imu.accel;
+    if ((accelDelta > IMU_WAKE_ACCEL_DELTA_MPS2) || (gyroMag > IMU_WAKE_GYRO_DPS))
+    {
+        if (imuWake.hitCount < IMU_WAKE_HITS_REQUIRED)
+        {
+            imuWake.hitCount++;
+        }
+    }
+    else
+    {
+        imuWake.hitCount = 0U;
+    }
+
+    if (imuWake.hitCount >= IMU_WAKE_HITS_REQUIRED)
+    {
+        imuWake.hitCount = 0U;
+        return true;
+    }
+
+    return false;
+}
+
 static void transitionImuState(void)
 {
     switch (imu.operatingMode)
@@ -467,6 +526,8 @@ static void imu_init()
  */
 static void imu100Hz_PRD(void)
 {
+    static bool wasSleeping = false;
+
     if (imu.operatingMode == RUNNING)
     {
         if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
@@ -479,6 +540,24 @@ static void imu100Hz_PRD(void)
             {
                 drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
             }
+
+            const bool sleeping = app_vehicleState_sleeping();
+            if (sleeping)
+            {
+                if (!wasSleeping)
+                {
+                    resetWakeDetector();
+                }
+                if (detectSleepWakeMovement())
+                {
+                    app_vehicleState_delaySleep(IMU_WAKE_DELAY_MS);
+                }
+            }
+            else if (wasSleeping)
+            {
+                resetWakeDetector();
+            }
+            wasSleeping = sleeping;
 
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED);
