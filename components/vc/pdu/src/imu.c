@@ -15,6 +15,7 @@
 #include "string.h"
 #include "app_faultManager.h"
 #include "lib_buffer.h"
+#include "lib_madgwick.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -22,6 +23,7 @@
 
 #define IMU_TIMEOUT_MS 1000U
 #define BASELINE_SAMPLES 500U
+#define MADGWICK_BETA 0.1f
 
 #define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
 
@@ -120,6 +122,8 @@ struct imu_S {
     drv_imu_gyro_S  vehicleAngle;
     drv_timer_S     imuTimeout;
     operatingMode_E operatingMode;
+    uint64_t        lastCycle_us;
+    lib_madgwick_S  madgwick;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
@@ -247,49 +251,64 @@ static bool calculateOffset(void)
     return valid;
 }
 
-static void estimateRotationFromGravity(drv_imu_vector_S* gVeh, drv_imu_gyro_S* vehicleAngle, const float32_t norm)
+static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgwick_euler_S* a)
 {
-    if (norm <= EPS)
-    {
-        LIB_LINALG_CLEAR_CVEC((drv_imu_vector_S*)vehicleAngle);
-        return;
-    }
+    const uint64_t currentTime = HW_TIM_getBaseTick();
+    const float32_t dt = (float32_t)(currentTime - imu.lastCycle_us) / 1000000.0f;
 
-    const float32_t invn = 1.0f / norm;
-    const float32_t nx = gVeh->elemCol[0] * invn;
-    const float32_t ny = gVeh->elemCol[1] * invn;
-    const float32_t nz = gVeh->elemCol[2] * invn;
-
-    vehicleAngle->rotX = atan2f(ny, nz) * RAD_TO_DEG;
-    vehicleAngle->rotY = atan2f(-nx, sqrtf(ny*ny + nz*nz)) * RAD_TO_DEG;
-    vehicleAngle->rotZ = 0.0f;
+    madgwick_update_imu(f, g, a, dt);
+    imu.lastCycle_us = currentTime;
 }
 
+static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out);
 static bool calculateVehicleAngle(void)
 {
-    static drv_imu_vector_S sum = {0};
-    static uint16_t count = 0;
+    static uint16_t countA = 0;
+    static uint16_t countG = 0;
+    uint16_t tmpCountA = 0;
+    uint16_t tmpCountG = 0;
 
-    drv_imu_vector_S tmp = {0};
-    drv_imu_vector_S gVeh = {0};
+    drv_imu_vector_S tmpA = {0};
+    drv_imu_vector_S tmpG = {0};
+    drv_imu_vector_S gVec = {0};
+    drv_imu_vector_S aVec = {0};
 
-    averageSamples(&tmp, &count, NULL, NULL);
-    LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
+    averageSamples(&tmpA, &tmpCountA, &tmpG, &tmpCountG);
 
-    const bool valid = (count > BASELINE_SAMPLES);
+    if (countA)
+    {
+        LIB_LINALG_MUL_CVECSCALAR(&tmpA, (1.0f / tmpCountA), &tmpA);
+        correctThenSetVector(&tmpA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
+        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmpA, &aVec);
+    }
+    else
+    {
+        LIB_LINALG_CVEC_EQ_CVEC((drv_imu_vector_S*)&imu.accel, &tmpA);
+    }
+    if (countG)
+    {
+        LIB_LINALG_MUL_CVECSCALAR(&tmpG, (1.0f / tmpCountG), &tmpG);
+        correctThenSetVector(&tmpG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
+        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmpG, &gVec);
+    }
+    else
+    {
+        LIB_LINALG_CVEC_EQ_CVEC((drv_imu_vector_S*)&imu.gyro, &tmpG);
+    }
+
+    updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&gVec, (drv_imu_euler_S*)&aVec);
+
+    countA += tmpCountA;
+    countG += tmpCountG;
+
+    const bool valid = (countG > BASELINE_SAMPLES);
     if (!valid)
     {
         return false;
     }
 
-    LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / count), &sum);
-    LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &sum, &gVeh);
-    float32_t norm = 0;
-    LIB_LINALG_GETNORM_CVEC(&gVeh, &norm);
-    estimateRotationFromGravity(&gVeh, &imu.vehicleAngle, norm);
-
-    LIB_LINALG_CLEAR_CVEC(&sum);
-    count = 0;
+    countA = 0;
+    countG = 0;
 
     return true;
 }
@@ -313,30 +332,6 @@ static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, d
     taskENTER_CRITICAL();
     LIB_LINALG_CVEC_EQ_CVEC(&rotated, out);
     taskEXIT_CRITICAL();
-}
-
-static void estimateAngleFromGAndRot(drv_imu_accel_S* gravity, drv_imu_gyro_S* rotEst, drv_imu_gyro_S* angleEst)
-{
-    drv_imu_vector_S vehicleAngleEst = { 0 };
-    float32_t norm = 0;
-    LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)gravity, &norm);
-    if (norm >= EPS)
-    {
-        estimateRotationFromGravity((drv_imu_vector_S*)gravity, (drv_imu_gyro_S*)&vehicleAngleEst, norm);
-
-        norm /= GRAVITY;
-        SATURATE(0.0f, norm, 2.0);
-
-        const float32_t gravityConfidence = norm > 1.0f ? 2.0f - norm : norm;
-        LIB_LINALG_WEIGHTAVG_CVEC(&vehicleAngleEst,
-                                  (drv_imu_vector_S*)rotEst,
-                                  gravityConfidence,
-                                  (drv_imu_vector_S*)angleEst);
-    }
-    else
-    {
-        LIB_LINALG_CVEC_EQ_CVEC((drv_imu_vector_S*)rotEst, (drv_imu_vector_S*)angleEst);
-    }
 }
 
 static void transitionImuState(void)
@@ -388,8 +383,6 @@ static void handleImuSamples(void)
 {
     if ((imu.operatingMode == RUNNING) && (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
     {
-        drv_imu_vector_S vehicleAngleEstRot = *((drv_imu_vector_S*)&imu.vehicleAngle);
-        drv_imu_vector_S vehicleAngleEst = { 0 };
         drv_imu_vector_S sumA = {0};
         drv_imu_vector_S sumG = {0};
         uint16_t countA = 0;
@@ -404,18 +397,14 @@ static void handleImuSamples(void)
         }
         if (countG)
         {
-            drv_imu_vector_S integratedG = {0};
             LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / countG), &sumG);
             correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
-
-            LIB_LINALG_MUL_CVECSCALAR(&sumG, asm330.state.sampleTime * countG, &integratedG);
-            LIB_LINALG_SUM_CVEC(&integratedG, &vehicleAngleEstRot, &vehicleAngleEstRot);
         }
 
-        estimateAngleFromGAndRot(&imu.accel, (drv_imu_gyro_S*)&vehicleAngleEstRot, (drv_imu_gyro_S*)&vehicleAngleEst);
+        updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&imu.gyro, (drv_imu_euler_S*)&imu.accel);
 
         taskENTER_CRITICAL();
-        LIB_LINALG_CVEC_EQ_CVEC(&vehicleAngleEst, (drv_imu_vector_S*)&imu.vehicleAngle);
+        madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
         taskEXIT_CRITICAL();
     }
 }
@@ -467,6 +456,8 @@ static void imu_init()
 {
     drv_asm330_init(&asm330);
     drv_timer_init(&imu.imuTimeout);
+    madgwick_init(&imu.madgwick, MADGWICK_BETA);
+    imu.lastCycle_us = HW_TIM_getBaseTick();
 
     imu.operatingMode = INIT_VEHICLEANGLE;
 }
@@ -497,6 +488,7 @@ static void imu100Hz_PRD(void)
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, true);
         }
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, false);
     }
     else
     {
