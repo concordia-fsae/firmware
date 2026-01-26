@@ -137,6 +137,8 @@ messages:
     signals:
       torqueRequestCorrectionDebug:
       torqueRequestMaxDebug:
+      slipTarget:
+        template: percentageAccurate
       slipRaw:
         template: percentageLargeAccurate
       slipErrorP:

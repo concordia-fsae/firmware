@@ -51,6 +51,8 @@ messages:
       requestRaceMode:
       requestTorqueInc:
       requestTorqueDec:
+      requestSlipInc:
+      requestSlipDec:
       requestScreen:
       requestLaunchControl:
       requestTractionControl:
