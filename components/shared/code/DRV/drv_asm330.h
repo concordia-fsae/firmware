@@ -67,6 +67,10 @@ typedef struct
     struct {
         asm330lhb_odr_xl_t odr;
         asm330lhb_fs_xl_t  scaleA;
+        bool               gyroLpfEnabled;
+        asm330lhb_ftype_t  gyroFtype;
+        bool               accelLpfEnabled;
+        asm330lhb_ftype_t  accelFtype;
     } config;
     struct {
         float32_t scaleA;
