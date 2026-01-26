@@ -33,6 +33,13 @@ typedef struct
     float32_t rotZ;
 } drv_imu_gyro_S;
 
+typedef struct
+{
+    float32_t x;
+    float32_t y;
+    float32_t z;
+} drv_imu_euler_S;
+
 LIB_LINALG_DEFINE_N(imuVector, float32_t, 3U);
 typedef LIB_LINALG_INST_CVEC(imuVector) drv_imu_vector_S;
 typedef LIB_LINALG_INST_RMAT(imuVector) drv_imu_vectorTransform_S;

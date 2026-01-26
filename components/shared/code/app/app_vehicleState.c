@@ -98,9 +98,9 @@ static void eval_sleep(void)
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
     CAN_sleepFollowerState_E swsSleepable = CAN_SLEEPFOLLOWERSTATE_SNA;
     CAN_sleepFollowerState_E vcfrontSleepable = CAN_SLEEPFOLLOWERSTATE_SNA;
-    const bool canSleepSWS = (CANRX_get_signal(VEH, SWS_sleepable, &swsSleepable) == CANRX_MESSAGE_VALID) &&
+    const bool canSleepSWS = (CANRX_get_signal(VEH, SWS_sleepable, &swsSleepable) != CANRX_MESSAGE_VALID) ||
                              (swsSleepable == CAN_SLEEPFOLLOWERSTATE_OK_TO_SLEEP);
-    const bool canSleepVCFRONT = (CANRX_get_signal(VEH, VCFRONT_sleepable, &vcfrontSleepable) == CANRX_MESSAGE_VALID) &&
+    const bool canSleepVCFRONT = (CANRX_get_signal(VEH, VCFRONT_sleepable, &vcfrontSleepable) != CANRX_MESSAGE_VALID) ||
                                  (vcfrontSleepable == CAN_SLEEPFOLLOWERSTATE_OK_TO_SLEEP);
 
     CANRX_MESSAGE_health_E (*uds_clients[])(void) = {

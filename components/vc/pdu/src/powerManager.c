@@ -18,10 +18,13 @@
 #include "drv_outputAD.h"
 #include "app_faultManager.h"
 #include "app_vehicleState.h"
+#include "drv_timer.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
+
+#define DEEP_SLEEP_DELAY_MS (15*60000U)
 
 #define PDU_CS_AMPS_PER_VOLT 0.20f
 #define PDU_VS_VOLTAGE_MULTIPLIER 3.61f
@@ -67,6 +70,7 @@ static struct
 
     bool charged:1;
     bool sleeping:1;
+    bool deepSleep:1;
     bool lowBattery:1;
     bool overvoltage:1;
 } pm_data;
@@ -88,6 +92,33 @@ static void getInputs(void)
     pm_data.pdu.current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
     pm_data.pdu.rail_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
     pm_data.sleeping = app_vehicleState_sleeping();
+}
+
+static void updateDeepSleepState(void)
+{
+    static drv_timer_S deepSleepTimer;
+    static bool timerInit = false;
+
+    if (!timerInit)
+    {
+        drv_timer_init(&deepSleepTimer);
+        timerInit = true;
+    }
+
+    if (pm_data.sleeping)
+    {
+        if (drv_timer_getState(&deepSleepTimer) == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&deepSleepTimer, DEEP_SLEEP_DELAY_MS);
+        }
+
+        pm_data.deepSleep = drv_timer_getState(&deepSleepTimer) == DRV_TIMER_EXPIRED;
+    }
+    else
+    {
+        pm_data.deepSleep = false;
+        drv_timer_stop(&deepSleepTimer);
+    }
 }
 
 static void evalAbilities(void)
@@ -159,6 +190,7 @@ static void powerManager_periodic_100Hz(void)
     float32_t tmp_current = 0.0f;
 
     getInputs();
+    updateDeepSleepState();
     evalAbilities();
 
     const drv_io_activeState_E shutdown_en = pm_data.okSafety ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
@@ -174,7 +206,13 @@ static void powerManager_periodic_100Hz(void)
             // Handle specific HSDs by sleep state
             const bool requiredLoad = (((i == DRV_TPS2HB16AB_IC_VC1_VC2) && (n == DRV_TPS2HB16AB_OUT_1)) ||
                                        (i == DRV_TPS2HB16AB_IC_VCU1_VCU2));
-            const bool enableLoad = pm_data.okLoads || (requiredLoad && pm_data.okBattery);
+            bool enableLoad = pm_data.okLoads || (requiredLoad && pm_data.okBattery);
+            const bool isVcuHsd = ((i == DRV_TPS2HB16AB_IC_VCU1_VCU2) ||
+                                   ((i == DRV_TPS2HB16AB_IC_MC_VCU3) && (n == DRV_TPS2HB16AB_OUT_2)));
+            if (pm_data.deepSleep && isVcuHsd)
+            {
+                enableLoad = false;
+            }
 
             drv_hsd_state_E state = drv_tps2hb16ab_getState(i, n);
             if (state == DRV_HSD_STATE_OVERCURRENT)
