@@ -83,6 +83,7 @@
 #define set_torqueRequestCorrectionDebug(m,b,n,s) set(m,b,n,s, torque_getTorqueRequestCorrection())
 #define set_torqueRequestMaxDebug(m,b,n,s) set(m,b,n,s, torque_getTorqueRequestMax())
 #define set_slipRaw(m,b,n,s) set(m,b,n,s, torque_getSlipRaw() * 100)
+#define set_slipTarget(m,b,n,s) set(m,b,n,s, torque_getSlipTarget() * 100) 
 #define set_slipErrorP(m,b,n,s) set(m,b,n,s, torque_getSlipErrorP() * 100)
 #define set_slipErrorI(m,b,n,s) set(m,b,n,s, torque_getSlipErrorI() * 100)
 #define set_slipErrorD(m,b,n,s) set(m,b,n,s, torque_getSlipErrorD() * 100)
