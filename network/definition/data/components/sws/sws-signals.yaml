@@ -82,11 +82,16 @@ signals:
   requestTractionControl:
     description: Status of traction control request
     discreteValues: digitalStatus
+  requestSlipInc:
+    description: Status of slip increase request
+    discreteValues: digitalStatus
+  requestSlipDec:
+    description: Status of slip decrease request
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested
     discreteValues: screenPage
-
   screenAlert:
     description: Alerts to show the driver
     discreteValues: screenAlerts

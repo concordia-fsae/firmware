@@ -69,6 +69,7 @@ float32_t                     torque_getTorqueRequestCorrection(void);
 float32_t                     torque_getTorqueDriverInput(void);
 float32_t                     torque_getPreloadTorque(void);
 float32_t                     torque_getSlipRaw(void);
+float32_t                     torque_getSlipTarget(void);
 float32_t                     torque_getSlipErrorP(void);
 float32_t                     torque_getSlipErrorI(void);
 float32_t                     torque_getSlipErrorD(void);
