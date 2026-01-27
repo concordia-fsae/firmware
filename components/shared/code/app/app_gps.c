@@ -174,6 +174,8 @@ static void app_gps_periodic_100Hz(void)
 
     while (LIB_BUFFER_CIRC_PEEK(&gps.dmaBuffer))
     {
+        uint8_t ch = LIB_BUFFER_CIRC_GETSET(&gps.dmaBuffer, 0U);
+
         if (LIB_BUFFER_CIRC_PEEKN(&gps.dmaBuffer, -1))
         {
             HW_UART_stopDMA(HW_UART_PORT_GPS);
@@ -183,7 +185,6 @@ static void app_gps_periodic_100Hz(void)
         }
         else
         {
-            uint8_t ch = LIB_BUFFER_CIRC_GETSET(&gps.dmaBuffer, 0U);
             LIB_BUFFER_FIFO_INSERT(&gps.sentence, ch);
             if (ch == '\n')
             {
