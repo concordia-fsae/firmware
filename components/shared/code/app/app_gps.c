@@ -137,7 +137,7 @@ app_gps_time_S* app_gps_getTimeRef(void)
 
 bool app_gps_isValid(void)
 {
-    return drv_timer_getState(&gps.timeout) != DRV_TIMER_RUNNING;
+    return drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING;
 }
 
 uint16_t app_gps_getCrcFailures(void)
@@ -196,7 +196,7 @@ static void app_gps_periodic_100Hz(void)
 
     const bool gpsValid = app_gps_isValid();
 
-    app_faultManager_setFaultState(GPS_DEVICE_ERROR, gpsValid || overrun);
+    app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid || overrun);
 #else // FEATURE_GPSTRANSCEIVER
     // TODO: Implement GPS listener
 #endif // !FEATURE_GPSTRANSCEIVER
