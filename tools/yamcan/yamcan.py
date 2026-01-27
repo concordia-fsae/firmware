@@ -322,11 +322,9 @@ def process_node(node: CanNode):
                     definition.update(templates["signals"][definition["template"]])
                 if "nativeRepresentation" not in definition and "discreteValues" not in definition:
                     raise Exception(f"Signal '{sig}' in '{node.name}' has neither a discreteValues or nativeRepresentation.")
-                if "unit" in definition:
-                    try:
-                        Units(definition["unit"])
-                    except:
-                        raise Exception(f"Unit '{definition['unit']}' is not an accepted unit.")
+                if not all(c.isalnum() or c == '^' for c in sig):
+                    raise Exception(f"Signal name '{sig}' can only contain alphanumeric characters or '^'.")
+
                 if "validationRole" in definition:
                     try:
                         ValidationRole(definition["validationRole"])

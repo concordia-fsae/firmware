@@ -1,0 +1,17 @@
+VERSION "veh dbc v1"
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+
+BS_:
+
+BU_: VCFRONT
+
+BO_ 100 MotorStatus: 8 VCFRONT
+ SG_ MotorPower : 0|16@1+ (0.1,0) [0|300] "kW" VCFRONT
+ SG_ MotorSpeed : 16|16@1+ (1,0) [0|20000] "rpm" VCFRONT
+
