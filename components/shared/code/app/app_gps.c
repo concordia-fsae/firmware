@@ -162,6 +162,7 @@ static void app_gps_init(void)
     drv_timer_init(&gps.timeout);
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
+    LIB_BUFFER_CIRC_CLEAR(&gps.dmaBuffer);
     HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_MCU_UART_EN, DRV_IO_ACTIVE);
 #endif // FEATURE_GPSTRANSCEIVER
