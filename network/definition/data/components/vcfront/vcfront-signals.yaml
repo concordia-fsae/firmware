@@ -12,6 +12,10 @@ signals:
     description: Device is in an error state
     discreteValues: faultStatus
 
+  gpsOverrun:
+    description: GPS data overrun
+    discreteValues: faultStatus
+
   steeringSensorFault:
     description: Steering angle sensor is faulted
     discreteValues: faultStatus

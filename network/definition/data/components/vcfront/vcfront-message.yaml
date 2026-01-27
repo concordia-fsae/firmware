@@ -13,6 +13,7 @@ messages:
       brakeSensorFault:
       apps1SensorFault:
       apps2SensorFault:
+      gpsOverrun:
 
   udsResponse:
     description: UDS response message from the VCFRONT

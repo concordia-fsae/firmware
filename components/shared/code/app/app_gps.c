@@ -27,6 +27,7 @@
 #define GPS_TIMEOUT_MS 2000U
 
 #define GPS_DEVICE_ERROR FM_FAULT_VCFRONT_GPSDEVICEERROR
+#define GPS_DEVICE_OVERRUN FM_FAULT_VCFRONT_GPSOVERRUN
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -196,7 +197,8 @@ static void app_gps_periodic_100Hz(void)
 
     const bool gpsValid = app_gps_isValid();
 
-    app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid || overrun);
+    app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid);
+    app_faultManager_setFaultState(GPS_DEVICE_OVERRUN, overrun);
 #else // FEATURE_GPSTRANSCEIVER
     // TODO: Implement GPS listener
 #endif // !FEATURE_GPSTRANSCEIVER
