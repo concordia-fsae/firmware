@@ -62,9 +62,14 @@
     } while (0)
 
 #define LIB_BUFFER_FIFO_PEEK(name) (name)->buffer[(name)->startPos]
-#define LIB_BUFFER_FIFO_PEEKN(name, index) (name)->buffer[((int32_t)(name)->startPos) + index > 0 ? \
-                                           ((int32_t)(name)->startPos + index) % COUNTOF((name)->buffer) : \
-                                           COUNTOF((name)->buffer) - ((-((int32_t)((name)->startPos) + index)) % COUNTOF((name)->buffer))]
+#define LIB_BUFFER_FIFO_PEEKN(name, index) \
+    (name)->buffer[({ \
+        int32_t _pos = (int32_t)(name)->startPos + (int32_t)(index); \
+        int32_t _len = (int32_t)COUNTOF((name)->buffer); \
+        _pos %= _len; \
+        if (_pos < 0) { _pos += _len; } \
+        _pos; \
+    })]
 #define LIB_BUFFER_FIFO_PEEKEND(name) (name)->buffer[(name)->endPos]
 
 #define LIB_BUFFER_FIFO_POP(name) \
