@@ -480,7 +480,7 @@ float32_t torque_getSlipRaw(void)
     return torque_data.slipRear;
 }
 
-float32_t torque_getTargetSlip(void)
+float32_t torque_getSlipTarget(void)
 {
     return torque_data.slip_request;
 }
