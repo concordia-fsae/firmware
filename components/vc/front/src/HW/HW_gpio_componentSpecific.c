@@ -313,7 +313,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .mode = GPIO_MODE_AF_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
-        .resetState = HW_GPIO_PINRESET,
+        .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_MCU_UART_RX] = {
         .port = GPIOC,

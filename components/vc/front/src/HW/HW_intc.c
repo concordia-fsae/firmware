@@ -11,6 +11,7 @@
 #include "HW_intc.h"
 #include "NetworkDefines_generated.h"
 #include "HW_tim.h"
+#include "HW_uart.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -22,6 +23,7 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
 extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
+extern UART_HandleTypeDef huart[HW_UART_PORT_COUNT];
 
 
 /******************************************************************************
@@ -164,4 +166,9 @@ void CAN2_RX0_IRQHandler(void)
 void CAN2_RX1_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan[CAN_BUS_NOSE]);
+}
+
+void USART3_IRQHandler(void)
+{
+    HAL_UART_IRQHandler(&huart[HW_UART_PORT_GPS]);
 }
