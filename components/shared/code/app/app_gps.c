@@ -75,22 +75,21 @@ static void updateGPS(void)
 
 static void parse(uint8_t* sentence, size_t len)
 {
-    if (lwgps_process(&gps.currentGPS, sentence, len))
+    lwgps_process(&gps.currentGPS, sentence, len);
+
+    if (gps.currentGPS.p.stat == STAT_UNKNOWN)
     {
-        if (gps.currentGPS.p.stat == STAT_UNKNOWN)
-        {
-            gps.invalidTransactions++;
-        }
-        else if (gps.currentGPS.p.stat == STAT_CHECKSUM_FAIL)
-        {
-            gps.crcFailures++;
-        }
-        else
-        {
-            updateGPS();
-            drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
-            gps.samples++;
-        }
+        gps.invalidTransactions++;
+    }
+    else if (gps.currentGPS.p.stat == STAT_CHECKSUM_FAIL)
+    {
+        gps.crcFailures++;
+    }
+    else
+    {
+        updateGPS();
+        drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
+        gps.samples++;
     }
 }
 #endif
