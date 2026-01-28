@@ -71,6 +71,7 @@
 
 #define set_requestRun(m,b,n,s)              set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RUN)                ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestReverse(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_REVERSE)            ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestCrashReset(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CRASH_RESET)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestRaceMode(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RACE)               ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTorqueInc(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC)         ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTorqueDec(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC)         ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)

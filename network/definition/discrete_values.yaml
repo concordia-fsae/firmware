@@ -243,6 +243,7 @@ screenAlerts:
   FAULT_GLV: 6
   FAULT_EM: 7
   REVERSE: 8
+  CRASH: 9
 
 screenWarnings:
   NONE: 0
@@ -251,3 +252,4 @@ screenWarnings:
   LOW_CELL: 3
   LOW_GLV: 4
   CONTACTS_OPEN_IN_RUN: 5
+  IMU_UNCALIBRATED: 6
