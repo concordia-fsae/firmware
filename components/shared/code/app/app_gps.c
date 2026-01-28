@@ -99,6 +99,12 @@ static void parse(uint8_t* sentence, size_t len)
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+void app_gps_resetBuffers(void)
+{
+    LIB_BUFFER_CIRC_CLEAR(&gps.dmaBuffer);
+    LIB_BUFFER_FIFO_CLEAR(&gps.sentence);
+}
+
 void app_gps_getPos(app_gps_pos_S* pos)
 {
     taskENTER_CRITICAL();
@@ -180,7 +186,7 @@ static void app_gps_periodic_100Hz(void)
         if (LIB_BUFFER_CIRC_PEEKN(&gps.dmaBuffer, -1))
         {
             HW_UART_stopDMA(HW_UART_PORT_GPS);
-            LIB_BUFFER_CIRC_CLEAR(&gps.dmaBuffer);
+            app_gps_resetBuffers();
             HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
             overrun = true;
         }

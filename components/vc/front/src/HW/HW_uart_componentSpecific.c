@@ -9,6 +9,7 @@
 
 #include "HW_uart.h"
 #include "SystemConfig.h"
+#include "app_gps.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -84,6 +85,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart)
         uint16_t rxLen = huart->RxXferSize;
 
         (void)HAL_UART_DMAStop(huart);
+        app_gps_resetBuffers();
+
         if ((rxBuf != NULL) && (rxLen > 0U))
         {
             (void)HAL_UART_Receive_DMA(huart, rxBuf, rxLen);
