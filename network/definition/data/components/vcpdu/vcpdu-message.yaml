@@ -190,3 +190,14 @@ messages:
       anglePitch:
         template: preciseAngle
 
+  crashSensor:
+    description: VCPDU crash sensor status
+    id: 0x3f2
+    cycleTimeMs: 10
+    sourceBuses: veh
+    signals:
+      crashSensorState:
+      crashSensorAccelMax:
+        template: imuLinearAcceleration
+      crashSensorAccelTripped:
+        template: imuLinearAcceleration

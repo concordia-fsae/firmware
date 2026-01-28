@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "lib_nvm.h"
+#include "crashSensor.h"
 #include "drv_imu.h"
 #include <string.h>
 
@@ -33,6 +34,11 @@ static const nvm_imuCalibration_S imuCalibration_default = {
     .rotation  = { { { 0.0f } } },
 };
 LIB_NVM_MEMORY_REGION(nvm_imuCalibration_S imuCalibration_data) = { 0U };
+static const nvm_crashState_S crashState_default = {
+    .crashLatched = true,
+    .reserved = { 0U },
+};
+LIB_NVM_MEMORY_REGION(nvm_crashState_S crashState_data) = { 0U };
 
 const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
     [NVM_ENTRYID_LOG] = {
@@ -54,6 +60,13 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .entryDefault_Ptr = &imuCalibration_default,
         .entryRam_Ptr = &imuCalibration_data,
         .minTimeBetweenWritesMs = 60000U,
+        .version = 0U,
+    },
+    [NVM_ENTRYID_CRASH_STATE] = {
+        .entrySize = sizeof(nvm_crashState_S),
+        .entryDefault_Ptr = &crashState_default,
+        .entryRam_Ptr = &crashState_data,
+        .minTimeBetweenWritesMs = 0U,
         .version = 0U,
     },
 };

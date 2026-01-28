@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "imu.h"
+#include "crashSensor.h"
 #include "drv_asm330.h"
 #include "Module.h"
 #include "FreeRTOS.h"
@@ -566,6 +567,9 @@ static void imu100Hz_PRD(void)
             if (imuRan)
             {
                 drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
+#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
+                crashSensor_notifyFromImu();
+#endif
             }
 
             const bool sleeping = app_vehicleState_sleeping();

@@ -77,6 +77,10 @@ drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT]
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
+    [DRV_INPUTAD_DRIVER_CRASH_RESET] = {
+        .type = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, SWS_requestCrashReset),
+    },
 };
 
 struct inputs_data {

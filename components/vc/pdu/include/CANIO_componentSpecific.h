@@ -25,6 +25,7 @@
 #include "Module.h"
 #include "app_faultManager.h"
 #include "imu.h"
+#include "crashSensor.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -106,6 +107,10 @@
                                                   CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
 #define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
                                                     CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+
+#define set_crashSensorState(m,b,n,s) set(m,b,n,s, crashSensor_getStateCAN())
+#define set_crashSensorAccelMax(m,b,n,s) set(m,b,n,s, crashSensor_getMaxAcceleration())
+#define set_crashSensorAccelTripped(m,b,n,s) set(m,b,n,s, crashSensor_getTrippedAcceleration())
 
 #define set_lon(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelX)
 #define set_lat(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelY)

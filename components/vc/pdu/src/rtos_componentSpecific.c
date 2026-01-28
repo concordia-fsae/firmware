@@ -1,0 +1,49 @@
+/**
+ * @file rtos_componentSpecific.c
+ * @brief  Component-specific RTOS configuration for VCPDU
+ */
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
+#include "FreeRTOS_types.h"
+#include "Utility.h"
+#include "crashSensor.h"
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
+static StaticTask_t crashSensorTask;
+static StackType_t  crashSensorStack[configMINIMAL_STACK_SIZE];
+
+static RTOS_taskDesc_t componentFreerunTasks[] = {
+    {
+        .function    = &crashSensor_task,
+        .name        = "Crash Sensor",
+        .priority    = 9U,
+        .parameters  = NULL,
+        .stack       = crashSensorStack,
+        .stackSize   = sizeof(crashSensorStack) / sizeof(StackType_t),
+        .stateBuffer = &crashSensorTask,
+    },
+};
+#endif
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+uint16_t RTOS_getComponentFreerunTasks(RTOS_taskDesc_t** tasks);
+uint16_t RTOS_getComponentFreerunTasks(RTOS_taskDesc_t** tasks)
+{
+#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
+    *tasks = componentFreerunTasks;
+    return (uint16_t)COUNTOF(componentFreerunTasks);
+#else
+    *tasks = NULL;
+    return 0U;
+#endif
+}

@@ -118,6 +118,12 @@ faultStatus:
   "OK": 0
   "FAULT": 1
 
+crashSensorState:
+  "SNA": 0
+  "OK": 1
+  "CRASHED": 2
+  "ERROR": 3
+
 pedalState:
   SNA: 0
   OK: 1

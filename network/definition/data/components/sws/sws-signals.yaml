@@ -61,6 +61,9 @@ signals:
   requestReverse:
     description: Status of reverse request
     discreteValues: digitalStatus
+  requestCrashReset:
+    description: Status of crash reset request
+    discreteValues: digitalStatus
   requestRaceMode:
     description: Status of race mode request
     discreteValues: digitalStatus
