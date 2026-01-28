@@ -132,6 +132,10 @@
 #define set_crcFailures(m,b,n,s) set(m,b,n,s, app_gps_getCrcFailures())
 #define set_invalidTransactions(m,b,n,s) set(m,b,n,s, app_gps_getInvalidTransactions())
 #define set_numberSamples(m,b,n,s) set(m,b,n,s, app_gps_getNumberSamples())
+#define set_gpsUartOreCount(m,b,n,s) set(m,b,n,s, app_gps_getUartErrorOreCount())
+#define set_gpsUartFeCount(m,b,n,s) set(m,b,n,s, app_gps_getUartErrorFeCount())
+#define set_gpsUartNeCount(m,b,n,s) set(m,b,n,s, app_gps_getUartErrorNeCount())
+#define set_gpsUartPeCount(m,b,n,s) set(m,b,n,s, app_gps_getUartErrorPeCount())
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())

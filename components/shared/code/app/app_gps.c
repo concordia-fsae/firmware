@@ -48,6 +48,10 @@ static struct
     uint16_t crcFailures;
     uint16_t invalidTransactions;
     uint16_t samples;
+    volatile uint16_t uartErrorOreCount;
+    volatile uint16_t uartErrorFeCount;
+    volatile uint16_t uartErrorNeCount;
+    volatile uint16_t uartErrorPeCount;
 #endif
 } gps;
 
@@ -159,6 +163,46 @@ uint16_t app_gps_getInvalidTransactions(void)
 uint16_t app_gps_getNumberSamples(void)
 {
     return gps.samples;
+}
+
+uint16_t app_gps_getUartErrorOreCount(void)
+{
+    return gps.uartErrorOreCount;
+}
+
+uint16_t app_gps_getUartErrorFeCount(void)
+{
+    return gps.uartErrorFeCount;
+}
+
+uint16_t app_gps_getUartErrorNeCount(void)
+{
+    return gps.uartErrorNeCount;
+}
+
+uint16_t app_gps_getUartErrorPeCount(void)
+{
+    return gps.uartErrorPeCount;
+}
+
+void app_gps_recordUartError(uint32_t errorCode)
+{
+    if ((errorCode & HAL_UART_ERROR_ORE) != 0U)
+    {
+        gps.uartErrorOreCount++;
+    }
+    if ((errorCode & HAL_UART_ERROR_FE) != 0U)
+    {
+        gps.uartErrorFeCount++;
+    }
+    if ((errorCode & HAL_UART_ERROR_NE) != 0U)
+    {
+        gps.uartErrorNeCount++;
+    }
+    if ((errorCode & HAL_UART_ERROR_PE) != 0U)
+    {
+        gps.uartErrorPeCount++;
+    }
 }
 
 static void app_gps_init(void)

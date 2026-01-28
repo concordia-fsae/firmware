@@ -16,6 +16,14 @@ signals:
         min: 0
         max: 512
       resolution: 1
+  count16Bit:
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 16
+      range:
+        min: 0
+        max: 65535
+      resolution: 1
   udsPayload:
     unit: ''
     description: UDS payload data

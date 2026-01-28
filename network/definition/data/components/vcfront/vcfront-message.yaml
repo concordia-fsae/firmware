@@ -180,3 +180,14 @@ messages:
     id: 0x312
     sourceBuses: veh
     template: date
+
+  gpsUartDiag:
+    description: GPS UART error counters
+    id: 0x313
+    cycleTimeMs: 1000
+    sourceBuses: veh
+    signals:
+      gpsUartOreCount:
+      gpsUartFeCount:
+      gpsUartNeCount:
+      gpsUartPeCount:

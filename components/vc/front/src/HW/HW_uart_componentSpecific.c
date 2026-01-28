@@ -81,6 +81,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart)
 {
     if (huart->Instance == USART3)
     {
+        app_gps_recordUartError(huart->ErrorCode);
         uint8_t* rxBuf = huart->pRxBuffPtr;
         uint16_t rxLen = huart->RxXferSize;
 

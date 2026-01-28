@@ -65,3 +65,8 @@ bool app_gps_isValid(void);
 uint16_t app_gps_getCrcFailures(void);
 uint16_t app_gps_getInvalidTransactions(void);
 uint16_t app_gps_getNumberSamples(void);
+uint16_t app_gps_getUartErrorOreCount(void);
+uint16_t app_gps_getUartErrorFeCount(void);
+uint16_t app_gps_getUartErrorNeCount(void);
+uint16_t app_gps_getUartErrorPeCount(void);
+void app_gps_recordUartError(uint32_t errorCode);

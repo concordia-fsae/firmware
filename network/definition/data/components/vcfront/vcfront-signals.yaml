@@ -16,6 +16,22 @@ signals:
     description: GPS data overrun
     discreteValues: faultStatus
 
+  gpsUartOreCount:
+    description: UART overrun error count for GPS
+    template: count16Bit
+
+  gpsUartFeCount:
+    description: UART framing error count for GPS
+    template: count16Bit
+
+  gpsUartNeCount:
+    description: UART noise error count for GPS
+    template: count16Bit
+
+  gpsUartPeCount:
+    description: UART parity error count for GPS
+    template: count16Bit
+
   steeringSensorFault:
     description: Steering angle sensor is faulted
     discreteValues: faultStatus
