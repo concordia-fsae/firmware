@@ -15,7 +15,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define LIB_BUFFER_CLEAR(name) memset(&(name)->buffer, 0U, COUNTOF((name)->buffer) * sizeof((name)->buffer[0]))
+#define LIB_BUFFER_CLEAR(name) memset((void*)(name)->buffer, 0U, COUNTOF((name)->buffer) * sizeof((name)->buffer[0]))
 #define LIB_BUFFER_GETNEXTINDEX(name, pos) ((pos + 1) % COUNTOF((name)->buffer))
 
 #define LIB_BUFFER_CIRC_CREATE(name, type, elements) \
