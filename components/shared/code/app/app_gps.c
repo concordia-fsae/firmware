@@ -42,7 +42,7 @@ static struct
     drv_timer_S timeout;
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
-    LIB_BUFFER_CIRC_CREATE(dmaBuffer, uint8_t, BUFFER_SIZE);
+    LIB_BUFFER_CIRC_CREATE(dmaBuffer, volatile uint8_t, BUFFER_SIZE);
     LIB_BUFFER_FIFO_CREATE(sentence, uint8_t, MAX_NMEA_SENTENCE);
     lwgps_t currentGPS;
     uint16_t crcFailures;
