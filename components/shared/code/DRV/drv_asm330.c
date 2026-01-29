@@ -31,10 +31,15 @@
 #define BIT_POS_TIMESTAMP_EN   5U
 #define BIT_POS_HPCF_XL        5U
 #define BIT_POS_ODR            4U
+#define BIT_POS_PAGE_SEL       4U
 #define BIT_POS_FS_VL          2U
 #define BIT_POS_IF_INC         2U
 #define BIT_POS_TDA            2U
 #define BIT_POS_I2C_DISABLE    2U
+#define BIT_POS_PAGE_READ      5U
+#define BIT_POS_PAGE_WRITE     6U
+#define BIT_POS_EMB_FUNC_LIR   7U
+#define BIT_POS_INT_CLR_ON_READ 6U
 #define BIT_POS_GDA            1U
 #define BIT_POS_I3C_DISABLE    1U
 #define BIT_POS_LPF2_XL_EN     1U
@@ -43,6 +48,9 @@
 #define BIT_POS_FIFO_MODE      0U
 #define BIT_POS_SW_RESET       0U
 #define BIT_POS_GYRO_FTYPE     0U
+#define BIT_POS_FSM_EN         0U
+#define BIT_POS_FSM1_EN        0U
+#define BIT_POS_FSM_INIT       0U
 
 #define PACK_IMU_FTYPE(dev)    (dev->config.accelLpfEnabled ? (uint8_t)(dev->config.accelFtype << BIT_POS_HPCF_XL) : 0U)
 #define PACK_GYRO_FTYPE(dev)   (dev->config.gyroLpfEnabled ? (uint8_t)(dev->config.gyroFtype << BIT_POS_GYRO_FTYPE) : 0U)
@@ -65,9 +73,22 @@
 #define PACK_LPF2_XL_EN        (0b1 << BIT_POS_LPF2_XL_EN)
 #define PACK_LPF1_SEL_G        (0b1 << BIT_POS_LPF1_SEL_G)
 
+#define PACK_PAGE_READ         (0b1 << BIT_POS_PAGE_READ)
+#define PACK_PAGE_WRITE        (0b1 << BIT_POS_PAGE_WRITE)
+
+#define BIT_POS_FSM_ODR        3U
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
+
+static bool getParam(drv_asm330_S* dev, uint8_t reg, uint8_t* data);
+static bool setParam(drv_asm330_S* dev, uint8_t reg, uint8_t data);
+static bool setFuncCfgAccess(drv_asm330_S* dev, bool enable);
+static bool writeAdvancedPageReg(drv_asm330_S* dev, uint8_t page, uint8_t addr, uint8_t value);
+static bool writeAdvancedPageBlock(drv_asm330_S* dev, uint16_t startAddr, const uint8_t* data, uint16_t len);
+static bool getFsmStatusInfo(uint8_t programNumber, uint8_t* reg, uint8_t* mask);
+static bool getFsmEnableInfo(uint8_t programNumber, uint8_t* reg, uint8_t* mask);
 
 static bool commHelper(drv_asm330_S* dev, uint8_t* wData, uint8_t wLen, uint8_t* rData, uint16_t rLen)
 {
@@ -79,6 +100,112 @@ static bool commHelper(drv_asm330_S* dev, uint8_t* wData, uint8_t wLen, uint8_t*
     HW_SPI_transmitReceiveAsym(dev->dev, wData, wLen, rData, rLen);
     HW_SPI_release(dev->dev);
 
+    return true;
+}
+
+static bool setFuncCfgAccess(drv_asm330_S* dev, bool enable)
+{
+    return setParam(dev, ASM330LHB_FUNC_CFG_ACCESS, enable ? PACK_CFG_ACCESS : 0U);
+}
+
+static bool writeAdvancedPageReg(drv_asm330_S* dev, uint8_t page, uint8_t addr, uint8_t value)
+{
+    uint8_t tmp = 0U;
+    const uint8_t page_sel_val = (uint8_t)(((page & 0x0FU) << BIT_POS_PAGE_SEL) | 0x01U);
+
+    if (!getParam(dev, ASM330LHB_PAGE_RW, &tmp))
+    {
+        return false;
+    }
+
+    tmp &= (uint8_t)~(PACK_PAGE_READ | PACK_PAGE_WRITE);
+    tmp |= PACK_PAGE_WRITE;
+    if (!setParam(dev, ASM330LHB_PAGE_RW, tmp))
+    {
+        return false;
+    }
+
+    if (!setParam(dev, ASM330LHB_PAGE_SEL, page_sel_val))
+    {
+        return false;
+    }
+
+    if (!setParam(dev, ASM330LHB_PAGE_ADDRESS, addr))
+    {
+        return false;
+    }
+
+    if (!setParam(dev, ASM330LHB_PAGE_VALUE, value))
+    {
+        return false;
+    }
+
+    if (!setParam(dev, ASM330LHB_PAGE_SEL, 0x01U))
+    {
+        return false;
+    }
+
+    tmp &= (uint8_t)~(PACK_PAGE_READ | PACK_PAGE_WRITE);
+    if (!setParam(dev, ASM330LHB_PAGE_RW, tmp))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+static bool writeAdvancedPageBlock(drv_asm330_S* dev, uint16_t startAddr, const uint8_t* data, uint16_t len)
+{
+    for (uint16_t i = 0U; i < len; i++)
+    {
+        const uint16_t addr = (uint16_t)(startAddr + i);
+        const uint8_t page = (uint8_t)((addr >> 8) & 0x0FU);
+        const uint8_t offset = (uint8_t)(addr & 0xFFU);
+
+        if (!writeAdvancedPageReg(dev, page, offset, data[i]))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool getFsmStatusInfo(uint8_t programNumber, uint8_t* reg, uint8_t* mask)
+{
+    if ((programNumber == 0U) || (programNumber > 16U) || (reg == NULL) || (mask == NULL))
+    {
+        return false;
+    }
+
+    if (programNumber <= 8U)
+    {
+        *reg = ASM330LHB_FSM_STATUS_A_MAINPAGE;
+        *mask = (uint8_t)(0x01U << (programNumber - 1U));
+        return true;
+    }
+
+    *reg = ASM330LHB_FSM_STATUS_B_MAINPAGE;
+    *mask = (uint8_t)(0x01U << (programNumber - 9U));
+    return true;
+}
+
+static bool getFsmEnableInfo(uint8_t programNumber, uint8_t* reg, uint8_t* mask)
+{
+    if ((programNumber == 0U) || (programNumber > 16U) || (reg == NULL) || (mask == NULL))
+    {
+        return false;
+    }
+
+    if (programNumber <= 8U)
+    {
+        *reg = ASM330LHB_FSM_ENABLE_A;
+        *mask = (uint8_t)(0x01U << (programNumber - 1U));
+        return true;
+    }
+
+    *reg = ASM330LHB_FSM_ENABLE_B;
+    *mask = (uint8_t)(0x01U << (programNumber - 9U));
     return true;
 }
 
@@ -181,6 +308,8 @@ bool drv_asm330_init(drv_asm330_S* dev)
         uint8_t freq = genCommandHeader(true, ASM330LHB_INTERNAL_FREQ_FINE);
         getParam(dev, freq, &freq);
         dev->state.sampleTime = 1.0f / (40000.0f + (0.0015f * freq * 40000.0f));
+        dev->state.fsmStartAddress = 0U;
+        dev->state.fsmMaxProgram = 0U;
     }
     else
     {
@@ -292,4 +421,244 @@ asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifo
     }
 
     return unpack.tag.tag_sensor;
+}
+
+bool drv_asm330_loadFsmProgram(drv_asm330_S* dev,
+                               uint8_t programNumber,
+                               uint16_t startAddress,
+                               const uint8_t* program,
+                               uint16_t programLength,
+                               asm330lhb_fsm_odr_t odr)
+{
+    uint8_t tmp = 0U;
+    uint8_t ctrl1_xl = 0U;
+    uint8_t ctrl2_g = 0U;
+    const uint8_t odr_mask = (uint8_t)(0x0FU << BIT_POS_ODR);
+    bool ok = true;
+    uint8_t fsm_en_reg = 0U;
+    uint8_t fsm_en_mask = 0U;
+    uint8_t fsm_programs = 0U;
+    uint16_t fsm_start = 0U;
+
+    if ((program == NULL) || (programLength == 0U))
+    {
+        return false;
+    }
+
+    if (!getFsmEnableInfo(programNumber, &fsm_en_reg, &fsm_en_mask))
+    {
+        return false;
+    }
+
+    fsm_programs = dev->state.fsmMaxProgram;
+    if (programNumber > fsm_programs)
+    {
+        fsm_programs = programNumber;
+    }
+
+    fsm_start = dev->state.fsmStartAddress;
+    if ((fsm_start == 0U) || (startAddress < fsm_start))
+    {
+        fsm_start = startAddress;
+    }
+
+    if (!getParam(dev, ASM330LHB_CTRL1_XL, &ctrl1_xl) ||
+        !getParam(dev, ASM330LHB_CTRL2_G, &ctrl2_g))
+    {
+        return false;
+    }
+
+    if (!setParam(dev, ASM330LHB_CTRL1_XL, (uint8_t)(ctrl1_xl & ~odr_mask)) ||
+        !setParam(dev, ASM330LHB_CTRL2_G, (uint8_t)(ctrl2_g & ~odr_mask)))
+    {
+        return false;
+    }
+
+    if (!setFuncCfgAccess(dev, true))
+    {
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!writeAdvancedPageBlock(dev, startAddress, program, programLength))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!writeAdvancedPageReg(dev, 0x01U, (uint8_t)(ASM330LHB_FSM_PROGRAMS & 0xFFU), fsm_programs))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!writeAdvancedPageReg(dev, 0x01U, (uint8_t)(ASM330LHB_FSM_START_ADD_L & 0xFFU), (uint8_t)(fsm_start & 0xFFU)))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!writeAdvancedPageReg(dev, 0x01U, (uint8_t)(ASM330LHB_FSM_START_ADD_H & 0xFFU), (uint8_t)((fsm_start >> 8) & 0xFFU)))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!getParam(dev, ASM330LHB_EMB_FUNC_ODR_CFG_B, &tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    tmp = (uint8_t)((tmp & ~(0x3U << BIT_POS_FSM_ODR)) | ((uint8_t)odr << BIT_POS_FSM_ODR));
+    if (!setParam(dev, ASM330LHB_EMB_FUNC_ODR_CFG_B, tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!getParam(dev, ASM330LHB_EMB_FUNC_EN_B, &tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    tmp |= (0b1 << BIT_POS_FSM_EN);
+    if (!setParam(dev, ASM330LHB_EMB_FUNC_EN_B, tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!getParam(dev, ASM330LHB_PAGE_RW, &tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    tmp |= (0b1 << BIT_POS_EMB_FUNC_LIR);
+    if (!setParam(dev, ASM330LHB_PAGE_RW, tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    tmp |= (0b1 << BIT_POS_INT_CLR_ON_READ);
+    if (!setParam(dev, ASM330LHB_INT_CFG0, tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (!getParam(dev, fsm_en_reg, &tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    tmp |= fsm_en_mask;
+    if (!setParam(dev, fsm_en_reg, tmp))
+    {
+        (void)setFuncCfgAccess(dev, false);
+        ok = false;
+        goto restore_odr;
+    }
+
+    if (getParam(dev, ASM330LHB_EMB_FUNC_INIT_B, &tmp))
+    {
+        tmp |= (0b1 << BIT_POS_FSM_INIT);
+        (void)setParam(dev, ASM330LHB_EMB_FUNC_INIT_B, tmp);
+        tmp &= (uint8_t)~(0b1 << BIT_POS_FSM_INIT);
+        (void)setParam(dev, ASM330LHB_EMB_FUNC_INIT_B, tmp);
+    }
+
+    (void)setFuncCfgAccess(dev, false);
+restore_odr:
+    (void)setParam(dev, ASM330LHB_CTRL1_XL, ctrl1_xl);
+    (void)setParam(dev, ASM330LHB_CTRL2_G, ctrl2_g);
+    if (ok)
+    {
+        dev->state.fsmMaxProgram = fsm_programs;
+        dev->state.fsmStartAddress = fsm_start;
+    }
+    return ok;
+}
+
+bool drv_asm330_getFsmEvent(drv_asm330_S* dev, uint8_t programNumber, bool* eventDetected)
+{
+    uint8_t status = 0U;
+    uint8_t reg = 0U;
+    uint8_t mask = 0U;
+
+    if (eventDetected == NULL)
+    {
+        return false;
+    }
+
+    if (!getFsmStatusInfo(programNumber, &reg, &mask))
+    {
+        return false;
+    }
+
+    if (!getParam(dev, reg, &status))
+    {
+        return false;
+    }
+
+    *eventDetected = (status & mask) != 0U;
+    return true;
+}
+
+bool drv_asm330_clearFsmStatus(drv_asm330_S* dev)
+{
+    uint8_t tmp = 0U;
+
+    if (!getParam(dev, ASM330LHB_FSM_STATUS_A_MAINPAGE, &tmp))
+    {
+        return false;
+    }
+
+    if (!getParam(dev, ASM330LHB_FSM_STATUS_B_MAINPAGE, &tmp))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool drv_asm330_getFsmStatus(drv_asm330_S* dev, uint8_t* statusA, uint8_t* statusB)
+{
+    uint8_t tmp = 0U;
+
+    if (statusA)
+    {
+        if (!getParam(dev, ASM330LHB_FSM_STATUS_A_MAINPAGE, &tmp))
+        {
+            return false;
+        }
+        *statusA = tmp;
+    }
+
+    if (statusB)
+    {
+        if (!getParam(dev, ASM330LHB_FSM_STATUS_B_MAINPAGE, &tmp))
+        {
+            return false;
+        }
+        *statusB = tmp;
+    }
+
+    return true;
 }
