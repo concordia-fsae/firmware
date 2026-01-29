@@ -193,7 +193,7 @@ static void powerManager_periodic_100Hz(void)
     updateDeepSleepState();
     evalAbilities();
 
-#if FEATURE_IS_DISABLED(FEATURE_CRASHSENSOR)
+#if FEATURE_IS_DISABLED(FEATURE_CRASHSENSOR_CONTROL)
     const drv_io_activeState_E shutdown_en = pm_data.okSafety ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, shutdown_en);
 #endif

@@ -67,6 +67,25 @@ signals:
         max: 32
       signedness: signed
     continuous: true
+  imuLinearAcceleration16g:
+    unit: 'm/s2'
+    nativeRepresentation:
+      resolution: 0.01
+      bitWidth: 15
+      range:
+        min: -160
+        max: 160
+      signedness: signed
+    continuous: true
+  imuLinearAcceleration16gPos:
+    unit: 'm/s2'
+    nativeRepresentation:
+      resolution: 0.01
+      bitWidth: 15
+      range:
+        min: 0
+        max: 160
+    continuous: true
   imuRotationalAcceleration:
     unit: 'deg/s'
     nativeRepresentation:

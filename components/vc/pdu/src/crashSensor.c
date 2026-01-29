@@ -24,19 +24,17 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
-#define INIT_BOOT_DELAY                     (500)
+#define INIT_BOOT_DELAY                    (500)
 
 #define CRASH_THRESH_MPS                   (8 * GRAVITY)
 #define CRASH_THRESH_CONSECUTIVE_CYCLES    (3)
 
-#define EXIT_CRASH_THRESH_G                (GRAVITY * 1.1f)
+#define EXIT_CRASH_THRESH_G                (GRAVITY * 1.25f)
 #define EXIT_CRASH_THRESH_DEG_FROM_GRAVITY (25.0f)
 
 #define TASK_WAIT_DURATION_MS (15)
 #define IMU_TIMEOUT_DURATION  (50)
 #define CRASH_THRESH_MISSED_CYCLES (IMU_TIMEOUT_DURATION / TASK_WAIT_DURATION_MS)
-#endif
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -47,13 +45,9 @@ static struct
     crashSensor_state_E sensorState;
     float32_t accelMax;
     float32_t accelTripped;
-#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
     uint8_t   missedCycles;
-    uint8_t   egregiousCycles;
-#endif
 } cs;
 
-#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
 static TaskHandle_t crashSensorTaskHandle = NULL;
 
 /******************************************************************************
@@ -73,7 +67,6 @@ static bool vehicleStateOk(const float32_t currentAccel)
 
     return ret;
 }
-#endif
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -114,7 +107,6 @@ void crashSensor_task(void)
 {
     memset(&cs, 0x00U, sizeof(cs));
 
-#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
     crashSensorTaskHandle = xTaskGetCurrentTaskHandle();
 
     if (crashState_data.crashLatched)
@@ -130,8 +122,8 @@ void crashSensor_task(void)
 
     if (cs.sensorState == CRASHSENSOR_INIT)
     {
-        const float32_t vehicleAccel = imu_getAccelNorm();
-        if (vehicleStateOk(vehicleAccel))
+        const float32_t vehicleAccel = imu_getAccelNormPeak();
+        if (vehicleStateOk(vehicleAccel) && !imu_isFaulted())
         {
             cs.sensorState = CRASHSENSOR_OK;
             drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, DRV_IO_ACTIVE);
@@ -146,30 +138,23 @@ void crashSensor_task(void)
     {
         if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(TASK_WAIT_DURATION_MS)))
         {
-            const float32_t vehicleAccel = imu_getAccelNorm();
+            const float32_t vehicleAccel = imu_getAccelNormPeak();
+            const bool crashEvent = imu_getCrashEvent();
             cs.missedCycles = 0;
 
             if (cs.sensorState == CRASHSENSOR_OK)
             {
-                if (vehicleAccel >= CRASH_THRESH_MPS)
+                if (crashEvent)
                 {
-                    if (cs.egregiousCycles < CRASH_THRESH_CONSECUTIVE_CYCLES)
-                    {
-                        cs.egregiousCycles++;
-                    }
-                    else
-                    {
-                        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, DRV_IO_INACTIVE);
-                        crashState_data.crashLatched = true;
-                        lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
-                        cs.accelTripped = vehicleAccel;
-                        cs.accelMax = vehicleAccel;
-                        cs.sensorState = CRASHSENSOR_CRASHED;
-                    }
+                    crashState_data.crashLatched = true;
+                    lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
+                    cs.accelTripped = vehicleAccel;
+                    cs.accelMax = vehicleAccel;
+                    cs.sensorState = CRASHSENSOR_CRASHED;
                 }
-                else
+                else if (imu_isFaulted())
                 {
-                    cs.egregiousCycles = 0;
+                    cs.sensorState = CRASHSENSOR_ERROR;
                 }
             }
             else
@@ -179,12 +164,13 @@ void crashSensor_task(void)
 
                 cs.accelMax = vehicleAccel > cs.accelMax ? vehicleAccel : cs.accelMax;
 
-                if (driverResetting && vehicleOk)
+                if (driverResetting && vehicleOk && !imu_isFaulted())
                 {
                     cs.sensorState = CRASHSENSOR_OK;
                     crashState_data.crashLatched = false;
                     lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
-                    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, DRV_IO_ACTIVE);
+                    cs.accelTripped = 0.0f;
+                    cs.accelMax = 0.0f;
                 }
             }
         }
@@ -196,18 +182,17 @@ void crashSensor_task(void)
             }
             else
             {
-                drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, DRV_IO_INACTIVE);
                 cs.sensorState = CRASHSENSOR_ERROR;
             }
         }
-    }
-#else
-    cs.sensorState = CRASHSENSOR_OK;
-    vTaskSuspend(NULL);
+
+#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR_CONTROL)
+        const drv_io_activeState_E safetyState = cs.sensorState == CRASHSENSOR_OK ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, safetyState);
 #endif
+    }
 }
 
-#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
 void crashSensor_notifyFromImu(void)
 {
     if (crashSensorTaskHandle != NULL)
@@ -215,4 +200,3 @@ void crashSensor_notifyFromImu(void)
         (void)xTaskNotifyGive(crashSensorTaskHandle);
     }
 }
-#endif

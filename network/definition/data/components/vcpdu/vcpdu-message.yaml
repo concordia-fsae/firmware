@@ -15,6 +15,7 @@ messages:
       imuOverrun:
       imuError:
       imuSna:
+      imuFsmInitFailure:
 
   udsResponse:
     description: UDS response message from the VCPDU
@@ -198,6 +199,22 @@ messages:
     signals:
       crashSensorState:
       crashSensorAccelMax:
-        template: imuLinearAcceleration
+        template: imuLinearAcceleration16g
       crashSensorAccelTripped:
-        template: imuLinearAcceleration
+        template: imuLinearAcceleration16g
+      crashSensorImpactActive:
+        template: digitalStatus
+      crashSensorImpactAccelMax:
+        template: imuLinearAcceleration16g
+      crashSensorImpactAccelCurrent:
+        template: imuLinearAcceleration16g
+
+  imuAccelNorm:
+    description: VCPDU IMU accel norm
+    id: 0x3f3
+    cycleTimeMs: 10
+    signals:
+      accelNorm:
+        template: imuLinearAcceleration16gPos
+      accelNormPeak:
+        template: imuLinearAcceleration16gPos

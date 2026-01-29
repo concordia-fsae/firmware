@@ -42,6 +42,4 @@ CAN_crashSensorState_E crashSensor_getStateCAN(void);
 float32_t crashSensor_getTrippedAcceleration(void);
 float32_t crashSensor_getMaxAcceleration(void);
 
-#if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR)
 void crashSensor_notifyFromImu(void);
-#endif
