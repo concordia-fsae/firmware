@@ -341,6 +341,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/shared/code:libs/lib_nvm.c",
+            "//components/shared/code:libs/lib_madgwick.c",
             "//embedded/libs:libcrc.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
