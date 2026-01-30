@@ -40,6 +40,14 @@ typedef struct
     uint8_t seconds;
 } app_gps_time_S;
 
+typedef struct
+{
+    uint32_t utcMs;
+    uint8_t drStage;
+    uint8_t dynamicStatus;
+    uint8_t alarmStatus;
+} app_gps_pairmsg_S;
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -55,11 +63,13 @@ void app_gps_resetBuffers(void);
 void app_gps_getPos(app_gps_pos_S* pos);
 void app_gps_getHeading(app_gps_heading_S* heading);
 void app_gps_getTime(app_gps_time_S* time);
+void app_gps_getPairmsg(app_gps_pairmsg_S* pairmsg);
 
 // Not thread safe
 app_gps_pos_S*  app_gps_getPosRef(void);
 app_gps_heading_S*  app_gps_getHeadingRef(void);
 app_gps_time_S* app_gps_getTimeRef(void);
+app_gps_pairmsg_S* app_gps_getPairmsgRef(void);
 
 bool app_gps_isValid(void);
 uint16_t app_gps_getCrcFailures(void);

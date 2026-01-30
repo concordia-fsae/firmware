@@ -8,6 +8,8 @@
  ******************************************************************************/
 
 #include "app_gps.h"
+#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 #include "lwgps.h"
 #include "drv_timer.h"
@@ -38,6 +40,7 @@ static struct
     app_gps_pos_S pos;
     app_gps_heading_S heading;
     app_gps_time_S time;
+    app_gps_pairmsg_S pairmsg;
 
     drv_timer_S timeout;
 
@@ -78,13 +81,295 @@ static void updateGPS(void)
     taskEXIT_CRITICAL();
 }
 
+static bool parsePairmsgUtcMs(const char* field, uint32_t* utcMs)
+{
+    uint32_t hour = 0U;
+    uint32_t minute = 0U;
+    uint32_t second = 0U;
+    uint32_t millisecond = 0U;
+
+    if ((field == NULL) || (field[0] == '\0'))
+    {
+        return false;
+    }
+
+    if (!(isdigit((unsigned char)field[0]) && isdigit((unsigned char)field[1]) &&
+          isdigit((unsigned char)field[2]) && isdigit((unsigned char)field[3]) &&
+          isdigit((unsigned char)field[4]) && isdigit((unsigned char)field[5])))
+    {
+        return false;
+    }
+
+    hour = (uint32_t)((field[0] - '0') * 10 + (field[1] - '0'));
+    minute = (uint32_t)((field[2] - '0') * 10 + (field[3] - '0'));
+    second = (uint32_t)((field[4] - '0') * 10 + (field[5] - '0'));
+
+    if ((hour > 23U) || (minute > 59U) || (second > 59U))
+    {
+        return false;
+    }
+
+    const char* dot = strchr(field, '.');
+    if (dot != NULL)
+    {
+        uint32_t scale = 100U;
+        const char* p = dot + 1;
+        while ((*p != '\0') && isdigit((unsigned char)*p) && (scale > 0U))
+        {
+            millisecond += (uint32_t)(*p - '0') * scale;
+            scale /= 10U;
+            p++;
+        }
+    }
+
+    *utcMs = ((hour * 3600U) + (minute * 60U) + second) * 1000U + millisecond;
+    return true;
+}
+
+static bool parsePairmsgChecksum(const char* payload, const char* checksum)
+{
+    uint8_t calc = 0U;
+    const char* p = payload;
+
+    while ((p != NULL) && (*p != '\0'))
+    {
+        calc ^= (uint8_t)(*p);
+        p++;
+    }
+
+    if ((checksum == NULL) || !isxdigit((unsigned char)checksum[0]) || !isxdigit((unsigned char)checksum[1]))
+    {
+        return false;
+    }
+
+    uint8_t expected = 0U;
+    for (uint8_t i = 0U; i < 2U; i++)
+    {
+        char c = (char)toupper((unsigned char)checksum[i]);
+        expected = (uint8_t)(expected << 4);
+        if (c >= 'A')
+        {
+            expected = (uint8_t)(expected | (uint8_t)(c - 'A' + 10));
+        }
+        else
+        {
+            expected = (uint8_t)(expected | (uint8_t)(c - '0'));
+        }
+    }
+
+    return calc == expected;
+}
+
+static bool parsePairmsg(const uint8_t* sentence, size_t len)
+{
+    char buffer[MAX_NMEA_SENTENCE + 1U];
+    size_t copyLen = len;
+    char* cursor = NULL;
+
+    if (copyLen > MAX_NMEA_SENTENCE)
+    {
+        copyLen = MAX_NMEA_SENTENCE;
+    }
+
+    memcpy(buffer, sentence, copyLen);
+    buffer[copyLen] = '\0';
+
+    while (copyLen > 0U)
+    {
+        char tail = buffer[copyLen - 1U];
+        if ((tail != '\r') && (tail != '\n'))
+        {
+            break;
+        }
+        buffer[copyLen - 1U] = '\0';
+        copyLen--;
+    }
+
+    if (strncmp(buffer, "$PAIRMSG,", 9U) != 0)
+    {
+        return false;
+    }
+
+    char* star = strchr(buffer, '*');
+    if (star == NULL)
+    {
+        gps.invalidTransactions++;
+        return true;
+    }
+
+    *star = '\0';
+    const char* checksum = star + 1;
+
+    if (!parsePairmsgChecksum(buffer + 1, checksum))
+    {
+        gps.crcFailures++;
+        return true;
+    }
+
+    cursor = buffer;
+    char* token = cursor;
+    char* comma = strchr(cursor, ',');
+    if (comma != NULL)
+    {
+        *comma = '\0';
+        cursor = comma + 1;
+    }
+    else
+    {
+        cursor = NULL;
+    }
+    if (token == NULL)
+    {
+        gps.invalidTransactions++;
+        return true;
+    }
+
+    token = cursor;
+    if (token != NULL)
+    {
+        comma = strchr(token, ',');
+        if (comma != NULL)
+        {
+            *comma = '\0';
+            cursor = comma + 1;
+        }
+        else
+        {
+            cursor = NULL;
+        }
+    }
+    if (token == NULL)
+    {
+        gps.invalidTransactions++;
+        return true;
+    }
+
+    const long messageId = strtol(token, NULL, 10);
+    uint32_t utcMs = 0U;
+    uint8_t drStage = gps.pairmsg.drStage;
+    uint8_t dynamicStatus = gps.pairmsg.dynamicStatus;
+    uint8_t alarmStatus = gps.pairmsg.alarmStatus;
+
+    token = cursor;
+    if (token != NULL)
+    {
+        comma = strchr(token, ',');
+        if (comma != NULL)
+        {
+            *comma = '\0';
+            cursor = comma + 1;
+        }
+        else
+        {
+            cursor = NULL;
+        }
+    }
+    if (!parsePairmsgUtcMs(token, &utcMs))
+    {
+        gps.invalidTransactions++;
+        return true;
+    }
+
+    if (messageId == 90L)
+    {
+        token = cursor;
+        if (token != NULL)
+        {
+            comma = strchr(token, ',');
+            if (comma != NULL)
+            {
+                *comma = '\0';
+                cursor = comma + 1;
+            }
+            else
+            {
+                cursor = NULL;
+            }
+        }
+        if (token == NULL)
+        {
+            gps.invalidTransactions++;
+            return true;
+        }
+
+        drStage = (uint8_t)strtoul(token, NULL, 10);
+        taskENTER_CRITICAL();
+        gps.pairmsg.utcMs = utcMs;
+        gps.pairmsg.drStage = drStage;
+        taskEXIT_CRITICAL();
+        return true;
+    }
+    else if (messageId == 91L)
+    {
+        token = cursor;
+        if (token != NULL)
+        {
+            comma = strchr(token, ',');
+            if (comma != NULL)
+            {
+                *comma = '\0';
+                cursor = comma + 1;
+            }
+            else
+            {
+                cursor = NULL;
+            }
+        }
+        if (token == NULL)
+        {
+            gps.invalidTransactions++;
+            return true;
+        }
+        dynamicStatus = (uint8_t)strtoul(token, NULL, 10);
+
+        token = cursor;
+        if (token != NULL)
+        {
+            comma = strchr(token, ',');
+            if (comma != NULL)
+            {
+                *comma = '\0';
+                cursor = comma + 1;
+            }
+            else
+            {
+                cursor = NULL;
+            }
+        }
+        if (token == NULL)
+        {
+            gps.invalidTransactions++;
+            return true;
+        }
+        alarmStatus = (uint8_t)strtoul(token, NULL, 10);
+
+        taskENTER_CRITICAL();
+        gps.pairmsg.utcMs = utcMs;
+        gps.pairmsg.dynamicStatus = dynamicStatus;
+        gps.pairmsg.alarmStatus = alarmStatus;
+        taskEXIT_CRITICAL();
+        return true;
+    }
+
+    gps.invalidTransactions++;
+    return true;
+}
+
 static void parse(uint8_t* sentence, size_t len)
 {
     lwgps_process(&gps.currentGPS, sentence, len);
 
     if (gps.currentGPS.p.stat == STAT_UNKNOWN)
     {
-        gps.invalidTransactions++;
+        if (parsePairmsg(sentence, len))
+        {
+            drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
+            gps.samples++;
+        }
+        else
+        {
+            gps.invalidTransactions++;
+        }
     }
     else if (gps.currentGPS.p.stat == STAT_CHECKSUM_FAIL)
     {
@@ -130,6 +415,13 @@ void app_gps_getTime(app_gps_time_S* time)
     taskEXIT_CRITICAL();
 }
 
+void app_gps_getPairmsg(app_gps_pairmsg_S* pairmsg)
+{
+    taskENTER_CRITICAL();
+    memcpy(pairmsg, &gps.pairmsg, sizeof(*pairmsg));
+    taskEXIT_CRITICAL();
+}
+
 app_gps_pos_S* app_gps_getPosRef(void)
 {
      return &gps.pos;
@@ -143,6 +435,11 @@ app_gps_heading_S* app_gps_getHeadingRef(void)
 app_gps_time_S* app_gps_getTimeRef(void)
 {
      return &gps.time;
+}
+
+app_gps_pairmsg_S* app_gps_getPairmsgRef(void)
+{
+    return &gps.pairmsg;
 }
 
 bool app_gps_isValid(void)

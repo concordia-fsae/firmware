@@ -96,6 +96,17 @@ pm100dxIsLimited:
   "NOT_LIMITED": 0
   "LIMITED": 1
 
+gpsDrStage:
+  "UNKNOWN": 0
+  "INIT": 1
+  "COARSE": 2
+  "STABLE": 3
+
+gpsDynamicStatus:
+  "UNKNOWN": 0
+  "STATIC": 1
+  "DYNAMIC": 2
+
 faultStatus:
   "OK": 0
   "FAULT": 1

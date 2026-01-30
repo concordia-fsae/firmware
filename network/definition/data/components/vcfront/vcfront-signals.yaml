@@ -32,6 +32,56 @@ signals:
     description: UART parity error count for GPS
     template: count16Bit
 
+  gpsPairUtcMs:
+    description: PAIRMSG UTC time (ms since midnight)
+    unit: ms
+    nativeRepresentation:
+      bitWidth: 32
+      range:
+        min: 0
+        max: 86399999
+      resolution: 1
+
+  gpsPairDrStage:
+    description: PAIRMSG 90 DR stage
+    discreteValues: gpsDrStage
+
+  gpsPairDynamicStatus:
+    description: PAIRMSG 91 dynamic status
+    discreteValues: gpsDynamicStatus
+
+  gpsPairAlarmHarshAcceleration:
+    description: PAIRMSG 91 harsh acceleration
+    discreteValues: flag
+
+  gpsPairAlarmHarshDeceleration:
+    description: PAIRMSG 91 harsh deceleration
+    discreteValues: flag
+
+  gpsPairAlarmHarshTurn:
+    description: PAIRMSG 91 harsh turn
+    discreteValues: flag
+
+  gpsPairAlarmHarshLaneChange:
+    description: PAIRMSG 91 harsh lane change
+    discreteValues: flag
+
+  gpsPairAlarmHorizontalCollision:
+    description: PAIRMSG 91 horizontal collision
+    discreteValues: flag
+
+  gpsPairAlarmRollover:
+    description: PAIRMSG 91 rollover
+    discreteValues: flag
+
+  gpsPairAlarmStabilityWarning:
+    description: PAIRMSG 91 stability warning
+    discreteValues: flag
+
+  gpsPairAlarmEulerAnomaly:
+    description: PAIRMSG 91 euler anomaly
+    discreteValues: flag
+
   steeringSensorFault:
     description: Steering angle sensor is faulted
     discreteValues: faultStatus

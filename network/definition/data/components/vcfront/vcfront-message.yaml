@@ -191,3 +191,21 @@ messages:
       gpsUartFeCount:
       gpsUartNeCount:
       gpsUartPeCount:
+
+  gpsDebug:
+    description: GPS debug status from PAIRMSG
+    id: 0x314
+    cycleTimeMs: 1000
+    sourceBuses: veh
+    signals:
+      gpsPairUtcMs:
+      gpsPairDrStage:
+      gpsPairDynamicStatus:
+      gpsPairAlarmHarshAcceleration:
+      gpsPairAlarmHarshDeceleration:
+      gpsPairAlarmHarshTurn:
+      gpsPairAlarmHarshLaneChange:
+      gpsPairAlarmHorizontalCollision:
+      gpsPairAlarmRollover:
+      gpsPairAlarmStabilityWarning:
+      gpsPairAlarmEulerAnomaly:
