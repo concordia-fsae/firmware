@@ -5,14 +5,9 @@
 
 #include "IMD.h"
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
-
-#include "FloatTypes.h"
-
+#include "lib_utility.h"
 #include "HW.h"
-
 #include "BMS.h"
 
 #define IMD_OHMS_PER_VOLT 500
@@ -45,12 +40,36 @@ void IMD_init(void)
     imd.sst_state = IMD_SST_BAD;
 }
 
-void IMD_setIsolation(float32_t kohm)
+void IMD_setMlsMeasurement(uint32_t freq, uint32_t duty)
 {
-    imd.isolation        = kohm;
-    imd.last_measurement = HW_getTick();
+    float32_t dutyf = (float32_t)duty;
+    float32_t kOhm = 0;
 
-    if (kohm > IMD_ISOLATION_MIN)
+    SATURATE(5.1f, dutyf, 94.9);
+
+    if (freq < 25) {
+        kOhm = (0.9f * 1200) / ((dutyf / 100) - 0.05f) - 1200.0f;
+        IMD_setFault(false);
+        IMD_setSST(true);
+        imd.isolation        = kOhm;
+        imd.last_measurement = HW_getTick();
+    }
+    else if ((freq >= 25) && (freq <= 35))
+    {
+        if (duty < 15) {
+            IMD_setSST(true);
+        }
+        else
+        {
+            IMD_setSST(false);
+        }
+    }
+    else if (freq > 35)
+    {
+        IMD_setFault(true);
+    }
+
+    if (kOhm > IMD_ISOLATION_MIN)
     {
         imd.state = IMD_HEALTHY;
         imd.fault = false;

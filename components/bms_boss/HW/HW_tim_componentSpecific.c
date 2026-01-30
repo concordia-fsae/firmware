@@ -145,34 +145,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 
         if (ICValue != 0)
         {
-
             // calculate the Duty Cycle
             Duty = (HAL_TIM_ReadCapturedValue(tim, TIM_CHANNEL_1) * 100) / ICValue;
-
 
             //Weird black magic? Has todo with counter and etc
             Frequency = 500000 / ICValue;
 
-            if (Frequency < 25) {
-                float32_t res = (0.9f * 1200) / (((float32_t)Duty / 100) - 0.05f) - 1200.0f;
-                IMD_setIsolation(res);
-                IMD_setFault(false);
-                IMD_setSST(true);
-            }
-            else if (Frequency >= 25 && Frequency <= 35)
-            {
-                if (Duty < 15) {
-                    IMD_setSST(true);
-                }
-                else
-                {
-                    IMD_setSST(false);
-                }
-            }
-            else if (Frequency > 35)
-            {
-                IMD_setFault(true);
-            }
+            IMD_setMlsMeasurement(Frequency, Duty);
         }
     }
 }
