@@ -129,6 +129,15 @@ messages:
       packVoltageMeasurementFault:
       packCycleCountedCoulombs:
 
+  imdStatus:
+    description: BMS Boss IMD status
+    cycleTimeMs: 1000
+    id: 0x7a1
+    sourceBuses: veh
+    signals:
+      imdState:
+      imdIsolationResistance:
+
   packData:
     description: BMS Boss debug information
     cycleTimeMs: 100

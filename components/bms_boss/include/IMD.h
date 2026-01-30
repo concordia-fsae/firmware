@@ -5,9 +5,7 @@
 
 #pragma once
 
-#include <stdbool.h>
-
-#include "FloatTypes.h"
+#include "LIB_Types.h"
 
 typedef enum {
     IMD_INIT = 0x00,
@@ -24,7 +22,7 @@ typedef enum {
 
 
 void IMD_init(void);
-void IMD_setIsolation(float32_t kohm);
+void IMD_setMlsMeasurement(uint32_t freq, uint32_t duty);
 void IMD_setSST(bool good);
 void IMD_setFault(bool fault);
 bool IMD_timeout(void);

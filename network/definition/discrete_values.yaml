@@ -107,6 +107,13 @@ gpsDynamicStatus:
   "STATIC": 1
   "DYNAMIC": 2
 
+imdState:
+  "INIT": 0
+  "HEALTHY": 1
+  "UNHEALTHY": 2
+  "FAULT": 3
+  "ERROR": 4
+
 faultStatus:
   "OK": 0
   "FAULT": 1
