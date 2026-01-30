@@ -8,6 +8,8 @@
  ******************************************************************************/
 
 #include "HW_uart.h"
+#include "SystemConfig.h"
+#include "app_gps.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -69,5 +71,26 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         }
 
         __HAL_LINKDMA(huart,hdmarx,hdma_uart3rx);
+
+        HAL_NVIC_SetPriority(USART3_IRQn, DMA_IRQ_PRIO, 0U);
+        HAL_NVIC_EnableIRQ(USART3_IRQn);
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart)
+{
+    if (huart->Instance == USART3)
+    {
+        app_gps_recordUartError(huart->ErrorCode);
+        uint8_t* rxBuf = huart->pRxBuffPtr;
+        uint16_t rxLen = huart->RxXferSize;
+
+        (void)HAL_UART_DMAStop(huart);
+        app_gps_resetBuffers();
+
+        if ((rxBuf != NULL) && (rxLen > 0U))
+        {
+            (void)HAL_UART_Receive_DMA(huart, rxBuf, rxLen);
+        }
     }
 }

@@ -49,6 +49,10 @@ void CAN1_TX_IRQHandler(void);
 void CAN1_RX0_IRQHandler(void);
 void CAN1_RX1_IRQHandler(void);
 
+void USART1_IRQHandler(void);
+void USART2_IRQHandler(void);
+void USART3_IRQHandler(void);
+
 #if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105)
 void CAN2_SCE_IRQHandler(void);
 void CAN2_TX_IRQHandler(void);

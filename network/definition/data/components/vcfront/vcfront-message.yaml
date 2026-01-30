@@ -13,6 +13,7 @@ messages:
       brakeSensorFault:
       apps1SensorFault:
       apps2SensorFault:
+      gpsOverrun:
 
   udsResponse:
     description: UDS response message from the VCFRONT
@@ -179,3 +180,32 @@ messages:
     id: 0x312
     sourceBuses: veh
     template: date
+
+  gpsUartDiag:
+    description: GPS UART error counters
+    id: 0x313
+    cycleTimeMs: 1000
+    sourceBuses: veh
+    signals:
+      gpsUartOreCount:
+      gpsUartFeCount:
+      gpsUartNeCount:
+      gpsUartPeCount:
+
+  gpsDebug:
+    description: GPS debug status from PAIRMSG
+    id: 0x314
+    cycleTimeMs: 1000
+    sourceBuses: veh
+    signals:
+      gpsPairUtcMs:
+      gpsPairDrStage:
+      gpsPairDynamicStatus:
+      gpsPairAlarmHarshAcceleration:
+      gpsPairAlarmHarshDeceleration:
+      gpsPairAlarmHarshTurn:
+      gpsPairAlarmHarshLaneChange:
+      gpsPairAlarmHorizontalCollision:
+      gpsPairAlarmRollover:
+      gpsPairAlarmStabilityWarning:
+      gpsPairAlarmEulerAnomaly:
