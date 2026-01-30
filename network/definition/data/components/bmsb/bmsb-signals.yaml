@@ -260,6 +260,21 @@ signals:
     description: "Status of the BMSB IMD SFTY"
     discreteValues: "digitalStatus"
 
+  imdState:
+    description: "IMD state"
+    discreteValues: imdState
+
+  imdIsolationResistance:
+    description: "IMD isolation resistance"
+    unit: 'kOhm'
+    nativeRepresentation:
+      bitWidth: 16
+      range:
+        min: 0
+        max: 65535
+      resolution: 1
+    continuous: true
+
   packCSPVoltage:
     unit: 'V'
     description: BMS Boss Pack Current Sensor Pos Diff Voltage

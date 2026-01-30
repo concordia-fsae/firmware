@@ -107,6 +107,7 @@ class Units(Enum):
     kW = "kW"
     km = "km"
     dps = "deg/s"
+    kOhm = "kOhm"
 
 
 class ValidationRole(Enum):

@@ -98,6 +98,8 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
                                                         CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_imdStatus(m, b, n, s)                   set(m, b, n, s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD) == DRV_IO_ACTIVE) ? \
                                                         CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_imdState(m, b, n, s)                    set(m, b, n, s, (uint8_t)IMD_getState())
+#define set_imdIsolationResistance(m, b, n, s)      set(m, b, n, s, IMD_getIsolation())
 #define set_packCSVoltage(m, b, n, s)               set(m, b, n, s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS))
 #define set_packCSPVoltage(m, b, n, s)              set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_CS))
 #define set_packCSNVoltage(m, b, n, s)              set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_CS))
