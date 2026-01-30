@@ -14,6 +14,7 @@ messages:
       apps1SensorFault:
       apps2SensorFault:
       gpsOverrun:
+      vehicleSpeedDegraded:
 
   udsResponse:
     description: UDS response message from the VCFRONT
