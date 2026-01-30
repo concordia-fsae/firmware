@@ -99,6 +99,7 @@ static void calculateVehicleSpeed(void)
 
     vehicle.lastTimestampMS = currentTime;
     vehicle.wasValidGPS = validGPS;
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_VEHICLESPEEDDEGRADED, !validGPS);
 #else // FEATURE_VEHICLEPEED_LEADER
     float32_t tmp = 0.0f;
     const bool valid = CANRX_VEHICLESPEED(&tmp) == CANRX_MESSAGE_VALID;

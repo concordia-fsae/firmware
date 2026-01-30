@@ -444,7 +444,11 @@ app_gps_pairmsg_S* app_gps_getPairmsgRef(void)
 
 bool app_gps_isValid(void)
 {
-    return drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING;
+    const bool ret = (drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING) &&
+                     (gps.pairmsg.drStage != 0x00U) &&
+                     (gps.pairmsg.drStage != 0x01U) &&
+                     (gps.pairmsg.dynamicStatus != 0x00U);
+    return ret;
 }
 
 uint16_t app_gps_getCrcFailures(void)
@@ -542,7 +546,7 @@ static void app_gps_periodic_100Hz(void)
         }
     }
 
-    const bool gpsValid = app_gps_isValid();
+    const bool gpsValid = drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING;
 
     app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid);
     app_faultManager_setFaultState(GPS_DEVICE_OVERRUN, overrun);

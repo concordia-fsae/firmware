@@ -16,6 +16,10 @@ signals:
     description: GPS data overrun
     discreteValues: faultStatus
 
+  vehicleSpeedDegraded:
+    description: Vehicle speed is degraded due to missing sensor data
+    discreteValues: faultStatus
+
   gpsUartOreCount:
     description: UART overrun error count for GPS
     template: count16Bit
