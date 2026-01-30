@@ -419,6 +419,12 @@ static void lpfAccel(drv_imu_accel_S* accel)
         imuLpf.accelX.y = accel->accelX;
         imuLpf.accelY.y = accel->accelY;
         imuLpf.accelZ.y = accel->accelZ;
+        lib_madgwick_euler_S initAccel = {
+            .x = accel->accelX,
+            .y = accel->accelY,
+            .z = accel->accelZ,
+        };
+        madgwick_init_quaternion_from_accel(&imu.madgwick, &initAccel);
     }
 
     accel->accelX = lib_simpleFilter_lpf_step(&imuLpf.accelX, accel->accelX);
