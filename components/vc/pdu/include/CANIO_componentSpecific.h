@@ -25,6 +25,8 @@
 #include "Module.h"
 #include "app_faultManager.h"
 #include "imu.h"
+#include "crashSensor.h"
+#include "lib_nvm.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -107,13 +109,34 @@
 #define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
                                                     CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 
+#define set_crashSensorState(m,b,n,s) set(m,b,n,s, crashSensor_getStateCAN())
+#define set_crashSensorAccelMax(m,b,n,s) set(m,b,n,s, crashSensor_getMaxAcceleration())
+#define set_crashSensorAccelTripped(m,b,n,s) set(m,b,n,s, crashSensor_getTrippedAcceleration())
+#define set_crashSensorImpactActive(m,b,n,s) set(m,b,n,s, imu_getImpactActive() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_crashSensorImpactAccelMax(m,b,n,s) set(m,b,n,s, imu_getImpactAccelMax())
+#define set_crashSensorImpactAccelCurrent(m,b,n,s) set(m,b,n,s, imu_getImpactAccelCurrent())
+
 #define set_lon(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelX)
 #define set_lat(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelY)
 #define set_vert(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelZ)
+#define set_accelNorm(m,b,n,s) set(m,b,n,s, imu_getAccelNorm())
+#define set_accelNormPeak(m,b,n,s) set(m,b,n,s, imu_getAccelNormPeak())
 #define set_yaw(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotZ)
 #define set_roll(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotY)
 #define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)
 #define set_angleRoll(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotY)
 #define set_anglePitch(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotX)
+
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+# define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
+# define set_nvmRecordWrites(m, b, n, s)            set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())
+# define set_nvmBlockErases(m, b, n, s)             set(m, b, n, s, (uint8_t)lib_nvm_getTotalBlockErases())
+# define set_nvmFailedCrc(m, b, n, s)               set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedCrc())
+# define set_nvmRecordFailedInit(m, b, n, s)        set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedRecordInit())
+# define set_nvmRecordEmptyInit(m, b, n, s)         set(m, b, n, s, (uint8_t)lib_nvm_getTotalEmptyRecordInit())
+# define set_nvmRecordsVersionFailed(m, b, n, s)    set(m, b, n, s, (uint8_t)lib_nvm_getTotalRecordsVersionFailed())
+#else
+# define transmit_VCPDU_nvmInformation               false
+#endif
 
 #include "TemporaryStubbing.h"

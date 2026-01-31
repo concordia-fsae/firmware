@@ -42,6 +42,7 @@ typedef enum
     ALERT_BMSB,
     ALERT_GLV,
     ALERT_EM,
+    ALERT_CRASH,
     ALERT_COUNT,
 } alerts_E;
 
@@ -53,6 +54,7 @@ typedef enum
     WARN_HOT_POWERTRAIN,
     WARN_LOW_CELL,
     WARN_CONTACTS_OPEN_IN_RUN,
+    WARN_IMU_UNCALIBRATED,
     WARN_COUNT,
 } warnings_E;
 
@@ -106,7 +108,11 @@ static CAN_screenAlerts_E translateAlertToCAN(alerts_E alert)
         case ALERT_EM:
             ret = CAN_SCREENALERTS_FAULT_EM;
             break;
-        default:
+        case ALERT_CRASH:
+            ret = CAN_SCREENALERTS_CRASH;
+            break;
+        case ALERT_NONE:
+        case ALERT_COUNT:
             break;
     }
 
@@ -134,7 +140,11 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_CONTACTS_OPEN_IN_RUN:
             ret = CAN_SCREENWARNINGS_CONTACTS_OPEN_IN_RUN;
             break;
-        default:
+        case WARN_IMU_UNCALIBRATED:
+            ret = CAN_SCREENWARNINGS_IMU_UNCALIBRATED;
+            break;
+        case WARN_NONE:
+        case WARN_COUNT:
             break;
     }
 
@@ -145,13 +155,20 @@ static void getAlerts(void)
 {
     CAN_gear_E gear = CAN_GEAR_SNA;
     CANRX_get_signal(VEH, VCFRONT_gear, &gear);
+    CAN_crashSensorState_E crash_state = CAN_CRASHSENSORSTATE_SNA;
+    CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state);
 
     FLAG_assign(sm.setAlerts, ALERT_REVERSE, gear == CAN_GEAR_REVERSE);
+    FLAG_assign(sm.setAlerts, ALERT_CRASH, crash_state != CAN_CRASHSENSORSTATE_OK);
 }
 
 static void determineActiveAlert(void)
 {
-    if (FLAG_get(sm.setAlerts, ALERT_REVERSE))
+    if (FLAG_get(sm.setAlerts, ALERT_CRASH))
+    {
+        sm.alert = ALERT_CRASH;
+    }
+    else if (FLAG_get(sm.setAlerts, ALERT_REVERSE))
     {
         sm.alert = ALERT_REVERSE;
     }
@@ -165,9 +182,11 @@ static void getWarnings(void)
 {
     const bool lowGLV = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
     const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
+    const bool imuUncalibrated = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUUNCALIBRATED);
 
     WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
     WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
+    WARNING_INGRESS(WARN_IMU_UNCALIBRATED, imuUncalibrated);
 }
 
 static void determineActiveWarning(void)

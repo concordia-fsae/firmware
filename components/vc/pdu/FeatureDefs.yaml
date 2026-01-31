@@ -5,3 +5,7 @@ defs:
   canrx_swi:
   cantx_swi:
   pump_full_beans:
+  crashsensor_control:
+    requires:
+      - nvm_lib_enabled
+      - app_component_freerunTasks

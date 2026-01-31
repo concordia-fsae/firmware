@@ -89,6 +89,7 @@
 #define RACE_DEBOUNCE_MS    500
 #define LAUNCH_DEBOUNCE_MS  500
 #define REVERSE_DEBOUNCE_MS 500
+#define CRASH_RESET_HOLD_MS 5000
 
 #define SLEEP_TIMEOUT_MS 15*60000
 
@@ -106,13 +107,16 @@ typedef struct
     drv_timer_S run_timer;
     drv_timer_S race_timer;
     drv_timer_S reverse_timer;
+    drv_timer_S crash_reset_timer;
     drv_timer_S launch_timer;
 
     // Latched combo state
     bool run_active;
     bool race_active;
     bool reverse_active;
+    bool crash_reset_active;
     bool launch_active;
+    bool crash_reset_lockout;
 
     struct {
         bool is_set;
@@ -135,6 +139,7 @@ static void driverInput_init(void)
     drv_timer_init(&data.run_timer);
     drv_timer_init(&data.race_timer);
     drv_timer_init(&data.reverse_timer);
+    drv_timer_init(&data.crash_reset_timer);
     drv_timer_init(&data.launch_timer);
 
     for (uint8_t i = 0; i < DRIVERINPUT_REQUEST_COUNT; i++)
@@ -146,7 +151,16 @@ static void driverInput_init(void)
     data.run_active = false;
     data.race_active = false;
     data.reverse_active = false;
+    data.crash_reset_active = false;
     data.launch_active = false;
+    data.crash_reset_lockout = false;
+}
+
+static bool getCrashResetMode(void)
+{
+    CAN_crashSensorState_E crash_state = CAN_CRASHSENSORSTATE_SNA;
+    return (CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state) == CANRX_MESSAGE_VALID) &&
+           (crash_state != CAN_CRASHSENSORSTATE_OK);
 }
 
 static void update_params(const bool tq_inc, const bool tq_dec,
@@ -190,7 +204,9 @@ static void update_combos(const bool pg_next, const bool pg_prev,
                           const bool sl_inc, const bool sl_dec,
                           const bool db_pg_next, const bool db_pg_prev,
                           const bool db_tq_inc, const bool db_tq_dec,
-                          const bool db_sl_inc, const bool db_sl_dec)
+                          const bool db_sl_inc, const bool db_sl_dec,
+                          const bool crash_reset_mode,
+                          const bool crash_reset_lockout)
 {
     const bool run_combo = pg_next && pg_prev;
     const bool race_combo = sl_inc && sl_dec;
@@ -206,6 +222,7 @@ static void update_combos(const bool pg_next, const bool pg_prev,
     const drv_timer_state_E timer_state_run = drv_timer_getState(&data.run_timer);
     const drv_timer_state_E timer_state_race = drv_timer_getState(&data.race_timer);
     const drv_timer_state_E timer_state_reverse = drv_timer_getState(&data.reverse_timer);
+    const drv_timer_state_E timer_state_crash_reset = drv_timer_getState(&data.crash_reset_timer);
     const drv_timer_state_E timer_state_launch = drv_timer_getState(&data.launch_timer);
 
     if (run_stable)
@@ -220,16 +237,35 @@ static void update_combos(const bool pg_next, const bool pg_prev,
         drv_timer_stop(&data.run_timer);
     }
 
-    if (rev_stable)
+    if (crash_reset_mode)
     {
-        if (timer_state_reverse == DRV_TIMER_STOPPED)
+        drv_timer_stop(&data.reverse_timer);
+        if (rev_stable)
         {
-            drv_timer_start(&data.reverse_timer, REVERSE_DEBOUNCE_MS);
+            if (timer_state_crash_reset == DRV_TIMER_STOPPED)
+            {
+                drv_timer_start(&data.crash_reset_timer, CRASH_RESET_HOLD_MS);
+            }
+        }
+        else
+        {
+            drv_timer_stop(&data.crash_reset_timer);
         }
     }
     else
     {
-        drv_timer_stop(&data.reverse_timer);
+        drv_timer_stop(&data.crash_reset_timer);
+        if (rev_stable && !crash_reset_lockout)
+        {
+            if (timer_state_reverse == DRV_TIMER_STOPPED)
+            {
+                drv_timer_start(&data.reverse_timer, REVERSE_DEBOUNCE_MS);
+            }
+        }
+        else
+        {
+            drv_timer_stop(&data.reverse_timer);
+        }
     }
 
     if (race_stable)
@@ -257,7 +293,8 @@ static void update_combos(const bool pg_next, const bool pg_prev,
     }
 
     data.run_active = timer_state_run == DRV_TIMER_EXPIRED;
-    data.reverse_active = timer_state_reverse == DRV_TIMER_EXPIRED;
+    data.reverse_active = (!crash_reset_mode) && (timer_state_reverse == DRV_TIMER_EXPIRED);
+    data.crash_reset_active = crash_reset_mode && (timer_state_crash_reset == DRV_TIMER_EXPIRED);
     data.race_active = timer_state_race == DRV_TIMER_EXPIRED;
     data.launch_active = timer_state_launch == DRV_TIMER_EXPIRED;
 }
@@ -341,6 +378,7 @@ static void driverInput_100Hz(void)
     const bool db_tq_dec  = drv_userInput_buttonInDebounce(BUTTON_TORQUE_DEC);
     const bool db_sl_inc  = drv_userInput_buttonInDebounce(BUTTON_SLIP_INC);
     const bool db_sl_dec  = drv_userInput_buttonInDebounce(BUTTON_SLIP_DEC);
+    const bool combo_buttons_pressed = pg_next || pg_prev || tq_inc || tq_dec || sl_inc || sl_dec;
 
     if (pg_next || pg_prev || tq_inc || tq_dec || sl_inc || sl_dec)
     {
@@ -348,9 +386,11 @@ static void driverInput_100Hz(void)
     }
 
     bool status[DRIVERINPUT_REQUEST_COUNT] = { false };
+    const bool crash_reset_mode = getCrashResetMode();
 
     update_combos(pg_next, pg_prev, tq_inc, tq_dec, sl_inc, sl_dec,
-                  db_pg_next, db_pg_prev, db_tq_inc, db_tq_dec, db_sl_inc, db_sl_dec);
+                  db_pg_next, db_pg_prev, db_tq_inc, db_tq_dec, db_sl_inc, db_sl_dec,
+                  crash_reset_mode, data.crash_reset_lockout);
     update_page_nav(pg_next, pg_prev, db_pg_next, db_pg_prev, (bool*)&status);
     update_params(tq_inc, tq_dec, sl_inc, sl_dec,
                   db_tq_inc, db_tq_dec, db_sl_inc, db_sl_dec,
@@ -358,6 +398,7 @@ static void driverInput_100Hz(void)
 
     // Build status each tick
     status[DRIVERINPUT_REQUEST_REVERSE]        = data.reverse_active;
+    status[DRIVERINPUT_REQUEST_CRASH_RESET]    = data.crash_reset_active;
     status[DRIVERINPUT_REQUEST_RUN]            = data.run_active;
     status[DRIVERINPUT_REQUEST_RACE]           = data.race_active;
     status[DRIVERINPUT_REQUEST_LAUNCH_CONTROL] = data.launch_active;
@@ -367,6 +408,15 @@ static void driverInput_100Hz(void)
     for (uint8_t i = 0; i < DRIVERINPUT_REQUEST_COUNT; i++)
     {
         data.digital[i].is_set = status[i];
+    }
+
+    if (data.crash_reset_active)
+    {
+        data.crash_reset_lockout = true;
+    }
+    if (data.crash_reset_lockout && !combo_buttons_pressed)
+    {
+        data.crash_reset_lockout = false;
     }
 }
 

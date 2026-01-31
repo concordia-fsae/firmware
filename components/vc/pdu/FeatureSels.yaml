@@ -10,9 +10,11 @@ features:
   app_uds: true
   feature_vehicleState_mode: leader
   feature_pump_full_beans: true
+  feature_crashsensor_control: true
   nvm_lib_enabled: true
   nvm_flash_backed: true
   nvm_block_size: 2048
   app_rtos: true
   nvm_task: true
   hw_flash_delay: true
+  app_component_freerunTasks: true

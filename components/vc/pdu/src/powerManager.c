@@ -193,8 +193,10 @@ static void powerManager_periodic_100Hz(void)
     updateDeepSleepState();
     evalAbilities();
 
+#if FEATURE_IS_DISABLED(FEATURE_CRASHSENSOR_CONTROL)
     const drv_io_activeState_E shutdown_en = pm_data.okSafety ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, shutdown_en);
+#endif
 
     // TODO: Improve
     static drv_tps2hb16ab_output_E output = DRV_TPS2HB16AB_OUT_1;
@@ -206,10 +208,13 @@ static void powerManager_periodic_100Hz(void)
             // Handle specific HSDs by sleep state
             const bool requiredLoad = (((i == DRV_TPS2HB16AB_IC_VC1_VC2) && (n == DRV_TPS2HB16AB_OUT_1)) ||
                                        (i == DRV_TPS2HB16AB_IC_VCU1_VCU2));
-            bool enableLoad = pm_data.okLoads || (requiredLoad && pm_data.okBattery);
             const bool isVcuHsd = ((i == DRV_TPS2HB16AB_IC_VCU1_VCU2) ||
                                    ((i == DRV_TPS2HB16AB_IC_MC_VCU3) && (n == DRV_TPS2HB16AB_OUT_2)));
-            if (pm_data.deepSleep && isVcuHsd)
+            const bool isShutdownCircuit = (i == DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN) && (n == DRV_TPS2HB16AB_OUT_2);
+
+            bool enableLoad = pm_data.okLoads || (requiredLoad && pm_data.okBattery);
+
+            if ((pm_data.deepSleep && isVcuHsd) || (isShutdownCircuit && !pm_data.okSafety))
             {
                 enableLoad = false;
             }

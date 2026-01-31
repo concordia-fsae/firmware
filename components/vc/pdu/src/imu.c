@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 #include "imu.h"
+#include "crashSensor.h"
 #include "drv_asm330.h"
 #include "Module.h"
 #include "FreeRTOS.h"
@@ -16,11 +17,14 @@
 #include "app_faultManager.h"
 #include "lib_buffer.h"
 #include "lib_madgwick.h"
+#include "lib_simpleFilter.h"
 #include "app_vehicleState.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
+
+#define IMU_IMPACT_THRESH_MPS (GRAVITY * 4)
 
 #define IMU_WAKE_ACCEL_DELTA_MPS2 0.4f
 #define IMU_WAKE_GYRO_DPS 3.0f
@@ -33,6 +37,19 @@
 
 #define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
 #define DEG_TO_RAD (1 / RAD_TO_DEG)
+
+#define IMU_LPF_CUTOFF_HZ 100.0f
+#define IMU_LPF_DT_S      0.01f
+
+#define IMU_FSM_CRASH_PROGRAM_NUMBER  1U
+#define IMU_FSM_IMPACT_PROGRAM_NUMBER 2U
+#define IMU_FSM_CRASH_PROGRAM_SIZE    12U
+#define IMU_FSM_IMPACT_PROGRAM_SIZE   12U
+#define IMU_FSM_ARM_CYCLES            10U
+
+#define IMU_FSM_BASE_START_ADDR       0x0400U
+#define IMU_FSM_CRASH_START_ADDR      IMU_FSM_BASE_START_ADDR
+#define IMU_FSM_IMPACT_START_ADDR     (IMU_FSM_CRASH_START_ADDR + IMU_FSM_CRASH_PROGRAM_SIZE)
 
 /*
  * Produces a 3x3 rotation matrix R such that:
@@ -113,13 +130,7 @@ drv_asm330_S asm330 = {
     .dev = HW_SPI_DEV_IMU,
     .config = {
         .odr = ASM330LHB_XL_ODR_1667Hz,
-        .scaleA = ASM330LHB_8g,
-        .accelLpfEnabled = true,
-        .gyroLpfEnabled = true,
-        // Accelerator LPF cutoff frequency 83Hz
-        .accelFtype = ASM330LHB_LIGHT,
-        // Gyroscope LPF cutoff frequency 99Hz
-        .gyroFtype = ASM330LHB_STRONG,
+        .scaleA = ASM330LHB_16g,
     },
 };
 
@@ -132,7 +143,14 @@ struct imu_S {
     uint64_t        lastCycle_us;
     lib_madgwick_S  madgwick;
     float32_t       accelNorm;
+    float32_t       accelNormPeak;
     float32_t       angleFromGravity;
+    bool            fsmCrashInitOk;
+    bool            fsmImpactInitOk;
+    bool            fsmCrashEvent;
+    bool            fsmImpactActive;
+    float32_t       impactAccelMax;
+    uint8_t         fsmArmCyclesLeft;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
@@ -142,6 +160,48 @@ static struct
     uint8_t         hitCount;
     bool            hasPrev;
 } imuWake = { 0 };
+
+static struct
+{
+    lib_simpleFilter_lpf_S accelX;
+    lib_simpleFilter_lpf_S accelY;
+    lib_simpleFilter_lpf_S accelZ;
+    lib_simpleFilter_lpf_S gyroX;
+    lib_simpleFilter_lpf_S gyroY;
+    lib_simpleFilter_lpf_S gyroZ;
+    bool accelInit;
+    bool gyroInit;
+} imuLpf = { 0 };
+
+static const uint8_t imuFsmCrashProgram[IMU_FSM_CRASH_PROGRAM_SIZE] = {
+    0x50U, /* CONFIG_A: 1 threshold, 1 mask */
+    0x00U, /* CONFIG_B */
+    0x0CU, /* SIZE */
+    0x00U, /* SETTINGS */
+    0x00U, /* RESET_POINTER */
+    0x00U, /* PROGRAM_POINTER */
+    0x00U, /* THRESH1 (LSB) = 8.0g */
+    0x48U, /* THRESH1 (MSB) */
+    0x03U, /* MASKA: +/-V */
+    0x00U, /* TMASKA */
+    0x05U, /* NOP | GNTH1 */
+    0x22U, /* CONTREL */
+};
+
+static const uint8_t imuFsmImpactProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
+    0x50U, /* CONFIG_A: 1 threshold, 1 mask */
+    0x00U, /* CONFIG_B */
+    0x0CU, /* SIZE */
+    0x00U, /* SETTINGS */
+    0x00U, /* RESET_POINTER */
+    0x00U, /* PROGRAM_POINTER */
+    0x00U, /* THRESH1 (LSB) = 4.0g */
+    0x44U, /* THRESH1 (MSB) */
+    0x03U, /* MASKA: +/-V */
+    0x00U, /* TMASKA */
+    0x05U, /* NOP | GNTH1 */
+    0x22U, /* CONTREL */
+};
 
 const drv_imu_vectorTransform_S rotationToVehicleFrame = {
     .rows = {
@@ -276,6 +336,8 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
 }
 
 static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out);
+static void lpfAccel(drv_imu_accel_S* accel);
+static void lpfGyro(drv_imu_gyro_S* gyro);
 static bool calculateVehicleAngle(void)
 {
     static uint16_t countA = 0;
@@ -347,6 +409,42 @@ static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, d
     taskENTER_CRITICAL();
     LIB_LINALG_CVEC_EQ_CVEC(&rotated, out);
     taskEXIT_CRITICAL();
+}
+
+static void lpfAccel(drv_imu_accel_S* accel)
+{
+    if (imuLpf.accelInit)
+    {
+        imuLpf.accelInit = false;
+        imuLpf.accelX.y = accel->accelX;
+        imuLpf.accelY.y = accel->accelY;
+        imuLpf.accelZ.y = accel->accelZ;
+        lib_madgwick_euler_S initAccel = {
+            .x = accel->accelX,
+            .y = accel->accelY,
+            .z = accel->accelZ,
+        };
+        madgwick_init_quaternion_from_accel(&imu.madgwick, &initAccel);
+    }
+
+    accel->accelX = lib_simpleFilter_lpf_step(&imuLpf.accelX, accel->accelX);
+    accel->accelY = lib_simpleFilter_lpf_step(&imuLpf.accelY, accel->accelY);
+    accel->accelZ = lib_simpleFilter_lpf_step(&imuLpf.accelZ, accel->accelZ);
+}
+
+static void lpfGyro(drv_imu_gyro_S* gyro)
+{
+    if (imuLpf.gyroInit)
+    {
+        imuLpf.gyroInit = false;
+        imuLpf.gyroX.y = gyro->rotX;
+        imuLpf.gyroY.y = gyro->rotY;
+        imuLpf.gyroZ.y = gyro->rotZ;
+    }
+
+    gyro->rotX = lib_simpleFilter_lpf_step(&imuLpf.gyroX, gyro->rotX);
+    gyro->rotY = lib_simpleFilter_lpf_step(&imuLpf.gyroY, gyro->rotY);
+    gyro->rotZ = lib_simpleFilter_lpf_step(&imuLpf.gyroZ, gyro->rotZ);
 }
 
 static void resetWakeDetector(void)
@@ -425,6 +523,7 @@ static void transitionImuState(void)
         case ZEROING:
             if (calculateOffset())
             {
+                lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
                 imu.operatingMode = RUNNING;
             }
             egressFifo();
@@ -455,13 +554,24 @@ static void handleImuSamples(void)
         if (countA)
         {
             LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / countA), &sumA);
-            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
-            LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&imu.accel, &imu.accelNorm);
+            drv_imu_accel_S accel = { 0 };
+            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&accel);
+            LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &imu.accelNormPeak);
+            lpfAccel(&accel);
+            LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &imu.accelNorm);
+            taskENTER_CRITICAL();
+            memcpy(&imu.accel, &accel, sizeof(imu.accel));
+            taskEXIT_CRITICAL();
         }
         if (countG)
         {
             LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / countG), &sumG);
-            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
+            drv_imu_gyro_S gyro = { 0 };
+            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&gyro);
+            lpfGyro(&gyro);
+            taskENTER_CRITICAL();
+            memcpy(&imu.gyro, &gyro, sizeof(imu.gyro));
+            taskEXIT_CRITICAL();
         }
 
         updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&imu.gyro, (drv_imu_euler_S*)&imu.accel);
@@ -525,6 +635,11 @@ float32_t imu_getAccelNorm(void)
     return imu.accelNorm;
 }
 
+float32_t imu_getAccelNormPeak(void)
+{
+    return imu.accelNormPeak;
+}
+
 float32_t imu_getAngleFromGravity(void)
 {
     return imu.angleFromGravity;
@@ -533,6 +648,38 @@ float32_t imu_getAngleFromGravity(void)
 drv_imu_gyro_S* imu_getVehicleAngleRef(void)
 {
     return &imu.vehicleAngle;
+}
+
+bool imu_getCrashEvent(void)
+{
+    bool event = false;
+
+    taskENTER_CRITICAL();
+    event = imu.fsmCrashEvent;
+    imu.fsmCrashEvent = false;
+    taskEXIT_CRITICAL();
+
+    return event;
+}
+
+bool imu_getImpactActive(void)
+{
+    return imu.fsmImpactActive;
+}
+
+float32_t imu_getImpactAccelCurrent(void)
+{
+    return imu.fsmImpactActive ? imu.accelNormPeak : 0.0f;
+}
+
+float32_t imu_getImpactAccelMax(void)
+{
+    return imu.fsmImpactActive ? imu.impactAccelMax : 0.0f;
+}
+
+bool imu_isFaulted(void)
+{
+    return !(imu.fsmCrashInitOk && imu.fsmImpactInitOk);
 }
 
 /**
@@ -544,8 +691,35 @@ static void imu_init()
     drv_timer_init(&imu.imuTimeout);
     madgwick_init(&imu.madgwick, MADGWICK_BETA);
     imu.lastCycle_us = HW_TIM_getBaseTick();
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelX, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelY, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelZ, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroX, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroY, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroZ, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    imuLpf.accelInit = true;
+    imuLpf.gyroInit = true;
 
     imu.operatingMode = INIT_VEHICLEANGLE;
+
+    imu.fsmCrashInitOk = drv_asm330_loadFsmProgram(&asm330,
+                                                   IMU_FSM_CRASH_PROGRAM_NUMBER,
+                                                   IMU_FSM_CRASH_START_ADDR,
+                                                   imuFsmCrashProgram,
+                                                   IMU_FSM_CRASH_PROGRAM_SIZE,
+                                                   ASM330LHB_ODR_FSM_104Hz);
+    imu.fsmImpactInitOk = drv_asm330_loadFsmProgram(&asm330,
+                                                    IMU_FSM_IMPACT_PROGRAM_NUMBER,
+                                                    IMU_FSM_IMPACT_START_ADDR,
+                                                    imuFsmImpactProgram,
+                                                    IMU_FSM_IMPACT_PROGRAM_SIZE,
+                                                    ASM330LHB_ODR_FSM_104Hz);
+    imu.fsmCrashEvent = false;
+    imu.fsmImpactActive = false;
+    imu.impactAccelMax = 0.0f;
+    imu.fsmArmCyclesLeft = IMU_FSM_ARM_CYCLES;
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUFSMINITFAILURE,
+                                   !(imu.fsmCrashInitOk && imu.fsmImpactInitOk));
 }
 
 /**
@@ -554,6 +728,9 @@ static void imu_init()
 static void imu100Hz_PRD(void)
 {
     static bool wasSleeping = false;
+    const bool imuCalibrated = !memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
+
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
 
     if (imu.operatingMode == RUNNING)
     {
@@ -563,9 +740,56 @@ static void imu100Hz_PRD(void)
             const bool imuRan = egressFifo();
             handleImuSamples();
 
+            if (imu.fsmCrashInitOk || imu.fsmImpactInitOk)
+            {
+                if (imu.fsmArmCyclesLeft > 0U)
+                {
+                    imu.fsmArmCyclesLeft--;
+                    (void)drv_asm330_clearFsmStatus(&asm330);
+                }
+                else
+                {
+                    uint8_t statusA = 0U;
+                    if (drv_asm330_getFsmStatus(&asm330, &statusA, NULL))
+                    {
+                        const bool crashEvent = (statusA & (0x01U << (IMU_FSM_CRASH_PROGRAM_NUMBER - 1U))) != 0U;
+                        const bool impactEvent = (statusA & (0x01U << (IMU_FSM_IMPACT_PROGRAM_NUMBER - 1U))) != 0U;
+
+                        if (imu.fsmCrashInitOk && crashEvent)
+                        {
+                            taskENTER_CRITICAL();
+                            imu.fsmCrashEvent = true;
+                            taskEXIT_CRITICAL();
+                        }
+
+                        if (imu.fsmImpactInitOk)
+                        {
+                            if (impactEvent || (imu_getAccelNormPeak() > IMU_IMPACT_THRESH_MPS))
+                            {
+                                if (!imu.fsmImpactActive)
+                                {
+                                    imu.impactAccelMax = imu.accelNormPeak;
+                                }
+                                else if (imu.accelNormPeak > imu.impactAccelMax)
+                                {
+                                    imu.impactAccelMax = imu.accelNormPeak;
+                                }
+                                imu.fsmImpactActive = true;
+                            }
+                            else
+                            {
+                                imu.fsmImpactActive = false;
+                                imu.impactAccelMax = 0.0f;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (imuRan)
             {
                 drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
+                crashSensor_notifyFromImu();
             }
 
             const bool sleeping = app_vehicleState_sleeping();

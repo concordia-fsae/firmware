@@ -7,4 +7,5 @@ signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:
   VCPDU_safetyReset:
+  VCPDU_crashSensorState:
   VCFRONT_gear:

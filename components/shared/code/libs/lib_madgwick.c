@@ -66,6 +66,36 @@ void madgwick_set_quaternion(lib_madgwick_S* f, float q0, float q1, float q2, fl
     quat_normalize(&f->q0, &f->q1, &f->q2, &f->q3);
 }
 
+void madgwick_init_quaternion_from_accel(lib_madgwick_S* f, const lib_madgwick_euler_S* a) {
+    float ax = a->x;
+    float ay = a->y;
+    float az = a->z;
+
+    float a2 = ax*ax + ay*ay + az*az;
+    if (a2 < (EPS * EPS)) {
+        f->q0 = 1.0f; f->q1 = 0.0f; f->q2 = 0.0f; f->q3 = 0.0f;
+        return;
+    }
+
+    float inva = 1.0f / sqrtf(a2);
+    ax *= inva; ay *= inva; az *= inva;
+
+    // Shortest-arc rotation from +Z to measured accel direction.
+    float w = 1.0f + az;
+    float q0, q1, q2, q3;
+    if (w < EPS) {
+        // 180 deg rotation around X (any axis orthogonal to Z is valid).
+        q0 = 0.0f; q1 = 1.0f; q2 = 0.0f; q3 = 0.0f;
+    } else {
+        q0 = w;
+        q1 = -ay;
+        q2 = ax;
+        q3 = 0.0f;
+    }
+    quat_normalize(&q0, &q1, &q2, &q3);
+    f->q0 = q0; f->q1 = q1; f->q2 = q2; f->q3 = q3;
+}
+
 void madgwick_get_euler_rad(const lib_madgwick_S* f, lib_madgwick_euler_S* e) {
     euler_from_quat(f, e);
 }

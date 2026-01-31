@@ -45,7 +45,11 @@ signals:
     sourceBuses: veh
   SWS_requestRun:
     sourceBuses: veh
+  SWS_requestCrashReset:
+    sourceBuses: veh
   VCFRONT_brakePosition:
+    sourceBuses: veh
+  VCFRONT_vehicleSpeed:
     sourceBuses: veh
   SWS_sleepable:
     sourceBuses: veh

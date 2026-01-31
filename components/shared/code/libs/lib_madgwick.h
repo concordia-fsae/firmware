@@ -40,6 +40,11 @@ void madgwick_init(lib_madgwick_S* f, float beta);
 void madgwick_set_quaternion(lib_madgwick_S* f, float q0, float q1, float q2, float q3);
 
 /**
+ * @brief Initialize quaternion from an accelerometer sample (yaw assumed zero).
+ */
+void madgwick_init_quaternion_from_accel(lib_madgwick_S* f, const lib_madgwick_euler_S* a);
+
+/**
  * @brief Get Euler angles (rad) from quaternion.
  */
 void madgwick_get_euler_rad(const lib_madgwick_S* f, lib_madgwick_euler_S* e);

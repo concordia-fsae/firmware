@@ -118,6 +118,12 @@ faultStatus:
   "OK": 0
   "FAULT": 1
 
+crashSensorState:
+  "SNA": 0
+  "OK": 1
+  "CRASHED": 2
+  "ERROR": 3
+
 pedalState:
   SNA: 0
   OK: 1
@@ -237,6 +243,7 @@ screenAlerts:
   FAULT_GLV: 6
   FAULT_EM: 7
   REVERSE: 8
+  CRASH: 9
 
 screenWarnings:
   NONE: 0
@@ -245,3 +252,4 @@ screenWarnings:
   LOW_CELL: 3
   LOW_GLV: 4
   CONTACTS_OPEN_IN_RUN: 5
+  IMU_UNCALIBRATED: 6

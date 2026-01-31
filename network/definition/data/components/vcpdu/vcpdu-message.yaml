@@ -15,6 +15,8 @@ messages:
       imuOverrun:
       imuError:
       imuSna:
+      imuFsmInitFailure:
+      imuUncalibrated:
 
   udsResponse:
     description: UDS response message from the VCPDU
@@ -190,3 +192,36 @@ messages:
       anglePitch:
         template: preciseAngle
 
+  crashSensor:
+    description: VCPDU crash sensor status
+    id: 0x3f2
+    cycleTimeMs: 10
+    sourceBuses: veh
+    signals:
+      crashSensorState:
+      crashSensorAccelMax:
+        template: imuLinearAcceleration16g
+      crashSensorAccelTripped:
+        template: imuLinearAcceleration16g
+      crashSensorImpactActive:
+        template: digitalStatus
+      crashSensorImpactAccelMax:
+        template: imuLinearAcceleration16g
+      crashSensorImpactAccelCurrent:
+        template: imuLinearAcceleration16g
+
+  imuAccelNorm:
+    description: VCPDU IMU accel norm
+    id: 0x3f3
+    cycleTimeMs: 10
+    signals:
+      accelNorm:
+        template: imuLinearAcceleration16gPos
+      accelNormPeak:
+        template: imuLinearAcceleration16gPos
+
+  nvmInformation:
+    description: Information relating to the NVM manager
+    id: 0x7fb
+    sourceBuses: veh
+    template: nvmInformation
