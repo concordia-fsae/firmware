@@ -219,3 +219,9 @@ messages:
         template: imuLinearAcceleration16gPos
       accelNormPeak:
         template: imuLinearAcceleration16gPos
+
+  nvmInformation:
+    description: Information relating to the NVM manager
+    id: 0x7fb
+    sourceBuses: veh
+    template: nvmInformation

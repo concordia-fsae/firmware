@@ -26,6 +26,7 @@
 #include "app_faultManager.h"
 #include "imu.h"
 #include "crashSensor.h"
+#include "lib_nvm.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -125,5 +126,17 @@
 #define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)
 #define set_angleRoll(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotY)
 #define set_anglePitch(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotX)
+
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+# define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
+# define set_nvmRecordWrites(m, b, n, s)            set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())
+# define set_nvmBlockErases(m, b, n, s)             set(m, b, n, s, (uint8_t)lib_nvm_getTotalBlockErases())
+# define set_nvmFailedCrc(m, b, n, s)               set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedCrc())
+# define set_nvmRecordFailedInit(m, b, n, s)        set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedRecordInit())
+# define set_nvmRecordEmptyInit(m, b, n, s)         set(m, b, n, s, (uint8_t)lib_nvm_getTotalEmptyRecordInit())
+# define set_nvmRecordsVersionFailed(m, b, n, s)    set(m, b, n, s, (uint8_t)lib_nvm_getTotalRecordsVersionFailed())
+#else
+# define transmit_VCPDU_nvmInformation               false
+#endif
 
 #include "TemporaryStubbing.h"
