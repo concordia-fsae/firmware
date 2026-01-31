@@ -143,7 +143,8 @@ static void evalAbilities(void)
     pm_data.charged = charged;
     pm_data.okBattery = okBattery && !overvoltage;
     pm_data.okLoads = okLoads && !pm_data.sleeping && !overvoltage && charged;
-    pm_data.okSafety = okSafety && !pm_data.sleeping && !overvoltage && charged;
+    const bool motorControllerTimeout = SYS_SFT_checkMCTimeout();
+    pm_data.okSafety = okSafety && !pm_data.sleeping && !overvoltage && charged && !motorControllerTimeout;
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_LOWVOLTAGE, lowBattery);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_OVERVOLTAGE, overvoltage);
