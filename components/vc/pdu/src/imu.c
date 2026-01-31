@@ -517,6 +517,7 @@ static void transitionImuState(void)
         case ZEROING:
             if (calculateOffset())
             {
+                lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
                 imu.operatingMode = RUNNING;
             }
             egressFifo();
@@ -721,6 +722,9 @@ static void imu_init()
 static void imu100Hz_PRD(void)
 {
     static bool wasSleeping = false;
+    const bool imuCalibrated = !memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
+
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
 
     if (imu.operatingMode == RUNNING)
     {

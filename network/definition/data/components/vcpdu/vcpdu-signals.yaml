@@ -39,6 +39,10 @@ signals:
     description: VCPDU IMU is not available
     discreteValues: faultStatus
 
+  imuUncalibrated:
+    description: IMU is uncalibrated
+    discreteValues: faultStatus
+
   crashSensorState:
     description: Crash sensor state
     discreteValues: crashSensorState

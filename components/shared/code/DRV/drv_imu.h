@@ -55,6 +55,7 @@ typedef struct
     drv_imu_vectorTransform_S rotation;
 } LIB_NVM_STORAGE(nvm_imuCalibration_S);
 extern nvm_imuCalibration_S imuCalibration_data;
+extern const nvm_imuCalibration_S imuCalibration_default;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

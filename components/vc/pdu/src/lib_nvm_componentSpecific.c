@@ -28,10 +28,16 @@ extern lib_nvm_nvmCycleLog_S cycleLog;
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-static const nvm_imuCalibration_S imuCalibration_default = {
+const nvm_imuCalibration_S imuCalibration_default = {
     .zeroAccel = { { 0.0f } },
     .zeroGyro  = { { 0.0f } },
-    .rotation  = { { { 0.0f } } },
+    .rotation  = {
+        {
+            { 1.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f },
+            { 0.0f, 0.0f, 1.0f },
+        }
+    },
 };
 LIB_NVM_MEMORY_REGION(nvm_imuCalibration_S imuCalibration_data) = { 0U };
 static const nvm_crashState_S crashState_default = {
