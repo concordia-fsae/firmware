@@ -63,8 +63,8 @@ signals:
       resolution: 0.001
       bitWidth: 16
       range:
-        min: -250
-        max: 250
+        min: -32
+        max: 32
       signedness: signed
     continuous: true
   imuRotationalAcceleration:
@@ -93,8 +93,8 @@ signals:
       resolution: 0.001
       bitWidth: 16
       range:
-        min: -250
-        max: 250
+        min: -32
+        max: 32
       signedness: signed
       endianness: big
     continuous: true

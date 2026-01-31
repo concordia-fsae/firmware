@@ -33,6 +33,9 @@ defs:
     requires:
       - app_validation_enabled
   rtos:
+  component_freerunTasks:
+    requires:
+      - app_rtos
   10kHz_task:
     requires:
       - app_rtos

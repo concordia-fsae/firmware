@@ -156,6 +156,20 @@ RTOS_taskDesc_t FreerunTasks[] = {
 #endif
 };
 
+#if FEATURE_IS_ENABLED(APP_COMPONENT_FREERUNTASKS)
+/**
+ * @brief Optional component-provided freerun tasks
+ * @param tasks pointer to list of tasks
+ * @return count of tasks in list
+ */
+#pragma weak RTOS_getComponentFreerunTasks
+uint16_t RTOS_getComponentFreerunTasks(RTOS_taskDesc_t** tasks)
+{
+    *tasks = NULL;
+    return 0U;
+}
+#endif
+
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -311,6 +325,21 @@ void RTOS_createResources(void)
                                             task->stack,
                                             task->stateBuffer);
     }
+#if FEATURE_IS_ENABLED(APP_COMPONENT_FREERUNTASKS)
+    RTOS_taskDesc_t* componentTasks = NULL;
+    const uint16_t componentTaskCount = RTOS_getComponentFreerunTasks(&componentTasks);
+    for (uint16_t i = 0U; i < componentTaskCount; i++)
+    {
+        RTOS_taskDesc_t* const task = &componentTasks[i];
+        task->handle = xTaskCreateStatic(&freerunTaskFxn,
+                                         task->name,
+                                         task->stackSize,
+                                         task,
+                                         task->priority,
+                                         task->stack,
+                                         task->stateBuffer);
+    }
+#endif
 
     /*
      * Create timers

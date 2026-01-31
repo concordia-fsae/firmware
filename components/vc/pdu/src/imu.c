@@ -32,6 +32,7 @@
 #define MADGWICK_BETA 0.1f
 
 #define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
+#define DEG_TO_RAD (1 / RAD_TO_DEG)
 
 /*
  * Produces a 3x3 rotation matrix R such that:
@@ -130,6 +131,8 @@ struct imu_S {
     operatingMode_E operatingMode;
     uint64_t        lastCycle_us;
     lib_madgwick_S  madgwick;
+    float32_t       accelNorm;
+    float32_t       angleFromGravity;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
@@ -453,6 +456,7 @@ static void handleImuSamples(void)
         {
             LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / countA), &sumA);
             correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
+            LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&imu.accel, &imu.accelNorm);
         }
         if (countG)
         {
@@ -465,6 +469,19 @@ static void handleImuSamples(void)
         taskENTER_CRITICAL();
         madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
         taskEXIT_CRITICAL();
+
+        const float32_t rollRad = imu.vehicleAngle.rotX * DEG_TO_RAD;
+        const float32_t pitchRad = imu.vehicleAngle.rotY * DEG_TO_RAD;
+        float32_t cosTheta = cosf(rollRad) * cosf(pitchRad);
+        if (cosTheta > 1.0f)
+        {
+            cosTheta = 1.0f;
+        }
+        else if (cosTheta < -1.0f)
+        {
+            cosTheta = -1.0f;
+        }
+        imu.angleFromGravity = acosf(cosTheta) * RAD_TO_DEG;
     }
 }
 
@@ -501,6 +518,16 @@ void imu_getVehicleAngle(drv_imu_gyro_S* gyro)
     taskENTER_CRITICAL();
     memcpy(gyro, &imu.vehicleAngle, sizeof(*gyro));
     taskEXIT_CRITICAL();
+}
+
+float32_t imu_getAccelNorm(void)
+{
+    return imu.accelNorm;
+}
+
+float32_t imu_getAngleFromGravity(void)
+{
+    return imu.angleFromGravity;
 }
 
 drv_imu_gyro_S* imu_getVehicleAngleRef(void)
