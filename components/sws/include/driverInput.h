@@ -18,7 +18,8 @@
 
 typedef enum
 {
-    DRIVERINPUT_REQUEST_RUN = 0x00U,
+    DRIVERINPUT_REQUEST_NONE = 0x00U,
+    DRIVERINPUT_REQUEST_RUN,
     DRIVERINPUT_REQUEST_REVERSE,
     DRIVERINPUT_REQUEST_CRASH_RESET,
     DRIVERINPUT_REQUEST_RACE,
@@ -31,7 +32,9 @@ typedef enum
     DRIVERINPUT_REQUEST_LAUNCH_CONTROL,
     DRIVERINPUT_REQUEST_PRELOAD_TORQUE_DEC,
     DRIVERINPUT_REQUEST_PRELOAD_TORQUE_INC,
-    DRIVERINPUT_REQUEST_COUNT
+    DRIVERINPUT_REQUEST_CALIBRATE_IMU,
+    DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+    DRIVERINPUT_REQUEST_COUNT,
 } driverInput_inputDigital_E;
 
 typedef enum
@@ -44,10 +47,17 @@ typedef enum
     DRIVERINPUT_PAGE_LAUNCH,
 } driverInput_page_E;
 
+typedef enum
+{
+    DRIVERINPUT_CONFIG_NONE = 0x00U,
+    DRIVERINPUT_CONFIG_CALIB_DYNAMICS,
+    DRIVERINPUT_CONFIG_COUNT,
+} driverInput_configSelection_E;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool             driverInput_getDigital(driverInput_inputDigital_E input);
-CAN_screenPage_E driverInput_getScreenCAN(void);
+bool                  driverInput_getDigital(driverInput_inputDigital_E input);
+CAN_screenPage_E      driverInput_getScreenCAN(void);
+CAN_configSelection_E driverInput_getConfigSelectedCAN(void);

@@ -254,3 +254,7 @@ screenWarnings:
   LOW_GLV: 4
   CONTACTS_OPEN_IN_RUN: 5
   IMU_UNCALIBRATED: 6
+
+configSelection:
+  NONE: 0
+  CALIB_DYNAMICS: 1
