@@ -736,7 +736,7 @@ static void imu100Hz_PRD(void)
 {
     CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
     static bool wasSleeping = false;
-    const bool imuCalibrated = !memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
+    const bool imuCalibrated = memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
     const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
                            (tmp == CAN_DIGITALSTATUS_ON);
 
