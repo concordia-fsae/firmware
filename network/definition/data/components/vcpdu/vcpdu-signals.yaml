@@ -43,6 +43,10 @@ signals:
     description: IMU is uncalibrated
     discreteValues: faultStatus
 
+  imuInvalid:
+    description: IMU data is not reliable
+    discreteValues: faultStatus
+
   crashSensorState:
     description: Crash sensor state
     discreteValues: crashSensorState

@@ -810,13 +810,17 @@ static void imu100Hz_PRD(void)
             }
             wasSleeping = sleeping;
 
+            const bool imuTimeout = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED;
+            const bool imuNotStarted = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_STOPPED;
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
-            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, imuTimeout);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, imuTimeout || imuNotStarted || !imuCalibrated);
         }
         else
         {
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, true);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, true);
         }
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, false);
     }
@@ -826,6 +830,7 @@ static void imu100Hz_PRD(void)
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, false);
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, true);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, true);
     }
 }
 
