@@ -79,6 +79,8 @@
 #define set_requestTractionControl(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC)                 ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestPreloadTorqueInc(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_PRELOAD_TORQUE_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestPreloadTorqueDec(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_PRELOAD_TORQUE_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestSlipInc(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_INC)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestSlipDec(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_DEC)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m,b,n,s) set(m,b,n,s, driverInput_getScreenCAN())
 

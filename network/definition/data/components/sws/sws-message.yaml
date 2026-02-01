@@ -57,6 +57,8 @@ messages:
       requestPreloadTorqueInc:
       requestPreloadTorqueDec:
       requestCrashReset:
+      requestSlipInc:
+      requestSlipDec:
       validatorRequest:
         template: criticalDataChecksum
 

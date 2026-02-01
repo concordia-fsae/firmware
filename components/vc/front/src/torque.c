@@ -57,6 +57,11 @@
 #define TC_ILIM 0.55f
 #define TC_VEHICLESPEED_THRESHOLD_MPS VEHICLE_STOPPED_THRESHOLD
 
+#define ABSOLUTE_MIN_SLIP 0.05f
+#define ABSOLUTE_MAX_SLIP 0.30f
+#define SLIP_TARGET_STEP 0.01f
+#define SLIP_CHANGE_DELAY 250
+
 #define PEDAL_SLEEP_THRESHOLD 0.02f
 #define SLEEP_TIMEOUT_MS 15*60000
 
@@ -76,6 +81,7 @@ static struct
     float32_t              torquePreload;
     float32_t              torqueDriverInput;
     float32_t              torque_request_max;
+    float32_t              slip_request;
     lib_rateLimit_linear_S torqueRateLimit;
     lib_rateLimit_linear_S launchRateLimit;
     lib_rateLimit_linear_S preloadRateLimit;
@@ -87,6 +93,7 @@ static struct
     drv_timer_S torque_change_timer;
     drv_timer_S launch_control_timer;
     drv_timer_S preloadChangeTimer;
+    drv_timer_S slip_change_timer;
 
     torque_launchControlState_E launchControlState;
     torque_tractionControlState_E tractionControlState;
@@ -333,7 +340,7 @@ static float32_t evaluate_traction_control(void)
 
     if (torque_data.tractionControlState == TC_STATE_ACTIVE)
     {
-        multiplier = calc_traction_control_reduction(TC_TARGET_SLIP, slip, dt);
+        multiplier = calc_traction_control_reduction(torque_data.slip_request, slip, dt);
     }
     else
     {
@@ -342,6 +349,41 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.slipRear = slip;
     return multiplier;
+}
+
+static void evaluate_slip_request(void)
+{
+    float32_t slip_request = torque_data.slip_request;
+    CAN_digitalStatus_E slip_change_request = CAN_DIGITALSTATUS_SNA;
+    const bool slip_inc_active = (CANRX_get_signal(VEH, SWS_requestSlipInc, &slip_change_request) != CANRX_MESSAGE_SNA) &&
+                                 (slip_change_request == CAN_DIGITALSTATUS_ON);
+    const bool slip_dec_active = (CANRX_get_signal(VEH, SWS_requestSlipDec, &slip_change_request) != CANRX_MESSAGE_SNA) &&
+                                 (slip_change_request == CAN_DIGITALSTATUS_ON);
+
+    if (slip_inc_active ^ slip_dec_active)
+    {
+        const drv_timer_state_E timer_state = drv_timer_getState(&torque_data.slip_change_timer);
+        if (timer_state == DRV_TIMER_STOPPED)
+        {
+            drv_timer_start(&torque_data.slip_change_timer, SLIP_CHANGE_DELAY);
+
+            slip_request = slip_inc_active
+                ? (slip_request + SLIP_TARGET_STEP)
+                : (slip_request - SLIP_TARGET_STEP);
+
+            slip_request = SATURATE(ABSOLUTE_MIN_SLIP, slip_request, ABSOLUTE_MAX_SLIP);
+            torque_data.slip_request = slip_request;
+        }
+        else if (timer_state == DRV_TIMER_EXPIRED)
+        {
+            drv_timer_stop(&torque_data.slip_change_timer);
+        }
+    }
+    else
+    {
+        drv_timer_stop(&torque_data.slip_change_timer);
+    }
+
 }
 
 static void evaluate_sleepable(float32_t accelerator_position, float32_t brake_position)
@@ -383,7 +425,7 @@ static void evaluate_preload_torque(void)
 }
 
 /******************************************************************************
- *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
 /**
@@ -434,6 +476,11 @@ torque_state_E torque_getState(void)
 float32_t torque_getSlipRaw(void)
 {
     return torque_data.slipRear;
+}
+
+float32_t torque_getSlipTarget(void)
+{
+    return torque_data.slip_request;
 }
 
 float32_t torque_getSlipErrorP(void)
@@ -641,6 +688,7 @@ static void torque_init(void)
     drv_timer_init(&torque_data.torque_change_timer);
     drv_timer_init(&torque_data.launch_control_timer);
     drv_timer_init(&torque_data.preloadChangeTimer);
+    drv_timer_init(&torque_data.slip_change_timer);
 
     torque_data.state = TORQUE_INACTIVE;
     torque_data.torque_request_max = DEFAULT_BOOT_TORQUE;
@@ -648,6 +696,7 @@ static void torque_init(void)
     torque_data.launchControlState   = LC_STATE_INACTIVE;
     torque_data.tractionControlState = TC_STATE_INACTIVE;
 
+    torque_data.slip_request                 = TC_TARGET_SLIP;
     torque_data.torqueRateLimit.y_n          = 0.0f;
     torque_data.torqueRateLimit.maxStepDelta = MAX_TORQUE_NM_PER_S / 100;
     torque_data.launchRateLimit.y_n          = 0.0f;
@@ -670,11 +719,13 @@ static void torque_periodic_100Hz(void)
 
     const bool gear_change = evaluate_gear_change(accelerator_position, brake_position);
     const bool mode_change = evaluate_mode_change(brake_position);
+    evaluate_slip_request();
+    evaluate_preload_torque();
+
     evaluate_launch_control(accelerator_position, brake_position);
     torque_data.torqueReduction = evaluate_traction_control();
 
     float32_t torque_request_max = evaluate_torque_max();
-    evaluate_preload_torque();
 
     if (torque_data.race_mode != RACEMODE_ENABLED)
     {
