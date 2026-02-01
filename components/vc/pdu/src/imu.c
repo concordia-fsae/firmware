@@ -151,6 +151,7 @@ struct imu_S {
     bool            fsmImpactActive;
     float32_t       impactAccelMax;
     uint8_t         fsmArmCyclesLeft;
+    bool            calibrating;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
@@ -525,6 +526,7 @@ static void transitionImuState(void)
             {
                 lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
                 imu.operatingMode = RUNNING;
+                imu.calibrating = false;
             }
             egressFifo();
             break;
@@ -682,6 +684,11 @@ bool imu_isFaulted(void)
     return !(imu.fsmCrashInitOk && imu.fsmImpactInitOk);
 }
 
+bool imu_isCalibrating(void)
+{
+    return imu.calibrating;
+}
+
 /**
  * @brief  imu Module Init function
  */
@@ -727,13 +734,35 @@ static void imu_init()
  */
 static void imu100Hz_PRD(void)
 {
+    CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
     static bool wasSleeping = false;
     const bool imuCalibrated = !memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
+    const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
+                           (tmp == CAN_DIGITALSTATUS_ON);
+
+    if (calibrate)
+    {
+        lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
+        imu.operatingMode = INIT;
+        imu.calibrating = true;
+    }
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
 
     if (imu.operatingMode == RUNNING)
     {
+        CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
+        const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
+                               (tmp == CAN_DIGITALSTATUS_ON);
+
+        if (calibrate)
+        {
+            lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
+            imu.operatingMode = INIT;
+            imu.calibrating = true;
+            return;
+        }
+
         if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
         {
             const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
