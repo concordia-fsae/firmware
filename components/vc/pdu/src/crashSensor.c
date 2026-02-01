@@ -19,6 +19,7 @@
 #include "MessageUnpack_generated.h"
 #include <string.h>
 #include "app_vehicleState.h"
+#include "drv_timer.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -35,6 +36,7 @@
 #define TASK_WAIT_DURATION_MS (15)
 #define IMU_TIMEOUT_DURATION  (50)
 #define CRASH_THRESH_MISSED_CYCLES (IMU_TIMEOUT_DURATION / TASK_WAIT_DURATION_MS)
+#define IMU_CALIBRATION_TIMEOUT_DURATION  (1000)
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -46,6 +48,7 @@ static struct
     float32_t accelMax;
     float32_t accelTripped;
     uint8_t   missedCycles;
+    drv_timer_S calibrationTimer;
 } cs;
 
 static TaskHandle_t crashSensorTaskHandle = NULL;
@@ -109,6 +112,8 @@ void crashSensor_task(void)
 
     crashSensorTaskHandle = xTaskGetCurrentTaskHandle();
 
+    drv_timer_init(&cs.calibrationTimer);
+
     if (crashState_data.crashLatched)
     {
         cs.sensorState = CRASHSENSOR_CRASHED;
@@ -142,6 +147,7 @@ void crashSensor_task(void)
             const bool crashEvent = imu_getCrashEvent();
             cs.missedCycles = 0;
 
+            drv_timer_stop(&cs.calibrationTimer);
             if (cs.sensorState == CRASHSENSOR_OK)
             {
                 if (crashEvent)

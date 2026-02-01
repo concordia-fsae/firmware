@@ -207,7 +207,8 @@ screenPage:
   "HOME": 1
   "BUTTONS": 2
   "DATA": 3
-  "LAUNCH": 4
+  "CONFIG": 4
+  "LAUNCH": 5
 
 launchControlState:
   SNA: 0
@@ -253,3 +254,7 @@ screenWarnings:
   LOW_GLV: 4
   CONTACTS_OPEN_IN_RUN: 5
   IMU_UNCALIBRATED: 6
+
+configSelection:
+  NONE: 0
+  CALIB_DYNAMICS: 1

@@ -88,8 +88,17 @@ static void steeringAngle_init(void)
 static void steeringAngle_periodic_10Hz(void)
 {
     bool faulted = false;
+    CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
+    const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibSteerAngle, &tmp) == CANRX_MESSAGE_VALID) &&
+                           (tmp == CAN_DIGITALSTATUS_ON);
 
     steeringAngle_data.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_STR_ANGLE);
+
+    if (calibrate)
+    {
+        steeringCalibration_data.zero = steeringAngle_data.voltage;
+        lib_nvm_requestWrite(NVM_ENTRYID_STEERINGCALIBRATION);
+    }
 
     if ((steeringAngle_data.voltage < OC_SC_V_MARGIN) ||
         (steeringAngle_data.voltage > (MAX_SENSOR_VOLTAGE - OC_SC_V_MARGIN)))

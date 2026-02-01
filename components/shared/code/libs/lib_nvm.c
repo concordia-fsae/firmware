@@ -506,6 +506,12 @@ bool lib_nvm_writeRequired(lib_nvm_entry_t entryId)
     return records[entryId].writeRequired;
 }
 
+bool lib_nvm_clearEntry(lib_nvm_entry_t entryId)
+{
+    recordPopulateDefault(entryId);
+    return lib_nvm_requestWrite(entryId);
+}
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/

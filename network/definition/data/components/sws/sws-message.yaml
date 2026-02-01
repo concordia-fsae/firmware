@@ -59,6 +59,8 @@ messages:
       requestCrashReset:
       requestSlipInc:
       requestSlipDec:
+      requestCalibImu:
+      requestCalibSteerAngle:
       validatorRequest:
         template: criticalDataChecksum
 
@@ -72,5 +74,16 @@ messages:
     id: 0x5e0
     cycleTimeMs: 200
     signals:
+      #T TODO: Statically define signal positions
       screenAlert:
       screenWarning:
+
+  configManager:
+    description: SWS configuration manager
+    id: 0x5f0
+    cycleTimeMs: 100
+    signals:
+      driverConfigSelection:
+        startBit: 0
+      displayValue:
+        startBit: 32

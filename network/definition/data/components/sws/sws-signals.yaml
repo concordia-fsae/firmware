@@ -91,6 +91,12 @@ signals:
   requestSlipDec:
     description: Status of slip decrease request
     discreteValues: digitalStatus
+  requestCalibImu:
+    description: Request IMU calibration
+    discreteValues: digitalStatus
+  requestCalibSteerAngle:
+    description: Request calibration of the steering angle sensor
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested
@@ -101,3 +107,11 @@ signals:
   screenWarning:
     description: Warning to show the driver
     discreteValues: screenWarnings
+  driverConfigSelection:
+    description: Current selected config value
+    discreteValues: configSelection
+  displayValue:
+    description: Value to display on the screen config page
+    nativeRepresentation:
+      bitWidth: 32
+      resolution: 0.001

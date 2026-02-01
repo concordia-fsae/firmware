@@ -85,6 +85,7 @@
 #define TOGGLE_REGEN USERINPUT_BUTTON_RIGHT_TOGGLE
 
 #define NAV_DEBOUNCE_MS     250
+#define CONFIG_DEBOUNCE_MS  500
 #define RUN_DEBOUNCE_MS     250
 #define RACE_DEBOUNCE_MS    500
 #define LAUNCH_DEBOUNCE_MS  500
@@ -100,10 +101,12 @@
 typedef struct
 {
     driverInput_page_E page;
+    driverInput_configSelection_E config;
     bool page_lockout;
 
     // Timers
     drv_timer_S nav_timer;
+    drv_timer_S config_timer;
     drv_timer_S run_timer;
     drv_timer_S race_timer;
     drv_timer_S reverse_timer;
@@ -123,11 +126,25 @@ typedef struct
     } digital[DRIVERINPUT_REQUEST_COUNT];
 } data_S;
 
+typedef struct
+{
+    driverInput_inputDigital_E requestDec;
+    driverInput_inputDigital_E requestInc;
+} configAction_S;
+
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
 static data_S data;
+
+static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
+    [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] = {
+        .requestDec = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
+        .requestInc = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+    },
+};
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -136,6 +153,7 @@ static data_S data;
 static void driverInput_init(void)
 {
     drv_timer_init(&data.nav_timer);
+    drv_timer_init(&data.config_timer);
     drv_timer_init(&data.run_timer);
     drv_timer_init(&data.race_timer);
     drv_timer_init(&data.reverse_timer);
@@ -148,6 +166,7 @@ static void driverInput_init(void)
     }
 
     data.page = DRIVERINPUT_PAGE_HOME;
+    data.config = DRIVERINPUT_CONFIG_NONE + 1U;
     data.run_active = false;
     data.race_active = false;
     data.reverse_active = false;
@@ -167,7 +186,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
                           const bool sl_inc, const bool sl_dec,
                           const bool db_tq_inc, const bool db_tq_dec,
                           const bool db_sl_inc, const bool db_sl_dec,
-                          bool status[DRIVERINPUT_REQUEST_TORQUE_INC])
+                          bool status[DRIVERINPUT_REQUEST_COUNT])
 {
     // Axis mutual exclusion (within-axis), but defer assertion while related buttons are debouncing
     const bool axis_any_db = db_tq_inc || db_tq_dec || db_sl_inc || db_sl_dec;
@@ -177,11 +196,25 @@ static void update_params(const bool tq_inc, const bool tq_dec,
     {
         if (tq_inc && !tq_dec)
         {
-            status[DRIVERINPUT_REQUEST_TORQUE_INC] = true;
+            if (data.page != DRIVERINPUT_PAGE_CONFIG)
+            {
+                status[DRIVERINPUT_REQUEST_TORQUE_INC] = true;
+            }
+            else
+            {
+                status[configActions[data.config].requestInc] = true;
+            }
         }
         else if (tq_dec && !tq_inc)
         {
-            status[DRIVERINPUT_REQUEST_TORQUE_DEC] = true;
+            if (data.page != DRIVERINPUT_PAGE_CONFIG)
+            {
+                status[DRIVERINPUT_REQUEST_TORQUE_DEC] = true;
+            }
+            else
+            {
+                status[configActions[data.config].requestDec] = true;
+            }
         }
     }
 
@@ -196,6 +229,25 @@ static void update_params(const bool tq_inc, const bool tq_dec,
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_DEC] = true;
         }
+
+        if (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING)
+        {
+            // initial step immediately
+            if (sl_dec && (data.config > (DRIVERINPUT_CONFIG_NONE + 1)))
+            {
+                data.config = (driverInput_configSelection_E)(data.config - 1);
+            }
+            else if (sl_inc && data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1))
+            {
+                data.config = (driverInput_configSelection_E)(data.config + 1);
+            }
+
+            drv_timer_start(&data.config_timer, CONFIG_DEBOUNCE_MS);
+        }
+    }
+    else
+    {
+        drv_timer_stop(&data.config_timer);
     }
 }
 
@@ -456,6 +508,9 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
             case DRIVERINPUT_PAGE_DATA:
                 page = CAN_SCREENPAGE_DATA;
                 break;
+            case DRIVERINPUT_PAGE_CONFIG:
+                page = CAN_SCREENPAGE_CONFIG;
+                break;
             case DRIVERINPUT_PAGE_LAUNCH:
                 page = CAN_SCREENPAGE_LAUNCH;
                 break;
@@ -465,4 +520,23 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
     }
 
     return page;
+}
+
+CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
+{
+    CAN_configSelection_E config = CAN_CONFIGSELECTION_NONE;
+
+    if (data.page != DRIVERINPUT_PAGE_CONFIG)
+    {
+        switch (data.config)
+        {
+            case DRIVERINPUT_CONFIG_CALIB_DYNAMICS:
+                config = CAN_CONFIGSELECTION_CALIB_DYNAMICS;
+                break;
+            default:
+                break;
+        }
+    }
+
+    return config;
 }

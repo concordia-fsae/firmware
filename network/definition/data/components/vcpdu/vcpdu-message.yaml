@@ -17,6 +17,7 @@ messages:
       imuSna:
       imuFsmInitFailure:
       imuUncalibrated:
+      imuInvalid:
 
   udsResponse:
     description: UDS response message from the VCPDU
