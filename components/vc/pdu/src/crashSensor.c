@@ -182,34 +182,19 @@ void crashSensor_task(void)
         }
         else
         {
-            if (!imu_isCalibrating())
+            if (cs.missedCycles < CRASH_THRESH_MISSED_CYCLES)
             {
-                if (cs.missedCycles < CRASH_THRESH_MISSED_CYCLES)
-                {
-                    cs.missedCycles++;
-                }
-                else
-                {
-                    cs.sensorState = CRASHSENSOR_ERROR;
-                }
+                cs.missedCycles++;
             }
             else
             {
-                const drv_timer_state_E state = drv_timer_getState(&cs.calibrationTimer);
-                if (state == DRV_TIMER_STOPPED)
-                {
-                    drv_timer_start(&cs.calibrationTimer, IMU_CALIBRATION_TIMEOUT_DURATION);
-                }
-                else if (state == DRV_TIMER_EXPIRED)
-                {
-                    cs.sensorState = CRASHSENSOR_ERROR;
-                }
+                cs.sensorState = CRASHSENSOR_ERROR;
             }
         }
 
 #if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR_CONTROL)
         const drv_io_activeState_E safetyState = cs.sensorState == CRASHSENSOR_OK ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, safetyState && !imu_isCalibrating());
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, safetyState);
 #endif
     }
 }

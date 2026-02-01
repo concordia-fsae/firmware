@@ -599,6 +599,60 @@ static void handleImuSamples(void)
     }
 }
 
+static bool getImuAlertStatus(void)
+{
+    bool ret = false;
+
+    if (imu.fsmCrashInitOk || imu.fsmImpactInitOk)
+    {
+        if (imu.fsmArmCyclesLeft > 0U)
+        {
+            imu.fsmArmCyclesLeft--;
+            (void)drv_asm330_clearFsmStatus(&asm330);
+        }
+        else
+        {
+            uint8_t statusA = 0U;
+            if (drv_asm330_getFsmStatus(&asm330, &statusA, NULL))
+            {
+                const bool crashEvent = (statusA & (0x01U << (IMU_FSM_CRASH_PROGRAM_NUMBER - 1U))) != 0U;
+                const bool impactEvent = (statusA & (0x01U << (IMU_FSM_IMPACT_PROGRAM_NUMBER - 1U))) != 0U;
+                ret = true;
+
+                if (imu.fsmCrashInitOk && crashEvent)
+                {
+                    taskENTER_CRITICAL();
+                    imu.fsmCrashEvent = true;
+                    taskEXIT_CRITICAL();
+                }
+
+                if (imu.fsmImpactInitOk)
+                {
+                    if (impactEvent || (imu_getAccelNormPeak() > IMU_IMPACT_THRESH_MPS))
+                    {
+                        if (!imu.fsmImpactActive)
+                        {
+                            imu.impactAccelMax = imu.accelNormPeak;
+                        }
+                        else if (imu.accelNormPeak > imu.impactAccelMax)
+                        {
+                            imu.impactAccelMax = imu.accelNormPeak;
+                        }
+                        imu.fsmImpactActive = true;
+                    }
+                    else
+                    {
+                        imu.fsmImpactActive = false;
+                        imu.impactAccelMax = 0.0f;
+                    }
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -739,9 +793,15 @@ static void imu100Hz_PRD(void)
     static bool wasSleeping = false;
     const bool imuCalibrated = memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
     const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
+    const bool gotAlerts = getImuAlertStatus();
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
+
+    if (gotAlerts)
+    {
+        crashSensor_notifyFromImu();
+    }
 
     if (imu.operatingMode == RUNNING)
     {
@@ -754,64 +814,15 @@ static void imu100Hz_PRD(void)
             lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
             imu.operatingMode = INIT;
             imu.calibrating = true;
-            return;
         }
-
-        if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
+        else if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
         {
             const bool imuRan = egressFifo();
             handleImuSamples();
 
-            if (imu.fsmCrashInitOk || imu.fsmImpactInitOk)
-            {
-                if (imu.fsmArmCyclesLeft > 0U)
-                {
-                    imu.fsmArmCyclesLeft--;
-                    (void)drv_asm330_clearFsmStatus(&asm330);
-                }
-                else
-                {
-                    uint8_t statusA = 0U;
-                    if (drv_asm330_getFsmStatus(&asm330, &statusA, NULL))
-                    {
-                        const bool crashEvent = (statusA & (0x01U << (IMU_FSM_CRASH_PROGRAM_NUMBER - 1U))) != 0U;
-                        const bool impactEvent = (statusA & (0x01U << (IMU_FSM_IMPACT_PROGRAM_NUMBER - 1U))) != 0U;
-
-                        if (imu.fsmCrashInitOk && crashEvent)
-                        {
-                            taskENTER_CRITICAL();
-                            imu.fsmCrashEvent = true;
-                            taskEXIT_CRITICAL();
-                        }
-
-                        if (imu.fsmImpactInitOk)
-                        {
-                            if (impactEvent || (imu_getAccelNormPeak() > IMU_IMPACT_THRESH_MPS))
-                            {
-                                if (!imu.fsmImpactActive)
-                                {
-                                    imu.impactAccelMax = imu.accelNormPeak;
-                                }
-                                else if (imu.accelNormPeak > imu.impactAccelMax)
-                                {
-                                    imu.impactAccelMax = imu.accelNormPeak;
-                                }
-                                imu.fsmImpactActive = true;
-                            }
-                            else
-                            {
-                                imu.fsmImpactActive = false;
-                                imu.impactAccelMax = 0.0f;
-                            }
-                        }
-                    }
-                }
-            }
-
             if (imuRan)
             {
                 drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
-                crashSensor_notifyFromImu();
             }
 
             const bool sleeping = app_vehicleState_sleeping();
