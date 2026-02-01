@@ -207,7 +207,8 @@ screenPage:
   "HOME": 1
   "BUTTONS": 2
   "DATA": 3
-  "LAUNCH": 4
+  "CONFIG": 4
+  "LAUNCH": 5
 
 launchControlState:
   SNA: 0
