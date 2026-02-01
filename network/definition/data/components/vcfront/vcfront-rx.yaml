@@ -19,3 +19,5 @@ signals:
     sourceBuses: veh
   VCPDU_safetyReset:
     sourceBuses: veh
+  SWS_requestCalibSteerAngle:
+    sourceBuses: veh
