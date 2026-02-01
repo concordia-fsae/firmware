@@ -122,6 +122,7 @@ bool lib_nvm_nvmInitializeNewBlock(void);
 bool lib_nvm_requestWrite(lib_nvm_entryId_E entryId);
 bool lib_nvm_writesRequired(void);
 bool lib_nvm_writeRequired(lib_nvm_entry_t entryId);
+bool lib_nvm_clearEntry(lib_nvm_entry_t entryId);
 
 uint32_t lib_nvm_getTotalRecordWrites(void);
 uint32_t lib_nvm_getTotalFailedCrc(void);
