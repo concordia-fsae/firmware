@@ -51,6 +51,8 @@
 #define IMU_FSM_CRASH_START_ADDR      IMU_FSM_BASE_START_ADDR
 #define IMU_FSM_IMPACT_START_ADDR     (IMU_FSM_CRASH_START_ADDR + IMU_FSM_CRASH_PROGRAM_SIZE)
 
+#define BUFFER_SAMPLE_SIZE 1000U
+
 /*
  * Produces a 3x3 rotation matrix R such that:
  *   R * normalize(meas) = (0,0,1)
@@ -154,7 +156,7 @@ struct imu_S {
     bool            calibrating;
 } imu;
 
-static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, 100U) = { 0 };
+static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, BUFFER_SAMPLE_SIZE) = { 0 };
 static struct
 {
     drv_imu_accel_S prevAccel;
@@ -734,19 +736,11 @@ static void imu_init()
  */
 static void imu100Hz_PRD(void)
 {
-    CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
     static bool wasSleeping = false;
     const bool imuCalibrated = memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
-    const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
-                           (tmp == CAN_DIGITALSTATUS_ON);
+    const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
 
-    if (calibrate)
-    {
-        lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
-        imu.operatingMode = INIT;
-        imu.calibrating = true;
-    }
-
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
 
     if (imu.operatingMode == RUNNING)
@@ -765,7 +759,6 @@ static void imu100Hz_PRD(void)
 
         if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
         {
-            const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
             const bool imuRan = egressFifo();
             handleImuSamples();
 
@@ -841,7 +834,6 @@ static void imu100Hz_PRD(void)
 
             const bool imuTimeout = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED;
             const bool imuNotStarted = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_STOPPED;
-            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, imuTimeout);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, imuTimeout || imuNotStarted || !imuCalibrated);
         }
