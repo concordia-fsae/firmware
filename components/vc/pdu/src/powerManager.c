@@ -149,12 +149,17 @@ static void evalAbilities(void)
     app_faultManager_setFaultState(FM_FAULT_VCPDU_OVERVOLTAGE, overvoltage);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_BATTERYNOK, !okBattery);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_LOADSNOK, !okLoads);
-    app_faultManager_setFaultState(FM_FAULT_VCPDU_SAFETYNOK, !okSafety);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_SAFETYNOK, !pm_data.okSafety);
 }
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
+
+bool powerManager_getSafetyHsdOk(void)
+{
+    return pm_data.okSafety;
+}
 
 float32_t powerManager_getGLVVoltage(void)
 {
