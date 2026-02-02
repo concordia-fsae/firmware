@@ -518,7 +518,7 @@ static void transitionImuState(void)
             if (calculateOffset())
             {
                 lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
-                imu.operatingMode = RUNNING;
+                imu.operatingMode = GET_VEHICLEANGLE;
                 imu.calibrating = false;
             }
             egressFifo();
