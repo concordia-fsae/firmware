@@ -208,8 +208,8 @@ static const uint8_t imuFsmImpactProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
 
 const drv_imu_vectorTransform_S rotationToVehicleFrame = {
     .rows = {
-        { 0, 1, 0 },
-        { 1, 0, 0 },
+        { 0, -1, 0 },
+        { -1, 0, 0 },
         { 0, 0, 1 },
     },
 };

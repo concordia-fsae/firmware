@@ -33,17 +33,17 @@ static void quat_normalize(float* q0, float* q1, float* q2, float* q3) {
 static void euler_from_quat(const lib_madgwick_S* f, lib_madgwick_euler_S* e) {
     const float q0 = f->q0, q1 = f->q1, q2 = f->q2, q3 = f->q3;
 
-    // roll (x-a->xis rotation)
+    // roll (x-axis rotation)
     float sinr_cosp = 2.0f * (q0*q1 + q2*q3);
     float cosr_cosp = 1.0f - 2.0f * (q1*q1 + q2*q2);
-    e->y = atan2f(sinr_cosp, cosr_cosp);
+    e->x = atan2f(sinr_cosp, cosr_cosp);
 
-    // pitch (y-a->xis rotation)
+    // pitch (y-axis rotation)
     float sinp = 2.0f * (q0*q2 - q3*q1);
     if (fabsf(sinp) >= 1.0f) {
-        e->x = copysignf((float)M_PI / 2.0f, sinp);
+        e->y = copysignf((float)M_PI / 2.0f, sinp);
     } else {
-        e->x = asinf(sinp);
+        e->y = asinf(sinp);
     }
 
     // yaw (z-a->xis rotation)
