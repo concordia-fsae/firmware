@@ -13,3 +13,7 @@ CSVtoARRAY(
     name = "battery_tables",
     srcs = glob(["*.csv"]),
 )
+python_binary(
+    name = "csv_array",
+    main = "CSV_integration.py",
+)

@@ -4,7 +4,7 @@ from pathlib import Path
 
 args = sys.argv[1:]
 
-sep = args.index("--out") # is outs the keyword between csv files and output
+sep = args.index("--outdir") # is outs the keyword between csv files and output
 
 csv_files = [Path(p) for p in args[:sep]]
 outs = [Path(p) for p in args[sep + 1:]]
