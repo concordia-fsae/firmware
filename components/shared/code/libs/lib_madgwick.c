@@ -80,7 +80,7 @@ void madgwick_init_quaternion_from_accel(lib_madgwick_S* f, const lib_madgwick_e
     float inva = 1.0f / sqrtf(a2);
     ax *= inva; ay *= inva; az *= inva;
 
-    // Shortest-arc rotation from +Z to measured accel direction.
+    // Shortest-arc rotation from measured accel direction to +Z.
     float w = 1.0f + az;
     float q0, q1, q2, q3;
     if (w < EPS) {
@@ -88,8 +88,8 @@ void madgwick_init_quaternion_from_accel(lib_madgwick_S* f, const lib_madgwick_e
         q0 = 0.0f; q1 = 1.0f; q2 = 0.0f; q3 = 0.0f;
     } else {
         q0 = w;
-        q1 = -ay;
-        q2 = ax;
+        q1 = ay;
+        q2 = -ax;
         q3 = 0.0f;
     }
     quat_normalize(&q0, &q1, &q2, &q3);
