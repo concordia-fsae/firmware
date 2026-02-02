@@ -297,9 +297,20 @@ signals:
     description: Vehicle odometer
     unit: km
     nativeRepresentation:
-      bitWidth: 15
+      bitWidth: 16
       range:
         min: 0
         max: 3000
       resolution: 0.1
+    continuous: true
+
+  vehicleSpeed:
+    unit: 'm/s'
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.01
+      range:
+        min: -50
+        max: 50
+      signedness: signed
     continuous: true
