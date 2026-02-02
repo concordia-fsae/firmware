@@ -19,3 +19,4 @@ float32_t powerManager_getGLVVoltage(void);
 float32_t powerManager_getGLVCurrent(void);
 float32_t powerManager_getPduCurrent(void);
 float32_t powerManager_getPdu5vVoltage(void);
+bool      powerManager_getSafetyHsdOk(void);

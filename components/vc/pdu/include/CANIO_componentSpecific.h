@@ -104,7 +104,8 @@
                                                    CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
 #define set_bspdSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BSPD_MEM) == DRV_IO_ACTIVE) ? \
                                                     CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
-#define set_vcSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN) == DRV_IO_ACTIVE) ? \
+#define set_vcSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN) == DRV_IO_ACTIVE) && \
+                                                  powerManager_getSafetyHsdOk() ? \
                                                   CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
 #define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
                                                     CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)

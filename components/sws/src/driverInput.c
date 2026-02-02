@@ -526,7 +526,7 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
 {
     CAN_configSelection_E config = CAN_CONFIGSELECTION_NONE;
 
-    if (data.page != DRIVERINPUT_PAGE_CONFIG)
+    if (data.page == DRIVERINPUT_PAGE_CONFIG)
     {
         switch (data.config)
         {
