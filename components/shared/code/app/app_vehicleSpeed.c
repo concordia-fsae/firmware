@@ -13,6 +13,7 @@
 #include "HW_tim.h"
 #include "MessageUnpack_generated.h"
 #include "lib_simpleFilter.h"
+#include <math.h>
 
 /******************************************************************************
  *                              D E F I N E S
@@ -91,7 +92,7 @@ static void calculateVehicleSpeed(void)
     if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
     {
         vehicle.odoSaved = false;
-        odometer_data.km += (vehicle.vehicleSpeedLinear * delta_t) / 100.0f;
+        odometer_data.km += (fabsf(vehicle.vehicleSpeedLinear) * delta_t) / 1000.0f;
     }
     else if (!vehicle.odoSaved)
     {
