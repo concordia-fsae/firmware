@@ -346,8 +346,32 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
 {
     const uint64_t currentTime = HW_TIM_getBaseTick();
     const float32_t dt = (float32_t)(currentTime - imu.lastCycle_us) / 1000000.0f;
+    float32_t norm = 0.0f;
 
+    // Dynamically reduce beta when accel magnitude deviates from 1g.
+    LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)a, &norm);
+    const float32_t delta = fabsf(norm - GRAVITY) / GRAVITY;
+    const float32_t bandStart = 0.05f; // full correction within +/-5%
+    const float32_t bandEnd = 0.25f;   // min correction beyond +/-10%
+    const float32_t minScale = 0.001f;  // keep some correction
+    float32_t scale = 1.0f;
+    if (delta > bandStart)
+    {
+        if (delta >= bandEnd)
+        {
+            scale = minScale;
+        }
+        else
+        {
+            const float32_t t = (delta - bandStart) / (bandEnd - bandStart);
+            scale = 1.0f - t * (1.0f - minScale);
+        }
+    }
+
+    const float32_t baseBeta = f->beta;
+    f->beta = baseBeta * scale;
     madgwick_update_imu(f, g, a, dt);
+    f->beta = baseBeta;
     imu.lastCycle_us = currentTime;
 }
 
