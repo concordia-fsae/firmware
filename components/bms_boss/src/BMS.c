@@ -117,7 +117,7 @@ static void BMS100Hz_PRD(void)
     const bool tsmsOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW;
     const bool imdOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW;
     const bool timeout = SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout();
-    const bool openContactors = bmsFault || tsmsOpen || imdOpen || timeout;
+    const bool openContactors = bmsFault || tsmsOpen || timeout;
 
     const bool underLoad = (BMS.pack_current > LOAD_CURRENT_THRESHOLD) || (BMS.pack_current < -LOAD_CURRENT_THRESHOLD);
     const bool contactorsClosed = (SYS.contacts == SYS_CONTACTORS_PRECHARGE) ||
@@ -127,7 +127,6 @@ static void BMS100Hz_PRD(void)
     app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORSOPENEDUNDERLOAD, openContactors && underLoad);
     app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULTOPENEDCONTACTORS, bmsFault && contactorsClosed);
     app_faultManager_setFaultState(FM_FAULT_BMSB_TSMSOPENEDCONTACTORS, tsmsOpen && contactorsClosed);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_IMDOPENEDCONTACTORS, imdOpen && contactorsClosed);
     app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUTOPENEDCONTACTORS, timeout && contactorsClosed);
     app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULT, bmsFault);
     app_faultManager_setFaultState(FM_FAULT_BMSB_IMDNOK, imdOpen);
