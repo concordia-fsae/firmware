@@ -18,10 +18,11 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define WHEEL_DIAMETER_M 0.4064f
+#define WHEEL_CIRCUMFERENCE_M 1.25679f
+
 #define HZ_TO_RPM(hz) ((uint16_t)((hz) * 60))
 #define RPM_TO_HZ(rpm) ((rpm) / 60.0f)
-#define RPM_TO_MPS(hz) (RPM_TO_HZ((float32_t)hz) * WHEEL_DIAMETER_M)
+#define RPM_TO_MPS(hz) (RPM_TO_HZ((float32_t)hz) * WHEEL_CIRCUMFERENCE_M)
 
 /******************************************************************************
  *                              D E F I N E S

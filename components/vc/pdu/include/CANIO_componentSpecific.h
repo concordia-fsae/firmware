@@ -125,8 +125,8 @@
 #define set_yaw(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotZ)
 #define set_roll(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotY)
 #define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)
-#define set_angleRoll(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotY)
-#define set_anglePitch(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotX)
+#define set_angleRoll(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotX)
+#define set_anglePitch(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotY)
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())

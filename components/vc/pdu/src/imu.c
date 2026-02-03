@@ -33,7 +33,7 @@
 
 #define IMU_TIMEOUT_MS 1000U
 #define BASELINE_SAMPLES 500U
-#define MADGWICK_BETA 0.1f
+#define MADGWICK_BETA 0.01f
 
 #define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
 #define DEG_TO_RAD (1 / RAD_TO_DEG)
@@ -208,8 +208,8 @@ static const uint8_t imuFsmImpactProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
 
 const drv_imu_vectorTransform_S rotationToVehicleFrame = {
     .rows = {
-        { 0, 1, 0 },
-        { 1, 0, 0 },
+        { 0, -1, 0 },
+        { -1, 0, 0 },
         { 0, 0, 1 },
     },
 };
@@ -345,48 +345,45 @@ static bool calculateVehicleAngle(void)
 {
     static uint16_t countA = 0;
     static uint16_t countG = 0;
-    uint16_t tmpCountA = 0;
-    uint16_t tmpCountG = 0;
+    static drv_imu_vector_S tmpA = {0};
+    static drv_imu_vector_S tmpG = {0};
 
-    drv_imu_vector_S tmpA = {0};
-    drv_imu_vector_S tmpG = {0};
-    drv_imu_vector_S gVec = {0};
-    drv_imu_vector_S aVec = {0};
+    averageSamples(&tmpA, &countA, &tmpG, &countG);
 
-    averageSamples(&tmpA, &tmpCountA, &tmpG, &tmpCountG);
-
-    if (countA)
-    {
-        LIB_LINALG_MUL_CVECSCALAR(&tmpA, (1.0f / tmpCountA), &tmpA);
-        correctThenSetVector(&tmpA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
-        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmpA, &aVec);
-    }
-    else
-    {
-        LIB_LINALG_CVEC_EQ_CVEC((drv_imu_vector_S*)&imu.accel, &tmpA);
-    }
-    if (countG)
-    {
-        LIB_LINALG_MUL_CVECSCALAR(&tmpG, (1.0f / tmpCountG), &tmpG);
-        correctThenSetVector(&tmpG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
-        LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, &tmpG, &gVec);
-    }
-    else
-    {
-        LIB_LINALG_CVEC_EQ_CVEC((drv_imu_vector_S*)&imu.gyro, &tmpG);
-    }
-
-    updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&gVec, (drv_imu_euler_S*)&aVec);
-
-    countA += tmpCountA;
-    countG += tmpCountG;
-
-    const bool valid = (countG > BASELINE_SAMPLES);
-    if (!valid)
+    const bool validG = (countG > BASELINE_SAMPLES);
+    const bool validA = (countA > BASELINE_SAMPLES);
+    if (!(validG && validA))
     {
         return false;
     }
 
+    float32_t norm = 0;
+    LIB_LINALG_GETNORM_CVEC(&tmpA, &norm);
+    norm /= countA;
+
+    if ((norm < (0.9f * GRAVITY)) || (norm > (1.1f * GRAVITY)))
+    {
+        return false;
+    }
+
+    if (countA)
+    {
+        LIB_LINALG_MUL_CVECSCALAR(&tmpA, (1.0f / countA), &tmpA);
+        correctThenSetVector(&tmpA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
+        madgwick_init_quaternion_from_accel(&imu.madgwick, (lib_madgwick_euler_S*)&imu.accel);
+        imu.lastCycle_us = HW_TIM_getBaseTick();
+        taskENTER_CRITICAL();
+        madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
+        taskEXIT_CRITICAL();
+    }
+    if (countG)
+    {
+        LIB_LINALG_MUL_CVECSCALAR(&tmpG, (1.0f / countG), &tmpG);
+        correctThenSetVector(&tmpG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
+    }
+
+    memset(&tmpA, 0x00U, sizeof(tmpA));
+    memset(&tmpG, 0x00U, sizeof(tmpG));
     countA = 0;
     countG = 0;
 
@@ -422,12 +419,6 @@ static void lpfAccel(drv_imu_accel_S* accel)
         imuLpf.accelX.y = accel->accelX;
         imuLpf.accelY.y = accel->accelY;
         imuLpf.accelZ.y = accel->accelZ;
-        lib_madgwick_euler_S initAccel = {
-            .x = accel->accelX,
-            .y = accel->accelY,
-            .z = accel->accelZ,
-        };
-        madgwick_init_quaternion_from_accel(&imu.madgwick, &initAccel);
     }
 
     accel->accelX = lib_simpleFilter_lpf_step(&imuLpf.accelX, accel->accelX);
@@ -527,7 +518,7 @@ static void transitionImuState(void)
             if (calculateOffset())
             {
                 lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
-                imu.operatingMode = RUNNING;
+                imu.operatingMode = GET_VEHICLEANGLE;
                 imu.calibrating = false;
             }
             egressFifo();

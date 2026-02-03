@@ -33,17 +33,17 @@ static void quat_normalize(float* q0, float* q1, float* q2, float* q3) {
 static void euler_from_quat(const lib_madgwick_S* f, lib_madgwick_euler_S* e) {
     const float q0 = f->q0, q1 = f->q1, q2 = f->q2, q3 = f->q3;
 
-    // roll (x-a->xis rotation)
+    // roll (x-axis rotation)
     float sinr_cosp = 2.0f * (q0*q1 + q2*q3);
     float cosr_cosp = 1.0f - 2.0f * (q1*q1 + q2*q2);
-    e->y = atan2f(sinr_cosp, cosr_cosp);
+    e->x = atan2f(sinr_cosp, cosr_cosp);
 
-    // pitch (y-a->xis rotation)
+    // pitch (y-axis rotation)
     float sinp = 2.0f * (q0*q2 - q3*q1);
     if (fabsf(sinp) >= 1.0f) {
-        e->x = copysignf((float)M_PI / 2.0f, sinp);
+        e->y = copysignf((float)M_PI / 2.0f, sinp);
     } else {
-        e->x = asinf(sinp);
+        e->y = asinf(sinp);
     }
 
     // yaw (z-a->xis rotation)
@@ -80,7 +80,7 @@ void madgwick_init_quaternion_from_accel(lib_madgwick_S* f, const lib_madgwick_e
     float inva = 1.0f / sqrtf(a2);
     ax *= inva; ay *= inva; az *= inva;
 
-    // Shortest-arc rotation from +Z to measured accel direction.
+    // Shortest-arc rotation from measured accel direction to +Z.
     float w = 1.0f + az;
     float q0, q1, q2, q3;
     if (w < EPS) {
@@ -88,8 +88,8 @@ void madgwick_init_quaternion_from_accel(lib_madgwick_S* f, const lib_madgwick_e
         q0 = 0.0f; q1 = 1.0f; q2 = 0.0f; q3 = 0.0f;
     } else {
         q0 = w;
-        q1 = -ay;
-        q2 = ax;
+        q1 = ay;
+        q2 = -ax;
         q3 = 0.0f;
     }
     quat_normalize(&q0, &q1, &q2, &q3);
