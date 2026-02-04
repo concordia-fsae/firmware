@@ -40,6 +40,27 @@ signals:
     description: UART parity error count for GPS
     template: count16Bit
 
+  gpsSentenceGgaCount:
+    description: GPS GGA sentence count
+    template: count10Bit
+
+  gpsSentenceGsaCount:
+    description: GPS GSA sentence count
+    template: count10Bit
+
+  gpsSentenceGsvCount:
+    description: GPS GSV sentence count
+    template: count10Bit
+
+  gpsSentenceRmcCount:
+    description: GPS RMC sentence count
+    template: count10Bit
+
+  gpsSentencePairMsgCount:
+    description: GPS PAIRMSG sentence count
+    template: count10Bit
+
+
   gpsPairUtcMs:
     description: PAIRMSG UTC time (ms since midnight)
     unit: ms
