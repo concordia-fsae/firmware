@@ -97,6 +97,9 @@ signals:
   requestCalibSteerAngle:
     description: Request calibration of the steering angle sensor
     discreteValues: digitalStatus
+  requestAppsBypass:
+    description: Request bypass of the apps sensor in testing
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested

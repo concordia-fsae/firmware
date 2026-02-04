@@ -35,6 +35,10 @@ static struct
 {
     float32_t pedal_position; // [%] 0.0f - 1.0f | 0.0f = 0% ad 1.0f = 100%
     apps_state_E state;
+#if FEATURE_IS_ENABLED(FEATURE_BYPASSABLE_APPS)
+    bool isBypassed;
+    bool bypassRequested;
+#endif
 } apps_data;
 
 /******************************************************************************
@@ -80,6 +84,16 @@ static void apps_init(void)
 
 static void apps_periodic_100Hz(void)
 {
+#if FEATURE_IS_ENABLED(FEATURE_BYPASSABLE_APPS)
+    CAN_digitalStatus_E bypass_request = CAN_DIGITALSTATUS_SNA;
+    const bool bypassWasRequested = apps_data.bypassRequested;
+    apps_data.bypassRequested = (CANRX_get_signal(VEH, SWS_requestAppsBypass, &bypass_request) == CANRX_MESSAGE_VALID) &&
+                                 (bypass_request == CAN_DIGITALSTATUS_ON);
+    const bool newRequest = apps_data.bypassRequested && !bypassWasRequested;
+
+    apps_data.isBypassed = newRequest ? !apps_data.isBypassed : apps_data.isBypassed;
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_APPSDISABLED, apps_data.isBypassed);
+#endif
     const bool okApps1 = drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS1) == DRV_PEDALMONITOR_OK;
     const bool okApps2 = drv_pedalMonitor_getPedalState(DRV_PEDALMONITOR_APPS2) == DRV_PEDALMONITOR_OK;
 
@@ -105,6 +119,23 @@ static void apps_periodic_100Hz(void)
             state = APPS_OK;
         }
     }
+#if FEATURE_IS_ENABLED(FEATURE_BYPASSABLE_APPS)
+    else if (apps_data.isBypassed)
+    {
+        const float32_t apps1 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1);
+        const float32_t apps2 = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2);
+        if (okApps1)
+        {
+            pedal_position = apps1;
+            state = APPS_OK;
+        }
+        else if (okApps2)
+        {
+            pedal_position = apps2;
+            state = APPS_OK;
+        }
+    }
+#endif
 
     apps_data.pedal_position = SATURATE(0.0f, pedal_position, 1.0f);
     apps_data.state = state;

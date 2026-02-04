@@ -144,6 +144,9 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
         .requestDec = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
         .requestInc = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
     },
+    [DRIVERINPUT_CONFIG_VEHICLE_CONTROL] = {
+        .requestDec = DRIVERINPUT_REQUEST_APPS_BYPASS,
+    },
 };
 
 /******************************************************************************
@@ -532,6 +535,9 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
         {
             case DRIVERINPUT_CONFIG_CALIB_DYNAMICS:
                 config = CAN_CONFIGSELECTION_CALIB_DYNAMICS;
+                break;
+            case DRIVERINPUT_CONFIG_VEHICLE_CONTROL:
+                config = CAN_CONFIGSELECTION_VEHICLE_CONTROL;
                 break;
             default:
                 break;

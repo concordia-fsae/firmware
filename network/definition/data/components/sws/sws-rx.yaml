@@ -3,6 +3,7 @@ messages:
     sourceBuses: veh
     unrecorded: true
   VCPDU_faults:
+  VCFRONT_faults:
 signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:

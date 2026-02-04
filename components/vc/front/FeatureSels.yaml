@@ -18,3 +18,4 @@ features:
   nvm_task: true
   hw_flash_delay: true
   feature_gpsTransceiver: true
+  feature_bypassable_apps: true

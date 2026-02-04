@@ -16,6 +16,10 @@ signals:
     description: GPS data overrun
     discreteValues: faultStatus
 
+  appsDisabled:
+    description: APPS Safety Redundancy Disabled
+    discreteValues: faultStatus
+
   vehicleSpeedDegraded:
     description: Vehicle speed is degraded due to missing sensor data
     discreteValues: faultStatus
