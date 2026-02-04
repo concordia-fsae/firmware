@@ -9,7 +9,6 @@ messages:
       contactorsOpenedUnderLoad:
       bmsFaultOpenedContactors:
       tsmsOpenedContactors:
-      imdOpenedContactors:
       timeoutOpenedContactors:
       bmsFault:
       imdNOK:

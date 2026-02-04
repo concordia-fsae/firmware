@@ -8,9 +8,6 @@ signals:
   tsmsOpenedContactors:
     description: TSMS caused contactors to open
     discreteValues: faultStatus
-  imdOpenedContactors:
-    description: IMD OK caused contactors to open
-    discreteValues: faultStatus
   timeoutOpenedContactors:
     description: Timed out TS nodes caused contactors to open
     discreteValues: faultStatus
