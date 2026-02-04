@@ -41,15 +41,18 @@
 #define IMU_LPF_CUTOFF_HZ 100.0f
 #define IMU_LPF_DT_S      0.01f
 
-#define IMU_FSM_CRASH_PROGRAM_NUMBER  1U
-#define IMU_FSM_IMPACT_PROGRAM_NUMBER 2U
-#define IMU_FSM_CRASH_PROGRAM_SIZE    12U
-#define IMU_FSM_IMPACT_PROGRAM_SIZE   12U
-#define IMU_FSM_ARM_CYCLES            10U
+#define IMU_FSM_CRASH_PROGRAM_NUMBER    1U
+#define IMU_FSM_IMPACT_PROGRAM_NUMBER   2U
+#define IMU_FSM_ACTIVITY_PROGRAM_NUMBER 3U
+#define IMU_FSM_CRASH_PROGRAM_SIZE      12U
+#define IMU_FSM_IMPACT_PROGRAM_SIZE     12U
+#define IMU_FSM_ACTIVITY_PROGRAM_SIZE   12U
+#define IMU_FSM_ARM_CYCLES              10U
 
 #define IMU_FSM_BASE_START_ADDR       0x0400U
 #define IMU_FSM_CRASH_START_ADDR      IMU_FSM_BASE_START_ADDR
 #define IMU_FSM_IMPACT_START_ADDR     (IMU_FSM_CRASH_START_ADDR + IMU_FSM_CRASH_PROGRAM_SIZE)
+#define IMU_FSM_ACTIVITY_START_ADDR   (IMU_FSM_IMPACT_START_ADDR + IMU_FSM_IMPACT_PROGRAM_SIZE)
 
 #define BUFFER_SAMPLE_SIZE 1000U
 
@@ -151,18 +154,13 @@ struct imu_S {
     bool            fsmImpactInitOk;
     bool            fsmCrashEvent;
     bool            fsmImpactActive;
+    bool            fsmActivityActive;
     float32_t       impactAccelMax;
     uint8_t         fsmArmCyclesLeft;
     bool            calibrating;
 } imu;
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, BUFFER_SAMPLE_SIZE) = { 0 };
-static struct
-{
-    drv_imu_accel_S prevAccel;
-    uint8_t         hitCount;
-    bool            hasPrev;
-} imuWake = { 0 };
 
 static struct
 {
@@ -200,6 +198,21 @@ static const uint8_t imuFsmImpactProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
     0x00U, /* PROGRAM_POINTER */
     0x00U, /* THRESH1 (LSB) = 4.0g */
     0x44U, /* THRESH1 (MSB) */
+    0x03U, /* MASKA: +/-V */
+    0x00U, /* TMASKA */
+    0x05U, /* NOP | GNTH1 */
+    0x22U, /* CONTREL */
+};
+
+static const uint8_t imuFsmActivityProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
+    0x50U, /* CONFIG_A: 1 threshold, 1 mask */
+    0x00U, /* CONFIG_B */
+    0x0CU, /* SIZE */
+    0x00U, /* SETTINGS */
+    0x00U, /* RESET_POINTER */
+    0x00U, /* PROGRAM_POINTER */
+    0x9aU, /* THRESH1 (LSB) = 1.15g */
+    0x3cU, /* THRESH1 (MSB) */
     0x03U, /* MASKA: +/-V */
     0x00U, /* TMASKA */
     0x05U, /* NOP | GNTH1 */
@@ -441,53 +454,6 @@ static void lpfGyro(drv_imu_gyro_S* gyro)
     gyro->rotZ = lib_simpleFilter_lpf_step(&imuLpf.gyroZ, gyro->rotZ);
 }
 
-static void resetWakeDetector(void)
-{
-    imuWake.hitCount = 0U;
-    imuWake.hasPrev = false;
-}
-
-static bool detectSleepWakeMovement(void)
-{
-    if (!imuWake.hasPrev)
-    {
-        imuWake.prevAccel = imu.accel;
-        imuWake.hasPrev = true;
-        return false;
-    }
-
-    const float32_t dAx = imu.accel.accelX - imuWake.prevAccel.accelX;
-    const float32_t dAy = imu.accel.accelY - imuWake.prevAccel.accelY;
-    const float32_t dAz = imu.accel.accelZ - imuWake.prevAccel.accelZ;
-    const float32_t accelDelta = sqrtf((dAx * dAx) + (dAy * dAy) + (dAz * dAz));
-
-    const float32_t gX = imu.gyro.rotX;
-    const float32_t gY = imu.gyro.rotY;
-    const float32_t gZ = imu.gyro.rotZ;
-    const float32_t gyroMag = sqrtf((gX * gX) + (gY * gY) + (gZ * gZ));
-
-    imuWake.prevAccel = imu.accel;
-    if ((accelDelta > IMU_WAKE_ACCEL_DELTA_MPS2) || (gyroMag > IMU_WAKE_GYRO_DPS))
-    {
-        if (imuWake.hitCount < IMU_WAKE_HITS_REQUIRED)
-        {
-            imuWake.hitCount++;
-        }
-    }
-    else
-    {
-        imuWake.hitCount = 0U;
-    }
-
-    if (imuWake.hitCount >= IMU_WAKE_HITS_REQUIRED)
-    {
-        imuWake.hitCount = 0U;
-        return true;
-    }
-
-    return false;
-}
-
 static void transitionImuState(void)
 {
     switch (imu.operatingMode)
@@ -608,6 +574,7 @@ static bool getImuAlertStatus(void)
             {
                 const bool crashEvent = (statusA & (0x01U << (IMU_FSM_CRASH_PROGRAM_NUMBER - 1U))) != 0U;
                 const bool impactEvent = (statusA & (0x01U << (IMU_FSM_IMPACT_PROGRAM_NUMBER - 1U))) != 0U;
+                imu.fsmActivityActive = (statusA & (0x01U << (IMU_FSM_ACTIVITY_PROGRAM_NUMBER - 1U))) != 0U;
                 ret = true;
 
                 if (imu.fsmCrashInitOk && crashEvent)
@@ -768,6 +735,12 @@ static void imu_init()
                                                     imuFsmImpactProgram,
                                                     IMU_FSM_IMPACT_PROGRAM_SIZE,
                                                     ASM330LHB_ODR_FSM_104Hz);
+    drv_asm330_loadFsmProgram(&asm330,
+                              IMU_FSM_ACTIVITY_PROGRAM_NUMBER,
+                              IMU_FSM_ACTIVITY_START_ADDR,
+                              imuFsmActivityProgram,
+                              IMU_FSM_ACTIVITY_PROGRAM_SIZE,
+                              ASM330LHB_ODR_FSM_104Hz);
     imu.fsmCrashEvent = false;
     imu.fsmImpactActive = false;
     imu.impactAccelMax = 0.0f;
@@ -781,7 +754,6 @@ static void imu_init()
  */
 static void imu100Hz_PRD(void)
 {
-    static bool wasSleeping = false;
     const bool imuCalibrated = memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
     const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
     const bool gotAlerts = getImuAlertStatus();
@@ -792,6 +764,10 @@ static void imu100Hz_PRD(void)
     if (gotAlerts)
     {
         crashSensor_notifyFromImu();
+        if (imu.fsmActivityActive)
+        {
+            app_vehicleState_delaySleep(IMU_WAKE_DELAY_MS);
+        }
     }
 
     if (imu.operatingMode == RUNNING)
@@ -815,24 +791,6 @@ static void imu100Hz_PRD(void)
             {
                 drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
             }
-
-            const bool sleeping = app_vehicleState_sleeping();
-            if (sleeping)
-            {
-                if (!wasSleeping)
-                {
-                    resetWakeDetector();
-                }
-                if (detectSleepWakeMovement())
-                {
-                    app_vehicleState_delaySleep(IMU_WAKE_DELAY_MS);
-                }
-            }
-            else if (wasSleeping)
-            {
-                resetWakeDetector();
-            }
-            wasSleeping = sleeping;
 
             const bool imuTimeout = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED;
             const bool imuNotStarted = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_STOPPED;

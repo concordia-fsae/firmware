@@ -133,7 +133,8 @@ static void eval_sleep(void)
     }
     else if (app_vehicleState_sleeping())
     {
-        app_vehicleState_init();
+        vehicleState_data.state = VEHICLESTATE_INIT;
+        drv_timer_start(&vehicleState_data.bootTimer, BOOT_TIME_MS);
     }
 #endif // FDEFS_MODE_LEADER
 }
