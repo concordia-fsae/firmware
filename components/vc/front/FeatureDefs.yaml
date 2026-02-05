@@ -6,3 +6,4 @@ defs:
   cantx_swi: 
   brakepedal_from_pressure:
   wiggly_pedal:
+  bypassable_apps:

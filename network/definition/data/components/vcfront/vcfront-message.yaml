@@ -15,6 +15,7 @@ messages:
       apps2SensorFault:
       gpsOverrun:
       vehicleSpeedDegraded:
+      appsDisabled:
 
   udsResponse:
     description: UDS response message from the VCFRONT
@@ -196,6 +197,18 @@ messages:
     id: 0x312
     sourceBuses: veh
     template: date
+
+  gpsSentenceCounts:
+    description: GPS sentence counters by type
+    id: 0x315
+    cycleTimeMs: 1000
+    sourceBuses: veh
+    signals:
+      gpsSentenceGgaCount:
+      gpsSentenceGsaCount:
+      gpsSentenceGsvCount:
+      gpsSentenceRmcCount:
+      gpsSentencePairMsgCount:
 
   gpsUartDiag:
     description: GPS UART error counters

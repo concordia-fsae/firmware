@@ -51,6 +51,11 @@ static struct
     uint16_t crcFailures;
     uint16_t invalidTransactions;
     uint16_t samples;
+    uint16_t sentenceCountGga;
+    uint16_t sentenceCountGsa;
+    uint16_t sentenceCountGsv;
+    uint16_t sentenceCountRmc;
+    uint16_t sentenceCountPairMsg;
     volatile uint16_t uartErrorOreCount;
     volatile uint16_t uartErrorFeCount;
     volatile uint16_t uartErrorNeCount;
@@ -63,6 +68,27 @@ static struct
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
+static void recordNonPairmsgCount(lwgps_statement_t statement)
+{
+    switch (statement)
+    {
+        case STAT_GGA:
+            gps.sentenceCountGga++;
+            break;
+        case STAT_GSA:
+            gps.sentenceCountGsa++;
+            break;
+        case STAT_GSV:
+            gps.sentenceCountGsv++;
+            break;
+        case STAT_RMC:
+            gps.sentenceCountRmc++;
+            break;
+        default:
+            break;
+    }
+}
+
 static void updateGPS(void)
 {
     taskENTER_CRITICAL();
@@ -365,6 +391,7 @@ static void parse(uint8_t* sentence, size_t len)
         {
             drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
             gps.samples++;
+            gps.sentenceCountPairMsg++;
         }
         else
         {
@@ -379,6 +406,7 @@ static void parse(uint8_t* sentence, size_t len)
     {
         updateGPS();
         drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
+        recordNonPairmsgCount(gps.currentGPS.p.stat);
         gps.samples++;
     }
 }
@@ -464,6 +492,31 @@ uint16_t app_gps_getInvalidTransactions(void)
 uint16_t app_gps_getNumberSamples(void)
 {
     return gps.samples;
+}
+
+uint16_t app_gps_getSentenceCountGga(void)
+{
+    return gps.sentenceCountGga;
+}
+
+uint16_t app_gps_getSentenceCountGsa(void)
+{
+    return gps.sentenceCountGsa;
+}
+
+uint16_t app_gps_getSentenceCountGsv(void)
+{
+    return gps.sentenceCountGsv;
+}
+
+uint16_t app_gps_getSentenceCountRmc(void)
+{
+    return gps.sentenceCountRmc;
+}
+
+uint16_t app_gps_getSentenceCountPairMsg(void)
+{
+    return gps.sentenceCountPairMsg;
 }
 
 uint16_t app_gps_getUartErrorOreCount(void)

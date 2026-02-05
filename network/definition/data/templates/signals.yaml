@@ -16,6 +16,14 @@ signals:
         min: 0
         max: 512
       resolution: 1
+  count10Bit:
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 1023
+      resolution: 1
   count16Bit:
     unit: ""
     nativeRepresentation:

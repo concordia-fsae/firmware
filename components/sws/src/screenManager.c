@@ -55,6 +55,7 @@ typedef enum
     WARN_LOW_CELL,
     WARN_CONTACTS_OPEN_IN_RUN,
     WARN_IMU_UNCALIBRATED,
+    WARN_APPS_DISABLED,
     WARN_COUNT,
 } warnings_E;
 
@@ -143,6 +144,9 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_IMU_UNCALIBRATED:
             ret = CAN_SCREENWARNINGS_IMU_UNCALIBRATED;
             break;
+        case WARN_APPS_DISABLED:
+            ret = CAN_SCREENWARNINGS_APPS_DISABLED;
+            break;
         case WARN_NONE:
         case WARN_COUNT:
             break;
@@ -183,10 +187,12 @@ static void getWarnings(void)
     const bool lowGLV = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
     const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
     const bool imuUncalibrated = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUUNCALIBRATED);
+    const bool appsBypassed = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_APPSDISABLED);
 
     WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
     WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
     WARNING_INGRESS(WARN_IMU_UNCALIBRATED, imuUncalibrated);
+    WARNING_INGRESS(WARN_APPS_DISABLED, appsBypassed);
 }
 
 static void determineActiveWarning(void)

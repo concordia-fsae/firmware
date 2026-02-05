@@ -20,6 +20,7 @@
 #define BOOT_TIME_MS 250U
 #define VEHICLESTATE_TIMEOUT_MS 1000U
 #define BOOT_SLEEP_DISABLE_MS 15*60000U
+#define UDS_DELAY_MS 5*60000U
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -135,6 +136,7 @@ static void eval_sleep(void)
     {
         vehicleState_data.state = VEHICLESTATE_INIT;
         drv_timer_start(&vehicleState_data.bootTimer, BOOT_TIME_MS);
+        drv_timer_start(&vehicleState_data.sleepTimeout, UDS_DELAY_MS);
     }
 #endif // FDEFS_MODE_LEADER
 }
