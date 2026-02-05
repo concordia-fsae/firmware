@@ -356,7 +356,7 @@ signals:
     description: min voltage in pack
     nativeRepresentation:
       endianness: little
-      bitWidth: 11
+      bitWidth: 9
       resolution: 0.01
       range:
         min: 0
@@ -369,7 +369,7 @@ signals:
     description: max voltage in pack
     nativeRepresentation:
       endianness: little
-      bitWidth: 11
+      bitWidth: 9
       resolution: 0.01
       range:
         min: 0
