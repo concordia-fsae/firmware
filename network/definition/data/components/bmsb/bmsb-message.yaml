@@ -144,3 +144,5 @@ messages:
     sourceBuses: veh
     signals:
       packPower:
+      bmsMaxVoltage:
+      bmsMinVoltage:
