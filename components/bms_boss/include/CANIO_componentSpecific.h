@@ -106,8 +106,8 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packVPackPVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_VPACK))
 #define set_packVPackNVoltage(m, b, n, s)           set(m, b, n, s, HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK))
 #define set_mcuTemperature(m, b, n, s)              set(m, b, n, s, ENV.board.mcu_temp)
-#define set_bmsMaxVoltage(m,b,n,s) set(m,b,n,s, bms_getcellmaxvoltage())
-#define set_bmsMinVoltage(m,b,n,s) set(m,b,n,s, bms_getcellminvoltage())
+#define set_bmsMaxVoltage(m,b,n,s) set(m,b,n,s, bms_getCellMaxVoltage())
+#define set_bmsMinVoltage(m,b,n,s) set(m,b,n,s, bms_getCellMinVoltage())
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
