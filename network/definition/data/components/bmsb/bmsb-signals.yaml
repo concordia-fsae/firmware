@@ -350,3 +350,29 @@ signals:
         max: 40
       signedness: unsigned
     continuous: true
+
+  bmsMinVoltage:
+    unit: 'V'
+    description: min voltage in pack
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 11
+      resolution: 0.01
+      range:
+        min: 1.5
+        max: 5.0
+      signedness: unsigned
+    continuous: true
+
+  bmsMaxVoltage:
+    unit: 'V'
+    description: max voltage in pack
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 11
+      resolution: 0.01
+      range:
+        min: 1.5
+        max: 5.0
+      signedness: unsigned
+    continuous: true

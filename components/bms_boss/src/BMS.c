@@ -243,3 +243,12 @@ void BMS_workerWatchdog(void)
         }
     }
 }
+
+float32_t bms_getcellmaxvoltage(void)
+{
+    return BMS.voltages.max;
+}
+float32_t bms_getcellminvoltage(void)
+{
+    return BMS.voltages.min;
+}
