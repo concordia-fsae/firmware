@@ -25,6 +25,9 @@
 
 #define WHEEL_CIRCUMFERENCE_M 1.25679f
 
+#define DEG_TO_RAD (0.01745329252f)
+#define GRAVITY 9.81f
+
 #define HZ_TO_RPM(hz) ((uint16_t)((hz) * 60))
 #define RPM_TO_HZ(rpm) ((rpm) / 60.0f)
 #define RPM_TO_MPS(hz) (RPM_TO_HZ((float32_t)hz) * WHEEL_CIRCUMFERENCE_M)
@@ -36,6 +39,9 @@
 #if FEATURE_IS_DISABLED(FEATURE_VEHICLESPEED_LEADER)
 #define CANRX_VEHICLESPEED(val) CANRX_get_signal(VEH, VCFRONT_vehicleSpeed, val)
 #define CANRX_ODOMETER(val) CANRX_get_signal(VEH, VCFRONT_odometer, val)
+#else
+#define CANRX_IMU_LON(val) CANRX_get_signal(VEH, VCPDU_lon, val)
+#define CANRX_IMU_ANGLEPITCH(val) CANRX_get_signal(VEH, VCPDU_anglePitch, val)
 #endif
 
 /******************************************************************************
@@ -75,22 +81,42 @@ static void calculateAxleSpeed(void)
 static void calculateVehicleSpeed(void)
 {
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+    float32_t speed = vehicle.vehicleSpeedLinear;
+    float32_t accelLon = 0.0f;
+    float32_t anglePitch = 0.0f;
+    const bool accelValid = (CANRX_IMU_LON(&accelLon) == CANRX_MESSAGE_VALID);
+    const bool angleValid = (CANRX_IMU_ANGLEPITCH(&anglePitch) == CANRX_MESSAGE_VALID);
     const uint32_t currentTime = HW_TIM_getTimeMS();
     const float32_t delta_t = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
     const bool validGPS = app_gps_isValid();
-    float32_t speed = app_gps_getHeadingRef()->speedMps;
 
-    if (!vehicle.wasValidGPS && validGPS)
+    if (accelValid && angleValid && (delta_t > 0.0f))
     {
-        vehicle.lpfSpeed.y = speed;
+        const float32_t accelAlongAxis = accelLon + (GRAVITY * sinf(anglePitch * DEG_TO_RAD));
+        speed += accelAlongAxis * delta_t;
     }
-    else if (!validGPS)
+
+    if (validGPS)
+    {
+        if (!vehicle.wasValidGPS)
+        {
+            speed = app_gps_getHeadingRef()->speedMps;
+            vehicle.lpfSpeed.y = speed;
+        }
+        else
+        {
+            // TODO: Check for an updated speed measurement
+            const float32_t tmp = app_gps_getHeadingRef()->speedMps;
+            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
+        }
+    }
+    else
     {
         // TODO: Handle degraded wheel speed sensors
-        speed = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
+        const float32_t tmp = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
+        speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
     }
 
-    speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, speed);
     vehicle.vehicleSpeedLinear = speed;
 
     if (app_vehicleState_getState() == VEHICLESTATE_TS_RUN)
