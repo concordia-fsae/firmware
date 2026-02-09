@@ -12,6 +12,7 @@
 #include "IMD.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "drv_userInput.h"
 #include "drv_timer.h"
 #include "Module.h"
 #include "Sys.h"
@@ -114,7 +115,7 @@ static void BMS10Hz_PRD(void)
 static void BMS100Hz_PRD(void)
 {
     const bool bmsFault = BMS.fault;
-    const bool tsmsOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_LOW;
+    const bool tsmsOpen = !drv_userInput_buttonPressed(USERINPUT_SWITCH_TSMS);
     const bool imdOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW;
     const bool timeout = SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout();
     const bool openContactors = bmsFault || tsmsOpen || timeout;
