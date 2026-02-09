@@ -25,6 +25,8 @@
  ******************************************************************************/
 
 #define DEEP_SLEEP_DELAY_MS (15*60000U)
+#define UNDERVOLTAGE_TIMEOUT_MS 1000U
+#define SAFETY_CUTOFF_TIMEOUT_MS 5000U
 
 #define PDU_CS_AMPS_PER_VOLT 0.20f
 #define PDU_VS_VOLTAGE_MULTIPLIER 3.61f
@@ -53,6 +55,9 @@ _Static_assert(BATTERY_RECHARGED < BATTERY_OVERVOLTAGE, "Overvoltage must be hig
 
 static struct
 {
+    drv_timer_S underVoltageTimeout;
+    drv_timer_S safetyCutoffTimeout;
+
     float32_t total_current;
     float32_t glv_voltage;
     struct {
@@ -131,10 +136,21 @@ static void evalAbilities(void)
                           pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_HI && resetFaults;
     const bool overvoltage = pm_data.glv_voltage > BATTERY_OVERVOLTAGE;
 
+    if (okSafety)
+    {
+        drv_timer_start(&pm_data.safetyCutoffTimeout, SAFETY_CUTOFF_TIMEOUT_MS);
+    }
+    const bool safetyCutoffExpired = drv_timer_getState(&pm_data.safetyCutoffTimeout) == DRV_TIMER_EXPIRED;
+    if (okBattery || !safetyCutoffExpired)
+    {
+        drv_timer_start(&pm_data.underVoltageTimeout, UNDERVOLTAGE_TIMEOUT_MS);
+    }
+    const bool undervoltageExpired = drv_timer_getState(&pm_data.underVoltageTimeout) == DRV_TIMER_EXPIRED;
+
     pm_data.lowBattery = lowBattery;
     pm_data.charged = charged;
-    pm_data.okBattery = okBattery && !overvoltage;
-    pm_data.okSafety = okSafety && !pm_data.sleeping && charged;
+    pm_data.okBattery = (okBattery || !undervoltageExpired) && !overvoltage;
+    pm_data.okSafety = (okSafety || !safetyCutoffExpired) && !pm_data.sleeping && charged;
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_LOWVOLTAGE, lowBattery);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_OVERVOLTAGE, overvoltage);
@@ -164,6 +180,9 @@ float32_t powerManager_getGLVCurrent(void)
 static void powerManager_init(void)
 {
     memset(&pm_data, 0x00, sizeof(pm_data));
+
+    drv_timer_init(&pm_data.underVoltageTimeout);
+    drv_timer_init(&pm_data.safetyCutoffTimeout);
 
     drv_tps2hb16ab_init();
     drv_vn9008_init();
