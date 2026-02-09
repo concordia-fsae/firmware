@@ -27,3 +27,5 @@ signals:
     sourceBuses: veh
   VCPDU_safetyReset:
     sourceBuses: veh
+  PM100DX_motorSpeedCritical:
+    sourceBuses: veh

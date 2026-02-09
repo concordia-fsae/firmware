@@ -31,6 +31,7 @@
 #define HZ_TO_RPM(hz) ((uint16_t)((hz) * 60))
 #define RPM_TO_HZ(rpm) ((rpm) / 60.0f)
 #define RPM_TO_MPS(hz) (RPM_TO_HZ((float32_t)hz) * WHEEL_CIRCUMFERENCE_M)
+#define MOTOR_SPEED_ZERO_RPM 10
 
 /******************************************************************************
  *                              D E F I N E S
@@ -42,6 +43,7 @@
 #else
 #define CANRX_IMU_LON(val) CANRX_get_signal(VEH, VCPDU_lon, val)
 #define CANRX_IMU_ANGLEPITCH(val) CANRX_get_signal(VEH, VCPDU_anglePitch, val)
+#define CANRX_MOTOR_SPEED(val) CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, val)
 #endif
 
 /******************************************************************************
@@ -57,6 +59,8 @@ typedef struct
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
     uint32_t lastTimestampMS;
     lib_simpleFilter_lpf_S lpfSpeed;
+    uint64_t lastFrontCaptureTick[2];
+    uint16_t lastGpsSamples;
     bool odoSaved;
     bool wasValidGPS;
 #endif // FEATURE_VEHICLEPEED_LEADER
@@ -84,11 +88,30 @@ static void calculateVehicleSpeed(void)
     float32_t speed = vehicle.vehicleSpeedLinear;
     float32_t accelLon = 0.0f;
     float32_t anglePitch = 0.0f;
+    int16_t motor_rpm = 0;
     const bool accelValid = (CANRX_IMU_LON(&accelLon) == CANRX_MESSAGE_VALID);
     const bool angleValid = (CANRX_IMU_ANGLEPITCH(&anglePitch) == CANRX_MESSAGE_VALID);
+    const bool motorValid = (CANRX_MOTOR_SPEED(&motor_rpm) == CANRX_MESSAGE_VALID);
     const uint32_t currentTime = HW_TIM_getTimeMS();
     const float32_t delta_t = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
     const bool validGPS = app_gps_isValid();
+    const uint16_t gpsSamples = app_gps_getNumberSamples();
+    const bool gpsUpdated = (gpsSamples != vehicle.lastGpsSamples);
+    const uint16_t frontAxleRpm = app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT);
+    bool frontSpeedUpdated = false;
+    uint64_t frontCaptureTick[2] = { 0U, 0U };
+
+    if (app_wheelSpeed_config.sensorType[WHEEL_FL] == WS_SENSORTYPE_TIM_CHANNEL)
+    {
+        frontCaptureTick[0] = HW_TIM_getLastCaptureBaseTick(app_wheelSpeed_config.config[WHEEL_FL].channel_freq);
+        frontSpeedUpdated |= (frontCaptureTick[0] != vehicle.lastFrontCaptureTick[0]);
+    }
+
+    if (app_wheelSpeed_config.sensorType[WHEEL_FR] == WS_SENSORTYPE_TIM_CHANNEL)
+    {
+        frontCaptureTick[1] = HW_TIM_getLastCaptureBaseTick(app_wheelSpeed_config.config[WHEEL_FR].channel_freq);
+        frontSpeedUpdated |= (frontCaptureTick[1] != vehicle.lastFrontCaptureTick[1]);
+    }
 
     if (accelValid && angleValid && (delta_t > 0.0f))
     {
@@ -105,16 +128,23 @@ static void calculateVehicleSpeed(void)
         }
         else
         {
-            // TODO: Check for an updated speed measurement
             const float32_t tmp = app_gps_getHeadingRef()->speedMps;
             speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
         }
     }
-    else
+    if (frontSpeedUpdated)
     {
-        // TODO: Handle degraded wheel speed sensors
-        const float32_t tmp = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT));
+        const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
         speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
+    }
+
+    if (motorValid)
+    {
+        motor_rpm = (int16_t)(motor_rpm < 0 ? -motor_rpm : motor_rpm);
+        if (motor_rpm < MOTOR_SPEED_ZERO_RPM)
+        {
+            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, 0.0f);
+        }
     }
 
     vehicle.vehicleSpeedLinear = speed;
@@ -130,6 +160,15 @@ static void calculateVehicleSpeed(void)
     }
 
     vehicle.lastTimestampMS = currentTime;
+    if (app_wheelSpeed_config.sensorType[WHEEL_FL] == WS_SENSORTYPE_TIM_CHANNEL)
+    {
+        vehicle.lastFrontCaptureTick[0] = frontCaptureTick[0];
+    }
+    if (app_wheelSpeed_config.sensorType[WHEEL_FR] == WS_SENSORTYPE_TIM_CHANNEL)
+    {
+        vehicle.lastFrontCaptureTick[1] = frontCaptureTick[1];
+    }
+    vehicle.lastGpsSamples = gpsSamples;
     vehicle.wasValidGPS = validGPS;
     app_faultManager_setFaultState(FM_FAULT_VCFRONT_VEHICLESPEEDDEGRADED, !validGPS);
 #else // FEATURE_VEHICLEPEED_LEADER
