@@ -191,12 +191,11 @@ void app_vehicleState_run100Hz(void)
                 {
                     vehicleState_data.state = VEHICLESTATE_ON_GLV;
                 }
-                else if ((VEHICLESTATE_CANRX_CONTACTORSTATE(&contacts) != CANRX_MESSAGE_VALID) ||
-                         (contacts != CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
-                {
-                    break;
-                }
-                else if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE && ((VEHICLESTATE_CANRX_BRAKEPOSITION(&percentage) == CANRX_MESSAGE_VALID) && (percentage > 10.0f)))
+                else if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE &&
+                         ((VEHICLESTATE_CANRX_BRAKEPOSITION(&percentage) == CANRX_MESSAGE_VALID) &&
+                         (percentage > 10.0f)) &&
+                         (VEHICLESTATE_CANRX_CONTACTORSTATE(&contacts) == CANRX_MESSAGE_VALID) ||
+                         (contacts == CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
                 {
                     vehicleState_data.state = VEHICLESTATE_TS_RUN;
                 }
@@ -204,6 +203,11 @@ void app_vehicleState_run100Hz(void)
             break;
         case VEHICLESTATE_TS_RUN:
             if (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_TSMS) == DRV_IO_INACTIVE)
+            {
+                vehicleState_data.state = VEHICLESTATE_ON_GLV;
+            }
+            else if ((VEHICLESTATE_CANRX_CONTACTORSTATE(&contacts) != CANRX_MESSAGE_VALID) ||
+                     (contacts != CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
             {
                 vehicleState_data.state = VEHICLESTATE_ON_GLV;
             }
