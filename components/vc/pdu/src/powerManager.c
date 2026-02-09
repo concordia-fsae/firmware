@@ -36,18 +36,14 @@
 #define BATTERY_RECHARGED      12.25f
 #define BATTERY_CUTOFF_SFTY_HI 11.75f
 #define BATTERY_CUTOFF_SFTY_LO 11.50f
-#define BATTERY_CUTOFF_LOAD_HI 11.25f
-#define BATTERY_CUTOFF_LOAD_LO 11.00f
 #define BATTERY_CUTOFF_ANY_HI  10.75f
 #define BATTERY_CUTOFF_ANY_LO  10.50f
 
 // Various power domain sanity checks
 _Static_assert(BATTERY_CUTOFF_ANY_LO < BATTERY_CUTOFF_ANY_HI, "Battery cutoff low must be lower than the high threshold.");
-_Static_assert(BATTERY_CUTOFF_LOAD_LO < BATTERY_CUTOFF_LOAD_HI, "Load cutoff low must be lower than the high threshold.");
 _Static_assert(BATTERY_CUTOFF_SFTY_LO < BATTERY_CUTOFF_SFTY_HI, "Safety cutoff low must be lower than the high threshold.");
 
-_Static_assert(BATTERY_CUTOFF_ANY_HI < BATTERY_CUTOFF_LOAD_LO, "Battery cutoff must be lower than the load cutoff.");
-_Static_assert(BATTERY_CUTOFF_LOAD_HI < BATTERY_CUTOFF_SFTY_LO, "Load cutoff must be lower than the safety cutoff.");
+_Static_assert(BATTERY_CUTOFF_ANY_HI < BATTERY_CUTOFF_SFTY_LO, "Battery cutoff must be lower than the safety cutoff.");
 _Static_assert(BATTERY_CUTOFF_SFTY_HI <= BATTERY_RECHARGED, "Battery must be considered recharged at a higher voltage than the highest cutoff.");
 _Static_assert(BATTERY_RECHARGED < BATTERY_OVERVOLTAGE, "Overvoltage must be highest voltage value.");
 
@@ -65,7 +61,6 @@ static struct
     } pdu;
 
     bool okBattery:1;
-    bool okLoads:1;
     bool okSafety:1;
 
     bool charged:1;
@@ -131,9 +126,6 @@ static void evalAbilities(void)
     const bool okBattery = pm_data.okBattery ?
                            pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO :
                            pm_data.glv_voltage > BATTERY_CUTOFF_ANY_HI;
-    const bool okLoads = pm_data.okLoads ?
-                         pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_LO :
-                         pm_data.glv_voltage > BATTERY_CUTOFF_LOAD_HI;
     const bool okSafety = pm_data.okSafety ?
                           pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_LO :
                           pm_data.glv_voltage > BATTERY_CUTOFF_SFTY_HI && resetFaults;
@@ -142,13 +134,11 @@ static void evalAbilities(void)
     pm_data.lowBattery = lowBattery;
     pm_data.charged = charged;
     pm_data.okBattery = okBattery && !overvoltage;
-    pm_data.okLoads = okLoads && !pm_data.sleeping && !overvoltage && charged;
-    pm_data.okSafety = okSafety && !pm_data.sleeping && !overvoltage && charged;
+    pm_data.okSafety = okSafety && !pm_data.sleeping && charged;
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_LOWVOLTAGE, lowBattery);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_OVERVOLTAGE, overvoltage);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_BATTERYNOK, !okBattery);
-    app_faultManager_setFaultState(FM_FAULT_VCPDU_LOADSNOK, !okLoads);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_SAFETYNOK, !pm_data.okSafety);
 }
 
@@ -217,7 +207,7 @@ static void powerManager_periodic_100Hz(void)
                                    ((i == DRV_TPS2HB16AB_IC_MC_VCU3) && (n == DRV_TPS2HB16AB_OUT_2)));
             const bool isShutdownCircuit = (i == DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN) && (n == DRV_TPS2HB16AB_OUT_2);
 
-            bool enableLoad = pm_data.okLoads || (requiredLoad && pm_data.okBattery);
+            bool enableLoad = (pm_data.okBattery && !pm_data.sleeping) || requiredLoad;
 
             if ((pm_data.deepSleep && isVcuHsd) || (isShutdownCircuit && !pm_data.okSafety))
             {

@@ -9,7 +9,6 @@ messages:
       overvoltage:
       lowVoltage:
       batteryNOK:
-      loadsNOK:
       safetyNOK:
       contactsOpenInRun:
       imuOverrun:
