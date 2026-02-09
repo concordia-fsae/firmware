@@ -33,11 +33,11 @@
 // MINIMUM_TS_ACTIVE 9.0V
 // MINIMUM_BOARD     8.0V
 #define BATTERY_OVERVOLTAGE    15.0f
-#define BATTERY_RECHARGED      12.25f
-#define BATTERY_CUTOFF_SFTY_HI 11.75f
-#define BATTERY_CUTOFF_SFTY_LO 11.50f
-#define BATTERY_CUTOFF_ANY_HI  10.75f
-#define BATTERY_CUTOFF_ANY_LO  10.50f
+#define BATTERY_RECHARGED      11.50f
+#define BATTERY_CUTOFF_SFTY_HI 11.00f
+#define BATTERY_CUTOFF_SFTY_LO 10.75f
+#define BATTERY_CUTOFF_ANY_HI  10.50f
+#define BATTERY_CUTOFF_ANY_LO  10.25f
 
 // Various power domain sanity checks
 _Static_assert(BATTERY_CUTOFF_ANY_LO < BATTERY_CUTOFF_ANY_HI, "Battery cutoff low must be lower than the high threshold.");
