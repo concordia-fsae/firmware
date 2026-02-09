@@ -340,6 +340,7 @@ cxx_binary(
             "//components/shared/code:DRV/drv_inputAD.c",
             "//components/shared/code:DRV/drv_io.c",
             "//components/shared/code:DRV/drv_outputAD.c",
+            "//components/shared/code:DRV/drv_userInput.c",
             "//components/shared/code:DRV/drv_timer.c",
             "//components/shared/code:HW/HW.c",
             "//components/shared/code:HW/HW_adc.c",
