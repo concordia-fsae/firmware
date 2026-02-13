@@ -1,0 +1,52 @@
+header:
+  version: 11
+  includes:
+    - yocto-cfr.yml
+
+distro: poky
+target: core-image-base
+machine: raspberrypi4-64
+
+defaults:
+  repos:
+    branch: scarthgap
+
+repos:
+  cfr-linux:
+    path: cfr-linux
+    layers:
+      meta-cfr-compute:
+    
+  meta-openembedded:
+    url: http://git.openembedded.org/meta-openembedded
+    path: build/extern/meta-openembedded
+    layers:
+      meta-oe:
+      meta-python:
+      meta-filesystems:
+      meta-networking:
+      meta-multimedia:
+
+  meta-raspberrypi:
+    url: https://github.com/agherzan/meta-raspberrypi.git
+    path: build/extern/meta-raspberrypi
+  
+  meta-mender-core:
+    url: https://github.com/mendersoftware/meta-mender
+    path: build/extern/meta-mender-core
+    layers:
+      meta-mender-core:
+
+  meta-mender-community:
+    url: https://github.com/theyoctojester/meta-mender-community
+    path: build/extern/meta-mender-community
+    layers:
+      meta-mender-raspberrypi:
+
+  poky:
+    url: https://git.yoctoproject.org/poky
+    path: build/extern/poky
+    layers:
+      meta:
+      meta-poky:
+      meta-yocto-bsp:
