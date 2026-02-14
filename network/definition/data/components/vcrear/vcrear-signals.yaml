@@ -80,11 +80,11 @@ signals:
       signedness: signed
     continuous: true
 
-  shockpotVoltRL:
+  shockpotVoltL:
     description: Front Left shock pot Voltage
     template: voltsPrecise
 
-  shockpotdispRL:
+  shockpotdispL:
     description: "Shock pot displacment rear left"
     unit: mm
     nativeRepresentation:
@@ -94,11 +94,11 @@ signals:
         max: 75
     continuous: true
 
-  shockpotVoltRR:
+  shockpotVoltR:
     description: Front right shock pot Voltage
     template: voltsPrecise
 
-  shockpotdispRR:
+  shockpotdispR:
     description: "Shockpot displacment rear right"
     unit: mm
     nativeRepresentation:

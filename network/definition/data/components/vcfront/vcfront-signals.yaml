@@ -237,13 +237,13 @@ signals:
     description: "State of the IMD light"
     discreteValues: digitalStatus
 
-  shockpotVoltFL:
+  shockpotVoltL:
     description: Front Left shock pot Voltage
     template: voltsPrecise
 
-  shockpotdispFL:
+  shockpotdispL:
     unit: mm
-    description: "Shock pot displacment front left"
+    description: "Shock pot displacement front left"
     nativeRepresentation:
       bitWidth: 12
       range:
@@ -251,13 +251,13 @@ signals:
         max: 75
     continuous: true
 
-  shockpotVoltFR:
+  shockpotVoltR:
     description: Front right shock pot Voltage
     template: voltsPrecise
 
-  shockpotdispFR:
+  shockpotdispR:
     unit: mm
-    description: "Shock pot displacment front right"
+    description: "Shock pot displacement front right"
     nativeRepresentation:
       bitWidth: 12
       range:

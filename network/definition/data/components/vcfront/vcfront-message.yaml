@@ -93,12 +93,12 @@ messages:
   shockpot:
     description: Data from front shock pots
     id: 0x455
-    cycleTimeMs: 100
+    cycleTimeMs: 10
     signals:
-      shockpotVoltFL:
-      shockpotdispFL:
-      shockpotVoltFR:
-      shockpotdispFR:
+      shockpotVoltL:
+      shockpotdispL:
+      shockpotVoltR:
+      shockpotdispR:
 
   cockpitLightStatus:
     description: Status of the cockpit lights
