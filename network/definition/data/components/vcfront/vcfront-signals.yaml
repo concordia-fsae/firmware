@@ -268,7 +268,7 @@ signals:
 
   shockpotdispFL:
     unit: mm
-    description: "Shock pot displacment front left"
+    description: "Shock pot displacement front left"
     nativeRepresentation:
       bitWidth: 12
       range:
@@ -282,7 +282,7 @@ signals:
 
   shockpotdispFR:
     unit: mm
-    description: "Shock pot displacment front right"
+    description: "Shock pot displacement front right"
     nativeRepresentation:
       bitWidth: 12
       range:

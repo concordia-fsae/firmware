@@ -1,6 +1,6 @@
 load("//components/shared/code/defs.bzl", "remap_headers")
 
-srcs = glob(["**/*.c"])
+srcs = glob(["**/*.c", "**/*.h"])
 [
     export_file(
         name = file,
