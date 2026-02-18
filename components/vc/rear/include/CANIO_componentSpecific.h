@@ -53,10 +53,10 @@
 #define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
 #define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
 
-#define set_shockpotdispRL(m,b,n,s) set(m,b,n,s, shockpot_getRLDisp())
-#define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRRDisp())
-#define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getRLVoltage())
-#define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRRVoltage())
+#define set_shockpotdispRL(m,b,n,s) set(m,b,n,s, shockpot_getLDisp())
+#define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getRDisp())
+#define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getLVoltage())
+#define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getRVoltage())
 
 #define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RL))
 #define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RR))
