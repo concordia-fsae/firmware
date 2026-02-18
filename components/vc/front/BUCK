@@ -1,5 +1,6 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
+load("//components/vc/shared:defs.bzl", "shared_shockpot_library")
 load("//drive-stack/defs.bzl", "deployable_target")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
@@ -345,6 +346,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_pid.c",
             "//components/shared/code:libs/lib_nvm.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
+            "//components/vc/shared:app/shockpot.c",
             "//embedded/libs:libcrc.c",
             ("//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]", ["-Wno-conversion"]),
             select({
@@ -459,3 +461,10 @@ alias(
     )
     for variant in variants
 ]
+
+
+shared_shockpot_library(
+    name = "shockpot",
+    toolchain = TOOLCHAIN,
+    componentSpecific_header_target = "//components/vc/front/include:headers",
+)

@@ -85,7 +85,7 @@ signals:
     template: voltsPrecise
 
   shockpotdispRL:
-    description: "Shock pot displacment rear left"
+    description: "Shock pot displacement rear left"
     unit: mm
     nativeRepresentation:
       bitWidth: 12
@@ -99,7 +99,7 @@ signals:
     template: voltsPrecise
 
   shockpotdispRR:
-    description: "Shockpot displacment rear right"
+    description: "Shockpot displacement rear right"
     unit: mm
     nativeRepresentation:
       bitWidth: 12

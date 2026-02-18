@@ -20,15 +20,15 @@ static struct
 {
     float32_t voltage;
     float32_t disp;
-} shockpot_FL;
+} shockpot_L;
 
 static struct
 {
     float32_t voltage;
     float32_t disp;
-} shockpot_FR;
+} shockpot_R;
 
-static lib_interpolation_point_S shockpot_FLMap[] = {
+static lib_interpolation_point_S shockpot_LMap[] = {
     {
         .x = 0.3f, // voltage
         .y = 75.0f, 
@@ -39,7 +39,7 @@ static lib_interpolation_point_S shockpot_FLMap[] = {
     },
 };
 
-static lib_interpolation_point_S shockpot_FRMap[] = {
+static lib_interpolation_point_S shockpot_RMap[] = {
     {
         .x = 0.3f, // voltage
         .y = 75.0f, 
@@ -50,57 +50,58 @@ static lib_interpolation_point_S shockpot_FRMap[] = {
     },
 };
 
-float32_t shockpot_getFLDisp(void) 
+float32_t shockpot_getLDisp(void)
 {
-    return shockpot_FL.disp;
+    return shockpot_L.disp;
 }
 
-float32_t shockpot_getFLVoltage(void) 
+float32_t shockpot_getLVoltage(void)
 {
-    return shockpot_FL.voltage;
+    return shockpot_L.voltage;
 }
 
-float32_t shockpot_getFRDisp(void) 
+float32_t shockpot_getRDisp(void)
 {
-    return shockpot_FR.disp;
+    return shockpot_R.disp;
 }
-float32_t shockpot_getFRVoltage(void) 
+float32_t shockpot_getRVoltage(void)
 {
-    return shockpot_FR.voltage;
+    return shockpot_R.voltage;
 }
 
 
 static lib_interpolation_mapping_S shockpot_map1 = {
-    .points = (lib_interpolation_point_S*)&shockpot_FLMap,
-    .number_points = COUNTOF(shockpot_FLMap),
+    .points = (lib_interpolation_point_S*)&shockpot_LMap,
+    .number_points = COUNTOF(shockpot_LMap),
     .saturate_left = true,
     .saturate_right = true,
 };
 
 static lib_interpolation_mapping_S shockpot_map2 = {
-    .points = (lib_interpolation_point_S*)&shockpot_FRMap,
-    .number_points = COUNTOF(shockpot_FRMap),
+    .points = (lib_interpolation_point_S*)&shockpot_RMap,
+    .number_points = COUNTOF(shockpot_RMap),
     .saturate_left = true,
     .saturate_right = true,
 };
+
 static void shockpot_init(void)
 {
-    memset(&shockpot_FL, 0x00U, sizeof(shockpot_FL)); 
+    memset(&shockpot_L, 0x00U, sizeof(shockpot_L));
     lib_interpolation_init(&shockpot_map1, 0.0f);
-    memset(&shockpot_FR, 0x00U, sizeof(shockpot_FR)); 
+    memset(&shockpot_R, 0x00U, sizeof(shockpot_R));
     lib_interpolation_init(&shockpot_map2, 0.0f);
 }
 
-static void shockpot_periodic_10Hz(void)
+static void shockpot_periodic_100Hz(void)
 {
-    shockpot_FL.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_L_SHK_DISP);
-    shockpot_FR.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_R_SHK_DISP);
-    shockpot_FL.disp = (lib_interpolation_interpolate(&shockpot_map1, shockpot_FL.voltage));
-    shockpot_FR.disp = (lib_interpolation_interpolate(&shockpot_map2, shockpot_FR.voltage));
+    shockpot_L.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_L_SHK_DISP);
+    shockpot_R.voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_R_SHK_DISP);
+    shockpot_L.disp = (lib_interpolation_interpolate(&shockpot_map1, shockpot_L.voltage));
+    shockpot_R.disp = (lib_interpolation_interpolate(&shockpot_map2, shockpot_R.voltage));
 
 }
 
 const ModuleDesc_S shockpot_desc = {
     .moduleInit = &shockpot_init,
-    .periodic10Hz_CLK = &shockpot_periodic_10Hz,
+    .periodic100Hz_CLK = &shockpot_periodic_100Hz,
 };

@@ -1,5 +1,6 @@
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
+load("//components/vc/shared:defs.bzl", "shared_shockpot_library")
 load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/defs.bzl", "deployable_target")
 load("//embedded/openocd/defs.bzl", "openocd_run")
@@ -335,6 +336,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
+            "//components/vc/shared:app/shockpot.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),
@@ -443,3 +445,14 @@ alias(
     )
     for variant in variants
 ]
+
+
+shared_shockpot_library(
+    name = "shockpot",
+    toolchain = TOOLCHAIN,
+    componentSpecific_header_target = "//components/vc/rear/include:headers",
+    srcs = ["//components/vc/shared:app/shockpot.c"],
+    headers = {"shockpot.h": "//components/vc/shared:app/shockpot.h"},
+    deps = ["//components/shared/code/RTOS:headers"],
+    visibility = ["PUBLIC"],
+)
