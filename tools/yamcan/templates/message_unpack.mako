@@ -20,20 +20,20 @@
 
 <%def name="make_structdef_signal(node, sig)">\
   %if node.received_sigs[sig].discrete_values:
-    CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+    CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit}] ${node.received_sigs[sig].description}
 %elif node.received_sigs[sig].native_representation.bit_width == 1:
-    bool ${node.received_sigs[sig].name} :1; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description};
+    bool ${node.received_sigs[sig].name} :1; // [${node.received_sigs[sig].unit}] ${node.received_sigs[sig].description};
 %else:
-    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit}] ${node.received_sigs[sig].description}
 %endif
 </%def>\
 <%def name="make_structdef_signalDuplicates(node, sig, total)">\
   %if node.received_sigs[sig].discrete_values:
-    CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+    CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit}] ${node.received_sigs[sig].description}
 %elif node.received_sigs[sig].native_representation.bit_width == 1:
-    bool ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+    bool ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit}] ${node.received_sigs[sig].description}
 %else:
-    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
+    ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit}] ${node.received_sigs[sig].description}
 %endif
 </%def>\
 

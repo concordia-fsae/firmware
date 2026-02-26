@@ -175,7 +175,7 @@ class CanSignal(CanObject):
             signal_def, "sna", SnaParams, SnaParams(), extra_params=self.name
         )
         try:
-            self.unit = get_if_exists(signal_def, "unit", Units, Units.none)
+            self.unit = get_if_exists(signal_def, "unit", str, "")
         except Exception as e:
             raise Exception(
                 f"Exception {e}: Unknown unit type for signal {self.name}"
@@ -213,6 +213,8 @@ class CanSignal(CanObject):
             self.native_representation.endianness.value.to_bytes(4, "little"), crc
         )
         crc = crc32(self.unit.value.encode(), crc)
+        crc = crc32(self.native_representation.endianness.value.to_bytes(4, 'little'), crc)
+        crc = crc32(self.unit.encode())
         crc = crc32(str(self.scale).encode(), crc)
         crc = crc32(str(self.offset).encode(), crc)
         return crc
@@ -225,7 +227,7 @@ class CanSignal(CanObject):
             f"offset: {self.offset}, "
             f"scale: {self.scale}, "
             f"startBit: {self.start_bit}, "
-            f"unit: {self.unit.value}"
+            f"unit: {self.unit}"
         )
 
     def _check_valid(self):
@@ -255,7 +257,7 @@ class CanSignal(CanObject):
                     # error for this printed from Range class
                     valid = False
             elif dv:
-                self.unit = Units.none
+                self.unit = ""
 
             nat_rep_invalid = not nat_rep.bit_width and (
                 not nat_rep.range or not nat_rep.range.is_valid

@@ -18,7 +18,7 @@ BO_ ${message.id if message.id <=0x7ff else message.id + 0x80000000} ${message.n
  SG_ ${signal.name} : \
 ${start_bit}|${signal.native_representation.bit_width}@${signal.native_representation.endianness.value}${signal.native_representation.signedness.value} \
 (${signal.scale},${signal.offset}) [${signal.native_representation.range.min}|${signal.native_representation.range.max}] \
-"${signal.unit.value}" ${",".join([sig.alias.upper() for sig in signal.receivers]) if signal.receivers else "Vector__XXX"}\
+"${signal.unit}" ${",".join([sig.alias.upper() for sig in signal.receivers]) if signal.receivers else "Vector__XXX"}\
 </%def>
 
 <%def name="make_comment(name, item, item_text)">

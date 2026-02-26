@@ -30,3 +30,6 @@ signals:
         min: 0
         max: 256
     continuous: true
+    continuous: true  
+    continuous: true
+    unit: ''

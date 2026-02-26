@@ -80,36 +80,6 @@ class SnaType(Enum):
     custom = 3
 
 
-# TODO: move this to a yaml
-class Units(Enum):
-    none = ""
-    m = "m"
-    cm = "cm"
-    s = "s"
-    ms = "ms"
-    volts = "V"
-    degC = "degC"
-    amps = "A"
-    amp_hours = "Ah"
-    rpm = "RPM"
-    pct = "%"
-    mm = "mm"
-    Nm = "Nm"
-    N = "N"
-    deg = "deg"
-    Hz = "Hz"
-    Wb = "Wb"
-    psi = "PSI"
-    mps2 = "m/s2"
-    mps = "m/s"
-    bytes = "B"
-    Whr = "Whr"
-    kW = "kW"
-    km = "km"
-    dps = "deg/s"
-    kOhm = "kOhm"
-
-
 class ValidationRole(Enum):
     none = "none"
     counter = "counter"
