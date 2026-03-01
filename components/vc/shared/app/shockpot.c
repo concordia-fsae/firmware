@@ -6,7 +6,6 @@
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
-
 #include "lib_utility.h"
 #include "shockpot.h"
 #include "ModuleDesc.h"
@@ -14,15 +13,9 @@
 #include "lib_interpolation.h"
 #include <string.h>
 
-typedef enum {
-    SHOCKPOT_LEFT,
-    SHOCKPOT_RIGHT,
-    SHOCKPOT_COUNT
-} shockpot_E;
-
 typedef struct {
     float32_t voltage;
-    float32_t disp;
+    float32_t displacement;
 } shockpotData_S;
 
 typedef struct {
@@ -42,23 +35,14 @@ static lib_interpolation_point_S shockpot_MapPoints[] = {
     },
 };
 
-float32_t shockpot_getLDisp(void)
+float32_t shockpot_getDisplacement(shockpot_E pot)
 {
-    return shockpot.data[SHOCKPOT_LEFT].disp;
+    return shockpot.data[pot].displacement;
 }
 
-float32_t shockpot_getLVoltage(void)
+float32_t shockpot_getVoltage(shockpot_E pot)
 {
-    return shockpot.data[SHOCKPOT_LEFT].voltage;
-}
-
-float32_t shockpot_getRDisp(void)
-{
-    return shockpot.data[SHOCKPOT_RIGHT].disp;
-}
-float32_t shockpot_getRVoltage(void)
-{
-    return shockpot.data[SHOCKPOT_RIGHT].voltage;
+    return shockpot.data[pot].voltage;
 }
 
 static lib_interpolation_mapping_S shockpot_map = {
@@ -78,8 +62,8 @@ static void shockpot_periodic_100Hz(void)
 {
     shockpot.data[SHOCKPOT_LEFT].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_L_SHK_DISP);
     shockpot.data[SHOCKPOT_RIGHT].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_R_SHK_DISP);
-    shockpot.data[SHOCKPOT_LEFT].disp = lib_interpolation_interpolate(&shockpot_map, shockpot.data[SHOCKPOT_LEFT].voltage);
-    shockpot.data[SHOCKPOT_RIGHT].disp = lib_interpolation_interpolate(&shockpot_map, shockpot.data[SHOCKPOT_RIGHT].voltage);
+    shockpot.data[SHOCKPOT_LEFT].displacement = lib_interpolation_interpolate(&shockpot_map, shockpot.data[SHOCKPOT_LEFT].voltage);
+    shockpot.data[SHOCKPOT_RIGHT].displacement = lib_interpolation_interpolate(&shockpot_map, shockpot.data[SHOCKPOT_RIGHT].voltage);
 
 }
 
