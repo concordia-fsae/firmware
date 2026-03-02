@@ -153,9 +153,11 @@ def generate_discrete_values(definition_dir: Path) -> None:
 def generate_units(definition_dir: Path) -> None:
     """Load valid units from units.yaml"""
     global valid_units
-    with open(definition_dir.joinpath("units.yaml"), "r") as fd:
+    with definition_dir.joinpath("units.yaml").open() as fd:
         data = safe_load(fd)
     valid_units = set(data["units"].values())
+
+
 def generate_templates(definition_dir: Path) -> None:
     """Load discrete values from signals.yaml"""
     global ERROR
@@ -374,10 +376,13 @@ def process_node(node: CanNode):
                 if "unit" in definition:
                     try:
                         if definition["unit"] not in valid_units:
-                            raise Exception(f"Unit '{definition['unit']}' is not an accepted unit.")
+                            raise Exception(
+                                f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                            )
                     except:
                         raise Exception(
-                            f"Unit '{definition['unit']}' is not an accepted unit."
+                            f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                            f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
                         )
                 if "validationRole" in definition:
                     try:
@@ -552,10 +557,13 @@ def process_node(node: CanNode):
                     if "unit" in definition:
                         try:
                             if definition["unit"] not in valid_units:
-                                raise Exception(f"Unit '{definition['unit']}' is not an accepted unit.")
+                                raise Exception(
+                                    f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                                )
                         except:
                             raise Exception(
-                                f"Unit '{new_sig['unit']}' is not an accepted unit."
+                                f"Unit '{new_sig['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                                f"Unit '{new_sig['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
                             )
                     if "validationRole" in new_sig:
                         try:
