@@ -133,7 +133,9 @@ class CType(Enum):
             return CType._bool
 
         req_width_bytes = (bit_width + 7) // 8
-        req_width_bytes = 4 if req_width_bytes == 3 else 8 if req_width_bytes > 4 else req_width_bytes
+        req_width_bytes = (
+            4 if req_width_bytes == 3 else 8 if req_width_bytes > 4 else req_width_bytes
+        )
 
         if req_width_bytes not in _DATA_SIZE_MAPPING[flt][signed]:
             raise KeyError("Error in calculation of required C type")
