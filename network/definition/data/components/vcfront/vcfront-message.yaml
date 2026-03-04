@@ -94,7 +94,7 @@ messages:
   shockpot:
     description: Data from front shock pots
     id: 0x455
-    cycleTimeMs: 100
+    cycleTimeMs: 10
     signals:
       shockpotVoltFL:
       shockpotdispFL:

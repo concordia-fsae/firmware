@@ -72,7 +72,7 @@ messages:
   shockpot:
     description: Data from rear shock pots
     id: 0x454
-    cycleTimeMs: 100
+    cycleTimeMs: 10
     signals:
       shockpotVoltRL:
       shockpotdispRL:
