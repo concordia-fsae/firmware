@@ -114,6 +114,34 @@ struct BusLog {
     path: PathBuf,
 }
 
+fn next_numbered_log_dir(base: &Path) -> std::io::Result<PathBuf> {
+    create_dir_all(base)?;
+    let mut max_num: Option<u64> = None;
+
+    for entry in read_dir(base)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_dir() {
+            continue;
+        }
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.is_empty() || !name.chars().all(|c| c.is_ascii_digit()) {
+            continue;
+        }
+        if let Ok(n) = name.parse::<u64>() {
+            max_num = Some(match max_num {
+                Some(cur) => cur.max(n),
+                None => n,
+            });
+        }
+    }
+
+    let next = max_num.map(|n| n + 1).unwrap_or(1);
+    let next_dir = base.join(next.to_string());
+    create_dir_all(&next_dir)?;
+    Ok(next_dir)
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
@@ -170,11 +198,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let log_cfg = match args.log_dir {
             Some(_) => {
-                args.log_dir.as_ref().map(|dir| LogConfig {
-                    dir: dir.clone(),
-                    tmp: args.tmp_dir.clone().expect("tmp folder must be specified when logging"),
-                    max_age: Duration::from_secs((args.log_rollover * 60).into()),
-                    max_bytes: args.log_size,
+                args.log_dir.as_ref().map(|dir| {
+                    let numbered_dir = next_numbered_log_dir(dir)
+                        .expect("failed to allocate numbered log directory");
+                    println!("log: using log directory '{}'", numbered_dir.display());
+                    LogConfig {
+                        dir: numbered_dir,
+                        tmp: args.tmp_dir.clone().expect("tmp folder must be specified when logging"),
+                        max_age: Duration::from_secs((args.log_rollover * 60).into()),
+                        max_bytes: args.log_size,
+                    }
                 })
             }
             _ => None,
