@@ -160,6 +160,7 @@ prebuilt_cxx_library(
     header_namespace = "",
     exported_headers = {
         "BuildDefines.h": "include/HW/BuildDefines.h",
+        "shockpot.h": "//components/vc/shared:app/shockpot.h",
     } | remap_headers(["include/HW/"]) | remap_headers(["include/"]),
     exported_deps = [":feature-tree"],
 )
@@ -335,6 +336,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
+            "//components/vc/shared:app/shockpot.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),
@@ -342,6 +344,7 @@ cxx_binary(
     header_namespace = "",
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+        "shockpot.h": "//components/vc/shared:app/shockpot.h",
     } | component_headers,
     include_directories = [
         "include/",
