@@ -255,6 +255,7 @@ screenWarnings:
   CONTACTS_OPEN_IN_RUN: 5
   IMU_UNCALIBRATED: 6
   APPS_DISABLED: 7
+  CONTACTOR_SOH_LOW: 8
 
 configSelection:
   NONE: 0

@@ -28,11 +28,52 @@
 
 #define LOAD_CURRENT_THRESHOLD 5
 
+#define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE 0.1f
+
 BMSB_S BMS;
 
 static drv_timer_S precharge_timer;
 
 void BMS_workerWatchdog(void);
+
+float32_t BMSB_getContactorSohHvp(void)
+{
+    return SATURATE(
+        0.0f,
+        1.0f - ((float32_t)contactor_data.contactorLifetime.contactorHvp / BMSB_CONTACTOR_LIFETIME_HVC43),
+        1.0f);
+}
+
+float32_t BMSB_getContactorSohHvn(void)
+{
+    return SATURATE(
+        0.0f,
+        1.0f - ((float32_t)contactor_data.contactorLifetime.contactorHvn / BMSB_CONTACTOR_LIFETIME_HVC43),
+        1.0f);
+}
+
+float32_t BMSB_getContactorSohPrecharge(void)
+{
+    return SATURATE(
+        0.0f,
+        1.0f - ((float32_t)contactor_data.contactorLifetime.precharge / BMSB_CONTACTOR_LIFETIME_3350_PRECHARGE),
+        1.0f);
+}
+
+uint32_t BMSB_getContactorLifetimeHvp(void)
+{
+    return contactor_data.contactorLifetime.contactorHvp;
+}
+
+uint32_t BMSB_getContactorLifetimeHvn(void)
+{
+    return contactor_data.contactorLifetime.contactorHvn;
+}
+
+uint32_t BMSB_getContactorLifetimePrecharge(void)
+{
+    return contactor_data.contactorLifetime.precharge;
+}
 
 static void BMS_init(void)
 {
@@ -131,6 +172,9 @@ static void BMS100Hz_PRD(void)
     app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULT, bmsFault);
     app_faultManager_setFaultState(FM_FAULT_BMSB_IMDNOK, imdOpen);
     app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUT, timeout);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVP, BMSB_getContactorSohHvp() <  CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVN, BMSB_getContactorSohHvn() <  CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE, BMSB_getContactorSohPrecharge() < CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
 
     if (bmsFault)
     {
@@ -164,6 +208,8 @@ static void BMS100Hz_PRD(void)
             {
                 SYS_SFT_cycleContacts();
                 drv_timer_start(&precharge_timer, PRECHARGE_MIN_TIME_MS);
+                contactor_data.contactorLifetime.contactorHvn++;
+                contactor_data.contactorLifetime.precharge++;
             }
             else if ((SYS.contacts == SYS_CONTACTORS_PRECHARGE) || (SYS.contacts == SYS_CONTACTORS_CLOSED))
             {
@@ -177,6 +223,8 @@ static void BMS100Hz_PRD(void)
                     (drv_timer_getState(&precharge_timer) == DRV_TIMER_EXPIRED))
                 {
                     SYS_SFT_cycleContacts();
+                    contactor_data.contactorLifetime.contactorHvp++;
+                    lib_nvm_requestWrite(NVM_ENTRYID_CONTACTOR_LIFETIME);
                 }
             }
         }

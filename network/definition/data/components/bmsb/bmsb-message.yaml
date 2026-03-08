@@ -13,6 +13,9 @@ messages:
       bmsFault:
       imdNOK:
       timeout:
+      contactorLowSohHvp:
+      contactorLowSohHvn:
+      contactorLowSohPrecharge:
 
   criticalData:
     description: BMS Boss Critical Data

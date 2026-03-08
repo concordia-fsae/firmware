@@ -56,6 +56,7 @@ typedef enum
     WARN_CONTACTS_OPEN_IN_RUN,
     WARN_IMU_UNCALIBRATED,
     WARN_APPS_DISABLED,
+    WARN_CONTACTOR_SOH_LOW,
     WARN_COUNT,
 } warnings_E;
 
@@ -147,6 +148,9 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_APPS_DISABLED:
             ret = CAN_SCREENWARNINGS_APPS_DISABLED;
             break;
+        case WARN_CONTACTOR_SOH_LOW:
+            ret = CAN_SCREENWARNINGS_CONTACTOR_SOH_LOW;
+            break;
         case WARN_NONE:
         case WARN_COUNT:
             break;
@@ -188,11 +192,15 @@ static void getWarnings(void)
     const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
     const bool imuUncalibrated = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUUNCALIBRATED);
     const bool appsBypassed = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_APPSDISABLED);
+    const bool contactorSohLow = app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVP) ||
+                              app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVN) ||
+                              app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE);
 
     WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
     WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
     WARNING_INGRESS(WARN_IMU_UNCALIBRATED, imuUncalibrated);
     WARNING_INGRESS(WARN_APPS_DISABLED, appsBypassed);
+    WARNING_INGRESS(WARN_CONTACTOR_SOH_LOW, contactorSohLow);
 }
 
 static void determineActiveWarning(void)
