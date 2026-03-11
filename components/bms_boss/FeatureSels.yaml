@@ -5,6 +5,8 @@ featureDefs:
 features:
   feature_cantx_swi:
   feature_canrx_swi:
+  app_component_id: bmsb
+  app_uds: true
   nvm_lib_enabled: true
   nvm_flash_backed: true
   nvm_block_size: 2048

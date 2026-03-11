@@ -9,4 +9,3 @@ variants:
         - "#/components/vc/shared/features/VC_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        feature_brakepedal_from_pressure: true

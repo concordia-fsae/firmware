@@ -10,8 +10,6 @@ variants:
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_uds: true
-        app_component_id: bmsb
   1:
     description: BMS Boss
     options:
@@ -23,5 +21,3 @@ variants:
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_uds: true
-        app_component_id: bmsb

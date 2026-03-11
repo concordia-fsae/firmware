@@ -8,6 +8,7 @@ features:
   feature_canrx_swi: true
   app_component_id: vcfront
   app_uds: true
+  feature_brakepedal_from_pressure: true
   feature_vehicleState_mode: follower
   feature_wiggly_pedal: true
   feature_vehicleSpeed_leader: true
