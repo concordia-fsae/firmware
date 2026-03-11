@@ -1,4 +1,4 @@
-configs:
+variants:
   0:
     description: BMS Worker Bootloader
     options:
@@ -11,7 +11,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -28,7 +28,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -45,7 +45,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -62,7 +62,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -79,7 +79,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -96,7 +96,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -112,7 +112,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsb
         app_validation_enabled: true
         feature_erase_invalid_app: false
@@ -129,7 +129,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 10
+        app_variant_id: 10
         app_component_id: stw
   21:
     description: Steering Wheel Switches Bootloader
@@ -142,7 +142,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: sws
   100:
     description: Debug Board Bootloader
@@ -155,7 +155,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 10
+        app_variant_id: 10
         app_component_id: debug
   30:
     description: VCFRONT Bootloader
@@ -168,7 +168,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: vcfront
         app_validation_enabled: true
         feature_erase_invalid_app: false
@@ -185,7 +185,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: vcrear
         app_validation_enabled: true
         feature_erase_invalid_app: false
@@ -202,7 +202,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
+        app_variant_id: 0
         app_component_id: vcpdu
         app_validation_enabled: true
         feature_erase_invalid_app: false
@@ -220,7 +220,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -237,7 +237,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -254,7 +254,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -271,7 +271,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -288,7 +288,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -305,7 +305,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -322,7 +322,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true
@@ -339,7 +339,7 @@ configs:
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
+        app_variant_id: 1
         app_component_id: bmsw
         app_node_id: true
         app_validation_enabled: true

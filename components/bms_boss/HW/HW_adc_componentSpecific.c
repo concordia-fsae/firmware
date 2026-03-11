@@ -67,7 +67,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     hadc1.Init.NbrOfConversion = 3;
 #else
     hadc1.Init.NbrOfConversion = 2;
@@ -93,7 +93,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
         Error_Handler();
     }
 
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     sConfig.Channel      = ADC_PACK_P_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
@@ -104,7 +104,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
 #endif
 
     sConfig.Channel      = ADC_CHANNEL_TEMPSENSOR;
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     sConfig.Rank         = ADC_REGULAR_RANK_3;
 #else
     sConfig.Rank         = ADC_REGULAR_RANK_2;
@@ -121,7 +121,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc2.Init.DiscontinuousConvMode = DISABLE;
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     hadc2.Init.NbrOfConversion = 3;
 #else
     hadc2.Init.NbrOfConversion = 1;
@@ -139,7 +139,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
         Error_Handler();
     }
 
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     sConfig.Channel      = ADC_PACK_N_CHANNEL;
     sConfig.Rank         = ADC_REGULAR_RANK_2;
     sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;

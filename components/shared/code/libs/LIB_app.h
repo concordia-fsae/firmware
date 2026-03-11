@@ -36,7 +36,7 @@ typedef struct
     const uint32_t appEnd;
     const uint32_t appCrcLocation;
     const uint16_t appComponentId;
-    const uint16_t appPcbaId;
+    const uint16_t appVariantId;
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
     const uint8_t appNodeId;
 #endif // APP_NODE_ID
@@ -53,7 +53,7 @@ typedef enum
 typedef enum
 {
     APP_VALID_CRC = 0U,
-    APP_VALID_PCBA_ID,
+    APP_VALID_VARIANT_ID,
     APP_VALID_COMPONENT_ID,
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
     APP_VALID_NODE_ID,

@@ -18,7 +18,7 @@
 
 void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
 {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
     for (uint8_t i = 0U; i < COUNTOF(CANRX_PRIVBMS_unpackList); i++)
     {
         if (id == CANRX_PRIVBMS_unpackList[i])
@@ -39,7 +39,7 @@ void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
 
     switch (bus)
     {
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
         case CAN_BUS_PRIVBMS:
             CANRX_PRIVBMS_unpackMessage(id, data);
             break;

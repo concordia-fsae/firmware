@@ -32,7 +32,7 @@ const lib_app_appDesc_S hwDesc = {
     .appEnd = (const uint32_t)&__app_end_addr,
     .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appComponentId = APP_COMPONENT_ID,
-    .appPcbaId = APP_PCBA_ID,
+    .appVariantId = APP_VARIANT_ID,
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
     .appNodeId = NODE_ID,
 #endif // APP_NODE_ID

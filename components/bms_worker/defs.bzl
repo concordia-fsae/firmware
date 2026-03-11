@@ -32,10 +32,10 @@ def _node_select(platform, node_count):
 def feature_tree_targets(platform_variants):
     select_map = {
         platform_constraint_label(platform): select(_node_select(platform, node_count))
-        for platform, _config_id, node_count in platform_variants
+        for platform, _variant_id, node_count in platform_variants
     }
     default_platform = _default_platform(platform_variants)
-    default_node_count = [node_count for platform, _config_id, node_count in platform_variants if platform == default_platform][0]
+    default_node_count = [node_count for platform, _variant_id, node_count in platform_variants if platform == default_platform][0]
     select_map["DEFAULT"] = select(
         _node_select(default_platform, default_node_count) | {
             "DEFAULT": [feature_tree_target(default_platform, 0)],
@@ -52,10 +52,10 @@ def feature_tree_codegen_srcs(platform_variants, static_srcs):
             }
             for node in range(node_count)
         })
-        for platform, _config_id, node_count in platform_variants
+        for platform, _variant_id, node_count in platform_variants
     }
     default_platform = _default_platform(platform_variants)
-    default_node_count = [node_count for platform, _config_id, node_count in platform_variants if platform == default_platform][0]
+    default_node_count = [node_count for platform, _variant_id, node_count in platform_variants if platform == default_platform][0]
     select_map["DEFAULT"] = select({
         ":node-{}".format(node): static_srcs | {
             "BuildDefines_generated.h": feature_tree_target(default_platform, node) + "-codegen[BuildDefines_generated.h]",

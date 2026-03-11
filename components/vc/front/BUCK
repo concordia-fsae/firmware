@@ -108,8 +108,7 @@ cxx_library(
 
 generate_feature_trees_by_platform(
     platform_variants = platform_variants,
-    app_name = APP_NAME,
-    srcs_by_platform = {
+    app_name = APP_NAME,    srcs_by_platform = {
         PLATFORMS.CFR25: {
             "variants.yaml": "variants.yaml",
             "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",

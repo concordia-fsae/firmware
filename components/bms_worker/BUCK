@@ -138,7 +138,7 @@ cxx_library(
 [
     generate_feature_tree(
         name = "feature-tree-{}-node-{}".format(platform_output_name(vehicle_platform), n),
-        config_id = variant_id,
+        variant_id = variant_id,
         srcs = {
             "variants.yaml": "variants.yaml",
             "BMS_FeatureSels.yaml": bms_sels,
@@ -152,10 +152,10 @@ cxx_library(
             "FeatureSels.yaml": "FeatureSels.yaml",
         },
         feature_overrides = {
-            "app_pcba_id": variant_id,
+            "app_variant_id": variant_id,
         },
         **{
-            APP_NAME + "_config_id": "{}U".format(variant_id),
+            APP_NAME + "_variant_id": "{}U".format(variant_id),
             "bmsw_node_id": "{}U".format(n),
         }
     )

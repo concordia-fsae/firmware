@@ -1,4 +1,4 @@
-configs:
+variants:
   0:
     description: BMS Worker #VA3
     options:

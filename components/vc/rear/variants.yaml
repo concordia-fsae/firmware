@@ -1,4 +1,4 @@
-configs:
+variants:
   0:
     description: Rear Vehicle Control Unit
     options:

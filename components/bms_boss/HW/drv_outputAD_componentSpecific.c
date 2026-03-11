@@ -21,7 +21,7 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
     [DRV_OUTPUTAD_DIGITAL_STATUS_IMD] = {
         .type = OUTPUT_DIGITAL,
         .config.gpio = {

@@ -59,12 +59,12 @@ def generate_feature_trees_by_platform(
     [
         generate_feature_tree(
             name = "{}-{}".format(name_prefix, platform_output_name(platform)),
-            config_id = variant_id,
+            variant_id = variant_id,
             srcs = srcs,
             feature_overrides = {
-                "app_pcba_id": variant_id,
+                "app_variant_id": variant_id,
             } | feature_overrides_by_platform.get(platform, {}),
-            **{app_name + "_config_id": str(variant_id) + "U"}
+            **{app_name + "_variant_id": str(variant_id) + "U"}
         )
         for platform, variant_id in platform_variants
         for srcs in [srcs_by_platform[platform]]

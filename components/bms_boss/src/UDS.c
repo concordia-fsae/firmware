@@ -267,7 +267,7 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
         case 0x05:
         {
             extern const lib_app_appDesc_S appDesc;
-            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appPcbaId, sizeof(appDesc.appPcbaId));
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appVariantId, sizeof(appDesc.appVariantId));
             break;
         }
         case 0x101:

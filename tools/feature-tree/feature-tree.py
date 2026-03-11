@@ -159,33 +159,33 @@ def LoadVariants(variants_file: str):
     with open(variants_file, "r") as fd:
         variants = safe_load(fd)
 
-    return variants["configs"]
+    return variants["variants"]
 
 
-def GetOptions(config_id: int, variants, kv: dict[str, str]):
+def GetOptions(variant_id: int, variants, kv: dict[str, str]):
     try:
-        if config_id not in variants:
-            raise Exception(f"Invalid config id. Supported IDs are {list(variants.keys())}")
-        override_options = variants[config_id]["options"] if variants[config_id]["options"] else {}
+        if variant_id not in variants:
+            raise Exception(f"Invalid variant id. Supported IDs are {list(variants.keys())}")
+        override_options = variants[variant_id]["options"] if variants[variant_id]["options"] else {}
         kv.update(override_options)
         return kv
     except Exception as e:
         raise Exception(f"Unknown error \"{type(e)} {e}\", unable to get variant options")
 
 
-def GetFeatures(config_id: int, variants):
-    return variants[config_id]["features"]
+def GetFeatures(variant_id: int, variants):
+    return variants[variant_id]["features"]
 
 
 if __name__ == "__main__":
     parser = ArgumentParser("feature-tree")
 
     parser.add_argument(
-        "--config-id",
+        "--variant-id",
         required=True,
         type=int,
-        help="Config ID in use.",
-        metavar="CONFIG_ID",
+        help="Variant ID in use.",
+        metavar="VARIANT_ID",
     )
     parser.add_argument(
         "--sources",
@@ -260,9 +260,9 @@ if __name__ == "__main__":
     try:
         options = {}
         variants = LoadVariants(variants_file)
-        options = GetOptions(args.config_id, variants, args.set)
-        features = GetFeatures(args.config_id, variants)
-        render_generated_file({ "configs": options }, "BuildDefines_generated.h.mako", args.output)
+        options = GetOptions(args.variant_id, variants, args.set)
+        features = GetFeatures(args.variant_id, variants)
+        render_generated_file({ "variants": options }, "BuildDefines_generated.h.mako", args.output)
         feature_overrides = dict(features["overrides"]) if features["overrides"] else {}
         feature_overrides.update({
             key: ParseFeatureOverrideValue(value)
