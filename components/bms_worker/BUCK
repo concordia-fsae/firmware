@@ -12,10 +12,11 @@ load("//tools/hextools/defs.bzl", "inject_crc")
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
 APP_NAME = "bmsw"
-NUMBER_NODES = 6
+NUMBER_NODES = 8
 
 variants = [
     0,
+    1,
 ]
 
 constraint_setting(
@@ -138,7 +139,7 @@ cxx_library(
         node_id = n,
         srcs = {
             "variants.yaml": "variants.yaml",
-            "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_FeatureSels.yaml",
+            "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml",
             "BMS_FeatureDefs.yaml": "//components/shared:FeatureDefs/BMS_FeatureDefs.yaml",
             "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
@@ -170,6 +171,16 @@ alias(
             ":node-6": ":feature-tree-0-6",
             ":node-7": ":feature-tree-0-7",
         }),
+        ":config-1": select({
+            ":node-0": ":feature-tree-1",
+            ":node-1": ":feature-tree-1-1",
+            ":node-2": ":feature-tree-1-2",
+            ":node-3": ":feature-tree-1-3",
+            ":node-4": ":feature-tree-1-4",
+            ":node-5": ":feature-tree-1-5",
+            ":node-6": ":feature-tree-1-6",
+            ":node-7": ":feature-tree-1-7",
+        }),
         "DEFAULT": select({
             ":node-0": ":feature-tree-0",
             ":node-1": ":feature-tree-0-1",
@@ -196,6 +207,16 @@ alias(
             ":node-5": ":feature-tree-0-5-codegen",
             ":node-6": ":feature-tree-0-6-codegen",
             ":node-7": ":feature-tree-0-7-codegen",
+        }),
+        ":config-1": select({
+            ":node-0": ":feature-tree-1-codegen",
+            ":node-1": ":feature-tree-1-1-codegen",
+            ":node-2": ":feature-tree-1-2-codegen",
+            ":node-3": ":feature-tree-1-3-codegen",
+            ":node-4": ":feature-tree-1-4-codegen",
+            ":node-5": ":feature-tree-1-5-codegen",
+            ":node-6": ":feature-tree-1-6-codegen",
+            ":node-7": ":feature-tree-1-7-codegen",
         }),
         "DEFAULT": select({
             ":node-0": ":feature-tree-0-codegen",
@@ -331,6 +352,7 @@ alias(
     name = "hal",
     actual = select({
         ":config-0": ":hal-f103",
+        ":config-1": ":hal-f103",
         "DEFAULT": ":hal-f103",
     }),
 )
@@ -339,6 +361,7 @@ alias(
     name = "CMSIS",
     actual = select({
         ":config-0": ":CMSIS-hal-f103",
+        ":config-1": ":CMSIS-hal-f103",
         "DEFAULT": ":CMSIS-hal-f103",
     }),
 )
@@ -367,6 +390,7 @@ alias(
     name = "linkscript",
     actual = select({
         ":config-0": ":linkscript-f103",
+        ":config-1": ":linkscript-f103",
         "DEFAULT": ":linkscript-f103",
     }),
 )
@@ -413,6 +437,7 @@ cxx_binary(
             "RTOS/FreeRTOS_SWI.c",
             select({
                 ":config-0": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
+                ":config-1": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
                 "DEFAULT": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
             }),
         ],
@@ -437,10 +462,11 @@ cxx_binary(
 )
 [
     configured_alias(
-        name = "elf-node-{}".format(i),
+        name = "elf-{}-node-{}".format(variant, i),
         actual = ":elf",
-        platform = ":cfg0-node-{}".format(i),
+        platform = ":cfg{}-node-{}".format(variant, i),
     )
+    for variant in variants
     for i in range(NUMBER_NODES)
 ]
 
@@ -463,77 +489,87 @@ generate_stripped_asms(
 
 [
     cxx_genrule(
-        name = "bin-node-{}".format(node),
+        name = "bin-{}-node-{}".format(variant, node),
         _cxx_toolchain = TOOLCHAIN,
         srcs = [":elf"],
         out = APP_NAME + "node{}.bin".format(node),
         cmd = "$(objcopy) -O binary ${SRCS} ${OUT}",
     )
+    for variant in variants
     for node in range(NUMBER_NODES)
 ]
 
 [
     inject_crc(
-        name = "bin_crc-node-{}".format(node),
-        src = ":bin-node-{}".format(node),
+        name = "bin_crc-{}-node-{}".format(variant, node),
+        src = ":bin-{}-node-{}".format(variant, node),
         out = APP_NAME + "_crc-node-{}.bin".format(node),
         start_address = APP_START_ADDR,
         visibility = ["PUBLIC"],
     )
+    for variant in variants
     for node in range(NUMBER_NODES)
 ]
 [
     configured_alias(
-        name = "crc-node-{}".format(i),
-        actual = ":bin_crc-node-{}".format(i),
-        platform = ":cfg0-node-{}".format(i),
+        name = "crc-{}-node-{}".format(variant, i),
+        actual = ":bin_crc-{}-node-{}".format(variant, i),
+        platform = ":cfg{}-node-{}".format(variant, i),
     )
+    for variant in variants
     for i in range(NUMBER_NODES)
 ]
 
-filegroup(
-    name = "crc-0.all_nodes",
-    srcs = [
-        ":crc-node-{}".format(i)
-        for i in range(NUMBER_NODES)
-    ],
-    visibility = ["PUBLIC"],
-)
+[
+    filegroup(
+        name = "crc-{}.all_nodes".format(variant),
+        srcs = [
+            ":crc-{}-node-{}".format(variant, i)
+            for i in range(NUMBER_NODES)
+        ],
+        visibility = ["PUBLIC"],
+    )
+    for variant in variants
+]
 
 [
     conUDS_download(
-        name = "download-node-{}".format(node),
-        binary = ":crc-node-{}".format(node),
+        name = "download-{}-node-{}".format(variant, node),
+        binary = ":crc-{}-node-{}".format(variant, node),
         manifest = "//network:manifest-uds",
         node = APP_NAME + "{}".format(node),
     )
+    for variant in variants
     for node in range(NUMBER_NODES)
 ]
 [
     deployable_target(
-        name = "deploy-node-{}".format(node),
-        src = ":crc-node-{}".format(node),
+        name = "deploy-{}-node-{}".format(variant, node),
+        src = ":crc-{}-node-{}".format(variant, node),
         target_node = APP_NAME + "{}".format(node),
         visibility = ["PUBLIC"],
     )
+    for variant in variants
     for node in range(NUMBER_NODES)
 ]
 [
     ota_agent(
-        name = "ota-node-{}".format(node),
-        src = ":deploy-node-{}".format(node),
+        name = "ota-{}-node-{}".format(variant, node),
+        src = ":deploy-{}-node-{}".format(variant, node),
         visibility = ["PUBLIC"],
     )
+    for variant in variants
     for node in range(NUMBER_NODES)
 ]
 
 [
     openocd_run(
-        name = "gdb-node-{}".format(node),
+        name = "gdb-{}-node-{}".format(variant, node),
         toolchain = TOOLCHAIN,
-        src = ":elf-node-{}".format(node),
+        src = ":elf-{}-node-{}".format(variant, node),
         interface = "stlink",
         mcu = "stm32f103c8",
     )
+    for variant in variants
     for node in range(NUMBER_NODES)
 ]

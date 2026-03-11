@@ -19,6 +19,14 @@ variants = [
     BootloaderVariant(name = "vcfront", config_id = 30, has_updater = True, target = SupportedMicrocontrollers("f105")),
     BootloaderVariant(name = "vcrear", config_id = 31, has_updater = True, target = SupportedMicrocontrollers("f105")),
     BootloaderVariant(name = "vcpdu", config_id = 32, has_updater = True, target = SupportedMicrocontrollers("f105")),
+    BootloaderVariant(name = "bmsw", config_id = 40, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 41, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 42, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 43, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 44, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 45, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 46, has_updater = True, target = SupportedMicrocontrollers("f103")),
+    BootloaderVariant(name = "bmsw", config_id = 47, has_updater = True, target = SupportedMicrocontrollers("f103")),
     BootloaderVariant(name = "debug", config_id = 100, has_updater = False, target = SupportedMicrocontrollers("f103")),
 ]
 
