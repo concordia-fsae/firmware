@@ -20,6 +20,13 @@ git_fetch(
     visibility = ["PUBLIC"],
 )
 
+configured_alias(
+    name = "cmsis-src",
+    actual = ":cmsis.git",
+    platform = "prelude//platforms:default",
+    visibility = ["PUBLIC"],
+)
+
 git_fetch(
     name = "hal.git",
     repo = "https://github.com/STMicroelectronics/stm32f1xx_hal_driver.git",
@@ -160,5 +167,12 @@ git_fetch(
         "Src/stm32f1xx_ll_utils.c",
         "Src/Legacy/stm32f1xx_hal_can.c",
     ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "hal-src",
+    actual = ":hal.git",
+    platform = "prelude//platforms:default",
     visibility = ["PUBLIC"],
 )

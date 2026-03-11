@@ -142,6 +142,17 @@ def GenerateFeatures(selection_files: List[str], features_dict: List[dict] = lis
 
     return features
 
+def ParseFeatureOverrideValue(value: str):
+    lowered = value.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    try:
+        return int(value.rstrip("Uu"), 0)
+    except ValueError:
+        return value
+
 def LoadVariants(variants_file: str):
     if not os.path.exists(variants_file):
         raise Exception(f"File '{variants_file}' does not exist")
@@ -192,6 +203,14 @@ if __name__ == "__main__":
         metavar="KEY=VALUE",
         help='Add key-value mappings to export into BuildDefines_generated.h.'
             ' If a value contains spaces, please wrap it in double quotes: key="value with spaces".'
+    )
+    parser.add_argument(
+        "--feature-set",
+        nargs='*',
+        default={},
+        action=MergeKeyValuePairs,
+        metavar="KEY=VALUE",
+        help="Add feature override mappings before FeatureDefines generation.",
     )
 
     parser.add_argument(
@@ -244,7 +263,12 @@ if __name__ == "__main__":
         options = GetOptions(args.config_id, variants, args.set)
         features = GetFeatures(args.config_id, variants)
         render_generated_file({ "configs": options }, "BuildDefines_generated.h.mako", args.output)
-        features = GenerateFeatures(selections, features["overrides"])
+        feature_overrides = dict(features["overrides"]) if features["overrides"] else {}
+        feature_overrides.update({
+            key: ParseFeatureOverrideValue(value)
+            for key, value in args.feature_set.items()
+        })
+        features = GenerateFeatures(selections, feature_overrides)
         render_generated_file({ "features": features }, "FeatureDefines_generated.h.mako", args.output)
     except Exception as e:
         print(f"Error: {e}")

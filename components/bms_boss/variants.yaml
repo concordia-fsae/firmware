@@ -12,7 +12,6 @@ configs:
       overrides:
         app_uds: true
         app_component_id: bmsb
-        app_pcba_id: 0
   1:
     description: BMS Boss
     options:
@@ -26,4 +25,3 @@ configs:
       overrides:
         app_uds: true
         app_component_id: bmsb
-        app_pcba_id: 1

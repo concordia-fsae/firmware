@@ -9,4 +9,3 @@ configs:
         - "#/components/vc/shared/features/VC_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0

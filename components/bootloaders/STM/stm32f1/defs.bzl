@@ -98,7 +98,7 @@ def _bootloader_impl(
             "-Wno-conversion",
         ],
         srcs = [
-            "//embedded/libs:isotp[isotp.c]",
+            "//embedded/libs:isotp-src[isotp.c]",
             "//embedded/libs/uds:lib_udsServer.c",
         ],
         header_namespace = "",
@@ -110,10 +110,10 @@ def _bootloader_impl(
         ],
         headers = {
             "uds_componentSpecific.h": "include/uds_componentSpecific.h",
-            "isotp.h": "//embedded/libs:isotp[include/isotp.h]",
-            "isotp_config.h": "//embedded/libs:isotp[include/isotp_config.h]",
-            "isotp_defines.h": "//embedded/libs:isotp[include/isotp_defines.h]",
-            "isotp_user.h": "//embedded/libs:isotp[include/isotp_user.h]",
+            "isotp.h": "//embedded/libs:isotp-src[include/isotp.h]",
+            "isotp_config.h": "//embedded/libs:isotp-src[include/isotp_config.h]",
+            "isotp_defines.h": "//embedded/libs:isotp-src[include/isotp_defines.h]",
+            "isotp_user.h": "//embedded/libs:isotp-src[include/isotp_user.h]",
         },
     )
 
