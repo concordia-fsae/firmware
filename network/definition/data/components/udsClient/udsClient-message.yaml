@@ -47,6 +47,22 @@ messages:
       - veh
     template: uds
 
+  bmsw6UdsRequest:
+    description: UDS request message for the BMS Worker 6
+    cycleTimeMs: 10
+    id: 0x606
+    sourceBuses:
+      - veh
+    template: uds
+
+  bmsw7UdsRequest:
+    description: UDS request message for the BMS Worker 7
+    cycleTimeMs: 10
+    id: 0x607
+    sourceBuses:
+      - veh
+    template: uds
+
   bmsbUdsRequest:
     description: UDS request message for the BMS Boss
     cycleTimeMs: 10
