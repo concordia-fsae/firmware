@@ -3,6 +3,8 @@ name: 'Build All Firmware'
 on:
   pull_request:
     branches: [ master, comp* ]
+  push:
+    branches: [ master, comp* ]
 
 jobs:
   generate-dbc:
