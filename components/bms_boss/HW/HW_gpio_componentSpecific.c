@@ -12,10 +12,10 @@
 
 const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     [HW_GPIO_CAN1_RX] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOB,
         .pin = GPIO_PIN_8,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOA,
         .pin = GPIO_PIN_11,
 #endif
@@ -25,10 +25,10 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_CAN1_TX] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOB,
         .pin = GPIO_PIN_9,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOA,
         .pin = GPIO_PIN_12,
 #endif
@@ -62,10 +62,10 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_TSMS_CHG] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOB,
         .pin = GPIO_PIN_14,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOD,
         .pin = GPIO_PIN_2,
 #endif
@@ -83,10 +83,10 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_BMS_IMD_RESET] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOA,
         .pin = GPIO_PIN_2,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOD,
         .pin = GPIO_PIN_3,
 #endif
@@ -96,10 +96,10 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_IMD_STATUS_MEM] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOA,
         .pin = GPIO_PIN_4,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOB,
         .pin = GPIO_PIN_8,
 #endif
@@ -109,10 +109,10 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_BMS_STATUS_MEM] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOA,
         .pin = GPIO_PIN_5,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOB,
         .pin = GPIO_PIN_9,
 #endif
@@ -138,10 +138,10 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_BMS_STATUS] = {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         .port = GPIOB,
         .pin = GPIO_PIN_12,
-#elif BMSB_CONFIG_ID == 1U
+#elif APP_VARIANT_ID == 1U
         .port = GPIOA,
         .pin = GPIO_PIN_4,
 #endif
@@ -150,7 +150,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_PULLDOWN,
         .resetState = HW_GPIO_PINRESET,
     },
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
     [HW_GPIO_IMD_STATUS] = {
         .port = GPIOB,
         .pin = GPIO_PIN_13,
@@ -184,7 +184,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     [HW_GPIO_UART_TX_3V] = {
         .port = GPIOA,
         .pin = GPIO_PIN_2,

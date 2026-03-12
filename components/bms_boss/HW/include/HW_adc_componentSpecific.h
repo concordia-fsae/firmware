@@ -28,7 +28,7 @@
 typedef enum
 {
     ADC_BANK_CHANNEL_CS,
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     ADC_BANK_CHANNEL_VPACK,
 #endif
     ADC_BANK_CHANNEL_MCU_TEMP,

@@ -31,7 +31,7 @@ void GPIO_init(const GPIO_config_S mux[], uint8_t pinCount)
         }
     }
 #if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU)
-#if (APP_PCBA_ID == 0U)
+#if (APP_VARIANT_ID == 0U)
     GPIO_assignPin(POE_PORT, POE_EN, true);
     GPIO_assignPin(CARCOMP_CONTROL_EN_PORT, CARCOMP_CONTROL_EN, true);
 #else

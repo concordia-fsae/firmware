@@ -6,36 +6,23 @@ load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//tools/yamcan/defs.bzl", "generate_code")
-load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
+load(
+    "//components/vehicle_platform:defs.bzl",
+    "add_platform_deploy_targets",
+    "generate_feature_trees_by_platform",
+    "platform_selected_codegen_srcs",
+    "platform_selected_targets",
+)
+load("//components/vehicle_platform:platforms.bzl", "PLATFORMS", "platform_output_name")
 
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
 APP_NAME = "vcpdu"
 
-variants = [
-    0,
-]
-
-constraint_setting(
-    name = "variant",
-)
-
-[
-    constraint_value(
-        name = "config-{}".format(variant),
-        constraint_setting = ":variant",
-    )
-    for variant in variants
-]
-[
-    platform(
-        name = "platform-{}".format(variant),
-        constraint_values = [
-            ":config-{}".format(variant),
-        ],
-    )
-    for variant in variants
+platform_variants = [
+    (PLATFORMS.CFR25, 0),
+    (PLATFORMS.CFR26, 0),
 ]
 
 compiler_flags = [
@@ -87,43 +74,42 @@ cxx_library(
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
     srcs = [
-        "//embedded/libs:FreeRTOS.git[Source/croutine.c]",
-        "//embedded/libs:FreeRTOS.git[Source/event_groups.c]",
-        "//embedded/libs:FreeRTOS.git[Source/list.c]",
-        "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/port.c]",
-        "//embedded/libs:FreeRTOS.git[Source/queue.c]",
-        "//embedded/libs:FreeRTOS.git[Source/tasks.c]",
-        "//embedded/libs:FreeRTOS.git[Source/timers.c]",
+        "//embedded/libs:FreeRTOS-src[Source/croutine.c]",
+        "//embedded/libs:FreeRTOS-src[Source/event_groups.c]",
+        "//embedded/libs:FreeRTOS-src[Source/list.c]",
+        "//embedded/libs:FreeRTOS-src[Source/portable/GCC/ARM_CM3/port.c]",
+        "//embedded/libs:FreeRTOS-src[Source/queue.c]",
+        "//embedded/libs:FreeRTOS-src[Source/tasks.c]",
+        "//embedded/libs:FreeRTOS-src[Source/timers.c]",
     ],
     header_namespace = "",
     exported_headers = {
-        "FreeRTOS.h": "//embedded/libs:FreeRTOS.git[Source/include/FreeRTOS.h]",
-        "croutine.h": "//embedded/libs:FreeRTOS.git[Source/include/croutine.h]",
-        "deprecated_definitions.h": "//embedded/libs:FreeRTOS.git[Source/include/deprecated_definitions.h]",
-        "event_groups.h": "//embedded/libs:FreeRTOS.git[Source/include/event_groups.h]",
-        "list.h": "//embedded/libs:FreeRTOS.git[Source/include/list.h]",
-        "mpu_wrappers.h": "//embedded/libs:FreeRTOS.git[Source/include/mpu_wrappers.h]",
-        "portable.h": "//embedded/libs:FreeRTOS.git[Source/include/portable.h]",
-        "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
-        "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
-        "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
-        "semphr.h": "//embedded/libs:FreeRTOS.git[Source/include/semphr.h]",
-        "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
-        "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
-        "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
-        "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
+        "FreeRTOS.h": "//embedded/libs:FreeRTOS-src[Source/include/FreeRTOS.h]",
+        "croutine.h": "//embedded/libs:FreeRTOS-src[Source/include/croutine.h]",
+        "deprecated_definitions.h": "//embedded/libs:FreeRTOS-src[Source/include/deprecated_definitions.h]",
+        "event_groups.h": "//embedded/libs:FreeRTOS-src[Source/include/event_groups.h]",
+        "list.h": "//embedded/libs:FreeRTOS-src[Source/include/list.h]",
+        "mpu_wrappers.h": "//embedded/libs:FreeRTOS-src[Source/include/mpu_wrappers.h]",
+        "portable.h": "//embedded/libs:FreeRTOS-src[Source/include/portable.h]",
+        "portmacro.h": "//embedded/libs:FreeRTOS-src[Source/portable/GCC/ARM_CM3/portmacro.h]",
+        "projdefs.h": "//embedded/libs:FreeRTOS-src[Source/include/projdefs.h]",
+        "queue.h": "//embedded/libs:FreeRTOS-src[Source/include/queue.h]",
+        "semphr.h": "//embedded/libs:FreeRTOS-src[Source/include/semphr.h]",
+        "stack_macros.h": "//embedded/libs:FreeRTOS-src[Source/include/stack_macros.h]",
+        "stream_buffer.h": "//embedded/libs:FreeRTOS-src[Source/include/stream_buffer.h]",
+        "task.h": "//embedded/libs:FreeRTOS-src[Source/include/task.h]",
+        "timers.h": "//embedded/libs:FreeRTOS-src[Source/include/timers.h]",
         "FreeRTOSConfig.h": "include/FreeRTOSConfig.h",
     },
     headers = {
     },
-    exported_deps = [":CMSIS"],
+    exported_deps = [":CMSIS-hal-f105"],
 )
 
-[
-    generate_feature_tree(
-        name = "feature-tree-{}".format(variant),
-        config_id = variant,
-        srcs = {
+generate_feature_trees_by_platform(
+    platform_variants = platform_variants,
+    app_name = APP_NAME,    srcs_by_platform = {
+        PLATFORMS.CFR25: {
             "variants.yaml": "variants.yaml",
             "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",
             "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
@@ -135,23 +121,19 @@ cxx_library(
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
         },
-        **{APP_NAME + "_config_id": str(variant) + "U"}
-    )
-    for variant in variants
-]
-
-alias(
-    name = "feature-tree",
-    actual = select({
-        "DEFAULT": ":feature-tree-0",
-    }),
-)
-
-alias(
-    name = "feature-tree-codegen",
-    actual = select({
-        "DEFAULT": ":feature-tree-0-codegen",
-    }),
+        PLATFORMS.CFR26: {
+            "variants.yaml": "variants.yaml",
+            "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",
+            "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
+            "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
+            "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
+            "SharedApp_FeatureDefs.yaml": "//components/shared/code:SharedApp_FeatureDefs.yaml",
+            "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
+            "hw_FeatureDefs.yaml": "//components/shared/code:HW/hw_FeatureDefs.yaml",
+            "FeatureDefs.yaml": "FeatureDefs.yaml",
+            "FeatureSels.yaml": "FeatureSels.yaml",
+        },
+    },
 )
 
 prebuilt_cxx_library(
@@ -161,7 +143,7 @@ prebuilt_cxx_library(
     exported_headers = {
         "BuildDefines.h": "include/HW/BuildDefines.h",
     } | remap_headers(["include/HW/"]) | remap_headers(["include/"]),
-    exported_deps = [":feature-tree"],
+    exported_deps = platform_selected_targets(platform_variants),
 )
 
 compiler_flags += ["-include", "BuildDefines.h"]
@@ -174,7 +156,7 @@ generate_code(
     network_dep = "//network:network",
     library_deps = [
         ":build-headers",
-        ":hal",
+        ":hal-f105",
         ":FreeRTOS",
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
@@ -193,7 +175,7 @@ cxx_library(
         "-Wno-conversion",
     ],
     srcs = [
-        "//embedded/libs:isotp[isotp.c]",
+        "//embedded/libs:isotp-src[isotp.c]",
         "//embedded/libs/uds:lib_udsServer.c",
     ],
     header_namespace = "",
@@ -207,10 +189,10 @@ cxx_library(
     ],
     headers = {
         "uds_componentSpecific.h": "include/uds_componentSpecific.h",
-        "isotp.h": "//embedded/libs:isotp[include/isotp.h]",
-        "isotp_config.h": "//embedded/libs:isotp[include/isotp_config.h]",
-        "isotp_defines.h": "//embedded/libs:isotp[include/isotp_defines.h]",
-        "isotp_user.h": "//embedded/libs:isotp[include/isotp_user.h]",
+        "isotp.h": "//embedded/libs:isotp-src[include/isotp.h]",
+        "isotp_config.h": "//embedded/libs:isotp-src[include/isotp_config.h]",
+        "isotp_defines.h": "//embedded/libs:isotp-src[include/isotp_defines.h]",
+        "isotp_user.h": "//embedded/libs:isotp-src[include/isotp_user.h]",
     },
 )
 
@@ -254,20 +236,6 @@ cxx_library(
     ]
 ]
 
-alias(
-    name = "hal",
-    actual = select({
-        "DEFAULT": ":hal-f105",
-    }),
-)
-
-alias(
-    name = "CMSIS",
-    actual = select({
-        "DEFAULT": ":CMSIS-hal-f105",
-    }),
-)
-
 [
     cxx_genrule(
         name = "linkscript-" + variant,
@@ -275,25 +243,16 @@ alias(
         cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) +
               " -include BuildDefines.h linkscript | sed -e '/^#.\\+$/d' > ${OUT}",
         out = "linkscript",
-        srcs = {
+        srcs = platform_selected_codegen_srcs(platform_variants, {
             "linkscript": "//embedded/platforms/stm32/f1/" + variant + ":" + script,
             "BuildDefines.h": "include/HW/BuildDefines.h",
             "FeatureDefines.h": "//tools/feature-tree:FeatureDefines.h",
-            "BuildDefines_generated.h": ":feature-tree-codegen[BuildDefines_generated.h]",
-            "FeatureDefines_generated.h": ":feature-tree-codegen[FeatureDefines_generated.h]",
-        },
+        }),
     )
     for variant, script in [
         ("f105", "stm32f105vc.ld"),
     ]
 ]
-
-alias(
-    name = "linkscript",
-    actual = select({
-        "DEFAULT": ":linkscript-f105",
-    }),
-)
 
 component_headers = remap_headers(["include/", "HW/include/"])
 
@@ -301,7 +260,7 @@ cxx_binary(
     name = "elf",
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
-    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"] + [
+    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript-f105)"] + [
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/croutine.c.o])",
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/event_groups.c.o])",
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/list.c.o])",
@@ -358,7 +317,7 @@ cxx_binary(
         "HW/include/",
     ],
     deps = [
-        ":hal",
+        ":hal-f105",
         ":udsServer",
         ":FreeRTOS",
         ":network",
@@ -379,7 +338,7 @@ generate_stripped_asms(
         ":elf",
         ":FreeRTOS",
         ":udsServer",
-        ":hal",
+        ":hal-f105",
         ":network",
     ],
     toolchain = TOOLCHAIN,
@@ -400,55 +359,23 @@ inject_crc(
     start_address = APP_START_ADDR,
     visibility = ["PUBLIC"],
 )
-[
-    configured_alias(
-        name = "crc-{}".format(variant),
-        actual = ":bin_crc",
-        platform = ":platform-{}".format(variant),
-        visibility = ["PUBLIC"],
-    )
-    for variant in variants
-]
-
 alias(
     name = APP_NAME,
     actual = ":bin",
 )
 
-[
-    conUDS_download(
-        name = "download-{}".format(variant),
-        binary = ":crc-{}".format(variant),
-        manifest = "//network:manifest-uds",
-        node = APP_NAME,
-    )
-    for variant in variants
-]
-[
-    deployable_target(
-        name = "deploy-{}".format(variant),
-        src = ":crc-{}".format(variant),
-        target_node = APP_NAME,
-        visibility = ["PUBLIC"],
-    )
-    for variant in variants
-]
-[
-    ota_agent(
-        name = "ota-{}".format(variant),
-        src = ":deploy-{}".format(variant),
-        visibility = ["PUBLIC"],
-    )
-    for variant in variants
-]
+add_platform_deploy_targets(
+    platform_variants = platform_variants,
+    app_name = APP_NAME,
+)
 
 [
     openocd_run(
-        name = "gdb-{}".format(variant),
+        name = "gdb-{}".format(platform_output_name(platform)),
         toolchain = TOOLCHAIN,
         src = ":elf",
         interface = "stlink",
         mcu = "stm32f103c8",
     )
-    for variant in variants
+    for platform, _variant in platform_variants
 ]

@@ -142,39 +142,50 @@ def GenerateFeatures(selection_files: List[str], features_dict: List[dict] = lis
 
     return features
 
+def ParseFeatureOverrideValue(value: str):
+    lowered = value.lower()
+    if lowered == "true":
+        return True
+    if lowered == "false":
+        return False
+    try:
+        return int(value.rstrip("Uu"), 0)
+    except ValueError:
+        return value
+
 def LoadVariants(variants_file: str):
     if not os.path.exists(variants_file):
         raise Exception(f"File '{variants_file}' does not exist")
     with open(variants_file, "r") as fd:
         variants = safe_load(fd)
 
-    return variants["configs"]
+    return variants["variants"]
 
 
-def GetOptions(config_id: int, variants, kv: dict[str, str]):
+def GetOptions(variant_id: int, variants, kv: dict[str, str]):
     try:
-        if config_id not in variants:
-            raise Exception(f"Invalid config id. Supported IDs are {list(variants.keys())}")
-        override_options = variants[config_id]["options"] if variants[config_id]["options"] else {}
+        if variant_id not in variants:
+            raise Exception(f"Invalid variant id. Supported IDs are {list(variants.keys())}")
+        override_options = variants[variant_id]["options"] if variants[variant_id]["options"] else {}
         kv.update(override_options)
         return kv
     except Exception as e:
         raise Exception(f"Unknown error \"{type(e)} {e}\", unable to get variant options")
 
 
-def GetFeatures(config_id: int, variants):
-    return variants[config_id]["features"]
+def GetFeatures(variant_id: int, variants):
+    return variants[variant_id]["features"]
 
 
 if __name__ == "__main__":
     parser = ArgumentParser("feature-tree")
 
     parser.add_argument(
-        "--config-id",
+        "--variant-id",
         required=True,
         type=int,
-        help="Config ID in use.",
-        metavar="CONFIG_ID",
+        help="Variant ID in use.",
+        metavar="VARIANT_ID",
     )
     parser.add_argument(
         "--sources",
@@ -192,6 +203,14 @@ if __name__ == "__main__":
         metavar="KEY=VALUE",
         help='Add key-value mappings to export into BuildDefines_generated.h.'
             ' If a value contains spaces, please wrap it in double quotes: key="value with spaces".'
+    )
+    parser.add_argument(
+        "--feature-set",
+        nargs='*',
+        default={},
+        action=MergeKeyValuePairs,
+        metavar="KEY=VALUE",
+        help="Add feature override mappings before FeatureDefines generation.",
     )
 
     parser.add_argument(
@@ -241,10 +260,15 @@ if __name__ == "__main__":
     try:
         options = {}
         variants = LoadVariants(variants_file)
-        options = GetOptions(args.config_id, variants, args.set)
-        features = GetFeatures(args.config_id, variants)
-        render_generated_file({ "configs": options }, "BuildDefines_generated.h.mako", args.output)
-        features = GenerateFeatures(selections, features["overrides"])
+        options = GetOptions(args.variant_id, variants, args.set)
+        features = GetFeatures(args.variant_id, variants)
+        render_generated_file({ "variants": options }, "BuildDefines_generated.h.mako", args.output)
+        feature_overrides = dict(features["overrides"]) if features["overrides"] else {}
+        feature_overrides.update({
+            key: ParseFeatureOverrideValue(value)
+            for key, value in args.feature_set.items()
+        })
+        features = GenerateFeatures(selections, feature_overrides)
         render_generated_file({ "features": features }, "FeatureDefines_generated.h.mako", args.output)
     except Exception as e:
         print(f"Error: {e}")

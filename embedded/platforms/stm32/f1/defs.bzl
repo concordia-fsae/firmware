@@ -47,17 +47,17 @@ def stm32f1_hal(
             headers.extend(driver_config.get("headers", []))
 
     srcs_qualified = [
-        "//embedded/platforms/stm32/f1:cmsis.git[Source/Templates/system_stm32f1xx.c]",
+        "//embedded/platforms/stm32/f1:cmsis-src[Source/Templates/system_stm32f1xx.c]",
     ]
     headers_qualified = {
         "stm32f1xx_hal_conf.h": hal_conf_header,
-        "stm32f1xx.h": "//embedded/platforms/stm32/f1:cmsis.git[Include/stm32f1xx.h]",
-        "stm32f103xb.h": "//embedded/platforms/stm32/f1:cmsis.git[Include/stm32f103xb.h]",
-        "stm32f105xc.h": "//embedded/platforms/stm32/f1:cmsis.git[Include/stm32f105xc.h]",
-        "system_stm32f1xx.h": "//embedded/platforms/stm32/f1:cmsis.git[Include/system_stm32f1xx.h]",
+        "stm32f1xx.h": "//embedded/platforms/stm32/f1:cmsis-src[Include/stm32f1xx.h]",
+        "stm32f103xb.h": "//embedded/platforms/stm32/f1:cmsis-src[Include/stm32f103xb.h]",
+        "stm32f105xc.h": "//embedded/platforms/stm32/f1:cmsis-src[Include/stm32f105xc.h]",
+        "system_stm32f1xx.h": "//embedded/platforms/stm32/f1:cmsis-src[Include/system_stm32f1xx.h]",
     }
 
-    HAL_PATH = "//embedded/platforms/stm32/f1:hal.git[{}]"
+    HAL_PATH = "//embedded/platforms/stm32/f1:hal-src[{}]"
     for src in srcs:
         if isinstance(src, str):
             srcs_qualified.append(HAL_PATH.format(src))

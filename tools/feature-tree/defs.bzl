@@ -6,12 +6,13 @@ DEFAULT_RENDERER = "//tools/feature-tree:BuildDefines_generated.h.mako"
 
 def generate_feature_tree(
         name: str,
-        config_id: int | Select,
+        variant_id: int | Select,
         srcs: list[str] | dict[str, str],
         node_id: int | None = None,
         build_renderer: str = DEFAULT_RENDERER,
+        feature_overrides: dict[str, str | int | bool] = {},
         **kwargs):
-    exported_identifier = ".config-{}"
+    exported_identifier = ".variant-{}"
 
     if node_id:
         name = "{}-{}".format(name, node_id)
@@ -32,12 +33,13 @@ def generate_feature_tree(
         }
 
     extra_args = " ".join(["--set {}={}".format(k, v) for k, v in kwargs.items()])
+    feature_override_args = " ".join(["--feature-set {}={}".format(k, v) for k, v in feature_overrides.items()])
     uv_genrule(
         name = uv_name,
         tool = "//tools/feature-tree:feature-tree",
         srcs = srcs_qualified,
-        cmd = "$(python) ${TOOLDIR}/feature-tree.py --config-id " + str(config_id) +
-              " --sources ${SRCS} --output ${OUT} " + extra_args,
+        cmd = "$(python) ${TOOLDIR}/feature-tree.py --variant-id " + str(variant_id) +
+              " --sources ${SRCS} --output ${OUT} " + extra_args + " " + feature_override_args,
         outs = {
             "BuildDefines_generated.h": ["BuildDefines_generated.h"],
             "FeatureDefines_generated.h": ["FeatureDefines_generated.h"],

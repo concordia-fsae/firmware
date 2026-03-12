@@ -66,7 +66,7 @@ static void periodic_10Hz(void)
     msg.id          = 0x299;
     msg.lengthBytes = 8U;
     msg.data.u16[0] = hwDesc.appComponentId;
-    msg.data.u16[1] = hwDesc.appPcbaId;
+    msg.data.u16[1] = hwDesc.appVariantId;
     msg.data.u8[4]  = APP_FUNCTION_ID;
     msg.data.u8[5]  = SYS_checkAppValid(APP_DESC_ADDR);
 #if FEATURE_IS_ENABLED(APP_NODE_ID)

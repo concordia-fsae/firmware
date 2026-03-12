@@ -5,6 +5,20 @@ load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load(
+    "//components/bms_worker:defs.bzl",
+    "all_nodes_target_name",
+    "configured_platform_name",
+    "feature_tree_codegen_srcs",
+    "feature_tree_target",
+    "feature_tree_targets",
+    "node_target_name",
+)
+load(
+    "//components/vehicle_platform:platforms.bzl",
+    "PLATFORMS",
+    "platform_output_name",
+)
 load("//tools/yamcan/defs.bzl", "generate_code")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
@@ -12,46 +26,35 @@ load("//tools/hextools/defs.bzl", "inject_crc")
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
 APP_NAME = "bmsw"
-NUMBER_NODES = 8
-
-variants = [
-    0,
-    1,
+platform_variants = [
+    # (platform, variant_id, node_count)
+    (PLATFORMS.CFR25, 0, 6),
+    (PLATFORMS.CFR26, 1, 8),
 ]
+max_node_count = max([node_count for _platform, _variant_id, node_count in platform_variants])
 
-constraint_setting(
-    name = "variant",
-)
 constraint_setting(
     name = "node",
 )
 [
     constraint_value(
-        name = "config-{}".format(variant),
-        constraint_setting = ":variant",
-    )
-    for variant in variants
-]
-[
-    constraint_value(
         name = "node-{}".format(node),
         constraint_setting = ":node",
     )
-    for node in range(NUMBER_NODES)
+    for node in range(max_node_count)
 ]
 
 [
     platform(
-        name = "cfg{}-node-{}".format(variant, i),
+        name = configured_platform_name(platform_name, node),
         constraint_values = [
-            ":config-{}".format(variant),
-            ":node-{}".format(i),
+            "//buck2/constraints:{}".format(platform_name),
+            ":node-{}".format(node),
         ],
     )
-    for variant in variants
-    for i in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
-
 compiler_flags = [
     "-std=c11",
     "-mthumb",
@@ -101,45 +104,44 @@ cxx_library(
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
     srcs = [
-        "//embedded/libs:FreeRTOS.git[Source/croutine.c]",
-        "//embedded/libs:FreeRTOS.git[Source/event_groups.c]",
-        "//embedded/libs:FreeRTOS.git[Source/list.c]",
-        "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/port.c]",
-        "//embedded/libs:FreeRTOS.git[Source/queue.c]",
-        "//embedded/libs:FreeRTOS.git[Source/tasks.c]",
-        "//embedded/libs:FreeRTOS.git[Source/timers.c]",
+        "//embedded/libs:FreeRTOS-src[Source/croutine.c]",
+        "//embedded/libs:FreeRTOS-src[Source/event_groups.c]",
+        "//embedded/libs:FreeRTOS-src[Source/list.c]",
+        "//embedded/libs:FreeRTOS-src[Source/portable/GCC/ARM_CM3/port.c]",
+        "//embedded/libs:FreeRTOS-src[Source/queue.c]",
+        "//embedded/libs:FreeRTOS-src[Source/tasks.c]",
+        "//embedded/libs:FreeRTOS-src[Source/timers.c]",
     ],
     header_namespace = "",
     exported_headers = {
-        "FreeRTOS.h": "//embedded/libs:FreeRTOS.git[Source/include/FreeRTOS.h]",
-        "croutine.h": "//embedded/libs:FreeRTOS.git[Source/include/croutine.h]",
-        "deprecated_definitions.h": "//embedded/libs:FreeRTOS.git[Source/include/deprecated_definitions.h]",
-        "event_groups.h": "//embedded/libs:FreeRTOS.git[Source/include/event_groups.h]",
-        "list.h": "//embedded/libs:FreeRTOS.git[Source/include/list.h]",
-        "mpu_wrappers.h": "//embedded/libs:FreeRTOS.git[Source/include/mpu_wrappers.h]",
-        "portable.h": "//embedded/libs:FreeRTOS.git[Source/include/portable.h]",
-        "portmacro.h": "//embedded/libs:FreeRTOS.git[Source/portable/GCC/ARM_CM3/portmacro.h]",
-        "projdefs.h": "//embedded/libs:FreeRTOS.git[Source/include/projdefs.h]",
-        "queue.h": "//embedded/libs:FreeRTOS.git[Source/include/queue.h]",
-        "stack_macros.h": "//embedded/libs:FreeRTOS.git[Source/include/stack_macros.h]",
-        "stream_buffer.h": "//embedded/libs:FreeRTOS.git[Source/include/stream_buffer.h]",
-        "task.h": "//embedded/libs:FreeRTOS.git[Source/include/task.h]",
-        "timers.h": "//embedded/libs:FreeRTOS.git[Source/include/timers.h]",
+        "FreeRTOS.h": "//embedded/libs:FreeRTOS-src[Source/include/FreeRTOS.h]",
+        "croutine.h": "//embedded/libs:FreeRTOS-src[Source/include/croutine.h]",
+        "deprecated_definitions.h": "//embedded/libs:FreeRTOS-src[Source/include/deprecated_definitions.h]",
+        "event_groups.h": "//embedded/libs:FreeRTOS-src[Source/include/event_groups.h]",
+        "list.h": "//embedded/libs:FreeRTOS-src[Source/include/list.h]",
+        "mpu_wrappers.h": "//embedded/libs:FreeRTOS-src[Source/include/mpu_wrappers.h]",
+        "portable.h": "//embedded/libs:FreeRTOS-src[Source/include/portable.h]",
+        "portmacro.h": "//embedded/libs:FreeRTOS-src[Source/portable/GCC/ARM_CM3/portmacro.h]",
+        "projdefs.h": "//embedded/libs:FreeRTOS-src[Source/include/projdefs.h]",
+        "queue.h": "//embedded/libs:FreeRTOS-src[Source/include/queue.h]",
+        "stack_macros.h": "//embedded/libs:FreeRTOS-src[Source/include/stack_macros.h]",
+        "stream_buffer.h": "//embedded/libs:FreeRTOS-src[Source/include/stream_buffer.h]",
+        "task.h": "//embedded/libs:FreeRTOS-src[Source/include/task.h]",
+        "timers.h": "//embedded/libs:FreeRTOS-src[Source/include/timers.h]",
         "FreeRTOSConfig.h": "RTOS/include/FreeRTOSConfig.h",
     },
     headers = {
     },
-    exported_deps = [":CMSIS", ":feature-tree"],
+    exported_deps = [":CMSIS-hal-f103"] + feature_tree_targets(platform_variants),
 )
 
 [
     generate_feature_tree(
-        name = "feature-tree-{}".format(v),
-        config_id = v,
-        node_id = n,
+        name = "feature-tree-{}-node-{}".format(platform_output_name(vehicle_platform), n),
+        variant_id = variant_id,
         srcs = {
             "variants.yaml": "variants.yaml",
-            "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml",
+            "BMS_FeatureSels.yaml": bms_sels,
             "BMS_FeatureDefs.yaml": "//components/shared:FeatureDefs/BMS_FeatureDefs.yaml",
             "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
@@ -149,88 +151,22 @@ cxx_library(
             "FeatureDefs.yaml": "FeatureDefs.yaml",
             "FeatureSels.yaml": "FeatureSels.yaml",
         },
+        feature_overrides = {
+            "app_variant_id": variant_id,
+        },
         **{
-            APP_NAME + "_config_id": "{}U".format(v),
+            APP_NAME + "_variant_id": "{}U".format(variant_id),
             "bmsw_node_id": "{}U".format(n),
         }
     )
-    for v in variants
-    for n in range(NUMBER_NODES)
+    for vehicle_platform, variant_id, node_count in platform_variants
+    for n in range(node_count)
+    for bms_sels in [
+        "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml"
+        if vehicle_platform == PLATFORMS.CFR25
+        else "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml"
+    ]
 ]
-
-alias(
-    name = "feature-tree",
-    actual = select({
-        ":config-0": select({
-            ":node-0": ":feature-tree-0",
-            ":node-1": ":feature-tree-0-1",
-            ":node-2": ":feature-tree-0-2",
-            ":node-3": ":feature-tree-0-3",
-            ":node-4": ":feature-tree-0-4",
-            ":node-5": ":feature-tree-0-5",
-            ":node-6": ":feature-tree-0-6",
-            ":node-7": ":feature-tree-0-7",
-        }),
-        ":config-1": select({
-            ":node-0": ":feature-tree-1",
-            ":node-1": ":feature-tree-1-1",
-            ":node-2": ":feature-tree-1-2",
-            ":node-3": ":feature-tree-1-3",
-            ":node-4": ":feature-tree-1-4",
-            ":node-5": ":feature-tree-1-5",
-            ":node-6": ":feature-tree-1-6",
-            ":node-7": ":feature-tree-1-7",
-        }),
-        "DEFAULT": select({
-            ":node-0": ":feature-tree-0",
-            ":node-1": ":feature-tree-0-1",
-            ":node-2": ":feature-tree-0-2",
-            ":node-3": ":feature-tree-0-3",
-            ":node-4": ":feature-tree-0-4",
-            ":node-5": ":feature-tree-0-5",
-            ":node-6": ":feature-tree-0-6",
-            ":node-7": ":feature-tree-0-7",
-            "DEFAULT": ":feature-tree-0",
-        }),
-    }),
-)
-
-alias(
-    name = "feature-tree-codegen",
-    actual = select({
-        ":config-0": select({
-            ":node-0": ":feature-tree-0-codegen",
-            ":node-1": ":feature-tree-0-1-codegen",
-            ":node-2": ":feature-tree-0-2-codegen",
-            ":node-3": ":feature-tree-0-3-codegen",
-            ":node-4": ":feature-tree-0-4-codegen",
-            ":node-5": ":feature-tree-0-5-codegen",
-            ":node-6": ":feature-tree-0-6-codegen",
-            ":node-7": ":feature-tree-0-7-codegen",
-        }),
-        ":config-1": select({
-            ":node-0": ":feature-tree-1-codegen",
-            ":node-1": ":feature-tree-1-1-codegen",
-            ":node-2": ":feature-tree-1-2-codegen",
-            ":node-3": ":feature-tree-1-3-codegen",
-            ":node-4": ":feature-tree-1-4-codegen",
-            ":node-5": ":feature-tree-1-5-codegen",
-            ":node-6": ":feature-tree-1-6-codegen",
-            ":node-7": ":feature-tree-1-7-codegen",
-        }),
-        "DEFAULT": select({
-            ":node-0": ":feature-tree-0-codegen",
-            ":node-1": ":feature-tree-0-1-codegen",
-            ":node-2": ":feature-tree-0-2-codegen",
-            ":node-3": ":feature-tree-0-3-codegen",
-            ":node-4": ":feature-tree-0-4-codegen",
-            ":node-5": ":feature-tree-0-5-codegen",
-            ":node-6": ":feature-tree-0-6-codegen",
-            ":node-7": ":feature-tree-0-7-codegen",
-            "DEFAULT": ":feature-tree-0-codegen",
-        }),
-    }),
-)
 
 prebuilt_cxx_library(
     name = "build-headers",
@@ -239,7 +175,7 @@ prebuilt_cxx_library(
     exported_headers = {
         "BuildDefines.h": "HW/include/BuildDefines.h",
     } | remap_headers(["HW/include/"]) | remap_headers(["include/"]),
-    exported_deps = [":feature-tree"],
+    exported_deps = feature_tree_targets(platform_variants),
 )
 
 compiler_flags += ["-include", "BuildDefines.h"]
@@ -253,12 +189,12 @@ compiler_flags += ["-include", "BuildDefines.h"]
         network_dep = "//network:network",
         library_deps = [
             ":build-headers",
-            ":hal",
+            ":hal-f103",
             ":FreeRTOS",
             "//components/shared/code:headers",
         ],
     )
-    for node in range(NUMBER_NODES)
+    for node in range(max_node_count)
 ]
 alias(
     name = "network",
@@ -287,7 +223,7 @@ cxx_library(
         "-Wno-conversion",
     ],
     srcs = [
-        "//embedded/libs:isotp[isotp.c]",
+        "//embedded/libs:isotp-src[isotp.c]",
         "//embedded/libs/uds:lib_udsServer.c",
     ],
     header_namespace = "",
@@ -301,10 +237,10 @@ cxx_library(
     ],
     headers = {
         "uds_componentSpecific.h": "include/uds_componentSpecific.h",
-        "isotp.h": "//embedded/libs:isotp[include/isotp.h]",
-        "isotp_config.h": "//embedded/libs:isotp[include/isotp_config.h]",
-        "isotp_defines.h": "//embedded/libs:isotp[include/isotp_defines.h]",
-        "isotp_user.h": "//embedded/libs:isotp[include/isotp_user.h]",
+        "isotp.h": "//embedded/libs:isotp-src[include/isotp.h]",
+        "isotp_config.h": "//embedded/libs:isotp-src[include/isotp_config.h]",
+        "isotp_defines.h": "//embedded/libs:isotp-src[include/isotp_defines.h]",
+        "isotp_user.h": "//embedded/libs:isotp-src[include/isotp_user.h]",
     },
 )
 
@@ -348,24 +284,6 @@ cxx_library(
     ]
 ]
 
-alias(
-    name = "hal",
-    actual = select({
-        ":config-0": ":hal-f103",
-        ":config-1": ":hal-f103",
-        "DEFAULT": ":hal-f103",
-    }),
-)
-
-alias(
-    name = "CMSIS",
-    actual = select({
-        ":config-0": ":CMSIS-hal-f103",
-        ":config-1": ":CMSIS-hal-f103",
-        "DEFAULT": ":CMSIS-hal-f103",
-    }),
-)
-
 [
     cxx_genrule(
         name = "linkscript-" + variant,
@@ -373,27 +291,16 @@ alias(
         cmd = "set -o pipefail && $(cpp) -P -undef {}".format(" ".join(compiler_flags)) +
               " -include BuildDefines.h linkscript | sed -e '/^#.\\+$/d' > ${OUT}",
         out = "linkscript",
-        srcs = {
+        srcs = feature_tree_codegen_srcs(platform_variants, {
             "linkscript": "//embedded/platforms/stm32/f1/" + variant + ":" + script,
             "BuildDefines.h": "HW/include/BuildDefines.h",
             "FeatureDefines.h": "//tools/feature-tree:FeatureDefines.h",
-            "BuildDefines_generated.h": ":feature-tree-codegen[BuildDefines_generated.h]",
-            "FeatureDefines_generated.h": ":feature-tree-codegen[FeatureDefines_generated.h]",
-        },
+        }),
     )
     for variant, script in [
         ("f103", "stm32f103c8.ld"),
     ]
 ]
-
-alias(
-    name = "linkscript",
-    actual = select({
-        ":config-0": ":linkscript-f103",
-        ":config-1": ":linkscript-f103",
-        "DEFAULT": ":linkscript-f103",
-    }),
-)
 
 component_headers = remap_headers(["include/", "HW/include/"])
 
@@ -401,7 +308,7 @@ cxx_binary(
     name = "elf",
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
-    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript)"] + [
+    linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript-f103)"] + [
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/croutine.c.o])",
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/event_groups.c.o])",
         # "$(location :FreeRTOS[objects][FreeRTOS/Source/list.c.o])",
@@ -435,11 +342,7 @@ cxx_binary(
             "//embedded/libs/cells:P42A.c",
             ("RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "RTOS/FreeRTOS_SWI.c",
-            select({
-                ":config-0": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
-                ":config-1": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
-                "DEFAULT": "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
-            }),
+            "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
         ],
     header_namespace = "",
     headers = {
@@ -451,7 +354,7 @@ cxx_binary(
         "RTOS/include/",
     ],
     deps = [
-        ":hal",
+        ":hal-f103",
         ":udsServer",
         ":FreeRTOS",
         ":network",
@@ -462,12 +365,12 @@ cxx_binary(
 )
 [
     configured_alias(
-        name = "elf-{}-node-{}".format(variant, i),
+        name = node_target_name("elf", platform_name, node),
         actual = ":elf",
-        platform = ":cfg{}-node-{}".format(variant, i),
+        platform = ":" + configured_platform_name(platform_name, node),
     )
-    for variant in variants
-    for i in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
 
 generate_asms(
@@ -481,7 +384,7 @@ generate_stripped_asms(
         ":elf",
         ":FreeRTOS",
         ":udsServer",
-        ":hal",
+        ":hal-f103",
         ":network",
     ],
     toolchain = TOOLCHAIN,
@@ -489,87 +392,118 @@ generate_stripped_asms(
 
 [
     cxx_genrule(
-        name = "bin-{}-node-{}".format(variant, node),
+        name = node_target_name("bin", platform_name, node),
         _cxx_toolchain = TOOLCHAIN,
         srcs = [":elf"],
         out = APP_NAME + "node{}.bin".format(node),
         cmd = "$(objcopy) -O binary ${SRCS} ${OUT}",
     )
-    for variant in variants
-    for node in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
 
 [
     inject_crc(
-        name = "bin_crc-{}-node-{}".format(variant, node),
-        src = ":bin-{}-node-{}".format(variant, node),
+        name = node_target_name("bin_crc", platform_name, node),
+        src = ":" + node_target_name("bin", platform_name, node),
         out = APP_NAME + "_crc-node-{}.bin".format(node),
         start_address = APP_START_ADDR,
         visibility = ["PUBLIC"],
     )
-    for variant in variants
-    for node in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
 [
     configured_alias(
-        name = "crc-{}-node-{}".format(variant, i),
-        actual = ":bin_crc-{}-node-{}".format(variant, i),
-        platform = ":cfg{}-node-{}".format(variant, i),
+        name = node_target_name("crc", platform_name, node),
+        actual = ":" + node_target_name("bin_crc", platform_name, node),
+        platform = ":" + configured_platform_name(platform_name, node),
     )
-    for variant in variants
-    for i in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
-
 [
     filegroup(
-        name = "crc-{}.all_nodes".format(variant),
+        name = all_nodes_target_name("crc", platform_name),
         srcs = [
-            ":crc-{}-node-{}".format(variant, i)
-            for i in range(NUMBER_NODES)
+            ":" + node_target_name("crc", platform_name, node)
+            for node in range(node_count)
         ],
         visibility = ["PUBLIC"],
     )
-    for variant in variants
+    for platform_name, _variant_id, node_count in platform_variants
 ]
 
 [
     conUDS_download(
-        name = "download-{}-node-{}".format(variant, node),
-        binary = ":crc-{}-node-{}".format(variant, node),
+        name = node_target_name("download", platform_name, node),
+        binary = ":" + node_target_name("crc", platform_name, node),
         manifest = "//network:manifest-uds",
         node = APP_NAME + "{}".format(node),
     )
-    for variant in variants
-    for node in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
 [
     deployable_target(
-        name = "deploy-{}-node-{}".format(variant, node),
-        src = ":crc-{}-node-{}".format(variant, node),
+        name = node_target_name("deploy", platform_name, node),
+        src = ":" + node_target_name("crc", platform_name, node),
         target_node = APP_NAME + "{}".format(node),
         visibility = ["PUBLIC"],
     )
-    for variant in variants
-    for node in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]
 [
     ota_agent(
-        name = "ota-{}-node-{}".format(variant, node),
-        src = ":deploy-{}-node-{}".format(variant, node),
+        name = node_target_name("ota", platform_name, node),
+        src = ":" + node_target_name("deploy", platform_name, node),
         visibility = ["PUBLIC"],
     )
-    for variant in variants
-    for node in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
+]
+
+[
+    alias(
+        name = "{}-{}".format(base, platform_output_name(platform_name)),
+        actual = ":" + node_target_name(base, platform_name, 0),
+    )
+    for base in [
+        "elf",
+        "bin",
+        "bin_crc",
+        "crc",
+        "download",
+        "deploy",
+        "ota",
+        "gdb",
+    ]
+    for platform_name, _variant_id, _node_count in platform_variants
+]
+[
+    alias(
+        name = "feature-tree-{}".format(platform_output_name(platform_name)),
+        actual = feature_tree_target(platform_name, 0),
+    )
+    for platform_name, _variant_id, _node_count in platform_variants
+]
+[
+    alias(
+        name = "feature-tree-{}-codegen".format(platform_output_name(platform_name)),
+        actual = feature_tree_target(platform_name, 0) + "-codegen",
+    )
+    for platform_name, _variant_id, _node_count in platform_variants
 ]
 
 [
     openocd_run(
-        name = "gdb-{}-node-{}".format(variant, node),
+        name = node_target_name("gdb", platform_name, node),
         toolchain = TOOLCHAIN,
-        src = ":elf-{}-node-{}".format(variant, node),
+        src = ":" + node_target_name("elf", platform_name, node),
         interface = "stlink",
         mcu = "stm32f103c8",
     )
-    for variant in variants
-    for node in range(NUMBER_NODES)
+    for platform_name, _variant_id, node_count in platform_variants
+    for node in range(node_count)
 ]

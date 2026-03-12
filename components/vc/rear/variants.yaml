@@ -1,4 +1,4 @@
-configs:
+variants:
   0:
     description: Rear Vehicle Control Unit
     options:
@@ -9,4 +9,3 @@ configs:
         - "#/components/vc/shared/features/VC_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0

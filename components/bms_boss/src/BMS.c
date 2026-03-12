@@ -140,7 +140,7 @@ static void BMS100Hz_PRD(void)
     {
         SYS_SFT_closeShutdown();
     }
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
     if (IMD_getState() == IMD_HEALTHY)
     {
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_ACTIVE);

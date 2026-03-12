@@ -88,7 +88,7 @@ static inline CAN_bus_E HW_CAN_getBusFromPeripheral(CAN_HandleTypeDef* canHandle
  */
 bool HW_CAN_sendMsg(CAN_bus_E bus, CAN_data_T data, uint32_t id, uint8_t len)
 {
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
     bus = CAN_BUS_VEH;
 #endif
 
@@ -109,7 +109,7 @@ bool HW_CAN_sendMsg(CAN_bus_E bus, CAN_data_T data, uint32_t id, uint8_t len)
 HW_StatusTypeDef_E HW_CAN_init(void)
 {
     hcan[CAN_BUS_VEH].Instance = CAN1;
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
     hcan[CAN_BUS_PRIVBMS].Instance = CAN2;
     for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
     {
@@ -187,7 +187,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_VEH], &filt);
     }
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
     HAL_CAN_ActivateNotification(&hcan[CAN_BUS_VEH], CAN_ENABLED_INTERRUPTS);
 #endif
 
@@ -205,7 +205,7 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
         filt.FilterActivation     = ENABLE;
         filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_PRIVBMS], &filt);
 #else
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_VEH], &filt);
@@ -227,13 +227,13 @@ HW_StatusTypeDef_E HW_CAN_init(void)
         filt.FilterFIFOAssignment = i % CAN_RX_FIFO_COUNT;
         filt.FilterActivation     = ENABLE;
         filt.SlaveStartFilterBank = (COUNTOF(CANRX_VEH_unpackList) + ((4U - COUNTOF(CANRX_VEH_unpackList) % 4U) % 4U)) / 4U;
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_PRIVBMS], &filt);
 #else
         HAL_CAN_ConfigFilter(&hcan[CAN_BUS_VEH], &filt);
 #endif
     }
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
     HAL_CAN_ActivateNotification(&hcan[CAN_BUS_PRIVBMS], CAN_ENABLED_INTERRUPTS);
 #else
     HAL_CAN_ActivateNotification(&hcan[CAN_BUS_VEH], CAN_ENABLED_INTERRUPTS);
@@ -253,7 +253,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         // CAN1 clock enable
         __HAL_RCC_CAN1_CLK_ENABLE();
 
-#if BMSB_CONFIG_ID == 0U
+#if APP_VARIANT_ID == 0U
         __HAL_AFIO_REMAP_CAN1_2();
 #endif
         HAL_NVIC_SetPriority(CAN1_SCE_IRQn, CAN_TX_IRQ_PRIO, 0U);
@@ -267,7 +267,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
         HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
 
     }
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
     else if (canHandle->Instance == hcan[CAN_BUS_PRIVBMS].Instance)
     {
         __HAL_RCC_CAN2_CLK_ENABLE();
@@ -301,7 +301,7 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
         HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
         HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
     }
-#if BMSB_CONFIG_ID > 0U
+#if APP_VARIANT_ID > 0U
     else if (canHandle->Instance == hcan[CAN_BUS_VEH].Instance)
     {
         // Peripheral clock disable

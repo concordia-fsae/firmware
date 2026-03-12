@@ -52,8 +52,8 @@ bool lib_app_validateApp(const lib_app_appDesc_S * const hwDesc, const lib_app_a
         case APP_VALID_CRC:
             break;
 #endif
-        case APP_VALID_PCBA_ID:
-            ret = hwDesc->appPcbaId == appDesc->appPcbaId;
+        case APP_VALID_VARIANT_ID:
+            ret = hwDesc->appVariantId == appDesc->appVariantId;
             break;
 
         case APP_VALID_COMPONENT_ID:

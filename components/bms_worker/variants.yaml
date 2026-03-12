@@ -1,4 +1,4 @@
-configs:
+variants:
   0:
     description: BMS Worker #VA3
     options:
@@ -9,10 +9,6 @@ configs:
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_uds: true
-        app_node_id: true
   1:
     description: BMS Worker
     options:
@@ -23,7 +19,3 @@ configs:
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 1
-        app_component_id: bmsw
-        app_uds: true
-        app_node_id: true

@@ -151,7 +151,7 @@ void CAN1_RX1_IRQHandler(void)
     HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
 }
 
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
 void CAN2_SCE_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan[CAN_BUS_PRIVBMS]);

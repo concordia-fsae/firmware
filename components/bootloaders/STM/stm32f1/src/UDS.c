@@ -654,7 +654,7 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
         }
         case 0x05:
         {
-            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appPcbaId, sizeof(APP_DESC_ADDR->appPcbaId));
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&APP_DESC_ADDR->appVariantId, sizeof(APP_DESC_ADDR->appVariantId));
             break;
         }
         case 0x06:
@@ -700,7 +700,7 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
         }
         case 0x205:
         {
-            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appPcbaId, sizeof(APP_DESC_ADDR->appPcbaId));
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&hwDesc.appVariantId, sizeof(APP_DESC_ADDR->appVariantId));
             break;
         }
         case 0x206:

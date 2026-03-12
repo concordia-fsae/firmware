@@ -11,11 +11,11 @@ def cmsis_headers(
         header_only = True,
         header_namespace = "",
         exported_headers = {
-            "core_cm3.h": "//embedded/libs:CMSIS.git[CMSIS/Core/Include/core_cm3.h]",
-            "cmsis_version.h": "//embedded/libs:CMSIS.git[CMSIS/Core/Include/cmsis_version.h]",
-            "cmsis_compiler.h": "//embedded/libs:CMSIS.git[CMSIS/Core/Include/cmsis_compiler.h]",
-            "cmsis_gcc.h": "//embedded/libs:CMSIS.git[CMSIS/Core/Include/cmsis_gcc.h]",
-            "m-profile/cmsis_gcc_m.h": "//embedded/libs:CMSIS.git[CMSIS/Core/Include/m-profile/cmsis_gcc_m.h]",
+            "core_cm3.h": "//embedded/libs:CMSIS-src[CMSIS/Core/Include/core_cm3.h]",
+            "cmsis_version.h": "//embedded/libs:CMSIS-src[CMSIS/Core/Include/cmsis_version.h]",
+            "cmsis_compiler.h": "//embedded/libs:CMSIS-src[CMSIS/Core/Include/cmsis_compiler.h]",
+            "cmsis_gcc.h": "//embedded/libs:CMSIS-src[CMSIS/Core/Include/cmsis_gcc.h]",
+            "m-profile/cmsis_gcc_m.h": "//embedded/libs:CMSIS-src[CMSIS/Core/Include/m-profile/cmsis_gcc_m.h]",
         },
         **kwargs
     )

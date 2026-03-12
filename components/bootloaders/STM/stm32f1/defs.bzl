@@ -18,7 +18,7 @@ OutputType = enum(
 
 BootloaderVariant = record(
     name = str,
-    config_id = int,
+    variant_id = int,
     has_updater = bool,
     start_address = field(int, 0x08000000),
     updater_offset = field(int, 0x2000),
@@ -33,8 +33,8 @@ def bootloader(
         linker_flags: list[str]):
     _bootloader_impl(variant, compiler_flags, linker_flags, False)
     conUDS_bootloader_download(
-        name = "{}-download-bootloader".format(variant.config_id),
-        binary = ":{}-bin-crc".format(variant.config_id),
+        name = "{}-download-bootloader".format(variant.variant_id),
+        binary = ":{}-bin-crc".format(variant.variant_id),
         manifest = "//network:manifest-uds",
         node = variant.name,
     )
@@ -42,8 +42,8 @@ def bootloader(
     if variant.has_updater:
         _bootloader_impl(variant, compiler_flags, linker_flags, True)
         conUDS_download(
-            name = "{}-download-updater".format(variant.config_id),
-            binary = ":{}-updater-bin-crc".format(variant.config_id),
+            name = "{}-download-updater".format(variant.variant_id),
+            binary = ":{}-updater-bin-crc".format(variant.variant_id),
             manifest = "//network:manifest-uds",
             node = variant.name,
         )
@@ -54,14 +54,14 @@ def _bootloader_impl(
         linker_flags: list[str],
         is_updater: bool):
     name = variant.name
-    config_id = variant.config_id
+    variant_id = variant.variant_id
     toolchain = variant.toolchain
     app_name = is_updater and "blu" or "bl"
-    name_prefix = "{}".format(config_id) + ("-updater-{}" if is_updater else "-{}")
+    name_prefix = "{}".format(variant_id) + ("-updater-{}" if is_updater else "-{}")
 
     generate_feature_tree(
         name = name_prefix.format("feature-tree"),
-        config_id = config_id,
+        variant_id = variant_id,
         build_renderer = "renderers/BuildDefines_generated.h.mako.buck2",
         srcs = {
             "variants.yaml": "variants.yaml",
@@ -83,7 +83,7 @@ def _bootloader_impl(
                 "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
             }
         ),
-        **{"{}_config_id".format(app_name): "{}U".format(config_id)}
+        **{"{}_variant_id".format(app_name): "{}U".format(variant_id)}
     )
 
     __rules__["cxx_library"](
@@ -98,7 +98,7 @@ def _bootloader_impl(
             "-Wno-conversion",
         ],
         srcs = [
-            "//embedded/libs:isotp[isotp.c]",
+            "//embedded/libs:isotp-src[isotp.c]",
             "//embedded/libs/uds:lib_udsServer.c",
         ],
         header_namespace = "",
@@ -110,10 +110,10 @@ def _bootloader_impl(
         ],
         headers = {
             "uds_componentSpecific.h": "include/uds_componentSpecific.h",
-            "isotp.h": "//embedded/libs:isotp[include/isotp.h]",
-            "isotp_config.h": "//embedded/libs:isotp[include/isotp_config.h]",
-            "isotp_defines.h": "//embedded/libs:isotp[include/isotp_defines.h]",
-            "isotp_user.h": "//embedded/libs:isotp[include/isotp_user.h]",
+            "isotp.h": "//embedded/libs:isotp-src[include/isotp.h]",
+            "isotp_config.h": "//embedded/libs:isotp-src[include/isotp_config.h]",
+            "isotp_defines.h": "//embedded/libs:isotp-src[include/isotp_defines.h]",
+            "isotp_user.h": "//embedded/libs:isotp-src[include/isotp_user.h]",
         },
     )
 
@@ -137,7 +137,7 @@ def _bootloader_impl(
         _cxx_toolchain = toolchain,
         compiler_flags = compiler_flags,
         linker_flags = compiler_flags + linker_flags + ["-T", "$(location :{})".format(name_prefix.format("linkscript"))],
-        executable_name = "{}-{}-{}.elf".format(app_name, name, config_id),
+        executable_name = "{}-{}-{}.elf".format(app_name, name, variant_id),
         srcs =
             glob(["src/**/*.c", "src/**/*.S"]) + [
                 "//embedded/libs:libcrc.c",
@@ -178,19 +178,19 @@ def _bootloader_impl(
         name = name_prefix.format("bin"),
         toolchain = toolchain,
         src = ":" + name_prefix.format("elf"),
-        out = "{}-{}-{}".format(app_name, name, config_id),
+        out = "{}-{}-{}".format(app_name, name, variant_id),
     )
 
     inject_crc(
         name = name_prefix.format("bin-crc"),
         src = ":" + name_prefix.format("bin"),
-        out = "{}-{}-{}_crc.bin".format(app_name, name, config_id),
+        out = "{}-{}-{}_crc.bin".format(app_name, name, variant_id),
         start_address = variant.start_address + (variant.updater_offset if is_updater else 0),
         visibility = ["PUBLIC"],
     )
 
     openocd_run(
-        name = "gdb-{}-{}".format(config_id, "blu" if is_updater else "bl"),
+        name = "gdb-{}-{}".format(variant_id, "blu" if is_updater else "bl"),
         toolchain = toolchain,
         src = ":" + name_prefix.format("elf"),
         interface = "stlink",
