@@ -90,6 +90,72 @@ See: https://github.com/benbrittain/buckle
 2. Run software locally with `buckle run //$TARGET_PATH:$TARGET_NAME`
     - Software must be compatible with your host system
 
+### 3. Formatting
+
+This repository uses `pre-commit` for formatting checks. The configured formatters are:
+
+- `uncrustify` for C/C++ sources using `uncrustify.cfg`
+- `yamlfmt` for YAML files using `yamlfmt.yaml`
+
+Install the tools locally:
+
+```bash
+brew install uncrustify yamlfmt pre-commit
+```
+
+Install the Git hook:
+
+```bash
+pre-commit install
+```
+
+Run formatting on all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Useful commands:
+
+- Run all formatting checks with CI-style output: `pre-commit run --all-files --show-diff-on-failure`
+- Run only C/C++ formatting: `pre-commit run uncrustify --all-files`
+- Run only YAML formatting: `pre-commit run yamlfmt --all-files`
+
+CI runs the same `pre-commit` formatting checks in `.github/workflows/formatting.yml`. If branch protection requires that workflow, pull requests will be blocked until formatting passes.
+
+### 3. Formatting
+
+This repository uses `pre-commit` for formatting checks. The configured formatters are:
+
+- `uncrustify` for C/C++ sources using `uncrustify.cfg`
+- `yamlfmt` for YAML files using `yamlfmt.yaml`
+
+Install the tools locally:
+
+```bash
+brew install uncrustify yamlfmt pre-commit
+```
+
+Install the Git hook:
+
+```bash
+pre-commit install
+```
+
+Run formatting on all files:
+
+```bash
+pre-commit run --all-files
+```
+
+Useful commands:
+
+- Run all formatting checks with CI-style output: `pre-commit run --all-files --show-diff-on-failure`
+- Run only C/C++ formatting: `pre-commit run uncrustify --all-files`
+- Run only YAML formatting: `pre-commit run yamlfmt --all-files`
+
+CI runs the same `pre-commit` formatting checks in `.github/workflows/formatting.yml`. If branch protection requires that workflow, pull requests will be blocked until formatting passes.
+
 ## Notes
 
 - To clean your current directory, run `buckle clean`
