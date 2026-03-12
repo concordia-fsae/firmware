@@ -164,7 +164,7 @@ cxx_library(
     for bms_sels in [
         "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml"
         if vehicle_platform == PLATFORMS.CFR25
-        else "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml"
+        else "//components/shared:FeatureSels/BMS_CFR26_FeatureSels.yaml"
     ]
 ]
 
