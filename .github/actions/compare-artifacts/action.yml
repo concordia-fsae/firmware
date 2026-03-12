@@ -1,0 +1,28 @@
+name: Compare Artifacts
+description: Compare artifact zip contents against base branch run and comment on PR
+inputs:
+  artifact-name:
+    description: Artifact name to compare
+    required: true
+  base-ref:
+    description: Base branch ref to compare against (defaults to PR base ref)
+    required: false
+  comment-tag:
+    description: Comment tag used to find/update previous comment
+    required: false
+    default: firmware-artifact-diff
+  max-items:
+    description: Max items per section to show in the comment
+    required: false
+    default: "100"
+runs:
+  using: composite
+  steps:
+    - name: Compare artifact zips
+      shell: bash
+      run: |
+        python3 "${{ github.action_path }}/compare_artifacts.py" \
+          --artifact-name "${{ inputs.artifact-name }}" \
+          --base-ref "${{ inputs.base-ref }}" \
+          --comment-tag "${{ inputs.comment-tag }}" \
+          --max-items "${{ inputs.max-items }}"

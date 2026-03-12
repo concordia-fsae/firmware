@@ -138,3 +138,31 @@ jobs:
         with:
           name: drive-tools-${{ matrix.runner }}
           path: builds/
+  compare-cfr-embedded:
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact: 
+          - embedded-cfr25
+          - embedded-cfr26
+          - drive-stack-arm64
+    runs-on: ubuntu-latest
+    needs:
+      - cfr-firmware
+      - cfr-drive-stack
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - name: Compare artifacts and comment on PR
+        uses: ./.github/actions/compare-artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          artifact-name: ${{ matrix.artifact }}
