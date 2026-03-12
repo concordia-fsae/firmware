@@ -75,3 +75,5 @@ typedef struct
 extern nvm_bms_data_S current_data;
 
 extern BMSB_S BMS;
+float32_t bms_getCellMinVoltage(void);
+float32_t bms_getCellMaxVoltage(void);
