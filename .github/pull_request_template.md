@@ -1,10 +1,10 @@
-### Describe changes
+### Reason for Change
 
-1. Describe changes...
+Why do we need these changes? What happened previously? What do we need to do now?
 
-### Impact
+### Changes
 
-1. Describe impact...
+1. List functional or configuration changes
 
 ### Test Plan
 
