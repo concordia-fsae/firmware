@@ -125,7 +125,7 @@ generate_feature_tree(
     config_id = 0,
     srcs = {
         "variants.yaml": "variants.yaml",
-        "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_FeatureSels.yaml",
+        "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml",
         "BMS_FeatureDefs.yaml": "//components/shared:FeatureDefs/BMS_FeatureDefs.yaml",
         "STM32F103xB_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F103xB_FeatureSels.yaml",
         "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
@@ -143,7 +143,7 @@ generate_feature_tree(
     config_id = 1,
     srcs = {
         "variants.yaml": "variants.yaml",
-        "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_FeatureSels.yaml",
+        "BMS_FeatureSels.yaml": "//components/shared:FeatureSels/BMS_CFR25_FeatureSels.yaml",
         "BMS_FeatureDefs.yaml": "//components/shared:FeatureDefs/BMS_FeatureDefs.yaml",
         "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",
         "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",

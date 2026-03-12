@@ -23,6 +23,12 @@ messages:
   UDSCLIENT_bmsw5UdsRequest:
     sourceBuses: veh
     unrecorded: true
+  UDSCLIENT_bmsw6UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
+  UDSCLIENT_bmsw7UdsRequest:
+    sourceBuses: veh
+    unrecorded: true
   UDSCLIENT_vcfrontUdsRequest:
     sourceBuses: veh
     unrecorded: true

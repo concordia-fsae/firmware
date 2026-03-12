@@ -3,6 +3,8 @@ name: 'Build All Firmware'
 on:
   pull_request:
     branches: [ master, comp* ]
+  push:
+    branches: [ master, comp* ]
 
 jobs:
   generate-dbc:
@@ -47,10 +49,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ ubuntu-24.04, ubuntu-24.04-arm,
-                  macos-26, macos-15 ]
-                  # TODO: Bringup support
-                  # windows-2022, windows-11-arm, ]
+        runner:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-26
+          - macos-15
+          # TODO: Bringup support
+          # - windows-2022
+          # - windows-11-arm
+        target:
+          - cfr25
+          - cfr26
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
@@ -62,13 +71,13 @@ jobs:
         with:
           version: "latest"
       - name: Build Stack
-        run: buck2 build :cfr25-embedded -j32 --out builds/
+        run: buck2 build :${{ matrix.target }}-embedded -j32 --out builds/
       - name: Archive Artifacts
         if: ${{ matrix.runner == 'ubuntu-24.04' }}
         id: archive
         uses: actions/upload-artifact@v4
         with:
-          name: embedded
+          name: embedded-${{ matrix.target }}
           path: builds/
   cfr-drive-stack:
     strategy:

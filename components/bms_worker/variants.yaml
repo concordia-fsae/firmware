@@ -13,3 +13,17 @@ configs:
         app_component_id: bmsw
         app_uds: true
         app_node_id: true
+  1:
+    description: BMS Worker
+    options:
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/BMS_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_uds: true
+        app_node_id: true

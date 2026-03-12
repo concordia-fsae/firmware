@@ -16,23 +16,6 @@ configs:
         app_node_id: true
         app_validation_enabled: true
         feature_erase_invalid_app: false
-  1000:
-    description: BMS Worker Bootloader Updater
-    options:
-      nodeId: 0
-      udsRequestId: 0x600
-      udsResponseId: 0x640
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_node_id: true
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
   1:
     description: BMS Worker Bootloader
     options:
@@ -43,23 +26,6 @@ configs:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_node_id: true
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-  1001:
-    description: BMS Worker Bootloader Updater
-    options:
-      nodeId: 1
-      udsRequestId: 0x601
-      udsResponseId: 0x641
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
@@ -84,23 +50,6 @@ configs:
         app_node_id: true
         app_validation_enabled: true
         feature_erase_invalid_app: false
-  1002:
-    description: BMS Worker Bootloader Updater
-    options:
-      nodeId: 2
-      udsRequestId: 0x602
-      udsResponseId: 0x642
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_node_id: true
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
   3:
     description: BMS Worker Bootloader
     options:
@@ -111,23 +60,6 @@ configs:
       selections:
         - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_node_id: true
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-  1003:
-    description: BMS Worker Bootloader Updater
-    options:
-      nodeId: 3
-      udsRequestId: 0x603
-      udsResponseId: 0x643
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
@@ -152,23 +84,6 @@ configs:
         app_node_id: true
         app_validation_enabled: true
         feature_erase_invalid_app: false
-  1004:
-    description: BMS Worker Bootloader Updater
-    options:
-      nodeId: 4
-      udsRequestId: 0x604
-      udsResponseId: 0x644
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_node_id: true
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
   5:
     description: BMS Worker Bootloader
     options:
@@ -186,53 +101,6 @@ configs:
         app_node_id: true
         app_validation_enabled: true
         feature_erase_invalid_app: false
-  1005:
-    description: BMS Worker Bootloader Updater
-    options:
-      nodeId: 5
-      udsRequestId: 0x605
-      udsResponseId: 0x645
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsw
-        app_node_id: true
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-  10:
-    description: BMS Boss Bootloader
-    options:
-      udsRequestId: 0x609
-      udsResponseId: 0x649
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsb
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-  1010:
-    description: BMS Boss Bootloader Updater
-    options:
-      udsRequestId: 0x609
-      udsResponseId: 0x649
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: bmsb
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
   11:
     description: BMS Boss Bootloader
     options:
@@ -242,23 +110,6 @@ configs:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 1
-        app_component_id: bmsb
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-        nvm_lib_enabled: true
-        nvm_block_size: 2048
-  1011:
-    description: BMS Boss Bootloader Updater
-    options:
-      udsRequestId: 0x609
-      udsResponseId: 0x649
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 1
@@ -293,19 +144,6 @@ configs:
       overrides:
         app_pcba_id: 0
         app_component_id: sws
-  1021:
-    description: Steering Wheel Switches Bootloader Updater
-    options:
-      udsRequestId: 0x651
-      udsResponseId: 0x691
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: sws
   100:
     description: Debug Board Bootloader
     options:
@@ -336,23 +174,6 @@ configs:
         feature_erase_invalid_app: false
         nvm_lib_enabled: true
         nvm_block_size: 2048
-  1030:
-    description: VCFRONT Bootloader Updater
-    options:
-      udsRequestId: 0x630
-      udsResponseId: 0x670
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: vcfront
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-        nvm_lib_enabled: true
-        nvm_block_size: 2048
   31:
     description: VCREAR Bootloader
     options:
@@ -362,23 +183,6 @@ configs:
       selections:
         - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
         - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
-        - "FeatureSels.yaml"
-      overrides:
-        app_pcba_id: 0
-        app_component_id: vcrear
-        app_validation_enabled: true
-        feature_erase_invalid_app: false
-        nvm_lib_enabled: true
-        nvm_block_size: 2048
-  1031:
-    description: VCREAR Bootloader Updater
-    options:
-      udsRequestId: 0x631
-      udsResponseId: 0x671
-    features:
-      selections:
-        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
         app_pcba_id: 0
@@ -404,18 +208,139 @@ configs:
         feature_erase_invalid_app: false
         nvm_lib_enabled: true
         nvm_block_size: 2048
-  1032:
-    description: VCPDU Bootloader Updater
+  40:
+    description: BMS Worker Bootloader
     options:
-      udsRequestId: 0x632
-      udsResponseId: 0x672
+      nodeId: 0
+      udsRequestId: 0x600
+      udsResponseId: 0x640
     features:
       selections:
-        - "#/components/shared/FeatureSels/STM32F105_FeatureSels.yaml"
-        - "#/components/shared/FeatureSels/BOOTUPDATER_V1_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0
-        app_component_id: vcpdu
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  41:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 1
+      udsRequestId: 0x601
+      udsResponseId: 0x641
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  42:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 2
+      udsRequestId: 0x602
+      udsResponseId: 0x642
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  43:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 3
+      udsRequestId: 0x603
+      udsResponseId: 0x643
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  44:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 4
+      udsRequestId: 0x604
+      udsResponseId: 0x644
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  45:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 5
+      udsRequestId: 0x605
+      udsResponseId: 0x645
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  46:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 6
+      udsRequestId: 0x606
+      udsResponseId: 0x646
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
+        app_validation_enabled: true
+        feature_erase_invalid_app: false
+  47:
+    description: BMS Worker Bootloader
+    options:
+      nodeId: 7
+      udsRequestId: 0x607
+      udsResponseId: 0x647
+    features:
+      selections:
+        - "#/components/shared/FeatureSels/STM32F103xB_FeatureSels.yaml"
+        - "#/components/shared/FeatureSels/BOOT_V1_FeatureSels.yaml"
+        - "FeatureSels.yaml"
+      overrides:
+        app_pcba_id: 1
+        app_component_id: bmsw
+        app_node_id: true
         app_validation_enabled: true
         feature_erase_invalid_app: false
