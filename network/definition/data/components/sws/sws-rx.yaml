@@ -4,6 +4,7 @@ messages:
     unrecorded: true
   VCPDU_faults:
   VCFRONT_faults:
+  BMSB_faults:
 signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:

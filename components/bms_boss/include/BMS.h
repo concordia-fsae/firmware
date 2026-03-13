@@ -17,6 +17,14 @@ _Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
 
 #define BMS_VPACK_SOURCE BMS.pack_voltage_calculated
 
+// TDK HVC43 series, worst case 200A load at break
+// https://www.tdk-electronics.tdk.com/inf/100/ds/HVC43MC_B88269X.pdf
+# define BMSB_CONTACTOR_LIFETIME_HVC43            1000U
+
+// Comus 3350 series reed relay, no cycle count published in datasheet
+// https://www.comus-intl.com/wp-content/uploads/2017/01/High-Voltage-Reed-Relays.pdf
+#define BMSB_CONTACTOR_LIFETIME_3350_PRECHARGE   2000U
+
 typedef enum {
     BMS_INIT = 0x00,
     BMS_RUNNING,
@@ -71,7 +79,25 @@ typedef struct
     float32_t pack_amp_hours;
     float32_t cell_amp_hours[BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS];
     uint8_t spare[16U];
-} LIB_NVM_STORAGE(nvm_bms_data_S);
-extern nvm_bms_data_S current_data;
+} LIB_NVM_STORAGE(nvm_bmsData_S);
+
+typedef struct {
+    struct{
+        uint32_t contactorHvp;
+        uint32_t contactorHvn;
+        uint32_t precharge;
+    } contactorLifetime;
+    uint8_t reserved[16U];
+} LIB_NVM_STORAGE(nvm_bmsbContactorData_S);
+
+extern nvm_bmsData_S current_data;
+extern nvm_bmsbContactorData_S contactor_data;
 
 extern BMSB_S BMS;
+
+float32_t BMSB_getContactorSohHvp(void);
+float32_t BMSB_getContactorSohHvn(void);
+float32_t BMSB_getContactorSohPrecharge(void);
+uint32_t BMSB_getContactorLifetimeHvp(void);
+uint32_t BMSB_getContactorLifetimeHvn(void);
+uint32_t BMSB_getContactorLifetimePrecharge(void);

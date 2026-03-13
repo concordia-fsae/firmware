@@ -14,6 +14,15 @@ signals:
   bmsFault:
     description: BMS Fault
     discreteValues: faultStatus
+  contactorLowSohHvp:
+    description: HVP contactor state of health below threshold
+    discreteValues: faultStatus
+  contactorLowSohHvn:
+    description: HVN contactor state of health below threshold
+    discreteValues: faultStatus
+  contactorLowSohPrecharge:
+    description: Precharge contactor state of health below threshold
+    discreteValues: faultStatus
   imdNOK:
     description: IMD NOK
     discreteValues: faultStatus

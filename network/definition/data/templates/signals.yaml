@@ -230,6 +230,51 @@ signals:
     nativeRepresentation:
       bitWidth: 7
       resolution: 1
+  contactorLifetimeHvp:
+    unit: ''
+    description: Count of BMSB contactor cycles for HV+ for product lifetime
+    nativeRepresentation:
+      bitWidth: 14
+      resolution: 1
+  contactorLifetimeHvn:
+    unit: ''
+    description: Count of BMSB contactor cycles for HV- for product lifetime
+    nativeRepresentation:
+      bitWidth: 14
+      resolution: 1
+  contactorLifetimePrecharge:
+    unit: ''
+    description: Count of BMSB contactor cycles for precharge for product lifetime
+    nativeRepresentation:
+      bitWidth: 14
+      resolution: 1
+  contactorSohHvp:
+    unit: '%'
+    description: State of health for HV+ contactor
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 1
+      range:
+        min: 0
+        max: 100
+  contactorSohHvn:
+    unit: '%'
+    description: State of health for HV- contactor
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 1
+      range:
+        min: 0
+        max: 100
+  contactorSohPrecharge:
+    unit: '%'
+    description: State of health for precharge contactor
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 1
+      range:
+        min: 0
+        max: 100
   bytes:
     unit: "B"
     nativeRepresentation:

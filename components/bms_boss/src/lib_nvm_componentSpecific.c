@@ -17,6 +17,7 @@
 
 extern lib_nvm_nvmRecordLog_S recordLog;
 extern lib_nvm_nvmCycleLog_S cycleLog;
+extern nvm_bmsbContactorData_S contactor_data;
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -31,7 +32,7 @@ static uint16_t version_handler_current(const uint16_t version, const storage_t*
     if (new_version == 0U)
     {
         // Example: NVM uprec
-        nvm_bms_data_S flash;
+        nvm_bmsData_S flash;
         memcpy(&flash, entry_Ptr, sizeof(flash.pack_amp_hours));
         current_data.pack_amp_hours = flash.pack_amp_hours;
         new_version = 1;
@@ -46,12 +47,19 @@ static uint16_t version_handler_current(const uint16_t version, const storage_t*
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-static const nvm_bms_data_S current_data_default = {
+static const nvm_bmsData_S current_data_default = {
     .pack_amp_hours = 0U,
     .cell_amp_hours = { 0 },
     .spare = { 0U },
 };
-LIB_NVM_MEMORY_REGION(nvm_bms_data_S current_data) = { 0U };
+LIB_NVM_MEMORY_REGION(nvm_bmsData_S current_data) = { 0U };
+
+static const nvm_bmsbContactorData_S contactor_data_default = {
+    .contactorLifetime.contactorHvp = 0U,
+    .contactorLifetime.contactorHvn = 0U,
+    .contactorLifetime.precharge = 0U,
+};
+LIB_NVM_MEMORY_REGION(nvm_bmsbContactorData_S contactor_data) = {0U};
 
 const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
     [NVM_ENTRYID_LOG] = {
@@ -68,8 +76,15 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .minTimeBetweenWritesMs = 60000U, // Should only change once per boot cycle
         .version = 0U,
     },
+    [NVM_ENTRYID_CONTACTOR_LIFETIME] = {
+        .entrySize = sizeof(nvm_bmsbContactorData_S),
+        .entryDefault_Ptr = &contactor_data_default,
+        .entryRam_Ptr = &contactor_data,
+        .minTimeBetweenWritesMs = 60000U,
+        .version = 0U,
+    },
     [NVM_ENTRYID_COULOMB_COUNT] = {
-        .entrySize = sizeof(nvm_bms_data_S),
+        .entrySize = sizeof(nvm_bmsData_S),
         .entryDefault_Ptr = &current_data_default,
         .entryRam_Ptr = &current_data,
         .minTimeBetweenWritesMs = 10000U,
