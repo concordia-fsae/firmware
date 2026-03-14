@@ -25,15 +25,25 @@
 #include "FeatureDefines_generated.h"
 #include "lib_nvm.h"
 
+#include "drv_userInput.h"
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
+
+// Required because BMSB Module hasnt been ported to the shared definition Modules
+// so these calls cant be sequenced in the module pre and post functions
+static ModuleDesc_S userInput_desc = {
+    .moduleInit       = &drv_userInput_init,
+    .periodic1kHz_CLK = &drv_userInput_run,
+};
 
 /**
  * @brief  Modules run by the Module Manager. Order will apply to execution.
  */
 static const ModuleDesc_S* modules[] = {
     &drv_inputAD_desc,
+    &userInput_desc,
     &ENV_desc,
     &BMS_desc,
     &SYS_desc,

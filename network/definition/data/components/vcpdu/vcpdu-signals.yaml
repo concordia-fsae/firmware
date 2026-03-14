@@ -11,10 +11,6 @@ signals:
     description: Undervoltage fault
     discreteValues: faultStatus
 
-  loadsNOK:
-    description: Brownout fault
-    discreteValues: faultStatus
-
   safetyNOK:
     description: Safety circuit brownout fault
     discreteValues: faultStatus
