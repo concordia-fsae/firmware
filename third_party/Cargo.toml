@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "rust-third-party"
 publish = false
