@@ -445,7 +445,7 @@ signals:
         max: 81.92
       resolution: 0.020
     continuous: true
-  
+
   segmentVoltageHighResCalculated:
     description: Total Segment Voltage, higher resolution
     unit: V

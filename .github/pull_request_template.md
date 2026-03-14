@@ -8,4 +8,4 @@ Why do we need these changes? What happened previously? What do we need to do no
 
 ### Test Plan
 
-- [ ] Describe tests needed to validate the software changes
+- \[ \] Describe tests needed to validate the software changes

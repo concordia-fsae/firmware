@@ -1,30 +1,34 @@
 use std::collections::{HashMap, VecDeque};
+use std::fs::File;
 use std::fs::OpenOptions;
+use std::fs::{create_dir_all, metadata, read_dir, remove_file, rename};
 use std::io::BufWriter;
 use std::io::Write;
-use std::fs::{create_dir_all, read_dir, rename, remove_file, metadata};
-use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::{mpsc, Arc};
-use std::time::{Instant, Duration, SystemTime};
+use std::sync::{Arc, mpsc};
 use std::thread;
+use std::time::{Duration, Instant, SystemTime};
 
-use clap::Parser;
 use chrono::Local;
-use libc::{CAN_EFF_FLAG, CAN_EFF_MASK, CAN_SFF_MASK};
-use flate2::write::GzEncoder;
+use clap::Parser;
 use flate2::Compression;
-use ratatui::crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEventKind, KeyModifiers};
+use flate2::write::GzEncoder;
+use libc::{CAN_EFF_FLAG, CAN_EFF_MASK, CAN_SFF_MASK};
+use ratatui::Terminal;
+use ratatui::crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEventKind,
+    KeyModifiers,
+};
 use ratatui::crossterm::execute;
-use ratatui::crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
+use ratatui::crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+};
 use ratatui::prelude::{Constraint, CrosstermBackend, Direction, Layout, Rect, Style};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap};
-use ratatui::Terminal;
 use tar::Builder;
 
 use can_bridge::{
-    BusDbc, BusState, Event, Filters,
-    parse_bus_specs, spawn_workers, maybe_decode, format_can_line,
+    BusDbc, BusState, Event, Filters, format_can_line, maybe_decode, parse_bus_specs, spawn_workers,
 };
 
 const LOG_BUS_LABEL: &str = "can";
@@ -122,17 +126,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Build filters (used in OUTPUT loop)
     let filters = Filters::from_parts(&args.ids, &args.msgs, &args.sigs)?;
-    if filters.id_ranges.is_empty() && filters.msg_filters.is_empty() && filters.sig_filters.is_empty() {
+    if filters.id_ranges.is_empty()
+        && filters.msg_filters.is_empty()
+        && filters.sig_filters.is_empty()
+    {
         println!("[filters] none");
     } else {
         if !filters.id_ranges.is_empty() {
-            let ids: Vec<String> = filters.id_ranges.iter().map(|r| {
-                if r.start == r.end {
-                    format!("0x{:X} ({})", r.start, r.start)
-                } else {
-                    format!("0x{:X}-0x{:X} ({}-{})", r.start, r.end, r.start, r.end)
-                }
-            }).collect();
+            let ids: Vec<String> = filters
+                .id_ranges
+                .iter()
+                .map(|r| {
+                    if r.start == r.end {
+                        format!("0x{:X} ({})", r.start, r.start)
+                    } else {
+                        format!("0x{:X}-0x{:X} ({}-{})", r.start, r.end, r.start, r.end)
+                    }
+                })
+                .collect();
             println!("[filters] id: {}", ids.join(", "));
         }
         if !filters.msg_filters.is_empty() {
@@ -148,7 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (bus_states_emitter, bus_states) = mpsc::channel::<(String, BusState)>();
 
     // Initial bus status (UI shows Starting -> Active once a frame is seen)
-    let mut bus_status: HashMap::<String, BusState> = HashMap::new();
+    let mut bus_status: HashMap<String, BusState> = HashMap::new();
     for bus in &buses {
         bus_status.insert(bus.clone(), BusState::Starting);
     }
@@ -169,17 +180,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )?;
     } else {
         let log_cfg = match args.log_dir {
-            Some(_) => {
-                args.log_dir.as_ref().map(|dir| LogConfig {
-                    dir: dir.clone(),
-                    tmp: args.tmp_dir.clone().expect("tmp folder must be specified when logging"),
-                    max_age: Duration::from_secs((args.log_rollover * 60).into()),
-                    max_bytes: args.log_size,
-                })
-            }
+            Some(_) => args.log_dir.as_ref().map(|dir| LogConfig {
+                dir: dir.clone(),
+                tmp: args
+                    .tmp_dir
+                    .clone()
+                    .expect("tmp folder must be specified when logging"),
+                max_age: Duration::from_secs((args.log_rollover * 60).into()),
+                max_bytes: args.log_size,
+            }),
             _ => None,
         };
-        run_headless(rx, bus_states, per_bus_bundles, filters, args.quiet, args.json, log_cfg);
+        run_headless(
+            rx,
+            bus_states,
+            per_bus_bundles,
+            filters,
+            args.quiet,
+            args.json,
+            log_cfg,
+        );
     }
 
     Ok(())
@@ -224,7 +244,8 @@ fn run_tui(
             } as u32;
 
             let has_id_filters = !filters.id_ranges.is_empty();
-            let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
+            let has_msg_sig_filters =
+                !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
 
             let maybe_line = if !has_msg_sig_filters {
                 if has_id_filters && !filters.match_id(id_masked) {
@@ -234,42 +255,46 @@ fn run_tui(
                         per_bus_bundles.get(&ev.bus),
                         &ev.frame,
                         id_masked,
-                        true,   // allow empty
-                        true,   // ignore msg filter
+                        true, // allow empty
+                        true, // ignore msg filter
                         &[],
                         &[],
                     );
                     Some(format_can_line(
-                            &ev.bus,
-                            per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
-                            &ev.frame,
-                            ev.ts_opt,
-                            decoded,
-                            false
-                            ))
+                        &ev.bus,
+                        per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
+                        &ev.frame,
+                        ev.ts_opt,
+                        decoded,
+                        false,
+                    ))
                 }
             } else {
                 let decoded = maybe_decode(
                     per_bus_bundles.get(&ev.bus),
                     &ev.frame,
                     id_masked,
-                    false,  // don't allow empty
-                    false,  // enforce msg filter
+                    false, // don't allow empty
+                    false, // enforce msg filter
                     &filters.msg_filters,
                     &filters.sig_filters,
                 );
-                decoded.map(|d| format_can_line(
+                decoded.map(|d| {
+                    format_can_line(
                         &ev.bus,
                         per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
                         &ev.frame,
                         ev.ts_opt,
                         Some(d),
-                        false
-                        ))
+                        false,
+                    )
+                })
             };
 
             if let Some(line) = maybe_line {
-                if messages.len() == max_msgs { messages.pop_front(); }
+                if messages.len() == max_msgs {
+                    messages.pop_front();
+                }
                 messages.push_back(line);
             }
         }
@@ -336,7 +361,9 @@ fn run_tui(
                     if key.kind == KeyEventKind::Press {
                         match key.code {
                             KeyCode::Char('q') => break 'ui,
-                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => break 'ui,
+                            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                                break 'ui;
+                            }
                             _ => {}
                         }
                     }
@@ -365,10 +392,7 @@ fn log_file_path(base: &Path, bus: &str) -> PathBuf {
 fn open_bus_log(base: &Path, bus: &str) -> std::io::Result<BusLog> {
     create_dir_all(base)?;
     let path = log_file_path(base, bus);
-    let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)?;
+    let file = OpenOptions::new().create(true).append(true).open(&path)?;
     eprintln!("log: opening file {:?}", path);
     let size = file.metadata().ok().map(|m| m.len()).unwrap_or(0);
     Ok(BusLog {
@@ -411,21 +435,22 @@ pub fn run_headless(
         match find_uncompressed_logs(&cfg.tmp) {
             Ok(paths) => {
                 if !paths.is_empty() {
-                    println!("log: startup: found {} uncompressed logs; compressing...", paths.len());
+                    println!(
+                        "log: startup: found {} uncompressed logs; compressing...",
+                        paths.len()
+                    );
                 }
                 for p in paths.iter() {
                     let p = p.clone();
                     let cfg_cloned = cfg.clone();
-                    if let Err(e) = thread::Builder::new()
-                        .name("log-compress".into())
-                        .spawn(move || {
+                    if let Err(e) = thread::Builder::new().name("log-compress".into()).spawn(
+                        move || {
                             let start_time = Instant::now();
                             match compress_and_remove(&p, &cfg_cloned.dir) {
                                 Ok(gz) => {
                                     // Best-effort size reporting
-                                    let size_mb = metadata(&gz)
-                                        .map(|m| m.len() / (1024 * 1024))
-                                        .unwrap_or(0);
+                                    let size_mb =
+                                        metadata(&gz).map(|m| m.len() / (1024 * 1024)).unwrap_or(0);
                                     println!(
                                         "log: compressed '{}' → '{}', size: {}MB duration: {:?}",
                                         p.display(),
@@ -434,15 +459,20 @@ pub fn run_headless(
                                         start_time.elapsed(),
                                     );
                                 }
-                                Err(e) => eprintln!("log: compression failed for '{}': {e}", p.display()),
+                                Err(e) => {
+                                    eprintln!("log: compression failed for '{}': {e}", p.display())
+                                }
                             }
-                        })
-                    {
+                        },
+                    ) {
                         eprintln!("log: failed to spawn compression thread: {e}");
                     }
                 }
             }
-            Err(e) => eprintln!("log: startup: failed to enumerate '{}': {e}", cfg.dir.display()),
+            Err(e) => eprintln!(
+                "log: startup: failed to enumerate '{}': {e}",
+                cfg.dir.display()
+            ),
         }
     }
 
@@ -481,15 +511,22 @@ pub fn run_headless(
             };
 
             let has_id_filters = !filters.id_ranges.is_empty();
-            let has_msg_sig_filters = !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
+            let has_msg_sig_filters =
+                !filters.msg_filters.is_empty() || !filters.sig_filters.is_empty();
 
             match bandwidth.get(&ev.bus) {
-                Some(bits) => { bandwidth.insert(ev.bus.clone(), (bit_length + *bits).into()); }
-                None => { bandwidth.insert(ev.bus.clone(), bit_length.into()); }
+                Some(bits) => {
+                    bandwidth.insert(ev.bus.clone(), (bit_length + *bits).into());
+                }
+                None => {
+                    bandwidth.insert(ev.bus.clone(), bit_length.into());
+                }
             }
 
             let line = if !has_msg_sig_filters {
-                if has_id_filters && !filters.match_id(id_masked) { continue; }
+                if has_id_filters && !filters.match_id(id_masked) {
+                    continue;
+                }
                 let decoded = maybe_decode(
                     per_bus_bundles.get(&ev.bus),
                     &ev.frame,
@@ -517,7 +554,9 @@ pub fn run_headless(
                     &filters.msg_filters,
                     &filters.sig_filters,
                 );
-                if decoded.is_none() { continue; }
+                if decoded.is_none() {
+                    continue;
+                }
                 format_can_line(
                     &ev.bus,
                     per_bus_bundles.get(&ev.bus).map(|b| b.dbc_name.as_str()),
@@ -553,7 +592,7 @@ pub fn run_headless(
                     if let Some(bl) = &global_log {
                         let elapsed = bl.opened_at.elapsed();
                         let secs = elapsed.as_secs_f64();
-                        let size = bl.current_size / (1024*1024);
+                        let size = bl.current_size / (1024 * 1024);
                         let time_triggered = elapsed >= cfg.max_age;
                         let size_triggered = size >= cfg.max_bytes;
                         let reason = match (time_triggered, size_triggered) {
@@ -631,8 +670,12 @@ fn list_log_files(dir: &Path) -> std::io::Result<Vec<(PathBuf, u64, SystemTime)>
     for entry in read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_file() { continue; }
-        if path.extension().and_then(|s| s.to_str()) != Some("log") { continue; }
+        if !path.is_file() {
+            continue;
+        }
+        if path.extension().and_then(|s| s.to_str()) != Some("log") {
+            continue;
+        }
         let md = entry.metadata()?;
         let len = md.len();
         let modified = md.modified().unwrap_or(SystemTime::UNIX_EPOCH);
@@ -648,8 +691,12 @@ fn dir_usage_bytes(dir: &Path) -> std::io::Result<u128> {
     for entry in read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if !path.is_file() { continue; }
-        if path.extension().and_then(|s| s.to_str()) != Some("log") { continue; }
+        if !path.is_file() {
+            continue;
+        }
+        if path.extension().and_then(|s| s.to_str()) != Some("log") {
+            continue;
+        }
         if let Ok(md) = entry.metadata() {
             total = total.saturating_add(md.len() as u128);
         }
@@ -689,10 +736,13 @@ fn find_uncompressed_logs(dir: &Path) -> Result<Vec<PathBuf>, std::io::Error> {
     for entry in read_dir(dir)? {
         let entry = entry?;
         let p = entry.path();
-        if !p.is_file() { continue; }
+        if !p.is_file() {
+            continue;
+        }
 
         // true if the extension is ".log"
-        let is_log = p.extension()
+        let is_log = p
+            .extension()
             .and_then(|s| s.to_str())
             .map(|s| s == "log")
             .unwrap_or(false);

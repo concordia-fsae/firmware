@@ -5,6 +5,7 @@ from glob import glob
 import os
 from zlib import crc32
 
+
 def render_build_info(output_dir, templates, build_info):
     for template in templates:
         renderer = Template(filename=template)
@@ -13,8 +14,10 @@ def render_build_info(output_dir, templates, build_info):
         except Exception as e:
             raise Exception(f"Template render error on '{template}': {e}")
         if not isinstance(rendered, str):
-            raise Exception("Template render error on '{template}': "+
-                            "Mako rendering didn't produce a str to write to the file")
+            raise Exception(
+                "Template render error on '{template}': "
+                + "Mako rendering didn't produce a str to write to the file"
+            )
 
         with open(output_dir + os.sep + template.rstrip(".mako"), "w") as out_fd:
             out_fd.write(rendered)

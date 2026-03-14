@@ -3,23 +3,23 @@ config:
   description: General definitions for applications and bootloaders
 defs:
   lib_enabled:
-    requires: 
+    requires:
       - app_start_addr
       - app_variant_id
       - app_component_id
       - app_function_id
   start_addr:
-    requires: 
+    requires:
       - app_lib_enabled
   variant_id:
-    requires: 
+    requires:
       - app_lib_enabled
   component_id:
     discreteValue: component_id
-    requires: 
+    requires:
       - app_lib_enabled
   node_id:
-    requires: 
+    requires:
       - app_lib_enabled
   function_id:
     discreteValue: function_id

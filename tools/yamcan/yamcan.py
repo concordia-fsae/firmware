@@ -33,58 +33,71 @@ can_nodes = {}
 discrete_values = {}
 templates = {}
 
-BUS_SCHEMA = Schema({
-    "name": str,
-    "description": str,
-    "defaultEndianness": str,
-    "baudrate": Or(1000000, 500000),
-})
+BUS_SCHEMA = Schema(
+    {
+        "name": str,
+        "description": str,
+        "defaultEndianness": str,
+        "baudrate": Or(1000000, 500000),
+    }
+)
 
-NODE_SCHEMA = Schema({
-    "description": str,
-    "onBuses": Or(str, list[str]),
-    Optional("duplicateNode"): int,
-    Optional("baseId"): int,
-})
+NODE_SCHEMA = Schema(
+    {
+        "description": str,
+        "onBuses": Or(str, list[str]),
+        Optional("duplicateNode"): int,
+        Optional("baseId"): int,
+    }
+)
 
-SIGNAL_SCHEMA = Schema({
-    Optional("description"): str,
-    Optional("unit"): str,
-    Optional("nativeRepresentation"): dict,
-    Optional("discreteValues"): str,
-    Optional("continuous"): bool,
-    Optional("validationRole"): str,
-    Optional("template"): str,
-})
+SIGNAL_SCHEMA = Schema(
+    {
+        Optional("description"): str,
+        Optional("unit"): str,
+        Optional("nativeRepresentation"): dict,
+        Optional("discreteValues"): str,
+        Optional("continuous"): bool,
+        Optional("validationRole"): str,
+        Optional("template"): str,
+    }
+)
 
-MESSAGE_SCHEMA = Schema({
-    Optional("description"): str,
-    Optional("cycleTimeMs"): int,
-    Optional("timeoutPeriodMs"): int,
-    Optional("id"): int,
-    Optional("idOffset"): int,
-    Optional("lengthBytes"): int,
-    Optional("messageType"): str,
-    Optional("sourceBuses"): Or(str, list[str]),
-    Optional("signals"): Or(dict, None),
-    Optional("unscheduled"): bool,
-    Optional("template"): str,
-})
+MESSAGE_SCHEMA = Schema(
+    {
+        Optional("description"): str,
+        Optional("cycleTimeMs"): int,
+        Optional("timeoutPeriodMs"): int,
+        Optional("id"): int,
+        Optional("idOffset"): int,
+        Optional("lengthBytes"): int,
+        Optional("messageType"): str,
+        Optional("sourceBuses"): Or(str, list[str]),
+        Optional("signals"): Or(dict, None),
+        Optional("unscheduled"): bool,
+        Optional("template"): str,
+    }
+)
 
-RX_FILE_SCHEMA = Schema({
-    "messages": Or(dict, None),
-    "signals": Or(dict, None),
-})
+RX_FILE_SCHEMA = Schema(
+    {
+        "messages": Or(dict, None),
+        "signals": Or(dict, None),
+    }
+)
 
-RX_ITEM_SCHEMA = Schema({
-    Optional("sourceBuses"): Or(str, list[str]),
-    Optional("unrecorded"): bool,
-    Optional("node"): Or(int, list[int]),
-    Optional("destBuses"): list[str],
-})
+RX_ITEM_SCHEMA = Schema(
+    {
+        Optional("sourceBuses"): Or(str, list[str]),
+        Optional("unrecorded"): bool,
+        Optional("node"): Or(int, list[int]),
+        Optional("destBuses"): list[str],
+    }
+)
 
 # if this gets set during the build, we will fail at the end
 ERROR = False
+
 
 class UniqueKeyLoader(yaml.SafeLoader):
     def construct_mapping(self, node, deep=False):
@@ -96,8 +109,10 @@ class UniqueKeyLoader(yaml.SafeLoader):
             mapping.add(key)
         return super().construct_mapping(node, deep)
 
+
 def safe_load(file):
     return yaml.load(file, Loader=UniqueKeyLoader)
+
 
 def generate_discrete_values(definition_dir: Path) -> None:
     """Load discrete values from discrete-values.yaml"""
@@ -114,11 +129,15 @@ def generate_discrete_values(definition_dir: Path) -> None:
             discrete_value = DiscreteValue(name, val)
             for vals, _ in val.items():
                 if any(c for c in vals if c.islower()):
-                    print(f"Discrete Value '{name}' cannot contain lower case in enum '{vals}'")
+                    print(
+                        f"Discrete Value '{name}' cannot contain lower case in enum '{vals}'"
+                    )
                     error = True
                     continue
-                if any(c for c in vals if not c.isalnum() and c != '_'):
-                    print(f"Discrete Value '{name}' may only contain capital letters, numbers, or underscores in enum '{vals}'")
+                if any(c for c in vals if not c.isalnum() and c != "_"):
+                    print(
+                        f"Discrete Value '{name}' may only contain capital letters, numbers, or underscores in enum '{vals}'"
+                    )
                     error = True
                     continue
             setattr(discrete_values, name, discrete_value)
@@ -128,6 +147,7 @@ def generate_discrete_values(definition_dir: Path) -> None:
     if error:
         ERROR = True
         raise Exception("Error generating discrete values, review previous errors...")
+
 
 def generate_templates(definition_dir: Path) -> None:
     """Load discrete values from signals.yaml"""
@@ -156,7 +176,9 @@ def generate_templates(definition_dir: Path) -> None:
                 continue
             if "sourceBuses" in definition:
                 ERROR = True
-                print(f"Template message '{message}' cannot define the source buses of a message")
+                print(
+                    f"Template message '{message}' cannot define the source buses of a message"
+                )
                 break
             elif "id" in definition:
                 ERROR = True
@@ -164,13 +186,16 @@ def generate_templates(definition_dir: Path) -> None:
                 break
             elif "signals" not in definition:
                 ERROR = True
-                print(f"Template message '{message}' must define the signals of a message")
+                print(
+                    f"Template message '{message}' must define the signals of a message"
+                )
                 break
             else:
                 templates["messages"][message] = definition
     if error:
         ERROR = True
         raise Exception("Error processing templates, see previous errors...")
+
 
 def generate_can_buses(definition_dir: Path) -> None:
     """Generate CAN buses based on yaml files"""
@@ -185,7 +210,9 @@ def generate_can_buses(definition_dir: Path) -> None:
             try:
                 Endianess[can_bus_def["defaultEndianness"]]
             except:
-                raise Exception(f"Endianness '{can_bus_def['defaultEndianness']}' is not valid. Endianness can be { [ e.name for e in Endianess ] }.")
+                raise Exception(
+                    f"Endianness '{can_bus_def['defaultEndianness']}' is not valid. Endianness can be { [ e.name for e in Endianess ] }."
+                )
         except Exception as e:
             print(f"CANbus configuration file '{bus_file_path}' is invalid.")
             print(f"CAN Bus Schema Error: {e}")
@@ -211,7 +238,9 @@ def generate_can_nodes(definition_dir: Path) -> None:
     error = False
 
     nodes = [
-        dir for dir in definition_dir.joinpath("data/components").iterdir() if dir.is_dir()
+        dir
+        for dir in definition_dir.joinpath("data/components").iterdir()
+        if dir.is_dir()
     ]
 
     for node in nodes:
@@ -261,10 +290,14 @@ def generate_can_nodes(definition_dir: Path) -> None:
             if type(node_def["onBuses"]) is list:
                 for bus in node_def["onBuses"]:
                     if bus not in can_bus_defs:
-                        raise Exception(f"Node '{node.name}' is on bus '{bus}' but that bus is not defined.")
+                        raise Exception(
+                            f"Node '{node.name}' is on bus '{bus}' but that bus is not defined."
+                        )
             else:
                 if node_def["onBuses"] not in can_bus_defs:
-                    raise Exception(f"Node '{node.name}' is on bus '{node_def['onBuses']}' but that bus is not defined.")
+                    raise Exception(
+                        f"Node '{node.name}' is on bus '{node_def['onBuses']}' but that bus is not defined."
+                    )
         except Exception as e:
             print(f"CAN node configuration file for node '{node.name}' is invalid.")
             print(f"CAN Node Error: {e}")
@@ -308,7 +341,9 @@ def process_node(node: CanNode):
             signals_dict = safe_load(signals_file)["signals"] or {}
             for key in signals_dict.keys():
                 if not key.isalnum():
-                    raise Exception(f"Signal name '{key}' can contain only alpha-numeric characters.")
+                    raise Exception(
+                        f"Signal name '{key}' can contain only alpha-numeric characters."
+                    )
         except Exception as e:
             raise Exception(f"Error in signal file {sig_file}: {e}")
 
@@ -318,22 +353,35 @@ def process_node(node: CanNode):
                 SIGNAL_SCHEMA.validate(definition)
                 if "template" in definition:
                     if definition["template"] not in templates["signals"]:
-                        raise Exception(f"Signal '{sig}' has template signal '{definition['template']}' which can not be found in the template signals")
+                        raise Exception(
+                            f"Signal '{sig}' has template signal '{definition['template']}' which can not be found in the template signals"
+                        )
                     definition.update(templates["signals"][definition["template"]])
-                if "nativeRepresentation" not in definition and "discreteValues" not in definition:
-                    raise Exception(f"Signal '{sig}' in '{node.name}' has neither a discreteValues or nativeRepresentation.")
+                if (
+                    "nativeRepresentation" not in definition
+                    and "discreteValues" not in definition
+                ):
+                    raise Exception(
+                        f"Signal '{sig}' in '{node.name}' has neither a discreteValues or nativeRepresentation."
+                    )
                 if "unit" in definition:
                     try:
                         Units(definition["unit"])
                     except:
-                        raise Exception(f"Unit '{definition['unit']}' is not an accepted unit.")
+                        raise Exception(
+                            f"Unit '{definition['unit']}' is not an accepted unit."
+                        )
                 if "validationRole" in definition:
                     try:
                         ValidationRole(definition["validationRole"])
                     except:
-                        raise Exception(f"Validation role '{definition['validationRole']}' is not valid.")
+                        raise Exception(
+                            f"Validation role '{definition['validationRole']}' is not valid."
+                        )
             except Exception as e:
-                print(f"CAN signal definition for '{sig}' in node '{node.name}' is invalid.")
+                print(
+                    f"CAN signal definition for '{sig}' in node '{node.name}' is invalid."
+                )
                 print(f"CAN Signal Schema Error: {e}")
                 error = True
                 continue
@@ -361,14 +409,18 @@ def process_node(node: CanNode):
                 continue
     if error:
         ERROR = True
-        raise Exception(f"Error processing node '{node.name}' signals, see previous errors...")
+        raise Exception(
+            f"Error processing node '{node.name}' signals, see previous errors..."
+        )
 
     with open(node.def_files[msg_file], "r") as messages_file:
         try:
             messages_dict = safe_load(messages_file).get("messages", {})
             for key in messages_dict.keys():
                 if not key.isalnum():
-                    raise Exception(f"Message name '{key}' can contain only alpha-numeric characters.")
+                    raise Exception(
+                        f"Message name '{key}' can contain only alpha-numeric characters."
+                    )
         except Exception as e:
             raise Exception(f"Error in message file {msg_file}: {e}")
 
@@ -376,7 +428,6 @@ def process_node(node: CanNode):
         print(f"No messages found in message file for node '{node.name}'")
         ERROR = True
         return
-
 
     for name, definition in messages_dict.items():
         if node.duplicateNode:
@@ -386,27 +437,39 @@ def process_node(node: CanNode):
 
         if "template" in definition:
             if definition["template"] not in templates["messages"]:
-                print(f"Message '{name}' has template message '{definition['template']}' which can not be found in the template messages")
+                print(
+                    f"Message '{name}' has template message '{definition['template']}' which can not be found in the template messages"
+                )
                 ERROR = True
                 break
             definition.update(templates["messages"][definition["template"]])
         try:
             MESSAGE_SCHEMA.validate(definition)
-            if "lengthBytes" in definition and (definition["lengthBytes"] < 1 or definition["lengthBytes"] > 8):
-                raise Exception("Message length must be greater than 0 and less than or equal to 8")
+            if "lengthBytes" in definition and (
+                definition["lengthBytes"] < 1 or definition["lengthBytes"] > 8
+            ):
+                raise Exception(
+                    "Message length must be greater than 0 and less than or equal to 8"
+                )
             if "id" not in definition and "idOffset" not in definition:
                 raise Exception("Message must have a specified 'id' or 'idOffset'")
             elif "id" in definition and "idOffset" in definition:
-                raise Exception("Message cannot have an 'id' and 'idOffset' at the same time")
+                raise Exception(
+                    "Message cannot have an 'id' and 'idOffset' at the same time"
+                )
         except Exception as e:
-            print(f"CAN message definition for '{name}' in node '{node.name}' is invalid.")
+            print(
+                f"CAN message definition for '{name}' in node '{node.name}' is invalid."
+            )
             print(f"Message Schema Error: {e}")
             error = True
             continue
 
         if "idOffset" in definition:
             if node.baseId is None:
-                print(f"Message '{name}' has a 'idOffset' specified and {node.name} does not have a 'baseId' specified")
+                print(
+                    f"Message '{name}' has a 'idOffset' specified and {node.name} does not have a 'baseId' specified"
+                )
                 ERROR = True
                 break
             else:
@@ -429,47 +492,73 @@ def process_node(node: CanNode):
 
         msg_obj.node_ref = node
         for msg_signal in msg_obj.signals:
-            sig = msg_signal.split('_')[1]
-            if definition['signals'][sig] is not None and "template" in definition["signals"][sig]:
+            sig = msg_signal.split("_")[1]
+            if (
+                definition["signals"][sig] is not None
+                and "template" in definition["signals"][sig]
+            ):
                 if "unit" in definition["signals"][sig]:
                     ERROR = True
-                    print(f"Templated signal '{msg_signal}' cannot override template unit")
+                    print(
+                        f"Templated signal '{msg_signal}' cannot override template unit"
+                    )
                     break
                 elif "nativeRepresentation" in definition["signals"][sig]:
                     ERROR = True
-                    print(f"Templated signal '{msg_signal}' cannot override template native representation")
+                    print(
+                        f"Templated signal '{msg_signal}' cannot override template native representation"
+                    )
                     break
                 elif "validationRole" in definition["signals"][sig]:
                     ERROR = True
-                    print(f"Templated signal '{msg_signal}' cannot override template validation role")
+                    print(
+                        f"Templated signal '{msg_signal}' cannot override template validation role"
+                    )
                     break
                 elif "discreteValues" in definition["signals"][sig]:
                     ERROR = True
-                    print(f"Templated signal '{msg_signal}' cannot override template discrete value")
+                    print(
+                        f"Templated signal '{msg_signal}' cannot override template discrete value"
+                    )
                     break
-                elif definition['signals'][sig]['template'] not in templates["signals"]:
+                elif definition["signals"][sig]["template"] not in templates["signals"]:
                     ERROR = True
-                    print(f"Templated signal '{definition['signals'][sig]['template']}' in message '{msg_signal}' cannot be found")
+                    print(
+                        f"Templated signal '{definition['signals'][sig]['template']}' in message '{msg_signal}' cannot be found"
+                    )
                     break
 
-                new_sig = copy.deepcopy(templates["signals"][definition['signals'][sig]['template']])
-                new_sig.update(definition['signals'][sig])
+                new_sig = copy.deepcopy(
+                    templates["signals"][definition["signals"][sig]["template"]]
+                )
+                new_sig.update(definition["signals"][sig])
                 try:
                     SIGNAL_SCHEMA.validate(new_sig)
-                    if "nativeRepresentation" not in new_sig and "discreteValues" not in new_sig:
-                        raise Exception(f"Signal '{msg_signal}' in '{node.name}' has neither a discreteValues or nativeRepresentation.")
+                    if (
+                        "nativeRepresentation" not in new_sig
+                        and "discreteValues" not in new_sig
+                    ):
+                        raise Exception(
+                            f"Signal '{msg_signal}' in '{node.name}' has neither a discreteValues or nativeRepresentation."
+                        )
                     if "unit" in definition:
                         try:
                             Units(definition["unit"])
                         except:
-                            raise Exception(f"Unit '{new_sig['unit']}' is not an accepted unit.")
+                            raise Exception(
+                                f"Unit '{new_sig['unit']}' is not an accepted unit."
+                            )
                     if "validationRole" in new_sig:
                         try:
                             ValidationRole(new_sig["validationRole"])
                         except:
-                            raise Exception(f"Validation role '{new_sig['validationRole']}' is not valid.")
+                            raise Exception(
+                                f"Validation role '{new_sig['validationRole']}' is not valid."
+                            )
                 except Exception as e:
-                    print(f"CAN signal definition for '{msg_signal}' in node '{node.name}' is invalid.")
+                    print(
+                        f"CAN signal definition for '{msg_signal}' in node '{node.name}' is invalid."
+                    )
                     print(f"CAN Signal Schema Error: {e}")
                     error = True
                     continue
@@ -497,14 +586,18 @@ def process_node(node: CanNode):
                 ERROR = True
         if error:
             ERROR = True
-            raise Exception(f"Error processing node '{node.name}' signals, see previous errors...")
+            raise Exception(
+                f"Error processing node '{node.name}' signals, see previous errors..."
+            )
         msg_obj.validate_msg()
         if not msg_obj.is_valid:
             ERROR = True
         node.add_message(msg_obj)
     if error:
         ERROR = True
-        raise Exception(f"Error processing node '{node.name}' messages, see previous errors...")
+        raise Exception(
+            f"Error processing node '{node.name}' messages, see previous errors..."
+        )
 
     for signal in signals.keys():
         if not signal in node.signals.keys():
@@ -516,6 +609,7 @@ def process_node(node: CanNode):
 
     for bus in node.on_buses:
         can_bus_defs[bus].add_node(node)
+
 
 def process_bridges(node: CanNode):
     global ERROR
@@ -547,13 +641,19 @@ def process_bridges(node: CanNode):
                 if type(definition["sourceBuses"]) is list:
                     for bus in definition["sourceBuses"]:
                         if bus not in can_bus_defs:
-                            raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
+                            raise Exception(
+                                f"Source bus {definition['sourceBuses']} is not defined in the network."
+                            )
 
                 else:
                     if definition["sourceBuses"] not in can_bus_defs:
-                        raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
+                        raise Exception(
+                            f"Source bus {definition['sourceBuses']} is not defined in the network."
+                        )
             except Exception as e:
-                print(f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid.")
+                print(
+                    f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid."
+                )
                 print(f"CAN RX Message Error: {e}")
                 error = True
                 continue
@@ -565,7 +665,9 @@ def process_bridges(node: CanNode):
         if definition is None or "destBuses" not in definition:
             continue
 
-        message = copy.deepcopy(can_bus_defs[definition["sourceBuses"]].messages[msg_name])
+        message = copy.deepcopy(
+            can_bus_defs[definition["sourceBuses"]].messages[msg_name]
+        )
         can_bus_defs[definition["sourceBuses"]].messages[msg_name].bridged = True
         message.from_bridge = True
         message.source_buses = definition["destBuses"]
@@ -601,18 +703,27 @@ def process_receivers(bus: CanBus, node: CanNode):
         # probably want to be able to gateway messages from
         # one bus to another, and this would be the place to
         # define the gateway node
-        rx_sig_dict = rx_sig_file["signals"] if rx_sig_file["signals"] is not None else {}
+        rx_sig_dict = (
+            rx_sig_file["signals"] if rx_sig_file["signals"] is not None else {}
+        )
 
     for sig, definition in rx_sig_dict.items():
         if definition is not None:
             try:
                 RX_ITEM_SCHEMA.validate(definition)
-                if "sourceBuses" in definition and definition["sourceBuses"] not in can_bus_defs:
-                    raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
+                if (
+                    "sourceBuses" in definition
+                    and definition["sourceBuses"] not in can_bus_defs
+                ):
+                    raise Exception(
+                        f"Source bus {definition['sourceBuses']} is not defined in the network."
+                    )
                 if "bridge" in definition:
                     raise Exception(f"Cannot bridge signals.")
             except Exception as e:
-                print(f"CAN signal reception definition for '{sig}' in node '{node.name}' is invalid.")
+                print(
+                    f"CAN signal reception definition for '{sig}' in node '{node.name}' is invalid."
+                )
                 print(f"CAN RX Signal Error: {e}")
                 error = True
                 continue
@@ -620,9 +731,10 @@ def process_receivers(bus: CanBus, node: CanNode):
         ERROR = True
         raise Exception("Error processing node receivers, see previous errors...")
 
-
     with open(node.def_files[rx_file], "r") as fd:
-        rx_msg_dict = rx_sig_file["messages"] if rx_sig_file["messages"] is not None else {}
+        rx_msg_dict = (
+            rx_sig_file["messages"] if rx_sig_file["messages"] is not None else {}
+        )
 
     for msg, definition in rx_msg_dict.items():
         if definition is not None:
@@ -636,9 +748,13 @@ def process_receivers(bus: CanBus, node: CanNode):
 
                 else:
                     if definition["sourceBuses"] not in can_bus_defs:
-                        raise Exception(f"Source bus {definition['sourceBuses']} is not defined in the network.")
+                        raise Exception(
+                            f"Source bus {definition['sourceBuses']} is not defined in the network."
+                        )
             except Exception as e:
-                print(f"CAN message fuck reception definition for '{msg}' in node '{node.name}' is invalid.")
+                print(
+                    f"CAN message fuck reception definition for '{msg}' in node '{node.name}' is invalid."
+                )
                 print(f"CAN RX Message Error: {e}")
                 error = True
                 continue
@@ -647,7 +763,10 @@ def process_receivers(bus: CanBus, node: CanNode):
         raise Exception("Error processing node receivers, see previous errors...")
 
     for sig_name in rx_sig_dict.keys():
-        if rx_sig_dict[sig_name] and ('sourceBuses' in rx_sig_dict[sig_name] and rx_sig_dict[sig_name]['sourceBuses'] != bus.name):
+        if rx_sig_dict[sig_name] and (
+            "sourceBuses" in rx_sig_dict[sig_name]
+            and rx_sig_dict[sig_name]["sourceBuses"] != bus.name
+        ):
             continue
         if sig_name not in bus.signals:
             print(
@@ -660,7 +779,11 @@ def process_receivers(bus: CanBus, node: CanNode):
         rxed_sig = bus.signals[sig_name]
         rxed_msg = rxed_sig.message_ref
 
-        if rxed_msg.checksum_sig and not rxed_msg.checksum_sig.name in rx_sig_dict.keys() and not rxed_msg.checksum_sig.name in node.received_sigs:
+        if (
+            rxed_msg.checksum_sig
+            and not rxed_msg.checksum_sig.name in rx_sig_dict.keys()
+            and not rxed_msg.checksum_sig.name in node.received_sigs
+        ):
             node.received_sigs[rxed_msg.checksum_sig.name] = rxed_msg.checksum_sig
             rxed_msg.add_receiver(node, rxed_msg.checksum_sig.name)
 
@@ -680,7 +803,10 @@ def process_receivers(bus: CanBus, node: CanNode):
             ERROR = True
             continue
 
-        if msg_name not in bus.messages.keys() or bus.name not in bus.messages[msg_name].source_buses:
+        if (
+            msg_name not in bus.messages.keys()
+            or bus.name not in bus.messages[msg_name].source_buses
+        ):
             print(
                 f"Node '{node.alias}' attempted to RX message '{msg_name}' "
                 f"on bus {bus.name}, but that message is not present on that bus"
@@ -691,7 +817,9 @@ def process_receivers(bus: CanBus, node: CanNode):
         if rx_msg_dict[msg_name] is not None:
             if "node" in rx_msg_dict[msg_name]:
                 if node.duplicateNode is False:
-                    Exception(f"{msg_name} in file {rx_file} is for node {rx_msg_dict[msg_name]['node']}, however {node.alias} is not a duplicate node.")
+                    Exception(
+                        f"{msg_name} in file {rx_file} is for node {rx_msg_dict[msg_name]['node']}, however {node.alias} is not a duplicate node."
+                    )
                 if rx_msg_dict[msg_name]["node"] is not node.offset:
                     continue
 
@@ -705,7 +833,10 @@ def process_receivers(bus: CanBus, node: CanNode):
         for sig_name in bus.messages[msg_name].signals:
             rxed_sig = bus.signals[sig_name]
 
-            if rxed_sig not in node.received_sigs and not rxed_sig.message_ref.fault_message:
+            if (
+                rxed_sig not in node.received_sigs
+                and not rxed_sig.message_ref.fault_message
+            ):
                 node.received_sigs[sig_name] = rxed_sig
                 bus.messages[msg_name].add_receiver(node, rxed_sig.name)
 
@@ -737,12 +868,10 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
-            ["NetworkDefines_generated.h.mako", {
-                "nodes": [can_nodes[node]],
-                "buses": can_bus_defs,
-                "network": {
-                }
-            }],
+            [
+                "NetworkDefines_generated.h.mako",
+                {"nodes": [can_nodes[node]], "buses": can_bus_defs, "network": {}},
+            ],
             ["CANTypes_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigTx.h.mako", {"nodes": [can_nodes[node]]}],
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],
@@ -829,7 +958,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--manifest-output",
         dest="manifest",
-        type= str,
+        type=str,
         action="store",
         help="Generate network manifest.",
     )
@@ -837,7 +966,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--manifest-bus",
         dest="manifest_bus",
-        type= str,
+        type=str,
         action="store",
         help="Bus to generate the network manifest for.",
     )
@@ -888,6 +1017,7 @@ def parseNetwork(args, lookup):
             if not node.processed:
                 process_receivers(bus, node)
 
+
 def calculate_bus_load(bus, output_dir):
     total_bits_per_s = 0
     total_messages_per_s = 0
@@ -896,7 +1026,7 @@ def calculate_bus_load(bus, output_dir):
     total_messages = 0
 
     makedirs(output_dir, exist_ok=True)
-    output = [ open(str(output_dir) + f"/{bus.name}-stats.txt", 'w'), sys.stdout ]
+    output = [open(str(output_dir) + f"/{bus.name}-stats.txt", "w"), sys.stdout]
 
     for _, message in bus.messages.items():
         # SOF(1), RTR(1), IDE(1), DLC(4), CRC(15)
@@ -906,7 +1036,7 @@ def calculate_bus_load(bus, output_dir):
 
         bit_length = 43
         bit_length += message.length_bytes * 8
-        bit_length += 11 if message.id <= 0x7ff else 29
+        bit_length += 11 if message.id <= 0x7FF else 29
 
         if message.unscheduled:
             total_unscheduled_bits += bit_length
@@ -920,11 +1050,22 @@ def calculate_bus_load(bus, output_dir):
 
     usage = total_bits_per_s / bus.baudrate
     for out in output:
-        print(f"CAN Bus Statistics for '{bus.name.upper()}'; Baudrate: {bus.baudrate}; Usage: {usage * 100}%", file=out)
-        print(f"Total Bits Transmitted/s: {int(total_bits_per_s)}; Total Messages Transmitted/s: {int(total_messages_per_s)}", file=out)
+        print(
+            f"CAN Bus Statistics for '{bus.name.upper()}'; Baudrate: {bus.baudrate}; Usage: {usage * 100}%",
+            file=out,
+        )
+        print(
+            f"Total Bits Transmitted/s: {int(total_bits_per_s)}; Total Messages Transmitted/s: {int(total_messages_per_s)}",
+            file=out,
+        )
         if total_unscheduled_messages > 0:
-            print(f"Total Bits Unscheduled: {int(total_unscheduled_bits)}; Total Messages Unscheduled: {int(total_unscheduled_messages)}", file=out)
-        print(f"Total Nodes: {len(bus.nodes)}; Count Messages: {total_messages}", file=out)
+            print(
+                f"Total Bits Unscheduled: {int(total_unscheduled_bits)}; Total Messages Unscheduled: {int(total_unscheduled_messages)}",
+                file=out,
+            )
+        print(
+            f"Total Nodes: {len(bus.nodes)}; Count Messages: {total_messages}", file=out
+        )
 
     if usage > 0.8:
         print(f"Warning: CANBus '{bus.name.upper()}' has high bus load")
@@ -932,7 +1073,9 @@ def calculate_bus_load(bus, output_dir):
         raise Exception(f"CAN Bus '{bus.name.upper()}' has total bus usage of {usage}")
 
 
-def generate_manifest(bus: str, manifest: str, filters: list[str], ignore_nodes: list[str]):
+def generate_manifest(
+    bus: str, manifest: str, filters: list[str], ignore_nodes: list[str]
+):
     nodes: dict[str, dict[str, int]] = {}
 
     # ---- preprocess filters ----
@@ -967,7 +1110,9 @@ def generate_manifest(bus: str, manifest: str, filters: list[str], ignore_nodes:
             if nodes[node_alias][out_name] == msg_id:
                 return
 
-            print(f"Signal filter '{filt}' has multiple matches in node '{node_alias}'.")
+            print(
+                f"Signal filter '{filt}' has multiple matches in node '{node_alias}'."
+            )
             print("Consider using a 'node:filter=alt' format.")
             exit(1)
 
@@ -995,7 +1140,9 @@ def generate_manifest(bus: str, manifest: str, filters: list[str], ignore_nodes:
                     chosen_msg, chosen_defs = exact[0]
                 else:
                     if fatal_on_ambiguous:
-                        print(f"Signal filter '{filt}' has multiple matches in node '{node_alias}'.")
+                        print(
+                            f"Signal filter '{filt}' has multiple matches in node '{node_alias}'."
+                        )
                         print("Consider using a 'node:filter=alt' format.")
                         exit(1)
                     # Generic filter is ambiguous for this node: skip it.
@@ -1039,7 +1186,7 @@ def main():
 
     # parse arguments
     args = parse_args()
-    lookup = TemplateLookup(directories=[ path.dirname(__file__) + "/templates" ])
+    lookup = TemplateLookup(directories=[path.dirname(__file__) + "/templates"])
 
     if args.build:
         if args.definition_dir:
@@ -1056,14 +1203,26 @@ def main():
                         message.crc = message.crc32()
                 else:
                     for name, message in node.messages.items():
-                        base_message = name.split("_")[0].rstrip(str(node.offset)) + str(0) + "_{}".format(name.split("_")[1])
-                        message.crc = can_nodes[node.name + "_" + str(0)].messages[base_message].crc
+                        base_message = (
+                            name.split("_")[0].rstrip(str(node.offset))
+                            + str(0)
+                            + "_{}".format(name.split("_")[1])
+                        )
+                        message.crc = (
+                            can_nodes[node.name + "_" + str(0)]
+                            .messages[base_message]
+                            .crc
+                        )
             if args.cache_dir:
                 makedirs(args.cache_dir, exist_ok=True)
-                pickle.dump(data, open(args.cache_dir.joinpath("CachedNetwork.pickle"), "wb"))
+                pickle.dump(
+                    data, open(args.cache_dir.joinpath("CachedNetwork.pickle"), "wb")
+                )
     elif args.cache_dir:
         try:
-            data = pickle.load(open(args.cache_dir.joinpath("CachedNetwork.pickle"), "rb"))
+            data = pickle.load(
+                open(args.cache_dir.joinpath("CachedNetwork.pickle"), "rb")
+            )
             can_nodes = data["can_nodes"]
             can_bus_defs = data["can_bus_defs"]
             discrete_values = data["discrete_values"]
@@ -1076,7 +1235,9 @@ def main():
         if len(args.filters) == 0:
             print("No manifest filters specified!")
             exit(1)
-        generate_manifest(args.manifest_bus, args.manifest, args.filters, args.ignore_nodes)
+        generate_manifest(
+            args.manifest_bus, args.manifest, args.filters, args.ignore_nodes
+        )
 
     if args.output_dir:
         for bus in can_bus_defs.values():

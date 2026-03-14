@@ -5,6 +5,6 @@ defs:
   max14921_calibrate:
   cell_balancing:
   canrx_swi:
-  cantx_swi: 
+  cantx_swi:
   cell_diagnostics:
   cell_sleep:

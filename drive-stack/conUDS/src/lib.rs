@@ -1,8 +1,8 @@
+use ::std::time::Duration;
 use std::path::PathBuf;
 use std::str::FromStr;
-use::std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use crc::Crc;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -50,7 +50,7 @@ impl CanioCmd {
                         }
                     }
                 };
-            },
+            }
             Err(e) => Err(e.into()),
         }
     }

@@ -1,15 +1,15 @@
 use std::{
     collections::HashMap,
+    fs::File,
+    io::Read,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
-    io::Read,
-    fs::File,
     sync::Arc,
     thread,
     time::{Duration, Instant},
 };
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use argh::FromArgs;
 use bytes::Buf; // for chunk.chunk()
 use chrono::Utc;
@@ -17,27 +17,31 @@ use futures_util::{StreamExt, TryStreamExt};
 use hex;
 use hostname::get as get_hostname;
 use if_addrs::get_if_addrs;
-use reqwest::{Client, multipart, Url};
+use reqwest::{Client, Url, multipart};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 use tokio::{fs, io::AsyncWriteExt};
-use tracing::{info, error};
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
-use warp::{http::StatusCode, Filter};
+use warp::{Filter, http::StatusCode};
 
 #[cfg(target_os = "linux")]
 use conUDS::modules::uds::UdsSession;
 use conUDS::{FlashStatus, UpdateResult};
-use net_detec::Server as MdnsServer;
 use net_detec::Client as MdnsClient;
-use net_detec::{DiscoveryFilter, DiscoveredService};
+use net_detec::Server as MdnsServer;
+use net_detec::{DiscoveredService, DiscoveryFilter};
 
 /// Host a Rest API with ability to upload and deploy applications
 #[derive(FromArgs, Debug)]
 struct Args {
     /// service type like _carputer-uds._tcp.local.
-    #[argh(option, short = 's', default = "String::from(\"_ota-agent._tcp.local.\")")]
+    #[argh(
+        option,
+        short = 's',
+        default = "String::from(\"_ota-agent._tcp.local.\")"
+    )]
     service_name: String,
 
     #[argh(subcommand)]
@@ -130,7 +134,11 @@ pub struct SubArgServer {
     #[argh(option, short = 't', default = "String::from(\"can0\")")]
     device: String,
     /// the manifest of UDS can nodes on the bus
-    #[argh(option, short = 'm', default = "String::from(\"drive-stack/conUDS/nodes.yml\")")]
+    #[argh(
+        option,
+        short = 'm',
+        default = "String::from(\"drive-stack/conUDS/nodes.yml\")"
+    )]
     node_manifest: String,
     /// network interface to use (e.g., eth0, en0)
     #[argh(option, short = 'i')]
@@ -262,9 +270,7 @@ async fn main() -> Result<()> {
             });
 
             let ip: IpAddr = match &server.ip {
-                Some(s) => s
-                    .parse()
-                    .with_context(|| format!("parsing ip {}", s))?,
+                Some(s) => s.parse().with_context(|| format!("parsing ip {}", s))?,
                 None => IpAddr::V4(find_interface_ipv4(server.interface.as_deref().unwrap())?),
             };
             let addr = SocketAddr::new(ip, server.port);
@@ -354,7 +360,8 @@ async fn main() -> Result<()> {
                     let mut buffer = Vec::new();
                     let fname: String = Path::new(&flash.binary)
                         .file_name()
-                        .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .expect("Invalid filename");
                     file.read_to_end(&mut buffer)?;
                     let part = multipart::Part::bytes(buffer)
                         .file_name(fname.clone())
@@ -369,7 +376,8 @@ async fn main() -> Result<()> {
                         .post(url)
                         .query(&[("node", flash.node.clone())])
                         .multipart(form)
-                        .send().await?;
+                        .send()
+                        .await?;
 
                     let stage_body = response.text().await?;
                     let parsed: Result<FlashReply, _> = serde_json::from_str(&stage_body);
@@ -381,8 +389,19 @@ async fn main() -> Result<()> {
                     let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
                     let resp_flash = Client::new()
                         .post(url_flash)
-                        .query(&[("node", flash.node), ("force", if flash.force { "true".into() } else { "false".into() })])
-                        .send().await?;
+                        .query(&[
+                            ("node", flash.node),
+                            (
+                                "force",
+                                if flash.force {
+                                    "true".into()
+                                } else {
+                                    "false".into()
+                                },
+                            ),
+                        ])
+                        .send()
+                        .await?;
                     let flash_body = resp_flash.text().await?;
                     let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
                     info!("Flash status: {}", parsed.unwrap().status);
@@ -393,7 +412,8 @@ async fn main() -> Result<()> {
                     let mut buffer = Vec::new();
                     let fname: String = Path::new(&flash.binary)
                         .file_name()
-                        .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .expect("Invalid filename");
                     file.read_to_end(&mut buffer)?;
                     let part = multipart::Part::bytes(buffer.clone())
                         .file_name(fname.clone())
@@ -411,8 +431,10 @@ async fn main() -> Result<()> {
                     let response = rest_client
                         .post(url)
                         .query(&[("node", flash.node.clone()), ("sha", sha256_hex)])
-                        .send().await?;
-                    let parsed: Result<VerifyReply, _> = serde_json::from_str(&response.text().await?);
+                        .send()
+                        .await?;
+                    let parsed: Result<VerifyReply, _> =
+                        serde_json::from_str(&response.text().await?);
 
                     let mut staged = false;
                     if let Ok(parsed) = parsed {
@@ -430,7 +452,8 @@ async fn main() -> Result<()> {
                             .post(url)
                             .query(&[("node", flash.node.clone())])
                             .multipart(form)
-                            .send().await?;
+                            .send()
+                            .await?;
 
                         let stage_body = response.text().await?;
                     }
@@ -440,8 +463,19 @@ async fn main() -> Result<()> {
                     let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
                     let resp_flash = Client::new()
                         .post(url_flash)
-                        .query(&[("node", flash.node), ("force", if flash.force { "true".into() } else { "false".into() })])
-                        .send().await?;
+                        .query(&[
+                            ("node", flash.node),
+                            (
+                                "force",
+                                if flash.force {
+                                    "true".into()
+                                } else {
+                                    "false".into()
+                                },
+                            ),
+                        ])
+                        .send()
+                        .await?;
                     let flash_body = resp_flash.text().await?;
                     let parsed: Result<FlashReply, _> = serde_json::from_str(&flash_body);
                     info!("Flash status: {}", parsed.unwrap().status);
@@ -453,19 +487,24 @@ async fn main() -> Result<()> {
                     }
 
                     let overall_start = Instant::now();
-                    let mut results: Vec<(String, UpdateResult)> = Vec::with_capacity(batch.targets.len());
+                    let mut results: Vec<(String, UpdateResult)> =
+                        Vec::with_capacity(batch.targets.len());
                     let rest_client = Client::new();
 
                     for upd in &batch.targets {
                         let node_start = Instant::now();
                         let Some((node, bin)) = parse_update_pair(upd) else {
-                            let msg = format!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
+                            let msg =
+                                format!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
                             error!("{}", msg);
-                            results.push(("<unknown>".to_string(), UpdateResult {
-                                bin: PathBuf::from("<unknown>".to_string()),
-                                result: FlashStatus::Failed(msg),
-                                duration: Duration::from_secs(0),
-                            }));
+                            results.push((
+                                "<unknown>".to_string(),
+                                UpdateResult {
+                                    bin: PathBuf::from("<unknown>".to_string()),
+                                    result: FlashStatus::Failed(msg),
+                                    duration: Duration::from_secs(0),
+                                },
+                            ));
                             continue;
                         };
 
@@ -476,7 +515,8 @@ async fn main() -> Result<()> {
                         let mut buffer = Vec::new();
                         let fname: String = Path::new(&bin)
                             .file_name()
-                            .map(|s| s.to_string_lossy().into_owned()).expect("Invalid filename");
+                            .map(|s| s.to_string_lossy().into_owned())
+                            .expect("Invalid filename");
                         file.read_to_end(&mut buffer)?;
                         let part = multipart::Part::bytes(buffer.clone())
                             .file_name(fname.clone())
@@ -492,8 +532,10 @@ async fn main() -> Result<()> {
                         let response = rest_client
                             .post(url)
                             .query(&[("node", node.clone()), ("sha", sha256_hex)])
-                            .send().await?;
-                        let parsed: Result<VerifyReply, _> = serde_json::from_str(&response.text().await?);
+                            .send()
+                            .await?;
+                        let parsed: Result<VerifyReply, _> =
+                            serde_json::from_str(&response.text().await?);
 
                         let mut staged = false;
                         if let Ok(parsed) = parsed {
@@ -506,23 +548,37 @@ async fn main() -> Result<()> {
                         if !staged {
                             // Stage
                             info!("Staging {} to the agent...", &fname);
-                            let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                            let url =
+                                build_url(result.addresses[0], result.port, "/firmware/stage");
                             let response = rest_client
                                 .post(url)
                                 .query(&[("node", node.clone())])
                                 .multipart(form)
-                                .send().await?;
+                                .send()
+                                .await?;
 
                             let stage_body = response.text().await?;
                         }
 
                         // Flash
                         info!("Requesting flash of staged binary...");
-                        let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
+                        let url_flash =
+                            build_url(result.addresses[0], result.port, "/firmware/flash");
                         let resp_flash = Client::new()
                             .post(url_flash)
-                            .query(&[("node", node.clone()), ("force", if batch.force { "true".into() } else { "false".into() })])
-                            .send().await?;
+                            .query(&[
+                                ("node", node.clone()),
+                                (
+                                    "force",
+                                    if batch.force {
+                                        "true".into()
+                                    } else {
+                                        "false".into()
+                                    },
+                                ),
+                            ])
+                            .send()
+                            .await?;
 
                         // Try to parse JSON regardless of status code
                         let status = resp_flash.status();
@@ -537,7 +593,8 @@ async fn main() -> Result<()> {
                                 info!("Flash status: {}", fr.status);
                                 let fs = match fr.status.as_str() {
                                     "failed" => {
-                                        let msg = fr.error.unwrap_or_else(|| "unknown error".to_string());
+                                        let msg =
+                                            fr.error.unwrap_or_else(|| "unknown error".to_string());
                                         FlashStatus::Failed(msg)
                                     }
                                     // Treat both "download_success" and "crc_match" as success for overall reporting
@@ -549,19 +606,37 @@ async fn main() -> Result<()> {
                                             FlashStatus::Skipped
                                         }
                                     }
-                                    other => FlashStatus::Failed(format!("unexpected status '{}'", other)),
+                                    other => FlashStatus::Failed(format!(
+                                        "unexpected status '{}'",
+                                        other
+                                    )),
                                 };
-                                (fs, PathBuf::from(fr.bin), Duration::from_millis(fr.duration_ms as u64))
+                                (
+                                    fs,
+                                    PathBuf::from(fr.bin),
+                                    Duration::from_millis(fr.duration_ms as u64),
+                                )
                             }
                             Err(e) => {
                                 // Non-JSON or unexpected shape
-                                let msg = format!("unparseable flash reply: {} | body: {}", e, flash_body);
-                                (FlashStatus::Failed(msg), PathBuf::from("<unknown>"), Duration::from_secs(0))
+                                let msg = format!(
+                                    "unparseable flash reply: {} | body: {}",
+                                    e, flash_body
+                                );
+                                (
+                                    FlashStatus::Failed(msg),
+                                    PathBuf::from("<unknown>"),
+                                    Duration::from_secs(0),
+                                )
                             }
                         };
 
                         let is_failed = matches!(final_status, FlashStatus::Failed(_));
-                        let duration = if dur_for_report.is_zero() { node_start.elapsed() } else { dur_for_report };
+                        let duration = if dur_for_report.is_zero() {
+                            node_start.elapsed()
+                        } else {
+                            dur_for_report
+                        };
 
                         // Record the node result using what we parsed
                         results.push((
@@ -599,11 +674,12 @@ async fn stage_handler(
     state: Arc<AppState>,
     form: warp::multipart::FormData,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let uds_node = state
-        .cfg
-        .nodes
-        .get(&p.node)
-        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+    let uds_node = state.cfg.nodes.get(&p.node).ok_or_else(|| {
+        warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            format!("unknown node '{}'", p.node),
+        ))
+    })?;
     let _ = uds_node; // only verifying existence here
 
     let mut saved_path: Option<PathBuf> = None;
@@ -621,34 +697,34 @@ async fn stage_handler(
             continue;
         }
 
-        let fname = part
-            .filename()
-            .map(|s| s.to_string())
-            .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, "missing filename".into())))?;
+        let fname = part.filename().map(|s| s.to_string()).ok_or_else(|| {
+            warp::reject::custom(HttpError(
+                StatusCode::BAD_REQUEST,
+                "missing filename".into(),
+            ))
+        })?;
         let safe = sanitize_filename(&fname);
         let full = state.save_dir.join(&safe);
 
-        let mut f = fs::File::create(&full)
-            .await
-            .map_err(|e| warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
+        let mut f = fs::File::create(&full).await.map_err(|e| {
+            warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+        })?;
 
         let mut stream = part.stream();
-        while let Some(chunk) = stream
-            .try_next()
-            .await
-            .map_err(|e| warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?
-        {
+        while let Some(chunk) = stream.try_next().await.map_err(|e| {
+            warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+        })? {
             // `chunk` implements `bytes::Buf`
             let bytes = chunk.chunk();
             sha.update(bytes);
-            f.write_all(bytes)
-                .await
-                .map_err(|e| warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
+            f.write_all(bytes).await.map_err(|e| {
+                warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+            })?;
             total += bytes.len() as u64;
         }
-        f.flush()
-            .await
-            .map_err(|e| warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())))?;
+        f.flush().await.map_err(|e| {
+            warp::reject::custom(HttpError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+        })?;
 
         safe_name = Some(safe);
         saved_path = Some(full);
@@ -723,11 +799,12 @@ async fn verify_handler(
     p: FlashParams,
     state: Arc<AppState>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let uds_node = state
-        .cfg
-        .nodes
-        .get(&p.node)
-        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+    let uds_node = state.cfg.nodes.get(&p.node).ok_or_else(|| {
+        warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            format!("unknown node '{}'", p.node),
+        ))
+    })?;
 
     let mut manifest = match read_manifest_compat(&state.manifest_path).await {
         Ok(m) => m,
@@ -735,7 +812,7 @@ async fn verify_handler(
             return Err(warp::reject::custom(HttpError(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("failed to read manifest: {}", e),
-            )))
+            )));
         }
     };
     if let Some(node) = manifest.nodes.get(&p.node) {
@@ -778,7 +855,7 @@ async fn flash_node(
     force: bool,
 ) -> UpdateResult {
     if let Err(e) = lock_manifest_node(&manifest_path, &node, &lock).await {
-        return UpdateResult{
+        return UpdateResult {
             bin: binary.into(),
             result: FlashStatus::Failed(e.to_string()),
             duration: Duration::from_secs(0),
@@ -799,8 +876,17 @@ async fn lock_manifest_node(
 ) -> anyhow::Result<()> {
     let _guard = lock.lock().await;
     let mut manifest = read_manifest_compat(manifest_path).await?;
-    if !manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing {
-        manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing = true;
+    if !manifest
+        .nodes
+        .get_mut(node)
+        .expect("Invalid manifest entry")
+        .flashing
+    {
+        manifest
+            .nodes
+            .get_mut(node)
+            .expect("Invalid manifest entry")
+            .flashing = true;
         return Ok(write_manifest(manifest_path, &manifest).await?);
     } else {
         return Err(anyhow!("Node {} is already being flashed", node));
@@ -815,8 +901,17 @@ async fn unlock_manifest_node(
 ) -> anyhow::Result<()> {
     let _guard = lock.lock().await;
     let mut manifest = read_manifest_compat(manifest_path).await?;
-    if manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing {
-        manifest.nodes.get_mut(node).expect("Invalid manifest entry").flashing = false;
+    if manifest
+        .nodes
+        .get_mut(node)
+        .expect("Invalid manifest entry")
+        .flashing
+    {
+        manifest
+            .nodes
+            .get_mut(node)
+            .expect("Invalid manifest entry")
+            .flashing = false;
         return Ok(write_manifest(manifest_path, &manifest).await?);
     } else {
         return Err(anyhow!("Node {} is not being flashed", node));
@@ -826,11 +921,20 @@ async fn unlock_manifest_node(
 #[cfg(target_os = "linux")]
 async fn systemd_service(action: &str, unit: &str) -> anyhow::Result<()> {
     use tokio::process::Command;
-    let status = Command::new("systemctl").arg(action).arg(unit).status().await?;
+    let status = Command::new("systemctl")
+        .arg(action)
+        .arg(unit)
+        .status()
+        .await?;
     if status.success() {
         Ok(())
     } else {
-        Err(anyhow::anyhow!("systemctl {} {} exited with {:?}", action, unit, status))
+        Err(anyhow::anyhow!(
+            "systemctl {} {} exited with {:?}",
+            action,
+            unit,
+            status
+        ))
     }
 }
 
@@ -840,11 +944,12 @@ async fn flash_handler(
     p: FlashParams,
     state: Arc<AppState>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let uds_node = state
-        .cfg
-        .nodes
-        .get(&p.node)
-        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+    let uds_node = state.cfg.nodes.get(&p.node).ok_or_else(|| {
+        warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            format!("unknown node '{}'", p.node),
+        ))
+    })?;
 
     let entry = {
         let _guard = state.manifest_lock.lock().await; // just to serialize reads/writes
@@ -854,15 +959,17 @@ async fn flash_handler(
                 return Err(warp::reject::custom(HttpError(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     format!("failed to read manifest: {}", e),
-                )))
+                )));
             }
         }
     };
 
-    let staged = entry.ok_or_else(|| warp::reject::custom(HttpError(
-        StatusCode::BAD_REQUEST,
-        ManifestError::NoStaged(p.node.clone()).to_string(),
-    )))?;
+    let staged = entry.ok_or_else(|| {
+        warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            ManifestError::NoStaged(p.node.clone()).to_string(),
+        ))
+    })?;
 
     info!(
         "Starting flash on device '{}' with node '{}' (file: {})",
@@ -886,8 +993,13 @@ async fn flash_handler(
         uds_node.response_id,
         &state.manifest_path,
         &state.manifest_lock,
-        if let Some(force) = p.force { force } else { false },
-    ).await;
+        if let Some(force) = p.force {
+            force
+        } else {
+            false
+        },
+    )
+    .await;
     if let Err(e) = systemd_service("start", bridge_unit).await {
         error!("Failed to start {}: {}", bridge_unit, e);
     }
@@ -897,10 +1009,11 @@ async fn flash_handler(
 
     let status_str = match &result.result {
         FlashStatus::DownloadSuccess => "download_success",
-        FlashStatus::CrcMatch        => "crc_match",
-        FlashStatus::Failed(_)       => "failed",
-        _                            => "unknown",
-    }.to_string();
+        FlashStatus::CrcMatch => "crc_match",
+        FlashStatus::Failed(_) => "failed",
+        _ => "unknown",
+    }
+    .to_string();
 
     let make_body = |error: Option<String>| {
         let duration_ms = result.duration.as_millis();
@@ -920,12 +1033,18 @@ async fn flash_handler(
         FlashStatus::Failed(ref e) => {
             error!("Flash failed: {e}");
             let body = make_body(Some(format!("flash failed: {e}")));
-            Ok(warp::reply::with_status(warp::reply::json(&body), StatusCode::INTERNAL_SERVER_ERROR))
+            Ok(warp::reply::with_status(
+                warp::reply::json(&body),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
         }
         _ => {
             info!("Flash result: {:?}", result);
             let body = make_body(None);
-            Ok(warp::reply::with_status(warp::reply::json(&body), StatusCode::OK))
+            Ok(warp::reply::with_status(
+                warp::reply::json(&body),
+                StatusCode::OK,
+            ))
         }
     }
 }
@@ -936,11 +1055,12 @@ async fn promote_handler(
     p: FlashParams,
     state: Arc<AppState>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let _ = state
-        .cfg
-        .nodes
-        .get(&p.node)
-        .ok_or_else(|| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, format!("unknown node '{}'", p.node))))?;
+    let _ = state.cfg.nodes.get(&p.node).ok_or_else(|| {
+        warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            format!("unknown node '{}'", p.node),
+        ))
+    })?;
 
     {
         let _guard = state.manifest_lock.lock().await;
@@ -1057,7 +1177,11 @@ async fn update_manifest_stage(
         .nodes
         .entry(node.to_string())
         .and_modify(|nb| nb.staged = Some(entry.clone()))
-        .or_insert_with(|| NodeBinaries { flashing: false, staged: Some(entry), production: None });
+        .or_insert_with(|| NodeBinaries {
+            flashing: false,
+            staged: Some(entry),
+            production: None,
+        });
 
     write_manifest(manifest_path, &manifest).await
 }
@@ -1065,8 +1189,14 @@ async fn update_manifest_stage(
 #[cfg(target_os = "linux")]
 async fn promote_staged_to_production(manifest_path: &Path, node: &str) -> anyhow::Result<()> {
     let mut manifest = read_manifest_compat(manifest_path).await?;
-    let nb = manifest.nodes.get_mut(node).ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
-    let staged = nb.staged.clone().ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
+    let nb = manifest
+        .nodes
+        .get_mut(node)
+        .ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
+    let staged = nb
+        .staged
+        .clone()
+        .ok_or_else(|| anyhow::anyhow!(ManifestError::NoStaged(node.to_string())))?;
     nb.production = Some(staged);
     write_manifest(manifest_path, &manifest).await
 }
@@ -1141,7 +1271,13 @@ fn sanitize_filename(raw: &str) -> String {
         .to_string_lossy();
     let s = just
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || "-._".contains(c) { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || "-._".contains(c) {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>();
     if s.is_empty() {
         "firmware.bin".into()
@@ -1167,9 +1303,7 @@ impl From<HttpError> for warp::reply::WithStatus<warp::reply::Json> {
 }
 
 // global recover to turn rejections into JSON
-async fn recover_json(
-    err: warp::Rejection,
-) -> Result<impl warp::Reply, std::convert::Infallible> {
+async fn recover_json(err: warp::Rejection) -> Result<impl warp::Reply, std::convert::Infallible> {
     use warp::reject;
 
     // Known custom error
@@ -1207,7 +1341,9 @@ async fn recover_json(
     }
     if let Some(_) = err.find::<reject::UnsupportedMediaType>() {
         return Ok(warp::reply::with_status(
-            warp::reply::json(&serde_json::json!({ "error": "unsupported media type (expect multipart/form-data)" })),
+            warp::reply::json(
+                &serde_json::json!({ "error": "unsupported media type (expect multipart/form-data)" }),
+            ),
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
         ));
     }
@@ -1228,9 +1364,17 @@ async fn recover_json(
 
 fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Duration) {
     let total = results.len() as u64;
-    let successes = results.iter().filter(|(_node, r)| !matches!(r.result, FlashStatus::Failed(_))).count() as u64;
+    let successes = results
+        .iter()
+        .filter(|(_node, r)| !matches!(r.result, FlashStatus::Failed(_)))
+        .count() as u64;
     let failures = total - successes;
-    let avg = average_duration(&results.iter().map(|(_node, r)| r.duration).collect::<Vec<_>>());
+    let avg = average_duration(
+        &results
+            .iter()
+            .map(|(_node, r)| r.duration)
+            .collect::<Vec<_>>(),
+    );
     let success_rate = if total > 0 {
         (successes as f64) * 100.0 / (total as f64)
     } else {
@@ -1246,7 +1390,10 @@ fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Durati
     info!("Total time       : {}", fmt_dur(total_dur));
     info!("Avg per-node time: {}", fmt_dur(avg));
     info!("=============================================================");
-    info!("{:<18}  {:<28}  {:<10}  {}", "Node", "Binary", "Elapsed", "Status");
+    info!(
+        "{:<18}  {:<28}  {:<10}  {}",
+        "Node", "Binary", "Elapsed", "Status"
+    );
     info!("{}", "-".repeat(18 + 2 + 28 + 2 + 10 + 2 + 10 + 2 + 5 + 16));
 
     for (node, r) in results {
@@ -1264,8 +1411,12 @@ fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Durati
     if failures > 0 {
         info!("");
         info!("--- Failure details ---");
-        for (node, r) in results.iter().filter(|(_node, r)| matches!(r.result, FlashStatus::Failed(_))) {
-            info!("node='{}' bin='{}' error='{:?}'",
+        for (node, r) in results
+            .iter()
+            .filter(|(_node, r)| matches!(r.result, FlashStatus::Failed(_)))
+        {
+            info!(
+                "node='{}' bin='{}' error='{:?}'",
                 node,
                 r.bin.to_string_lossy(),
                 r.result

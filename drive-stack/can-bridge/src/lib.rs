@@ -1,25 +1,25 @@
-use std::error::Error;
 use std::collections::HashMap;
+use std::error::Error;
 use std::ffi::CString;
 use std::io;
 use std::mem::{size_of, zeroed};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::path::Path;
 use std::ptr;
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use libc::{
-    bind, can_frame, c_long, c_void, cmsghdr, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t,
-    sockaddr, sockaddr_can, socklen_t, socket, timespec, AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK,
-    CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK, EINTR, SCM_TIMESTAMPING, SO_TIMESTAMPING,
-    SOCK_RAW, SOL_SOCKET, SOF_TIMESTAMPING_RAW_HARDWARE, SOF_TIMESTAMPING_RX_HARDWARE,
-    SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
-};
 use can_dbc::{ByteOrder, DBC, Message, MessageId, MultiplexIndicator, Signal, ValueType};
+use libc::{
+    AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK, EINTR,
+    SCM_TIMESTAMPING, SO_TIMESTAMPING, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE,
+    SOF_TIMESTAMPING_RX_HARDWARE, SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
+    SOL_SOCKET, bind, c_long, c_void, can_frame, cmsghdr, if_nametoindex, iovec, msghdr, recvmsg,
+    sa_family_t, sockaddr, sockaddr_can, socket, socklen_t, timespec,
+};
 use serde::Serialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 // ---------------- Types ----------------
 
@@ -38,7 +38,12 @@ pub struct Event {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum BusState { Failed, Starting, Active, Error }
+pub enum BusState {
+    Failed,
+    Starting,
+    Active,
+    Error,
+}
 
 // ---------------- Filters ----------------
 
@@ -124,7 +129,11 @@ impl Filters {
         }
         let msg_filters = msgs.iter().map(|s| s.to_lowercase()).collect();
         let sig_filters = sigs.iter().map(|s| s.to_lowercase()).collect();
-        Ok(Filters { id_ranges, msg_filters, sig_filters })
+        Ok(Filters {
+            id_ranges,
+            msg_filters,
+            sig_filters,
+        })
     }
 
     #[inline]
@@ -143,7 +152,9 @@ pub struct IdRange {
     pub end: u32, // inclusive
 }
 impl IdRange {
-    pub fn contains(&self, x: u32) -> bool { self.start <= x && x <= self.end }
+    pub fn contains(&self, x: u32) -> bool {
+        self.start <= x && x <= self.end
+    }
 }
 
 pub fn parse_id_range(s: &str) -> Result<IdRange, Box<dyn Error>> {
@@ -151,7 +162,11 @@ pub fn parse_id_range(s: &str) -> Result<IdRange, Box<dyn Error>> {
     if let Some((a, b)) = s.split_once('-') {
         let start = parse_u32_id(a.trim())?;
         let end = parse_u32_id(b.trim())?;
-        let (start, end) = if start <= end { (start, end) } else { (end, start) };
+        let (start, end) = if start <= end {
+            (start, end)
+        } else {
+            (end, start)
+        };
         Ok(IdRange { start, end })
     } else {
         let v = parse_u32_id(s)?;
@@ -185,13 +200,27 @@ pub fn format_can_line(
     let is_rtr = (f.can_id & CAN_RTR_FLAG) != 0;
     let is_err = (f.can_id & CAN_ERR_FLAG) != 0;
 
-    let id_val = if is_eff { f.can_id & CAN_EFF_MASK } else { f.can_id & CAN_SFF_MASK };
-    let id_str = if is_eff { format!("{:08X}", id_val) } else { format!("{:03X}", id_val) };
+    let id_val = if is_eff {
+        f.can_id & CAN_EFF_MASK
+    } else {
+        f.can_id & CAN_SFF_MASK
+    };
+    let id_str = if is_eff {
+        format!("{:08X}", id_val)
+    } else {
+        format!("{:03X}", id_val)
+    };
 
     let mut flags = String::new();
-    if is_eff { flags.push_str(" EXT"); }
-    if is_rtr { flags.push_str(" RTR"); }
-    if is_err { flags.push_str(" ERR"); }
+    if is_eff {
+        flags.push_str(" EXT");
+    }
+    if is_rtr {
+        flags.push_str(" RTR");
+    }
+    if is_err {
+        flags.push_str(" ERR");
+    }
 
     let ts_str = ts_opt
         .map(|(s, ns)| format!("{}.{}", s, ns / 1_000))
@@ -200,11 +229,18 @@ pub fn format_can_line(
     if !json {
         // ----- Pretty-print path (build only what we need)
         if is_rtr {
-            return format!("[{}] {} ID={}{flags} DLC={}", ts_str, bus, id_str, f.can_dlc);
+            return format!(
+                "[{}] {} ID={}{flags} DLC={}",
+                ts_str, bus, id_str, f.can_dlc
+            );
         }
 
         let bytes = &f.data[..(f.can_dlc as usize).min(8)];
-        let payload = bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join(" ");
+        let payload = bytes
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
+            .join(" ");
 
         if let Some(dm) = decoded {
             if let Some(dec_str) = dm.to_pretty(true) {
@@ -227,11 +263,17 @@ pub fn format_can_line(
         Vec::<String>::new()
     } else {
         let bytes = &f.data[..(f.can_dlc as usize).min(8)];
-        bytes.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>()
+        bytes
+            .iter()
+            .map(|b| format!("{:02X}", b))
+            .collect::<Vec<_>>()
     };
 
     let (msg_name, measurements) = if let Some(dm) = decoded {
-        (Some(dm.message_name.clone()), Value::Object(dm.clone().to_measurements_map()))
+        (
+            Some(dm.message_name.clone()),
+            Value::Object(dm.clone().to_measurements_map()),
+        )
     } else {
         (None, Value::Object(Map::new()))
     };
@@ -314,7 +356,11 @@ pub fn parse_bus_specs(
                 .to_string();
             bundles.insert(
                 bus.to_string(),
-                Arc::new(BusDbc { dbc, id_index, dbc_name }),
+                Arc::new(BusDbc {
+                    dbc,
+                    id_index,
+                    dbc_name,
+                }),
             );
         } else {
             let bus = spec.trim();
@@ -339,18 +385,32 @@ pub fn parse_bus_specs(
 
 #[inline]
 fn safe_len(len: usize) -> usize {
-    if len == 0 { 0 } else if len >= 64 { 64 } else { len }
+    if len == 0 {
+        0
+    } else if len >= 64 {
+        64
+    } else {
+        len
+    }
 }
 
 #[inline]
 fn bitmask(len: usize) -> u64 {
     let len = safe_len(len);
-    if len == 0 { 0 } else if len == 64 { u64::MAX } else { (1u64 << len) - 1 }
+    if len == 0 {
+        0
+    } else if len == 64 {
+        u64::MAX
+    } else {
+        (1u64 << len) - 1
+    }
 }
 
 fn extract_le_bits(data: &[u8; 8], start_bit: usize, len: usize) -> u64 {
     let len = safe_len(len);
-    if len == 0 { return 0; }
+    if len == 0 {
+        return 0;
+    }
     let le = u64::from_le_bytes(*data);
     (le >> start_bit) & bitmask(len)
 }
@@ -358,10 +418,15 @@ fn extract_le_bits(data: &[u8; 8], start_bit: usize, len: usize) -> u64 {
 // DBC BigEndian (Motorola, MSB0 numbering).
 fn extract_be_bits(data: &[u8; 8], start_bit: usize, len: usize) -> u64 {
     let len = safe_len(len);
-    if len == 0 { return 0; }
+    if len == 0 {
+        return 0;
+    }
     let mut out = 0u64;
     for j in 0..len {
-        let pos = match start_bit.checked_sub(j) { Some(p) => p, None => break };
+        let pos = match start_bit.checked_sub(j) {
+            Some(p) => p,
+            None => break,
+        };
         let byte = pos / 8;
         let bit_in_byte = 7 - (pos % 8);
         let bit = (data[byte] >> bit_in_byte) & 1;
@@ -372,11 +437,19 @@ fn extract_be_bits(data: &[u8; 8], start_bit: usize, len: usize) -> u64 {
 
 fn sign_extend_u64(raw: u64, len: usize) -> i64 {
     let len = safe_len(len);
-    if len == 0 { return 0; }
-    if len == 64 { return raw as i64; }
+    if len == 0 {
+        return 0;
+    }
+    if len == 64 {
+        return raw as i64;
+    }
     let sign_bit = 1u64 << (len - 1);
     let mask = (!0u64) << len;
-    if (raw & sign_bit) != 0 { (raw | mask) as i64 } else { (raw & !mask) as i64 }
+    if (raw & sign_bit) != 0 {
+        (raw | mask) as i64
+    } else {
+        (raw & !mask) as i64
+    }
 }
 
 fn extract_raw(sig: &Signal, data: &[u8; 8]) -> u64 {
@@ -384,7 +457,7 @@ fn extract_raw(sig: &Signal, data: &[u8; 8]) -> u64 {
     let len = *sig.signal_size() as usize;
     match *sig.byte_order() {
         ByteOrder::LittleEndian => extract_le_bits(data, start, len),
-        ByteOrder::BigEndian    => extract_be_bits(data, start, len),
+        ByteOrder::BigEndian => extract_be_bits(data, start, len),
     }
 }
 
@@ -440,11 +513,12 @@ pub fn maybe_decode(
         }
     }
 
-    render_members_with_optional_sig_filter(msg, frame, sig_filters, allow_empty_signals)
-        .map(|members| DecodedMessage {
+    render_members_with_optional_sig_filter(msg, frame, sig_filters, allow_empty_signals).map(
+        |members| DecodedMessage {
             message_name: msg.message_name().to_string(),
             members,
-        })
+        },
+    )
 }
 
 fn render_members_with_optional_sig_filter(
@@ -458,14 +532,22 @@ fn render_members_with_optional_sig_filter(
 
     let mut out: Vec<SignalMeasurement> = Vec::new();
     for sig in msg.signals() {
-        if !is_signal_active(sig, mux) { continue; }
+        if !is_signal_active(sig, mux) {
+            continue;
+        }
         if !sig_filters.is_empty() {
             let lname = sig.name().to_lowercase();
-            if !sig_filters.iter().any(|p| lname.contains(p)) { continue; }
+            if !sig_filters.iter().any(|p| lname.contains(p)) {
+                continue;
+            }
         }
         let v = decode_signal(sig, &data);
         let unit = sig.unit();
-        let unit_opt = if unit.is_empty() { None } else { Some(unit.to_string()) };
+        let unit_opt = if unit.is_empty() {
+            None
+        } else {
+            Some(unit.to_string())
+        };
         out.push(SignalMeasurement {
             name: sig.name().to_string(),
             value: v,
@@ -482,7 +564,11 @@ fn render_members_with_optional_sig_filter(
 
 // ---------------- Workers / Bridge / Headless ----------------
 
-fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>, bus_state: &mpsc::Sender<(String, BusState)>) {
+fn run_bus_worker(
+    bus: &str,
+    tx: &mpsc::Sender<Event>,
+    bus_state: &mpsc::Sender<(String, BusState)>,
+) {
     loop {
         let mut active = false;
         if let Ok(fd) = open_can_with_timestamping(bus) {
@@ -509,7 +595,8 @@ fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>, bus_state: &mpsc::Sender<
                 let n = unsafe { recvmsg(fd.as_raw_fd(), &mut msg, 0) };
                 if n <= 0 {
                     let err = io::Error::last_os_error();
-                    if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR) {
+                    if err.kind() == io::ErrorKind::WouldBlock || err.raw_os_error() == Some(EINTR)
+                    {
                         continue;
                     } else if active {
                         active = false;
@@ -524,9 +611,17 @@ fn run_bus_worker(bus: &str, tx: &mpsc::Sender<Event>, bus_state: &mpsc::Sender<
                 let ts_opt = parse_timestamp_from_cmsgs(&msg);
 
                 // Copy libc::can_frame -> portable CanFrame
-                let cf = CanFrame { can_id: frame.can_id, can_dlc: frame.can_dlc, data: frame.data };
+                let cf = CanFrame {
+                    can_id: frame.can_id,
+                    can_dlc: frame.can_dlc,
+                    data: frame.data,
+                };
 
-                let _ = tx.send(Event { bus: bus.to_string(), frame: cf, ts_opt });
+                let _ = tx.send(Event {
+                    bus: bus.to_string(),
+                    frame: cf,
+                    ts_opt,
+                });
             }
         }
         thread::sleep(Duration::from_millis(1000));
@@ -554,7 +649,9 @@ pub fn spawn_workers(
 /// Open a RAW CAN socket bound to `iface`, enable SO_TIMESTAMPING (HW/SW).
 fn open_can_with_timestamping(iface: &str) -> io::Result<OwnedFd> {
     let fd = unsafe { socket(AF_CAN, SOCK_RAW, CAN_RAW) };
-    if fd < 0 { return Err(io::Error::last_os_error()); }
+    if fd < 0 {
+        return Err(io::Error::last_os_error());
+    }
     let fd = unsafe { OwnedFd::from_raw_fd(fd) };
 
     let ts_flags = SOF_TIMESTAMPING_RX_HARDWARE
@@ -571,11 +668,15 @@ fn open_can_with_timestamping(iface: &str) -> io::Result<OwnedFd> {
             size_of::<i32>() as socklen_t,
         )
     };
-    if rc != 0 { return Err(io::Error::last_os_error()); }
+    if rc != 0 {
+        return Err(io::Error::last_os_error());
+    }
 
     let ifname = CString::new(iface).unwrap();
     let ifindex = unsafe { if_nametoindex(ifname.as_ptr()) };
-    if ifindex == 0 { return Err(io::Error::last_os_error()); }
+    if ifindex == 0 {
+        return Err(io::Error::last_os_error());
+    }
     let mut addr: sockaddr_can = unsafe { zeroed() };
     addr.can_family = AF_CAN as sa_family_t;
     addr.can_ifindex = ifindex as i32;
@@ -587,7 +688,9 @@ fn open_can_with_timestamping(iface: &str) -> io::Result<OwnedFd> {
             size_of::<sockaddr_can>() as socklen_t,
         )
     };
-    if rc != 0 { return Err(io::Error::last_os_error()); }
+    if rc != 0 {
+        return Err(io::Error::last_os_error());
+    }
 
     Ok(fd)
 }
@@ -614,9 +717,15 @@ fn parse_timestamp_from_cmsgs(msg: &msghdr) -> Option<(u64, u32)> {
         if cmsg.cmsg_level == SOL_SOCKET && cmsg.cmsg_type == SCM_TIMESTAMPING {
             if cdata_len >= size_of::<timespec>() * 3 {
                 let mut ts_arr: [timespec; 3] = unsafe { zeroed() };
-                unsafe { ptr::copy_nonoverlapping(data_ptr as *const timespec, ts_arr.as_mut_ptr(), 3); }
+                unsafe {
+                    ptr::copy_nonoverlapping(data_ptr as *const timespec, ts_arr.as_mut_ptr(), 3);
+                }
                 let pick = |t: timespec| -> Option<(u64, u32)> {
-                    if t.tv_sec != 0 || t.tv_nsec != 0 { Some((t.tv_sec as u64, t.tv_nsec as u32)) } else { None }
+                    if t.tv_sec != 0 || t.tv_nsec != 0 {
+                        Some((t.tv_sec as u64, t.tv_nsec as u32))
+                    } else {
+                        None
+                    }
                 };
                 return pick(ts_arr[2]).or_else(|| pick(ts_arr[0]));
             }

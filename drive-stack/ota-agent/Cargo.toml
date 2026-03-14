@@ -1,8 +1,8 @@
 # Cargo.toml
 [package]
-name = { workspace = true }
-version = { workspace = true }
-edition = { workspace = true }
+name = "ota-agent"
+version = "0.1.0"
+edition = "2024"
 
 [dependencies]
 argh = { workspace = true }

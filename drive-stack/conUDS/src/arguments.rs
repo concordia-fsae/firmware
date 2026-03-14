@@ -20,7 +20,11 @@ pub struct Arguments {
     pub device: String,
 
     /// the manifest of UDS can nodes on the bus
-    #[argh(option, short = 'm', default = "String::from(\"drive-stack/conUDS/nodes.yml\")")]
+    #[argh(
+        option,
+        short = 'm',
+        default = "String::from(\"drive-stack/conUDS/nodes.yml\")"
+    )]
     pub node_manifest: String,
 
     #[argh(subcommand)]
@@ -89,5 +93,4 @@ pub struct SubArgReadDID {
 /// Hard reset entire NVM including internal values
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "nvmHardReset")]
-pub struct SubArgNVMHardReset {
-}
+pub struct SubArgNVMHardReset {}
