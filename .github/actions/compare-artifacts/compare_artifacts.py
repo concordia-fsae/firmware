@@ -136,13 +136,27 @@ def truncate_list(items, max_items):
 def render_table(rows, headers):
     if not rows:
         return "_None_\n"
-    lines = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"]
+    lines = [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join(["---"] * len(headers)) + " |",
+    ]
     for row in rows:
         lines.append("| " + " | ".join(row) + " |")
     return "\n".join(lines) + "\n"
 
 
-def build_comment(artifact_name, base_run_id, pr_run_id, added, deleted, changed, unchanged_count, max_items, repo, tag):
+def build_comment(
+    artifact_name,
+    base_run_id,
+    pr_run_id,
+    added,
+    deleted,
+    changed,
+    unchanged_count,
+    max_items,
+    repo,
+    tag,
+):
     added_rows = [[f"`{name}`", f"`{sha}`"] for name, sha in added]
     deleted_rows = [[f"`{name}`", f"`{sha}`"] for name, sha in deleted]
     changed_rows = [[f"`{name}`", f"`{old}`", f"`{new}`"] for name, old, new in changed]
@@ -151,7 +165,9 @@ def build_comment(artifact_name, base_run_id, pr_run_id, added, deleted, changed
     deleted_rows, deleted_trim = truncate_list(deleted_rows, max_items)
     changed_rows, changed_trim = truncate_list(changed_rows, max_items)
 
-    base_link = f"https://github.com/{repo}/actions/runs/{base_run_id}" if base_run_id else ""
+    base_link = (
+        f"https://github.com/{repo}/actions/runs/{base_run_id}" if base_run_id else ""
+    )
     pr_link = f"https://github.com/{repo}/actions/runs/{pr_run_id}" if pr_run_id else ""
 
     lines = [
@@ -186,7 +202,9 @@ def build_comment(artifact_name, base_run_id, pr_run_id, added, deleted, changed
     lines.append("")
 
     lines.append("Changed:")
-    lines.append(render_table(changed_rows, ["Path", "Base SHA256", "PR SHA256"]).rstrip())
+    lines.append(
+        render_table(changed_rows, ["Path", "Base SHA256", "PR SHA256"]).rstrip()
+    )
     if changed_trim:
         lines.append(f"_And {changed_trim} more changed files not shown._")
     lines.append("")
@@ -259,7 +277,9 @@ def upsert_comment(repo, pr_number, token, body, tag, artifact_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare GitHub artifact zips and comment on PR.")
+    parser = argparse.ArgumentParser(
+        description="Compare GitHub artifact zips and comment on PR."
+    )
     parser.add_argument("--artifact-name", required=True)
     parser.add_argument("--base-ref", default="")
     parser.add_argument("--comment-tag", default="firmware-artifact-diff")
@@ -334,7 +354,9 @@ def main():
             repo,
             args.comment_tag,
         )
-        upsert_comment(repo, pr_number, token, body, args.comment_tag, args.artifact_name)
+        upsert_comment(
+            repo, pr_number, token, body, args.comment_tag, args.artifact_name
+        )
         eprint("Base artifact not found; posted placeholder comment")
         return 0
 
@@ -370,7 +392,9 @@ def main():
         args.comment_tag,
     )
 
-    result = upsert_comment(repo, pr_number, token, body, args.comment_tag, args.artifact_name)
+    result = upsert_comment(
+        repo, pr_number, token, body, args.comment_tag, args.artifact_name
+    )
     eprint(f"Comment {result} for {args.artifact_name}")
     return 0
 

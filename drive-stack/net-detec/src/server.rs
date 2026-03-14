@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use if_addrs::get_if_addrs;
 use mdns_sd::{ServiceDaemon, ServiceInfo};
@@ -67,7 +67,7 @@ impl ServerHandle {
 }
 
 impl Server {
-/// Spawns the announcer thread and returns immediately.
+    /// Spawns the announcer thread and returns immediately.
     pub fn start(self) -> Result<ServerHandle, ServerError> {
         let (exit_tx, exit_rx) = mpsc::channel::<ServerExit>();
 
@@ -117,10 +117,11 @@ impl Server {
         daemon.enable_interface(&self.interface)?;
 
         // txt must be (&str, &str). Build owned pairs to keep data alive for the loop.
-        let txt_owned: Vec<(String, String)> =
-            self.txt.into_iter().map(|(k, v)| (k, v)).collect();
-        let txt_pairs: Vec<(&str, &str)> =
-            txt_owned.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        let txt_owned: Vec<(String, String)> = self.txt.into_iter().map(|(k, v)| (k, v)).collect();
+        let txt_pairs: Vec<(&str, &str)> = txt_owned
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
 
         // mdns-sd constructor variant: (service, instance, host_name, ip, port, txt)
         let info = ServiceInfo::new(

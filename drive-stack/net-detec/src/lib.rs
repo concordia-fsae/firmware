@@ -3,5 +3,5 @@
 pub mod client;
 pub mod server;
 
-pub use client::{Client, DiscoveryFilter, DiscoveredService};
+pub use client::{Client, DiscoveredService, DiscoveryFilter};
 pub use server::Server;

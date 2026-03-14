@@ -1,8 +1,8 @@
+use std::error::Error;
 use std::fs::File;
+use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
-use std::io::Read;
-use std::error::Error;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -14,7 +14,7 @@ use conUDS::SupportedResetTypes;
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
 use conUDS::modules::uds::UdsSession;
-use conUDS::{UpdateResult, FlashStatus};
+use conUDS::{FlashStatus, UpdateResult};
 
 #[tokio::main]
 async fn main() {
@@ -37,7 +37,8 @@ async fn main() {
                 .build(),
             File::create("conUDS.log").unwrap(),
         ),
-    ]).unwrap_or_else(|e| {
+    ])
+    .unwrap_or_else(|e| {
         error!("Initialization error: {:?}", e);
         std::process::exit(1)
     });
@@ -67,28 +68,40 @@ async fn main() {
                 let Some((node, bin)) = parse_update_pair(upd) else {
                     let msg = format!("Bad -u format: '{}'. Expected node:/path/to/bin", upd);
                     error!("{}", msg);
-                    results.push(("<unknown>".to_string(), UpdateResult {
-                        bin: PathBuf::from("<unknown>".to_string()),
-                        result: FlashStatus::Failed(msg),
-                        duration: Duration::from_secs(0),
-                    }));
+                    results.push((
+                        "<unknown>".to_string(),
+                        UpdateResult {
+                            bin: PathBuf::from("<unknown>".to_string()),
+                            result: FlashStatus::Failed(msg),
+                            duration: Duration::from_secs(0),
+                        },
+                    ));
                     continue;
                 };
 
                 let Some(uds_node) = cfg.nodes.get(&node) else {
                     let msg = format!("UDS node '{}' not defined in manifest", node);
                     error!("{}", msg);
-                    results.push((node.clone(), UpdateResult {
-                        bin: bin.clone(),
-                        result: FlashStatus::Failed(msg),
-                        duration: Duration::from_secs(0),
-                    }));
+                    results.push((
+                        node.clone(),
+                        UpdateResult {
+                            bin: bin.clone(),
+                            result: FlashStatus::Failed(msg),
+                            duration: Duration::from_secs(0),
+                        },
+                    ));
                     continue;
                 };
 
                 info!("Downloading binary {:?} to node '{}'", bin, node);
 
-                let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, false).await;
+                let mut uds = UdsSession::new(
+                    &args.device,
+                    uds_node.request_id,
+                    uds_node.response_id,
+                    false,
+                )
+                .await;
                 let result = uds.download_app_to_target(&bin, true).await;
                 uds.teardown().await;
 
@@ -109,8 +122,17 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
-            info!("Performing {:?} reset for node '{}'", reset.reset_type, node);
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
+            info!(
+                "Performing {:?} reset for node '{}'",
+                reset.reset_type, node
+            );
             if let Err(e) = uds.reset_node(reset.reset_type).await {
                 error!("Error while resetting ecu: {}", e);
             }
@@ -127,7 +149,13 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, dl.no_skip).await;
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                dl.no_skip,
+            )
+            .await;
             info!("Downloading binary {:?} to node '{}'", dl.binary, node);
 
             if let Err(e) = uds.reset_node(SupportedResetTypes::Hard).await {
@@ -136,7 +164,11 @@ async fn main() {
                     return;
                 }
             }
-            if let FlashStatus::Failed(e) = uds.download_app_to_target(&dl.binary, !dl.no_skip).await.result {
+            if let FlashStatus::Failed(e) = uds
+                .download_app_to_target(&dl.binary, !dl.no_skip)
+                .await
+                .result
+            {
                 error!("Download failed for node '{}': {}", node, e);
             } else {
                 info!("Download successful for node '{}'...", node);
@@ -154,7 +186,13 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
             info!("Downloading bootloader {:?} to node '{}'", dl.binary, node);
             if let Err(e) = uds.file_download(&dl.binary, 0x08000000).await {
                 error!("While downloading bootloader: {}", e);
@@ -172,8 +210,17 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
-            info!("Performing DID read on id {:#?} for node '{}'", did.id, node);
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
+            info!(
+                "Performing DID read on id {:#?} for node '{}'",
+                did.id, node
+            );
             let id = u16::from_str_radix(&did.id, 16).unwrap();
             let resp = uds.client.did_read(id).await;
             uds.teardown().await;
@@ -190,7 +237,13 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(&args.device, uds_node.request_id, uds_node.response_id, true).await;
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
             info!("Performing NVM hard reset for node '{}'", node);
             if let Err(e) = uds.client.routine_start(0xf0f0, None).await {
                 error!("While starting NVM erase: {}", e);
@@ -218,9 +271,17 @@ fn fmt_dur(d: Duration) -> String {
 
 fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Duration) {
     let total = results.len() as u64;
-    let successes = results.iter().filter(|(_node, r)| !matches!(r.result, FlashStatus::Failed(_))).count() as u64;
+    let successes = results
+        .iter()
+        .filter(|(_node, r)| !matches!(r.result, FlashStatus::Failed(_)))
+        .count() as u64;
     let failures = total - successes;
-    let avg = average_duration(&results.iter().map(|(_node, r)| r.duration).collect::<Vec<_>>());
+    let avg = average_duration(
+        &results
+            .iter()
+            .map(|(_node, r)| r.duration)
+            .collect::<Vec<_>>(),
+    );
     let success_rate = if total > 0 {
         (successes as f64) * 100.0 / (total as f64)
     } else {
@@ -236,7 +297,10 @@ fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Durati
     info!("Total time       : {}", fmt_dur(total_dur));
     info!("Avg per-node time: {}", fmt_dur(avg));
     info!("=============================================================");
-    info!("{:<18}  {:<28}  {:<10}  {}", "Node", "Binary", "Elapsed", "Status");
+    info!(
+        "{:<18}  {:<28}  {:<10}  {}",
+        "Node", "Binary", "Elapsed", "Status"
+    );
     info!("{}", "-".repeat(18 + 2 + 28 + 2 + 10 + 2 + 10 + 2 + 5 + 16));
 
     for (node, r) in results {
@@ -254,8 +318,12 @@ fn print_deployment_report(results: &[(String, UpdateResult)], total_dur: Durati
     if failures > 0 {
         info!("");
         info!("--- Failure details ---");
-        for (node, r) in results.iter().filter(|(_node, r)| matches!(r.result, FlashStatus::Failed(_))) {
-            info!("node='{}' bin='{}' error='{:?}'",
+        for (node, r) in results
+            .iter()
+            .filter(|(_node, r)| matches!(r.result, FlashStatus::Failed(_)))
+        {
+            info!(
+                "node='{}' bin='{}' error='{:?}'",
                 node,
                 r.bin.to_string_lossy(),
                 r.result

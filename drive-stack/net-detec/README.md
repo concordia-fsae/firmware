@@ -3,6 +3,7 @@
 A tiny mDNS-SD **client/server** utility with a reusable library. It can **advertise** a service on a specific interface or **discover** services/hosts by service type or hostname.
 
 ## Advertise (server)
+
 ```bash
 # Advertise _net-detec._tcp on eth0, port 8080 with some TXT
 net-detec --interface eth0 --host-name my-compute.local. --service-name _net-detec._tcp.local. \
@@ -10,6 +11,7 @@ net-detec --interface eth0 --host-name my-compute.local. --service-name _net-det
 ```
 
 ## Discover (client)
+
 ```bash
 # Find by service type
 net-detec --interface eth0 --service-name _net-detec._tcp.local. client --timeout 5
@@ -19,6 +21,7 @@ net-detec --interface eth0 --host-name my-compute.local. client --timeout 3
 ```
 
 ## Library usage
+
 ```rust
 use net_detec::{Client, DiscoverFilter, Server};
 use std::time::Duration;

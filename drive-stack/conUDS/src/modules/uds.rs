@@ -1,38 +1,38 @@
 use core::time;
 use std::borrow::Cow;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::io::Read;
-use std::io::stdin;
 use std::fs::File;
 use std::fs::read;
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
+use std::io::stdin;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 use std::time::Instant;
 
-use anyhow::anyhow;
 use anyhow::Result;
+use anyhow::anyhow;
 use automotive_diag::uds::UdsCommand;
-use automotive_diag::uds::UdsErrorByte;
 use automotive_diag::uds::UdsError;
-use ecu_diagnostics::uds::UDSProtocol;
+use automotive_diag::uds::UdsErrorByte;
 use automotive_diag::uds::{ResetType, RoutineControlType};
-use ecu_diagnostics::dynamic_diag::EcuNRC;
 use ecu_diagnostics::dynamic_diag::DiagProtocol;
-use log::{debug, error, info};
+use ecu_diagnostics::dynamic_diag::EcuNRC;
+use ecu_diagnostics::uds::UDSProtocol;
 use indicatif::{ProgressBar, ProgressStyle};
+use log::{debug, error, info};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
-use crate::{FlashStatus, UpdateResult};
+use crate::CRC8;
 use crate::DownloadParams;
 use crate::SupportedResetTypes;
 use crate::UdsDownloadStart;
-use crate::CRC8;
-use crate::{CanioCmd, PrdCmd};
 use crate::modules::canio::CANIO;
+use crate::{CanioCmd, PrdCmd};
+use crate::{FlashStatus, UpdateResult};
 
 const UDS_DID_CRC: u16 = 0x03;
 
@@ -44,7 +44,7 @@ pub struct UdsClient {
 
 pub struct UdsSession {
     pub client: UdsClient,
-    exit: Arc::<Mutex::<bool>>,
+    exit: Arc<Mutex<bool>>,
     threads: [JoinHandle<Result<()>>; 2],
     interactive_session: bool,
 }
@@ -67,12 +67,7 @@ impl UdsSession {
         debug!("UDS client initialized: {:#?}", uds_client);
 
         let canio = {
-            match CANIO::new(
-                &device,
-                request_id,
-                response_id,
-                uds_queue_rx,
-            ) {
+            match CANIO::new(&device, request_id, response_id, uds_queue_rx) {
                 Ok(canio) => {
                     debug!("CANIO object initialized: {}", canio);
                     canio
@@ -85,7 +80,8 @@ impl UdsSession {
 
         debug!("Spawning threads");
         let t1 = tokio::spawn(async move { tsk_canio(app_canio, canio).await });
-        let t2 = tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx).await });
+        let t2 =
+            tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx).await });
         Self {
             exit: exit,
             client: uds_client,
@@ -107,7 +103,10 @@ impl UdsSession {
     }
 
     pub async fn reset_node(&mut self, reset_type: SupportedResetTypes) -> Result<()> {
-        let resp = self.client.ecu_reset(reset_type, self.interactive_session).await;
+        let resp = self
+            .client
+            .ecu_reset(reset_type, self.interactive_session)
+            .await;
         if self.interactive_session {
             Ok(())
         } else {
@@ -130,7 +129,11 @@ impl UdsSession {
         self.client.app_download(path.to_path_buf(), address).await
     }
 
-    pub async fn download_app_to_target(&mut self, binary_path: &PathBuf, skip: bool) -> UpdateResult {
+    pub async fn download_app_to_target(
+        &mut self,
+        binary_path: &PathBuf,
+        skip: bool,
+    ) -> UpdateResult {
         let node_start = Instant::now();
         let mut err_msg: Option<String> = None;
 
@@ -145,18 +148,18 @@ impl UdsSession {
             let crc = match get_app_crc(self).await {
                 Err(e) => {
                     let node_dur = node_start.elapsed();
-                    return UpdateResult{
+                    return UpdateResult {
                         bin: binary_path.to_path_buf(),
                         result: FlashStatus::Failed(format!("{:?}", e)),
                         duration: node_dur,
                     };
-                },
+                }
                 Ok(crc) => crc,
             };
 
             if crc == app_crc {
                 let node_dur = node_start.elapsed();
-                return UpdateResult{
+                return UpdateResult {
                     bin: binary_path.to_path_buf(),
                     result: FlashStatus::CrcMatch,
                     duration: node_dur,
@@ -171,32 +174,36 @@ impl UdsSession {
 
         self.client.start_persistent_tp().await;
         if !self.interactive_session {
-            if let Err(_) = self.client.ecu_reset(SupportedResetTypes::Hard, self.interactive_session).await {
+            if let Err(_) = self
+                .client
+                .ecu_reset(SupportedResetTypes::Hard, self.interactive_session)
+                .await
+            {
                 let node_dur = node_start.elapsed();
-                return UpdateResult{
-                        bin: binary_path.to_path_buf(),
-                        result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
-                        duration: node_dur,
-                    };
+                return UpdateResult {
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
+                    duration: node_dur,
+                };
             }
         }
         match self.file_download(&binary_path, 0x08002000).await {
             Ok(()) => {
                 let node_dur = node_start.elapsed();
-                return UpdateResult{
+                return UpdateResult {
                     bin: binary_path.to_path_buf(),
                     result: FlashStatus::DownloadSuccess,
                     duration: node_dur,
                 };
-            },
+            }
             Err(e) => {
                 let node_dur = node_start.elapsed();
-                return UpdateResult{
+                return UpdateResult {
                     bin: binary_path.to_path_buf(),
                     result: FlashStatus::Failed(format!("Error downloading binary: '{}'", e)),
                     duration: node_dur,
                 };
-            },
+            }
         }
     }
 }
@@ -244,10 +251,11 @@ async fn tsk_10ms(
         } else {
             if send_tp {
                 let _resp = CanioCmd::send_recv(
-                        &UDSProtocol::create_tp_msg(true).to_bytes(),
-                        uds_queue.clone(),
-                        10
-                    ).await;
+                    &UDSProtocol::create_tp_msg(true).to_bytes(),
+                    uds_queue.clone(),
+                    10,
+                )
+                .await;
             }
         }
 
@@ -288,15 +296,9 @@ impl UdsClient {
             (did & 0xff).try_into().unwrap(),
             (did >> 8).try_into().unwrap(),
         ];
-        let buf: [u8; 3] = [
-            UdsCommand::ReadDataByIdentifier.into(),
-            id[0],
-            id[1],
-        ];
+        let buf: [u8; 3] = [UdsCommand::ReadDataByIdentifier.into(), id[0], id[1]];
 
-        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await
-        {
+        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await {
             Ok(resp) => {
                 if resp.is_empty() {
                     error!("Empty ECU response");
@@ -339,7 +341,11 @@ impl UdsClient {
         }
     }
 
-    pub async fn ecu_reset(&mut self, reset_type: SupportedResetTypes, recoverable: bool) -> Result<()> {
+    pub async fn ecu_reset(
+        &mut self,
+        reset_type: SupportedResetTypes,
+        recoverable: bool,
+    ) -> Result<()> {
         let buf = [
             UdsCommand::ECUReset.into(),
             <SupportedResetTypes as Into<ResetType>>::into(reset_type).into(),
@@ -352,7 +358,9 @@ impl UdsClient {
         if resp.len() > 0 {
             let nrc = UdsErrorByte::from(*resp.last().unwrap());
             if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
-                error!("ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex.");
+                error!(
+                    "ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex."
+                );
             }
         } else if !recoverable {
             return Err(anyhow!("ECU reset failed"));
@@ -375,9 +383,7 @@ impl UdsClient {
 
         debug!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
 
-        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50)
-            .await
-        {
+        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await {
             Ok(resp) => debug!("Start routine response: {:02x?}", resp),
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
@@ -422,7 +428,7 @@ impl UdsClient {
             .with_style(ProgressStyle::with_template("{spinner} {msg} [{elapsed}]")?);
 
         let mut retries = 1000; // 100 retries with a 10ms delay is 1s, which should be plenty of time
-                               // to erase any of our current apps.
+        // to erase any of our current apps.
 
         loop {
             let resp = self.routine_get_results(0xf00f).await?;
@@ -467,8 +473,11 @@ impl UdsClient {
                             ))?);
                             pg.tick();
                             pg.finish();
-                            return Err(anyhow!("App erase failed, unexpected response '{:02x}' from ECU for SID '{:02}'",
-                                resp[2], sid));
+                            return Err(anyhow!(
+                                "App erase failed, unexpected response '{:02x}' from ECU for SID '{:02}'",
+                                resp[2],
+                                sid
+                            ));
                         }
                     }
                 } else {
@@ -488,8 +497,11 @@ impl UdsClient {
                 ))?);
                 pg.tick();
                 pg.finish();
-                return Err(anyhow!("Response '0x{:02x}' is not a positive response for SID '0x{:02}'",
-                    resp[0], sid));
+                return Err(anyhow!(
+                    "Response '0x{:02x}' is not a positive response for SID '0x{:02}'",
+                    resp[0],
+                    sid
+                ));
             }
 
             retries -= 1;
@@ -629,7 +641,7 @@ impl UdsClient {
                     pg.tick();
                     pg.finish();
                     error = true;
-                    break
+                    break;
                 }
                 pg.inc(dl_params.chunksize.into());
             }

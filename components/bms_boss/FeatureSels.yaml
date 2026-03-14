@@ -1,4 +1,4 @@
-featureDefs: 
+featureDefs:
   - "#/components/bms_boss/FeatureDefs.yaml"
   - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
   - "#/components/shared/code/HW/hw_FeatureDefs.yaml"

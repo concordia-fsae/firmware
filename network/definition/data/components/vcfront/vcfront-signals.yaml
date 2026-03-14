@@ -60,7 +60,6 @@ signals:
     description: GPS PAIRMSG sentence count
     template: count10Bit
 
-
   gpsPairUtcMs:
     description: PAIRMSG UTC time (ms since midnight)
     unit: ms
@@ -177,15 +176,15 @@ signals:
     discreteValues: digitalStatus
 
   steeringAngle:
-        description: Steering Angle Sensor
-        unit: 'deg'
-        nativeRepresentation:
-          resolution: 1
-          bitWidth: 9
-          range:
-            min: -173
-            max: 173
-        continuous: true
+    description: Steering Angle Sensor
+    unit: 'deg'
+    nativeRepresentation:
+      resolution: 1
+      bitWidth: 9
+      range:
+        min: -173
+        max: 173
+    continuous: true
 
   steeringAngleVoltage:
     description: Steering Angle Voltage
