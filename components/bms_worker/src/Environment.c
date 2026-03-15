@@ -18,7 +18,6 @@
 /**< Driver Includes */
 #include "HW_adc.h"
 #include "HW_SHT40.h"
-#include "HW_NX3L4051PW.h"
 #include "drv_inputAD.h"
 #include "drv_tempSensors.h"
 #include "lib_voltageDivider.h"
@@ -110,7 +109,7 @@ static void Environment10Hz_PRD()
         SHT_startConversion();
     }
 
-    for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
+    for (uint16_t i = 0; i <= DRV_INPUTAD_ANALOG_MUX1_CH8 - DRV_INPUTAD_ANALOG_MUX1_CH1; i++)
     {
         const float32_t mux1 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + i);
 #if APP_VARIANT_ID == 0U

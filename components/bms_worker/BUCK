@@ -322,6 +322,8 @@ cxx_binary(
         glob(["src/*.c", "HW/*.c"]) + [
             "//components/shared/code:DRV/drv_inputAD.c",
             "//components/shared/code:DRV/drv_io.c",
+            "//components/shared/code:DRV/drv_mux.c",
+            "//components/shared/code:DRV/drv_outputAD.c",
             "//components/shared/code:DRV/drv_tempSensors.c",
             "//components/shared/code:DRV/drv_timer.c",
             "//components/shared/code:HW/HW.c",
