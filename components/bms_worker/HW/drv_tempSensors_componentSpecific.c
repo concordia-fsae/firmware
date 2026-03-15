@@ -24,7 +24,7 @@ static float32_t getMaxSegmentTemp(void)
  ******************************************************************************/
 
 drv_tempSensors_channelConfig_S drv_tempSensors_channels[] = {
-    [DRV_TEMPSENSORS_CHANNEL_MCU_TEMP] = {
+    [DRV_TEMPSENSORS_CHANNEL_MCU] = {
         .sensor_type = DRV_TEMPSENSORS_SENSOR_LINEAR,
         .config.linear = {
             .t0_temp = 25,

@@ -26,7 +26,7 @@ messages:
     lengthBytes: 8
     signals:
       cellTemp1:
-      cellTemp0:
+      cellTemp20:
       socMax:
       socAvg:
       socMin:
@@ -108,13 +108,13 @@ messages:
     description: Segment temperature and humidity data
     cycleTimeMs: 1000
     id: 0x760
-    lengthBytes: 5
     signals:
       boardRelativeHumidity:
       boardAmbientTemp:
-      mcuTemp:
-      boardTemp0:
-      boardTemp1:
+      tempMcu:
+      tempBalancing0:
+      tempBalancing1:
+      tempBoard:
 
   fans:
     description: Segment fan data
