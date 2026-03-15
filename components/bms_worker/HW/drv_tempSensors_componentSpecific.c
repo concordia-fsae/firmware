@@ -30,27 +30,38 @@ drv_tempSensors_channelConfig_S drv_tempSensors_channels[] = {
             .t0_temp = 25,
             .t0_voltage = 1.43f,
             .degC_per_mV = 0.0043f,
-            .adc_channel = DRV_INPUTAD_ANALOG_MCU_TEMP,
+            .adc_channel = DRV_INPUTAD_ANALOG_TEMP_MCU,
         },
     },
-    [DRV_TEMPSENSORS_CHANNEL_BOARD1] = {
+    [DRV_TEMPSENSORS_CHANNEL_BALANCING1] = {
         .sensor_type = DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE,
         .config.thermistor_ls = {
             .b_param = &NCP21_bParam,
             .fixed_resistance = 10000,
-            .adc_channel = DRV_INPUTAD_ANALOG_BOARD_TEMP1,
+            .adc_channel = DRV_INPUTAD_ANALOG_TEMP_BALANCING1,
             .ref_voltage = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
         },
     },
-    [DRV_TEMPSENSORS_CHANNEL_BOARD2] = {
+    [DRV_TEMPSENSORS_CHANNEL_BALANCING2] = {
         .sensor_type = DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE,
         .config.thermistor_ls = {
             .b_param = &NCP21_bParam,
             .fixed_resistance = 10000,
-            .adc_channel = DRV_INPUTAD_ANALOG_BOARD_TEMP1,
+            .adc_channel = DRV_INPUTAD_ANALOG_TEMP_BALANCING2,
             .ref_voltage = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
         },
     },
+#if APP_VARIANT_ID == 1U
+    [DRV_TEMPSENSORS_CHANNEL_BOARD] = {
+        .sensor_type = DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE,
+        .config.thermistor_ls = {
+            .b_param = &NCP21_bParam,
+            .fixed_resistance = 10000,
+            .adc_channel = DRV_INPUTAD_ANALOG_TEMP_BOARD,
+            .ref_voltage = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
+        },
+    },
+#endif
     [DRV_TEMPSENSORS_CHANNEL_SEGMENT_MAX] = {
         .sensor_type = DRV_TEMPSENSORS_SENSOR_FUNC,
         .config.func = &getMaxSegmentTemp,

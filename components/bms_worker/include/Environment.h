@@ -36,6 +36,7 @@ typedef enum
     CH7,
     CH8,
     CH9,
+#if APP_VARIANT_ID == 0U
     CH10,
     CH11,
     CH12,
@@ -47,6 +48,7 @@ typedef enum
     CH18,
     CH19,
     CH20,
+#endif
     CHANNEL_COUNT,
 } ENV_thermistorID_E;
 

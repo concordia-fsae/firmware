@@ -63,12 +63,18 @@ static void drv_inputAD_1kHz_PRD(void)
 
     HW_ADC_unpackADCBuffer();
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD1));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD2));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_MCU, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_MCU));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BALANCING1, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BALANCING1));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BALANCING2, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BALANCING2));
+#if APP_VARIANT_ID == 1U
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BOARD, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BOARD));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_THERM9, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_THERM9));
+#endif
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX1));
+#if APP_VARIANT_ID == 0U
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX2));
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX3));
+#endif
 
     if (++current_sel == NX3L_MUX_COUNT)
     {
