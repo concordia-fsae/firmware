@@ -212,6 +212,13 @@ def build_comment(
     return "\n".join(lines).strip() + "\n"
 
 
+def print_diff_to_stdout(body):
+    lines = body.splitlines()
+    if lines and lines[0].startswith("<!-- ") and lines[0].endswith(" -->"):
+        body = "\n".join(lines[1:]).lstrip("\n") + "\n"
+    print(body)
+
+
 def find_existing_comment(repo, pr_number, token, tag, artifact_name):
     page = 1
     target = f"<!-- {tag}:{artifact_name} -->"
@@ -354,6 +361,7 @@ def main():
             repo,
             args.comment_tag,
         )
+        print_diff_to_stdout(body)
         upsert_comment(
             repo, pr_number, token, body, args.comment_tag, args.artifact_name
         )
@@ -392,6 +400,7 @@ def main():
         args.comment_tag,
     )
 
+    print_diff_to_stdout(body)
     result = upsert_comment(
         repo, pr_number, token, body, args.comment_tag, args.artifact_name
     )
