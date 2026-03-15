@@ -47,7 +47,7 @@ drv_tempSensors_channelConfig_S drv_tempSensors_channels[] = {
         .config.thermistor_ls = {
             .b_param = &NCP21_bParam,
             .fixed_resistance = 10000,
-            .adc_channel = DRV_INPUTAD_ANALOG_TEMP_BALANCING1,
+            .adc_channel = DRV_INPUTAD_ANALOG_TEMP_BALANCING2,
             .ref_voltage = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
         },
     },
