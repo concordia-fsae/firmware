@@ -478,7 +478,7 @@ signals:
         max: 127
     continuous: true
 
-  mcuTemp:
+  tempMcu:
     description: Segment worker microcontroller temperature
     unit: degC
     nativeRepresentation:
@@ -488,7 +488,7 @@ signals:
         max: 127
     continuous: true
 
-  boardTemp0:
+  tempBalancing0:
     description: Segment worker board temperature 0
     unit: degC
     nativeRepresentation:
@@ -498,7 +498,17 @@ signals:
         max: 127
     continuous: true
 
-  boardTemp1:
+  tempBalancing1:
+    description: Segment worker board temperature 1
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  tempBoard:
     description: Segment worker board temperature 1
     unit: degC
     nativeRepresentation:
@@ -568,7 +578,7 @@ signals:
         max: 127
     continuous: true
 
-  cellTemp0:
+  cellTemp20:
     description: Temperature of cell 0
     unit: degC
     nativeRepresentation:

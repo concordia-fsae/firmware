@@ -18,11 +18,11 @@
 /**< Driver Includes */
 #include "HW_adc.h"
 #include "HW_SHT40.h"
-#include "HW_NX3L4051PW.h"
 #include "drv_inputAD.h"
 #include "drv_tempSensors.h"
 #include "lib_voltageDivider.h"
 #include "BatteryMonitoring.h"
+#include "Module.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -49,19 +49,6 @@
 
 extern SHT_S sht_chip;
 
-
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-typedef enum
-{
-    SENS_INIT = 0x00,
-    SENS_RUNNING,
-    SENS_ERROR,
-} Sensor_State_E;
-
-
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -69,11 +56,55 @@ typedef enum
 ENV_S ENV;
 
 /******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
+ *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-void ENV_calcTempStats(void);
+/**
+ * @brief  Go through Environment variables and calculate segment statistics
+ */
+static void ENV_calcTempStats(void)
+{
+    uint8_t connected_channels = 0;
 
+    ENV.values.avg_temp = 0;
+    ENV.values.max_temp = 0;
+    ENV.values.min_temp = 200;
+
+    for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
+    {
+        if ((uint8_t)ENV.values.temps[i].temp == 0)
+        {
+            ENV.values.temps[i].therm_error = true;
+            continue;
+        }
+
+        connected_channels++;
+        ENV.values.temps[i].therm_error = false;
+        ENV.values.avg_temp += ENV.values.temps[i].temp;
+        ENV.values.max_temp = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
+        ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
+    }
+
+    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F)
+    {
+        ENV.state = ENV_ERROR;
+    }
+    else if (connected_channels < CHANNEL_COUNT)
+    {
+        ENV.state = ENV_FAULT;
+    }
+
+    ENV.values.avg_temp /= connected_channels;
+
+    if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) ||
+        connected_channels == 0 || ENV.values.max_temp >= 60)
+    {
+        ENV.state = ENV_FAULT;
+    }
+    else {
+        ENV.state = ENV_RUNNING;
+    }
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -107,10 +138,18 @@ static void Environment10Hz_PRD()
     }
     else if (sht_chip.state == SHT_WAITING)
     {
-        SHT_startConversion();
+        if (ENV.startRhHeater && (ENV.values.board.rh > 90.0f))
+        {
+            ENV.startRhHeater = false;
+            SHT_startHeater(SHT_HEAT_MED);
+        }
+        else
+        {
+            SHT_startConversion();
+        }
     }
 
-    for (uint16_t i = 0; i < NX3L_MUX_COUNT; i++)
+    for (uint16_t i = 0; i <= DRV_INPUTAD_ANALOG_MUX1_CH8 - DRV_INPUTAD_ANALOG_MUX1_CH1; i++)
     {
         const float32_t mux1 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + i);
 #if APP_VARIANT_ID == 0U
@@ -154,20 +193,13 @@ static void Environment1Hz_PRD()
 
         case ENV_FAULT:
         case ENV_RUNNING:
-            if (sht_chip.state == SHT_WAITING)
-            {
-                if (ENV.values.board.rh > 90.0f)
-                {
-                    SHT_startHeater(SHT_HEAT_MED);
-                }
-                else
-                {
-                    SHT_startConversion();
-                }
-            }
-            else if (sht_chip.state == SHT_ERROR)
+            if (sht_chip.state == SHT_ERROR)
             {
                 // TODO: Implement error handling
+            }
+            else
+            {
+                ENV.startRhHeater = true;
             }
             break;
 
@@ -187,55 +219,3 @@ const ModuleDesc_S ENV_desc = {
     .periodic10Hz_CLK = &Environment10Hz_PRD,
     .periodic1Hz_CLK  = &Environment1Hz_PRD,
 };
-
-
-/******************************************************************************
- *                     P R I V A T E  F U N C T I O N S
- ******************************************************************************/
-
-/**
- * @brief  Go through Environment variables and calculate segment statistics
- */
-void ENV_calcTempStats(void)
-{
-    uint8_t connected_channels = 0;
-
-    ENV.values.avg_temp = 0;
-    ENV.values.max_temp = 0;
-    ENV.values.min_temp = 200;
-
-    for (uint8_t i = 0; i < CHANNEL_COUNT; i++)
-    {
-        if ((uint8_t)ENV.values.temps[i].temp == 0)
-        {
-            ENV.values.temps[i].therm_error = true;
-            continue;
-        }
-
-        connected_channels++;
-        ENV.values.temps[i].therm_error = false;
-        ENV.values.avg_temp += ENV.values.temps[i].temp;
-        ENV.values.max_temp = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
-        ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
-    }
-
-    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F)
-    {
-        ENV.state = ENV_ERROR;
-    }
-    else if (connected_channels < CHANNEL_COUNT)
-    {
-        ENV.state = ENV_FAULT;
-    }
-
-    ENV.values.avg_temp /= connected_channels;
-
-    if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) ||
-        connected_channels == 0 || ENV.values.max_temp >= 60)
-    {
-        ENV.state = ENV_FAULT;
-    }
-    else {
-        ENV.state = ENV_RUNNING;
-    }
-}

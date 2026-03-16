@@ -13,13 +13,8 @@
 #include "stdbool.h"
 #include "stdint.h"
 
-// Firmware Includes
-#include "HW_LTC2983.h"
-
 // Other Includes
-#include "Module.h"
 #include "FloatTypes.h"
-
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -81,6 +76,7 @@ typedef struct
         float32_t       min_temp;
         float32_t       avg_temp;
     } values;
+    bool startRhHeater;
 } ENV_S;
 
 

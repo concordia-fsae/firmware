@@ -21,11 +21,6 @@
 #include "HW_spi.h"
 #include "HW_tim.h"
 
-#include "HW_HS4011.h"
-#include "HW_LTC2983.h"
-#include "HW_MAX14921.h"
-#include "HW_SHT40.h"
-
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
 #include "FreeRTOS_SWI.h"

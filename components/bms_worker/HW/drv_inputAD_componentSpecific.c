@@ -19,7 +19,7 @@
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_tim.h"
-#include "HW_NX3L4051PW.h"
+#include "drv_mux.h"
 #include "BatteryMonitoring.h"
 
 /**< Other Includes */
@@ -31,6 +31,17 @@
  ******************************************************************************/
 
 #define ADC_VOLTAGE_DIVISION    2.0f /**< Voltage division for cell voltage output */
+
+drv_mux_channel_S signal_mux = {
+    .type = DRV_MUX_TYPE_GPIO,
+    .config = {
+        .max_output_channel = 8U,
+        .outputs.gpio = {
+            .pin_first = DRV_OUTPUTAD_DIGITAL_MUX_SEL1,
+            .pin_last = DRV_OUTPUTAD_DIGITAL_MUX_SEL3,
+        },
+    }
+};
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -50,16 +61,15 @@ static void drv_inputAD_init_componentSpecific(void)
 {
     drv_inputAD_private_init();
 
-    NX3L_init();
-    NX3L_enableMux();
-    NX3L_setMux(NX3L_MUX1);
+    drv_mux_init(&signal_mux);
+    drv_mux_setMuxOutput(&signal_mux, 0U);
 
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
 }
 
 static void drv_inputAD_1kHz_PRD(void)
 {
-    static NX3L_MUXChannel_E current_sel = NX3L_MUX1;
+    uint8_t current_sel = drv_mux_getMuxOutput(&signal_mux);
 
     HW_ADC_unpackADCBuffer();
 
@@ -76,12 +86,7 @@ static void drv_inputAD_1kHz_PRD(void)
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX3));
 #endif
 
-    if (++current_sel == NX3L_MUX_COUNT)
-    {
-        current_sel = NX3L_MUX1;
-    }
-
-    NX3L_setMux(current_sel);
+    drv_mux_setMuxOutput(&signal_mux, ++current_sel);
 
     if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
     {
