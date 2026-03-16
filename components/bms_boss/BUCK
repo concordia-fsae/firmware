@@ -103,9 +103,7 @@ cxx_library(
         "stream_buffer.h": "//embedded/libs:FreeRTOS-src[Source/include/stream_buffer.h]",
         "task.h": "//embedded/libs:FreeRTOS-src[Source/include/task.h]",
         "timers.h": "//embedded/libs:FreeRTOS-src[Source/include/timers.h]",
-        "FreeRTOSConfig.h": "RTOS/include/FreeRTOSConfig.h",
-        "FreeRTOS_SWI.h": "RTOS/include/FreeRTOS_SWI.h",
-        "FreeRTOS_types.h": "RTOS/include/FreeRTOS_types.h",
+        "FreeRTOSConfig.h": "include/FreeRTOSConfig.h",
     },
     exported_deps = [":CMSIS-hal-f105"],
 )
@@ -165,6 +163,7 @@ generate_code(
         ":hal-f105",
         ":FreeRTOS",
         "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
     ],
 )
 
@@ -302,9 +301,10 @@ cxx_binary(
             "//components/shared/code:libs/lib_thermistors.c",
             "//components/shared/code:app/app_faultManager.c",
             "//components/shared/code:libs/Utility.c",
+            ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
+            "//components/shared/code/RTOS:FreeRTOS_SWI.c",
+            "//components/shared/code/RTOS:Module.c",
             "//embedded/libs:libcrc.c",
-            ("RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
-            "RTOS/FreeRTOS_SWI.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),
@@ -326,6 +326,7 @@ cxx_binary(
         ":network",
         ":build-headers",
         "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
     ],
 )
 

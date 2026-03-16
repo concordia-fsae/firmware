@@ -15,7 +15,6 @@
 #include "stdbool.h"
 #include "stdint.h"
 #include "lib_nvm_componentSpecific.h"
-#include "Module.h"
 #if FEATURE_IS_ENABLED(NVM_SWI)
 #include "FreeRTOS_SWI.h"
 #endif
