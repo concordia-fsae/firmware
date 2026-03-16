@@ -128,7 +128,7 @@ cxx_library(
         "stream_buffer.h": "//embedded/libs:FreeRTOS-src[Source/include/stream_buffer.h]",
         "task.h": "//embedded/libs:FreeRTOS-src[Source/include/task.h]",
         "timers.h": "//embedded/libs:FreeRTOS-src[Source/include/timers.h]",
-        "FreeRTOSConfig.h": "RTOS/include/FreeRTOSConfig.h",
+        "FreeRTOSConfig.h": "include/FreeRTOSConfig.h",
     },
     headers = {
     },
@@ -192,6 +192,7 @@ compiler_flags += ["-include", "BuildDefines.h"]
             ":hal-f103",
             ":FreeRTOS",
             "//components/shared/code:headers",
+            "//components/shared/code/RTOS:headers",
         ],
     )
     for node in range(max_node_count)
@@ -342,8 +343,9 @@ cxx_binary(
             "//components/shared/code:libs/lib_thermistors.c",
             "//components/shared/code:libs/Utility.c",
             "//embedded/libs/cells:P42A.c",
-            ("RTOS/FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
-            "RTOS/FreeRTOS_SWI.c",
+            ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
+            "//components/shared/code/RTOS:FreeRTOS_SWI.c",
+            "//components/shared/code/RTOS:Module.c",
             "//embedded/platforms/stm32/f1/f103:startup_stm32f103xb.S",
         ],
     header_namespace = "",
@@ -363,6 +365,7 @@ cxx_binary(
         ":build-headers",
         "//components/shared/code:headers",
         "//embedded/libs/cells:cells",
+        "//components/shared/code/RTOS:headers",
     ],
 )
 [
