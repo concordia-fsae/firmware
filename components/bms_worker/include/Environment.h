@@ -76,6 +76,7 @@ typedef struct
         float32_t       min_temp;
         float32_t       avg_temp;
     } values;
+    bool startRhHeater;
 } ENV_S;
 
 

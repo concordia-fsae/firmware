@@ -138,7 +138,15 @@ static void Environment10Hz_PRD()
     }
     else if (sht_chip.state == SHT_WAITING)
     {
-        SHT_startConversion();
+        if (ENV.startRhHeater && (ENV.values.board.rh > 90.0f))
+        {
+            ENV.startRhHeater = false;
+            SHT_startHeater(SHT_HEAT_MED);
+        }
+        else
+        {
+            SHT_startConversion();
+        }
     }
 
     for (uint16_t i = 0; i <= DRV_INPUTAD_ANALOG_MUX1_CH8 - DRV_INPUTAD_ANALOG_MUX1_CH1; i++)
@@ -185,20 +193,13 @@ static void Environment1Hz_PRD()
 
         case ENV_FAULT:
         case ENV_RUNNING:
-            if (sht_chip.state == SHT_WAITING)
-            {
-                if (ENV.values.board.rh > 90.0f)
-                {
-                    SHT_startHeater(SHT_HEAT_MED);
-                }
-                else
-                {
-                    SHT_startConversion();
-                }
-            }
-            else if (sht_chip.state == SHT_ERROR)
+            if (sht_chip.state == SHT_ERROR)
             {
                 // TODO: Implement error handling
+            }
+            else
+            {
+                ENV.startRhHeater = true;
             }
             break;
 
