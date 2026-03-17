@@ -42,6 +42,7 @@ const nvm_imuCalibration_S imuCalibration_default = {
 LIB_NVM_MEMORY_REGION(nvm_imuCalibration_S imuCalibration_data) = { 0U };
 static const nvm_crashState_S crashState_default = {
     .crashLatched = true,
+    .vehicleState = VEHICLESTATE_TS_RUN,
     .reserved = { 0U },
 };
 LIB_NVM_MEMORY_REGION(nvm_crashState_S crashState_data) = { 0U };

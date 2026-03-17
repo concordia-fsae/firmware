@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 #include "lib_nvm.h"
+#include "app_vehicleState.h"
 #include "LIB_Types.h"
 #include "CANTypes_generated.h"
 
@@ -23,15 +24,18 @@ typedef enum
     CRASHSENSOR_OK,
     CRASHSENSOR_CRASHED,
     CRASHSENSOR_ERROR,
+    CRASHSENSOR_IMPLAUSIBILITY,
 } crashSensor_state_E;
 
 typedef struct
 {
     bool crashLatched;
-    uint8_t reserved[16U];
+    app_vehicleState_state_E vehicleState;
+    uint8_t reserved[15U];
 } LIB_NVM_STORAGE(nvm_crashState_S);
 extern nvm_crashState_S crashState_data;
 
+_Static_assert(sizeof(nvm_crashState_S) == 18U, "NVM deterministic size");
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/

@@ -127,15 +127,26 @@ void crashSensor_task(void)
 
     if (cs.sensorState == CRASHSENSOR_INIT)
     {
-        const float32_t vehicleAccel = imu_getAccelNormPeak();
-        if (vehicleStateOk(vehicleAccel) && !imu_isFaulted())
+        const app_vehicleState_state_E nvmVehiclestate = crashState_data.vehicleState;
+        if (nvmVehiclestate == VEHICLESTATE_TS_RUN)
         {
-            cs.sensorState = CRASHSENSOR_OK;
-            drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, DRV_IO_ACTIVE);
+            cs.sensorState = CRASHSENSOR_IMPLAUSIBILITY;
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_CRASHIMPLAUSIBILITY, true);
+            crashState_data.crashLatched = true;
+            lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
         }
         else
         {
-            cs.sensorState = CRASHSENSOR_ERROR;
+            const float32_t vehicleAccel = imu_getAccelNormPeak();
+            if (vehicleStateOk(vehicleAccel) && !imu_isFaulted())
+            {
+                cs.sensorState = CRASHSENSOR_OK;
+                drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, DRV_IO_ACTIVE);
+            }
+            else
+            {
+                cs.sensorState = CRASHSENSOR_ERROR;
+            }
         }
     }
 
@@ -174,6 +185,7 @@ void crashSensor_task(void)
                 {
                     cs.sensorState = CRASHSENSOR_OK;
                     crashState_data.crashLatched = false;
+                    app_faultManager_setFaultState(FM_FAULT_VCPDU_CRASHIMPLAUSIBILITY, false);
                     lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
                     cs.accelTripped = 0.0f;
                     cs.accelMax = 0.0f;
@@ -196,6 +208,12 @@ void crashSensor_task(void)
         const drv_io_activeState_E safetyState = cs.sensorState == CRASHSENSOR_OK ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, safetyState);
 #endif
+        const app_vehicleState_state_E currentVehicleState = app_vehicleState_getState();
+        if (currentVehicleState != crashState_data.vehicleState)
+        {
+            crashState_data.vehicleState = currentVehicleState;
+            lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
+        }
     }
 }
 
