@@ -2,6 +2,7 @@ load("@prelude//:rules.bzl", "cxx_library")
 load("//tools/defs.bzl", "remap_files")
 load("@prelude//:rules.bzl", __rules__ = "rules")
 load("//tools/uv/defs.bzl", "uv_genrule", "uv_tool")
+load("//components/vehicle_platform:platforms.bzl", "PLATFORM", "platform_output_name", "platform_target_label")
 
 def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: list[str] | None = None, **kwargs):
     args = ""
@@ -105,17 +106,35 @@ def generate_dbcs(
 def build_network(
         name: str,
         data_dir: str,
+        platform: PLATFORM | None = None,
         **kwargs):
+    visibility = kwargs.get("visibility")
+    if "visibility" in kwargs:
+        kwargs = dict(kwargs)
+        kwargs.pop("visibility")
+    configured_platform = "prelude//platforms:default"
+    name_suffix = "default"
+    if platform != None:
+        configured_platform = platform_target_label(platform)
+        name_suffix = platform_output_name(platform)
     defs = remap_files(data_dir, glob([data_dir + "**/*.yaml"]))
     __rules__["filegroup"](
         name = "network-defs",
         srcs = defs,
+        visibility = visibility,
     )
     uv_genrule(
-        name = name,
+        name = name + "-{}".format(name_suffix),
         tool = "//tools/yamcan:yamcan",
         srcs = [":network-defs"],
         out = "network-cache",
         cmd = "$(python) ${TOOLDIR}/yamcan.py --data-dir ${SRCS} --cache-dir ${OUT} --build",
+        visibility = visibility,
         **kwargs
+    )
+    native.configured_alias(
+        name = name,
+        actual = ":" + name + "-{}".format(name_suffix),
+        platform = configured_platform,
+        visibility = visibility,
     )
