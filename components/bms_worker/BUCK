@@ -17,6 +17,7 @@ load(
 load(
     "//components/vehicle_platform:platforms.bzl",
     "PLATFORMS",
+    "platform_constraint_label",
     "platform_output_name",
 )
 load("//tools/yamcan/defs.bzl", "generate_code")
@@ -48,7 +49,7 @@ constraint_setting(
     platform(
         name = configured_platform_name(platform_name, node),
         constraint_values = [
-            "//buck2/constraints:{}".format(platform_name),
+            platform_constraint_label(platform_name),
             ":node-{}".format(node),
         ],
     )
