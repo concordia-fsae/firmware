@@ -117,3 +117,11 @@ void Error_Handler(void)
         }
     }
 }
+
+static void SYS1Hz_PRD()
+{
+    HW_GPIO_togglePin(HW_GPIO_LED);
+}
+const ModuleDesc_S SYS_desc = {
+    .periodic1Hz_CLK   = &SYS1Hz_PRD,
+};

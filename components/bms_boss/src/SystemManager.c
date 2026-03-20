@@ -20,6 +20,7 @@
 #include "HW_i2c.h"
 #include "HW_tim.h"
 #include "HW_flash.h"
+#include "drv_outputAD.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -119,3 +120,11 @@ void Error_Handler(void)
             ;
     }
 }
+
+static void SYS1Hz_PRD()
+{
+    drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
+}
+const ModuleDesc_S SYS_desc = {
+    .periodic1Hz_CLK   = &SYS1Hz_PRD,
+};

@@ -10,7 +10,7 @@
 #include "lib_nvm.h"
 #include "lib_simpleFilter.h"
 
-#include "FloatTypes.h"
+#include "LIB_Types.h"
 
 #define BMS_MAX_SEGMENTS 8U
 _Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
@@ -31,6 +31,13 @@ typedef enum {
     BMS_FAULT,
 } BMS_State_E;
 
+typedef enum {
+    BMS_CONTACTORS_OPEN = 0x00,
+    BMS_CONTACTORS_PRECHARGE,
+    BMS_CONTACTORS_CLOSED,
+    BMS_CONTACTORS_HVP_CLOSED,
+} BMS_Contactors_E;
+
 typedef struct {
     bool fault :1;
     bool timeout :1;
@@ -47,6 +54,7 @@ typedef struct {
 } BMSW_S;
 
 typedef struct {
+    BMS_Contactors_E contacts;
     bool fault :1;
     bool pack_voltage_sense_fault :1;
     bool charging_paused :1;
@@ -95,6 +103,15 @@ extern nvm_bmsbContactorData_S contactor_data;
 
 extern BMSB_S BMS;
 
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
+
+bool BMS_SFT_checkMCTimeout(void);
+bool BMS_SFT_checkBrusaChargerTimeout(void);
+bool BMS_SFT_checkElconChargerTimeout(void);
+void BMS_stopCharging(void);
+void BMS_continueCharging(void);
 float32_t BMSB_getContactorSohHvp(void);
 float32_t BMSB_getContactorSohHvn(void);
 float32_t BMSB_getContactorSohPrecharge(void);

@@ -7,10 +7,8 @@ messages:
     signals:
       validator:
         template: criticalDataChecksum
-      envFaultFlag:
-      envErrorFlag:
-      faultFlag:
-      errorFlag:
+      faultTemp:
+      faultBMS:
       dischargeLimit:
         startBit: 16
       chargeLimit:

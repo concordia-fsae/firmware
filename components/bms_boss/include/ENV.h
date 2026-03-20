@@ -10,7 +10,7 @@
  ******************************************************************************/
 
 // System Includes
-#include "FloatTypes.h"
+#include "LIB_Types.h"
 #include "stdbool.h"
 #include "stdint.h"
 
