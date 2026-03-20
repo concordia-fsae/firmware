@@ -63,6 +63,8 @@ static void outputPower(app_cooling_channel_S* channel)
                                power);
             }
             break;
+        case OUTPUT_TYPE_VIRTUAL:
+            break;
     }
 }
 
@@ -174,6 +176,8 @@ float32_t app_cooling_getRate(app_cooling_channel_S* channel)
     {
         case FEEDBACK_FUNC:
             ret = channel->config.feedback.feedback.func() * channel->config.feedback.scale;
+            break;
+        case FEEDBACK_VIRTUAL:
             break;
     }
 

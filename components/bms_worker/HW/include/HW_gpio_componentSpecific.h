@@ -22,11 +22,15 @@ typedef enum
     HW_GPIO_MUX_SEL3,
     HW_GPIO_CAN_RX,
     HW_GPIO_CAN_TX,
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HW_GPIO_TACH_FAN1,
     HW_GPIO_TACH_FAN2,
+#endif
     HW_GPIO_LED,
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HW_GPIO_PWM_FAN1,
     HW_GPIO_PWM_FAN2,
+#endif
     HW_GPIO_MAX_SAMPLE,
     HW_GPIO_NX3_NEN,
     HW_GPIO_ADC_MAX,
