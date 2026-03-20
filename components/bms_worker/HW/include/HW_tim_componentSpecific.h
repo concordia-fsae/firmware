@@ -27,8 +27,10 @@
 
 typedef enum
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HW_TIM_PORT_TACH,
     HW_TIM_PORT_PWM,
+#endif
     HW_TIM_PORT_COUNT,
 } HW_TIM_port_E;
 

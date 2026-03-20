@@ -62,6 +62,7 @@ typedef struct
     {
         OUTPUT_TYPE_PWM = 0x00U,
         OUTPUT_TYPE_PWM_EN,
+        OUTPUT_TYPE_VIRTUAL,
     } type;
     union
     {
@@ -80,6 +81,7 @@ typedef struct
     enum
     {
         FEEDBACK_FUNC,
+        FEEDBACK_VIRTUAL,
     } type;
     union
     {

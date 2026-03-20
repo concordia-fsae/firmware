@@ -31,8 +31,13 @@
  ******************************************************************************/
 
 #define ADC_VOLTAGE_DIVISION    2.0f /**< Voltage division for cell voltage output */
+#define SCALAR_VSNS_7V5         6.0f
 
-drv_mux_channel_S signal_mux = {
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static drv_mux_channel_S signal_mux = {
     .type = DRV_MUX_TYPE_GPIO,
     .config = {
         .max_output_channel = 8U,
@@ -79,6 +84,7 @@ static void drv_inputAD_1kHz_PRD(void)
 #if APP_VARIANT_ID == 1U
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BOARD, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BOARD));
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_THERM9, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_THERM9));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_VSNS_7V5, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_VSNS_7V5) * SCALAR_VSNS_7V5);
 #endif
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX1));
 #if APP_VARIANT_ID == 0U

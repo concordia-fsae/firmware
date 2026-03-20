@@ -37,6 +37,7 @@ static uint64_t   fan2_last_tick[2] = { 0 };
  */
 HW_StatusTypeDef_E HW_TIM_init(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     RCC_ClkInitTypeDef      clkconfig;
     TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
     TIM_OC_InitTypeDef      sConfigOC          = { 0 };
@@ -143,7 +144,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
 
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_2);
-
+#endif
     return HW_OK;
 }
 
@@ -154,9 +155,10 @@ HW_StatusTypeDef_E HW_TIM_init(void)
  */
 HW_StatusTypeDef_E HW_TIM_deInit(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_PWM_Stop(&htim[HW_TIM_PORT_TACH], TIM_CHANNEL_1);
     __HAL_RCC_TIM1_CLK_DISABLE();
-
+#endif
     return HW_OK;
 }
 
@@ -169,10 +171,12 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
     if (htim_base->Instance == TIM1)
     {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
         __HAL_RCC_TIM1_CLK_ENABLE();
 
         HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
         HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+#endif
     }
 }
 
@@ -202,11 +206,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
  */
 float32_t HW_TIM1_getFreqCH1(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     if ((fan1_last_tick[1] + 1000000) < HW_TIM_getBaseTick()) 
     {
         return 0;
     }
     return (uint16_t)((fan1_last_tick[1]) ? 4000000 / (fan1_last_tick[1] - fan1_last_tick[0]) : 0);
+#else
+    return 0;
+#endif
 }
 
 /**
@@ -216,10 +224,14 @@ float32_t HW_TIM1_getFreqCH1(void)
  */
 float32_t HW_TIM1_getFreqCH2(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     if ((fan2_last_tick[1] + 1000000U) < HW_TIM_getBaseTick()) 
     {
         return 0;
     }
     return (uint16_t)((fan2_last_tick[1]) ? 4000000U / (fan2_last_tick[1] - fan2_last_tick[0]) : 0);
+#else
+    return 0;
+#endif
 }
 

@@ -41,16 +41,24 @@ app_cooling_channel_S cooling[COOLING_CHANNEL_COUNT] = {
                 .input.tempSensor = DRV_TEMPSENSORS_CHANNEL_SEGMENT_MAX,
             },
             .output = {
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type = OUTPUT_TYPE_VIRTUAL,
+#else
                 .type = OUTPUT_TYPE_PWM,
                 .output.pwm = {
                     .tim_port = HW_TIM_PORT_PWM,
                     .tim_channel = HW_TIM_CHANNEL_1,
                 },
+#endif
             },
             .feedback = { // Feedback in units of RPM
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type = FEEDBACK_VIRTUAL,
+#else
                 .type = FEEDBACK_FUNC,
                 .feedback.func = &HW_TIM1_getFreqCH1,
                 .scale = 60,
+#endif
             },
             .cooling_map = {
                 .points = (lib_interpolation_point_S*)&fan_curve,
@@ -67,16 +75,24 @@ app_cooling_channel_S cooling[COOLING_CHANNEL_COUNT] = {
                 .input.tempSensor = DRV_TEMPSENSORS_CHANNEL_SEGMENT_MAX,
             },
             .output = {
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type = OUTPUT_TYPE_VIRTUAL,
+#else
                 .type = OUTPUT_TYPE_PWM,
                 .output.pwm = {
                     .tim_port = HW_TIM_PORT_PWM,
                     .tim_channel = HW_TIM_CHANNEL_2,
                 },
+#endif
             },
             .feedback = { // Feedback in units of RPM
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type = FEEDBACK_VIRTUAL,
+#else
                 .type = FEEDBACK_FUNC,
                 .feedback.func = &HW_TIM1_getFreqCH2,
                 .scale = 60,
+#endif
             },
             .cooling_map = {
                 .points = (lib_interpolation_point_S*)&fan_curve,
