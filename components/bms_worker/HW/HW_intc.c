@@ -100,7 +100,9 @@ void ADC1_2_IRQHandler(void)
  */
 void TIM4_IRQHandler(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_PWM]);
+#endif
 }
 
 void TIM3_IRQHandler(void)
@@ -114,12 +116,16 @@ void TIM2_IRQHandler(void)
 
 void TIM1_TRG_COM_IRQHandler(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_TACH]);
+#endif
 }
 
 void TIM1_CC_IRQHandler(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_TACH]);
+#endif
 }
 
 // CAN interrupts

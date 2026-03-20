@@ -99,6 +99,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINSET,
     },
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     [HW_GPIO_TACH_FAN1] = { 
         .port = GPIOA,
         .pin = GPIO_PIN_8,
@@ -115,6 +116,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
+#endif
     [HW_GPIO_LED] = { 
         .port = GPIOC,
         .pin = GPIO_PIN_13,
@@ -123,6 +125,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     [HW_GPIO_PWM_FAN1] = { 
         .port = GPIOB,
         .pin = GPIO_PIN_6,
@@ -139,6 +142,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
+#endif
     [HW_GPIO_MAX_SAMPLE] = { 
         .port = GPIOA,
         .pin = GPIO_PIN_10,
