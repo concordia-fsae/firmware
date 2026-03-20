@@ -1,5 +1,5 @@
 /**
- * @file app_cooling.c
+ * @file drv_cooling.c
  * @brief Source code for the cooling driver
  */
 
@@ -7,7 +7,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "app_cooling.h"
+#include "drv_cooling.h"
 #include "drv_tempSensors.h"
 #include "lib_utility.h"
 
@@ -20,7 +20,7 @@
  * @param channel The channel to retrieve
  * @return The current temperature of the channel
  */
-static float32_t getTemperature(app_cooling_channel_S* channel)
+static float32_t getTemperature(drv_cooling_channel_S* channel)
 {
     float32_t ret = 0;
 
@@ -39,7 +39,7 @@ static float32_t getTemperature(app_cooling_channel_S* channel)
  * @param channel Channel to output
  * @note The output power is saturated between 0 and 100 percent (0.0f-1.0f)
  */
-static void outputPower(app_cooling_channel_S* channel)
+static void outputPower(drv_cooling_channel_S* channel)
 {
     switch (channel->config.output.type)
     {
@@ -76,7 +76,7 @@ static void outputPower(app_cooling_channel_S* channel)
  * @brief Initialize a cooling channel
  * @param channel The channel to initialize
  */
-void app_cooling_init(app_cooling_channel_S* channel)
+void drv_cooling_init(drv_cooling_channel_S* channel)
 {
     channel->state = COOLING_OFF;
     channel->enabled = false;
@@ -90,7 +90,7 @@ void app_cooling_init(app_cooling_channel_S* channel)
  * @param channel The channel to update
  * @param enabled True if the channel is enabled, false otherwise
  */
-void app_cooling_runChannel(app_cooling_channel_S* channel, bool enabled)
+void drv_cooling_runChannel(drv_cooling_channel_S* channel, bool enabled)
 {
     const float32_t temperature = getTemperature(channel);
     channel->enabled = enabled;
@@ -134,7 +134,7 @@ void app_cooling_runChannel(app_cooling_channel_S* channel, bool enabled)
  * @param channel The channel to set the override value of
  * @param percentage The percent to override. This should be between 0.0f and 1.0f
  */
-void app_cooling_setOverride(app_cooling_channel_S* channel, float32_t percentage)
+void drv_cooling_setOverride(drv_cooling_channel_S* channel, float32_t percentage)
 {
     channel->override_percentage = percentage;
 }
@@ -144,7 +144,7 @@ void app_cooling_setOverride(app_cooling_channel_S* channel, float32_t percentag
  * @param channel The channel to retrieve
  * @return The percentage power output between 0.0f and 1.0f
  */
-float32_t app_cooling_getPower(app_cooling_channel_S* channel)
+float32_t drv_cooling_getPower(drv_cooling_channel_S* channel)
 {
     return channel->power;
 }
@@ -154,7 +154,7 @@ float32_t app_cooling_getPower(app_cooling_channel_S* channel)
  * @param channel The channel to retrieve
  * @return The current state of the cooling channel
  */
-app_cooling_state_E app_cooling_getState(app_cooling_channel_S* channel)
+drv_cooling_state_E drv_cooling_getState(drv_cooling_channel_S* channel)
 {
     return channel->state;
 }
@@ -168,7 +168,7 @@ app_cooling_state_E app_cooling_getState(app_cooling_channel_S* channel)
  * @param channel The channel to retrieve
  * @return The rate of flow in the units specified by the channel configuration
  */
-float32_t app_cooling_getRate(app_cooling_channel_S* channel)
+float32_t drv_cooling_getRate(drv_cooling_channel_S* channel)
 {
     float32_t ret = 0;
 
