@@ -322,6 +322,7 @@ cxx_binary(
     executable_name = APP_NAME + ".elf",
     srcs =
         glob(["src/*.c", "HW/*.c"]) + [
+            "//components/shared/code:DRV/drv_cooling.c",
             "//components/shared/code:DRV/drv_inputAD.c",
             "//components/shared/code:DRV/drv_io.c",
             "//components/shared/code:DRV/drv_mux.c",
@@ -337,7 +338,6 @@ cxx_binary(
             "//components/shared/code:HW/HW_tim.c",
             "//components/shared/code:app/CAN/CANIO-rx.c",
             "//components/shared/code:app/CAN/CANIO-tx.c",
-            "//components/shared/code:app/app_cooling.c",
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",

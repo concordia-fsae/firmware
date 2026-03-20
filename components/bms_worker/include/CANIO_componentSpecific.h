@@ -88,13 +88,13 @@
 #if APP_VARIANT_ID == 1U
 #define set_tempBoard(m, b, n, s)                set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD))
 #endif
-#define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, app_cooling_getRate(&cooling[COOLING_CHANNEL_FAN2]))
-#define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, app_cooling_getRate(&cooling[COOLING_CHANNEL_FAN1]))
-#define set_coolPct1(m, b, n, s)                 set(m,b,n,s, (app_cooling_getPower(&cooling[COOLING_CHANNEL_FAN2]) * 100.0f))
-#define set_coolState1(m, b, n, s)               set(m,b,n,s, (app_cooling_getState(&cooling[COOLING_CHANNEL_FAN2]) != COOLING_OFF) ? \
+#define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, drv_cooling_getRate(&cooling[COOLING_CHANNEL_FAN2]))
+#define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, drv_cooling_getRate(&cooling[COOLING_CHANNEL_FAN1]))
+#define set_coolPct1(m, b, n, s)                 set(m,b,n,s, (drv_cooling_getPower(&cooling[COOLING_CHANNEL_FAN2]) * 100.0f))
+#define set_coolState1(m, b, n, s)               set(m,b,n,s, (drv_cooling_getState(&cooling[COOLING_CHANNEL_FAN2]) != COOLING_OFF) ? \
                                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_coolPct0(m, b, n, s)                 set(m,b,n,s, (app_cooling_getPower(&cooling[COOLING_CHANNEL_FAN1]) * 100.0f))
-#define set_coolState0(m, b, n, s)               set(m,b,n,s, (app_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
+#define set_coolPct0(m, b, n, s)                 set(m,b,n,s, (drv_cooling_getPower(&cooling[COOLING_CHANNEL_FAN1]) * 100.0f))
+#define set_coolState0(m, b, n, s)               set(m,b,n,s, (drv_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
                                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #include "TemporaryStubbing.h"

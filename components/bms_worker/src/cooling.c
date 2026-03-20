@@ -33,7 +33,7 @@ static lib_interpolation_point_S fan_curve[] = {
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-app_cooling_channel_S cooling[COOLING_CHANNEL_COUNT] = {
+drv_cooling_channel_S cooling[COOLING_CHANNEL_COUNT] = {
     [COOLING_CHANNEL_FAN1] = {
         .config = {
             .input = {
@@ -115,7 +115,7 @@ static void cooling_init()
 {
     for (uint8_t i = 0; i < COOLING_CHANNEL_COUNT; i++)
     {
-        app_cooling_init(&cooling[i]);
+        drv_cooling_init(&cooling[i]);
     }
 
     drv_timer_init(&start_up);
@@ -147,9 +147,9 @@ static void cooling10Hz_PRD(void)
     for (uint8_t i = 0; i < COOLING_CHANNEL_COUNT; i++)
     {
         // Update the states of the cooler, disabling if not required
-        app_cooling_setOverride(&cooling[i], override);
-        app_cooling_runChannel(&cooling[i], (boot_timer_state == DRV_TIMER_EXPIRED) &&
-                                             app_cooling_getPower(&cooling[i]) > 0.01f);
+        drv_cooling_setOverride(&cooling[i], override);
+        drv_cooling_runChannel(&cooling[i], (boot_timer_state == DRV_TIMER_EXPIRED) &&
+                                             drv_cooling_getPower(&cooling[i]) > 0.01f);
     }
 }
 
