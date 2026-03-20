@@ -20,8 +20,8 @@
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S driverInput_desc;
-extern const ModuleDesc_S light_desc;
 extern const ModuleDesc_S screenManager_desc;
+extern const ModuleDesc_S sys_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -34,8 +34,8 @@ typedef enum
     MODULE_UDS,
     MODULE_VEHICLESTATE,
     MODULE_DRIVERINPUT,
-    MODULE_LIGHT,
     MODULE_SCREENMANAGER,
+    MODULE_SYS,
     MODULE_CANIO_tx,
     MODULE_CNT
 } Module_tasks_E;

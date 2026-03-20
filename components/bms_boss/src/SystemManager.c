@@ -115,7 +115,7 @@ void Error_Handler(void)
     while (1)
     {
         uint32_t cnt = 6400000;
-        HW_GPIO_togglePin(HW_GPIO_LED);
+        drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
         while (cnt--)
             ;
     }

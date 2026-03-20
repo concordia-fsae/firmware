@@ -20,6 +20,7 @@
 #include "HW_i2c.h"
 #include "HW_spi.h"
 #include "HW_tim.h"
+#include "drv_outputAD.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -110,7 +111,7 @@ void Error_Handler(void)
     while (1)
     {
         uint32_t cnt = 6400000;
-        HW_GPIO_togglePin(HW_GPIO_LED);
+        drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
         while (cnt--)
         {
             ;
@@ -120,7 +121,7 @@ void Error_Handler(void)
 
 static void SYS1Hz_PRD()
 {
-    HW_GPIO_togglePin(HW_GPIO_LED);
+    drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
 }
 const ModuleDesc_S SYS_desc = {
     .periodic1Hz_CLK   = &SYS1Hz_PRD,
