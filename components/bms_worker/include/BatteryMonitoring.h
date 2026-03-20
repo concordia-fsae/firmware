@@ -19,11 +19,6 @@
 /**< Driver Includes */
 #include "HW_MAX14921.h"
 
-
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -31,9 +26,7 @@
 typedef enum
 {
     BMS_INIT = 0x00,
-#if FEATURE_IS_ENABLED(FEATURE_MAX14921_CALIBRATE)
     BMS_CALIBRATING,
-#endif // FEATURE_MAX14921_CALIBRATE
     BMS_PARASITIC,
     BMS_PARASITIC_MEASUREMENT,
     BMS_HOLDING,
@@ -45,9 +38,6 @@ typedef enum
 #if FEATURE_IS_ENABLED(FEATURE_CELL_BALANCING)
     BMS_BALANCING,
 #endif // FEATURE_CELL_BALANCING
-#if FEATURE_IS_ENABLED(FEATURE_CELL_SLEEP)
-    BMS_SLEEPING,
-#endif // FEATURE_CELL_SLEEP
     BMS_ERROR,
 } BMS_State_E;
 
@@ -98,13 +88,11 @@ typedef struct
     } relative_soc;    // [100-0], precision 0.1%
 } BMS_S;
 
-
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
 
 extern BMS_S BMS;
-
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
