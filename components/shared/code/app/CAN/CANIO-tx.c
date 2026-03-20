@@ -108,8 +108,8 @@ static void CANIO_tx_1kHz_PRD(void)
                 continue;
             }
 
-            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
-                // all the message weren't sent. TO-DO: error handling
+            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) 
+            {
             }
 
             CAN_table[bus].busTable[table].index = 0U;
