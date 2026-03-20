@@ -9,14 +9,14 @@
  ******************************************************************************/
 
 #include "FeatureDefines_generated.h"
-#if APP_UDS
+#if FEATURE_IS_ENABLED(APP_UDS)
 
 #ifndef ISO_TP_USER_DEBUG_ENABLED
 #define ISO_TP_USER_DEBUG_ENABLED 0U
 #endif
 
 // module include
-#include "UDS.h"
+#include "uds_componentSpecific.h"
 
 // other includes
 #include "CAN/CanTypes.h"
@@ -26,11 +26,12 @@
 #include "ModuleDesc.h"
 #include "task.h"
 #include "lib_uds.h"
-#include "LIB_app.h"
 #include "Utility.h"
+#include "LIB_app.h"
 
 // system includes
 #include <string.h>
+
 
 /******************************************************************************
  *                              E X T E R N S
@@ -240,6 +241,12 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appVariantId, sizeof(appDesc.appVariantId));
             break;
         }
+        case 0x06:
+        {
+            extern const lib_app_appDesc_S appDesc;
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appNodeId, sizeof(appDesc.appNodeId));
+            break;
+        }
         case 0x101:
         {
             // always respond with 0x01 since we're in the app
@@ -287,5 +294,5 @@ void        isotp_user_debug(const char* message, ...)
 {
     UNUSED(message);
 }
-#endif // ISO_TP_USER_DEBUG_ENABLED
-#endif // FEATURE_UDS
+#endif
+#endif // fEATURE_UDS
