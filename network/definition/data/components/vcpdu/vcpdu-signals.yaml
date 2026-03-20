@@ -47,6 +47,10 @@ signals:
     description: Crash sensor state
     discreteValues: crashSensorState
 
+  crashImplausibility:
+    description: NVM vehicle state is in TS_RUN on boot
+    discreteValues: faultStatus
+
   vehicleState:
     description: "Current state of the vehicle"
     discreteValues: vehicleState
