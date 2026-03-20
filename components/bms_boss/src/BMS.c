@@ -15,7 +15,6 @@
 #include "drv_userInput.h"
 #include "drv_timer.h"
 #include "Module.h"
-#include "Sys.h"
 #include "SystemConfig.h"
 #include "MessageUnpack_generated.h"
 #include "NetworkDefines_generated.h"
@@ -33,9 +32,12 @@
 
 BMSB_S BMS;
 
-static drv_timer_S precharge_timer;
+void BMS_SFT_openShutdown(void);
+void BMS_SFT_closeShutdown(void);
+void BMS_SFT_openContactors(void);
+void BMS_SFT_cycleContacts(void);
 
-void BMS_workerWatchdog(void);
+static drv_timer_S precharge_timer;
 
 float32_t BMSB_getContactorSohHvp(void)
 {
@@ -101,13 +103,15 @@ static void BMS10Hz_PRD(void)
 
     for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
     {
-        CAN_flag_E seg_faultFlag = 0U;
-        const bool worker_valid = CANRX_get_signalDuplicate(VEH, BMSW_faultFlag, &seg_faultFlag, i) == CANRX_MESSAGE_VALID;
+        CAN_flag_E faultBMS = 0U;
+        CAN_flag_E faultTemp = 0U;
+        const bool worker_valid = CANRX_get_signalDuplicate(VEH, BMSW_faultBMS, &faultBMS, i) == CANRX_MESSAGE_VALID;
+        (void)CANRX_get_signalDuplicate(VEH, BMSW_faultTemp, &faultTemp, i);
         if (worker_valid == false)
         {
             continue;
         }
-        else if (worker_valid && (seg_faultFlag == CAN_FLAG_SET))
+        else if (worker_valid && ((faultBMS == CAN_FLAG_SET) || (faultTemp == CAN_FLAG_SET)))
         {
 #if BMS_FAULTS
             tmp.fault                = true;
@@ -133,7 +137,14 @@ static void BMS10Hz_PRD(void)
         tmp.max_temp     = (max_temp > tmp.max_temp) ? max_temp : tmp.max_temp;
     }
 
-    BMS_workerWatchdog();
+    BMS.connected_segments = 0;
+    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
+    {
+        if (CANRX_validateDuplicate(VEH, BMSW_criticalData, i) == CANRX_MESSAGE_VALID)
+        {
+            BMS.connected_segments++;
+        }
+    }
 
     if (BMS.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
     {
@@ -158,13 +169,13 @@ static void BMS100Hz_PRD(void)
     const bool bmsFault = BMS.fault;
     const bool tsmsOpen = !drv_userInput_buttonPressed(USERINPUT_SWITCH_TSMS);
     const bool imdOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW;
-    const bool timeout = SYS_SFT_checkMCTimeout() && SYS_SFT_checkElconChargerTimeout() && SYS_SFT_checkBrusaChargerTimeout();
+    const bool timeout = BMS_SFT_checkMCTimeout() && BMS_SFT_checkElconChargerTimeout() && BMS_SFT_checkBrusaChargerTimeout();
     const bool openContactors = bmsFault || tsmsOpen || timeout;
 
     const bool underLoad = (BMS.pack_current > LOAD_CURRENT_THRESHOLD) || (BMS.pack_current < -LOAD_CURRENT_THRESHOLD);
-    const bool contactorsClosed = (SYS.contacts == SYS_CONTACTORS_PRECHARGE) ||
-                                  (SYS.contacts == SYS_CONTACTORS_CLOSED) ||
-                                  (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED);
+    const bool contactorsClosed = (BMS.contacts == BMS_CONTACTORS_PRECHARGE) ||
+                                  (BMS.contacts == BMS_CONTACTORS_CLOSED) ||
+                                  (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED);
 
     app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORSOPENEDUNDERLOAD, openContactors && underLoad);
     app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULTOPENEDCONTACTORS, bmsFault && contactorsClosed);
@@ -179,11 +190,11 @@ static void BMS100Hz_PRD(void)
 
     if (bmsFault)
     {
-        SYS_SFT_openShutdown();
+        BMS_SFT_openShutdown();
     }
     else
     {
-        SYS_SFT_closeShutdown();
+        BMS_SFT_closeShutdown();
     }
 #if APP_VARIANT_ID == 0U
     if (IMD_getState() == IMD_HEALTHY)
@@ -198,21 +209,21 @@ static void BMS100Hz_PRD(void)
 
     if (openContactors)
     {
-        SYS_SFT_openContactors();
+        BMS_SFT_openContactors();
         drv_timer_stop(&precharge_timer);
     }
     else
     {
         if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_LOGIC_HIGH)
         {
-            if (SYS.contacts == SYS_CONTACTORS_OPEN)
+            if (BMS.contacts == BMS_CONTACTORS_OPEN)
             {
-                SYS_SFT_cycleContacts();
+                BMS_SFT_cycleContacts();
                 drv_timer_start(&precharge_timer, PRECHARGE_MIN_TIME_MS);
                 contactor_data.contactorLifetime.contactorHvn++;
                 contactor_data.contactorLifetime.precharge++;
             }
-            else if ((SYS.contacts == SYS_CONTACTORS_PRECHARGE) || (SYS.contacts == SYS_CONTACTORS_CLOSED))
+            else if ((BMS.contacts == BMS_CONTACTORS_PRECHARGE) || (BMS.contacts == BMS_CONTACTORS_CLOSED))
             {
                 float32_t ts_voltage = 0.0f;
                 float32_t chg_voltage = 0.0f;
@@ -223,7 +234,7 @@ static void BMS100Hz_PRD(void)
                      ((chg_valid == true) && (chg_voltage > 0.95f * BMS_VPACK_SOURCE)))  &&
                     (drv_timer_getState(&precharge_timer) == DRV_TIMER_EXPIRED))
                 {
-                    SYS_SFT_cycleContacts();
+                    BMS_SFT_cycleContacts();
                     contactor_data.contactorLifetime.contactorHvp++;
                     lib_nvm_requestWrite(NVM_ENTRYID_CONTACTOR_LIFETIME);
                 }
@@ -246,9 +257,9 @@ static void BMS1kHz_PRD(void)
     BMS.packPowerKW = (BMS.pack_voltage_measured * BMS.pack_current) / 1000.0f;
 
     // TODO: Update coulomb count in cells
-    if ((SYS.contacts == SYS_CONTACTORS_PRECHARGE) ||
-        (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED) ||
-        (SYS.contacts == SYS_CONTACTORS_CLOSED))
+    if ((BMS.contacts == BMS_CONTACTORS_PRECHARGE) ||
+        (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED) ||
+        (BMS.contacts == BMS_CONTACTORS_CLOSED))
     {
         const float32_t delta_amp_hr = BMS.pack_current * (((float32_t)delta_t) / 1000000.0f) * (1.0f /  3600.0f);
         BMS.counted_coulombs.reset = false;
@@ -274,21 +285,63 @@ const ModuleDesc_S BMS_desc = {
     .periodic1kHz_CLK  = &BMS1kHz_PRD,
 };
 
-void BMS_workerWatchdog(void)
+void BMS_SFT_openShutdown(void)
 {
-    BMS.connected_segments = 0;
-    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_INACTIVE);
+}
+
+void BMS_SFT_closeShutdown(void)
+{
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_ACTIVE);
+}
+
+void BMS_SFT_openContactors(void)
+{
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_INACTIVE);
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
+    BMS.contacts = BMS_CONTACTORS_OPEN;
+}
+
+void BMS_SFT_cycleContacts(void)
+{
+    if (BMS.contacts == BMS_CONTACTORS_OPEN)
     {
-        if (CANRX_validateDuplicate(VEH, BMSW_criticalData, i) == CANRX_MESSAGE_VALID)
-        {
-            BMS.connected_segments++;
-#if BMS_FAULTS
-            if (CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].max_temp > 60.0f || BMS.workers[i].voltages.max >= 4.2f ||
-                CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].voltages.min <= 2.5f)
-            {
-                CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault = true;
-            }
-#endif // BMS_FAULTS
-        }
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_ACTIVE);
+        BMS.contacts = BMS_CONTACTORS_PRECHARGE;
     }
+    else if (BMS.contacts == BMS_CONTACTORS_PRECHARGE)
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_ACTIVE);
+        BMS.contacts = BMS_CONTACTORS_CLOSED;
+    }
+    else if (BMS.contacts == BMS_CONTACTORS_CLOSED)
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
+        BMS.contacts = BMS_CONTACTORS_HVP_CLOSED;
+    }
+}
+
+bool BMS_SFT_checkMCTimeout(void)
+{
+    return (CANRX_validate(VEH, PM100DX_criticalData) != CANRX_MESSAGE_VALID);
+}
+
+bool BMS_SFT_checkBrusaChargerTimeout(void)
+{
+    return (CANRX_validate(VEH, BRUSA513_criticalData) != CANRX_MESSAGE_VALID);
+}
+
+void BMS_stopCharging(void)
+{
+    BMS.charging_paused = true;
+}
+
+void BMS_continueCharging(void)
+{
+    BMS.charging_paused = false;
+}
+
+bool BMS_SFT_checkElconChargerTimeout(void)
+{
+    return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
 }

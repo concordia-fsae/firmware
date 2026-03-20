@@ -11,14 +11,12 @@
 #include "HW_can.h"
 
 #include "HW.h"
-#include "stdint.h"
 
 #include "CAN/CAN.h"
 #include "CAN/CanTypes.h"
-#include "FloatTypes.h"
+#include "LIB_Types.h"
 
 #include "BMS.h"
-#include "Sys.h"
 
 #include "NetworkDefines_generated.h"
 #include "MessageUnpack_generated.h"

@@ -9,17 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
-#include "stdbool.h"
-
-// Firmware Includes
 #include "stm32f1xx.h"
-
-// FreeRTOS Includes
 #include "FreeRTOSConfig.h"
-
-// Other Includes
-#include "FloatTypes.h"
 
 /******************************************************************************
  *                              D E F I N E S

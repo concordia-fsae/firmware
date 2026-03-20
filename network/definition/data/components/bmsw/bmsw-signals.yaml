@@ -63,20 +63,11 @@ signals:
         max: 255
     continuous: true
 
-  errorFlag:
-    description: Error flag
+  faultBMS:
+    description: Battery fault flag
     discreteValues: flag
-
-  faultFlag:
-    description: Fault flag
-    discreteValues: flag
-
-  envErrorFlag:
-    description: Environment error flag
-    discreteValues: flag
-
-  envFaultFlag:
-    description: Environment fault flag
+  faultTemp:
+    description: Temperature fault flag
     discreteValues: flag
 
   cellTemp10:

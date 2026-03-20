@@ -35,6 +35,8 @@
 #define THERM_PULLUP  10000.0F
 #define RES_FROM_V(v) (lib_voltageDivider_getRFromVKnownPullUp(v, THERM_PULLUP, ADC_REF_VOLTAGE))
 
+#define ENV_ERROR_TIMEOUT_MS 1000U
+
 #if APP_VARIANT_ID == 0U
 #define CELL_THERM_BPARAM MF52_bParam
 #elif APP_VARIANT_ID == 1U
@@ -85,19 +87,10 @@ static void ENV_calcTempStats(void)
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
-    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F)
-    {
-        ENV.state = ENV_ERROR;
-    }
-    else if (connected_channels < CHANNEL_COUNT)
-    {
-        ENV.state = ENV_FAULT;
-    }
-
     ENV.values.avg_temp /= connected_channels;
 
     if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) ||
-        connected_channels == 0 || ENV.values.max_temp >= 60)
+        (ENV.values.max_temp >= 60))
     {
         ENV.state = ENV_FAULT;
     }
@@ -115,12 +108,7 @@ static void ENV_calcTempStats(void)
  */
 static void Environment_Init()
 {
-    ENV.state = ENV_INIT;
-
-    if (ENV.state != ENV_ERROR)
-    {
-        ENV.state = ENV_RUNNING;
-    }
+    ENV.state = ENV_RUNNING;
 }
 
 /**
@@ -201,9 +189,6 @@ static void Environment1Hz_PRD()
             {
                 ENV.startRhHeater = true;
             }
-            break;
-
-        case ENV_ERROR:
             break;
 
         default:

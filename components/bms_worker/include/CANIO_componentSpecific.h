@@ -27,10 +27,8 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_envFaultFlag(m,b,n,s)                set(m,b,n,s, (ENV.state == ENV_FAULT) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_envErrorFlag(m, b, n, s)             set(m,b,n,s, (ENV.state == ENV_ERROR) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_faultFlag(m, b, n, s)                set(m,b,n,s, (BMS.fault) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_errorFlag(m, b, n, s)                set(m,b,n,s, (BMS.state == BMS_ERROR) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_faultTemp(m,b,n,s)                   set(m,b,n,s, (ENV.state == ENV_FAULT) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_faultBMS(m, b, n, s)                 set(m,b,n,s, (BMS.fault || (BMS.state == BMS_ERROR)) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_dischargeLimit(m, b, n, s)           set(m,b,n,s, BMS.discharge_limit)
 #define set_chargeLimit(m, b, n, s)              set(m,b,n,s, BMS.charge_limit)
 #define set_tempMax(m, b, n, s)                  set(m,b,n,s, ENV.values.max_temp)
