@@ -19,6 +19,7 @@
 #include "BatteryMonitoring.h"
 #include "Module.h"
 #include "drv_tempSensors.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -27,7 +28,9 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_faultTemp(m,b,n,s)                   set(m,b,n,s, (ENV.state == ENV_FAULT) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+
+#define set_faultTemp(m,b,n,s)                   set(m,b,n,s, (ENV.fault) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_faultBMS(m, b, n, s)                 set(m,b,n,s, (BMS.fault || (BMS.state == BMS_ERROR)) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_tempMax(m, b, n, s)                  set(m,b,n,s, ENV.values.max_temp)
 #define set_segmentVoltage(m, b, n, s)           set(m,b,n,s, BMS.pack_voltage)

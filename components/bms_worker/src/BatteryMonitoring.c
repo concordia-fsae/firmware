@@ -15,11 +15,13 @@
 #include "HW_adc.h"
 #include "HW_tim.h"
 #include "drv_inputAD.h"
+#include "drv_timer.h"
 
 /**< Other Includes */
 #include "Module.h"
 #include "string.h"
 #include "MessageUnpack_generated.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -31,6 +33,16 @@
 
 #define BMS_CONFIGURED_SAMPLING_TIME_MS 20
 #define BMS_CONFIGURED_BALANCING_TIME_MS 500
+
+#define CELL_DISCONNECTED_TIMEOUT_MS 15000U
+#define CELL_UNDERVOLTAGE_TIMEOUT_MS 1000U
+#define CELL_CHIPERROR_TIMEOUT_MS 500U
+
+#define CELL_DISCONNECTED_THRESH_LOW  1.5f
+#define CELL_DISCONNECTED_THRESH_HIGH 4.5f
+
+#define CELL_VOLTAGE_THRESH_UV 2.0f
+#define CELL_VOLTAGE_THRESH_OV 4.225f
 
 /******************************************************************************
  *                              E X T E R N S
@@ -45,6 +57,17 @@ extern MAX_S max_chip;
 BMS_S BMS;
 
 /******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static struct bms_S
+{
+    drv_timer_S timerDisconnected;
+    drv_timer_S timerUndervoltage;
+    drv_timer_S timerChipError;
+} bms;
+
+/******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
@@ -53,23 +76,29 @@ BMS_S BMS;
  */
 static void checkFault(void)
 {
-    bool faulted = false;
+    bool hasUv = false, hasOv = false, hasNc = false;
+    const bool analogError = max_chip.state.va_undervoltage;
+    const bool packError = max_chip.state.vp_undervoltage;
+    const bool chipError = analogError || packError;
 
     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
     {
-        /**< Check if any cell between first and last populated cells in the stack are disconnected*/
-        if (BMS.cells[i].state != BMS_CELL_CONNECTED)
-        {
-            faulted = true;
-        }
+        hasUv |= BMS.cells[i].state == BMS_CELL_FAULT_UV;
+        hasOv |= BMS.cells[i].state == BMS_CELL_FAULT_OV;
+        hasNc |= BMS.cells[i].state == BMS_CELL_ERROR;
     }
 
-    if (!max_chip.state.ready || max_chip.state.va_undervoltage || max_chip.state.vp_undervoltage)
-    {
-        faulted = true;
-    }
+    const bool cellDisconnected = drv_timer_run(&bms.timerDisconnected, hasNc) == DRV_TIMER_EXPIRED;
+    const bool cellUndervoltage = drv_timer_run(&bms.timerUndervoltage, hasUv) == DRV_TIMER_EXPIRED;
+    const bool chipInError = drv_timer_run(&bms.timerChipError, chipError) == DRV_TIMER_EXPIRED;
 
-    BMS.fault = faulted;
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLDISCONNECTED, cellDisconnected);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLUNDERVOLTAGE, cellUndervoltage);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLOVERVOLTAGE, hasOv);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_ANALOGREF5VHWERROR, analogError);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_PACKVOLTAGEHWERROR, packError);
+
+    BMS.fault = cellDisconnected || cellUndervoltage || chipInError || hasOv;
 }
 
 /**
@@ -80,20 +109,19 @@ static void calcSegStats(void)
     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
     {
         BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i) + BMS.cells[i].parasitic_corr;
-        if ((BMS.cells[i].voltage > 2.0f) && (BMS.cells[i].voltage < 4.5f))
+        if ((BMS.cells[i].voltage > CELL_DISCONNECTED_THRESH_LOW) &&
+            (BMS.cells[i].voltage < CELL_DISCONNECTED_THRESH_HIGH))
         {
-#if BMS_FAULTS
-            if (BMS.cells[i].voltage < 2.5f)
+            if (BMS.cells[i].voltage < CELL_VOLTAGE_THRESH_UV)
             {
                 BMS.cells[i].state = BMS_CELL_FAULT_UV;
                 continue;
             }
-            else if (BMS.cells[i].voltage > 4.2f)
+            else if (BMS.cells[i].voltage > CELL_VOLTAGE_THRESH_OV)
             {
                 BMS.cells[i].state = BMS_CELL_FAULT_OV;
                 continue;
             }
-#endif // BMS_FAULTS
             BMS.cells[i].state    = BMS_CELL_CONNECTED;
         }
         else
@@ -188,6 +216,8 @@ void BMS_measurementComplete(void)
     max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
     MAX_readWriteToChip();
     BMS.state = BMS_CALIBRATING;
+
+    calcSegStats();
 }
 
 /**
@@ -196,6 +226,10 @@ void BMS_measurementComplete(void)
 static void BMS_Init(void)
 {
     memset(&BMS, 0, sizeof(BMS));
+
+    drv_timer_initWithRuntime(&bms.timerDisconnected, CELL_DISCONNECTED_TIMEOUT_MS);
+    drv_timer_initWithRuntime(&bms.timerUndervoltage, CELL_UNDERVOLTAGE_TIMEOUT_MS);
+    drv_timer_initWithRuntime(&bms.timerChipError, CELL_CHIPERROR_TIMEOUT_MS);
 
     if (!MAX_init())
     {
@@ -295,8 +329,6 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling_start       = UINT32_MAX;
         }
     }
-
-    calcSegStats();
 }
 
 /**

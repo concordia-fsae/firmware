@@ -1,4 +1,29 @@
 signals:
+  analogRef5vHwError:
+    description: Error on 5V analog reference
+    discreteValues: faultStatus
+  packVoltageHwError:
+    description: Segment voltage into BMS error
+    discreteValues: faultStatus
+  insufficientThermistors:
+    description: Not enough thermistors are connected to be rules compliant
+    discreteValues: faultStatus
+  thermistorDisconnected:
+    description: One or more of the thermistors is disconnected
+    discreteValues: faultStatus
+  cellDisconnected:
+    description: One or more of the battery voltage taps is disconnected
+    discreteValues: faultStatus
+  cellUndervoltage:
+    description: One or more battery cells is undervoltage
+    discreteValues: faultStatus
+  cellOvervoltage:
+    description: One or more battery cells is overvoltage
+    discreteValues: faultStatus
+  cellOvertemp:
+    description: One or more battery cells is overtemperature
+    discreteValues: faultStatus
+
   voltageMin:
     description: Segment Minimum Cell Voltage
     unit: V
