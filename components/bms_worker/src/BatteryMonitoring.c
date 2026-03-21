@@ -294,24 +294,7 @@ void BMS_measurementComplete(void)
     max_chip.config.output.state       = MAX_PACK_VOLTAGE;
     max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
     MAX_readWriteToChip();
-
     BMS.state = BMS_CALIBRATING;
-    MAX_readWriteToChip();
-    if (!max_chip.state.ready) return;
-
-    BMS.state                          = BMS_WAITING;
-#if FEATURE_CELL_DIAGNOSTICS
-    max_chip.config.diagnostic_enabled = true;
-    max_chip.config.sampling           = true;
-    max_chip.config.low_power_mode     = false;
-    max_chip.config.balancing          = 0x00;
-    max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-    max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
-    MAX_readWriteToChip();
-
-    max_chip.config.sampling_start = HW_TIM_getTimeMS();
-    BMS.state                            = BMS_DIAGNOSTIC;
-#endif // FEATURE_CELL_DIAGNOSTICS
 }
 
 /**
@@ -395,7 +378,20 @@ static void BMS100Hz_PRD()
 
         if (max_chip.state.ready)
         {
+#if FEATURE_CELL_DIAGNOSTICS
+            max_chip.config.diagnostic_enabled = true;
+            max_chip.config.sampling           = true;
+            max_chip.config.low_power_mode     = false;
+            max_chip.config.balancing          = 0x00;
+            max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+            max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
+            MAX_readWriteToChip();
+
+            max_chip.config.sampling_start = HW_TIM_getTimeMS();
+            BMS.state                      = BMS_DIAGNOSTIC;
+#else
             BMS.state = BMS_WAITING;
+#endif
         }
     }
 #if FEATURE_CELL_DIAGNOSTICS
@@ -410,9 +406,8 @@ static void BMS100Hz_PRD()
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
             MAX_readWriteToChip();
+            BMS.state                            = BMS_SAMPLING;
             max_chip.config.sampling_start       = UINT32_MAX;
-            BMS.delayed_measurement              = true;
-            BMS.state                            = BMS_HOLDING;
         }
     }
 #endif // FEATURE_CELL_DIAGNOSTICS
