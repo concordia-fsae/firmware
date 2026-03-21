@@ -45,8 +45,8 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 
 #define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
 
-#define set_packChargeLimit(m, b, n, s)                set(m, b, n, s, BMS.pack_charge_limit)
-#define set_packDischargeLimit(m, b, n, s)             set(m, b, n, s, BMS.pack_discharge_limit)
+#define set_packChargeLimit(m, b, n, s)                set(m, b, n, s, BMS.charge_limit)
+#define set_packDischargeLimit(m, b, n, s)             set(m, b, n, s, BMS.discharge_limit)
 #define set_packVoltage(m, b, n, s)                    set(m, b, n, s, BMS_VPACK_SOURCE)
 #define set_packVoltageCalculated(m, b, n, s)          set(m, b, n, s, BMS.pack_voltage_calculated)
 #define set_packVoltageMeasured(m, b, n, s)            set(m, b, n, s, BMS.pack_voltage_measured)
@@ -55,19 +55,20 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packAmpHours(m, b, n, s)                   set(m, b, n, s, current_data.pack_amp_hours)
 #define set_packCurrent(m, b, n, s)                    set(m, b, n, s, BMS.pack_current)
 #define set_packPower(m, b, n, s)                      set(m, b, n, s, BMS.packPowerKW)
+#define set_soc(m, b, n, s)                            set(m, b, n, s, BMS.soc)
 #define set_packContactorState(m, b, n, s)             set(m, b, n, s, CANIO_tx_getContactorState())
 #define set_nlg513ControlByte(m, b, n, s)              set(m, b, n, s, CANIO_tx_getNLG513ControlByte())
 #define set_nlg513MaxMainsCurrent(m, b, n, s)          set(m, b, n, s, 16.0f)
 #define set_nlg513MaxChargeVoltage(m, b, n, s)         set(m, b, n, s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
-#define set_nlg513MaxChargeCurrent(m, b, n, s)         set(m, b, n, s, (CANIO_tx_getNLG513ControlByte() == 0x40) ? 0.0f : BMS.pack_charge_limit)
+#define set_nlg513MaxChargeCurrent(m, b, n, s)         set(m, b, n, s, (CANIO_tx_getNLG513ControlByte() == 0x40) ? 0.0f : BMS.charge_limit)
 #define transmit_BMSB_brusaChargeCommand               (BMS_SFT_checkBrusaChargerTimeout() == false)
 #define set_elconMaxChargeVoltage(m, b, n, s)          set(m, b, n, s, BMS_CONFIGURED_PACK_MAX_VOLTAGE)
-#define set_elconMaxChargeCurrent(m, b, n, s)          set(m, b, n, s, BMS.pack_charge_limit)
+#define set_elconMaxChargeCurrent(m, b, n, s)          set(m, b, n, s, BMS.charge_limit)
 #define set_elconControlByte(m, b, n, s)               set(m, b, n, s, CANIO_tx_getElconControlByte())
 #define transmit_BMSB_elconChargeCommand               (BMS_SFT_checkElconChargerTimeout() == false)
 #define transmit_BMSB_currentLimit                     (BMS_SFT_checkMCTimeout() == false)
-#define set_maxCharge(m, b, n, s)                      set(m, b, n, s, BMS.pack_charge_limit);
-#define set_maxDischarge(m, b, n, s)                   set(m, b, n, s, BMS.pack_discharge_limit);
+#define set_maxCharge(m, b, n, s)                      set(m, b, n, s, BMS.charge_limit);
+#define set_maxDischarge(m, b, n, s)                   set(m, b, n, s, BMS.discharge_limit);
 #define set_packRH(m, b, n, s)                         set(m, b, n, s, ENV.board.rh)
 #define set_packTemperature(m, b, n, s)                set(m, b, n, s, ENV.board.ambient_temp)
 #define set_tsmsChg(m, b, n, s)                        set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_ACTIVE) ? \

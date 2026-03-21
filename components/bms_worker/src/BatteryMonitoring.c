@@ -14,14 +14,11 @@
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_tim.h"
+#include "drv_inputAD.h"
 
 /**< Other Includes */
 #include "Module.h"
 #include "string.h"
-
-#include "CELL.h"
-#include "drv_inputAD.h"
-
 #include "MessageUnpack_generated.h"
 
 /******************************************************************************
@@ -30,12 +27,10 @@
 
 #define BMS_CONFIGURED_BALANCING_TIMEOUT 1100
 #define BMS_CONFIGURED_BALANCING_MARGIN 0.050f // [V], precision 1mV
-#define BMS_CONFIGURED_DERATING_DELAY 1000 // [ms]
 #define BMS_START_DELAY_MS 100U
 
 #define BMS_CONFIGURED_SAMPLING_TIME_MS 20
 #define BMS_CONFIGURED_BALANCING_TIME_MS 500
-#define STANDARD_CHARGE_CURRENT BMS_MAX_CONT_CHARGE_CURRENT
 
 /******************************************************************************
  *                              E X T E R N S
@@ -77,73 +72,6 @@ static void checkFault(void)
     BMS.fault = faulted;
 }
 
-static void chargeLimit()
-{
-    if (ENV.values.max_temp > 60.0f || BMS.fault || BMS.state == BMS_ERROR)
-    {
-        BMS.charge_limit = 0;
-        return;
-    }
-
-    if (BMS.relative_soc.max <= 80)
-    {
-        BMS.charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    }
-    else
-    {
-        BMS.charge_limit = ((100.0f - BMS.relative_soc.max)/20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
-    }
-
-    if (ENV.values.max_temp >= 48)
-    {
-         BMS.charge_limit += -((ENV.values.max_temp - 48.0f)/12.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    }
-
-    if (BMS.charge_limit < 0.0f) BMS.charge_limit = 0.0f;
-    if (BMS.charge_limit > STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-}
-
-static void dischargeLimit()
-{
-    static uint32_t start_derate = 0x00;
-
-    if (ENV.values.max_temp > 60.0f || BMS.fault || BMS.state == BMS_ERROR)
-    {
-        BMS.discharge_limit = 0.0f;
-        return;
-    }
-
-    if (BMS.relative_soc.min > 20.0f)
-    {
-        BMS.discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-        start_derate = 0x00;
-    }
-    else
-    {
-        if (start_derate == 0x00)
-        {
-            start_derate = HW_TIM_getTimeMS();
-        }
-        else if ((start_derate + BMS_CONFIGURED_DERATING_DELAY) < HW_TIM_getTimeMS())
-        {
-            start_derate = 0x00;
-            float32_t dis = BMS.discharge_limit;
-
-            dis -= 1.0f;
-
-            BMS.discharge_limit =  (dis > ((BMS.relative_soc.avg / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)) ? dis : (BMS.relative_soc.avg / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
-        }
-    }
-
-    if (ENV.values.max_temp >= 48.0f)
-    {
-        BMS.discharge_limit += -((ENV.values.max_temp - 48.0f) / 12.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    }
-
-    if (BMS.discharge_limit < 0.0f) BMS.discharge_limit = 0.0f;
-    if (BMS.discharge_limit > BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) BMS.charge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-}
-
 /**
  * @brief  Calculates the segments statistics.
  */
@@ -181,36 +109,19 @@ static void calcSegStats(void)
     BMS.voltage.min             = 5.0f;
     BMS.voltage.avg             = 0x00;
     BMS.calculated_pack_voltage = 0x00;
-    BMS.relative_soc.max        = 0x00;
-    BMS.relative_soc.min        = 101.0f;
-
 
     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
     {
-        if (BMS.cells[i].state == BMS_CELL_ERROR)
-        {
-            BMS.cells[i].relative_soc = 0;
-            continue;
-        }
-
         tmp_count++;
         BMS.voltage.max = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
         BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
         batt_tmp += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage;
-
-        BMS.cells[i].relative_soc = CELL_getSoCfromV((BMS.cells[i].voltage));
     }
 
     BMS.voltage.avg = batt_tmp / tmp_count;
-    BMS.relative_soc.min = CELL_getSoCfromV((BMS.voltage.min));
-    BMS.relative_soc.max = CELL_getSoCfromV((BMS.voltage.max));
-    BMS.relative_soc.avg = CELL_getSoCfromV((BMS.voltage.avg));
 
     checkFault();    // If cells are in error, it will override from sampling state
-
-    dischargeLimit();
-    chargeLimit();
 }
 
 /******************************************************************************

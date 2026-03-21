@@ -3,13 +3,17 @@
  * @brief  Source code for BMS manager
  */
 
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
 #include "BMS.h"
 
 #include <string.h>
 
 #include "HW.h"
-
 #include "IMD.h"
+#include "ENV.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "drv_userInput.h"
@@ -20,6 +24,11 @@
 #include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
 #include "lib_utility.h"
+#include "CELL.h"
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
 #define CURRENT_SENSE_V_per_A -0.0025f
 #define PRECHARGE_MIN_TIME_MS 1320U
@@ -27,17 +36,133 @@
 #define PACK_CS_0_OFFSET 0.0f
 
 #define LOAD_CURRENT_THRESHOLD 5
+#define BMS_CONFIGURED_DERATING_DELAY 1000 // [ms]
+#define STANDARD_CHARGE_CURRENT BMS_MAX_CONT_CHARGE_CURRENT
 
 #define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE 0.1f
 
+/******************************************************************************
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
+
 BMSB_S BMS;
 
-void BMS_SFT_openShutdown(void);
-void BMS_SFT_closeShutdown(void);
-void BMS_SFT_openContactors(void);
-void BMS_SFT_cycleContacts(void);
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 static drv_timer_S precharge_timer;
+
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
+static void chargeLimit(BMSB_S* bms)
+{
+    if (bms->max_temp > 60.0f || bms->fault)
+    {
+        bms->charge_limit = 0;
+        return;
+    }
+
+    if (bms->soc <= 80)
+    {
+        bms->charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    }
+    else
+    {
+        bms->charge_limit = ((100.0f - bms->soc)/20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
+    }
+
+    if (bms->max_temp >= 48)
+    {
+         bms->charge_limit += -((bms->max_temp - 48.0f)/12.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    }
+
+    if (bms->charge_limit < 0.0f) bms->charge_limit = 0.0f;
+    if (bms->charge_limit > STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) bms->charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+}
+
+static void dischargeLimit(BMSB_S* bms)
+{
+    static uint32_t start_derate = 0x00;
+
+    if (bms->max_temp > 60.0f || bms->fault)
+    {
+        bms->discharge_limit = 0.0f;
+        return;
+    }
+
+    if (bms->soc > 20.0f)
+    {
+        bms->discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+        start_derate = 0x00;
+    }
+    else
+    {
+        if (start_derate == 0x00)
+        {
+            start_derate = HW_TIM_getTimeMS();
+        }
+        else if ((start_derate + BMS_CONFIGURED_DERATING_DELAY) < HW_TIM_getTimeMS())
+        {
+            start_derate = 0x00;
+            float32_t dis = bms->discharge_limit;
+
+            dis -= 1.0f;
+
+            bms->discharge_limit =  (dis > ((bms->soc / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)) ? dis : (bms->soc / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
+        }
+    }
+
+    if (bms->max_temp >= 48.0f)
+    {
+        bms->discharge_limit += -((bms->max_temp - 48.0f) / 12.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    }
+
+    if (bms->discharge_limit < 0.0f) bms->discharge_limit = 0.0f;
+    if (bms->discharge_limit > BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS) bms->charge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+}
+
+static void openShutdown(void)
+{
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_INACTIVE);
+}
+
+static void closeShutdown(void)
+{
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_ACTIVE);
+}
+
+static void openAllContactors(void)
+{
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_INACTIVE);
+    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
+    BMS.contacts = BMS_CONTACTORS_OPEN;
+}
+
+static void cycleContacts(void)
+{
+    if (BMS.contacts == BMS_CONTACTORS_OPEN)
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_ACTIVE);
+        BMS.contacts = BMS_CONTACTORS_PRECHARGE;
+    }
+    else if (BMS.contacts == BMS_CONTACTORS_PRECHARGE)
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_ACTIVE);
+        BMS.contacts = BMS_CONTACTORS_CLOSED;
+    }
+    else if (BMS.contacts == BMS_CONTACTORS_CLOSED)
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
+        BMS.contacts = BMS_CONTACTORS_HVP_CLOSED;
+    }
+}
+
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
 float32_t BMSB_getContactorSohHvp(void)
 {
@@ -78,6 +203,31 @@ uint32_t BMSB_getContactorLifetimePrecharge(void)
     return contactor_data.contactorLifetime.precharge;
 }
 
+bool BMS_SFT_checkMCTimeout(void)
+{
+    return (CANRX_validate(VEH, PM100DX_criticalData) != CANRX_MESSAGE_VALID);
+}
+
+bool BMS_SFT_checkBrusaChargerTimeout(void)
+{
+    return (CANRX_validate(VEH, BRUSA513_criticalData) != CANRX_MESSAGE_VALID);
+}
+
+void BMS_stopCharging(void)
+{
+    BMS.charging_paused = true;
+}
+
+void BMS_continueCharging(void)
+{
+    BMS.charging_paused = false;
+}
+
+bool BMS_SFT_checkElconChargerTimeout(void)
+{
+    return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
+}
+
 static void BMS_init(void)
 {
     memset(&BMS, 0x00, sizeof(BMSB_S));
@@ -98,8 +248,8 @@ static void BMS10Hz_PRD(void)
     tmp.voltages.max            = 0.0f;
     tmp.voltages.min            = 5.0f;
     tmp.max_temp                = 0.0f;
-    tmp.pack_charge_limit       = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    tmp.pack_discharge_limit    = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    tmp.charge_limit            = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    tmp.discharge_limit         = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
 
     for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
     {
@@ -115,20 +265,14 @@ static void BMS10Hz_PRD(void)
         {
 #if BMS_FAULTS
             tmp.fault                = true;
-            tmp.pack_discharge_limit = 0.0f;
-            tmp.pack_charge_limit    = 0.0f;
 #endif // BMS_FAULTS
         }
 
-        float32_t charge_limit = 0.0f, discharge_limit = 0.0f, pack_voltage = 0.0f, max_voltage = 0.0f, min_voltage = 0.0f, max_temp = 0.0f;
-        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_chargeLimit, &charge_limit, i));
-        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_dischargeLimit, &discharge_limit, i));
+        float32_t pack_voltage = 0.0f, max_voltage = 0.0f, min_voltage = 0.0f, max_temp = 0.0f;
         UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_segmentVoltage, &pack_voltage, i));
         UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_voltageMax, &max_voltage, i));
         UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_voltageMin, &min_voltage, i));
         UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_tempMax, &max_temp, i));
-        tmp.pack_charge_limit    = (charge_limit < tmp.pack_charge_limit) ? charge_limit : tmp.pack_charge_limit;
-        tmp.pack_discharge_limit = (discharge_limit < tmp.pack_discharge_limit) ? discharge_limit : tmp.pack_discharge_limit;
 
         tmp.pack_voltage_calculated += pack_voltage;
 
@@ -149,19 +293,23 @@ static void BMS10Hz_PRD(void)
     if (BMS.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
     {
         tmp.fault                = true;
-        BMS.pack_charge_limit    = 0U;
-        BMS.pack_discharge_limit = 0U;
+        BMS.charge_limit    = 0U;
+        BMS.discharge_limit = 0U;
     }
     else
     {
-        BMS.pack_charge_limit    = tmp.pack_charge_limit;
-        BMS.pack_discharge_limit = tmp.pack_discharge_limit;
+        chargeLimit(&tmp);
+        dischargeLimit(&tmp);
+
+        BMS.charge_limit    = tmp.charge_limit;
+        BMS.discharge_limit = tmp.discharge_limit;
     }
 
     BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
-    BMS.fault        = tmp.fault;
-    BMS.voltages     = tmp.voltages;
-    BMS.max_temp     = tmp.max_temp;
+    BMS.fault                   = tmp.fault;
+    BMS.voltages                = tmp.voltages;
+    BMS.max_temp                = tmp.max_temp;
+    BMS.soc                     = CELL_getSoCfromV(BMS.voltages.min);
 }
 
 static void BMS100Hz_PRD(void)
@@ -190,11 +338,11 @@ static void BMS100Hz_PRD(void)
 
     if (bmsFault)
     {
-        BMS_SFT_openShutdown();
+        openShutdown();
     }
     else
     {
-        BMS_SFT_closeShutdown();
+        closeShutdown();
     }
 #if APP_VARIANT_ID == 0U
     if (IMD_getState() == IMD_HEALTHY)
@@ -209,7 +357,7 @@ static void BMS100Hz_PRD(void)
 
     if (openContactors)
     {
-        BMS_SFT_openContactors();
+        openAllContactors();
         drv_timer_stop(&precharge_timer);
     }
     else
@@ -218,7 +366,7 @@ static void BMS100Hz_PRD(void)
         {
             if (BMS.contacts == BMS_CONTACTORS_OPEN)
             {
-                BMS_SFT_cycleContacts();
+                cycleContacts();
                 drv_timer_start(&precharge_timer, PRECHARGE_MIN_TIME_MS);
                 contactor_data.contactorLifetime.contactorHvn++;
                 contactor_data.contactorLifetime.precharge++;
@@ -234,7 +382,7 @@ static void BMS100Hz_PRD(void)
                      ((chg_valid == true) && (chg_voltage > 0.95f * BMS_VPACK_SOURCE)))  &&
                     (drv_timer_getState(&precharge_timer) == DRV_TIMER_EXPIRED))
                 {
-                    BMS_SFT_cycleContacts();
+                    cycleContacts();
                     contactor_data.contactorLifetime.contactorHvp++;
                     lib_nvm_requestWrite(NVM_ENTRYID_CONTACTOR_LIFETIME);
                 }
@@ -284,64 +432,3 @@ const ModuleDesc_S BMS_desc = {
     .periodic100Hz_CLK = &BMS100Hz_PRD,
     .periodic1kHz_CLK  = &BMS1kHz_PRD,
 };
-
-void BMS_SFT_openShutdown(void)
-{
-    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_INACTIVE);
-}
-
-void BMS_SFT_closeShutdown(void)
-{
-    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_BMS, DRV_IO_ACTIVE);
-}
-
-void BMS_SFT_openContactors(void)
-{
-    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_INACTIVE);
-    drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
-    BMS.contacts = BMS_CONTACTORS_OPEN;
-}
-
-void BMS_SFT_cycleContacts(void)
-{
-    if (BMS.contacts == BMS_CONTACTORS_OPEN)
-    {
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_ACTIVE);
-        BMS.contacts = BMS_CONTACTORS_PRECHARGE;
-    }
-    else if (BMS.contacts == BMS_CONTACTORS_PRECHARGE)
-    {
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_AIR, DRV_IO_ACTIVE);
-        BMS.contacts = BMS_CONTACTORS_CLOSED;
-    }
-    else if (BMS.contacts == BMS_CONTACTORS_CLOSED)
-    {
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_PRECHG, DRV_IO_INACTIVE);
-        BMS.contacts = BMS_CONTACTORS_HVP_CLOSED;
-    }
-}
-
-bool BMS_SFT_checkMCTimeout(void)
-{
-    return (CANRX_validate(VEH, PM100DX_criticalData) != CANRX_MESSAGE_VALID);
-}
-
-bool BMS_SFT_checkBrusaChargerTimeout(void)
-{
-    return (CANRX_validate(VEH, BRUSA513_criticalData) != CANRX_MESSAGE_VALID);
-}
-
-void BMS_stopCharging(void)
-{
-    BMS.charging_paused = true;
-}
-
-void BMS_continueCharging(void)
-{
-    BMS.charging_paused = false;
-}
-
-bool BMS_SFT_checkElconChargerTimeout(void)
-{
-    return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
-}
