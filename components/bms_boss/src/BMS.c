@@ -31,7 +31,8 @@
  ******************************************************************************/
 
 #define CURRENT_SENSE_V_per_A -0.0025f
-#define PRECHARGE_MIN_TIME_MS 1320U
+// Precharge is complete at ~3x the precharge time constant
+#define PRECHARGE_MIN_TIME_MS (BMS_PRECHARGE_RESISTANCE * BMS_DC_LINK_CAPACITANCE * 3 * 1000)
 
 #define PACK_CS_0_OFFSET 0.0f
 
