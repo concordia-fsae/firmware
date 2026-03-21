@@ -94,6 +94,22 @@ bool MAX_readWriteToChip(void)
     return true;
 }
 
+/**
+ * @brief  Set output cell of the cell multiplexer
+ *
+ * @param cell Voltage of cell to output
+ */
+void MAX_setOutputCell(MAX_selectedCell_E cell)
+{
+    max_chip.config.sampling           = false;
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_CELL_VOLTAGE;
+    max_chip.config.output.output.cell = cell;
+    MAX_readWriteToChip();
+}
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/

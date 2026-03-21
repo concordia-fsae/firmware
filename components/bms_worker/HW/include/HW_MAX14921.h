@@ -109,3 +109,4 @@ typedef struct
 
 bool MAX_init(void);
 bool MAX_readWriteToChip(void);
+void MAX_setOutputCell(MAX_selectedCell_E cell);
