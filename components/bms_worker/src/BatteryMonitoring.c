@@ -358,7 +358,6 @@ static void BMS100Hz_PRD()
 
         if (max_chip.state.ready)
         {
-#if FEATURE_CELL_DIAGNOSTICS
             max_chip.config.diagnostic_enabled = true;
             max_chip.config.sampling           = true;
             max_chip.config.low_power_mode     = false;
@@ -368,12 +367,8 @@ static void BMS100Hz_PRD()
 
             max_chip.config.sampling_start = HW_TIM_getTimeMS();
             BMS.state                      = BMS_DIAGNOSTIC;
-#else
-            BMS.state = BMS_WAITING;
-#endif
         }
     }
-#if FEATURE_CELL_DIAGNOSTICS
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
         if ((max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_TIM_getTimeMS())
@@ -389,7 +384,6 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling_start       = UINT32_MAX;
         }
     }
-#endif // FEATURE_CELL_DIAGNOSTICS
 
     calcSegStats();
 }

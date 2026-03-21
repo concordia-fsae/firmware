@@ -5,4 +5,3 @@ defs:
   cell_balancing:
   canrx_swi:
   cantx_swi:
-  cell_diagnostics:
