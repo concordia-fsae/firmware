@@ -69,8 +69,6 @@ typedef struct
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [V], precision 1V
     float32_t   pack_voltage;               // [V], precision 1V
     float32_t   calculated_pack_voltage;    // [V], precision 1V
-    uint8_t     connected_cells;
-
     float32_t charge_limit;
     float32_t discharge_limit;
 
