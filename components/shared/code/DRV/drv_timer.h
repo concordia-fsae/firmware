@@ -30,7 +30,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stdint.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -57,8 +57,10 @@ typedef struct
  ******************************************************************************/
 
 void              drv_timer_init(drv_timer_S * timer);
+void              drv_timer_initWithRuntime(drv_timer_S * timer, time_t runtime_ms);
 void              drv_timer_start(drv_timer_S * timer, time_t runtime_ms);
 void              drv_timer_stop(drv_timer_S * timer);
+drv_timer_state_E drv_timer_run(drv_timer_S * timer, bool run);
 drv_timer_state_E drv_timer_getState(drv_timer_S * timer);
 time_t            drv_timer_getElapsedTimeMs(drv_timer_S *timer);
 time_t            drv_timer_getEndTimeMS(drv_timer_S *timer);
