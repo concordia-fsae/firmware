@@ -47,13 +47,6 @@ typedef enum
     CHANNEL_COUNT,
 } ENV_thermistorID_E;
 
-typedef enum
-{
-    ENV_INIT = 0x00,
-    ENV_RUNNING,
-    ENV_FAULT,
-} Environment_State_E;
-
 typedef struct
 {
     bool    therm_error;
@@ -62,8 +55,7 @@ typedef struct
 
 typedef struct
 {
-    Environment_State_E state;
-    bool hwFailure;
+    bool fault;
     struct
     {
         struct

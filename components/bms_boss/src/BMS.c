@@ -160,6 +160,101 @@ static void cycleContacts(void)
     }
 }
 
+static void getSegmentStats(BMSB_S* bms)
+{
+    bms->fault                   = false;
+    bms->pack_voltage_calculated = 0.0f;
+    bms->pack_voltage_measured   = 0.0f;
+    bms->voltages.max            = 0.0f;
+    bms->voltages.min            = 5.0f;
+    bms->max_temp                = 0.0f;
+    bms->charge_limit            = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    bms->discharge_limit         = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+
+    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
+    {
+        CAN_flag_E faultBMS = 0U;
+        CAN_flag_E faultTemp = 0U;
+        const bool worker_valid = CANRX_get_signalDuplicate(VEH, BMSW_faultBMS, &faultBMS, i) == CANRX_MESSAGE_VALID;
+        (void)CANRX_get_signalDuplicate(VEH, BMSW_faultTemp, &faultTemp, i);
+        if (worker_valid == false)
+        {
+            continue;
+        }
+        else if (worker_valid && ((faultBMS == CAN_FLAG_SET) || (faultTemp == CAN_FLAG_SET)))
+        {
+            bms->fault = true;
+        }
+
+        float32_t pack_voltage = 0.0f, max_voltage = 0.0f, min_voltage = 0.0f, max_temp = 0.0f;
+        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_segmentVoltage, &pack_voltage, i));
+        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_voltageMax, &max_voltage, i));
+        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_voltageMin, &min_voltage, i));
+        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_tempMax, &max_temp, i));
+
+        bms->pack_voltage_calculated += pack_voltage;
+
+        bms->voltages.max = (max_voltage > bms->voltages.max) ? max_voltage : bms->voltages.max;
+        bms->voltages.min = (min_voltage < bms->voltages.min) ? min_voltage : bms->voltages.min;
+        bms->max_temp     = (max_temp > bms->max_temp) ? max_temp : bms->max_temp;
+    }
+
+    bms->connected_segments = 0;
+    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
+    {
+        if (CANRX_validateDuplicate(VEH, BMSW_criticalData, i) == CANRX_MESSAGE_VALID)
+        {
+            bms->connected_segments++;
+        }
+    }
+}
+
+static bool checkBmsFaulted(void)
+{
+    const bool bmsFault = BMS.fault;
+    const bool tsmsOpen = !drv_userInput_buttonPressed(USERINPUT_SWITCH_TSMS);
+    const bool imdOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW;
+    const bool timeout = BMS_SFT_checkMCTimeout() && BMS_SFT_checkElconChargerTimeout() && BMS_SFT_checkBrusaChargerTimeout();
+    const bool openContactors = bmsFault || tsmsOpen || timeout;
+
+    const bool underLoad = (BMS.pack_current > LOAD_CURRENT_THRESHOLD) || (BMS.pack_current < -LOAD_CURRENT_THRESHOLD);
+    const bool contactorsClosed = (BMS.contacts == BMS_CONTACTORS_PRECHARGE) ||
+                                  (BMS.contacts == BMS_CONTACTORS_CLOSED) ||
+                                  (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED);
+
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORSOPENEDUNDERLOAD, openContactors && underLoad);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULTOPENEDCONTACTORS, bmsFault && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_TSMSOPENEDCONTACTORS, tsmsOpen && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUTOPENEDCONTACTORS, timeout && contactorsClosed);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULT, bmsFault);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_IMDNOK, imdOpen);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUT, timeout);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVP, BMSB_getContactorSohHvp() <  CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVN, BMSB_getContactorSohHvn() <  CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE, BMSB_getContactorSohPrecharge() < CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
+
+    if (bmsFault)
+    {
+        openShutdown();
+    }
+    else
+    {
+        closeShutdown();
+    }
+#if APP_VARIANT_ID == 0U
+    if (IMD_getState() == IMD_HEALTHY)
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_ACTIVE);
+    }
+    else
+    {
+        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_INACTIVE);
+    }
+#endif
+
+    return openContactors;
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -213,6 +308,11 @@ bool BMS_SFT_checkBrusaChargerTimeout(void)
     return (CANRX_validate(VEH, BRUSA513_criticalData) != CANRX_MESSAGE_VALID);
 }
 
+bool BMS_SFT_checkElconChargerTimeout(void)
+{
+    return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
+}
+
 void BMS_stopCharging(void)
 {
     BMS.charging_paused = true;
@@ -221,11 +321,6 @@ void BMS_stopCharging(void)
 void BMS_continueCharging(void)
 {
     BMS.charging_paused = false;
-}
-
-bool BMS_SFT_checkElconChargerTimeout(void)
-{
-    return (CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
 }
 
 static void BMS_init(void)
@@ -241,72 +336,28 @@ static void BMS_init(void)
 
 static void BMS10Hz_PRD(void)
 {
-    BMSB_S tmp                  = { 0x00 };
-    tmp.fault                   = false;
-    tmp.pack_voltage_calculated = 0.0f;
-    tmp.pack_voltage_measured   = 0.0f;
-    tmp.voltages.max            = 0.0f;
-    tmp.voltages.min            = 5.0f;
-    tmp.max_temp                = 0.0f;
-    tmp.charge_limit            = BMS_MAX_CONT_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    tmp.discharge_limit         = 150.0f; //BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    BMSB_S tmp = { 0x00 };
 
-    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
-    {
-        CAN_flag_E faultBMS = 0U;
-        CAN_flag_E faultTemp = 0U;
-        const bool worker_valid = CANRX_get_signalDuplicate(VEH, BMSW_faultBMS, &faultBMS, i) == CANRX_MESSAGE_VALID;
-        (void)CANRX_get_signalDuplicate(VEH, BMSW_faultTemp, &faultTemp, i);
-        if (worker_valid == false)
-        {
-            continue;
-        }
-        else if (worker_valid && ((faultBMS == CAN_FLAG_SET) || (faultTemp == CAN_FLAG_SET)))
-        {
-#if BMS_FAULTS
-            tmp.fault                = true;
-#endif // BMS_FAULTS
-        }
-
-        float32_t pack_voltage = 0.0f, max_voltage = 0.0f, min_voltage = 0.0f, max_temp = 0.0f;
-        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_segmentVoltage, &pack_voltage, i));
-        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_voltageMax, &max_voltage, i));
-        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_voltageMin, &min_voltage, i));
-        UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_tempMax, &max_temp, i));
-
-        tmp.pack_voltage_calculated += pack_voltage;
-
-        tmp.voltages.max = (max_voltage > tmp.voltages.max) ? max_voltage : tmp.voltages.max;
-        tmp.voltages.min = (min_voltage < tmp.voltages.min) ? min_voltage : tmp.voltages.min;
-        tmp.max_temp     = (max_temp > tmp.max_temp) ? max_temp : tmp.max_temp;
-    }
-
-    BMS.connected_segments = 0;
-    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
-    {
-        if (CANRX_validateDuplicate(VEH, BMSW_criticalData, i) == CANRX_MESSAGE_VALID)
-        {
-            BMS.connected_segments++;
-        }
-    }
+    getSegmentStats(&tmp);
 
     if (BMS.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
     {
         tmp.fault                = true;
-        BMS.charge_limit    = 0U;
-        BMS.discharge_limit = 0U;
+        tmp.charge_limit    = 0U;
+        tmp.discharge_limit = 0U;
     }
     else
     {
         chargeLimit(&tmp);
         dischargeLimit(&tmp);
-
-        BMS.charge_limit    = tmp.charge_limit;
-        BMS.discharge_limit = tmp.discharge_limit;
     }
 
+    BMS.fault           = tmp.fault;
+    BMS.charge_limit    = tmp.charge_limit;
+    BMS.discharge_limit = tmp.discharge_limit;
+
+    BMS.connected_segments      = tmp.connected_segments;
     BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
-    BMS.fault                   = tmp.fault;
     BMS.voltages                = tmp.voltages;
     BMS.max_temp                = tmp.max_temp;
     BMS.soc                     = CELL_getSoCfromV(BMS.voltages.min);
@@ -314,46 +365,7 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
-    const bool bmsFault = BMS.fault;
-    const bool tsmsOpen = !drv_userInput_buttonPressed(USERINPUT_SWITCH_TSMS);
-    const bool imdOpen = drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_LOGIC_LOW;
-    const bool timeout = BMS_SFT_checkMCTimeout() && BMS_SFT_checkElconChargerTimeout() && BMS_SFT_checkBrusaChargerTimeout();
-    const bool openContactors = bmsFault || tsmsOpen || timeout;
-
-    const bool underLoad = (BMS.pack_current > LOAD_CURRENT_THRESHOLD) || (BMS.pack_current < -LOAD_CURRENT_THRESHOLD);
-    const bool contactorsClosed = (BMS.contacts == BMS_CONTACTORS_PRECHARGE) ||
-                                  (BMS.contacts == BMS_CONTACTORS_CLOSED) ||
-                                  (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED);
-
-    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORSOPENEDUNDERLOAD, openContactors && underLoad);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULTOPENEDCONTACTORS, bmsFault && contactorsClosed);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_TSMSOPENEDCONTACTORS, tsmsOpen && contactorsClosed);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUTOPENEDCONTACTORS, timeout && contactorsClosed);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_BMSFAULT, bmsFault);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_IMDNOK, imdOpen);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_TIMEOUT, timeout);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVP, BMSB_getContactorSohHvp() <  CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVN, BMSB_getContactorSohHvn() <  CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
-    app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE, BMSB_getContactorSohPrecharge() < CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
-
-    if (bmsFault)
-    {
-        openShutdown();
-    }
-    else
-    {
-        closeShutdown();
-    }
-#if APP_VARIANT_ID == 0U
-    if (IMD_getState() == IMD_HEALTHY)
-    {
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_ACTIVE);
-    }
-    else
-    {
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_STATUS_IMD, DRV_IO_INACTIVE);
-    }
-#endif
+    const bool openContactors = checkBmsFaulted();
 
     if (openContactors)
     {
