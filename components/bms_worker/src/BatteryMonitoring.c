@@ -15,18 +15,14 @@
 #include "HW_adc.h"
 #include "HW_tim.h"
 
-#include "FreeRTOS.h"
-
 /**< Other Includes */
 #include "Module.h"
 #include "string.h"
-#include <stdint.h>
 
 #include "CELL.h"
 #include "drv_inputAD.h"
 
 #include "MessageUnpack_generated.h"
-#include "FeatureDefines_generated.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -35,6 +31,7 @@
 #define BMS_CONFIGURED_BALANCING_TIMEOUT 1100
 #define BMS_CONFIGURED_BALANCING_MARGIN 0.050f // [V], precision 1mV
 #define BMS_CONFIGURED_DERATING_DELAY 1000 // [ms]
+#define BMS_START_DELAY_MS 100U
 
 #define BMS_CONFIGURED_SAMPLING_TIME_MS 20
 #define BMS_CONFIGURED_BALANCING_TIME_MS 500
@@ -331,9 +328,9 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling_start = HW_TIM_getTimeMS();
             return;
         }
-        else if (HW_TIM_getTimeMS() >= max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
+        else if (HW_TIM_getTimeMS() >= (max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
-            max_chip.config.sampling_start       = UINT32_MAX;
+            max_chip.config.sampling_start     = UINT32_MAX;
             max_chip.config.sampling           = false;
             max_chip.config.diagnostic_enabled = false;
             max_chip.config.low_power_mode     = false;
@@ -358,7 +355,7 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling_start = HW_TIM_getTimeMS();
             return;
         }
-        else if (HW_TIM_getTimeMS() >= max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS))
+        else if (HW_TIM_getTimeMS() >= (max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
             max_chip.config.sampling_start       = UINT32_MAX;
             BMS.pack_voltage                     = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT) * 16;
@@ -397,14 +394,14 @@ static void BMS100Hz_PRD()
 #if FEATURE_CELL_DIAGNOSTICS
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
-        if (max_chip.config.sampling_start + pdMS_TO_TICKS(BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_TIM_getTimeMS())
+        if ((max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_TIM_getTimeMS())
         {
             max_chip.config.sampling             = false;
             max_chip.config.diagnostic_enabled   = false;
             max_chip.config.low_power_mode       = false;
             max_chip.config.balancing            = 0x00;
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell = BMS.connected_cells - 1; /**< Prepare for next step */
+            max_chip.config.output.output.cell   = BMS.connected_cells - 1; /**< Prepare for next step */
             MAX_readWriteToChip();
             BMS.state                            = BMS_SAMPLING;
             max_chip.config.sampling_start       = UINT32_MAX;
@@ -441,7 +438,7 @@ static void BMS1Hz_PRD()
             start_time = HW_TIM_getTimeMS();
             return;
         }
-        else if ((start_time + pdMS_TO_TICKS(100)) > HW_TIM_getTimeMS())
+        else if ((start_time + BMS_START_DELAY_MS) > HW_TIM_getTimeMS())
         {
             return; /**< wait atleast 100ms to sample the voltages for the first time */
         }
