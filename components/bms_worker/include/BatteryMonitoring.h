@@ -54,7 +54,6 @@ typedef struct
 {
     float32_t  voltage;
     float32_t  parasitic_corr;
-    float32_t  relative_soc;
     BMS_Cell_E state;
 } BMS_Cell_S;
 
@@ -67,8 +66,6 @@ typedef struct
     BMS_Cell_S  cells[MAX_CELL_COUNT];      // [V], precision 1V
     float32_t   pack_voltage;               // [V], precision 1V
     float32_t   calculated_pack_voltage;    // [V], precision 1V
-    float32_t charge_limit;
-    float32_t discharge_limit;
 
     struct
     {
@@ -76,12 +73,6 @@ typedef struct
         float32_t min;
         float32_t avg;
     } voltage;         // [V], precision 1V
-    struct
-    {
-        float32_t min;
-        float32_t max;
-        float32_t avg;
-    } relative_soc;    // [100-0], precision 0.1%
 } BMS_S;
 
 /******************************************************************************

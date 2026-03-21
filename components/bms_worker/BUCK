@@ -343,7 +343,6 @@ cxx_binary(
             "//components/shared/code:libs/lib_interpolation.c",
             "//components/shared/code:libs/lib_thermistors.c",
             "//components/shared/code:libs/Utility.c",
-            "//embedded/libs/cells:P42A.c",
             ("//components/shared/code/RTOS:FreeRTOSResources.c", ["-Wno-missing-prototypes"]),
             "//components/shared/code/RTOS:FreeRTOS_SWI.c",
             "//components/shared/code/RTOS:Module.c",
@@ -365,7 +364,6 @@ cxx_binary(
         ":network",
         ":build-headers",
         "//components/shared/code:headers",
-        "//embedded/libs/cells:cells",
         "//components/shared/code/RTOS:headers",
     ],
 )

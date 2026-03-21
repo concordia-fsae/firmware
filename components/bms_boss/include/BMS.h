@@ -59,13 +59,14 @@ typedef struct {
     bool pack_voltage_sense_fault :1;
     bool charging_paused :1;
     uint8_t connected_segments;
-    float32_t pack_charge_limit; // [A] precision 1A
-    float32_t pack_discharge_limit; // [A] precision 1A
+    float32_t charge_limit; // [A] precision 1A
+    float32_t discharge_limit; // [A] precision 1A
     float32_t pack_voltage_calculated;
     float32_t pack_voltage_measured;
     float32_t pack_current;
     float32_t packCurrentRaw;
     float32_t packPowerKW;
+    float32_t soc;
     float32_t max_temp; // [deg C] precision 1degC
     struct
     {
