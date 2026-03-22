@@ -333,7 +333,7 @@ static void BMS_init(void)
     BMS.counted_coulombs.last_step_us = HW_TIM_getBaseTick();
     BMS.counted_coulombs.reset = true;
 
-    lib_simpleFilter_lpf_calcSmoothingFactor(&BMS.lpfCurrent, 10.0f, 0.001f);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&BMS.lpfCurrent, 100.0f, 0.001f);
 }
 
 static void BMS10Hz_PRD(void)
