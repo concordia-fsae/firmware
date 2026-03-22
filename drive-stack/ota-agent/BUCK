@@ -1,3 +1,5 @@
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
+
 rust_binary(
     name = "ota-agent",
     srcs = ["src/main.rs"],
@@ -13,6 +15,7 @@ rust_binary(
         "//third_party:hostname",
         "//third_party:hex",
         "//third_party:if-addrs",
+        "//third_party:indicatif",
         "//third_party:reqwest",
         "//third_party:serde",
         "//third_party:serde_yaml",
@@ -32,4 +35,18 @@ configured_alias(
     actual = ":ota-agent",
     platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer",
+    target_node = "ota-agent",
+    binary = ":bin-arm64",
+    binary_install_name = "ota_agent",
+    service_src = "ota-agent.service",
+    service_install_name = "ota-agent.service",
+    resources = {
+        "application/config/ota-agent/discovery.yaml": "discovery.yaml",
+        "application/config/ota-agent/ota-agent.toml": "ota-agent.toml",
+    },
+    include_artifact_hash = False,
 )

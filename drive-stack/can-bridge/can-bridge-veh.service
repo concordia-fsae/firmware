@@ -1,9 +1,11 @@
 [Unit]
 Description=Carputer CAN Bridge (veh)
 After=network.target
+After=bootstrap-carputer.service
+Wants=bootstrap-carputer.service
 
 [Service]
-ExecStart=/bin/cfr/can-bridge-veh can0 --forward-iface vcanVeh -j -q --tmp-dir /tmp/can-bridge/veh --log-dir /application/logs/can/veh --log-mins 5 --log-size 250000000
+ExecStart=/bin/cfr/can_bridge_veh can0 --forward-iface vcanVeh -j -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 5 --log-size 250000000
 Restart=always
 RestartSec=5s
 StartLimitBurst=0

@@ -1,4 +1,5 @@
 load("defs.bzl", "identify_carputer")
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
 
 rust_library(
     name = "lib",
@@ -32,6 +33,16 @@ configured_alias(
     actual = ":net-detec",
     platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer",
+    target_node = "net-detec",
+    binary = ":bin-arm64",
+    binary_install_name = "net-detec",
+    service_src = "net-detec-carputer.service",
+    service_install_name = "net-detec-carputer.service",
+    include_artifact_hash = False,
 )
 
 identify_carputer(

@@ -1,0 +1,17 @@
+[Unit]
+Description=Activate drive-stack overlay for the carputer
+DefaultDependencies=no
+After=local-fs.target
+Before=can-bridge-veh.service
+Before=can-bridge-body.service
+Before=log-processor.service
+Before=net-detec-carputer.service
+Before=ota-agent.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ota-agent/drive-stack-activate.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
