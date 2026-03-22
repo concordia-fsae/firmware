@@ -1,0 +1,2 @@
+service_name: "_ota-agent._tcp.local."
+interface: "eth0"

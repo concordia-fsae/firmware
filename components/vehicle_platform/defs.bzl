@@ -102,6 +102,7 @@ def add_platform_deploy_targets(platform_variants, app_name):
         ota_agent(
             name = "ota-{}".format(platform_output_name(platform)),
             src = ":deploy-{}".format(platform_output_name(platform)),
+            platform = platform_output_name(platform),
             visibility = ["PUBLIC"],
         )
         for platform, _variant in platform_variants

@@ -1,0 +1,191 @@
+load(":defs.bzl", "carputer_deploy_targets_manifest", "carputer_platform_targets")
+load("//components/vehicle_platform:platforms.bzl", "PLATFORMS")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent_revert", "ota_agent_status")
+load("//tools:defs.bzl", "sh_run")
+
+CARPUTER_APP_TARGETS = [
+    "//drive-stack/can-bridge:carputer-veh-target",
+    "//drive-stack/can-bridge:carputer-body-target",
+    "//drive-stack/net-detec:carputer-target",
+    "//drive-stack/ota-agent:carputer-target",
+    "//tools/log-processor:carputer-target",
+]
+
+CARPUTER_APPS = [
+    "//drive-stack/can-bridge:carputer-veh-app",
+    "//drive-stack/can-bridge:carputer-body-app",
+    "//drive-stack/net-detec:carputer-app",
+    "//drive-stack/ota-agent:carputer-app",
+    "//tools/log-processor:carputer-app",
+]
+
+CFR_STACK = [
+    "//drive-stack/carputer:carputer-package-cfr26",
+    "//drive-stack/conUDS:bin-arm64",
+    "//drive-stack/net-detec:bin-arm64",
+    "//drive-stack/ota-agent:bin-arm64",
+    "//drive-stack/can-bridge:bin-veh-arm64",
+    "//drive-stack/can-bridge:bin-body-arm64",
+    "//tools/log-processor:bin-arm64",
+]
+
+CFR25_FIRMWARE = [
+    "//components/bms_boss:deploy-cfr25",
+    "//components/bms_worker:deploy-cfr25-node-0",
+    "//components/bms_worker:deploy-cfr25-node-1",
+    "//components/bms_worker:deploy-cfr25-node-2",
+    "//components/bms_worker:deploy-cfr25-node-3",
+    "//components/bms_worker:deploy-cfr25-node-4",
+    "//components/bms_worker:deploy-cfr25-node-5",
+    "//components/sws:deploy-cfr25",
+    "//components/vc/front:deploy-cfr25",
+    "//components/vc/rear:deploy-cfr25",
+    "//components/vc/pdu:deploy-cfr25",
+]
+
+CFR26_FIRMWARE = [
+    "//components/bms_boss:deploy-cfr26",
+    "//components/bms_worker:deploy-cfr26-node-0",
+    "//components/bms_worker:deploy-cfr26-node-1",
+    "//components/bms_worker:deploy-cfr26-node-2",
+    "//components/bms_worker:deploy-cfr26-node-3",
+    "//components/bms_worker:deploy-cfr26-node-4",
+    "//components/bms_worker:deploy-cfr26-node-5",
+    "//components/bms_worker:deploy-cfr26-node-6",
+    "//components/bms_worker:deploy-cfr26-node-7",
+    "//components/sws:deploy-cfr26",
+    "//components/vc/front:deploy-cfr26",
+    "//components/vc/rear:deploy-cfr26",
+    "//components/vc/pdu:deploy-cfr26",
+]
+
+filegroup(
+    name = "cfr-stack",
+    srcs = CFR_STACK,
+)
+
+export_file(
+    name = "ota-agent-drive-stack-activate.sh-file",
+    src = "ota-agent-drive-stack-activate.sh",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "ota-agent-drive-stack.service-file",
+    src = "ota-agent-drive-stack.service",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "bootstrap-carputer.sh-file",
+    src = "bootstrap-carputer.sh",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "bootstrap-carputer.service-file",
+    src = "bootstrap-carputer.service",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "bootstrap-startup.sh-file",
+    src = "bootstrap-startup.sh",
+    visibility = ["PUBLIC"],
+)
+
+carputer_platform_targets(
+    platform = PLATFORMS.CFR25,
+    apps = CARPUTER_APPS,
+    app_targets = CARPUTER_APP_TARGETS,
+    firmware = CFR25_FIRMWARE,
+    include_artifact_hashes = False,
+    uds_manifest = "//network:manifest-uds",
+    uds_start_services = [
+        "can-bridge-veh.service",
+        "can-bridge-body.service",
+        "log-processor.service",
+    ],
+    uds_stop_services = [
+        "can-bridge-veh.service",
+        "can-bridge-body.service",
+        "log-processor.service",
+    ],
+)
+
+carputer_platform_targets(
+    platform = PLATFORMS.CFR26,
+    apps = CARPUTER_APPS,
+    app_targets = CARPUTER_APP_TARGETS,
+    firmware = CFR26_FIRMWARE,
+    include_artifact_hashes = False,
+    uds_manifest = "//network:manifest-uds",
+    uds_start_services = [
+        "can-bridge-veh.service",
+        "can-bridge-body.service",
+        "log-processor.service",
+    ],
+    uds_stop_services = [
+        "can-bridge-veh.service",
+        "can-bridge-body.service",
+        "log-processor.service",
+    ],
+)
+
+carputer_deploy_targets_manifest(
+    name = "deploy-targets-manifest",
+    apps = CARPUTER_APP_TARGETS,
+    bundle_filename = "carputer.tgz",
+    bundle_node = "carputer",
+    firmware = CFR26_FIRMWARE,
+    include_artifact_hashes = False,
+    out = "deploy-targets.yaml",
+    platform = "cfr26",
+    uds_manifest = "//network:manifest-uds",
+    uds_start_services = [
+        "can-bridge-veh.service",
+        "can-bridge-body.service",
+        "log-processor.service",
+    ],
+    uds_stop_services = [
+        "can-bridge-veh.service",
+        "can-bridge-body.service",
+        "log-processor.service",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+alias(
+    name = "stage-carputer",
+    actual = ":ota-carputer-cfr26",
+    visibility = ["PUBLIC"],
+)
+
+alias(
+    name = "ota-carputer",
+    actual = ":ota-bootstrap-carputer-cfr26",
+    visibility = ["PUBLIC"],
+)
+
+ota_agent_status(
+    name = "status",
+    visibility = ["PUBLIC"],
+)
+
+ota_agent_revert(
+    name = "revert",
+    all = True,
+    visibility = ["PUBLIC"],
+)
+
+alias(
+    name = "revert-all",
+    actual = ":revert",
+    visibility = ["PUBLIC"],
+)
+
+sh_run(
+    name = "bootstrap-carputer",
+    script = "bootstrap-carputer.sh",
+    visibility = ["PUBLIC"],
+)

@@ -132,7 +132,7 @@ jobs:
       - name: Add ARM64 Toolchain
         run: rustup target add aarch64-unknown-linux-gnu
       - name: Build Stack
-        run: buck2 build //drive-stack:cfr26-stack -j32 --out builds/
+        run: buck2 build //drive-stack/carputer:cfr-stack -j32 --out builds/
       - name: Archive Artifacts
         if: ${{ matrix.runner == 'ubuntu-24.04' }}
         id: archive

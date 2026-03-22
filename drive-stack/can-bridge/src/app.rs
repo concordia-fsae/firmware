@@ -22,8 +22,6 @@ use crate::{
     yamcan_init,
 };
 
-const LOG_BUS_LABEL: &str = "can";
-
 #[derive(Parser, Debug)]
 #[command(
     name = "can-bridge",
@@ -68,6 +66,7 @@ pub struct Args {
 struct LogConfig {
     dir: PathBuf,
     tmp: PathBuf,
+    label: String,
     max_bytes: u64,
     max_age: Duration,
 }
@@ -267,7 +266,7 @@ impl LogManager {
             print_roll_reason(log, cfg);
         }
 
-        self.global_log = match open_bus_log(&cfg.tmp, LOG_BUS_LABEL) {
+        self.global_log = match open_bus_log(&cfg.tmp, &cfg.label) {
             Ok(log) => Some(log),
             Err(e) => {
                 eprintln!("log: failed to open global log: {e}");
@@ -294,8 +293,12 @@ pub fn run(bus: Bus) -> Result<(), Box<dyn std::error::Error>> {
     let filters = Filters::from_parts(&args.ids, &args.msgs, &args.sigs)?;
     print_filter_summary(&filters);
 
-    let mut processor =
-        EventProcessor::new(filters, args.quiet, args.json, build_log_config(&args));
+    let mut processor = EventProcessor::new(
+        filters,
+        args.quiet,
+        args.json,
+        build_log_config(&args, binding.bus.as_str()),
+    );
     processor.initialize();
 
     println!(
@@ -404,13 +407,14 @@ pub fn run(bus: Bus) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn build_log_config(args: &Args) -> Option<LogConfig> {
+fn build_log_config(args: &Args, bus_label: &str) -> Option<LogConfig> {
     args.log_dir.as_ref().map(|dir| LogConfig {
         dir: dir.clone(),
         tmp: args
             .tmp_dir
             .clone()
             .expect("tmp folder must be specified when logging"),
+        label: bus_label.to_string(),
         max_age: Duration::from_secs((args.log_rollover * 60).into()),
         max_bytes: args.log_size,
     })
