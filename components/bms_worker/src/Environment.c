@@ -20,9 +20,11 @@
 #include "HW_SHT40.h"
 #include "drv_inputAD.h"
 #include "drv_tempSensors.h"
+#include "drv_timer.h"
 #include "lib_voltageDivider.h"
 #include "BatteryMonitoring.h"
 #include "Module.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -34,6 +36,8 @@
 
 #define THERM_PULLUP  10000.0F
 #define RES_FROM_V(v) (lib_voltageDivider_getRFromVKnownPullUp(v, THERM_PULLUP, ADC_REF_VOLTAGE))
+
+#define ENV_ERROR_TIMEOUT_MS 1000U
 
 #if APP_VARIANT_ID == 0U
 #define CELL_THERM_BPARAM MF52_bParam
@@ -54,6 +58,16 @@ extern SHT_S sht_chip;
  ******************************************************************************/
 
 ENV_S ENV;
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static struct env_S
+{
+    drv_timer_S timerDisconnected;
+    drv_timer_S timerInsufficient;
+} env;
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -85,25 +99,19 @@ static void ENV_calcTempStats(void)
         ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
-    if (connected_channels < BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS * 0.2F)
-    {
-        ENV.state = ENV_ERROR;
-    }
-    else if (connected_channels < CHANNEL_COUNT)
-    {
-        ENV.state = ENV_FAULT;
-    }
-
     ENV.values.avg_temp /= connected_channels;
 
-    if (connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS) ||
-        connected_channels == 0 || ENV.values.max_temp >= 60)
-    {
-        ENV.state = ENV_FAULT;
-    }
-    else {
-        ENV.state = ENV_RUNNING;
-    }
+    const bool disconnectedCell = connected_channels != CHANNEL_COUNT;
+    const bool insufficientThermistors = connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS);
+    const bool thermistorFaulted = drv_timer_run(&env.timerDisconnected, disconnectedCell) == DRV_TIMER_EXPIRED;
+    const bool insufficientFaulted = drv_timer_run(&env.timerInsufficient, insufficientThermistors) == DRV_TIMER_EXPIRED;
+    const bool cellOvertemp = ENV.values.max_temp >= 60;
+
+    app_faultManager_setFaultState(FM_FAULT_BMSW_THERMISTORDISCONNECTED, disconnectedCell);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_INSUFFICIENTTHERMISTORS, insufficientThermistors);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLOVERTEMP, cellOvertemp);
+
+    ENV.fault = (insufficientFaulted || thermistorFaulted || cellOvertemp);
 }
 
 /******************************************************************************
@@ -115,12 +123,9 @@ static void ENV_calcTempStats(void)
  */
 static void Environment_Init()
 {
-    ENV.state = ENV_INIT;
-
-    if (ENV.state != ENV_ERROR)
-    {
-        ENV.state = ENV_RUNNING;
-    }
+    ENV.fault = false;
+    drv_timer_initWithRuntime(&env.timerDisconnected, ENV_ERROR_TIMEOUT_MS);
+    drv_timer_initWithRuntime(&env.timerInsufficient, ENV_ERROR_TIMEOUT_MS);
 }
 
 /**
@@ -186,28 +191,13 @@ static void Environment10Hz_PRD()
  */
 static void Environment1Hz_PRD()
 {
-    switch (ENV.state)
+    if (sht_chip.state == SHT_ERROR)
     {
-        case ENV_INIT:
-            break;
-
-        case ENV_FAULT:
-        case ENV_RUNNING:
-            if (sht_chip.state == SHT_ERROR)
-            {
-                // TODO: Implement error handling
-            }
-            else
-            {
-                ENV.startRhHeater = true;
-            }
-            break;
-
-        case ENV_ERROR:
-            break;
-
-        default:
-            break;
+        // TODO: Implement error handling
+    }
+    else
+    {
+        ENV.startRhHeater = true;
     }
 }
 

@@ -359,3 +359,14 @@ signals:
         max: 40
       signedness: unsigned
     continuous: true
+
+  soc:
+    description: Avg cell SOC
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+      resolution: 0.1
+    continuous: true

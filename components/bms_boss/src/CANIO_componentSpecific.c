@@ -55,13 +55,13 @@ void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
 uint8_t CANIO_tx_getNLG513ControlByte(void)
 {
     uint8_t ret = 0x00;
-    switch (SYS.contacts)
+    switch (BMS.contacts)
     {
-        case SYS_CONTACTORS_PRECHARGE:
+        case BMS_CONTACTORS_PRECHARGE:
             ret = 0x40;
             break;
 
-        case SYS_CONTACTORS_HVP_CLOSED:
+        case BMS_CONTACTORS_HVP_CLOSED:
             ret = 0x80;
             break;
 
@@ -77,21 +77,21 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void)
 {
     CAN_prechargeContactorState_E ret = CAN_PRECHARGECONTACTORSTATE_SNA;
 
-    switch (SYS.contacts)
+    switch (BMS.contacts)
     {
-        case SYS_CONTACTORS_OPEN:
+        case BMS_CONTACTORS_OPEN:
             ret = CAN_PRECHARGECONTACTORSTATE_OPEN;
             break;
 
-        case SYS_CONTACTORS_PRECHARGE:
+        case BMS_CONTACTORS_PRECHARGE:
             ret = CAN_PRECHARGECONTACTORSTATE_PRECHARGE_CLOSED;
             break;
 
-        case SYS_CONTACTORS_CLOSED:
+        case BMS_CONTACTORS_CLOSED:
             ret = CAN_PRECHARGECONTACTORSTATE_PRECHARGE_HVP_CLOSED;
             break;
 
-        case SYS_CONTACTORS_HVP_CLOSED:
+        case BMS_CONTACTORS_HVP_CLOSED:
             ret = CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED;
             break;
     }
@@ -102,7 +102,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void)
 uint8_t CANIO_tx_getElconControlByte(void)
 {
     uint8_t ret = 0x01;
-    if (SYS.contacts == SYS_CONTACTORS_HVP_CLOSED)
+    if (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED)
     {
         ret = 0x00;
     }

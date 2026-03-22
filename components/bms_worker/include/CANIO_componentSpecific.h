@@ -19,6 +19,7 @@
 #include "BatteryMonitoring.h"
 #include "Module.h"
 #include "drv_tempSensors.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -27,19 +28,14 @@
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
-#define set_envFaultFlag(m,b,n,s)                set(m,b,n,s, (ENV.state == ENV_FAULT) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_envErrorFlag(m, b, n, s)             set(m,b,n,s, (ENV.state == ENV_ERROR) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_faultFlag(m, b, n, s)                set(m,b,n,s, (BMS.fault) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_errorFlag(m, b, n, s)                set(m,b,n,s, (BMS.state == BMS_ERROR) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
-#define set_dischargeLimit(m, b, n, s)           set(m,b,n,s, BMS.discharge_limit)
-#define set_chargeLimit(m, b, n, s)              set(m,b,n,s, BMS.charge_limit)
+#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+
+#define set_faultTemp(m,b,n,s)                   set(m,b,n,s, (ENV.fault) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+#define set_faultBMS(m, b, n, s)                 set(m,b,n,s, (BMS.fault || (BMS.state == BMS_ERROR)) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_tempMax(m, b, n, s)                  set(m,b,n,s, ENV.values.max_temp)
 #define set_segmentVoltage(m, b, n, s)           set(m,b,n,s, BMS.pack_voltage)
 #define set_voltageMax(m, b, n, s)               set(m,b,n,s, BMS.voltage.max)
 #define set_voltageMin(m, b, n, s)               set(m,b,n,s, BMS.voltage.min)
-#define set_socMax(m, b, n, s)                   set(m,b,n,s, BMS.relative_soc.max)
-#define set_socAvg(m, b, n, s)                   set(m,b,n,s, BMS.relative_soc.avg)
-#define set_socMin(m, b, n, s)                   set(m,b,n,s, BMS.relative_soc.min)
 #define set_tempAvg(m, b, n, s)                  set(m,b,n,s, ENV.values.avg_temp)
 #define set_cellVoltageAvg(m, b, n, s)           set(m,b,n,s, BMS.voltage.avg)
 #define set_cellTemp9(m, b, n, s)                set(m,b,n,s, ENV.values.temps[CH9].temp)
@@ -90,13 +86,13 @@
 #if APP_VARIANT_ID == 1U
 #define set_tempBoard(m, b, n, s)                set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD))
 #endif
-#define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, app_cooling_getRate(&cooling[COOLING_CHANNEL_FAN2]))
-#define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, app_cooling_getRate(&cooling[COOLING_CHANNEL_FAN1]))
-#define set_coolPct1(m, b, n, s)                 set(m,b,n,s, (app_cooling_getPower(&cooling[COOLING_CHANNEL_FAN2]) * 100.0f))
-#define set_coolState1(m, b, n, s)               set(m,b,n,s, (app_cooling_getState(&cooling[COOLING_CHANNEL_FAN2]) != COOLING_OFF) ? \
+#define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, drv_cooling_getRate(&cooling[COOLING_CHANNEL_FAN2]))
+#define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, drv_cooling_getRate(&cooling[COOLING_CHANNEL_FAN1]))
+#define set_coolPct1(m, b, n, s)                 set(m,b,n,s, (drv_cooling_getPower(&cooling[COOLING_CHANNEL_FAN2]) * 100.0f))
+#define set_coolState1(m, b, n, s)               set(m,b,n,s, (drv_cooling_getState(&cooling[COOLING_CHANNEL_FAN2]) != COOLING_OFF) ? \
                                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_coolPct0(m, b, n, s)                 set(m,b,n,s, (app_cooling_getPower(&cooling[COOLING_CHANNEL_FAN1]) * 100.0f))
-#define set_coolState0(m, b, n, s)               set(m,b,n,s, (app_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
+#define set_coolPct0(m, b, n, s)                 set(m,b,n,s, (drv_cooling_getPower(&cooling[COOLING_CHANNEL_FAN1]) * 100.0f))
+#define set_coolState0(m, b, n, s)               set(m,b,n,s, (drv_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
                                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #include "TemporaryStubbing.h"

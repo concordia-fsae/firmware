@@ -14,7 +14,7 @@
 #include "stdint.h"
 
 // Other Includes
-#include "FloatTypes.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -47,14 +47,6 @@ typedef enum
     CHANNEL_COUNT,
 } ENV_thermistorID_E;
 
-typedef enum
-{
-    ENV_INIT = 0x00,
-    ENV_RUNNING,
-    ENV_FAULT,
-    ENV_ERROR,
-} Environment_State_E;
-
 typedef struct
 {
     bool    therm_error;
@@ -63,7 +55,7 @@ typedef struct
 
 typedef struct
 {
-    Environment_State_E state;
+    bool fault;
     struct
     {
         struct

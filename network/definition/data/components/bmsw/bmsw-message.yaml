@@ -1,4 +1,20 @@
 messages:
+  faults:
+    description: BMSW Faults
+    cycleTimeMs: 1000
+    id: 0x3b0
+    sourceBuses: veh
+    messageType: faults
+    signals:
+      analogRef5vHwError:
+      packVoltageHwError:
+      insufficientThermistors:
+      thermistorDisconnected:
+      cellDisconnected:
+      cellUndervoltage:
+      cellOvervoltage:
+      cellOvertemp:
+
   criticalData:
     description: Critical data from segment
     cycleTimeMs: 10
@@ -7,13 +23,8 @@ messages:
     signals:
       validator:
         template: criticalDataChecksum
-      envFaultFlag:
-      envErrorFlag:
-      faultFlag:
-      errorFlag:
-      dischargeLimit:
-        startBit: 16
-      chargeLimit:
+      faultTemp:
+      faultBMS:
       tempMax:
       segmentVoltage:
       voltageMax:
@@ -27,11 +38,10 @@ messages:
     signals:
       cellTemp1:
       cellTemp20:
-      socMax:
-      socAvg:
-      socMin:
       tempAvg:
       cellVoltageAvg:
+      segmentVoltageHighRes:
+      segmentVoltageHighResCalculated:
 
   cellTemps0:
     description: First set of cell temperatures
@@ -97,8 +107,6 @@ messages:
     id: 0x750
     lengthBytes: 8
     signals:
-      segmentVoltageHighRes:
-      segmentVoltageHighResCalculated:
       cellVoltage15:
       cellVoltage14:
       cellVoltage13:

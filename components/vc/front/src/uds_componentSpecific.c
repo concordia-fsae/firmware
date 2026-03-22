@@ -16,7 +16,7 @@
 #endif
 
 // module include
-#include "UDS.h"
+#include "uds_componentSpecific.h"
 
 // other includes
 #include "CAN/CanTypes.h"
