@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 // System Includes
+#include "include/HW_gpio_componentSpecific.h"
 #include "stdint.h"
 #include "string.h"
 #include "SystemConfig.h"
@@ -169,8 +170,13 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
         }
     }
 
-    /**< Device always SAMPL IO controlled */    // data[2] |= (config->sampling) ? 0 : 1 << 5;
+// Variant 0: controls sampling via physical GPIO pin (PA10)
+// Variant 1: sampling is controlled via SPI
+#if (APP_VARIANT_ID == 0U)
     HW_GPIO_writePin(HW_GPIO_MAX_SAMPLE, config->sampling);
+#elif (APP_VARIANT_ID == 1U)
+    data[2] |= (config->sampling) ? 0 : 1 << 5;
+#endif
     if (config->sampling)
     {
         data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;

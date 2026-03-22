@@ -11,6 +11,7 @@
 
 typedef enum
 {
+    DRV_INPUTAD_DIGITAL_NSHUTDOWN,
     DRV_INPUTAD_DIGITAL_COUNT,
 } drv_inputAD_channelDigital_E;
 
