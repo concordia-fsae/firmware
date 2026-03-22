@@ -33,10 +33,10 @@ typedef struct
           %if node.received_msgs[msg].node_ref.offset != 0:
 <%continue%>\
           %else:
-<%make_structdef_messageDuplicates(node, msg, node.received_msgs[msg].node_ref.total_duplicates)%>\
+<%make_structdef_messageDuplicates(bus, node, msg, node.received_msgs[msg].node_ref.total_duplicates)%>\
           %endif
         %else:
-<%make_structdef_message(node, msg)%>\
+<%make_structdef_message(bus, node, msg)%>\
         %endif
       %endif
     %endfor

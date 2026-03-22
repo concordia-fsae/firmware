@@ -1,6 +1,6 @@
 import copy
 from math import ceil, log
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 from schema import Schema, Or, Optional, And
 from zlib import crc32
 
@@ -581,6 +581,7 @@ class CanNode(CanObject):
         self.received_msgs: Dict[str, CanMessage] = {}
         self.received_sigs: Dict[str, CanSignal] = {}
         self.forwarding_routes: List[dict] = []
+        self.bridged_rx_messages: Set[Tuple[str, str]] = set()
 
         self.is_valid = True
 

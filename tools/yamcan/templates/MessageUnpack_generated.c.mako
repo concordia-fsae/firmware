@@ -219,11 +219,10 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
               %endif
             %endfor
     msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.timestamp = CANIO_getTimeMs();
-            %if node.received_msgs[message].bridged or node.received_msgs[message].fault_message:
-
+            %if (bus, message) in node.bridged_rx_messages or node.received_msgs[message].fault_message:
     msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.raw = *m;
             %endif
-            %if node.received_msgs[message].bridged:
+            %if (bus, message) in node.bridged_rx_messages:
     msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.new_message = true;
             %endif
 }
@@ -231,7 +230,3 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
     %endfor
   %endfor
 %endfor
-
-
-
-
