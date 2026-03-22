@@ -56,14 +56,21 @@ static const CAN_busConfig_T CAN_busConfig[CAN_BUS_COUNT] = {
       %for bus in node.on_buses:
           %if bus not in evaluated_buses:
 <%
-  if buses[bus].baudrate == 1000000:
+  evaluated_buses.append(bus)
+  if buses[bus].interface_type == "virtual":
+    baudrate = None
+  elif buses[bus].baudrate == 1000000:
     baudrate = 'CAN_BAUDRATE_1MBIT'
   elif buses[bus].baudrate == 500000:
     baudrate = 'CAN_BAUDRATE_500KBIT'
   else:
     raise Exception("Unsupported baudrate")
 %>\
+    %if baudrate is None:
+    [CAN_BUS_${bus.upper()}] = { },
+    %else:
     [CAN_BUS_${bus.upper()}] = { .baudrate = ${baudrate}, },
+    %endif
           %endif
     %endfor
   %endfor
@@ -90,7 +97,6 @@ static const CAN_busConfig_T CAN_busConfig[CAN_BUS_COUNT] = {
     %endfor
   %endfor
 %endfor
-
 
 
 

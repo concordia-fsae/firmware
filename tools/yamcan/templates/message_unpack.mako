@@ -15,6 +15,12 @@
 <%def name="make_structdef_messageDuplicates(node, message, total)">\
     struct {
         uint32_t timestamp;
+%if node.received_msgs[message].bridged or node.received_msgs[message].fault_message:
+        CAN_data_T raw;
+%endif
+%if node.received_msgs[message].bridged:
+        bool new_message;
+%endif
     } ${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}[${total}U];
 </%def>\
 

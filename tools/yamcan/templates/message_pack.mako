@@ -4,16 +4,20 @@
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
   %if msg.from_bridge:
+<%
+    storage_name = msg.node_ref.name.upper() + '_' + msg.name.split('_')[1] if msg.node_ref.duplicateNode else msg.name
+    storage_index = f'[{msg.node_ref.offset}U]' if msg.node_ref.duplicateNode else ''
+%>
     (void)counter;
     extern CANRX_${msg.origin_bus.upper()}_messages_S CANRX_${msg.origin_bus.upper()}_messages;
 
-    if (CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message == false)
+    if (CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.new_message == false)
     {
         return false;
     }
 
-    *message = CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.raw;
-    CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message = false;
+    *message = CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.raw;
+    CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.new_message = false;
   %elif msg.fault_message:
   (void)counter;
   *message = set_fault_message;

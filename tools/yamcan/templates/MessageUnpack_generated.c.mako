@@ -73,19 +73,17 @@ contains_message = True
             break;
     }
 }
-    %for message in node.received_msgs:
-      %if bus in node.received_msgs[message].source_buses:
-        %for signal in node.received_msgs[message].signals:
-          %if signal in node.received_sigs:
+    %for signal in node.received_sigs:
+      %if bus in node.received_sigs[signal].message_ref.source_buses:
 <%
-  duplicate = node.received_msgs[message].node_ref.duplicateNode
-  if duplicate and node.received_msgs[message].node_ref.offset != 0:
+  duplicate = node.received_sigs[signal].message_ref.node_ref.duplicateNode
+  if duplicate and node.received_sigs[signal].message_ref.node_ref.offset != 0:
     continue
   arg = ', uint8_t nodeId' if duplicate else ''
   index = '[nodeId]' if duplicate else ''
   nodeStr = 'nodeId' if duplicate else ''
-  sig_name = node.received_sigs[signal].name if not duplicate else node.received_msgs[message].node_ref.name.upper() + '_' + signal.split('_')[1]
-  msg_name = node.received_msgs[message].name if not duplicate else node.received_msgs[message].node_ref.name.upper() + '_' + node.received_msgs[message].name.split('_')[1]
+  sig_name = node.received_sigs[signal].name if not duplicate else node.received_sigs[signal].message_ref.node_ref.name.upper() + '_' + signal.split('_')[1]
+  msg_name = node.received_sigs[signal].message_ref.name if not duplicate else node.received_sigs[signal].message_ref.node_ref.name.upper() + '_' + node.received_sigs[signal].message_ref.name.split('_')[1]
 %>\
             %if node.received_sigs[signal].discrete_values:
 
@@ -106,8 +104,6 @@ CANRX_MESSAGE_health_E CANRX_${bus.upper()}_get_${sig_name}(${node.received_sigs
 
     return health;
 }
-          %endif
-        %endfor
       %endif
     %endfor
   %endfor
@@ -235,7 +231,6 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
     %endfor
   %endfor
 %endfor
-
 
 
 
