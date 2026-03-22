@@ -1,0 +1,59 @@
+load("//constraints:defs.bzl", "transition_alias")
+load("//stage1:defs.bzl", "SYSROOT_CRATES", "rust_dist", "rust_tool", "sysroot")
+
+[
+    transition_alias(
+        name = crate,
+        actual = "//:{}".format(crate),
+        incoming_transition = "//platforms/stage2:library",
+        visibility = ["PUBLIC"],
+    )
+    for crate in SYSROOT_CRATES
+]
+
+transition_alias(
+    name = "rust_allocator",
+    actual = "//allocator:rust_allocator",
+    incoming_transition = "//platforms/stage2:library",
+    visibility = ["toolchains//:rust"],
+)
+
+rust_tool(
+    name = "rustc",
+    exe = "//:rustc-main-rustc-main",
+    incoming_transition = "//platforms/stage2:compiler",
+    llvm = "//stage0:ci_llvm",
+    visibility = ["toolchains//:rust"],
+)
+
+rust_tool(
+    name = "rustdoc",
+    exe = "//:rustdoc-tool-rustdoc_tool_binary",
+    incoming_transition = "//platforms/stage2:compiler",
+    llvm = "//stage0:ci_llvm",
+    visibility = ["toolchains//:rust"],
+)
+
+rust_tool(
+    name = "clippy-driver",
+    exe = "//:clippy-clippy-driver",
+    incoming_transition = "//platforms/stage2:compiler",
+    llvm = "//stage0:ci_llvm",
+    visibility = ["toolchains//:rust"],
+)
+
+sysroot(
+    name = "sysroot",
+    incoming_transition = "//platforms/stage2:library",
+    visibility = ["toolchains//:rust"],
+    deps = [":{}".format(crate) for crate in SYSROOT_CRATES],
+)
+
+rust_dist(
+    name = "dist",
+    deps = [
+        ":rustc",
+        ":sysroot",
+        "//stage0:ci_llvm",
+    ],
+)

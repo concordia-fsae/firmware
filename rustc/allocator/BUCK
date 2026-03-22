@@ -1,0 +1,28 @@
+rust_library(
+    name = "rust_allocator",
+    srcs = [
+        "allocator.rs",
+        "std_alloc.rs",
+    ],
+    crate = "rust_allocator",
+    crate_root = "allocator.rs",
+    default_target_platform = "//platforms/stage1:compiler",
+    edition = "2024",
+    features = [
+        "std",
+    ],
+    preferred_linkage = "static",
+    rustc_flags = [
+        "-Clink-arg=-fvisibility=hidden",
+        "-Ainternal_features",
+    ],
+    visibility = ["PUBLIC"],
+    deps = select({
+        "rust//constraints:library": [
+            "//:alloc",
+            "//:std",
+        ],
+        "rust//constraints:library-build-script": [],
+        "rust//constraints:compiler": [],
+    }),
+)

@@ -2,7 +2,6 @@
   root = .
   prelude = prelude
   toolchains = buck2/toolchains
-  rustc = rustc
   none = none
 
 [cell_aliases]
@@ -13,18 +12,9 @@
   fbcode_macros = none
   buck2 = none
 
-# Vendor prelude and rustc bootstrap
+# Use Buck's bundled prelude.
 [external_cells]
-  prelude = git
-  rustc = git
-
-[external_cell_prelude]
-  git_origin = https://github.com/facebook/buck2-prelude
-  commit_hash = 1449150aa3d3f9f1df44f45889615636ce721dbc
-
-[external_cell_rustc]
-  git_origin = https://github.com/dtolnay/buck2-rustc-bootstrap
-  commit_hash = 074332d90e3fe1c63f76dbd7e8e71d569a853e57
+  prelude = bundled
 
 [parser]
   target_platform_detector_spec = target:root//...->prelude//platforms:default

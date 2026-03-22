@@ -1,0 +1,14 @@
+buildscript.run = false
+cargo_env = [
+    "CARGO_PKG_NAME",
+    "CARGO_PKG_VERSION_MAJOR",
+    "CARGO_PKG_VERSION_MINOR",
+    "CARGO_PKG_VERSION_PATCH",
+]
+extra_deps = [
+    ":rustc_driver-0.0.0",
+    ":rustc_interface-0.0.0",
+    ":rustc_session-0.0.0",
+    ":rustc_span-0.0.0",
+]
+linker_flags = ["-Wl,-rpath,$ORIGIN/../lib"]

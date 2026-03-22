@@ -1,0 +1,32 @@
+[package]
+name = "buck2-rust"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "reindeer"
+path = "reindeer.toml"
+
+[target.'cfg(workspace = "library")'.dependencies]
+alloc = { path = "rust/library/alloc" }
+compiler_builtins = "0.1"
+core = { path = "rust/library/core" }
+panic_abort = { path = "rust/library/panic_abort" }
+panic_unwind = { path = "rust/library/panic_unwind" }
+proc_macro = { path = "rust/library/proc_macro" }
+std = { path = "rust/library/std", features = ["backtrace", "std_detect_dlsym_getauxval", "std_detect_file_io"] }
+test = { path = "rust/library/test" }
+
+[target.'cfg(workspace = "compiler")'.dependencies]
+allocator-api2 = { version = "0.2", default-features = false }
+clippy = { path = "rust/src/tools/clippy", artifact = ["bin"] }
+rustc-main = { path = "rust/compiler/rustc", artifact = ["bin"], features = ["llvm"] }
+rustc_driver_impl = { path = "rust/compiler/rustc_driver_impl" }
+rustdoc-tool = { path = "rust/src/tools/rustdoc", artifact = ["bin"] }
+
+[patch.crates-io]
+compiler_builtins = { path = "rust/library/compiler-builtins/compiler-builtins" }
+rustc-std-workspace-alloc = { path = "rust/library/rustc-std-workspace-alloc" }
+rustc-std-workspace-core = { path = "rust/library/rustc-std-workspace-core" }
+rustc-std-workspace-std = { path = "rust/library/rustc-std-workspace-std" }

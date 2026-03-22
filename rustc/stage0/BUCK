@@ -1,0 +1,103 @@
+load("//constraints:defs.bzl", "configuration_transition")
+load(
+    ":defs.bzl",
+    "ci_artifact",
+    "ci_llvm",
+    "stage0_download",
+    "stage0_executable",
+    "stage0_extract",
+    "stage0_sysroot",
+)
+
+configuration_transition(
+    name = "stage0_configuration",
+    add_fallback_settings = "//platforms:host",
+    keep_settings = [
+        "prelude//cpu/constraints:cpu",
+        "prelude//os/constraints:os",
+    ],
+)
+
+stage0_download(
+    name = "dist",
+    components = [
+        "cargo",
+        "clippy",
+        "rust-std",
+        "rustc",
+    ],
+    incoming_transition = ":stage0_configuration",
+    manifest = "//:stage0_manifest",
+)
+
+stage0_extract(
+    name = "extract",
+    dist = ":dist",
+    incoming_transition = ":stage0_configuration",
+)
+
+stage0_executable(
+    name = "rustc",
+    dist = ":extract[rustc]",
+    incoming_transition = ":stage0_configuration",
+    visibility = ["PUBLIC"],
+)
+
+stage0_executable(
+    name = "rustdoc",
+    dist = ":extract[rustc]",
+    env = {"RUSTC_BOOTSTRAP": "1"},
+    incoming_transition = ":stage0_configuration",
+    visibility = ["PUBLIC"],
+)
+
+stage0_executable(
+    name = "clippy-driver",
+    dist = ":extract[clippy]",
+    incoming_transition = ":stage0_configuration",
+    libdir = ":extract[rustc]",
+    visibility = ["PUBLIC"],
+)
+
+stage0_sysroot(
+    name = "sysroot",
+    dist = ":dist[rust-std]",
+    incoming_transition = ":stage0_configuration",
+    visibility = ["PUBLIC"],
+)
+
+ci_artifact(
+    name = "rust_dev",
+    commit = "cbf84ed0ca316895a576e163bb34c0cdf7d2a0f6",
+    component = "rust-dev-beta",
+    incoming_transition = ":stage0_configuration",
+    manifest = "//:stage0_manifest",
+    sha256 = {
+        "aarch64-apple-darwin": "42837b7c19e03968ac19277c51918d7d2bea122e599e161c315457808f4a8915",
+        "aarch64-pc-windows-msvc": "9f53728ac0dc8d42d8996a9548e910146cc813172f87c9d6938d62a8265a8efb",
+        "aarch64-unknown-linux-gnu": "e2a85e519d8bd95b794311fddda387f402518c3c601c1d155d1482ac4572f681",
+        "riscv64gc-unknown-linux-gnu": "d376cf26c95399c4fa75a54707eb4f12e3513a07ce28a7408c7bda25a91b6e29",
+        "x86_64-apple-darwin": "b3ee091cc7dc240689d7a401ce4fd24ca3dc23f26a757e87015c275946a6f544",
+        "x86_64-pc-windows-msvc": "1b8daf82d4fa51570deaa028e031601f99a96881347354b8164a74aebbb12fc8",
+        "x86_64-unknown-linux-gnu": "e8eda3e612c64371f0f04477447f013a3ecb82545552697720c7c430a8a61b8d",
+    },
+)
+
+ci_llvm(
+    name = "ci_llvm",
+    incoming_transition = ":stage0_configuration",
+    rust_dev = ":rust_dev",
+    visibility = ["PUBLIC"],
+)
+
+python_bootstrap_binary(
+    name = "frob",
+    main = "frob.py",
+    visibility = ["PUBLIC"],
+)
+
+python_bootstrap_binary(
+    name = "exec",
+    main = "exec.py",
+    visibility = ["PUBLIC"],
+)

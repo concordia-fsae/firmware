@@ -1,0 +1,7 @@
+extra_srcs = [
+    "src/**/*.md",
+    "../portable-simd/crates/core_simd/src/core_simd_docs.md",
+    "../portable-simd/crates/core_simd/**/*.rs",
+    "../stdarch/crates/core_arch/src/core_arch_docs.md",
+    "../stdarch/crates/core_arch/**/*.rs",
+]

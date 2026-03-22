@@ -1,0 +1,53 @@
+load(
+    ":defs.bzl",
+    "llvm_config",
+    "llvm_cxx_flags",
+    "llvm_linker_flags",
+    "llvm_preprocessor_flags",
+    "llvm_rustc_flags",
+)
+
+llvm_config(
+    name = "llvm-config",
+    llvm = "//stage0:ci_llvm",
+)
+
+configured_alias(
+    name = "host-llvm-config",
+    actual = ":llvm-config",
+    platform = "//platforms:host",
+)
+
+llvm_rustc_flags(
+    name = "rustc-flags",
+    host_llvm_config = ":host-llvm-config",
+    visibility = ["//:rustc_llvm"],
+)
+
+llvm_cxx_flags(
+    name = "cxx-flags",
+    host_llvm_config = ":host-llvm-config",
+    visibility = ["//:rustc_llvm-0.0.0-llvm-wrapper-compile"],
+)
+
+llvm_preprocessor_flags(
+    name = "preprocessor-flags",
+    host_llvm_config = ":host-llvm-config",
+    visibility = ["//:rustc_llvm-0.0.0-llvm-wrapper-compile"],
+)
+
+llvm_linker_flags(
+    name = "linker-flags",
+    host_llvm_config = ":host-llvm-config",
+    target_llvm = "//stage0:ci_llvm",
+)
+
+prebuilt_cxx_library(
+    name = "llvm",
+    exported_linker_flags = [
+        "-L$(location //stage0:ci_llvm)/lib",
+        "-lz",
+        "@$(location :linker-flags)",
+    ],
+    visibility = ["//:rustc_llvm-0.0.0-llvm-wrapper-compile"],
+)

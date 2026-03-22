@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  buck2:
+    name: Buck2 on ${{matrix.os == 'ubuntu' && 'Linux' || matrix.os == 'macos' && 'macOS' || matrix.os == 'windows' && 'Windows' || '???'}}
+    runs-on: ${{matrix.os}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu
+          - macos
+         #- windows
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/install-buck2@latest
+      - name: git submodule init
+        uses: ./.github/actions/checkout
+      - run: buck2 run stage2:rustc -- --version --verbose

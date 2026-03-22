@@ -1,0 +1,4 @@
+buildscript.run = true
+
+['cfg(version = "2")']
+cargo_env = ["CARGO_PKG_VERSION_PATCH"]
