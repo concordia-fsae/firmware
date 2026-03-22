@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "can-bridge"
-path = "src/main.rs"
+name = "can-bridge-veh"
+path = "src/main_veh.rs"
+
+[[bin]]
+name = "can-bridge-body"
+path = "src/main_body.rs"
 
 [dependencies]
 clap = { workspace = true }
-can-dbc = { workspace = true }
 libc = { workspace = true }
-ratatui = { workspace = true }
 socketcan = { workspace = true }

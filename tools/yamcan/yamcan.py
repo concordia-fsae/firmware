@@ -665,9 +665,7 @@ def process_bridges(node: CanNode):
 
 def bridge_message_to_bus(node: CanNode, source_bus: str, dest_bus: str, msg_name: str):
     source_message = can_bus_defs[source_bus].messages[msg_name]
-    source_message.bridged = True
-    if dest_bus not in source_message.bridge_dest_buses:
-        source_message.bridge_dest_buses.append(dest_bus)
+    node.bridged_rx_messages.add((source_bus, msg_name))
 
     if msg_name in can_bus_defs[dest_bus].messages:
         return

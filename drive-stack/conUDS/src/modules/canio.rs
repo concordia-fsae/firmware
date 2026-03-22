@@ -1,4 +1,4 @@
-/// CANIO module
+// CANIO module
 use std::marker::PhantomData;
 
 use anyhow::{Result, anyhow};

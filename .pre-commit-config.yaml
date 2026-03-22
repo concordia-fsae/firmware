@@ -18,6 +18,7 @@ repos:
     hooks:
       - id: fmt
         files: \.rs$
+        exclude: ^tools/yamcan/srcs/rust/lib\.rs$
   - repo: https://github.com/ComPWA/taplo-pre-commit
     rev: v0.9.3
     hooks:

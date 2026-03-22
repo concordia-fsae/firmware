@@ -7,7 +7,7 @@ static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t c
 <%
     storage_name = msg.node_ref.name.upper() + '_' + msg.name.split('_')[1] if msg.node_ref.duplicateNode else msg.name
     storage_index = f'[{msg.node_ref.offset}U]' if msg.node_ref.duplicateNode else ''
-%>
+%>\
     (void)counter;
     extern CANRX_${msg.origin_bus.upper()}_messages_S CANRX_${msg.origin_bus.upper()}_messages;
 

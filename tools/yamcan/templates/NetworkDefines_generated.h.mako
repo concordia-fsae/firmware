@@ -97,6 +97,3 @@ static const CAN_busConfig_T CAN_busConfig[CAN_BUS_COUNT] = {
     %endfor
   %endfor
 %endfor
-
-
-
