@@ -17,7 +17,7 @@
 
 /**< Driver Includes */
 #include "HW_adc.h"
-#include "HW_SHT40.h"
+#include "drv_sht40.h"
 #include "drv_inputAD.h"
 #include "drv_tempSensors.h"
 #include "drv_timer.h"
@@ -51,7 +51,7 @@
  *                              E X T E R N S
  ******************************************************************************/
 
-extern SHT_S sht_chip;
+extern HW_I2C_Handle_T i2c2;
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -62,6 +62,15 @@ ENV_S ENV;
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
+
+HW_I2C_Device_S I2C_SHT40 = {
+    .addr   =  0x44,
+    .handle = &i2c2,
+};
+
+drv_sht40_S sht_chip = {
+    .dev = &I2C_SHT40,
+};
 
 static struct env_S
 {
@@ -126,6 +135,8 @@ static void Environment_Init()
     ENV.fault = false;
     drv_timer_initWithRuntime(&env.timerDisconnected, ENV_ERROR_TIMEOUT_MS);
     drv_timer_initWithRuntime(&env.timerInsufficient, ENV_ERROR_TIMEOUT_MS);
+
+    drv_sht40_init(&sht_chip);
 }
 
 /**
@@ -133,24 +144,24 @@ static void Environment_Init()
  */
 static void Environment10Hz_PRD()
 {
-    if (sht_chip.state == SHT_MEASURING || sht_chip.state == SHT_HEATING)
+    if (sht_chip.state == SHT40_MEASURING || sht_chip.state == SHT40_HEATING)
     {
-        if (SHT_getData())
+        if (drv_sht40_getData(&sht_chip))
         {
             ENV.values.board.ambient_temp = sht_chip.data.temp;
             ENV.values.board.rh           = sht_chip.data.rh;
         }
     }
-    else if (sht_chip.state == SHT_WAITING)
+    else if (sht_chip.state == SHT40_WAITING)
     {
         if (ENV.startRhHeater && (ENV.values.board.rh > 90.0f))
         {
             ENV.startRhHeater = false;
-            SHT_startHeater(SHT_HEAT_MED);
+            drv_sht40_startHeater(&sht_chip, SHT40_HEAT_MED);
         }
         else
         {
-            SHT_startConversion();
+            drv_sht40_startConversion(&sht_chip);
         }
     }
 
@@ -191,7 +202,7 @@ static void Environment10Hz_PRD()
  */
 static void Environment1Hz_PRD()
 {
-    if (sht_chip.state == SHT_ERROR)
+    if (sht_chip.state == SHT40_ERROR)
     {
         // TODO: Implement error handling
     }
