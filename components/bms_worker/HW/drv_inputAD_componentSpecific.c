@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 /**< Module Header */
+#include "include/drv_inputAD_componentSpecific.h"
 #include "drv_inputAD_private.h"
 
 /**< System Includes*/
@@ -48,6 +49,18 @@ static drv_mux_channel_S signal_mux = {
     }
 };
 
+drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
+#if APP_VARIANT_ID == 1
+    [DRV_INPUTAD_DIGITAL_NSHUTDOWN] = {
+        .type = INPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_NSHUTDOWN,
+            .active_level = DRV_IO_LOGIC_HIGH,
+        },
+    },
+#endif
+};
+
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -65,6 +78,7 @@ void drv_inputAD_private_unpackADCBufferTemps(void);
 static void drv_inputAD_init_componentSpecific(void)
 {
     drv_inputAD_private_init();
+    drv_inputAD_private_runDigital();
 
     drv_mux_init(&signal_mux);
     drv_mux_setMuxOutput(&signal_mux, 0U);
@@ -91,6 +105,7 @@ static void drv_inputAD_1kHz_PRD(void)
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX2));
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX3));
 #endif
+    drv_inputAD_private_runDigital();
 
     drv_mux_setMuxOutput(&signal_mux, ++current_sel);
 

@@ -7,6 +7,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "include/drv_outputAD_componentSpecific.h"
 #include "drv_outputAD.h"
 
 /******************************************************************************
@@ -35,4 +36,13 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
+#if APP_VARIANT_ID == 1
+    [DRV_OUTPUTAD_DIGITAL_SUPPLY_KEEPON] = {
+        .type = OUTPUT_DIGITAL,
+        .config.gpio = {
+            .pin = HW_GPIO_SUPPLY_KEEPON,
+            .active_level = DRV_IO_LOGIC_HIGH
+        },
+    }
+#endif
 };
