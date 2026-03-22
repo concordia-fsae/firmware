@@ -79,10 +79,8 @@ void CANRX_${bus.upper()}_unpackMessage(const uint32_t id, const CAN_data_T *con
 %endfor
 %for node in nodes:
   %for bus in node.on_buses:
-    %for message in node.received_msgs:
-      %if bus in node.received_msgs[message].source_buses:
-        %for signal in node.received_msgs[message].signals:
-          %if signal in node.received_sigs:
+    %for signal in node.received_sigs:
+      %if bus in node.received_sigs[signal].message_ref.source_buses:
 <%
   duplicate = node.received_sigs[signal].message_ref.node_ref.duplicateNode
   offset = node.received_sigs[signal].message_ref.node_ref.offset
@@ -100,8 +98,6 @@ void CANRX_${bus.upper()}_unpackMessage(const uint32_t id, const CAN_data_T *con
 %>\
 CANRX_MESSAGE_health_E CANRX_${bus.upper()}_get_${sig_name}(${type} * const val${arg});
 uint32_t CANRX_${bus.upper()}_get_${sig_name}_timeSinceLastMessageMS(${argNodeOnly});
-          %endif
-        %endfor
       %endif
     %endfor
   %endfor
@@ -136,22 +132,34 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
   %for bus in node.on_buses:
     %for message in node.received_msgs:
         %if bus in node.received_msgs[message].source_buses and (node.received_msgs[message].fault_message or node.received_msgs[message].bridged):
+<%
+  duplicate = node.received_msgs[message].node_ref.duplicateNode
+  offset = node.received_msgs[message].node_ref.offset
+  msg_name = node.received_msgs[message].node_ref.name.upper() + '_' + message.split('_')[1] if duplicate else message
+  index = f'[{offset}U]' if duplicate else ''
+%>
 
 inline CAN_data_T* CANRX_${bus.upper()}_rawMessage_${message}(void)
 {
-    return &CANRX_${bus.upper()}_messages.${message}.raw;
+    return &CANRX_${bus.upper()}_messages.${msg_name}${index}.raw;
 }
       %endif
       %if bus in node.received_msgs[message].source_buses and node.received_msgs[message].bridged:
+<%
+  duplicate = node.received_msgs[message].node_ref.duplicateNode
+  offset = node.received_msgs[message].node_ref.offset
+  msg_name = node.received_msgs[message].node_ref.name.upper() + '_' + message.split('_')[1] if duplicate else message
+  index = f'[{offset}U]' if duplicate else ''
+%>
 
 inline bool CANRX_${bus.upper()}_rawBridgeWaiting_${message}(void)
 {
-    return CANRX_${bus.upper()}_messages.${message}.new_message;
+    return CANRX_${bus.upper()}_messages.${msg_name}${index}.new_message;
 }
 
 inline void CANRX_${bus.upper()}_setRawBridgeWaiting_${message}(bool val)
 {
-    CANRX_${bus.upper()}_messages.${message}.new_message = val;
+    CANRX_${bus.upper()}_messages.${msg_name}${index}.new_message = val;
 }
       %endif
     %endfor
