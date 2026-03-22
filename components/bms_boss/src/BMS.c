@@ -208,6 +208,7 @@ static void getSegmentStats(BMSB_S* bms)
             bms->connected_segments++;
         }
     }
+    bms->soc = CELL_getSoCfromV(bms->voltages.min);
 }
 
 static bool checkBmsFaulted(void)
@@ -353,6 +354,7 @@ static void BMS10Hz_PRD(void)
         dischargeLimit(&tmp);
     }
 
+    BMS.soc             = tmp.soc;
     BMS.fault           = tmp.fault;
     BMS.charge_limit    = tmp.charge_limit;
     BMS.discharge_limit = tmp.discharge_limit;
@@ -361,7 +363,7 @@ static void BMS10Hz_PRD(void)
     BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
     BMS.voltages                = tmp.voltages;
     BMS.max_temp                = tmp.max_temp;
-    BMS.soc                     = CELL_getSoCfromV(BMS.voltages.min);
+
 }
 
 static void BMS100Hz_PRD(void)
