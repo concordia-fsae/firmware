@@ -25,41 +25,41 @@
 
 typedef enum
 {
-    SHT_INIT = 0x00,
-    SHT_WAITING,
-    SHT_MEASURING,
-    SHT_HEATING,
-    SHT_ERROR,
-} SHT_State_E;
+    SHT40_INIT = 0x00,
+    SHT40_WAITING,
+    SHT40_MEASURING,
+    SHT40_HEATING,
+    SHT40_ERROR,
+} drv_sht40_state_E;
 
 typedef enum
 {
-    SHT_HEAT_LOW = 0x00,
-    SHT_HEAT_MED,
-    SHT_HEAT_HIGH,
-} SHT_Heat_E;
+    SHT40_HEAT_LOW = 0x00,
+    SHT40_HEAT_MED,
+    SHT40_HEAT_HIGH,
+} drv_sht40_heat_E;
 
 typedef struct
 {
     uint64_t  raw;
     float32_t temp; // [deg C], precision 0.01 deg C
     float32_t rh;   // [%], precision 0.01%
-} SHT_Data_S;
+} drv_sht40_data_S;
 
 typedef struct
 {
-    SHT_State_E      state;
+    drv_sht40_state_E      state;
     HW_I2C_Device_S* dev;
     uint32_t         serial_number;
-    SHT_Data_S       data;
-} SHT_S;
+    drv_sht40_data_S       data;
+} drv_sht40_S;
 
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool SHT_init(void);
-bool SHT_startConversion(void);
-bool SHT_getData(void);
-bool SHT_startHeater(SHT_Heat_E heat);
+bool drv_sht40_init(drv_sht40_S * sht_chip);
+bool drv_sht40_startConversion(drv_sht40_S * sht_chip);
+bool drv_sht40_getData(drv_sht40_S * sht_chip);
+bool drv_sht40_startHeater(drv_sht40_S * sht_chip, drv_sht40_heat_E heat);
