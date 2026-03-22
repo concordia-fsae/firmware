@@ -1,0 +1,4 @@
+description: "Carputer vehicle bridge"
+onBuses:
+  - "veh"
+  - "vcanVeh"
