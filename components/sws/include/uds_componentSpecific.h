@@ -4,8 +4,8 @@
  */
 #pragma once
 
-#include "NetworkDefines_generated.h"
 #include "FeatureDefines_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

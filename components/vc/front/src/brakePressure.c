@@ -11,8 +11,9 @@
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "drv_inputAD_componentSpecific.h"
-#include "MessageUnpack_generated.h"
+
 #include "drv_inputAD.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S

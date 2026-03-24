@@ -23,7 +23,7 @@
 #include "drv_inputAD_componentSpecific.h"
 #include "HW_gpio.h"
 #include "LIB_Types.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
 *                             T Y P E D E F S

@@ -9,9 +9,10 @@
 
 // Firmware Includes
 #include "HW_intc.h"
-#include "NetworkDefines_generated.h"
+
 #include "HW_tim.h"
 #include "HW_uart.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -24,7 +25,6 @@ extern TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
 extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 extern UART_HandleTypeDef huart[HW_UART_PORT_COUNT];
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S

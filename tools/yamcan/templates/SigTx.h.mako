@@ -3,13 +3,14 @@
 * SigTx.h
  * Signal packing function definitions
  */
+#pragma once
  
  /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 #include "CANTypes_generated.h"
-#include "CAN/CanTypes.h"
+#include "YamcanTypes.h"
 #include "lib_atomic.h"
 #include "Utility.h"
 

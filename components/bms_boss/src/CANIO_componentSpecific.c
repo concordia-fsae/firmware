@@ -10,7 +10,7 @@
 #include "CAN/CAN.h"
 #include "CANIO_componentSpecific.h"
 #include "Utility.h"
-#include "MessageUnpack_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S

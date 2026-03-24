@@ -3,7 +3,6 @@
  * CAN Receive
  */
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -17,9 +16,10 @@
 #include "Utility.h"
 #include "string.h"
 #include "lib_uds.h"
+#include "CANIO_componentSpecific.h"
 
-#include "MessageUnpack_generated.h"
 #include "FeatureDefines_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -101,7 +101,7 @@ static void CANIO_rx_init(void)
 {
     // initialize module struct to 0
     memset(&canrx, 0x00, sizeof(canrx));
-    CANRX_init();
+    YAMCAN_shared_init_static();
 }
 
 const ModuleDesc_S CANIO_rx = {

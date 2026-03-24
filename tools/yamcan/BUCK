@@ -8,6 +8,22 @@ uv_tool(
     visibility = ["PUBLIC"],
 )
 
+export_file(
+    name = "Yamcan.h",
+    src = "srcs/c/Yamcan.h",
+    visibility = ["PUBLIC"],
+)
+export_file(
+    name = "YamcanTypes.h",
+    src = "srcs/c/YamcanTypes.h",
+    visibility = ["PUBLIC"],
+)
+export_file(
+    name = "YamcanShared.c",
+    src = "srcs/c/YamcanShared.c",
+    visibility = ["PUBLIC"],
+)
+
 filegroup(
     name = "rust-runtime-srcs",
     srcs = [

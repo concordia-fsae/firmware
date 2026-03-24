@@ -11,13 +11,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "MessageUnpack_generated.h"
 #include "CANTypes_generated.h"
+#include "YamcanTypes.h"
 #include "LIB_FloatTypes.h"
 #include "LIB_Types.h"
 #include "Utility.h"
 
-#include "CANIO_componentSpecific.h"
 
 /******************************************************************************
  *                             T Y P E D E F S

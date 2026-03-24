@@ -9,7 +9,7 @@
 
 // Firmware Includes
 #include "HW_intc.h"
-#include "NetworkDefines_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -22,7 +22,6 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
-
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S

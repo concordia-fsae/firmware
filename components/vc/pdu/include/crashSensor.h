@@ -12,7 +12,7 @@
 #include "lib_nvm.h"
 #include "app_vehicleState.h"
 #include "LIB_Types.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                             T Y P E D E F S

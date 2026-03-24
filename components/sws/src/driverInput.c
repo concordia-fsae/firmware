@@ -67,8 +67,9 @@
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "drv_timer.h"
-#include "MessageUnpack_generated.h"
+
 #include "app_vehicleState.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -131,7 +132,6 @@ typedef struct
     driverInput_inputDigital_E requestDec;
     driverInput_inputDigital_E requestInc;
 } configAction_S;
-
 
 /******************************************************************************
  *                         P R I V A T E  V A R S

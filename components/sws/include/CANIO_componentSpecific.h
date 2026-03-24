@@ -5,16 +5,15 @@
 
 #pragma once
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 // imports for timebase
 #include "HW_tim.h"
+#include "Yamcan.h"
 
 // imports for CAN generated types
-#include "CANTypes_generated.h"
 
 // imports for data access
 #include "Module.h"
@@ -90,4 +89,3 @@
 
 #define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
 
-#include "TemporaryStubbing.h"

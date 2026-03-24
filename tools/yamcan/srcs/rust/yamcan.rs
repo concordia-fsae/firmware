@@ -169,7 +169,6 @@ pub trait NetworkDecoder {
     type Bus: NetworkBus;
     type Message: DecodedCanMessage<Bus = Self::Bus>;
 
-    fn init();
     fn decode_received_message(
         message: ReceivedCanMessage<Self::Bus>,
     ) -> MessageDecodeResult<Self::Message>;
@@ -202,10 +201,6 @@ impl<N: NetworkDecoder> BusRouter<N> {
     pub fn binding_for_iface(&self, iface: &str) -> Option<&BusBinding<N::Bus>> {
         self.bindings.get(iface)
     }
-}
-
-pub fn init<N: NetworkDecoder>() {
-    N::init();
 }
 
 pub fn bus_descriptor_for<N: NetworkDecoder>(

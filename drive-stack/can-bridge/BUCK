@@ -16,6 +16,7 @@ generate_c_library(
     ],
     extra_exported_headers = {
         "CANIO_componentSpecific.h": "include/CANIO_componentSpecific.h",
+        "YamcanConfig.h": "include/YamcanConfig.h",
     },
     library_deps = [
         "//components/shared/code:headers",

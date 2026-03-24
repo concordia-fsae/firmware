@@ -3,7 +3,6 @@
  * @brief  Source code for CAN firmware
  */
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -13,16 +12,15 @@
 #include "HW.h"
 
 #include "CAN/CAN.h"
-#include "CAN/CanTypes.h"
 #include "LIB_Types.h"
 
 #include "BMS.h"
 
-#include "NetworkDefines_generated.h"
-#include "MessageUnpack_generated.h"
+#include "SystemConfig.h"
 #include "lib_uds.h"
 #include "uds_componentSpecific.h"
 #include "LIB_app.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

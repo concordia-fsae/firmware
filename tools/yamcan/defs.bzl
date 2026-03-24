@@ -12,6 +12,7 @@ _GENERATED_HEADERS = {
     "SigRx.h": "SigRx.h",
     "SigTx.h": "SigTx.h",
     "TemporaryStubbing.h": "TemporaryStubbing.h",
+    "YamcanShared.h": "YamcanShared.h",
 }
 
 _GENERATED_SOURCES = [
@@ -75,6 +76,9 @@ def generate_c_library(
         header: codegen_target + "[{}]".format(header)
         for header in _GENERATED_HEADERS.keys()
     }
+    exported_headers["YamcanTypes.h"] = "//tools/yamcan:YamcanTypes.h"
+    exported_headers["Yamcan.h"] = "//tools/yamcan:Yamcan.h"
+    exported_headers["lib_atomic.h"] = "//embedded/libs:lib_atomic.h"
     if extra_exported_headers:
         exported_headers.update(extra_exported_headers)
 
@@ -84,11 +88,8 @@ def generate_c_library(
         name = name,
         deps = library_deps if library_deps else [],
         header_namespace = "",
-        srcs = srcs,
+        srcs = srcs + ["//tools/yamcan:YamcanShared.c"],
         exported_headers = exported_headers,
-        headers = {
-            "lib_atomic.h": "//embedded/libs:lib_atomic.h",
-        },
         **kwargs
     )
 

@@ -29,7 +29,7 @@
 #include "LIB_Types.h"
 #include "drv_inputAD.h"
 #include "lib_interpolation.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                             T Y P E D E F S

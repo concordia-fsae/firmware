@@ -112,7 +112,7 @@ for node in nodes:
             }
         )
 %>\
-use crate::rust_model_generated::{init_generated, AnyMessage, Bus};
+use crate::rust_model_generated::{AnyMessage, Bus};
 use crate::yamcan::{
     BusDescriptor,
     BusInterfaceType,
@@ -189,10 +189,6 @@ pub struct GeneratedNetwork;
 impl NetworkDecoder for GeneratedNetwork {
     type Bus = Bus;
     type Message = AnyMessage;
-
-    fn init() {
-        init_generated();
-    }
 
     fn decode_received_message(message: ReceivedCanMessage<Bus>) -> MessageDecodeResult<Self::Message> {
         decode_received_message(message)

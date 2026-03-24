@@ -11,8 +11,7 @@
 #include "cooling.h"
 #include "Module.h"
 #include "drv_timer.h"
-
-#include "MessageUnpack_generated.h"
+#include "Yamcan.h"
 
 #define STARTUP_TIMER 10000
 

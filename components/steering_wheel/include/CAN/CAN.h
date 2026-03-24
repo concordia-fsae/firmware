@@ -10,7 +10,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "CAN/CanTypes.h"
+#include "Yamcan.h"
 
 #include "FreeRTOS_SWI.h"
 

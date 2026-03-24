@@ -15,7 +15,7 @@ extern "C" {
 
 #include "SystemConfig.h"
 
-#include "CAN/CanTypes.h"
+#include "Yamcan.h"
 
 
 /******************************************************************************

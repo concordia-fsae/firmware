@@ -11,9 +11,13 @@
 #include "ModuleDesc.h"
 #include "string.h"
 #include "HW_tim.h"
-#include "MessageUnpack_generated.h"
+
+#include "app_faultManager.h"
+#include "app_gps.h"
+#include "app_vehicleState.h"
 #include "lib_simpleFilter.h"
 #include <math.h>
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

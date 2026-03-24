@@ -1032,6 +1032,7 @@ def codegen(
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["YamcanShared.h.mako", {"nodes": [can_nodes[node]]}],
             [
                 "NetworkDefines_generated.h.mako",
                 {"nodes": [can_nodes[node]], "buses": can_bus_defs, "network": {}},

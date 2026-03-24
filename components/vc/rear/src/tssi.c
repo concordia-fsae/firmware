@@ -12,10 +12,11 @@
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "string.h"
-#include "MessageUnpack_generated.h"
+
 #include "drv_outputAD.h"
 #include "app_vehicleState.h"
 #include "drv_timer.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
