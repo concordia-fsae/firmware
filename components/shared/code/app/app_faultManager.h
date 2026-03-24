@@ -11,11 +11,10 @@
 
 // The fault index and fault messages are generated from yamcan
 // TODO: Improve the generator
-#include "CANTypes_generated.h"
-#include "MessageUnpack_generated.h"
 
 #include "LIB_Types.h"
 #include "FeatureDefines_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

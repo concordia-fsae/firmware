@@ -5,16 +5,15 @@
 
 #pragma once
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 // imports for timebase
 #include "HW_tim.h"
+#include "Yamcan.h"
 
 // imports for CAN generated types
-#include "CANTypes_generated.h"
 
 // imports for data access
 #include "Module.h"
@@ -62,4 +61,3 @@
 #define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RR))
 #define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
 
-#include "TemporaryStubbing.h"

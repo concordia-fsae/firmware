@@ -1,4 +1,6 @@
+use core::ffi::{c_char, c_int};
 use std::error::Error;
+use std::ffi::CString;
 
 mod rust_decode_generated;
 mod rust_model_generated;
@@ -16,8 +18,22 @@ pub use yamcan::{
 
 pub type YamcanRouter = BusRouter<rust_decode_generated::GeneratedNetwork>;
 
-pub fn init() {
-    yamcan::init::<rust_decode_generated::GeneratedNetwork>();
+unsafe extern "C" {
+    fn YAMCAN_shared_init_static();
+    fn YAMCAN_shared_init_shm(name: *const c_char) -> c_int;
+}
+
+pub fn init_static() {
+    unsafe { YAMCAN_shared_init_static() };
+}
+
+pub fn init_shmem(name: &str) -> Result<(), Box<dyn Error>> {
+    let c_name = CString::new(name)?;
+    let rc = unsafe { YAMCAN_shared_init_shm(c_name.as_ptr()) };
+    if rc != 0 {
+        return Err(format!("YAMCAN_shared_init_shm failed for '{name}'").into());
+    }
+    Ok(())
 }
 
 pub fn configure(

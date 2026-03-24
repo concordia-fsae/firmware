@@ -11,9 +11,10 @@
 
 #include "LIB_Types.h"
 #include "ModuleDesc.h"
-#include "CANTypes_generated.h"
+
 #include "HW_tim.h"
 #include "lib_nvm.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                             T Y P E D E F S

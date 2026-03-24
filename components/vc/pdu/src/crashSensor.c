@@ -16,10 +16,12 @@
 #include "task.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
-#include "MessageUnpack_generated.h"
+
 #include <string.h>
 #include "app_vehicleState.h"
+#include "app_faultManager.h"
 #include "drv_timer.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

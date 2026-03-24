@@ -9,7 +9,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "CAN/CanTypes.h"
+#include "YamcanTypes.h"
 
 #include "FloatTypes.h"
 #include "Utility.h"

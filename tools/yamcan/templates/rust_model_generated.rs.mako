@@ -249,17 +249,12 @@ use crate::yamcan::{
 };
 
 unsafe extern "C" {
-    fn CANRX_init();
 %for bus in bus_order:
     fn ${extern_unpacks[bus]}(id: u32, msg: *const CanData);
 %endfor
 %for getter in extern_getters.values():
     fn ${getter["symbol"]}(val: *mut ${getter["rust_type"]}${', node_id: u8' if getter["duplicate"] else ''}) -> c_int;
 %endfor
-}
-
-pub(crate) fn init_generated() {
-    unsafe { CANRX_init() };
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

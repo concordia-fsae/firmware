@@ -8,11 +8,13 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "CAN/CanTypes.h"
+#include "YamcanTypes.h"
 #include "MessagePack_generated.h"
 #include "NetworkDefines_generated.h"
 #include "SigTx.h"
 #include "MessageUnpack_generated.h"
+#include "YamcanConfig.h"
+#include "TemporaryStubbing.h"
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S

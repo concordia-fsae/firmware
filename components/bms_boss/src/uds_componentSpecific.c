@@ -19,7 +19,7 @@
 #include "uds_componentSpecific.h"
 
 // other includes
-#include "CAN/CanTypes.h"
+#include "Yamcan.h"
 #include "FreeRTOS.h"
 #include "HW.h"
 #include "HW_can.h"

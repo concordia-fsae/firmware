@@ -12,9 +12,10 @@
 
 #include "NetworkDefines_generated.h"
 #include "CANTypes_generated.h"
-#include "CAN/CanTypes.h"
+#include "YamcanTypes.h"
 #include "Utility.h"
 #include "SigRx.h"
+#include "YamcanShared.h"
 
  /******************************************************************************
  *                              D E F I N E S
@@ -36,9 +37,8 @@
  ******************************************************************************/
 %for node in nodes:
   %for bus in node.on_buses:
-
-extern CANRX_${bus.upper()}_signals_S CANRX_${bus.upper()}_signals;
-extern CANRX_${bus.upper()}_messages_S CANRX_${bus.upper()}_messages;
+#define CANRX_${bus.upper()}_signals (g_yamcan->${bus}_signals)
+#define CANRX_${bus.upper()}_messages (g_yamcan->${bus}_messages)
   %endfor
 %endfor
 %for node in nodes:

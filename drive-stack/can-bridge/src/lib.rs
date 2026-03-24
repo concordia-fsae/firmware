@@ -21,7 +21,7 @@ pub use yamcan_generated::{
     NetworkBus, SignalMeasurement, bus_descriptor, forward_route_for_bus, forward_route_for_pair,
     forward_routes_from_bus,
 };
-pub use yamcan_generated::{configure_iface as configure_yamcan_iface, init as yamcan_init};
+pub use yamcan_generated::{configure_iface as configure_yamcan_iface, init_static as yamcan_init};
 
 #[derive(Clone, Debug)]
 pub struct Event {

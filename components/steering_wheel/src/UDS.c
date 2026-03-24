@@ -12,7 +12,7 @@
 #include "UDS.h"
 
 // other includes
-#include "CAN/CanTypes.h"
+#include "Yamcan.h"
 #include "FreeRTOS.h"
 #include "HW_can.h"
 #include "ModuleDesc.h"

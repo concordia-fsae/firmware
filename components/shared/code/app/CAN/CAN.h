@@ -5,15 +5,13 @@
 
 #pragma once
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 #include "HW_can_componentSpecific.h"
-#include "CAN/CanTypes.h"
 #include "FreeRTOS_SWI.h"
-#include "NetworkDefines_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -25,7 +23,6 @@ extern RTOS_swiHandle_T *CANRX_swi;
 extern void CANRX_SWI(void); // Prototype for SWI function
 extern void CANRX_notify(CAN_bus_E bus, CAN_RxFifo_E rxFifo);
 #endif
-
 
 #if FEATURE_IS_ENABLED(FEATURE_CANTX_SWI)
 // Transmitter

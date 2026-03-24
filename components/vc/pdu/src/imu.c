@@ -19,6 +19,7 @@
 #include "lib_madgwick.h"
 #include "lib_simpleFilter.h"
 #include "app_vehicleState.h"
+#include "drv_timer.h"
 
 /******************************************************************************
  *                              D E F I N E S

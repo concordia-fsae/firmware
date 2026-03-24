@@ -14,7 +14,7 @@
 #include "string.h"
 #include "drv_outputAD.h"
 #include "app_vehicleState.h"
-#include "MessageUnpack_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -48,7 +48,6 @@ static void cockpitLights_init(void)
     cockpitLights_data.bmsState = true;
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_BMS_LIGHT_EN, DRV_IO_ACTIVE);
 }
-
 
 static void cockpitLights_periodic_10Hz(void)
 {

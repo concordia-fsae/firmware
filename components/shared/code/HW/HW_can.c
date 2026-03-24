@@ -3,7 +3,6 @@
  * @brief  Source code for CAN firmware
  */
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -12,12 +11,9 @@
 #include "HW_can.h"
 
 #include "CAN/CAN.h"
-#include "CAN/CanTypes.h"
 #include "lib_uds.h"
 #include "uds_componentSpecific.h"
-
-#include "NetworkDefines_generated.h"
-#include "MessageUnpack_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -252,7 +248,6 @@ bool HW_CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx
     // Return function status
     return true;
 }
-
 
 // define interrupt handlers
 

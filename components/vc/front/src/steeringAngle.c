@@ -12,9 +12,10 @@
 #include "ModuleDesc.h"
 #include "drv_inputAD_componentSpecific.h"
 #include "drv_inputAD.h"
-#include "MessageUnpack_generated.h"
+
 #include "lib_interpolation.h"
 #include "app_faultManager.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

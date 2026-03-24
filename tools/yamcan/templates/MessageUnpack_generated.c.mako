@@ -10,32 +10,12 @@
 
 #include "MessageUnpack_generated.h"
 #include "SigRx.h"
+#include "YamcanConfig.h"
 #include "string.h"
-
-/******************************************************************************
- *                         P U B L I C  V A R S
- ******************************************************************************/
-%for node in nodes:
-  %for bus in node.on_buses:
-
-CANRX_${bus.upper()}_signals_S CANRX_${bus.upper()}_signals;
-CANRX_${bus.upper()}_messages_S CANRX_${bus.upper()}_messages;
-  %endfor
-%endfor
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
-
-void CANRX_init(void)
-{
-%for node in nodes:
-  %for bus in node.on_buses:
-    memset(&CANRX_${bus.upper()}_signals, 0U, sizeof(CANRX_${bus.upper()}_signals));
-    memset(&CANRX_${bus.upper()}_messages, 0U, sizeof(CANRX_${bus.upper()}_messages));
-  %endfor
-%endfor
-}
 %for node in nodes:
   %for bus in node.on_buses:
 
@@ -130,7 +110,7 @@ CANRX_MESSAGE_health_E CANRX_${bus.upper()}_validate_${msg_name}(${arg})
     {
         // Stays SNA
     }
-    if (CANRX_${bus.upper()}_messages.${msg_name}${index}.timestamp < (CANIO_getTimeMs() - ${int(node.received_msgs[message].timeout_period_ms)}U))
+    if (CANRX_${bus.upper()}_messages.${msg_name}${index}.timestamp < (YAMCAN_GET_TIME_MS() - ${int(node.received_msgs[message].timeout_period_ms)}U))
     {
         ret = CANRX_MESSAGE_MIA;
     }
@@ -218,7 +198,7 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
                 %endif
               %endif
             %endfor
-    msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.timestamp = CANIO_getTimeMs();
+    msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.timestamp = YAMCAN_GET_TIME_MS();
             %if (bus, message) in node.bridged_rx_messages or node.received_msgs[message].fault_message:
     msgrx->${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}${index}.raw = *m;
             %endif
