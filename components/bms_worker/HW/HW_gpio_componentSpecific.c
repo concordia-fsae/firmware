@@ -11,15 +11,15 @@
 #include "HW_gpio.h"
 
 const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
-    [HW_GPIO_I2C2_SCL] = { 
-        .port = GPIOB, 
+    [HW_GPIO_I2C2_SCL] = {
+        .port = GPIOB,
         .pin = GPIO_PIN_10,
         .mode = GPIO_MODE_AF_OD,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_I2C2_SDA] = { 
+    [HW_GPIO_I2C2_SDA] = {
         .port = GPIOB,
         .pin = GPIO_PIN_11,
         .mode = GPIO_MODE_AF_OD,
@@ -27,7 +27,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_SPI1_CLK] = { 
+    [HW_GPIO_SPI1_CLK] = {
         .port = GPIOB,
         .pin = GPIO_PIN_3,
         .mode = GPIO_MODE_AF_PP,
@@ -35,7 +35,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_SPI1_MISO] = { 
+    [HW_GPIO_SPI1_MISO] = {
         .port = GPIOB,
         .pin = GPIO_PIN_4,
         .mode = GPIO_MODE_INPUT,
@@ -43,7 +43,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_SPI1_MOSI] = { 
+    [HW_GPIO_SPI1_MOSI] = {
         .port = GPIOB,
         .pin = GPIO_PIN_5,
         .mode = GPIO_MODE_AF_PP,
@@ -51,7 +51,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_SPI1_MAX_NCS] = { 
+    [HW_GPIO_SPI1_MAX_NCS] = {
         .port = GPIOB,
         .pin = GPIO_PIN_12,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -59,7 +59,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINSET,
     },
-    [HW_GPIO_MUX_SEL1] = { 
+    [HW_GPIO_MUX_SEL1] = {
         .port = GPIOB,
         .pin = GPIO_PIN_15,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -67,7 +67,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-    [HW_GPIO_MUX_SEL2] = { 
+    [HW_GPIO_MUX_SEL2] = {
         .port = GPIOB,
         .pin = GPIO_PIN_14,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -75,7 +75,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-    [HW_GPIO_MUX_SEL3] = { 
+    [HW_GPIO_MUX_SEL3] = {
         .port = GPIOB,
         .pin = GPIO_PIN_13,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -83,7 +83,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-    [HW_GPIO_CAN_RX] = { 
+    [HW_GPIO_CAN_RX] = {
         .port = GPIOB,
         .pin = GPIO_PIN_8,
         .mode = GPIO_MODE_INPUT,
@@ -91,7 +91,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_CAN_TX] = { 
+    [HW_GPIO_CAN_TX] = {
         .port = GPIOB,
         .pin = GPIO_PIN_9,
         .mode = GPIO_MODE_AF_PP,
@@ -100,7 +100,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_PINSET,
     },
 #if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
-    [HW_GPIO_TACH_FAN1] = { 
+    [HW_GPIO_TACH_FAN1] = {
         .port = GPIOA,
         .pin = GPIO_PIN_8,
         .mode = GPIO_MODE_INPUT,
@@ -108,7 +108,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_TACH_FAN2] = { 
+    [HW_GPIO_TACH_FAN2] = {
         .port = GPIOA,
         .pin = GPIO_PIN_9,
         .mode = GPIO_MODE_INPUT,
@@ -117,7 +117,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
 #endif
-    [HW_GPIO_LED] = { 
+    [HW_GPIO_LED] = {
         .port = GPIOC,
         .pin = GPIO_PIN_13,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -126,7 +126,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_PINRESET,
     },
 #if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
-    [HW_GPIO_PWM_FAN1] = { 
+    [HW_GPIO_PWM_FAN1] = {
         .port = GPIOB,
         .pin = GPIO_PIN_6,
         .mode = GPIO_MODE_AF_PP,
@@ -134,7 +134,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_PWM_FAN2] = { 
+    [HW_GPIO_PWM_FAN2] = {
         .port = GPIOB,
         .pin = GPIO_PIN_7,
         .mode = GPIO_MODE_AF_PP,
@@ -143,7 +143,8 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
 #endif
-    [HW_GPIO_MAX_SAMPLE] = { 
+#if (APP_VARIANT_ID == 0)
+    [HW_GPIO_MAX_SAMPLE] = {
         .port = GPIOA,
         .pin = GPIO_PIN_10,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -151,7 +152,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
     },
-    [HW_GPIO_NX3_NEN] = { 
+    [HW_GPIO_NX3_NEN] = {
         .port = GPIOA,
         .pin = GPIO_PIN_15,
         .mode = GPIO_MODE_OUTPUT_PP,
@@ -159,15 +160,22 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINSET,
     },
-    [HW_GPIO_ADC_MAX] = { 
+#endif
+#if (APP_VARIANT_ID == 0)
+    [HW_GPIO_ADC_MAX] = {
         .port = GPIOA,
         .pin = GPIO_PIN_0,
+#elif (APP_VARIANT_ID == 1)
+    [HW_GPIO_ADC_MAX] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_7,
+#endif
         .mode = GPIO_MODE_ANALOG,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_ADC_MUX1] = { 
+    [HW_GPIO_ADC_MUX1] = {
         .port = GPIOA,
         .pin = GPIO_PIN_1,
         .mode = GPIO_MODE_ANALOG,
@@ -175,7 +183,8 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_ADC_MUX2] = { 
+#if (APP_VARIANT_ID == 0U)
+    [HW_GPIO_ADC_MUX2] = {
         .port = GPIOA,
         .pin = GPIO_PIN_2,
         .mode = GPIO_MODE_ANALOG,
@@ -183,7 +192,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_ADC_MUX3] = { 
+    [HW_GPIO_ADC_MUX3] = {
         .port = GPIOA,
         .pin = GPIO_PIN_3,
         .mode = GPIO_MODE_ANALOG,
@@ -191,7 +200,8 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_ADC_TEMPBRD1] = { 
+#endif
+    [HW_GPIO_ADC_TEMP_BALANCING1] = {
         .port = GPIOA,
         .pin = GPIO_PIN_4,
         .mode = GPIO_MODE_ANALOG,
@@ -199,7 +209,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
-    [HW_GPIO_ADC_TEMPBRD2] = { 
+    [HW_GPIO_ADC_TEMP_BALANCING2] = {
         .port = GPIOA,
         .pin = GPIO_PIN_5,
         .mode = GPIO_MODE_ANALOG,
@@ -207,4 +217,46 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_NOSET,
     },
+#if (APP_VARIANT_ID == 1U)
+    [HW_GPIO_ADC_VSNS_7V5] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_0,
+        .mode = GPIO_MODE_ANALOG,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+    },
+    [HW_GPIO_THERM9] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_2,
+        .mode = GPIO_MODE_ANALOG,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+    },
+    [HW_GPIO_ADC_TEMP_BOARD] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_6,
+        .mode = GPIO_MODE_ANALOG,
+        .speed = GPIO_SPEED_FREQ_HIGH,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_NOSET,
+    },
+    [HW_GPIO_NSHUTDOWN] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_10,
+        .mode = GPIO_MODE_INPUT,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_PINRESET,
+    },
+    [HW_GPIO_SUPPLY_KEEPON] = {
+        .port = GPIOA,
+        .pin = GPIO_PIN_11,
+        .mode = GPIO_MODE_OUTPUT_PP,
+        .speed = GPIO_SPEED_FREQ_LOW,
+        .pull = GPIO_NOPULL,
+        .resetState = HW_GPIO_PINRESET,
+    },
+#endif
 };
