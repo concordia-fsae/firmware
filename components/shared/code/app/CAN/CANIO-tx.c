@@ -3,19 +3,17 @@
  * CAN Transmit
  */
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 #include "CAN/CAN.h"
-#include "CAN/CanTypes.h"
 #include "HW_can.h"
 #include "FreeRTOS_SWI.h"
 #include "ModuleDesc.h"
 #include "FeatureDefines_generated.h"
 #include "CANIO_componentSpecific.h"
-#include "MessagePack_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -66,7 +64,6 @@ void CANTX_SWI(void)
         }
     }
 }
-
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -159,7 +156,6 @@ static void CANIO_tx_init(void)
         HW_CAN_start(bus);    // start CAN peripheral
     }
 }
-
 
 const ModuleDesc_S CANIO_tx = {
     .moduleInit        = &CANIO_tx_init,

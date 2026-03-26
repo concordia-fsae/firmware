@@ -9,6 +9,7 @@
 
 /**< Module Header */
 #include "drv_inputAD_private.h"
+#include "Yamcan.h"
 
 /**< System Includes*/
 #include <string.h>
@@ -22,7 +23,6 @@
 
 /**< Other Includes */
 #include "ModuleDesc.h"
-#include "MessageUnpack_generated.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S

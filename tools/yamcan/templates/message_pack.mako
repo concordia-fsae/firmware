@@ -4,16 +4,18 @@
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
   %if msg.from_bridge:
+<%
+    storage_name = msg.node_ref.name.upper() + '_' + msg.name.split('_')[1] if msg.node_ref.duplicateNode else msg.name
+    storage_index = f'[{msg.node_ref.offset}U]' if msg.node_ref.duplicateNode else ''
+%>\
     (void)counter;
-    extern CANRX_${msg.origin_bus.upper()}_messages_S CANRX_${msg.origin_bus.upper()}_messages;
-
-    if (CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message == false)
+    if (CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.new_message == false)
     {
         return false;
     }
 
-    *message = CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.raw;
-    CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message = false;
+    *message = CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.raw;
+    CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.new_message = false;
   %elif msg.fault_message:
   (void)counter;
   *message = set_fault_message;
@@ -127,7 +129,10 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
     tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((val - ${int(signal.offset)}) / ${int(signal.scale)});
     %endif
     %if signal.native_representation.signedness == Signedness.signed:
-    tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((tmp_${signal.name} & ${2**(signal.native_representation.bit_width - 1) - 1}U) | ((tmp_${signal.name} < 0) ? 1 << ${(signal.native_representation.bit_width - 1)}U : 0U));
+    uint${dtype}_t tmp_${signal.name}_u = (uint${dtype}_t)tmp_${signal.name};
+    tmp_${signal.name}_u = (uint${dtype}_t)((tmp_${signal.name}_u & ${2**(signal.native_representation.bit_width - 1) - 1}U) |
+        ((tmp_${signal.name} < 0) ? (1U << ${(signal.native_representation.bit_width - 1)}U) : 0U));
+    tmp_${signal.name} = (int${dtype}_t)tmp_${signal.name}_u;
     %endif
     %if signal.native_representation.endianness.value == 0 and signal.native_representation.bit_width > 8:
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${int(signal.native_representation.bit_width / 8)}U);

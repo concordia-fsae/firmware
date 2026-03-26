@@ -4,6 +4,117 @@ load("@prelude//:rules.bzl", __rules__ = "rules")
 load("//tools/uv/defs.bzl", "uv_genrule", "uv_tool")
 load("//components/vehicle_platform:platforms.bzl", "PLATFORM", "platform_output_name", "platform_target_label")
 
+_GENERATED_HEADERS = {
+    "CANTypes_generated.h": "CANTypes_generated.h",
+    "MessagePack_generated.h": "MessagePack_generated.h",
+    "MessageUnpack_generated.h": "MessageUnpack_generated.h",
+    "NetworkDefines_generated.h": "NetworkDefines_generated.h",
+    "SigRx.h": "SigRx.h",
+    "SigTx.h": "SigTx.h",
+    "TemporaryStubbing.h": "TemporaryStubbing.h",
+    "YamcanShared.h": "YamcanShared.h",
+}
+
+_GENERATED_SOURCES = [
+    "generated/MessagePack_generated.c",
+    "generated/MessageUnpack_generated.c",
+]
+
+def _codegen_outs(rust_wrapper: bool = False):
+    outs = {
+        key: ["generated/{}".format(val)]
+        for key, val in _GENERATED_HEADERS.items()
+    }
+    outs["MessagePack_generated.c"] = ["generated/MessagePack_generated.c"]
+    outs["MessageUnpack_generated.c"] = ["generated/MessageUnpack_generated.c"]
+    outs["sources"] = _GENERATED_SOURCES
+    if rust_wrapper:
+        outs["lib.rs"] = ["generated/lib.rs"]
+        outs["yamcan.rs"] = ["generated/yamcan.rs"]
+        outs["rust_model_generated.rs"] = ["generated/rust_model_generated.rs"]
+        outs["rust_decode_generated.rs"] = ["generated/rust_decode_generated.rs"]
+    return outs
+
+def _codegen_cmd(node: str, rust_wrapper: bool = False):
+    cmd = (
+        "$(python) ${TOOLDIR}/yamcan.py" +
+        " --cache-dir ${SRCS}" +
+        " --node {}".format(node) +
+        " --codegen-dir ${OUT}/generated/"
+    )
+    if rust_wrapper:
+        cmd += " --rust-codegen"
+        cmd += (
+            " && cp ${TOOLDIR}/srcs/rust/lib.rs ${OUT}/generated/lib.rs" +
+            " && cp ${TOOLDIR}/srcs/rust/yamcan.rs ${OUT}/generated/yamcan.rs"
+        )
+    return cmd
+
+def generate_resources(
+        name: str,
+        network_dep: str,
+        node: str,
+        rust_wrapper: bool = False,
+        **kwargs):
+    uv_genrule(
+        name = name,
+        tool = "//tools/yamcan:yamcan",
+        outs = _codegen_outs(rust_wrapper),
+        cmd = _codegen_cmd(node, rust_wrapper),
+        srcs = [network_dep],
+        **kwargs
+    )
+
+def generate_c_library(
+        name: str,
+        codegen_target: str,
+        library_deps: list[str] | None = None,
+        extra_srcs: list[str] | None = None,
+        extra_exported_headers: dict[str, str] | None = None,
+        **kwargs):
+    exported_headers = {
+        header: codegen_target + "[{}]".format(header)
+        for header in _GENERATED_HEADERS.keys()
+    }
+    exported_headers["YamcanTypes.h"] = "//tools/yamcan:YamcanTypes.h"
+    exported_headers["Yamcan.h"] = "//tools/yamcan:Yamcan.h"
+    exported_headers["lib_atomic.h"] = "//embedded/libs:lib_atomic.h"
+    if extra_exported_headers:
+        exported_headers.update(extra_exported_headers)
+
+    srcs = [codegen_target + "[sources]"] + (extra_srcs if extra_srcs else [])
+
+    cxx_library(
+        name = name,
+        deps = library_deps if library_deps else [],
+        header_namespace = "",
+        srcs = srcs + ["//tools/yamcan:YamcanShared.c"],
+        exported_headers = exported_headers,
+        **kwargs
+    )
+
+def generate_rust_library(
+        name: str,
+        crate: str,
+        codegen_target: str,
+        c_dep: str,
+        deps: list[str] | None = None,
+        **kwargs):
+    __rules__["rust_library"](
+        name = name,
+        crate = crate,
+        crate_root = "generated/lib.rs",
+        srcs = [
+            codegen_target + "[lib.rs]",
+            codegen_target + "[yamcan.rs]",
+            codegen_target + "[rust_model_generated.rs]",
+            codegen_target + "[rust_decode_generated.rs]",
+        ],
+        edition = "2024",
+        deps = [c_dep] + (deps if deps else []),
+        **kwargs
+    )
+
 def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: list[str] | None = None, **kwargs):
     args = ""
     for node in ignore_nodes:
@@ -27,55 +138,24 @@ def generate_manifest(name: str, dep: str, filters: list[str], ignore_nodes: lis
         **kwargs,
     )
 
-def generate_code(name: str, network_dep: str, node: str, library_deps: list[str] | None = None, **kwargs):
-    uv_name = name + "-codegen"
-    cxx_deps = [":" + uv_name] + library_deps if library_deps else []
-    return [
-        uv_genrule(
-            name = uv_name,
-            tool = "//tools/yamcan:yamcan",
-            # Named output dir called "include"
-            outs = {
-                "CANTypes_generated.h": ["generated/CANTypes_generated.h"],
-                "MessagePack_generated.h": ["generated/MessagePack_generated.h"],
-                "MessageUnpack_generated.h": ["generated/MessageUnpack_generated.h"],
-                "NetworkDefines_generated.h": ["generated/NetworkDefines_generated.h"],
-                "SigRx.h": ["generated/SigRx.h"],
-                "SigTx.h": ["generated/SigTx.h"],
-                "TemporaryStubbing.h": ["generated/TemporaryStubbing.h"],
-                "sources": [
-                    "generated/MessagePack_generated.c",
-                    "generated/MessageUnpack_generated.c",
-                ],
-            },
-            cmd = (
-                "$(python) ${TOOLDIR}/yamcan.py" +
-                " --cache-dir ${SRCS}" +
-                " --node {}".format(node) +
-                " --codegen-dir ${OUT}/generated/"
-            ),
-            srcs = [network_dep],
-        ),
-        cxx_library(
-            name = name,
-            deps = cxx_deps,
-            header_namespace = "",
-            srcs = [":" + uv_name + "[sources]"],
-            exported_headers = {
-                "CANTypes_generated.h": ":" + uv_name + "[CANTypes_generated.h]",
-                "MessagePack_generated.h": ":" + uv_name + "[MessagePack_generated.h]",
-                "MessageUnpack_generated.h": ":" + uv_name + "[MessageUnpack_generated.h]",
-                "NetworkDefines_generated.h": ":" + uv_name + "[NetworkDefines_generated.h]",
-                "SigRx.h": ":" + uv_name + "[SigRx.h]",
-                "SigTx.h": ":" + uv_name + "[SigTx.h]",
-                "TemporaryStubbing.h": ":" + uv_name + "[TemporaryStubbing.h]",
-            },
-            headers = {
-                "lib_atomic.h": "//embedded/libs:lib_atomic.h",
-            },
-            **kwargs
-        ),
-    ]
+def generate_code(
+        name: str,
+        network_dep: str,
+        node: str,
+        library_deps: list[str] | None = None,
+        **kwargs):
+    codegen_name = name + "-codegen"
+    generate_resources(
+        name = codegen_name,
+        network_dep = network_dep,
+        node = node,
+    )
+    generate_c_library(
+        name = name,
+        codegen_target = ":" + codegen_name,
+        library_deps = library_deps,
+        **kwargs
+    )
 
 def generate_stats(
         name: str,

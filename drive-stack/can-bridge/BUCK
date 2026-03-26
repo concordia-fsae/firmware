@@ -1,14 +1,115 @@
+load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "generate_rust_library")
+
+generate_resources(
+    name = "yamcan-carputer-veh-codegen",
+    network_dep = "//network:network",
+    node = "carputerVeh",
+    rust_wrapper = True,
+    visibility = ["PUBLIC"],
+)
+
+generate_c_library(
+    name = "yamcan-carputer-veh",
+    codegen_target = ":yamcan-carputer-veh-codegen",
+    extra_srcs = [
+        "//components/shared/code:libs/Utility.c",
+    ],
+    extra_exported_headers = {
+        "CANIO_componentSpecific.h": "include/CANIO_componentSpecific.h",
+        "YamcanConfig.h": "include/YamcanConfig.h",
+    },
+    library_deps = [
+        "//components/shared/code:headers",
+    ],
+    visibility = ["PUBLIC"],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+)
+
+generate_rust_library(
+    name = "yamcan-carputer-veh-rust",
+    crate = "yamcan_generated",
+    codegen_target = ":yamcan-carputer-veh-codegen",
+    c_dep = ":yamcan-carputer-veh",
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+generate_resources(
+    name = "yamcan-carputer-body-codegen",
+    network_dep = "//network:network",
+    node = "carputerBody",
+    rust_wrapper = True,
+    visibility = ["PUBLIC"],
+)
+
+generate_c_library(
+    name = "yamcan-carputer-body",
+    codegen_target = ":yamcan-carputer-body-codegen",
+    extra_srcs = [
+        "//components/shared/code:libs/Utility.c",
+    ],
+    extra_exported_headers = {
+        "CANIO_componentSpecific.h": "include/CANIO_componentSpecific.h",
+    },
+    library_deps = [
+        "//components/shared/code:headers",
+    ],
+    visibility = ["PUBLIC"],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+)
+
+generate_rust_library(
+    name = "yamcan-carputer-body-rust",
+    crate = "yamcan_generated",
+    codegen_target = ":yamcan-carputer-body-codegen",
+    c_dep = ":yamcan-carputer-body",
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
 rust_library(
-    name = "lib",
+    name = "lib-veh",
     crate = "can_bridge",
-    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
+    srcs = glob(["src/**/*.rs"], exclude=["main_*.rs"]),
     edition = "2024",
     deps = [
-        "//third_party:can-dbc",
+        ":yamcan-carputer-veh-rust",
+        "//third_party:chrono",
+        "//third_party:clap",
+        "//third_party:flate2",
         "//third_party:libc",
         "//third_party:socketcan",
-        "//third_party:serde",
         "//third_party:serde_json",
+        "//third_party:tar",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_library(
+    name = "lib-body",
+    crate = "can_bridge",
+    srcs = glob(["src/**/*.rs"], exclude=["main_*.rs"]),
+    edition = "2024",
+    deps = [
+        "//third_party:chrono",
+        "//third_party:flate2",
+        "//third_party:libc",
+        "//third_party:clap",
+        "//third_party:serde_json",
+        "//third_party:socketcan",
+        "//third_party:tar",
+        ":yamcan-carputer-body-rust",
     ],
     target_compatible_with = [
         "prelude//os/constraints:linux",
@@ -17,25 +118,52 @@ rust_library(
 )
 
 rust_binary(
-    name = "can-bridge",
-    srcs = ["src/main.rs"],
+    name = "can-bridge-veh",
+    srcs = ["src/main_veh.rs"],
+    crate_root = "src/main_veh.rs",
     edition = "2024",
     deps = [
-        ":lib",
-        "//third_party:clap",
-        "//third_party:chrono",
-        "//third_party:can-dbc",
-        "//third_party:flate2",
-        "//third_party:libc",
-        "//third_party:ratatui",
-        "//third_party:tar",
+        ":lib-veh",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "can-bridge-body",
+    srcs = ["src/main_body.rs"],
+    crate_root = "src/main_body.rs",
+    edition = "2024",
+    deps = [
+        ":lib-body",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
     ],
     visibility = ["PUBLIC"],
 )
 
 configured_alias(
-    name = "bin-arm64",
-    actual = ":can-bridge",
+    name = "bin-veh-arm64",
+    actual = ":can-bridge-veh",
     platform = "//buck2/platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-body-arm64",
+    actual = ":can-bridge-body",
+    platform = "//buck2/platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "bin-arm64",
+    srcs = [
+        ":bin-veh-arm64",
+        ":bin-body-arm64",
+    ],
     visibility = ["PUBLIC"],
 )

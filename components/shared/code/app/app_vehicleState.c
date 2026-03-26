@@ -9,9 +9,11 @@
 
 #include "app_vehicleState.h"
 #include "string.h"
-#include "MessageUnpack_generated.h"
+
 #include "drv_timer.h"
 #include "drv_inputAD.h"
+#include "HW_tim.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

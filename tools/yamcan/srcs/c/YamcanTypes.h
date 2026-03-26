@@ -1,45 +1,22 @@
 /*
- * CanTypes.h
- * This file contains types used for CAN messages and signals
+ * YamcanTypes.h
+ * Types used for CAN messages and signals in yamcan-generated code.
  */
 
 #pragma once
+
+#ifndef YAMCAN_CAN_TYPES_DEFINED
+#define YAMCAN_CAN_TYPES_DEFINED 1
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "Types.h"
-
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
-
-typedef enum
-{
-    CAN_TX_PRIO_1KHZ = 0U,
-    CAN_TX_PRIO_100HZ,
-    CAN_TX_PRIO_10HZ,
-    CAN_TX_PRIO_COUNT,
-} CAN_TX_Priorities_E;
-
-typedef enum
-{
-    CAN_TX_MAILBOX_0 = 0U,
-    CAN_TX_MAILBOX_1,
-    CAN_TX_MAILBOX_2,
-    CAN_TX_MAILBOX_COUNT,
-} CAN_TxMailbox_E;
-
-_Static_assert((uint8_t)CAN_TX_PRIO_COUNT == (uint8_t)CAN_TX_MAILBOX_COUNT, "Number of TX priorities should equal the number of TX mailboxes");
-
-typedef enum
-{
-    CAN_RX_FIFO_0 = 0U,
-    CAN_RX_FIFO_1,
-    CAN_RX_FIFO_COUNT,
-} CAN_RxFifo_E;
 
 typedef enum
 {
@@ -53,6 +30,11 @@ typedef enum
     CAN_REMOTE_TRANSMISSION_REQUEST_REMOTE,
 } CAN_RemoteTransmission_E;
 
+typedef enum
+{
+    CAN_BAUDRATE_1MBIT = 0U,
+    CAN_BAUDRATE_500KBIT,
+} CAN_baudrate_E;
 
 typedef union
 {
@@ -64,19 +46,23 @@ typedef union
 
 typedef struct
 {
-    uint16_t                 id;
+    CAN_baudrate_E baudrate;
+} CAN_busConfig_T;
+
+typedef struct
+{
+    uint32_t                 id;
 
     CAN_IdentifierLen_E      IDE;
     CAN_RemoteTransmission_E RTR;
 
     uint8_t                  lengthBytes;
     CAN_data_T               data;
-    CAN_TxMailbox_E          mailbox;
 } CAN_TxMessage_T;
 
 typedef struct
 {
-    uint16_t                 id;
+    uint32_t                 id;
 
     CAN_IdentifierLen_E      IDE;
     CAN_RemoteTransmission_E RTR;
@@ -88,11 +74,29 @@ typedef struct
     uint8_t                  filterMatchIndex;
 } CAN_RxMessage_T;
 
-typedef bool (*packFn)(CAN_data_T *messsage, const int counter);
+typedef bool (*packFn)(CAN_data_T *messsage, const uint8_t counter);
 
 typedef struct
 {
-    packFn   pack;
-    uint16_t id;
-    uint8_t  len;
+    const packFn   pack;
+    const uint32_t id;
+    const uint8_t  len;
 } packTable_S;
+
+typedef struct
+{
+    const packTable_S* const packTable;
+    const uint8_t      packTableLength;
+    const uint16_t     period;
+    uint8_t            counter;
+    uint8_t            index;
+    uint32_t           lastTimestamp;
+} busTable_S;
+
+typedef struct
+{
+    busTable_S* const busTable;
+    const uint8_t     busTableLength;
+} canTable_S;
+
+#endif

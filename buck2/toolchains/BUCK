@@ -68,9 +68,9 @@ gcc_toolchain(
 # Host toolchain
 system_cxx_toolchain(
     name = "cxx-host",
-    compiler = "gcc",
-    cxx_compiler = "g++",
-    linker = "g++",
+    compiler = "clang",
+    cxx_compiler = "clang++",
+    linker = "clang++",
     archiver = "ar",
     visibility = ["PUBLIC"],
 )

@@ -38,7 +38,8 @@ BUS_SCHEMA = Schema(
         "name": str,
         "description": str,
         "defaultEndianness": str,
-        "baudrate": Or(1000000, 500000),
+        Optional("interfaceType"): Or("physical", "virtual"),
+        Optional("baudrate"): Or(1000000, 500000),
     }
 )
 
@@ -83,6 +84,8 @@ RX_FILE_SCHEMA = Schema(
     {
         "messages": Or(dict, None),
         "signals": Or(dict, None),
+        Optional("receiveAllMessagesOnBuses"): Or(str, list[str]),
+        Optional("forwarding"): Or(list, None),
     }
 )
 
@@ -91,7 +94,15 @@ RX_ITEM_SCHEMA = Schema(
         Optional("sourceBuses"): Or(str, list[str]),
         Optional("unrecorded"): bool,
         Optional("node"): Or(int, list[int]),
-        Optional("destBuses"): list[str],
+    }
+)
+
+FORWARDING_ITEM_SCHEMA = Schema(
+    {
+        "sourceBus": str,
+        "destBus": str,
+        Optional("policy"): Or("all", "bridged"),
+        Optional("bridgedMessages"): Or(list[str], None),
     }
 )
 
@@ -207,6 +218,12 @@ def generate_can_buses(definition_dir: Path) -> None:
             can_bus_def = safe_load(bus_file)
         try:
             BUS_SCHEMA.validate(can_bus_def)
+            interface_type = can_bus_def.get("interfaceType", "physical")
+            if interface_type == "virtual":
+                if "baudrate" in can_bus_def:
+                    raise Exception("Virtual buses must not define a baudrate.")
+            elif "baudrate" not in can_bus_def:
+                raise Exception("Physical buses must define a baudrate.")
             try:
                 Endianess[can_bus_def["defaultEndianness"]]
             except:
@@ -272,9 +289,10 @@ def generate_can_nodes(definition_dir: Path) -> None:
         message_file = f"{node.name}-message.yaml" in node_dict["def_files"]
         signals_file = f"{node.name}-signals.yaml" in node_dict["def_files"]
 
-        if (message_file and not signals_file) or (not message_file and signals_file):
+        if not message_file or not signals_file:
             print(
-                f"You must either provide both a '{node.name}-message.yaml' and '{node.name}-signals.yaml file, or neither"
+                f"Missing node transmit definition files for '{node.name}'. "
+                f"Expected both '{node.name}-message.yaml' and '{node.name}-signals.yaml'."
             )
             ERROR = True
 
@@ -338,7 +356,8 @@ def process_node(node: CanNode):
     signals_dict = {}
     with open(node.def_files[sig_file], "r") as signals_file:
         try:
-            signals_dict = safe_load(signals_file)["signals"] or {}
+            signals_root = safe_load(signals_file) or {}
+            signals_dict = signals_root.get("signals", {}) or {}
             for key in signals_dict.keys():
                 if not key.isalnum():
                     raise Exception(
@@ -415,7 +434,8 @@ def process_node(node: CanNode):
 
     with open(node.def_files[msg_file], "r") as messages_file:
         try:
-            messages_dict = safe_load(messages_file).get("messages", {})
+            messages_root = safe_load(messages_file) or {}
+            messages_dict = messages_root.get("messages", {}) or {}
             for key in messages_dict.keys():
                 if not key.isalnum():
                     raise Exception(
@@ -426,8 +446,6 @@ def process_node(node: CanNode):
 
     if not messages_dict:
         print(f"No messages found in message file for node '{node.name}'")
-        ERROR = True
-        return
 
     for name, definition in messages_dict.items():
         if node.duplicateNode:
@@ -629,55 +647,153 @@ def process_bridges(node: CanNode):
             print(f"File Schema Error: {e}")
             raise e
 
-    rx_msg_dict = rx_sig_file["messages"] if rx_sig_file["messages"] is not None else {}
-    for msg, definition in rx_msg_dict.items():
-        if definition is not None:
-            try:
-                RX_ITEM_SCHEMA.validate(definition)
-                if "destBuses" not in definition:
-                    continue
-                if "sourceBuses" not in definition:
-                    raise Exception(f"Source bus is not defined.")
-                if type(definition["sourceBuses"]) is list:
-                    for bus in definition["sourceBuses"]:
-                        if bus not in can_bus_defs:
-                            raise Exception(
-                                f"Source bus {definition['sourceBuses']} is not defined in the network."
-                            )
+    for route in node.forwarding_routes:
+        if route["policy"] == "all":
+            message_names = [
+                message.name
+                for message in can_bus_defs[route["source_bus"]].messages.values()
+                if route["source_bus"] in message.source_buses
+            ]
+        else:
+            message_names = route.get("bridged_messages", [])
 
-                else:
-                    if definition["sourceBuses"] not in can_bus_defs:
-                        raise Exception(
-                            f"Source bus {definition['sourceBuses']} is not defined in the network."
-                        )
-            except Exception as e:
-                print(
-                    f"CAN message reception definition for '{msg}' in node '{node.name}' is invalid."
+        for msg_name in message_names:
+            bridge_message_to_bus(
+                node, route["source_bus"], route["dest_bus"], msg_name
+            )
+
+
+def bridge_message_to_bus(node: CanNode, source_bus: str, dest_bus: str, msg_name: str):
+    source_message = can_bus_defs[source_bus].messages[msg_name]
+    node.bridged_rx_messages.add((source_bus, msg_name))
+
+    if msg_name in can_bus_defs[dest_bus].messages:
+        return
+
+    message = copy.deepcopy(source_message)
+    message.from_bridge = True
+    message.source_buses = [dest_bus]
+    message.origin_bus = source_bus
+    node.add_message(message)
+    can_bus_defs[dest_bus].messages[message.name] = message
+    sigs = {}
+    for sig, defn in message.signal_objs.items():
+        sigs[sig] = defn
+    can_bus_defs[dest_bus].signals.update(sigs)
+
+
+def process_forwarding(node: CanNode):
+    global ERROR
+    error = False
+
+    rx_file = RX_FILE.format(name=node.name)
+    if rx_file not in node.def_files:
+        return
+
+    with open(node.def_files[rx_file], "r") as fd:
+        rx_sig_file = safe_load(fd) or {"messages": {}, "signals": {}}
+        try:
+            RX_FILE_SCHEMA.validate(rx_sig_file)
+        except Exception as e:
+            print(f"CAN rx definition for node '{node.name}' is invalid.")
+            print(f"File Schema Error: {e}")
+            raise e
+
+    node.forwarding_routes = []
+    forwarding_defs = rx_sig_file.get("forwarding") or []
+    seen_routes = set()
+
+    def upsert_route(source_bus: str, dest_bus: str, policy: str):
+        for route in node.forwarding_routes:
+            if route["source_bus"] == source_bus and route["dest_bus"] == dest_bus:
+                if route["policy"] == "all" or policy == route["policy"]:
+                    return
+                if policy == "all":
+                    route["policy"] = "all"
+                    route["bridged_messages"] = []
+                return
+        node.forwarding_routes.append(
+            {
+                "source_bus": source_bus,
+                "dest_bus": dest_bus,
+                "policy": policy,
+                "bridged_messages": [],
+            }
+        )
+        seen_routes.add((source_bus, dest_bus))
+
+    for definition in forwarding_defs:
+        try:
+            FORWARDING_ITEM_SCHEMA.validate(definition)
+
+            source_bus = definition["sourceBus"]
+            dest_bus = definition["destBus"]
+            policy = definition.get("policy", "all")
+            bridged_messages = definition.get("bridgedMessages") or []
+
+            if source_bus not in can_bus_defs:
+                raise Exception(
+                    f"Source bus '{source_bus}' is not defined in the network."
                 )
-                print(f"CAN RX Message Error: {e}")
+            if dest_bus not in can_bus_defs:
+                raise Exception(
+                    f"Destination bus '{dest_bus}' is not defined in the network."
+                )
+
+            if source_bus not in node.on_buses:
+                raise Exception(
+                    f"Node '{node.alias}' cannot define forwarding for bus '{source_bus}' because it is not present on that bus."
+                )
+            if dest_bus not in node.on_buses:
+                raise Exception(
+                    f"Node '{node.alias}' cannot define forwarding to bus '{dest_bus}' because it is not present on that bus."
+                )
+            if source_bus == dest_bus:
+                raise Exception(
+                    f"Node '{node.alias}' cannot forward bus '{source_bus}' to itself."
+                )
+            if policy == "all" and bridged_messages:
+                raise Exception(
+                    f"Node '{node.alias}' defines bridgedMessages for '{source_bus}' -> '{dest_bus}' with policy 'all'."
+                )
+            if policy == "bridged" and not bridged_messages:
+                raise Exception(
+                    f"Node '{node.alias}' must define bridgedMessages for '{source_bus}' -> '{dest_bus}' when policy is 'bridged'."
+                )
+            route_key = (source_bus, dest_bus)
+            if route_key in seen_routes:
+                raise Exception(
+                    f"Node '{node.alias}' defines multiple forwarding routes for '{source_bus}' -> '{dest_bus}'."
+                )
+
+            upsert_route(source_bus, dest_bus, policy)
+            route = next(
+                route
+                for route in node.forwarding_routes
+                if route["source_bus"] == source_bus and route["dest_bus"] == dest_bus
+            )
+            if policy == "bridged":
+                route["bridged_messages"] = bridged_messages
+        except Exception as e:
+            print(f"CAN forwarding definition for node '{node.name}' is invalid.")
+            print(f"CAN Forwarding Error: {e}")
+            error = True
+
+    for route in node.forwarding_routes:
+        if route["policy"] != "bridged":
+            continue
+        for msg_name in route["bridged_messages"]:
+            if msg_name not in can_bus_defs[route["source_bus"]].messages:
+                print(
+                    f"Node '{node.alias}' forwards bridged message '{msg_name}' from "
+                    f"'{route['source_bus']}' to '{route['dest_bus']}', but that message "
+                    "does not exist on the source bus."
+                )
                 error = True
-                continue
+
     if error:
         ERROR = True
-        raise Exception("Error processing node bridges, see previous errors...")
-
-    for msg_name, definition in rx_msg_dict.items():
-        if definition is None or "destBuses" not in definition:
-            continue
-
-        message = copy.deepcopy(
-            can_bus_defs[definition["sourceBuses"]].messages[msg_name]
-        )
-        can_bus_defs[definition["sourceBuses"]].messages[msg_name].bridged = True
-        message.from_bridge = True
-        message.source_buses = definition["destBuses"]
-        message.origin_bus = definition["sourceBuses"]
-        node.add_message(message)
-        can_bus_defs[definition["destBuses"]].messages[message.name] = message
-        sigs = {}
-        for sig, defn in message.signal_objs.items():
-            sigs[sig] = defn
-        can_bus_defs[definition["destBuses"]].signals.update(sigs)
+        raise Exception("Error processing node forwarding, see previous errors...")
 
 
 def process_receivers(bus: CanBus, node: CanNode):
@@ -697,6 +813,17 @@ def process_receivers(bus: CanBus, node: CanNode):
             print(f"CAN rx definition for node '{node.name}' is invalid.")
             print(f"File Schema Error: {e}")
             raise e
+
+    rx_all = rx_sig_file.get("receiveAllMessagesOnBuses")
+    rx_all_buses: list[str] = []
+    if rx_all is not None:
+        rx_all_buses = rx_all if type(rx_all) is list else [rx_all]
+        for b in rx_all_buses:
+            if b not in can_bus_defs:
+                print(
+                    f"Node '{node.alias}' attempted to RX all messages on bus '{b}', but that bus is not defined."
+                )
+                error = True
 
     with open(node.def_files[rx_file], "r") as fd:
         # making this a dictionary because eventually we'll
@@ -730,6 +857,24 @@ def process_receivers(bus: CanBus, node: CanNode):
     if error:
         ERROR = True
         raise Exception("Error processing node receivers, see previous errors...")
+
+    def add_message_and_signals(rxed_msg: CanMessage):
+        if rxed_msg.name not in node.received_msgs:
+            node.received_msgs[rxed_msg.name] = rxed_msg
+        for sig_name, sig_obj in rxed_msg.signal_objs.items():
+            if sig_name not in node.received_sigs:
+                node.received_sigs[sig_name] = sig_obj
+            rxed_msg.add_receiver(node, sig_name)
+
+        if (
+            rxed_msg.checksum_sig
+            and rxed_msg.checksum_sig.name not in node.received_sigs
+        ):
+            node.received_sigs[rxed_msg.checksum_sig.name] = rxed_msg.checksum_sig
+            rxed_msg.add_receiver(node, rxed_msg.checksum_sig.name)
+        if rxed_msg.counter_sig and rxed_msg.counter_sig.name not in node.received_sigs:
+            node.received_sigs[rxed_msg.counter_sig.name] = rxed_msg.counter_sig
+            rxed_msg.add_receiver(node, rxed_msg.counter_sig.name)
 
     with open(node.def_files[rx_file], "r") as fd:
         rx_msg_dict = (
@@ -826,9 +971,12 @@ def process_receivers(bus: CanBus, node: CanNode):
         if msg_name not in node.received_msgs:
             node.received_msgs[msg_name] = bus.messages[msg_name]
 
-        if rx_msg_dict[msg_name] is not None:
-            if "unrecorded" in rx_msg_dict[msg_name]:
-                continue
+            if rx_msg_dict[msg_name] is not None:
+                if "unrecorded" in rx_msg_dict[msg_name]:
+                    continue
+
+        if rx_msg_dict[msg_name] is not None and "unrecorded" in rx_msg_dict[msg_name]:
+            continue
 
         for sig_name in bus.messages[msg_name].signals:
             rxed_sig = bus.signals[sig_name]
@@ -839,6 +987,18 @@ def process_receivers(bus: CanBus, node: CanNode):
             ):
                 node.received_sigs[sig_name] = rxed_sig
                 bus.messages[msg_name].add_receiver(node, rxed_sig.name)
+
+    if bus.name in rx_all_buses:
+        if bus.name not in node.on_buses:
+            print(
+                f"Node '{node.alias}' attempted to RX all messages on bus '{bus.name}', but '{node.alias}' is not present on that bus"
+            )
+            ERROR = True
+            return
+        for msg in bus.messages.values():
+            if bus.name not in msg.source_buses:
+                continue
+            add_message_and_signals(msg)
 
 
 def generate_dbcs(mako_lookup: TemplateLookup, bus: CanBus, output_dir: Path):
@@ -856,7 +1016,11 @@ def generate_dbcs(mako_lookup: TemplateLookup, bus: CanBus, output_dir: Path):
         dbc_handle.write(dbc)
 
 
-def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
+def codegen(
+    mako_lookup: TemplateLookup,
+    nodes: Iterator[Tuple[str, Path]],
+    rust_codegen: bool = False,
+):
     global ERROR
     for node, output_dir in nodes:
         if node not in can_nodes:
@@ -868,6 +1032,7 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["MessageUnpack_generated.c.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
             ["MessageUnpack_generated.h.mako", {"nodes": [can_nodes[node]]}],
+            ["YamcanShared.h.mako", {"nodes": [can_nodes[node]]}],
             [
                 "NetworkDefines_generated.h.mako",
                 {"nodes": [can_nodes[node]], "buses": can_bus_defs, "network": {}},
@@ -877,6 +1042,14 @@ def codegen(mako_lookup: TemplateLookup, nodes: Iterator[Tuple[str, Path]]):
             ["SigRx.h.mako", {"nodes": [can_nodes[node]]}],
             ["TemporaryStubbing.h.mako", {"nodes": [can_nodes[node]]}],
         ]
+        if rust_codegen:
+            makos += [
+                ["rust_model_generated.rs.mako", {"nodes": [can_nodes[node]]}],
+                [
+                    "rust_decode_generated.rs.mako",
+                    {"nodes": [can_nodes[node]], "can_bus_defs": can_bus_defs},
+                ],
+            ]
         for template in makos:
             rendered = mako_lookup.get_template(template[0]).render(**template[1])
             if not isinstance(rendered, str):
@@ -956,6 +1129,13 @@ def parse_args() -> Namespace:
     )
 
     parser.add_argument(
+        "--rust-codegen",
+        dest="rust_codegen",
+        action="store_true",
+        help="Generate additional code for can-bridge integration.",
+    )
+
+    parser.add_argument(
         "--manifest-output",
         dest="manifest",
         type=str,
@@ -1010,6 +1190,9 @@ def parseNetwork(args, lookup):
         process_node(node)
 
     for node in can_nodes.values():
+        process_forwarding(node)
+
+    for node in can_nodes.values():
         process_bridges(node)
 
     for bus in can_bus_defs.values():
@@ -1048,12 +1231,18 @@ def calculate_bus_load(bus, output_dir):
         total_bits_per_s += bit_length * messages_per_s
         total_messages_per_s += messages_per_s
 
-    usage = total_bits_per_s / bus.baudrate
+    usage = 0 if bus.interface_type == "virtual" else total_bits_per_s / bus.baudrate
     for out in output:
-        print(
-            f"CAN Bus Statistics for '{bus.name.upper()}'; Baudrate: {bus.baudrate}; Usage: {usage * 100}%",
-            file=out,
-        )
+        if bus.interface_type == "virtual":
+            print(
+                f"CAN Bus Statistics for '{bus.name.upper()}'; Interface Type: virtual; Usage: n/a",
+                file=out,
+            )
+        else:
+            print(
+                f"CAN Bus Statistics for '{bus.name.upper()}'; Baudrate: {bus.baudrate}; Usage: {usage * 100}%",
+                file=out,
+            )
         print(
             f"Total Bits Transmitted/s: {int(total_bits_per_s)}; Total Messages Transmitted/s: {int(total_messages_per_s)}",
             file=out,
@@ -1067,9 +1256,9 @@ def calculate_bus_load(bus, output_dir):
             f"Total Nodes: {len(bus.nodes)}; Count Messages: {total_messages}", file=out
         )
 
-    if usage > 0.8:
+    if bus.interface_type != "virtual" and usage > 0.8:
         print(f"Warning: CANBus '{bus.name.upper()}' has high bus load")
-    if usage > 1:
+    if bus.interface_type != "virtual" and usage > 1:
         raise Exception(f"CAN Bus '{bus.name.upper()}' has total bus usage of {usage}")
 
 
@@ -1250,7 +1439,7 @@ def main():
         raise Exception("Build failed. See previous errors in output")
 
     if args.node:
-        codegen(lookup, zip(args.node, args.codegen_dir))
+        codegen(lookup, zip(args.node, args.codegen_dir), args.rust_codegen)
 
 
 if __name__ == "__main__":

@@ -29,7 +29,7 @@
 #include "app_vehicleState_componentSpecific.h"
 #include "LIB_Types.h"
 #include "Module.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

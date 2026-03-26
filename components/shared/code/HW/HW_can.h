@@ -12,11 +12,7 @@
 // System Includes
 #include "HW.h"
 #include "HW_can_componentSpecific.h"
-
-// Firmware Includes
-#include "CAN/CanTypes.h"
-#include "NetworkDefines_generated.h"
-#include "FeatureDefines_generated.h"
+#include "Yamcan.h"
 
 #if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB) || \
     (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105)

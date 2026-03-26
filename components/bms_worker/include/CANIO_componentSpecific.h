@@ -5,13 +5,13 @@
 
 #pragma once
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 // imports for time base
 #include "HW_tim.h"
+#include "Yamcan.h"
 
 // imports for data access
 #include "cooling.h"
@@ -95,4 +95,3 @@
 #define set_coolState0(m, b, n, s)               set(m,b,n,s, (drv_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
                                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
-#include "TemporaryStubbing.h"

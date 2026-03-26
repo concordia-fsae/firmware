@@ -5,16 +5,15 @@
 
 #pragma once
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 // imports for timebase
 #include "HW_tim.h"
+#include "Yamcan.h"
 
 // imports for CAN generated types
-#include "CANTypes_generated.h"
 
 // imports for data access
 #include "BMS.h"
@@ -112,4 +111,3 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 # define transmit_BMSB_nvmInformation                  false
 #endif
 
-#include "TemporaryStubbing.h"

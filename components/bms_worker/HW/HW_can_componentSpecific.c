@@ -3,7 +3,6 @@
  * @brief  Source code for CAN firmware
  */
 
-
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
@@ -11,14 +10,14 @@
 #include "HW_can.h"
 
 #include "BatteryMonitoring.h"
-#include "CAN/CanTypes.h"
+#include "Yamcan.h"
 #include "CAN/CAN.h"
 #include "stm32f103xb.h"
 #include "stm32f1xx_hal_can.h"
 
-#include "MessageUnpack_generated.h"
 #include "lib_uds.h"
 #include "uds_componentSpecific.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

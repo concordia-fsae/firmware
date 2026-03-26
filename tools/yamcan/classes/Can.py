@@ -1,6 +1,6 @@
 import copy
 from math import ceil, log
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 from schema import Schema, Or, Optional, And
 from zlib import crc32
 
@@ -396,6 +396,7 @@ class CanMessage(CanObject):
         self.bridged = False
         self.from_bridge = False
         self.origin_bus = None
+        self.bridge_dest_buses: List[str] = []
         self.source_buses: List[str]
         self.crc = -1
         self.fault_message = (
@@ -579,6 +580,8 @@ class CanNode(CanObject):
         self.on_buses: List[str] = []
         self.received_msgs: Dict[str, CanMessage] = {}
         self.received_sigs: Dict[str, CanSignal] = {}
+        self.forwarding_routes: List[dict] = []
+        self.bridged_rx_messages: Set[Tuple[str, str]] = set()
 
         self.is_valid = True
 
@@ -620,7 +623,8 @@ class CanBus(CanObject):
 
     def __init__(self, bus_def):
         self.name = get_if_exists(bus_def, "name", str, "")
-        self.baudrate = get_if_exists(bus_def, "baudrate", int, 500000)
+        self.interface_type = get_if_exists(bus_def, "interfaceType", str, "physical")
+        self.baudrate = get_if_exists(bus_def, "baudrate", int, None)
         self.description = get_if_exists(bus_def, "description", str, "")
         self.default_endianess = Endianess[bus_def["defaultEndianness"]]
         self.nodes = {}
@@ -641,6 +645,19 @@ class CanBus(CanObject):
         valid = True
         if self.name == "":
             print("A bus is missing a name! Check bus definition files")
+            valid = False
+
+        if self.interface_type not in ["physical", "virtual"]:
+            print(
+                f"Bus '{self.name}' has unsupported interface type '{self.interface_type}'"
+            )
+            valid = False
+
+        if self.interface_type == "physical" and self.baudrate is None:
+            print(f"Bus '{self.name}' is physical but has no baudrate")
+            valid = False
+        if self.interface_type == "virtual" and self.baudrate is not None:
+            print(f"Bus '{self.name}' is virtual and must not define a baudrate")
             valid = False
 
         if self.description == "":

@@ -20,11 +20,12 @@
 #include "drv_timer.h"
 #include "Module.h"
 #include "SystemConfig.h"
-#include "MessageUnpack_generated.h"
-#include "NetworkDefines_generated.h"
+#include "app_faultManager.h"
+
 #include "FeatureDefines_generated.h"
 #include "lib_utility.h"
 #include "CELL.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

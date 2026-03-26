@@ -17,10 +17,12 @@
 #include "string.h"
 #include "lib_utility.h"
 #include "app_vehicleState.h"
-#include "MessageUnpack_generated.h"
+#include "app_faultManager.h"
+
 #include "drv_timer.h"
 #include "lib_rateLimit.h"
 #include "lib_pid.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

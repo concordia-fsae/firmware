@@ -1,3 +1,23 @@
+forwarding:
+  - sourceBus: ass
+    destBus: veh
+    policy: bridged
+    bridgedMessages:
+      - PM100DX_criticalData
+      - PM100DX_temps1
+      - PM100DX_temps3AndTorqueShudder
+      - PM100DX_motorPositionInfo
+      - PM100DX_torqueAndTimerInfo
+      - PM100DX_currentInfo
+      - PM100DX_faults
+      - PM100DX_eepromResponse
+  - sourceBus: veh
+    destBus: ass
+    policy: bridged
+    bridgedMessages:
+      - BMSB_currentLimit
+      - TOOLING_mcEepromCommand
+
 messages:
   UDSCLIENT_vcrearUdsRequest:
     unrecorded: true
@@ -8,25 +28,18 @@ messages:
   BMSB_ioStatus:
     sourceBuses: veh
   PM100DX_criticalData:
-    destBuses: veh
     sourceBuses: ass
   BMSB_currentLimit:
-    destBuses: ass
     sourceBuses: veh
   PM100DX_temps1:
-    destBuses: veh
     sourceBuses: ass
   PM100DX_temps3AndTorqueShudder:
-    destBuses: veh
     sourceBuses: ass
   PM100DX_motorPositionInfo:
-    destBuses: veh
     sourceBuses: ass
   PM100DX_torqueAndTimerInfo:
-    destBuses: veh
     sourceBuses: ass
   PM100DX_currentInfo:
-    destBuses: veh
     sourceBuses: ass
   PM100DX_internalStates:
     sourceBuses: ass
@@ -34,15 +47,12 @@ messages:
     sourceBuses: veh
     unrecorded: true
   PM100DX_faults:
-    destBuses: veh
     sourceBuses: ass
   PM100DX_eepromResponse:
-    destBuses: veh
     sourceBuses: ass
     unrecorded: true
   TOOLING_mcEepromCommand:
     sourceBuses: veh
-    destBuses: ass
     unrecorded: true
 
 signals:

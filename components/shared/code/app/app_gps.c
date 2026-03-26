@@ -19,6 +19,7 @@
 #include "app_faultManager.h"
 #include "HW_uart.h"
 #include "HW_gpio.h"
+#include "drv_outputAD.h"
 
 /******************************************************************************
  *                              D E F I N E S

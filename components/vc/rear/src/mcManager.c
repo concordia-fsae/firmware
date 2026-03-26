@@ -11,11 +11,10 @@
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "string.h"
-#include "MessageUnpack_generated.h"
+
 #include "lib_utility.h"
 #include "app_faultManager.h"
-#include "MessageUnpack_generated.h"
-#include "SigTx.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

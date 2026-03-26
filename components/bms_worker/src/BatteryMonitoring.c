@@ -9,6 +9,7 @@
 
 /**< Module header */
 #include "BatteryMonitoring.h"
+#include "Yamcan.h"
 
 /**< Driver Includes */
 #include "HW.h"
@@ -20,7 +21,7 @@
 /**< Other Includes */
 #include "Module.h"
 #include "string.h"
-#include "MessageUnpack_generated.h"
+
 #include "app_faultManager.h"
 
 /******************************************************************************
