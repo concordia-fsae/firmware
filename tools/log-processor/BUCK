@@ -55,7 +55,7 @@ carputer_application_target(
     name = "carputer",
     target_node = "log-processor",
     binary = ":bin-arm64",
-    binary_install_name = "log_processor",
+    binary_install_name = "log-processor",
     service_src = "log-processor.service",
     service_install_name = "log-processor.service",
     include_artifact_hash = False,

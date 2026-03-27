@@ -6,7 +6,7 @@ Requires=ota-agent-drive-stack.service
 [Service]
 Environment=OTA_AGENT_CONFIG_TOML=/application/config/ota-agent/ota-agent.toml
 Environment=OTA_AGENT_DISCOVERY_YAML=/application/config/ota-agent/discovery.yaml
-ExecStart=/bin/cfr/ota_agent server -i eth0 --save-dir /application/firmware/ -m /application/config/ota-agent/deploy-targets.yaml
+ExecStart=/bin/cfr/ota-agent server -i eth0 --save-dir /application/firmware/ -m /application/config/ota-agent/deploy-targets.yaml
 Restart=always
 RestartSec=5s
 

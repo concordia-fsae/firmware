@@ -4,7 +4,7 @@ After=network.target
 PartOf=drive-stack.target
 
 [Service]
-ExecStart=/bin/cfr/can_bridge_body can1 --forward-iface vcanBody -j -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 5 --log-size 250000000
+ExecStart=/bin/cfr/can-bridge-body can1 --forward-iface vcanBody -j -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 5 --log-size 250000000
 Restart=always
 RestartSec=5s
 StartLimitBurst=0
