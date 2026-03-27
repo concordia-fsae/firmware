@@ -580,16 +580,16 @@ async fn main() -> Result<()> {
 
             let state_filter = warp::any().map(move || Arc::clone(&state));
 
-            // POST /firmware/verify
-            let verify_route = warp::path("firmware")
+            // POST /ota/verify
+            let verify_route = warp::path("ota")
                 .and(warp::path("verify"))
                 .and(warp::post())
                 .and(warp::query::<FlashParams>())
                 .and(state_filter.clone())
                 .and_then(verify_handler);
 
-            // POST /firmware/stage  (multipart form: file)
-            let stage_route = warp::path("firmware")
+            // POST /ota/stage  (multipart form: file)
+            let stage_route = warp::path("ota")
                 .and(warp::path("stage"))
                 .and(warp::post())
                 .and(warp::query::<FlashParams>())
@@ -597,43 +597,43 @@ async fn main() -> Result<()> {
                 .and(warp::multipart::form().max_length(1024 * 1024 * 512)) // 512MB cap
                 .and_then(stage_handler);
 
-            // POST /firmware/flash  (no body; uses staged manifest)
-            let flash_route = warp::path("firmware")
+            // POST /ota/flash  (no body; uses staged manifest)
+            let flash_route = warp::path("ota")
                 .and(warp::path("flash"))
                 .and(warp::post())
                 .and(warp::query::<FlashParams>())
                 .and(state_filter.clone())
                 .and_then(flash_handler);
 
-            let bootstrap_route = warp::path("firmware")
+            let bootstrap_route = warp::path("ota")
                 .and(warp::path("bootstrap"))
                 .and(warp::post())
                 .and(warp::query::<FlashParams>())
                 .and(state_filter.clone())
                 .and_then(bootstrap_handler);
 
-            let bootstrap_status_route = warp::path("firmware")
+            let bootstrap_status_route = warp::path("ota")
                 .and(warp::path("bootstrap"))
                 .and(warp::path("status"))
                 .and(warp::get())
                 .and(state_filter.clone())
                 .and_then(bootstrap_status_handler);
 
-            let status_route = warp::path("firmware")
+            let status_route = warp::path("ota")
                 .and(warp::path("status"))
                 .and(warp::get())
                 .and(warp::query::<StatusParams>())
                 .and(state_filter.clone())
                 .and_then(status_handler);
 
-            let uds_ping_route = warp::path("firmware")
+            let uds_ping_route = warp::path("ota")
                 .and(warp::path("uds"))
                 .and(warp::path("ping"))
                 .and(warp::get())
                 .and(state_filter.clone())
                 .and_then(uds_ping_handler);
 
-            let revert_route = warp::path("firmware")
+            let revert_route = warp::path("ota")
                 .and(warp::path("revert"))
                 .and(warp::post())
                 .and(warp::query::<RevertParams>())
@@ -698,7 +698,7 @@ async fn main() -> Result<()> {
                     let stage_start = Instant::now();
                     let stage_pb = progress_step(&mp, &format!("staging {}", fname));
                     let rest_client = Client::new();
-                    let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                    let url = build_url(result.addresses[0], result.port, "/ota/stage");
                     let response = rest_client
                         .post(url)
                         .query(&FlashParams {
@@ -727,7 +727,7 @@ async fn main() -> Result<()> {
                     let mp = MultiProgress::new();
                     let flash_start = Instant::now();
                     let flash_pb = progress_step(&mp, "flashing staged binary");
-                    let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
+                    let url_flash = build_url(result.addresses[0], result.port, "/ota/flash");
                     let resp_flash = Client::new()
                         .post(url_flash)
                         .query(&FlashParams {
@@ -771,7 +771,7 @@ async fn main() -> Result<()> {
                     let mut sha = Sha256::new();
                     sha.update(&buffer);
                     let sha256_hex = hex::encode(sha.finalize());
-                    let url = build_url(result.addresses[0], result.port, "/firmware/verify");
+                    let url = build_url(result.addresses[0], result.port, "/ota/verify");
                     let response = rest_client
                         .post(url)
                         .query(&FlashParams {
@@ -813,7 +813,7 @@ async fn main() -> Result<()> {
                     if !staged {
                         let stage_start = Instant::now();
                         let stage_pb = progress_step(&mp, &format!("staging {}", fname));
-                        let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                        let url = build_url(result.addresses[0], result.port, "/ota/stage");
                         let response = rest_client
                             .post(url)
                             .query(&FlashParams {
@@ -849,7 +849,7 @@ async fn main() -> Result<()> {
                     // Flash
                     let flash_start = Instant::now();
                     let flash_pb = progress_step(&mp, "flashing staged binary");
-                    let url_flash = build_url(result.addresses[0], result.port, "/firmware/flash");
+                    let url_flash = build_url(result.addresses[0], result.port, "/ota/flash");
                     let resp_flash = Client::new()
                         .post(url_flash)
                         .query(&FlashParams {
@@ -908,7 +908,7 @@ async fn main() -> Result<()> {
                     let mut sha = Sha256::new();
                     sha.update(&buffer);
                     let sha256_hex = hex::encode(sha.finalize());
-                    let url = build_url(result.addresses[0], result.port, "/firmware/verify");
+                    let url = build_url(result.addresses[0], result.port, "/ota/verify");
                     let response = rest_client
                         .post(url)
                         .query(&FlashParams {
@@ -949,7 +949,7 @@ async fn main() -> Result<()> {
                     if !staged {
                         let stage_start = Instant::now();
                         let stage_pb = progress_step(&mp, &format!("staging {}", fname));
-                        let url = build_url(result.addresses[0], result.port, "/firmware/stage");
+                        let url = build_url(result.addresses[0], result.port, "/ota/stage");
                         let response = rest_client
                             .post(url)
                             .query(&FlashParams {
@@ -980,7 +980,7 @@ async fn main() -> Result<()> {
                     let boot_start = Instant::now();
                     let boot_pb = progress_step(&mp, "bootstrapping bundle");
                     let url_bootstrap =
-                        build_url(result.addresses[0], result.port, "/firmware/bootstrap");
+                        build_url(result.addresses[0], result.port, "/ota/bootstrap");
                     let resp = retry_request("bootstrap request", || {
                         let url_bootstrap = url_bootstrap.clone();
                         let node = bootstrap.node.clone();
@@ -1142,7 +1142,7 @@ async fn main() -> Result<()> {
                         let mut sha = Sha256::new();
                         sha.update(&buffer);
                         let sha256_hex = hex::encode(sha.finalize());
-                        let url = build_url(result.addresses[0], result.port, "/firmware/verify");
+                        let url = build_url(result.addresses[0], result.port, "/ota/verify");
                         let response = rest_client
                             .post(url)
                             .query(&FlashParams {
@@ -1169,7 +1169,7 @@ async fn main() -> Result<()> {
                             // Stage
                             node_pb.set_message(format!("{}: staging", node));
                             let url =
-                                build_url(result.addresses[0], result.port, "/firmware/stage");
+                                build_url(result.addresses[0], result.port, "/ota/stage");
                             let response = rest_client
                                 .post(url)
                                 .query(&FlashParams {
@@ -1190,7 +1190,7 @@ async fn main() -> Result<()> {
                         // Flash
                         node_pb.set_message(format!("{}: flashing", node));
                         let url_flash =
-                            build_url(result.addresses[0], result.port, "/firmware/flash");
+                            build_url(result.addresses[0], result.port, "/ota/flash");
                         let resp_flash = Client::new()
                             .post(url_flash)
                             .query(&FlashParams {
@@ -1283,7 +1283,7 @@ async fn main() -> Result<()> {
                     print_deployment_report(&results, total_dur);
                 }
                 SubAction::Status(status) => {
-                    let url = build_url(result.addresses[0], result.port, "/firmware/status");
+                    let url = build_url(result.addresses[0], result.port, "/ota/status");
                     let query = status
                         .nodes
                         .iter()
@@ -1324,7 +1324,7 @@ async fn main() -> Result<()> {
                 SubAction::UdsPing(_) => {
                     let mp = MultiProgress::new();
                     let ping_pb = progress_step(&mp, "requesting uds ping");
-                    let url = build_url(result.addresses[0], result.port, "/firmware/uds/ping");
+                    let url = build_url(result.addresses[0], result.port, "/ota/uds/ping");
                     let response = Client::new().get(url).send().await?;
                     let body = response.text().await?;
                     let report: UdsPingReport = serde_json::from_str(&body)
@@ -1348,7 +1348,7 @@ async fn main() -> Result<()> {
                     println!("{table}");
                 }
                 SubAction::Revert(revert) => {
-                    let url = build_url(result.addresses[0], result.port, "/firmware/status");
+                    let url = build_url(result.addresses[0], result.port, "/ota/status");
                     info!("Requesting status from ota-agent...");
                     let response = Client::new().get(url).send().await?;
                     let body = response.text().await?;
@@ -1417,7 +1417,7 @@ async fn main() -> Result<()> {
                             "Reverting '{}' (staged {} != production {})",
                             node, staged_hash, prod_hash
                         );
-                        let url = build_url(result.addresses[0], result.port, "/firmware/revert");
+                        let url = build_url(result.addresses[0], result.port, "/ota/revert");
                         let response = Client::new()
                             .post(url)
                             .query(&[("node", node.clone())])
@@ -1715,7 +1715,7 @@ fn bundle_relative_path(path: &str) -> anyhow::Result<PathBuf> {
 const UDS_DID_CRC: u16 = 0x03;
 
 #[cfg(target_os = "linux")]
-// POST /firmware/stage?node=...   (multipart form with part name "file")
+// POST /ota/stage?node=...   (multipart form with part name "file")
 async fn stage_handler(
     p: FlashParams,
     state: Arc<AppState>,
@@ -1850,7 +1850,7 @@ async fn stage_handler(
 }
 
 #[cfg(target_os = "linux")]
-// POST /firmware/stage?node=...
+// POST /ota/stage?node=...
 async fn verify_handler(
     p: FlashParams,
     state: Arc<AppState>,
@@ -3245,7 +3245,7 @@ async fn apply_local_package(
 }
 
 #[cfg(target_os = "linux")]
-// POST /firmware/flash?node=...
+// POST /ota/flash?node=...
 async fn flash_handler(
     p: FlashParams,
     state: Arc<AppState>,
@@ -3493,7 +3493,7 @@ async fn flash_handler(
 }
 
 #[cfg(target_os = "linux")]
-// POST /firmware/bootstrap?node=...
+// POST /ota/bootstrap?node=...
 async fn bootstrap_handler(
     p: FlashParams,
     state: Arc<AppState>,
@@ -4380,7 +4380,7 @@ fn start_mdns_advertisement(
     let host_name = format!("{}.local.", instance_name);
 
     let mut txt: HashMap<String, String> = HashMap::new();
-    txt.insert("api".to_string(), "/firmware".to_string());
+    txt.insert("api".to_string(), "/ota".to_string());
     txt.insert("proto".to_string(), "http".to_string());
     if !platform.is_empty() {
         txt.insert("platform".to_string(), platform);
