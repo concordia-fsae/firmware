@@ -7,6 +7,8 @@ messages:
     messageType: faults
     signals:
       mcFaulted:
+      faulted5vCritical:
+      faulted5vExt:
 
   udsResponse:
     description: UDS response message from the VCREAR
