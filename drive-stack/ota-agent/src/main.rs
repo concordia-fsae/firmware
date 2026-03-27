@@ -75,6 +75,7 @@ pub enum SubAction {
     Bootstrap(SubActionBootstrap),
     Batch(SubActionBatch),
     Status(SubActionStatus),
+    UdsPing(SubActionUdsPing),
     Revert(SubActionRevert),
 }
 
@@ -168,6 +169,11 @@ pub struct SubActionStatus {
     #[argh(option, short = 'n')]
     pub nodes: Vec<String>,
 }
+
+/// Check UDS node responsiveness and CRCs
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "uds-ping")]
+pub struct SubActionUdsPing {}
 
 /// Revert one, many, or all nodes to the baseline artifact
 #[derive(Debug, FromArgs)]
@@ -447,6 +453,21 @@ struct StatusReport {
     nodes: HashMap<String, StatusNodeReport>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct UdsPingNode {
+    node: String,
+    status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    crc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct UdsPingReport {
+    nodes: Vec<UdsPingNode>,
+}
+
 #[derive(Error, Debug, Clone)]
 enum ManifestError {
     #[error("binary already associated with node '{existing}', cannot reassign to '{incoming}'")]
@@ -605,6 +626,13 @@ async fn main() -> Result<()> {
                 .and(state_filter.clone())
                 .and_then(status_handler);
 
+            let uds_ping_route = warp::path("firmware")
+                .and(warp::path("uds"))
+                .and(warp::path("ping"))
+                .and(warp::get())
+                .and(state_filter.clone())
+                .and_then(uds_ping_handler);
+
             let revert_route = warp::path("firmware")
                 .and(warp::path("revert"))
                 .and(warp::post())
@@ -618,6 +646,7 @@ async fn main() -> Result<()> {
                 .or(bootstrap_route)
                 .or(bootstrap_status_route)
                 .or(status_route)
+                .or(uds_ping_route)
                 .or(revert_route)
                 .recover(recover_json);
 
@@ -1292,6 +1321,32 @@ async fn main() -> Result<()> {
                     );
                     println!("{table}");
                 }
+                SubAction::UdsPing(_) => {
+                    let mp = MultiProgress::new();
+                    let ping_pb = progress_step(&mp, "requesting uds ping");
+                    let url = build_url(result.addresses[0], result.port, "/firmware/uds/ping");
+                    let response = Client::new().get(url).send().await?;
+                    let body = response.text().await?;
+                    let report: UdsPingReport = serde_json::from_str(&body)
+                        .with_context(|| format!("parsing uds ping reply: {}", body))?;
+                    ping_pb.finish_with_message("uds ping complete");
+
+                    let mut rows = report
+                        .nodes
+                        .iter()
+                        .map(|node| {
+                            vec![
+                                node.node.clone(),
+                                node.status.clone(),
+                                node.crc.clone().unwrap_or_else(|| "-".to_string()),
+                                node.error.clone().unwrap_or_else(|| "-".to_string()),
+                            ]
+                        })
+                        .collect::<Vec<_>>();
+                    rows.sort_by(|a, b| a[0].cmp(&b[0]));
+                    let table = render_table(&["node", "status", "crc", "error"], &rows);
+                    println!("{table}");
+                }
                 SubAction::Revert(revert) => {
                     let url = build_url(result.addresses[0], result.port, "/firmware/status");
                     info!("Requesting status from ota-agent...");
@@ -1657,6 +1712,9 @@ fn bundle_relative_path(path: &str) -> anyhow::Result<PathBuf> {
 }
 
 #[cfg(target_os = "linux")]
+const UDS_DID_CRC: u16 = 0x03;
+
+#[cfg(target_os = "linux")]
 // POST /firmware/stage?node=...   (multipart form with part name "file")
 async fn stage_handler(
     p: FlashParams,
@@ -1889,6 +1947,108 @@ async fn status_handler(
             platform: state.cfg.platform.clone(),
             nodes,
         }),
+        StatusCode::OK,
+    ))
+}
+
+#[cfg(target_os = "linux")]
+async fn uds_ping_handler(state: Arc<AppState>) -> Result<impl warp::Reply, warp::Rejection> {
+    let uds_manifest = state.uds_manifest.as_ref().ok_or_else(|| {
+        warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            "missing UDS manifest; cannot ping UDS targets".to_string(),
+        ))
+    })?;
+
+    let manifest = read_manifest_compat(&state.manifest_path)
+        .await
+        .map_err(|e| {
+            warp::reject::custom(HttpError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to read manifest: {}", e),
+            ))
+        })?;
+
+    let mut nodes: Vec<_> = uds_manifest
+        .nodes
+        .iter()
+        .map(|(node, uds_entry)| {
+            let flashing = manifest
+                .nodes
+                .get(node)
+                .map(|entry| entry.flashing)
+                .unwrap_or(false);
+            let ids = match state.cfg.targets.get(node) {
+                Some(DeployTarget::Uds {
+                    request_id,
+                    response_id,
+                    ..
+                }) => match uds_ids_for_node_anyhow(&state, node, *request_id, *response_id) {
+                    Ok(ids) => ids,
+                    Err(_) => (uds_entry.request_id, uds_entry.response_id),
+                },
+                _ => (uds_entry.request_id, uds_entry.response_id),
+            };
+            (node.clone(), ids.0, ids.1, flashing)
+        })
+        .collect();
+    nodes.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut results = Vec::new();
+    for (node, request_id, response_id, flashing) in nodes {
+        if flashing {
+            results.push(UdsPingNode {
+                node,
+                status: "flashing".to_string(),
+                crc: None,
+                error: None,
+            });
+            continue;
+        }
+
+        let mut uds = UdsSession::new(&state.can_device, request_id, response_id, false).await;
+        let resp = uds.client.did_read(UDS_DID_CRC).await;
+        uds.teardown().await;
+
+        match resp {
+            Ok(bytes) => {
+                if let Ok(arr) = <[u8; 4]>::try_from(bytes.as_slice()) {
+                    let crc = u32::from_le_bytes(arr);
+                    if crc == 0xffffffff {
+                        results.push(UdsPingNode {
+                            node,
+                            status: "bootloader".to_string(),
+                            crc: Some("0xffffffff".to_string()),
+                            error: None,
+                        });
+                    } else {
+                        results.push(UdsPingNode {
+                            node,
+                            status: "online".to_string(),
+                            crc: Some(format!("0x{:08x}", crc)),
+                            error: None,
+                        });
+                    }
+                } else {
+                    results.push(UdsPingNode {
+                        node,
+                        status: "online".to_string(),
+                        crc: None,
+                        error: Some("invalid crc response".to_string()),
+                    });
+                }
+            }
+            Err(_) => results.push(UdsPingNode {
+                node,
+                status: "offline".to_string(),
+                crc: None,
+                error: Some("no response".to_string()),
+            }),
+        }
+    }
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&UdsPingReport { nodes: results }),
         StatusCode::OK,
     ))
 }

@@ -1,6 +1,6 @@
 load(":defs.bzl", "carputer_deploy_targets_manifest", "carputer_platform_targets")
 load("//components/vehicle_platform:platforms.bzl", "PLATFORMS")
-load("//drive-stack/ota-agent/defs.bzl", "ota_agent_revert", "ota_agent_status")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent_revert", "ota_agent_status", "ota_agent_uds_ping")
 load("//tools:defs.bzl", "sh_run")
 
 CARPUTER_APP_TARGETS = [
@@ -169,6 +169,11 @@ alias(
 
 ota_agent_status(
     name = "status",
+    visibility = ["PUBLIC"],
+)
+
+ota_agent_uds_ping(
+    name = "uds-ping",
     visibility = ["PUBLIC"],
 )
 
