@@ -105,6 +105,20 @@ ota_agent_status = rule(
     },
 )
 
+def _ota_agent_uds_ping(ctx: AnalysisContext):
+    tool = ctx.attrs.tool[RunInfo]
+    argv = cmd_args(tool)
+    argv.add("client")
+    argv.add("uds-ping")
+    return [RunInfo(args = argv), DefaultInfo()]
+
+ota_agent_uds_ping = rule(
+    impl = _ota_agent_uds_ping,
+    attrs = {
+        "tool": attrs.exec_dep(default = "//drive-stack/ota-agent:ota-agent"),
+    },
+)
+
 def _ota_agent_revert(ctx: AnalysisContext):
     tool = ctx.attrs.tool[RunInfo]
     argv = cmd_args(tool)
