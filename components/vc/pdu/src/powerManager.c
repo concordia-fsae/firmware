@@ -12,6 +12,7 @@
 #include "ModuleDesc.h"
 #include "drv_tps2hb16ab.h"
 #include "drv_vn9008.h"
+#include "drv_tps20xx.h"
 #include "LIB_Types.h"
 #include "string.h"
 #include "drv_inputAD.h"
@@ -186,6 +187,7 @@ static void powerManager_init(void)
 
     drv_tps2hb16ab_init();
     drv_vn9008_init();
+    drv_tps20xx_init();
 
     drv_tps2hb16ab_setDiagEnabled(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, true); // All diag pins are set to the same gpio
     drv_tps2hb16ab_setCSChannel(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1);
@@ -211,6 +213,22 @@ static void powerManager_periodic_100Hz(void)
     const drv_io_activeState_E shutdown_en = pm_data.okSafety ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, shutdown_en);
 #endif
+
+    const bool sleeping = app_vehicleState_sleeping();
+    const drv_tps20xx_state_E stateCrit = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_CRITICAL);
+    const drv_tps20xx_state_E stateExt = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_EXT);
+    const bool faultedCrit = (stateCrit == DRV_TPS20XX_STATE_FAULTED_OC) || (stateCrit == DRV_TPS20XX_STATE_FAULTED_OT);
+    const bool faultedExt = (stateExt == DRV_TPS20XX_STATE_FAULTED_OC) || (stateExt == DRV_TPS20XX_STATE_FAULTED_OT);
+
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_FAULTED5VCRITICAL, faultedCrit);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_FAULTED5VEXT, faultedExt);
+
+    for (uint8_t i = 0; i < DRV_TPS20XX_CHANNEL_COUNT; i++)
+    {
+        drv_tps20xx_setEnabled(i, !sleeping);
+    }
+
+    drv_tps20xx_run();
 
     // TODO: Improve
     static drv_tps2hb16ab_output_E output = DRV_TPS2HB16AB_OUT_1;

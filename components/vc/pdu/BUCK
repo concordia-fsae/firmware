@@ -281,6 +281,7 @@ cxx_binary(
             "//components/shared/code:DRV/drv_timer.c",
             "//components/shared/code:DRV/drv_tps2hb16ab.c",
             "//components/shared/code:DRV/drv_vn9008.c",
+            "//components/shared/code:DRV/drv_tps20xx.c",
             "//components/shared/code:HW/HW.c",
             "//components/shared/code:HW/HW_adc.c",
             "//components/shared/code:HW/HW_can.c",
