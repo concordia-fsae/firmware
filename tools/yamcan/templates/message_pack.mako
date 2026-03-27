@@ -20,6 +20,16 @@ static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t c
   (void)counter;
   *message = set_fault_message;
   %else:
+    %if msg.injected_tx:
+    (void)counter;
+    if (!CANTX_inject_${bus.upper()}_${msg.name}_state.pending)
+    {
+        return false;
+    }
+    *message = CANTX_inject_${bus.upper()}_${msg.name}_state.raw;
+    CANTX_inject_${bus.upper()}_${msg.name}_state.pending = false;
+    return true;
+    %endif
     if (transmit_${msg.name} == false)
     {
         return false;

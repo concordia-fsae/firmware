@@ -99,10 +99,11 @@ RX_ITEM_SCHEMA = Schema(
 
 FORWARDING_ITEM_SCHEMA = Schema(
     {
-        "sourceBus": str,
+        Optional("sourceBus"): str,
         "destBus": str,
-        Optional("policy"): Or("all", "bridged"),
+        Optional("policy"): Or("all", "bridged", "injected"),
         Optional("bridgedMessages"): Or(list[str], None),
+        Optional("injectedMessages"): Or(list[str], None),
     }
 )
 
@@ -667,7 +668,7 @@ def bridge_message_to_bus(node: CanNode, source_bus: str, dest_bus: str, msg_nam
     source_message = can_bus_defs[source_bus].messages[msg_name]
     node.bridged_rx_messages.add((source_bus, msg_name))
 
-    if msg_name in can_bus_defs[dest_bus].messages:
+    if msg_name in node.messages:
         return
 
     message = copy.deepcopy(source_message)
@@ -675,11 +676,26 @@ def bridge_message_to_bus(node: CanNode, source_bus: str, dest_bus: str, msg_nam
     message.source_buses = [dest_bus]
     message.origin_bus = source_bus
     node.add_message(message)
-    can_bus_defs[dest_bus].messages[message.name] = message
-    sigs = {}
-    for sig, defn in message.signal_objs.items():
-        sigs[sig] = defn
-    can_bus_defs[dest_bus].signals.update(sigs)
+    if msg_name not in can_bus_defs[dest_bus].messages:
+        can_bus_defs[dest_bus].messages[message.name] = message
+        sigs = {}
+        for sig, defn in message.signal_objs.items():
+            sigs[sig] = defn
+        can_bus_defs[dest_bus].signals.update(sigs)
+
+
+def inject_message_to_bus(node: CanNode, dest_bus: str, msg_name: str):
+    source_message = can_bus_defs[dest_bus].messages[msg_name]
+    node.injected_tx_messages.add((dest_bus, msg_name))
+
+    if msg_name in node.messages:
+        return
+
+    message = copy.deepcopy(source_message)
+    message.injected_tx = True
+    message.source_buses = [dest_bus]
+    message.node_ref = node
+    node.add_message(message)
 
 
 def process_forwarding(node: CanNode):
@@ -726,27 +742,54 @@ def process_forwarding(node: CanNode):
         try:
             FORWARDING_ITEM_SCHEMA.validate(definition)
 
-            source_bus = definition["sourceBus"]
-            dest_bus = definition["destBus"]
             policy = definition.get("policy", "all")
+            dest_bus = definition["destBus"]
+            source_bus = definition.get("sourceBus")
             bridged_messages = definition.get("bridgedMessages") or []
+            injected_messages = definition.get("injectedMessages") or []
 
-            if source_bus not in can_bus_defs:
-                raise Exception(
-                    f"Source bus '{source_bus}' is not defined in the network."
-                )
             if dest_bus not in can_bus_defs:
                 raise Exception(
                     f"Destination bus '{dest_bus}' is not defined in the network."
                 )
 
-            if source_bus not in node.on_buses:
-                raise Exception(
-                    f"Node '{node.alias}' cannot define forwarding for bus '{source_bus}' because it is not present on that bus."
-                )
             if dest_bus not in node.on_buses:
                 raise Exception(
                     f"Node '{node.alias}' cannot define forwarding to bus '{dest_bus}' because it is not present on that bus."
+                )
+
+            if policy == "injected":
+                if source_bus is not None:
+                    raise Exception(
+                        f"Node '{node.alias}' defines sourceBus for injected policy; remove it."
+                    )
+                if bridged_messages:
+                    raise Exception(
+                        f"Node '{node.alias}' defines bridgedMessages for injected policy."
+                    )
+                if not injected_messages:
+                    raise Exception(
+                        f"Node '{node.alias}' must define injectedMessages for injected policy."
+                    )
+                for msg_name in injected_messages:
+                    if msg_name not in can_bus_defs[dest_bus].messages:
+                        raise Exception(
+                            f"Node '{node.alias}' injects message '{msg_name}' to '{dest_bus}', but that message does not exist."
+                        )
+                    inject_message_to_bus(node, dest_bus, msg_name)
+                continue
+
+            if source_bus is None:
+                raise Exception(
+                    f"Node '{node.alias}' must define sourceBus for policy '{policy}'."
+                )
+            if source_bus not in can_bus_defs:
+                raise Exception(
+                    f"Source bus '{source_bus}' is not defined in the network."
+                )
+            if source_bus not in node.on_buses:
+                raise Exception(
+                    f"Node '{node.alias}' cannot define forwarding for bus '{source_bus}' because it is not present on that bus."
                 )
             if source_bus == dest_bus:
                 raise Exception(
