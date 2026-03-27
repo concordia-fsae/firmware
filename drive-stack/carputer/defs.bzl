@@ -313,6 +313,11 @@ carputer_deploy_targets_manifest = rule(
 
 def _carputer_bundle_impl(ctx: AnalysisContext) -> list[Provider]:
     out = ctx.actions.declare_output(ctx.attrs.out)
+    drive_stack_units = {}
+    drive_stack_exclude = {
+        "ota-agent.service": True,
+        "ota-agent-drive-stack.service": True,
+    }
     script_lines = [
         "set -eu",
         'OUT="$1"',
@@ -377,6 +382,8 @@ def _carputer_bundle_impl(ctx: AnalysisContext) -> list[Provider]:
                 app.service,
                 '$PKG_DIR/payload/etc/systemd/system/{}'.format(app.service_install_name),
             ))
+            if not drive_stack_exclude.get(app.service_install_name, False):
+                drive_stack_units[app.service_install_name] = True
 
         for idx, resource in enumerate(app.resources):
             install_path = app.resource_install_paths[idx]
@@ -411,6 +418,25 @@ def _carputer_bundle_impl(ctx: AnalysisContext) -> list[Provider]:
             resource,
             '$PKG_DIR/payload/{}'.format(install_path),
         ))
+
+    script_lines.append('mkdir -p "$PKG_DIR/payload/etc/systemd/system"')
+    script_lines.append(
+        'cat > "$PKG_DIR/payload/etc/systemd/system/drive-stack.target" <<EOF',
+    )
+    script_lines.append("[Unit]")
+    script_lines.append("Description=Drive stack umbrella target")
+    if len(drive_stack_units) > 0:
+        ordered_units = sorted(drive_stack_units.keys())
+        script_lines.append("Wants={}".format(" ".join(ordered_units)))
+        script_lines.append(
+            "After=ota-agent-drive-stack.service {}".format(" ".join(ordered_units)),
+        )
+    else:
+        script_lines.append("After=ota-agent-drive-stack.service")
+    script_lines.append("")
+    script_lines.append("[Install]")
+    script_lines.append("WantedBy=multi-user.target")
+    script_lines.append("EOF")
 
     script_lines.append('tar -C "$PKG_DIR" -czf "$OUT" .')
     script = ctx.actions.write("bundle-carputer.sh", script_lines, is_executable = True)

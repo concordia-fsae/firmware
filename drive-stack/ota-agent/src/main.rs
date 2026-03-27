@@ -2837,6 +2837,38 @@ async fn install_global_bundle(
     info!("Installing global bundle from {}", staged.path);
     lock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await?;
 
+    let mut stop_units = Vec::new();
+    for target in state.cfg.targets.values() {
+        if let DeployTarget::LocalPackage {
+            service,
+            enable_services,
+            restart_services,
+            ..
+        } = target
+        {
+            if let Some(service) = service {
+                let unit = &service.unit;
+                if unit != "ota-agent.service" && unit != "ota-agent-drive-stack.service" {
+                    stop_units.push(unit.clone());
+                }
+            }
+            for unit in enable_services.iter().chain(restart_services.iter()) {
+                if unit != "ota-agent.service" && unit != "ota-agent-drive-stack.service" {
+                    stop_units.push(unit.clone());
+                }
+            }
+        }
+    }
+    stop_units.sort();
+    stop_units.dedup();
+    if !stop_units.is_empty() {
+        info!("Stopping drive stack units: {:?}", stop_units);
+    }
+    for unit in &stop_units {
+        let _ = systemd_service("stop", unit).await;
+    }
+    let _ = systemd_service("stop", "drive-stack.target").await;
+
     let baseline_root = baseline_root(state);
     let releases_root = baseline_root.join("releases");
     fs::create_dir_all(&releases_root).await?;
@@ -3296,6 +3328,7 @@ async fn flash_handler(
     let force = p.force.unwrap_or(false);
     let lease_id = p.lease_id.as_deref();
     let release_lease = p.release_lease.unwrap_or(true);
+    let mut restart_drive_stack = false;
     let result = match get_target(&state, &p.node) {
         Ok(DeployTarget::LocalBundle { .. }) => {
             let staged = entry.clone().ok_or_else(|| {
@@ -3308,9 +3341,9 @@ async fn flash_handler(
                 "Installing global bundle for node '{}' (file: {})",
                 &p.node, &staged.filename
             );
-            install_global_bundle(&state, &staged)
-                .await
-                .map(|result| (result, None::<String>, staged))
+            let bundle_result = install_global_bundle(&state, &staged).await;
+            restart_drive_stack = true;
+            bundle_result.map(|result| (result, None::<String>, staged))
         }
         Ok(DeployTarget::LocalPackage {
             artifact,
@@ -3476,6 +3509,8 @@ async fn flash_handler(
             p.node
         );
     }
+
+    let _ = restart_drive_stack;
 
     let status_str = match &result.result {
         FlashStatus::DownloadSuccess => "download_success",
@@ -3897,7 +3932,9 @@ async fn apply_bootstrap(
         }
     }
 
-    release_service_lease(&state, Some(&lease_id), &start_services).await?;
+    if let Err(e) = release_service_lease(&state, Some(&lease_id), &start_services).await {
+        error!("Bootstrap apply: failed to start services: {}", e);
+    }
 
     let mut updated = 0;
     let mut skipped = 0;
@@ -3973,25 +4010,10 @@ async fn apply_bootstrap(
     if any_failed {
         info!("Bootstrap completed with failures; restarting ota-agent anyway");
     }
+
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(10)).await;
-        if let Err(e) = run_command(
-            "systemd-run",
-            &[
-                "--on-active=5s",
-                "--unit",
-                "ota-agent-bootstrap-restart",
-                "/bin/bash",
-                "-lc",
-                "systemctl restart ota-agent-drive-stack.service && systemctl restart ota-agent.service",
-            ],
-        )
-        .await
-        {
-            error!("Failed to schedule ota-agent restart: {}", e);
-        } else {
-            info!("Scheduled ota-agent restart via systemd-run");
-        }
+        tokio::time::sleep(Duration::from_secs(15)).await;
+        let _ = systemd_service("restart", "drive-stack.target").await;
     });
 
     Ok(())

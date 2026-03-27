@@ -1,8 +1,7 @@
 [Unit]
 Description=Carputer CAN Bridge (veh)
 After=network.target
-After=bootstrap-carputer.service
-Wants=bootstrap-carputer.service
+PartOf=drive-stack.target
 
 [Service]
 ExecStart=/bin/cfr/can_bridge_veh can0 --forward-iface vcanVeh -j -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 5 --log-size 250000000

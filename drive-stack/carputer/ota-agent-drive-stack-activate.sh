@@ -136,3 +136,10 @@ if [ -d "${PAYLOAD_DIR}/local" ]; then
 		cp -a "${unit_dir}/." /etc/systemd/system/
 	done
 fi
+
+if [ -f /etc/systemd/system/drive-stack.target ]; then
+	log "Reloading systemd units"
+	systemctl daemon-reload || true
+	log "Starting drive-stack.target"
+	systemctl start --no-block drive-stack.target || true
+fi
