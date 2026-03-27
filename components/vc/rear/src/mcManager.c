@@ -129,10 +129,16 @@ static void mcManager_periodic_100Hz(void)
     CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
     int16_t motor_rpm = 0;
     const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
-    (void)CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state);
+    const bool miaBms = CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state) != CANRX_MESSAGE_VALID;
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAMC, !speed_valid);
 
     bool mcFaulted = app_faultManager_getNetworkedFault_anySet(ASS, PM100DX_faults);
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MCFAULTED, mcFaulted);
+    const bool miaFront = CANRX_validate(VEH, VCFRONT_torqueManager) != CANRX_MESSAGE_VALID;
+    const bool miaPdu = CANRX_validate(VEH, VCPDU_vehicleState) != CANRX_MESSAGE_VALID;
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAVCFRONT, miaFront);
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAVCPDU, miaPdu);
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_MIABMS, miaBms);
 
     motor_rpm = (int16_t)(motor_rpm < 0 ? -motor_rpm : motor_rpm);
     mcManager_data.axle_rpm = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
