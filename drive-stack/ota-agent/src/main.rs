@@ -550,7 +550,8 @@ async fn main() -> Result<()> {
             match clear_flashing_flags_on_startup(&state).await {
                 Ok(flashing_nodes) => {
                     if let Err(e) =
-                        reconcile_flashing_nodes_on_startup(Arc::clone(&state), flashing_nodes).await
+                        reconcile_flashing_nodes_on_startup(Arc::clone(&state), flashing_nodes)
+                            .await
                     {
                         error!("Reconcile flashing nodes failed: {}", e);
                     }
@@ -683,8 +684,7 @@ async fn main() -> Result<()> {
             match client.action {
                 SubAction::Stage(flash) => {
                     let mp = MultiProgress::new();
-                    let buffer =
-                        read_file_with_progress(&mp, &flash.binary, "reading binary")?;
+                    let buffer = read_file_with_progress(&mp, &flash.binary, "reading binary")?;
                     let fname: String = Path::new(&flash.binary)
                         .file_name()
                         .map(|s| s.to_string_lossy().into_owned())
@@ -752,8 +752,7 @@ async fn main() -> Result<()> {
                     // Build multipart form with the file
                     let mp = MultiProgress::new();
                     let mut rows = Vec::new();
-                    let buffer =
-                        read_file_with_progress(&mp, &flash.binary, "reading binary")?;
+                    let buffer = read_file_with_progress(&mp, &flash.binary, "reading binary")?;
                     let fname: String = Path::new(&flash.binary)
                         .file_name()
                         .map(|s| s.to_string_lossy().into_owned())
@@ -793,11 +792,7 @@ async fn main() -> Result<()> {
                             staged = true;
                         }
                     }
-                    let verify_status = if staged {
-                        "matched"
-                    } else {
-                        "needs stage"
-                    };
+                    let verify_status = if staged { "matched" } else { "needs stage" };
                     verify_pb.finish_with_message(format!(
                         "verify {} ({})",
                         verify_status,
@@ -834,11 +829,7 @@ async fn main() -> Result<()> {
                             fname,
                             fmt_dur(stage_start.elapsed())
                         ));
-                        let stage_status = if stage_body.is_empty() {
-                            "ok"
-                        } else {
-                            "ok"
-                        };
+                        let stage_status = if stage_body.is_empty() { "ok" } else { "ok" };
                         rows.push(vec![
                             "stage".to_string(),
                             stage_status.to_string(),
@@ -867,8 +858,12 @@ async fn main() -> Result<()> {
                     if !status.is_success() {
                         let msg = serde_json::from_str::<serde_json::Value>(&flash_body)
                             .ok()
-                            .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(|s| s.to_string()))
-                        .unwrap_or_else(|| flash_body.clone());
+                            .and_then(|v| {
+                                v.get("error")
+                                    .and_then(|e| e.as_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .unwrap_or_else(|| flash_body.clone());
                         return Err(anyhow!("flash failed: {}", msg));
                     }
                     let parsed: FlashReply = serde_json::from_str(&flash_body)
@@ -890,8 +885,7 @@ async fn main() -> Result<()> {
                 SubAction::Bootstrap(bootstrap) => {
                     let mp = MultiProgress::new();
                     let mut rows = Vec::new();
-                    let buffer =
-                        read_file_with_progress(&mp, &bootstrap.binary, "reading bundle")?;
+                    let buffer = read_file_with_progress(&mp, &bootstrap.binary, "reading bundle")?;
                     let fname: String = Path::new(&bootstrap.binary)
                         .file_name()
                         .map(|s| s.to_string_lossy().into_owned())
@@ -930,11 +924,7 @@ async fn main() -> Result<()> {
                             staged = true;
                         }
                     }
-                    let verify_status = if staged {
-                        "matched"
-                    } else {
-                        "needs stage"
-                    };
+                    let verify_status = if staged { "matched" } else { "needs stage" };
                     verify_pb.finish_with_message(format!(
                         "verify {} ({})",
                         verify_status,
@@ -1065,10 +1055,8 @@ async fn main() -> Result<()> {
                         })
                         .collect::<Vec<_>>();
                     result_rows.sort_by(|a, b| a[0].cmp(&b[0]));
-                    let result_table = render_table(
-                        &["node", "kind", "action", "status", "error"],
-                        &result_rows,
-                    );
+                    let result_table =
+                        render_table(&["node", "kind", "action", "status", "error"], &result_rows);
                     println!("{result_table}");
                     if parsed.failed > 0 {
                         let mut reasons = HashMap::new();
@@ -1122,8 +1110,7 @@ async fn main() -> Result<()> {
                             continue;
                         };
 
-                        let node_pb =
-                            progress_step(&mp, &format!("{}: preparing", node));
+                        let node_pb = progress_step(&mp, &format!("{}: preparing", node));
 
                         // Build multipart form with the file
                         let buffer =
@@ -1168,8 +1155,7 @@ async fn main() -> Result<()> {
                         if !staged {
                             // Stage
                             node_pb.set_message(format!("{}: staging", node));
-                            let url =
-                                build_url(result.addresses[0], result.port, "/ota/stage");
+                            let url = build_url(result.addresses[0], result.port, "/ota/stage");
                             let response = rest_client
                                 .post(url)
                                 .query(&FlashParams {
@@ -1189,8 +1175,7 @@ async fn main() -> Result<()> {
 
                         // Flash
                         node_pb.set_message(format!("{}: flashing", node));
-                        let url_flash =
-                            build_url(result.addresses[0], result.port, "/ota/flash");
+                        let url_flash = build_url(result.addresses[0], result.port, "/ota/flash");
                         let resp_flash = Client::new()
                             .post(url_flash)
                             .query(&FlashParams {
@@ -1315,10 +1300,8 @@ async fn main() -> Result<()> {
                             ]
                         })
                         .collect::<Vec<_>>();
-                    let table = render_table(
-                        &["node", "kind", "staged_sha", "production_sha"],
-                        &rows,
-                    );
+                    let table =
+                        render_table(&["node", "kind", "staged_sha", "production_sha"], &rows);
                     println!("{table}");
                 }
                 SubAction::UdsPing(_) => {
@@ -1475,7 +1458,12 @@ where
             Err(e) => {
                 last_err = Some(e);
                 if attempt < 10 {
-                    info!("{label}: retrying in {}s (attempt {}/{})", attempt, attempt + 1, 10);
+                    info!(
+                        "{label}: retrying in {}s (attempt {}/{})",
+                        attempt,
+                        attempt + 1,
+                        10
+                    );
                     tokio::time::sleep(Duration::from_secs(attempt as u64)).await;
                 }
             }
@@ -1503,15 +1491,30 @@ fn render_table(headers: &[&str], rows: &[Vec<String>]) -> String {
     let mut out = String::new();
     for (idx, header) in headers.iter().enumerate() {
         let pad = widths.get(idx).copied().unwrap_or(header.len());
-        out.push_str(&format!("{:width$}{}", header, if idx + 1 == headers.len() { "\n" } else { "  " }, width = pad));
+        out.push_str(&format!(
+            "{:width$}{}",
+            header,
+            if idx + 1 == headers.len() { "\n" } else { "  " },
+            width = pad
+        ));
     }
     for (idx, width) in widths.iter().enumerate() {
-        out.push_str(&format!("{:-<width$}{}", "", if idx + 1 == widths.len() { "\n" } else { "  " }, width = *width));
+        out.push_str(&format!(
+            "{:-<width$}{}",
+            "",
+            if idx + 1 == widths.len() { "\n" } else { "  " },
+            width = *width
+        ));
     }
     for row in rows {
         for (idx, value) in row.iter().enumerate() {
             let pad = widths.get(idx).copied().unwrap_or(value.len());
-            out.push_str(&format!("{:width$}{}", value, if idx + 1 == widths.len() { "\n" } else { "  " }, width = pad));
+            out.push_str(&format!(
+                "{:width$}{}",
+                value,
+                if idx + 1 == widths.len() { "\n" } else { "  " },
+                width = pad
+            ));
         }
     }
     out
@@ -2305,9 +2308,17 @@ async fn install_local_support_files(release_root: &Path) -> anyhow::Result<Path
         fs::copy(&bootstrap_startup_src, &bootstrap_startup_dst)
             .await
             .with_context(|| format!("installing {}", bootstrap_startup_dst.display()))?;
-        fs::set_permissions(&bootstrap_startup_dst, std::fs::Permissions::from_mode(0o755))
-            .await
-            .with_context(|| format!("setting executable bit on {}", bootstrap_startup_dst.display()))?;
+        fs::set_permissions(
+            &bootstrap_startup_dst,
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "setting executable bit on {}",
+                bootstrap_startup_dst.display()
+            )
+        })?;
     }
     if fs::try_exists(&bootstrap_service_src).await? {
         fs::copy(&bootstrap_service_src, &bootstrap_service_dst)
@@ -2514,9 +2525,7 @@ async fn clear_staged_uploads(state: &AppState) -> anyhow::Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-async fn collect_and_clear_flashing_nodes(
-    manifest_path: &Path,
-) -> anyhow::Result<Vec<String>> {
+async fn collect_and_clear_flashing_nodes(manifest_path: &Path) -> anyhow::Result<Vec<String>> {
     let mut manifest = read_manifest_compat(manifest_path).await?;
     let mut flashing_nodes = Vec::new();
     for (node, entry) in manifest.nodes.iter_mut() {
@@ -2685,9 +2694,21 @@ async fn reconcile_flashing_nodes_on_startup(
                 report.results.push(update.clone());
             }
         }
-        report.updated = report.results.iter().filter(|r| r.action == "updated").count() as u64;
-        report.failed = report.results.iter().filter(|r| r.action == "failed").count() as u64;
-        report.skipped = report.results.iter().filter(|r| r.action == "skipped").count() as u64;
+        report.updated = report
+            .results
+            .iter()
+            .filter(|r| r.action == "updated")
+            .count() as u64;
+        report.failed = report
+            .results
+            .iter()
+            .filter(|r| r.action == "failed")
+            .count() as u64;
+        report.skipped = report
+            .results
+            .iter()
+            .filter(|r| r.action == "skipped")
+            .count() as u64;
         report.status = if report.failed > 0 {
             "partial_failed".to_string()
         } else {
@@ -2724,10 +2745,7 @@ async fn load_bootstrap_report(state: &AppState) -> anyhow::Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-async fn prune_release_dirs(
-    root: &Path,
-    keep_name: Option<&str>,
-) -> anyhow::Result<()> {
+async fn prune_release_dirs(root: &Path, keep_name: Option<&str>) -> anyhow::Result<()> {
     if !fs::try_exists(root).await? {
         return Ok(());
     }
@@ -2775,7 +2793,11 @@ async fn cleanup_bootstrap_releases(state: &AppState) -> anyhow::Result<()> {
     } else {
         None
     };
-    prune_release_dirs(&state.local_deploy_root.join("releases"), keep_name.as_deref()).await?;
+    prune_release_dirs(
+        &state.local_deploy_root.join("releases"),
+        keep_name.as_deref(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -2873,12 +2895,16 @@ async fn install_global_bundle(
     }
     let bootstrap_startup = PathBuf::from("/usr/local/libexec/ota-agent/bootstrap-startup.sh");
     if fs::try_exists(&bootstrap_startup).await? {
-        let bootstrap_startup_str = bootstrap_startup
-            .to_str()
-            .ok_or_else(|| anyhow!("invalid startup script path {}", bootstrap_startup.display()))?;
+        let bootstrap_startup_str = bootstrap_startup.to_str().ok_or_else(|| {
+            anyhow!(
+                "invalid startup script path {}",
+                bootstrap_startup.display()
+            )
+        })?;
         info!("Running bootstrap startup script");
         if let Err(e) = run_command(bootstrap_startup_str, &[]).await {
-            let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
+            let _ =
+                unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
             return Err(e);
         }
     }
@@ -3355,12 +3381,13 @@ async fn flash_handler(
                             format!("firmware target '{}' missing bundle path", p.node),
                         ))
                     })?;
-                    let baseline_path = baseline_bundle_entry(&state, bundle_path).map_err(|e| {
-                        warp::reject::custom(HttpError(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            e.to_string(),
-                        ))
-                    })?;
+                    let baseline_path =
+                        baseline_bundle_entry(&state, bundle_path).map_err(|e| {
+                            warp::reject::custom(HttpError(
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                e.to_string(),
+                            ))
+                        })?;
                     if !fs::try_exists(&baseline_path).await.map_err(|e| {
                         warp::reject::custom(HttpError(
                             StatusCode::INTERNAL_SERVER_ERROR,
@@ -3500,7 +3527,10 @@ async fn bootstrap_handler(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     validate_platform_param(&state, p.platform.as_deref())?;
     validate_target(&state, &p.node)?;
-    info!("Bootstrap request: node='{}' platform={:?}", p.node, p.platform);
+    info!(
+        "Bootstrap request: node='{}' platform={:?}",
+        p.node, p.platform
+    );
 
     let entry = {
         let _guard = state.manifest_lock.lock().await;
@@ -3665,10 +3695,7 @@ async fn apply_bootstrap(
             Err(e) => {
                 let msg = e.to_string();
                 if msg.contains("already being flashed") && attempt < 5 {
-                    info!(
-                        "Bootstrap apply: bundle busy, retrying {}/5",
-                        attempt + 1
-                    );
+                    info!("Bootstrap apply: bundle busy, retrying {}/5", attempt + 1);
                     tokio::time::sleep(Duration::from_secs(2)).await;
                     continue;
                 }
@@ -3783,12 +3810,7 @@ async fn apply_bootstrap(
             start_services: target_start,
         } = target
         {
-            uds_targets.push((
-                node.clone(),
-                *request_id,
-                *response_id,
-                artifact.clone(),
-            ));
+            uds_targets.push((node.clone(), *request_id, *response_id, artifact.clone()));
             stop_services.extend(target_stop.clone());
             start_services.extend(target_start.clone());
         }
@@ -3803,7 +3825,10 @@ async fn apply_bootstrap(
     acquire_service_lease(&state, Some(&lease_id), &stop_services).await?;
 
     let force = false;
-    info!("Bootstrap apply: flashing {} UDS targets", uds_targets.len());
+    info!(
+        "Bootstrap apply: flashing {} UDS targets",
+        uds_targets.len()
+    );
     for (node, request_id, response_id, artifact) in uds_targets {
         let (request_id, response_id) = uds_ids_for_node(&state, &node, request_id, response_id)
             .map_err(|e| anyhow!(format!("uds ids for {}: {:?}", node, e)))?;
@@ -3840,7 +3865,10 @@ async fn apply_bootstrap(
         )
         .await;
 
-        info!("Bootstrap apply: flashed '{}' status={:?}", node, result.result);
+        info!(
+            "Bootstrap apply: flashed '{}' status={:?}",
+            node, result.result
+        );
         let error = match &result.result {
             FlashStatus::Failed(e) => Some(e.clone()),
             _ => None,
@@ -4110,8 +4138,7 @@ async fn production_entry_for_target(
             let current_link = baseline_current_root(state);
             if fs::try_exists(&current_link).await? {
                 if let Ok(dest) = fs::read_link(&current_link).await {
-                    if let Some(name) = dest.file_name().map(|s| s.to_string_lossy().into_owned())
-                    {
+                    if let Some(name) = dest.file_name().map(|s| s.to_string_lossy().into_owned()) {
                         hash = Some(name);
                     }
                 }
@@ -4152,10 +4179,7 @@ async fn production_entry_for_target(
         return Ok(None);
     };
 
-    let hash_matches_declared = artifact
-        .sha256
-        .as_ref()
-        .map(|declared| declared == &hash);
+    let hash_matches_declared = artifact.sha256.as_ref().map(|declared| declared == &hash);
 
     Ok(Some(BinaryEntry {
         filename: artifact.filename.clone(),
@@ -4178,7 +4202,11 @@ async fn ensure_production_entries_on_startup(state: &AppState) -> anyhow::Resul
     let mut missing = Vec::new();
 
     for (node, target) in state.cfg.targets.iter() {
-        let needs_production = match manifest.nodes.get(node).and_then(|entry| entry.production.as_ref()) {
+        let needs_production = match manifest
+            .nodes
+            .get(node)
+            .and_then(|entry| entry.production.as_ref())
+        {
             Some(prod) => prod.hash.is_empty(),
             None => true,
         };
@@ -4186,11 +4214,7 @@ async fn ensure_production_entries_on_startup(state: &AppState) -> anyhow::Resul
             continue;
         }
         if let Some(entry) = production_entry_for_target(state, target).await? {
-            manifest
-                .nodes
-                .entry(node.clone())
-                .or_default()
-                .production = Some(entry);
+            manifest.nodes.entry(node.clone()).or_default().production = Some(entry);
             updated += 1;
         } else {
             missing.push(node.clone());
