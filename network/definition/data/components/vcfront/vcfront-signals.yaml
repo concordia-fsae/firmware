@@ -3,25 +3,26 @@ signals:
   launchRejected:
     description: Driver launch request rejected
     discreteValues: faultStatus
-
   gearChangeRejected:
     description: Driver reverse request rejected
     discreteValues: faultStatus
-
   gpsDeviceError:
     description: Device is in an error state
     discreteValues: faultStatus
-
   gpsOverrun:
     description: GPS data overrun
     discreteValues: faultStatus
-
   appsDisabled:
     description: APPS Safety Redundancy Disabled
     discreteValues: faultStatus
-
   vehicleSpeedDegraded:
     description: Vehicle speed is degraded due to missing sensor data
+    discreteValues: faultStatus
+  faulted5vCritical:
+    description: 5V critical external power rail faulted
+    discreteValues: faultStatus
+  faulted5vExt:
+    description: 5V external power rail faulted
     discreteValues: faultStatus
 
   gpsUartOreCount:

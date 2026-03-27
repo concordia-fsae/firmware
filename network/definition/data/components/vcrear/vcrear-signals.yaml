@@ -3,6 +3,12 @@ signals:
   mcFaulted:
     description: The motor controller is showing a fault
     discreteValues: faultStatus
+  faulted5vCritical:
+    description: 5V critical external power rail faulted
+    discreteValues: faultStatus
+  faulted5vExt:
+    description: 5V external power rail faulted
+    discreteValues: faultStatus
 
   # Signals
   brakeLightState:

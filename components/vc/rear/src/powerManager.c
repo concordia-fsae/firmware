@@ -13,6 +13,7 @@
 #include "drv_tps20xx.h"
 #include "LIB_Types.h"
 #include "string.h"
+#include "app_faultManager.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -35,10 +36,19 @@ static void powerManager_init(void)
 
 static void powerManager_periodic_10Hz(void)
 {
+    const bool sleeping = app_vehicleState_sleeping();
+    const drv_tps20xx_state_E stateCrit = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_CRITICAL);
+    const drv_tps20xx_state_E stateExt = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_EXT);
+    const bool faultedCrit = (stateCrit == DRV_TPS20XX_STATE_FAULTED_OC) || (stateCrit == DRV_TPS20XX_STATE_FAULTED_OT);
+    const bool faultedExt = (stateExt == DRV_TPS20XX_STATE_FAULTED_OC) || (stateExt == DRV_TPS20XX_STATE_FAULTED_OT);
+
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_FAULTED5VCRITICAL, faultedCrit);
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_FAULTED5VEXT, faultedExt);
+
     // TODO: Improve
     for (uint8_t i = 0; i < DRV_TPS20XX_CHANNEL_COUNT; i++)
     {
-        drv_tps20xx_setEnabled(i, true);
+        drv_tps20xx_setEnabled(i, !sleeping);
     }
 
     drv_tps20xx_run();
