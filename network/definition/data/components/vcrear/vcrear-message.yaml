@@ -9,6 +9,10 @@ messages:
       mcFaulted:
       faulted5vCritical:
       faulted5vExt:
+      miaVcfront:
+      miaBms:
+      miaVcpdu:
+      miaMc:
 
   udsResponse:
     description: UDS response message from the VCREAR
