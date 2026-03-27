@@ -1,6 +1,7 @@
 [Unit]
 Description=Carputer Device Discovery Service
 After=network.target
+PartOf=drive-stack.target
 
 [Service]
 

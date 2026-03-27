@@ -1,3 +1,5 @@
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
+
 rust_library(
     name = "lib",
     crate = "log_processor",
@@ -47,4 +49,14 @@ configured_alias(
     actual = ":log-processor",
     platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer",
+    target_node = "log-processor",
+    binary = ":bin-arm64",
+    binary_install_name = "log_processor",
+    service_src = "log-processor.service",
+    service_install_name = "log-processor.service",
+    include_artifact_hash = False,
 )

@@ -1,4 +1,5 @@
 load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "generate_rust_library")
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
 
 generate_resources(
     name = "yamcan-carputer-veh-codegen",
@@ -166,4 +167,23 @@ filegroup(
         ":bin-body-arm64",
     ],
     visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer-veh",
+    target_node = "can-bridge-veh",
+    binary = ":bin-veh-arm64",
+    binary_install_name = "can_bridge_veh",
+    service_src = "can-bridge-veh.service",
+    service_install_name = "can-bridge-veh.service",
+    include_artifact_hash = False,
+)
+carputer_application_target(
+    name = "carputer-body",
+    target_node = "can-bridge-body",
+    binary = ":bin-body-arm64",
+    binary_install_name = "can_bridge_body",
+    service_src = "can-bridge-body.service",
+    service_install_name = "can-bridge-body.service",
+    include_artifact_hash = False,
 )

@@ -1,5 +1,4 @@
 load("//drive-stack/conUDS/defs.bzl", "conUDS_batch")
-load("//drive-stack/ota-agent/defs.bzl", "ota_agent_batch")
 
 export_file(
     name = ".git",
@@ -93,21 +92,9 @@ conUDS_batch(
     manifest = "//network:manifest-uds",
 )
 
-ota_agent_batch(
+alias(
     name = "cfr25-ota",
-    srcs = [
-        "//components/bms_boss:deploy-cfr25",
-        "//components/bms_worker:deploy-cfr25-node-0",
-        "//components/bms_worker:deploy-cfr25-node-1",
-        "//components/bms_worker:deploy-cfr25-node-2",
-        "//components/bms_worker:deploy-cfr25-node-3",
-        "//components/bms_worker:deploy-cfr25-node-4",
-        "//components/bms_worker:deploy-cfr25-node-5",
-        "//components/sws:deploy-cfr25",
-        "//components/vc/front:deploy-cfr25",
-        "//components/vc/rear:deploy-cfr25",
-        "//components/vc/pdu:deploy-cfr25",
-    ],
+    actual = "//drive-stack/carputer:cfr25-ota",
 )
 
 conUDS_batch(
@@ -130,21 +117,17 @@ conUDS_batch(
     manifest = "//network:manifest-uds",
 )
 
-ota_agent_batch(
+alias(
     name = "cfr26-ota",
-    srcs = [
-        "//components/bms_boss:deploy-cfr26",
-        "//components/bms_worker:deploy-cfr26-node-0",
-        "//components/bms_worker:deploy-cfr26-node-1",
-        "//components/bms_worker:deploy-cfr26-node-2",
-        "//components/bms_worker:deploy-cfr26-node-3",
-        "//components/bms_worker:deploy-cfr26-node-4",
-        "//components/bms_worker:deploy-cfr26-node-5",
-        "//components/bms_worker:deploy-cfr26-node-6",
-        "//components/bms_worker:deploy-cfr26-node-7",
-        "//components/sws:deploy-cfr26",
-        "//components/vc/front:deploy-cfr26",
-        "//components/vc/rear:deploy-cfr26",
-        "//components/vc/pdu:deploy-cfr26",
-    ],
+    actual = "//drive-stack/carputer:cfr26-ota",
+)
+
+alias(
+    name = "status",
+    actual = "//drive-stack/carputer:status",
+)
+
+alias(
+    name = "revert",
+    actual = "//drive-stack/carputer:revert",
 )
