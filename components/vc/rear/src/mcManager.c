@@ -80,7 +80,7 @@ CAN_pm100dxEnableState_E mcManager_getEnableCommand(void)
     CAN_pm100dxEnableState_E ret = CAN_PM100DXENABLESTATE_DISABLED;
     CAN_pm100dxInverterLockoutState_E inverter_lock_out = CAN_PM100DXINVERTERLOCKOUTSTATE_CANNOT_BE_ENABLED;
 
-    const bool lockout_valid = CANRX_get_signal(ASS, PM100DX_inverterEnableLockout, &inverter_lock_out) == CANRX_MESSAGE_VALID;
+    const bool lockout_valid = CANRX_get_signal(VEH, PM100DX_inverterEnableLockout, &inverter_lock_out) == CANRX_MESSAGE_VALID;
 
     if (!lockout_valid || (inverter_lock_out == CAN_PM100DXINVERTERLOCKOUTSTATE_CANNOT_BE_ENABLED))
     {
@@ -128,11 +128,11 @@ static void mcManager_periodic_100Hz(void)
     mcManager_enable_E enable = MCMANAGER_DISABLE;
     CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
     int16_t motor_rpm = 0;
-    const bool speed_valid = CANRX_get_signal(ASS, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
+    const bool speed_valid = CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
     const bool miaBms = CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state) != CANRX_MESSAGE_VALID;
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAMC, !speed_valid);
 
-    bool mcFaulted = app_faultManager_getNetworkedFault_anySet(ASS, PM100DX_faults);
+    bool mcFaulted = app_faultManager_getNetworkedFault_anySet(VEH, PM100DX_faults);
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MCFAULTED, mcFaulted);
     const bool miaFront = CANRX_validate(VEH, VCFRONT_torqueManager) != CANRX_MESSAGE_VALID;
     const bool miaPdu = CANRX_validate(VEH, VCPDU_vehicleState) != CANRX_MESSAGE_VALID;
@@ -188,16 +188,15 @@ static void mcManager_periodic_100Hz(void)
                 }
                 if (mcManager_data.clear_faults)
                 {
-                    const bool bridgeWaiting = CANRX_get_bridgeWaiting(VEH, TOOLING_mcEepromCommand);
+                    const bool injectPending = CANTX_inject_pending(VEH, TOOLING_mcEepromCommand);
 
-                    if (!bridgeWaiting)
+                    if (!injectPending)
                     {
                         CAN_data_T message = { 0 };
-                        set(&message,ASS,TOOLING,eepromAddress, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR);
-                        set(&message,ASS,TOOLING,eepromCommand, CAN_PM100DXEEPROMRWCOMMAND_WRITE);
-                        set(&message,ASS,TOOLING,eepromDataRaw, 0U);
-                        *CANRX_get_rawMessage(VEH, TOOLING_mcEepromCommand) = message;
-                        CANRX_set_bridgeWaiting(VEH, TOOLING_mcEepromCommand, true);
+                        set(&message,VEH,TOOLING,eepromAddress, CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR);
+                        set(&message,VEH,TOOLING,eepromCommand, CAN_PM100DXEEPROMRWCOMMAND_WRITE);
+                        set(&message,VEH,TOOLING,eepromDataRaw, 0U);
+                        (void)CANTX_inject(VEH, TOOLING_mcEepromCommand, &message);
 
                         // TODO: Only clear faults when they actually clear
                         mcManager_data.clear_faults = false;
