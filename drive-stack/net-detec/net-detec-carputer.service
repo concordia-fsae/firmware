@@ -1,8 +1,7 @@
 [Unit]
 Description=Carputer Device Discovery Service
 After=network.target
-After=bootstrap-carputer.service
-Wants=bootstrap-carputer.service
+PartOf=drive-stack.target
 
 [Service]
 

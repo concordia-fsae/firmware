@@ -131,6 +131,13 @@ if [[ "${LOCAL_MODE}" -eq 1 ]]; then
 		echo "[bootstrap] Installing ota-agent.service from payload"
 		sudo cp "${ota_service_src}" /etc/systemd/system/ota-agent.service
 		sudo systemctl daemon-reload
+	else
+		ota_service_legacy="${release_root}/payload/local/ota-agent/etc/systemd/system/ota-agent.service"
+		if [ -f "${ota_service_legacy}" ]; then
+			echo "[bootstrap] Installing ota-agent.service from legacy payload"
+			sudo cp "${ota_service_legacy}" /etc/systemd/system/ota-agent.service
+			sudo systemctl daemon-reload
+		fi
 	fi
 	if systemctl list-unit-files | grep -q '^ota-agent.service'; then
 		echo "[bootstrap] Restarting ota-agent.service"
