@@ -1,3 +1,5 @@
+load(":defs.bzl", "conuds_run")
+
 rust_library(
     name = "lib",
     crate = "conUDS",
@@ -48,5 +50,13 @@ configured_alias(
 export_file(
     name = "routines-manifest",
     src = "routines.yml",
+    visibility = ["PUBLIC"],
+)
+
+conuds_run(
+    name = "run",
+    binary = ":conUDS",
+    uds_manifest = "//network:manifest-uds",
+    routines_manifest = ":routines-manifest",
     visibility = ["PUBLIC"],
 )
