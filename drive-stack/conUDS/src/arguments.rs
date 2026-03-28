@@ -48,6 +48,7 @@ pub enum ArgSubCommands {
     Reset(SubArgReset),
     ReadDID(SubArgReadDID),
     RoutineStart(SubArgRoutineStart),
+    RoutineList(SubArgRoutineList),
 }
 
 /// Download an application to an ECU
@@ -106,3 +107,8 @@ pub struct SubArgRoutineStart {
     #[argh(positional)]
     pub routine: String,
 }
+
+/// List routines available for a node
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "routineList")]
+pub struct SubArgRoutineList {}
