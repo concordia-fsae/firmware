@@ -45,6 +45,7 @@
 #define set_hornState(m,b,n,s) set(m,b,n,s, horn_getStateCAN())
 #define set_tssiState(m,b,n,s) set(m,b,n,s, tssi_getStateCAN())
 #define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
+#define set_brakePrVoltage(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressureVoltage())
 #define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
 #define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
 #define set_torqueCommand(m,b,n,s) set(m,b,n,s, mcManager_getTorqueCommand())
