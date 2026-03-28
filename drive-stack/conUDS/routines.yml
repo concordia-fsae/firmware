@@ -1,0 +1,5 @@
+nodes:
+  dbg:
+    routines:
+      nvmHardReset:
+        id: 0xf0f0

@@ -44,3 +44,9 @@ configured_alias(
     platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
 )
+
+export_file(
+    name = "routines-manifest",
+    src = "routines.yml",
+    visibility = ["PUBLIC"],
+)
