@@ -671,6 +671,7 @@ def carputer_platform_targets(
         app_targets,
         firmware,
         uds_manifest,
+        uds_routines_manifest = None,
         uds_stop_services = [],
         uds_start_services = [],
         bundle_node = "carputer",
@@ -701,14 +702,20 @@ def carputer_platform_targets(
         visibility = visibility,
     )
 
+    extra_resources = [":" + manifest_name, uds_manifest]
+    extra_resource_paths = [
+        "application/config/ota-agent/deploy-targets.yaml",
+        "application/config/ota-agent/uds-manifest.yaml",
+    ]
+    if uds_routines_manifest != None:
+        extra_resources.append(uds_routines_manifest)
+        extra_resource_paths.append("application/config/ota-agent/uds-routines.yaml")
+
     carputer_bundle(
         name = package_name,
         apps = apps,
-        extra_resource_files = [":" + manifest_name, uds_manifest],
-        extra_resource_install_paths = [
-            "application/config/ota-agent/deploy-targets.yaml",
-            "application/config/ota-agent/uds-manifest.yaml",
-        ],
+        extra_resource_files = extra_resources,
+        extra_resource_install_paths = extra_resource_paths,
         firmware = firmware,
         out = bundle_filename,
         bootstrap_script = "//drive-stack/carputer:bootstrap-carputer.sh-file",
