@@ -395,6 +395,7 @@ class CanMessage(CanObject):
         self.receivers = []
         self.bridged = False
         self.from_bridge = False
+        self.injected_tx = False
         self.origin_bus = None
         self.bridge_dest_buses: List[str] = []
         self.source_buses: List[str]
@@ -582,6 +583,7 @@ class CanNode(CanObject):
         self.received_sigs: Dict[str, CanSignal] = {}
         self.forwarding_routes: List[dict] = []
         self.bridged_rx_messages: Set[Tuple[str, str]] = set()
+        self.injected_tx_messages: Set[Tuple[str, str]] = set()
 
         self.is_valid = True
 

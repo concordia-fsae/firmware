@@ -41,7 +41,7 @@ carputer_application_target(
     name = "carputer",
     target_node = "ota-agent",
     binary = ":bin-arm64",
-    binary_install_name = "ota_agent",
+    binary_install_name = "ota-agent",
     service_src = "ota-agent.service",
     service_install_name = "ota-agent.service",
     resources = {

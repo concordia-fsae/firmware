@@ -16,6 +16,8 @@ messages:
       gpsOverrun:
       vehicleSpeedDegraded:
       appsDisabled:
+      faulted5vCritical:
+      faulted5vExt:
 
   udsResponse:
     description: UDS response message from the VCFRONT

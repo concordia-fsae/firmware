@@ -83,8 +83,8 @@ lib_interpolation_point_S mapping_brake_pot[] = {
 };
 
 lib_interpolation_point_S mapping_brake_pr[] = {
-    { .x = 0.5f,   .y = 0.0f,  },
-    { .x = 2.5f,   .y = 1.0f,  },
+    { .x = 0.3f,   .y = 0.0f,  },
+    { .x = 2.7f,   .y = 1.0f,  },
 };
 
 drv_pedalMonitor_channelConfig_S drv_pedalMonitor_channels[DRV_PEDALMONITOR_CHANNEL_COUNT] = {
@@ -134,8 +134,8 @@ drv_pedalMonitor_channelConfig_S drv_pedalMonitor_channels[DRV_PEDALMONITOR_CHAN
         .type = DRV_PEDALMONITOR_TYPE_ANALOG,
         .input.analog = {
             .channel = DRV_INPUTAD_ANALOG_BR_PR,
-            .fault_high = 4.75f,
-            .fault_low = 0.25f,
+            .fault_high = 2.85f,
+            .fault_low = 0.15f,
             .pedal_map = {
                 .points = (lib_interpolation_point_S*)&mapping_brake_pr,
                 .number_points = COUNTOF(mapping_brake_pr),

@@ -20,9 +20,6 @@ void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
 {
     switch (bus)
     {
-        case CAN_BUS_ASS:
-            CANRX_ASS_unpackMessage(id, data);
-            break;
         case CAN_BUS_VEH:
             CANRX_VEH_unpackMessage(id, data);
             break;

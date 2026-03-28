@@ -145,23 +145,3 @@ void CAN1_RX1_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
 }
-
-void CAN2_SCE_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_ASS]);
-}
-
-void CAN2_TX_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_ASS]);
-}
-
-void CAN2_RX0_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_ASS]);
-}
-
-void CAN2_RX1_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_ASS]);
-}

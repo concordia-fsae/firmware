@@ -2,45 +2,41 @@ signals:
   overvoltage:
     description: Overvoltage fault
     discreteValues: faultStatus
-
   lowVoltage:
     description: Low voltage fault
     discreteValues: faultStatus
-
   batteryNOK:
     description: Undervoltage fault
     discreteValues: faultStatus
-
   safetyNOK:
     description: Safety circuit brownout fault
     discreteValues: faultStatus
-
   contactsOpenInRun:
     description: Contacts opened while in run mode
     discreteValues: faultStatus
-
   imuOverrun:
     description: VCPDU IMU buffern overrun
     discreteValues: faultStatus
-
   imuError:
     description: VCPDU IMU error
     discreteValues: faultStatus
-
   imuSna:
     description: VCPDU IMU is not available
     discreteValues: faultStatus
-
   imuFsmInitFailure:
     description: VCPDU IMU is not available
     discreteValues: faultStatus
-
   imuUncalibrated:
     description: IMU is uncalibrated
     discreteValues: faultStatus
-
   imuInvalid:
     description: IMU data is not reliable
+    discreteValues: faultStatus
+  faulted5vCritical:
+    description: 5V critical external power rail faulted
+    discreteValues: faultStatus
+  faulted5vExt:
+    description: 5V external power rail faulted
     discreteValues: faultStatus
 
   crashSensorState:

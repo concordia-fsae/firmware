@@ -29,8 +29,14 @@ static struct
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-float32_t brakePressure_getBrakePressure(void){
+float32_t brakePressure_getBrakePressure(void)
+{
     return brakePressure_data.pressure;
+}
+
+float32_t brakePressure_getBrakePressureVoltage(void)
+{
+    return brakePressure_data.voltage;
 }
 
 static void brakePressure_init(void)

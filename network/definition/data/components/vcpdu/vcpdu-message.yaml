@@ -18,6 +18,8 @@ messages:
       imuUncalibrated:
       imuInvalid:
       crashImplausibility:
+      faulted5vCritical:
+      faulted5vExt:
 
   udsResponse:
     description: UDS response message from the VCPDU

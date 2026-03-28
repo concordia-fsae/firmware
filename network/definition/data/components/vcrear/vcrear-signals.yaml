@@ -3,11 +3,33 @@ signals:
   mcFaulted:
     description: The motor controller is showing a fault
     discreteValues: faultStatus
+  faulted5vCritical:
+    description: 5V critical external power rail faulted
+    discreteValues: faultStatus
+  faulted5vExt:
+    description: 5V external power rail faulted
+    discreteValues: faultStatus
+  miaVcfront:
+    description: The VCFRONT is MIA
+    discreteValues: faultStatus
+  miaBms:
+    description: The BMS is MIA
+    discreteValues: faultStatus
+  miaVcpdu:
+    description: The VCPDU is MIA
+    discreteValues: faultStatus
+  miaMc:
+    description: The Motor Controller is MIA
+    discreteValues: faultStatus
 
   # Signals
   brakeLightState:
     description: 'State of the break light'
     discreteValues: brakeLightState
+
+  brakePrVoltage:
+    description: "Voltage of the brake pedal pressure"
+    template: voltsPrecise
 
   hornState:
     description: State of the horn
