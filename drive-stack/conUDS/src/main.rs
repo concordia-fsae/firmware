@@ -227,35 +227,6 @@ async fn main() {
             println!("{:?}", resp);
         }
 
-        ArgSubCommands::NVMHardReset(_) => {
-            let node = args.node.clone().unwrap_or_else(|| {
-                error!("-n <node> is required for 'nvmHardReset'.");
-                std::process::exit(1)
-            });
-            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
-                error!("UDS node '{}' not defined", node);
-                std::process::exit(1)
-            });
-
-            let mut uds = UdsSession::new(
-                &args.device,
-                uds_node.request_id,
-                uds_node.response_id,
-                true,
-            )
-            .await;
-            info!("Performing NVM hard reset for node '{}'", node);
-            let routine_id = routine_id_for_node(uds_node, "nvmHardReset").unwrap_or(0xf0f0);
-            if let Err(e) = uds.client.routine_start(routine_id, None).await {
-                error!("While starting NVM erase: {}", e);
-            } else {
-                let _result = uds.client.routine_get_results(routine_id).await;
-                // TODO: Implement error checking
-                info!("Successful NVM erase");
-            }
-            uds.teardown().await;
-        }
-
         ArgSubCommands::RoutineStart(routine) => {
             let node = args.node.clone().unwrap_or_else(|| {
                 error!("-n <node> is required for 'routineStart'.");
