@@ -48,7 +48,7 @@ async fn main() {
     let args: Arguments = argh::from_env();
     debug!("Command-line arguments processed: {:#?}", args);
 
-    let cfg = Config::new(&args.node_manifest).unwrap_or_else(|e| {
+    let cfg = Config::new(&args.node_manifest, &args.routine_manifest).unwrap_or_else(|e| {
         error!("Configuration error: {:?}", e);
         std::process::exit(1)
     });
@@ -245,12 +245,49 @@ async fn main() {
             )
             .await;
             info!("Performing NVM hard reset for node '{}'", node);
-            if let Err(e) = uds.client.routine_start(0xf0f0, None).await {
+            let routine_id = routine_id_for_node(uds_node, "nvmHardReset").unwrap_or(0xf0f0);
+            if let Err(e) = uds.client.routine_start(routine_id, None).await {
                 error!("While starting NVM erase: {}", e);
             } else {
-                let _result = uds.client.routine_get_results(0xf0f0).await;
+                let _result = uds.client.routine_get_results(routine_id).await;
                 // TODO: Implement error checking
                 info!("Successful NVM erase");
+            }
+            uds.teardown().await;
+        }
+
+        ArgSubCommands::RoutineStart(routine) => {
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'routineStart'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let Some(routine_id) = routine_id_for_node(uds_node, &routine.routine) else {
+                let available = fmt_available_routines(uds_node);
+                error!(
+                    "Routine '{}' not defined for node '{}'. Available: {}",
+                    routine.routine, node, available
+                );
+                std::process::exit(1)
+            };
+
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
+            info!(
+                "Starting routine '{}' (0x{:04X}) for node '{}'",
+                routine.routine, routine_id, node
+            );
+            if let Err(e) = uds.client.routine_start(routine_id, None).await {
+                error!("While starting routine '{}': {}", routine.routine, e);
             }
             uds.teardown().await;
         }
@@ -352,4 +389,18 @@ fn average_duration(durations: &[Duration]) -> Duration {
     let total_nanos: u128 = durations.iter().map(|d| d.as_nanos()).sum();
     let avg_nanos = total_nanos / (durations.len() as u128);
     Duration::from_nanos(avg_nanos as u64)
+}
+
+fn routine_id_for_node(uds_node: &conUDS::config::Node, routine: &str) -> Option<u16> {
+    uds_node.routines.get(routine).map(|cfg| cfg.id)
+}
+
+fn fmt_available_routines(uds_node: &conUDS::config::Node) -> String {
+    if uds_node.routines.is_empty() {
+        "<none>".to_string()
+    } else {
+        let mut names: Vec<_> = uds_node.routines.keys().cloned().collect();
+        names.sort();
+        names.join(", ")
+    }
 }
