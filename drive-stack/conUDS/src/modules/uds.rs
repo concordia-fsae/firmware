@@ -36,6 +36,91 @@ use crate::{FlashStatus, UpdateResult};
 
 const UDS_DID_CRC: u16 = 0x03;
 
+#[derive(Debug, Clone)]
+pub enum RoutineStartResponse {
+    Positive {
+        payload: Vec<u8>,
+        text: Option<String>,
+        raw: Vec<u8>,
+    },
+    Negative {
+        nrc: u8,
+        description: String,
+        payload: Vec<u8>,
+        text: Option<String>,
+        raw: Vec<u8>,
+    },
+}
+
+impl RoutineStartResponse {
+    fn from_raw(resp: Vec<u8>) -> Result<Self> {
+        if resp.is_empty() {
+            return Err(anyhow!("Empty ECU response"));
+        }
+
+        if resp[0] == 0x7F {
+            if resp.len() < 3 {
+                return Err(anyhow!(
+                    "Malformed negative routine start response: {:02X?}",
+                    resp
+                ));
+            }
+
+            let payload = if resp.len() > 3 {
+                resp[3..].to_vec()
+            } else {
+                Vec::new()
+            };
+
+            return Ok(Self::Negative {
+                nrc: resp[2],
+                description: UdsErrorByte::from(resp[2]).desc().to_string(),
+                text: decode_routine_payload_text(&payload),
+                payload,
+                raw: resp,
+            });
+        }
+
+        let expected_sid = u8::from(UdsCommand::RoutineControl) + 0x40;
+        if resp[0] != expected_sid {
+            return Err(anyhow!(
+                "Unexpected routine start response SID 0x{:02X}, expected 0x{:02X}",
+                resp[0],
+                expected_sid
+            ));
+        }
+
+        if resp.len() < 4 {
+            return Err(anyhow!(
+                "Malformed positive routine start response: {:02X?}",
+                resp
+            ));
+        }
+
+        let payload = resp[4..].to_vec();
+
+        Ok(Self::Positive {
+            text: decode_routine_payload_text(&payload),
+            payload,
+            raw: resp,
+        })
+    }
+}
+
+fn decode_routine_payload_text(payload: &[u8]) -> Option<String> {
+    let end = payload
+        .iter()
+        .rposition(|byte| *byte != 0)
+        .map(|idx| idx + 1)
+        .unwrap_or(0);
+    if end == 0 {
+        return None;
+    }
+
+    let text = String::from_utf8_lossy(&payload[..end]).trim().to_string();
+    if text.is_empty() { None } else { Some(text) }
+}
+
 #[derive(Debug)]
 pub struct UdsClient {
     cmd_queue_tx: mpsc::Sender<PrdCmd>,
@@ -369,7 +454,11 @@ impl UdsClient {
     }
 
     /// Start the given routine
-    pub async fn routine_start(&mut self, routine_id: u16, data: Option<Vec<u8>>) -> Result<()> {
+    pub async fn routine_start(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineStartResponse> {
         let mut buf = vec![
             UdsCommand::RoutineControl.into(),
             RoutineControlType::StartRoutine.into(),
@@ -384,14 +473,15 @@ impl UdsClient {
         debug!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
 
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await {
-            Ok(resp) => debug!("Start routine response: {:02x?}", resp),
+            Ok(resp) => {
+                debug!("Start routine response: {:02x?}", resp);
+                RoutineStartResponse::from_raw(resp)
+            }
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
-                return Err(e.into());
+                Err(e.into())
             }
         }
-
-        Ok(())
     }
 
     /// Request results from the ECU for the given routine
