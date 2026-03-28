@@ -16,3 +16,4 @@
  ******************************************************************************/
 
 float32_t brakePressure_getBrakePressure(void);
+float32_t brakePressure_getBrakePressureVoltage(void);

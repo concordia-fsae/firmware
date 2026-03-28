@@ -54,6 +54,7 @@ messages:
       brakePressure:
         template: brakePressure
         description: Brake pressure
+      brakePrVoltage:
 
   mcCommand:
     description: COmmand message for the motor controller

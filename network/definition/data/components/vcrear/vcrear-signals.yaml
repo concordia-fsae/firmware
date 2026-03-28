@@ -27,6 +27,10 @@ signals:
     description: 'State of the break light'
     discreteValues: brakeLightState
 
+  brakePrVoltage:
+    description: "Voltage of the brake pedal pressure"
+    template: voltsPrecise
+
   hornState:
     description: State of the horn
     discreteValues: digitalStatus
