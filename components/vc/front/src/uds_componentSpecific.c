@@ -27,6 +27,7 @@
 #include "task.h"
 #include "lib_uds.h"
 #include "LIB_app.h"
+#include "lib_nvm.h"
 #include "Utility.h"
 
 // system includes
@@ -47,25 +48,66 @@ extern void     isotp_user_debug(const char* message, ...);
  *                              D E F I N E S
  ******************************************************************************/
 
-
-/******************************************************************************
- *                             T Y P E D E F S
- ******************************************************************************/
-
-// typedef struct
-// {
-// } uds_S;
-
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-// static uds_S uds;
+static struct uds_S
+{
+    bool odometerResetting;
+} uds;
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+static void routine_resetOdometer(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
+{
+    UNUSED(payloadLengthBytes);
+    UNUSED(payload);
+
+    switch (routineControlType)
+    {
+        case UDS_ROUTINE_CONTROL_START:
+            if (lib_nvm_writeRequired(NVM_ENTRYID_ODOMETER))
+            {
+                uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_BUSY_REPEAT_REQUEST);
+            }
+            else
+            {
+                lib_nvm_clearEntry(NVM_ENTRYID_ODOMETER);
+                uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
+                uds.odometerResetting = true;
+            }
+            break;
+
+        case UDS_ROUTINE_CONTROL_GET_RESULT:
+        {
+            uint8_t resp = lib_nvm_writeRequired(NVM_ENTRYID_ODOMETER) == false;
+
+            if (!uds.odometerResetting)
+            {
+                uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_GENERAL_REJECT);
+            }
+            else if (resp)
+            {
+                uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_GET_RESULT, &resp, 0x01);
+                uds.odometerResetting = false;
+            }
+            else
+            {
+                uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_GET_RESULT, &resp, 0x01);
+            }
+        }
+            break;
+
+        case UDS_ROUTINE_CONTROL_STOP:
+        case UDS_ROUTINE_CONTROL_NONE:
+        default:
+            uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
+            break;
+    }
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -77,6 +119,7 @@ extern void     isotp_user_debug(const char* message, ...);
  */
 static void UDS_init(void)
 {
+    memset(&uds, 0x00U, sizeof(uds));
     udsSrv_init();    // initialize the UDS library
 }
 
@@ -175,6 +218,9 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
 
     switch (routineId.u16)
     {
+        case 0x1000:
+            routine_resetOdometer(routineControlType, payload + 2U, payloadLengthBytes);
+            break;
         default:
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SERVICE_NOT_SUPPORTED);
             break;
