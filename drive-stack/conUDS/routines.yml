@@ -1,5 +1,5 @@
 nodes:
-  dbg:
+  vcfront:
     routines:
-      nvmHardReset:
-        id: 0xf0f0
+      resetOdometer:
+        id: 0x1000
