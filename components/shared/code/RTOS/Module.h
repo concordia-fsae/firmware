@@ -16,6 +16,7 @@
 // Other Includes
 #include "Module_componentSpecific.h"
 
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -32,11 +33,10 @@
 #define set_taskStack100Hz(m,b,n,s)              set(m, b, n, s, Module_getMinStackLeft(MODULE_100Hz_TASK))
 #define set_taskStack10Hz(m,b,n,s)               set(m, b, n, s, Module_getMinStackLeft(MODULE_10Hz_TASK))
 #define set_taskStack1Hz(m,b,n,s)                set(m, b, n, s, Module_getMinStackLeft(MODULE_1Hz_TASK))
-
+#define set_taskDeadlineMiss1kHz(m,b,n,s)        set(m, b, n, s, (uint16_t)Module_getCANDeadlineMissCount());
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
-
 /**< Module tasks to get called by the RTOS */
 extern void Module_Init(void);
 extern void Module_1kHz_TSK(void);
@@ -78,4 +78,7 @@ void      Module_componentSpecific_1Hz(void);
 float32_t Module_getTotalRuntimePercentage(Module_taskSpeeds_E task);
 uint32_t  Module_getTotalRuntimeIterations(Module_taskSpeeds_E task);
 uint8_t   Module_getMinStackLeft(Module_taskSpeeds_E task);
+uint32_t  Module_getCANDeadlineMissCount(void);
 void      Module_ApplicationIdleHook(void);
+
+
