@@ -35,3 +35,4 @@ extern void CANTX_SWI(void);  // Prototype for SWI function
  ******************************************************************************/
 
 void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T* data);
+uint32_t CANIO_getDeadlineMissCount(void);
