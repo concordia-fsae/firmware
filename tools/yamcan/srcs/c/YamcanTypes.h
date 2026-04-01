@@ -91,7 +91,6 @@ typedef struct
     uint8_t            counter;
     uint8_t            index;
     uint32_t           lastTimestamp;
-    uint32_t           missedDeadlineCount;
 } busTable_S;
 
 typedef struct
