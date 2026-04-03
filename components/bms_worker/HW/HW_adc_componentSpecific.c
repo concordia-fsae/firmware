@@ -133,6 +133,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     {
         Error_Handler();
     }
+    HW_GPIO_writePin(HW_GPIO_NX3_NEN, false);
 #elif APP_VARIANT_ID == 1U
     sConfig.Channel      = ADC_CHANNEL_TEMP_BOARD;
     sConfig.Rank         = ADC_REGULAR_RANK_5;
