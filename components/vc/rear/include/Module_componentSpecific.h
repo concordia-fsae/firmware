@@ -9,9 +9,11 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
+// System Includes, ModuleDesc include must come first
+// *FORMAT-OFF*
 #include "ModuleDesc.h"
 #include "app_vehicleState.h"
+// *FORMAT-ON*
 
 /******************************************************************************
  *                              E X T E R N S
@@ -49,5 +51,5 @@ typedef enum
     MODULE_SHOCKPOT,
     MODULE_SYS,
     MODULE_CANIO_tx,
-    MODULE_CNT
+    MODULE_CNT,
 } Module_tasks_E;
