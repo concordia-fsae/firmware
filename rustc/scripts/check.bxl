@@ -1,0 +1,54 @@
+# Report warnings from every dependency of rustc:
+#   buck2 bxl scripts/check.bxl:main -- --target stage1:rustc | xargs cat
+#
+# Run clippy on every dependency of rustc:
+#   buck2 bxl scripts/check.bxl:main -- --target stage1:rustc --output clippy.txt | xargs cat
+#
+# Run clippy on every dependency of rustc and report lints in JSON:
+#   buck2 bxl scripts/check.bxl:main -- --target stage1:rustc --output clippy.json | xargs cat
+
+def main_impl(bxl_ctx: bxl.Context) -> None:
+    # Build unconfigured targets set
+    utargets = utarget_set()
+    utargets += bxl_ctx.uquery().owner(bxl_ctx.cli_args.path)
+    for target in bxl_ctx.cli_args.target:
+        utargets += bxl_ctx.unconfigured_targets(target)
+
+    # Apply default target platform to every target in the set
+    ctargets = bxl_ctx.configured_targets(utargets, modifiers = bxl_ctx.cli_args.modifier)
+
+    # Compute transitive closure of dependencies
+    transitive_ctargets = bxl_ctx.cquery().deps(ctargets)
+
+    # Filter to just Rust targets
+    rust_ctargets = bxl_ctx.cquery().kind("^(rust_library|rust_binary)$", transitive_ctargets)
+
+    # Build the requested sub-target of each of those Rust targets
+    build_result = bxl_ctx.build([
+        target.label.with_sub_target(bxl_ctx.cli_args.output)
+        for target in rust_ctargets
+    ])
+
+    # Report results
+    failed_targets = []
+    for target, value in build_result.items():
+        raw_target = target.raw_target()
+        if len(value.failures()) > 0:
+            failed_targets.append(raw_target)
+        else:
+            artifacts = bxl_ctx.output.ensure_multiple(value.artifacts())
+            bxl_ctx.output.stream(sep = "\n", wait_on = artifacts, *artifacts)
+
+    if len(failed_targets) != 0:
+        bxl_ctx.output.stream_json({"failed_targets": failed_targets})
+        fail("{} targets failed to build".format(len(failed_targets)))
+
+main = bxl.main(
+    impl = main_impl,
+    cli_args = {
+        "modifier": cli_args.list(cli_args.string(), short = "m", default = []),
+        "output": cli_args.enum(["diag.txt", "diag.json", "clippy.txt", "clippy.json"], default = "diag.txt"),
+        "path": cli_args.list(cli_args.string(), default = []),
+        "target": cli_args.list(cli_args.target_expr(), default = []),
+    },
+)

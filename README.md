@@ -82,6 +82,8 @@ See: https://github.com/benbrittain/buckle
 
 1. Install `buckle`, `reindeer`, and `uv` on your host system.
 
+Rust and Zig toolchains are pinned in Buck under `buck2/toolchains/` and the current pinned releases are also recorded in `.buckleconfig.toml` as `rust_version` and `zig_version`.
+
 ### 2. Buck2 Usage
 
 1. Build a target with `buckle build //$TARGET_PATH:$TARGET_NAME`

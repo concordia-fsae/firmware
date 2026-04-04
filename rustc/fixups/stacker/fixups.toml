@@ -1,0 +1,7 @@
+buildscript.run = false
+
+[['cfg(target_os = "windows")'.cxx_library]]
+name = "windows"
+srcs = ["src/arch/windows.c"]
+compiler_flags = ["-DWINDOWS"]
+target_compatible_with = ["prelude//os/constraints:windows"]

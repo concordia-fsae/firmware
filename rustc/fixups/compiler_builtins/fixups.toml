@@ -1,0 +1,14 @@
+extra_srcs = ["../libm/src/math/**/*.rs"]
+
+rustc_flags = [
+    # Port of Cargo change: https://github.com/rust-lang/rust/pull/73136/files
+    #
+    # Set this to a large value in order to allow compiler-builtins to generate
+    # 1 symbol per object file. This is needed in order to allow the linker to
+    # avoid duplicate symbols.
+    "-Ccodegen-units=10000",
+]
+
+[buildscript.run.env]
+# Read by the  build script, but only relevant to libm tests.
+OPT_LEVEL = "3"

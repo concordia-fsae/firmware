@@ -1,8 +1,9 @@
 load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
 load("@prelude//toolchains:python.bzl", "system_python_bootstrap_toolchain")
-load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
 load("@prelude//toolchains/cxx.bzl", "system_cxx_toolchain")
 load("@toolchains//gcc:defs.bzl", "download_gcc_distribution", "gcc_toolchain")
+load("@toolchains//rust:defs.bzl", "download_rust_distribution", "rust_toolchain")
+load("@toolchains//zig:defs.bzl", "download_zig_distribution", "zig_toolchain")
 
 system_python_bootstrap_toolchain(
     name = "python_bootstrap",
@@ -65,6 +66,18 @@ gcc_toolchain(
     visibility = ["PUBLIC"],
 )
 
+download_zig_distribution(
+    name = "zig-0.14.1-aarch64-linux-gnu-dist",
+    version = "0.14.1",
+    target_triple = "aarch64-linux-gnu",
+)
+
+zig_toolchain(
+    name = "zig-0.14.1-aarch64-linux-gnu",
+    distribution = ":zig-0.14.1-aarch64-linux-gnu-dist",
+    visibility = ["PUBLIC"],
+)
+
 # Host toolchain
 system_cxx_toolchain(
     name = "cxx-host",
@@ -75,30 +88,88 @@ system_cxx_toolchain(
     visibility = ["PUBLIC"],
 )
 
-system_rust_toolchain(
+download_rust_distribution(
+    name = "rust-1.85.1-aarch64-apple-darwin-dist",
+    version = "1.85.1",
+    host_triple = "aarch64-apple-darwin",
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-x86_64-apple-darwin-dist",
+    version = "1.85.1",
+    host_triple = "x86_64-apple-darwin",
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-aarch64-unknown-linux-gnu-dist",
+    version = "1.85.1",
+    host_triple = "aarch64-unknown-linux-gnu",
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-x86_64-unknown-linux-gnu-dist",
+    version = "1.85.1",
+    host_triple = "x86_64-unknown-linux-gnu",
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-aarch64-apple-darwin-aarch64-linux-gnu-dist",
+    version = "1.85.1",
+    host_triple = "aarch64-apple-darwin",
+    extra_targets = ["aarch64-unknown-linux-gnu"],
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-x86_64-apple-darwin-aarch64-linux-gnu-dist",
+    version = "1.85.1",
+    host_triple = "x86_64-apple-darwin",
+    extra_targets = ["aarch64-unknown-linux-gnu"],
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-aarch64-unknown-linux-gnu-aarch64-linux-gnu-dist",
+    version = "1.85.1",
+    host_triple = "aarch64-unknown-linux-gnu",
+    extra_targets = ["aarch64-unknown-linux-gnu"],
+)
+
+download_rust_distribution(
+    name = "rust-1.85.1-x86_64-unknown-linux-gnu-aarch64-linux-gnu-dist",
+    version = "1.85.1",
+    host_triple = "x86_64-unknown-linux-gnu",
+    extra_targets = ["aarch64-unknown-linux-gnu"],
+)
+
+rust_toolchain(
     name = "rust-host",
+    distribution = select({
+        "prelude//os/constraints:macos": select({
+            "prelude//cpu/constraints:arm64": ":rust-1.85.1-aarch64-apple-darwin-dist",
+            "prelude//cpu/constraints:x86_64": ":rust-1.85.1-x86_64-apple-darwin-dist",
+        }),
+        "prelude//os/constraints:linux": select({
+            "prelude//cpu/constraints:arm64": ":rust-1.85.1-aarch64-unknown-linux-gnu-dist",
+            "prelude//cpu/constraints:x86_64": ":rust-1.85.1-x86_64-unknown-linux-gnu-dist",
+        }),
+    }),
     default_edition = "2021",
     visibility = ["PUBLIC"],
 )
 
-system_rust_toolchain(
-    name = "rust-linux-x86_64",
-    default_edition = "2024",
-    rustc_target_triple = "x86_64-unknown-linux-gnu",
-    visibility = ["PUBLIC"],
-)
-
-system_rust_toolchain(
-    name = "rust-linux-aarch64",
-    default_edition = "2024",
+rust_toolchain(
+    name = "rust-arm64-linux",
+    distribution = select({
+        "prelude//os/constraints:macos": select({
+            "prelude//cpu/constraints:arm64": ":rust-1.85.1-aarch64-apple-darwin-aarch64-linux-gnu-dist",
+            "prelude//cpu/constraints:x86_64": ":rust-1.85.1-x86_64-apple-darwin-aarch64-linux-gnu-dist",
+        }),
+        "prelude//os/constraints:linux": select({
+            "prelude//cpu/constraints:arm64": ":rust-1.85.1-aarch64-unknown-linux-gnu-aarch64-linux-gnu-dist",
+            "prelude//cpu/constraints:x86_64": ":rust-1.85.1-x86_64-unknown-linux-gnu-aarch64-linux-gnu-dist",
+        }),
+    }),
+    default_edition = "2021",
     rustc_target_triple = "aarch64-unknown-linux-gnu",
-    visibility = ["PUBLIC"],
-)
-
-system_rust_toolchain(
-    name = "rust-linux-arm",
-    default_edition = "2024",
-    rustc_target_triple = "arm-unknown-linux-gnueabihf",
     visibility = ["PUBLIC"],
 )
 
@@ -107,7 +178,7 @@ toolchain_alias(
     name = "cxx",
     actual = select({
         "root//buck2/constraints:arm32-none": ":gcc-14.2.rel1-arm-none-eabi",
-        "root//buck2/constraints:arm64-linux": ":gcc-14.2.rel1-aarch64-linux-gnu",
+        "root//buck2/constraints:arm64-linux": ":zig-0.14.1-aarch64-linux-gnu",
         "prelude//os/constraints:linux": ":cxx-host",
         "DEFAULT": ":cxx-host",
     }),
@@ -117,7 +188,7 @@ toolchain_alias(
 toolchain_alias(
     name = "rust",
     actual = select({
-        "root//buck2/constraints:arm64-linux": ":rust-linux-aarch64",
+        "root//buck2/constraints:arm64-linux": ":rust-arm64-linux",
         "DEFAULT": ":rust-host",
     }),
     visibility = ["PUBLIC"],
