@@ -99,8 +99,22 @@ This repository uses `pre-commit` for formatting checks. The configured formatte
 
 Install the tools locally:
 
+Install pixi:
+
 ```bash
-brew install uncrustify yamlfmt pre-commit
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+Install pre-commit and prek:
+
+```bash
+pip3 install pre-commit prek
+```
+
+Install the pinned uncrustify binary:
+
+```bash
+pixi install
 ```
 
 Install the Git hook:
@@ -120,39 +134,7 @@ Useful commands:
 - Run all formatting checks with CI-style output: `pre-commit run --all-files --show-diff-on-failure`
 - Run only C/C++ formatting: `pre-commit run uncrustify --all-files`
 - Run only YAML formatting: `pre-commit run yamlfmt --all-files`
-
-CI runs the same `pre-commit` formatting checks in `.github/workflows/formatting.yml`. If branch protection requires that workflow, pull requests will be blocked until formatting passes.
-
-### 3. Formatting
-
-This repository uses `pre-commit` for formatting checks. The configured formatters are:
-
-- `uncrustify` for C/C++ sources using `uncrustify.cfg`
-- `yamlfmt` for YAML files using `yamlfmt.yaml`
-
-Install the tools locally:
-
-```bash
-brew install uncrustify yamlfmt pre-commit
-```
-
-Install the Git hook:
-
-```bash
-pre-commit install
-```
-
-Run formatting on all files:
-
-```bash
-pre-commit run --all-files
-```
-
-Useful commands:
-
-- Run all formatting checks with CI-style output: `pre-commit run --all-files --show-diff-on-failure`
-- Run only C/C++ formatting: `pre-commit run uncrustify --all-files`
-- Run only YAML formatting: `pre-commit run yamlfmt --all-files`
+- Check active uncrustify version: `pixi run uncrustify --version`
 
 CI runs the same `pre-commit` formatting checks in `.github/workflows/formatting.yml`. If branch protection requires that workflow, pull requests will be blocked until formatting passes.
 
