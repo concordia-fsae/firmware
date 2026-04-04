@@ -39,5 +39,5 @@ typedef enum
     MODULE_ENV,
     MODULE_SYS,
     MODULE_CANIO_tx,
-    MODULE_CNT
+    MODULE_CNT,
 } Module_tasks_E;

@@ -33,9 +33,9 @@
 // CAN_IER_BOFIE  Bus Off Interrupt
 // CAN_IER_LECIE  Last Error Code Interrupt
 // CAN_IER_ERRIE  Error Interrupt
-#define CAN_ENABLED_INTERRUPTS (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
-                                CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
-                                CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
+#define CAN_ENABLED_INTERRUPTS    (CAN_IER_TMEIE | CAN_IER_FMPIE0 | CAN_IER_FMPIE1 | CAN_IER_FFIE0 | \
+                                   CAN_IER_FFIE1 | CAN_IER_FOVIE0 | CAN_IER_FOVIE1 | CAN_IER_EWGIE | \
+                                   CAN_IER_EPVIE | CAN_IER_BOFIE | CAN_IER_LECIE | CAN_IER_ERRIE)
 
 /******************************************************************************
  *                              E X T E R N S
@@ -57,7 +57,7 @@ static bool HW_CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
 {
     uint32_t tsr = READ_REG(canHandle->Instance->TSR);
 
-    return (tsr & (CAN_TSR_TME0 << mailbox));
+    return(tsr & (CAN_TSR_TME0 << mailbox));
 }
 
 /******************************************************************************
@@ -68,7 +68,7 @@ static bool HW_CAN_checkMbFree(CAN_HandleTypeDef* canHandle, CAN_TxMailbox_E mai
  * @brief Deinitializes the CAN peripheral
  * @retval HW_OK
  */
- HW_StatusTypeDef_E HW_CAN_deInit(void)
+HW_StatusTypeDef_E HW_CAN_deInit(void)
 {
     for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
     {
@@ -110,9 +110,9 @@ HW_StatusTypeDef_E HW_CAN_stop(CAN_bus_E bus)
  */
 HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg)
 {
-    CAN_HandleTypeDef* canHandle = &hcan[bus];
-    HAL_CAN_StateTypeDef state = canHandle->State;
-    HW_StatusTypeDef_E ret = HW_ERROR;
+    CAN_HandleTypeDef    * canHandle = &hcan[bus];
+    HAL_CAN_StateTypeDef state       = canHandle->State;
+    HW_StatusTypeDef_E   ret         = HW_ERROR;
 
     if ((state == HAL_CAN_STATE_READY) || (state == HAL_CAN_STATE_LISTENING))
     {
@@ -123,10 +123,10 @@ HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg
             if (HW_CAN_checkMbFree(canHandle, mailbox))
             {
                 // set CAN ID
-                canHandle->Instance->sTxMailBox[mailbox].TIR  = ((msg.IDE == CAN_IDENTIFIER_STD) ?
-                                                                 msg.id << CAN_TI0R_STID_Pos :
-                                                                 msg.id << CAN_TI0R_EXID_Pos) |
-                                                                ((msg.IDE == CAN_IDENTIFIER_EXT) ? 0x01 << 2U : 0x00);
+                canHandle->Instance->sTxMailBox[mailbox].TIR = ((msg.IDE == CAN_IDENTIFIER_STD) ?
+                                                                msg.id << CAN_TI0R_STID_Pos :
+                                                                msg.id << CAN_TI0R_EXID_Pos) |
+                                                               ((msg.IDE == CAN_IDENTIFIER_EXT) ? 0x01 << 2U : 0x00);
                 // set message length
                 canHandle->Instance->sTxMailBox[mailbox].TDTR = msg.lengthBytes;
 
@@ -139,6 +139,7 @@ HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg
 
                 // Return function status
                 return HW_OK;
+
                 no_mailbox_empty = false;
             }
         }
@@ -159,8 +160,9 @@ HW_StatusTypeDef_E HW_CAN_sendMsgOnPeripheral(CAN_bus_E bus, CAN_TxMessage_T msg
 
 void HW_CAN_activateFifoNotifications(CAN_bus_E bus, CAN_RxFifo_E rxFifo)
 {
-    uint32_t it = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
-    uint32_t itFull = rxFifo == CAN_RX_FIFO_0 ? CAN_IER_FFIE0 : CAN_IER_FFIE1;
+    uint32_t it     = (rxFifo == CAN_RX_FIFO_0) ? CAN_IER_FMPIE0 : CAN_IER_FMPIE1;
+    uint32_t itFull = (rxFifo == CAN_RX_FIFO_0) ? CAN_IER_FFIE0 : CAN_IER_FFIE1;
+
     HAL_CAN_ActivateNotification(&hcan[bus], it);
     HAL_CAN_ActivateNotification(&hcan[bus], itFull);
 }
@@ -210,34 +212,35 @@ bool HW_CAN_getRxMessage(CAN_bus_E bus, CAN_RxFifo_E rxFifo, CAN_RxMessage_T* rx
         default:
             // should never reach this state
             return false;
+
             break;
     }
 
     // Get the header
-    rx->IDE = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan[bus].Instance->sFIFOMailBox[rxFifo].RIR);
-    rx->RTR = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan[bus].Instance->sFIFOMailBox[rxFifo].RIR);
+    rx->IDE              = (CAN_IdentifierLen_E)(CAN_RI0R_IDE & hcan[bus].Instance->sFIFOMailBox[rxFifo].RIR);
+    rx->RTR              = (CAN_RemoteTransmission_E)(CAN_RI0R_RTR & hcan[bus].Instance->sFIFOMailBox[rxFifo].RIR);
 
-    rx->id = (((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan[bus].Instance->sFIFOMailBox[rxFifo].RIR) >> (rx->IDE == CAN_IDENTIFIER_STD ? CAN_RI0R_STID_Pos : CAN_RI0R_EXID_Pos));
-    rx->lengthBytes = (CAN_RDT0R_DLC & hcan[bus].Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
+    rx->id               = (((CAN_RI0R_EXID | CAN_RI0R_STID) & hcan[bus].Instance->sFIFOMailBox[rxFifo].RIR) >> ((rx->IDE == CAN_IDENTIFIER_STD) ? CAN_RI0R_STID_Pos : CAN_RI0R_EXID_Pos));
+    rx->lengthBytes      = (CAN_RDT0R_DLC & hcan[bus].Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_DLC_Pos;
 
     rx->timestamp        = (CAN_RDT0R_TIME & hcan[bus].Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_TIME_Pos;
     rx->filterMatchIndex = (CAN_RDT0R_FMI & hcan[bus].Instance->sFIFOMailBox[rxFifo].RDTR) >> CAN_RDT0R_FMI_Pos;
 
     // Get the data
-    rx->data.u32[0U] = hcan[bus].Instance->sFIFOMailBox[rxFifo].RDLR;
-    rx->data.u32[1U] = hcan[bus].Instance->sFIFOMailBox[rxFifo].RDHR;
+    rx->data.u32[0U]     = hcan[bus].Instance->sFIFOMailBox[rxFifo].RDLR;
+    rx->data.u32[1U]     = hcan[bus].Instance->sFIFOMailBox[rxFifo].RDHR;
 
     // Release the FIFO
     switch (rxFifo)
     {
         case CAN_RX_FIFO0:
             SET_BIT(hcan[bus].Instance->RF0R, CAN_RF0R_RFOM0);
-            /* HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE0); */
+            // HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE0);
             break;
 
         case CAN_RX_FIFO1:
             SET_BIT(hcan[bus].Instance->RF1R, CAN_RF1R_RFOM1);
-            /* HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE1); */
+            // HAL_CAN_ActivateNotification(&hcan, CAN_IER_FMPIE1);
             break;
 
         default:
@@ -273,8 +276,8 @@ void HW_CAN_TxComplete_ISR(CAN_bus_E bus, CAN_TxMailbox_E mailbox)
 void HW_CAN_RxMsgPending_ISR(CAN_bus_E bus, CAN_RxFifo_E fifoId)
 {
 #if FEATURE_IS_DISABLED(FEATURE_CANRX_SWI)
-    CAN_data_T          data = {0U};
-    CAN_RxHeaderTypeDef header = {0U};
+    CAN_data_T          data   = { 0U };
+    CAN_RxHeaderTypeDef header = { 0U };
 #endif // FEATURE_CANRX_SWI == FEATURE_DISABLED
 
 #if FEATURE_CANRX_SWI == FEATURE_DISABLED
@@ -283,7 +286,7 @@ void HW_CAN_RxMsgPending_ISR(CAN_bus_E bus, CAN_RxFifo_E fifoId)
         HAL_CAN_GetRxMessage(&hcan[bus], fifoId, &header, (uint8_t*)&data);
         CANRX_VEH_unpackMessage(header.StdId, &data);
 
-#if APP_UDS
+# if APP_UDS
         if (header.StdId == UDS_REQUEST_ID)
         {
             // FIXME: there needs to be a queue here for received UDS messages
@@ -292,7 +295,7 @@ void HW_CAN_RxMsgPending_ISR(CAN_bus_E bus, CAN_RxFifo_E fifoId)
             // the next one, even if it hasn't been processed yet.
             udsSrv_processMessage(data.u8, (uint8_t)header.DLC);
         }
-#endif // FEATURE_UDS
+# endif // FEATURE_UDS
     }
 #else // FEATURE_CANRX_SWI == FEATURE_DISABLED
     CANRX_notify(bus, fifoId);

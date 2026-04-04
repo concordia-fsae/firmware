@@ -1,29 +1,29 @@
 /**
-* @file bppc.c
-* @brief Module source for the Brake Pedal Plausibility Check
-*/
+ * @file bppc.c
+ * @brief Module source for the Brake Pedal Plausibility Check
+ */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "bppc.h"
+#include "app_faultManager.h"
 #include "apps.h"
+#include "bppc.h"
 #include "drv_pedalMonitor.h"
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "string.h"
 #include "torque.h"
-#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(FEATURE_BRAKEPEDAL_FROM_PRESSURE)
-#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_PR
+# define BRAKE_CHANNEL    DRV_PEDALMONITOR_BRAKE_PR
 #else
-#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_POT
+# define BRAKE_CHANNEL    DRV_PEDALMONITOR_BRAKE_POT
 #endif
 
 /******************************************************************************
@@ -33,7 +33,7 @@
 static struct
 {
     bppc_state_E state;
-    float32_t position;
+    float32_t    position;
 } bppc_data;
 
 /******************************************************************************
@@ -59,15 +59,19 @@ CAN_bppcState_E bppc_getStateCAN(void)
         case BPPC_OK:
             ret = CAN_BPPCSTATE_OK;
             break;
+
         case BPPC_FAULT:
             ret = CAN_BPPCSTATE_FAULT;
             break;
+
         case BPPC_FAULT_LATCHED:
             ret = CAN_BPPCSTATE_FAULT_LATCHED;
             break;
+
         case BPPC_ERROR:
             ret = CAN_BPPCSTATE_ERROR;
             break;
+
         default:
             break;
     }
@@ -86,9 +90,9 @@ static void bppc_periodic_100Hz(void)
 
     if (drv_pedalMonitor_getPedalState(BRAKE_CHANNEL) == DRV_PEDALMONITOR_OK)
     {
-        const float32_t brake_pos = drv_pedalMonitor_getPedalPosition(BRAKE_CHANNEL);
-        const float32_t accelerator_pos = apps_getPedalPosition();
-        const bool in_launch_control = torque_isLaunching();
+        const float32_t brake_pos         = drv_pedalMonitor_getPedalPosition(BRAKE_CHANNEL);
+        const float32_t accelerator_pos   = apps_getPedalPosition();
+        const bool      in_launch_control = torque_isLaunching();
 
         bppc_data.position = brake_pos;
 
@@ -122,6 +126,6 @@ static void bppc_periodic_100Hz(void)
  ******************************************************************************/
 
 const ModuleDesc_S bppc_desc = {
-    .moduleInit = &bppc_init,
+    .moduleInit        = &bppc_init,
     .periodic100Hz_CLK = &bppc_periodic_100Hz,
 };

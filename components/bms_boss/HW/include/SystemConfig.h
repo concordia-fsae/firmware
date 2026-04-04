@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stm32f1xx.h"
 #include "FreeRTOSConfig.h"
+#include "stm32f1xx.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -21,8 +21,8 @@
 
 // NVIC interrupt priorities, lower number is higher priority
 // tick interrupt is highest priority
-#define DMA_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
-#define ADC_IRQ_PRIO    DMA_IRQ_PRIO + 1U
-#define CAN_RX_IRQ_PRIO configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 6U
-#define CAN_TX_IRQ_PRIO configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 8U
-#define EXTI_IRQ_PRIO   ADC_IRQ_PRIO
+#define DMA_IRQ_PRIO       configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 4U
+#define ADC_IRQ_PRIO       DMA_IRQ_PRIO + 1U
+#define CAN_RX_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 6U
+#define CAN_TX_IRQ_PRIO    configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 8U
+#define EXTI_IRQ_PRIO      ADC_IRQ_PRIO

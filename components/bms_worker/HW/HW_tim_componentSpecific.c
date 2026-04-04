@@ -9,12 +9,12 @@
 
 // System Includes
 #include "include/HW_tim_componentSpecific.h"
-#include "SystemConfig.h"
 #include "LIB_Types.h"
+#include "SystemConfig.h"
 
 // Firmware Includes
-#include "HW_tim.h"
 #include "FeatureDefines_generated.h"
+#include "HW_tim.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -49,7 +49,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
 
     __HAL_RCC_TIM4_CLK_ENABLE();
 
-    uwTimclock                   = HAL_RCC_GetPCLK2Freq();
+    uwTimclock                                    = HAL_RCC_GetPCLK2Freq();
     htim[HW_TIM_PORT_TACH].Instance               = TIM1;
     htim[HW_TIM_PORT_TACH].Init.Prescaler         = (uwTimclock / 2000000) - 1;
     htim[HW_TIM_PORT_TACH].Init.CounterMode       = TIM_COUNTERMODE_UP;
@@ -93,8 +93,8 @@ HW_StatusTypeDef_E HW_TIM_init(void)
 
     // Get clock configuration
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
-    uwTimclock                   = HAL_RCC_GetPCLK1Freq();
-    uwPrescalerValue             = (uint32_t)((uwTimclock / 1000000U) - 1U);
+    uwTimclock                                   = HAL_RCC_GetPCLK1Freq();
+    uwPrescalerValue                             = (uint32_t)((uwTimclock / 1000000U) - 1U);
     htim[HW_TIM_PORT_PWM].Instance               = TIM4;
     htim[HW_TIM_PORT_PWM].Init.Prescaler         = uwPrescalerValue;
     htim[HW_TIM_PORT_PWM].Init.CounterMode       = TIM_COUNTERMODE_UP;
@@ -144,7 +144,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
 
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_2);
-#endif
+#endif // if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     return HW_OK;
 }
 
@@ -207,7 +207,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 float32_t HW_TIM1_getFreqCH1(void)
 {
 #if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
-    if ((fan1_last_tick[1] + 1000000) < HW_TIM_getBaseTick()) 
+    if ((fan1_last_tick[1] + 1000000) < HW_TIM_getBaseTick())
     {
         return 0;
     }
@@ -225,7 +225,7 @@ float32_t HW_TIM1_getFreqCH1(void)
 float32_t HW_TIM1_getFreqCH2(void)
 {
 #if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
-    if ((fan2_last_tick[1] + 1000000U) < HW_TIM_getBaseTick()) 
+    if ((fan2_last_tick[1] + 1000000U) < HW_TIM_getBaseTick())
     {
         return 0;
     }

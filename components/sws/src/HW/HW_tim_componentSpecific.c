@@ -8,8 +8,8 @@
  ******************************************************************************/
 
 // System Includes
-#include "SystemConfig.h"
 #include "LIB_Types.h"
+#include "SystemConfig.h"
 
 // Firmware Includes
 #include "HW_tim.h"

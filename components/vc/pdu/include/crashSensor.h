@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "lib_nvm.h"
 #include "app_vehicleState.h"
+#include "lib_nvm.h"
 #include "LIB_Types.h"
 #include "Yamcan.h"
 
@@ -29,9 +29,9 @@ typedef enum
 
 typedef struct
 {
-    bool crashLatched;
+    bool                     crashLatched;
     app_vehicleState_state_E vehicleState;
-    uint8_t reserved[15U];
+    uint8_t                  reserved[15U];
 } LIB_NVM_STORAGE(nvm_crashState_S);
 extern nvm_crashState_S crashState_data;
 
@@ -40,10 +40,10 @@ _Static_assert(sizeof(nvm_crashState_S) == 18U, "NVM deterministic size");
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void crashSensor_task(void);
-crashSensor_state_E crashSensor_getState(void);
+void                   crashSensor_task(void);
+crashSensor_state_E    crashSensor_getState(void);
 CAN_crashSensorState_E crashSensor_getStateCAN(void);
-float32_t crashSensor_getTrippedAcceleration(void);
-float32_t crashSensor_getMaxAcceleration(void);
+float32_t              crashSensor_getTrippedAcceleration(void);
+float32_t              crashSensor_getMaxAcceleration(void);
 
-void crashSensor_notifyFromImu(void);
+void                   crashSensor_notifyFromImu(void);

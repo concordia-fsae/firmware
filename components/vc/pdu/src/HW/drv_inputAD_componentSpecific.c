@@ -15,11 +15,11 @@
 #include <string.h>
 
 /**< Firmware Includes */
+#include "drv_mux.h"
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
-#include "drv_mux.h"
 
 /**< Other Includes */
 #include "ModuleDesc.h"
@@ -29,72 +29,73 @@
  ******************************************************************************/
 
 drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
-    [DRV_INPUTAD_TSCHG_MS] = {
-        .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_tsmsChg),
+    [DRV_INPUTAD_TSCHG_MS] =           {
+        .type                       = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH,BMSB_tsmsChg),
     },
-    [DRV_INPUTAD_RUN_BUTTON] = {
-        .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, SWS_requestRun),
+    [DRV_INPUTAD_RUN_BUTTON] =         {
+        .type                       = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH,SWS_requestRun),
     },
-    [DRV_INPUTAD_IMD_SAFETY_EN] = {
-        .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_imdStatusMem),
+    [DRV_INPUTAD_IMD_SAFETY_EN] =      {
+        .type                       = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH,BMSB_imdStatusMem),
     },
-    [DRV_INPUTAD_BMS_SAFETY_EN] = {
-        .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_bmsStatusMem),
+    [DRV_INPUTAD_BMS_SAFETY_EN] =      {
+        .type                       = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH,BMSB_bmsStatusMem),
     },
-    [DRV_INPUTAD_BMS_RESET] = {
-        .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, BMSB_bmsIMDReset),
+    [DRV_INPUTAD_BMS_RESET] =          {
+        .type                       = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH,BMSB_bmsIMDReset),
     },
-    [DRV_INPUTAD_5V_NFLT1] = { 
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_5V_NFLT1,
+    [DRV_INPUTAD_5V_NFLT1] =           {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                 {
+            .pin          = HW_GPIO_5V_NFLT1,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
-    [DRV_INPUTAD_5V_NFLT2] = { 
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_5V_NFLT2,
+    [DRV_INPUTAD_5V_NFLT2] =           {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                 {
+            .pin          = HW_GPIO_5V_NFLT2,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
-    [DRV_INPUTAD_VCU_SFTY_RESET] = { 
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_VCU_SFTY_RESET,
+    [DRV_INPUTAD_VCU_SFTY_RESET] =     {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                 {
+            .pin          = HW_GPIO_VCU_SFTY_RESET,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-    [DRV_INPUTAD_BSPD_MEM] = { 
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_BSPD_MEM,
+    [DRV_INPUTAD_BSPD_MEM] =           {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                 {
+            .pin          = HW_GPIO_BSPD_MEM,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
     [DRV_INPUTAD_DRIVER_CRASH_RESET] = {
-        .type = INPUT_DIGITAL_CAN,
-        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH, SWS_requestCrashReset),
+        .type                       = INPUT_DIGITAL_CAN,
+        .config.canrx_digitalStatus = &CANRX_get_signal_func(VEH,SWS_requestCrashReset),
     },
 };
 
-struct inputs_data {
+struct inputs_data
+{
     drv_mux_channel_S signal_mux;
 };
 
 struct inputs_data inputs_data = {
-    .signal_mux = {
-        .type = DRV_MUX_TYPE_GPIO,
+    .signal_mux                 = {
+        .type   = DRV_MUX_TYPE_GPIO,
         .config = {
-            .max_output_channel = 3U,
-            .outputs.gpio = {
-                .pin_first = DRV_OUTPUTAD_MUX2_SEL1,
-                .pin_last = DRV_OUTPUTAD_MUX2_SEL2,
+            .max_output_channel =                     3U,
+            .outputs.gpio       = {
+                .pin_first      = DRV_OUTPUTAD_MUX2_SEL1,
+                .pin_last       = DRV_OUTPUTAD_MUX2_SEL2,
                 .disable_on_ch0 = true,
             },
         },
@@ -130,11 +131,11 @@ void drv_inputAD_1kHz_componentSpecific(void)
         drv_inputAD_private_setAnalogVoltage(i + ADC_BANK1_CHANNEL_COUNT, HW_ADC_getVFromBank2Channel(i));
     }
 
-    const float32_t hp_cs = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_HP_CS);
+    const float32_t hp_cs              = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_HP_CS);
     const float32_t thermistor_voltage = HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_MUX2_THERMISTORS);
-    const uint8_t current_channel = drv_mux_getMuxOutput(&inputs_data.signal_mux);
+    const uint8_t   current_channel    = drv_mux_getMuxOutput(&inputs_data.signal_mux);
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP + current_channel, hp_cs);
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_PUMP + current_channel,      hp_cs);
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_THERM_MCU + current_channel, thermistor_voltage);
     drv_mux_setMuxOutput(&inputs_data.signal_mux, (uint8_t)(current_channel + 1U));
 

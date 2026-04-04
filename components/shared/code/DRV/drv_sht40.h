@@ -5,18 +5,18 @@
  * @note Not used in Release A.1
  */
 
-# pragma once
+#pragma once
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
 // System Includes
-# include "stdbool.h"
-# include "stdint.h"
+#include "stdbool.h"
+#include "stdint.h"
 
 // Firmware Includes
-# include "HW_i2c.h"
+#include "HW_i2c.h"
 
 
 /******************************************************************************
@@ -42,16 +42,16 @@ typedef enum
 typedef struct
 {
     uint64_t  raw;
-    float32_t temp; // [deg C], precision 0.01 deg C
-    float32_t rh;   // [%], precision 0.01%
+    float32_t temp;  // [deg C], precision 0.01 deg C
+    float32_t rh;    // [%], precision 0.01%
 } drv_sht40_data_S;
 
 typedef struct
 {
-    drv_sht40_state_E      state;
-    HW_I2C_Device_S* dev;
-    uint32_t         serial_number;
-    drv_sht40_data_S       data;
+    drv_sht40_state_E state;
+    HW_I2C_Device_S   * dev;
+    uint32_t          serial_number;
+    drv_sht40_data_S  data;
 } drv_sht40_S;
 
 

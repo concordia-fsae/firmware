@@ -8,10 +8,10 @@
  ******************************************************************************/
 
 // Firmware Includes
-#include "HW_intc.h"
-#include "stm32f1xx.h"
 #include "FeatureDefines_generated.h"
+#include "HW_intc.h"
 #include "HW_tim.h"
+#include "stm32f1xx.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -129,34 +129,34 @@ void TIM1_CC_IRQHandler(void)
 }
 
 // CAN interrupts
- void CAN1_SCE_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_SCE_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
 
 /**
  * CAN1_TX_IRQHandler
  *
  */
- void CAN1_TX_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_TX_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
 
 /**
  * CAN1_RX0_IRQHandler
  *
  */
- void CAN1_RX0_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
 
 /**
  * CAN1_RX1_IRQHandler
  *
  */
- void CAN1_RX1_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_RX1_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}

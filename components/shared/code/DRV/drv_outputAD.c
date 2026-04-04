@@ -7,9 +7,9 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_io.h"
 #include "drv_outputAD.h"
 #include "HW_gpio.h"
-#include "drv_io.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -18,7 +18,7 @@
 extern drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COUNT];
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -47,9 +47,9 @@ static outputAD_S outputs;
 static void setDigitalOutputState(drv_outputAD_channelDigital_E channel)
 {
     const drv_io_logicLevel_E desired_level = (outputs.digital[channel].active_state == DRV_IO_ACTIVE) ?
-                                               drv_outputAD_configDigital[channel].config.gpio.active_level :
-                                               drv_io_invertLogicLevel(drv_outputAD_configDigital[channel].config.gpio.active_level);
-    const bool state_to_set = desired_level == DRV_IO_LOGIC_HIGH;
+                                              drv_outputAD_configDigital[channel].config.gpio.active_level :
+                                              drv_io_invertLogicLevel(drv_outputAD_configDigital[channel].config.gpio.active_level);
+    const bool                state_to_set  = desired_level == DRV_IO_LOGIC_HIGH;
 
     HW_GPIO_writePin(drv_outputAD_configDigital[channel].config.gpio.pin, state_to_set);
 }
@@ -96,8 +96,8 @@ void drv_outputAD_setDigitalActiveState(drv_outputAD_channelDigital_E channel, d
 void drv_outputAD_toggleDigitalState(drv_outputAD_channelDigital_E channel)
 {
     outputs.digital[channel].active_state = (outputs.digital[channel].active_state == DRV_IO_ACTIVE) ?
-                                             DRV_IO_INACTIVE :
-                                             DRV_IO_ACTIVE;
+                                            DRV_IO_INACTIVE :
+                                            DRV_IO_ACTIVE;
     setDigitalOutputState(channel);
 }
 

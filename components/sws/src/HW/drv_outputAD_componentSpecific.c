@@ -14,17 +14,17 @@
  ******************************************************************************/
 
 drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COUNT] = {
-    [DRV_OUTPUTAD_DIGITAL_LED] = {
-        .type = OUTPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_LED,
+    [DRV_OUTPUTAD_DIGITAL_LED] =       {
+        .type        = OUTPUT_DIGITAL,
+        .config.gpio =                 {
+            .pin          = HW_GPIO_LED,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
     [DRV_OUTPUTAD_DIGITAL_CAN_SLEEP] = {
-        .type = OUTPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_CAN_SLEEP,
+        .type        = OUTPUT_DIGITAL,
+        .config.gpio =                 {
+            .pin          = HW_GPIO_CAN_SLEEP,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },

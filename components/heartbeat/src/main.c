@@ -36,7 +36,8 @@ volatile const uint32_t garbageData[1024] = { 0xFF };
 
 int main()
 {
-    if (garbageData[0] == 0xFF) {}
+    if (garbageData[0] == 0xFF)
+    {}
     setupCLK();
     setupLEDAndButton();
 

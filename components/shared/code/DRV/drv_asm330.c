@@ -14,69 +14,69 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define DEFAULT_SCALE_G        ((500.0f) / 65535.0f)
+#define DEFAULT_SCALE_G             ((500.0f) / 65535.0f)
 
-#define DEFAULT_SCALE_A        ((4.0f * GRAVITY) / 65535.0f)
-#define SCALE_A_16G            ((32.0f * GRAVITY) / 65535.0f)
-#define SCALE_A_8G             ((16.0f * GRAVITY) / 65535.0f)
-#define SCALE_A_4G             ((8.0f * GRAVITY) / 65535.0f)
+#define DEFAULT_SCALE_A             ((4.0f * GRAVITY) / 65535.0f)
+#define SCALE_A_16G                 ((32.0f * GRAVITY) / 65535.0f)
+#define SCALE_A_8G                  ((16.0f * GRAVITY) / 65535.0f)
+#define SCALE_A_4G                  ((8.0f * GRAVITY) / 65535.0f)
 
-#define CONFIG_ENTRY(param, val) genCommandHeader(false, param), (uint8_t)val
+#define CONFIG_ENTRY(param, val)    genCommandHeader(false, param), (uint8_t)val
 
-#define BIT_POS_SOFT_RESET     7U
-#define BIT_POS_CFG_ACCESS     7U
-#define BIT_POS_READ           7U
-#define BIT_POS_HP_EN_G        6U
-#define BIT_POS_BDU            6U
-#define BIT_POS_TIMESTAMP_EN   5U
-#define BIT_POS_HPCF_XL        5U
-#define BIT_POS_ODR            4U
-#define BIT_POS_PAGE_SEL       4U
-#define BIT_POS_FS_VL          2U
-#define BIT_POS_IF_INC         2U
-#define BIT_POS_TDA            2U
-#define BIT_POS_I2C_DISABLE    2U
-#define BIT_POS_PAGE_READ      5U
-#define BIT_POS_PAGE_WRITE     6U
-#define BIT_POS_EMB_FUNC_LIR   7U
-#define BIT_POS_INT_CLR_ON_READ 6U
-#define BIT_POS_GDA            1U
-#define BIT_POS_I3C_DISABLE    1U
-#define BIT_POS_LPF2_XL_EN     1U
-#define BIT_POS_LPF1_SEL_G     1U
-#define BIT_POS_XLDA           0U
-#define BIT_POS_FIFO_MODE      0U
-#define BIT_POS_SW_RESET       0U
-#define BIT_POS_GYRO_FTYPE     0U
-#define BIT_POS_FSM_EN         0U
-#define BIT_POS_FSM1_EN        0U
-#define BIT_POS_FSM_INIT       0U
+#define BIT_POS_SOFT_RESET          7U
+#define BIT_POS_CFG_ACCESS          7U
+#define BIT_POS_READ                7U
+#define BIT_POS_HP_EN_G             6U
+#define BIT_POS_BDU                 6U
+#define BIT_POS_TIMESTAMP_EN        5U
+#define BIT_POS_HPCF_XL             5U
+#define BIT_POS_ODR                 4U
+#define BIT_POS_PAGE_SEL            4U
+#define BIT_POS_FS_VL               2U
+#define BIT_POS_IF_INC              2U
+#define BIT_POS_TDA                 2U
+#define BIT_POS_I2C_DISABLE         2U
+#define BIT_POS_PAGE_READ           5U
+#define BIT_POS_PAGE_WRITE          6U
+#define BIT_POS_EMB_FUNC_LIR        7U
+#define BIT_POS_INT_CLR_ON_READ     6U
+#define BIT_POS_GDA                 1U
+#define BIT_POS_I3C_DISABLE         1U
+#define BIT_POS_LPF2_XL_EN          1U
+#define BIT_POS_LPF1_SEL_G          1U
+#define BIT_POS_XLDA                0U
+#define BIT_POS_FIFO_MODE           0U
+#define BIT_POS_SW_RESET            0U
+#define BIT_POS_GYRO_FTYPE          0U
+#define BIT_POS_FSM_EN              0U
+#define BIT_POS_FSM1_EN             0U
+#define BIT_POS_FSM_INIT            0U
 
-#define PACK_IMU_FTYPE(dev)    (dev->config.accelLpfEnabled ? (uint8_t)(dev->config.accelFtype << BIT_POS_HPCF_XL) : 0U)
-#define PACK_GYRO_FTYPE(dev)   (dev->config.gyroLpfEnabled ? (uint8_t)(dev->config.gyroFtype << BIT_POS_GYRO_FTYPE) : 0U)
-#define PACK_ODR_FREQ(freq)    (freq << BIT_POS_ODR)
-#define PACK_ODR_SCALE(scale)  (scale << BIT_POS_FS_VL)
-#define PACK_FIFO_FREQ(freq)   ((freq) | (freq << BIT_POS_ODR))
-#define PACK_IF_INC            (0b1 << BIT_POS_IF_INC)
-#define PACK_HP_EN_G           (0b1 << BIT_POS_HP_EN_G)
-#define PACK_TDA               (0b1 << BIT_POS_TDA)
-#define PACK_GDA               (0b1 << BIT_POS_GDA)
-#define PACK_XLDA              (0b1 << BIT_POS_XLDA)
-#define PACK_FIFO_CONTINUOUS   (0b110 << BIT_POS_FIFO_MODE)
-#define PACK_I2C_DISABLE       (0b1 << BIT_POS_I2C_DISABLE)
-#define PACK_I3C_DISABLE       (0b1 << BIT_POS_I3C_DISABLE)
-#define PACK_TIMESTAMP_EN      (0b1 << BIT_POS_TIMESTAMP_EN)
-#define PACK_SOFT_RESET        (0b1 << BIT_POS_SOFT_RESET)
-#define PACK_SW_RESET          (0b1 << BIT_POS_SW_RESET)
-#define PACK_CFG_ACCESS        (0b1 << BIT_POS_CFG_ACCESS)
-#define PACK_BDU               (0b1 << BIT_POS_BDU)
-#define PACK_LPF2_XL_EN        (0b1 << BIT_POS_LPF2_XL_EN)
-#define PACK_LPF1_SEL_G        (0b1 << BIT_POS_LPF1_SEL_G)
+#define PACK_IMU_FTYPE(dev)         (dev->config.accelLpfEnabled ? (uint8_t)(dev->config.accelFtype << BIT_POS_HPCF_XL) : 0U)
+#define PACK_GYRO_FTYPE(dev)        (dev->config.gyroLpfEnabled ? (uint8_t)(dev->config.gyroFtype << BIT_POS_GYRO_FTYPE) : 0U)
+#define PACK_ODR_FREQ(freq)         (freq << BIT_POS_ODR)
+#define PACK_ODR_SCALE(scale)       (scale << BIT_POS_FS_VL)
+#define PACK_FIFO_FREQ(freq)        ((freq) | (freq << BIT_POS_ODR))
+#define PACK_IF_INC                 (0b1 << BIT_POS_IF_INC)
+#define PACK_HP_EN_G                (0b1 << BIT_POS_HP_EN_G)
+#define PACK_TDA                    (0b1 << BIT_POS_TDA)
+#define PACK_GDA                    (0b1 << BIT_POS_GDA)
+#define PACK_XLDA                   (0b1 << BIT_POS_XLDA)
+#define PACK_FIFO_CONTINUOUS        (0b110 << BIT_POS_FIFO_MODE)
+#define PACK_I2C_DISABLE            (0b1 << BIT_POS_I2C_DISABLE)
+#define PACK_I3C_DISABLE            (0b1 << BIT_POS_I3C_DISABLE)
+#define PACK_TIMESTAMP_EN           (0b1 << BIT_POS_TIMESTAMP_EN)
+#define PACK_SOFT_RESET             (0b1 << BIT_POS_SOFT_RESET)
+#define PACK_SW_RESET               (0b1 << BIT_POS_SW_RESET)
+#define PACK_CFG_ACCESS             (0b1 << BIT_POS_CFG_ACCESS)
+#define PACK_BDU                    (0b1 << BIT_POS_BDU)
+#define PACK_LPF2_XL_EN             (0b1 << BIT_POS_LPF2_XL_EN)
+#define PACK_LPF1_SEL_G             (0b1 << BIT_POS_LPF1_SEL_G)
 
-#define PACK_PAGE_READ         (0b1 << BIT_POS_PAGE_READ)
-#define PACK_PAGE_WRITE        (0b1 << BIT_POS_PAGE_WRITE)
+#define PACK_PAGE_READ              (0b1 << BIT_POS_PAGE_READ)
+#define PACK_PAGE_WRITE             (0b1 << BIT_POS_PAGE_WRITE)
 
-#define BIT_POS_FSM_ODR        3U
+#define BIT_POS_FSM_ODR             3U
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -110,7 +110,7 @@ static bool setFuncCfgAccess(drv_asm330_S* dev, bool enable)
 
 static bool writeAdvancedPageReg(drv_asm330_S* dev, uint8_t page, uint8_t addr, uint8_t value)
 {
-    uint8_t tmp = 0U;
+    uint8_t       tmp          = 0U;
     const uint8_t page_sel_val = (uint8_t)(((page & 0x0FU) << BIT_POS_PAGE_SEL) | 0x01U);
 
     if (!getParam(dev, ASM330LHB_PAGE_RW, &tmp))
@@ -118,7 +118,7 @@ static bool writeAdvancedPageReg(drv_asm330_S* dev, uint8_t page, uint8_t addr, 
         return false;
     }
 
-    tmp &= (uint8_t)~(PACK_PAGE_READ | PACK_PAGE_WRITE);
+    tmp &= (uint8_t) ~(PACK_PAGE_READ | PACK_PAGE_WRITE);
     tmp |= PACK_PAGE_WRITE;
     if (!setParam(dev, ASM330LHB_PAGE_RW, tmp))
     {
@@ -145,7 +145,7 @@ static bool writeAdvancedPageReg(drv_asm330_S* dev, uint8_t page, uint8_t addr, 
         return false;
     }
 
-    tmp &= (uint8_t)~(PACK_PAGE_READ | PACK_PAGE_WRITE);
+    tmp &= (uint8_t) ~(PACK_PAGE_READ | PACK_PAGE_WRITE);
     if (!setParam(dev, ASM330LHB_PAGE_RW, tmp))
     {
         return false;
@@ -158,9 +158,9 @@ static bool writeAdvancedPageBlock(drv_asm330_S* dev, uint16_t startAddr, const 
 {
     for (uint16_t i = 0U; i < len; i++)
     {
-        const uint16_t addr = (uint16_t)(startAddr + i);
-        const uint8_t page = (uint8_t)((addr >> 8) & 0x0FU);
-        const uint8_t offset = (uint8_t)(addr & 0xFFU);
+        const uint16_t addr   = (uint16_t)(startAddr + i);
+        const uint8_t  page   = (uint8_t)((addr >> 8) & 0x0FU);
+        const uint8_t  offset = (uint8_t)(addr & 0xFFU);
 
         if (!writeAdvancedPageReg(dev, page, offset, data[i]))
         {
@@ -180,12 +180,12 @@ static bool getFsmStatusInfo(uint8_t programNumber, uint8_t* reg, uint8_t* mask)
 
     if (programNumber <= 8U)
     {
-        *reg = ASM330LHB_FSM_STATUS_A_MAINPAGE;
+        *reg  = ASM330LHB_FSM_STATUS_A_MAINPAGE;
         *mask = (uint8_t)(0x01U << (programNumber - 1U));
         return true;
     }
 
-    *reg = ASM330LHB_FSM_STATUS_B_MAINPAGE;
+    *reg  = ASM330LHB_FSM_STATUS_B_MAINPAGE;
     *mask = (uint8_t)(0x01U << (programNumber - 9U));
     return true;
 }
@@ -199,12 +199,12 @@ static bool getFsmEnableInfo(uint8_t programNumber, uint8_t* reg, uint8_t* mask)
 
     if (programNumber <= 8U)
     {
-        *reg = ASM330LHB_FSM_ENABLE_A;
+        *reg  = ASM330LHB_FSM_ENABLE_A;
         *mask = (uint8_t)(0x01U << (programNumber - 1U));
         return true;
     }
 
-    *reg = ASM330LHB_FSM_ENABLE_B;
+    *reg  = ASM330LHB_FSM_ENABLE_B;
     *mask = (uint8_t)(0x01U << (programNumber - 9U));
     return true;
 }
@@ -222,12 +222,14 @@ static bool getVector(drv_asm330_S* dev, uint8_t command, drv_asm330_vector_S* v
 static bool getParam(drv_asm330_S* dev, uint8_t reg, uint8_t* data)
 {
     uint8_t command = genCommandHeader(true, reg);
+
     return commHelper(dev, &command, 1U, data, 1U);
 }
 
 static bool getFlag(drv_asm330_S* dev, uint8_t reg, uint8_t flag)
 {
     uint8_t tmp = 0U;
+
     if (!getParam(dev, reg, &tmp))
     {
         return false;
@@ -261,27 +263,30 @@ drv_asm330_state_E drv_asm330_getState(drv_asm330_S* dev)
 
 bool drv_asm330_init(drv_asm330_S* dev)
 {
-    uint8_t id = 0;
+    uint8_t    id    = 0;
     const bool valid = getParam(dev, ASM330LHB_WHO_AM_I, &id);
 
     if (valid && (id == ASM330LHB_ID))
     {
         setParam(dev, CONFIG_ENTRY(ASM330LHB_CTRL3_C, PACK_SW_RESET | PACK_IF_INC));
-        while (getFlag(dev, ASM330LHB_CTRL3_C, PACK_SW_RESET));
+        while (getFlag(dev, ASM330LHB_CTRL3_C, PACK_SW_RESET))
+        {
+            ;
+        }
 
         // General configs to always apply
         uint8_t configs[][2U] = {
             { CONFIG_ENTRY(ASM330LHB_FIFO_CTRL3, PACK_FIFO_FREQ(dev->config.odr)) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL1_XL, PACK_ODR_FREQ(dev->config.odr) |
-                                               PACK_ODR_SCALE(dev->config.scaleA) |
-                                               (uint8_t)(dev->config.accelLpfEnabled ? PACK_LPF2_XL_EN : 0U)) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL4_C, PACK_I2C_DISABLE |
-                                              (uint8_t)(dev->config.gyroLpfEnabled ? PACK_LPF1_SEL_G : 0U)) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL8_XL, PACK_IMU_FTYPE(dev)) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL6_C, PACK_GYRO_FTYPE(dev)) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL2_G, PACK_ODR_FREQ(dev->config.odr)) },
-            { CONFIG_ENTRY(ASM330LHB_FIFO_CTRL4, PACK_FIFO_CONTINUOUS) },
-            { CONFIG_ENTRY(ASM330LHB_CTRL3_C, PACK_IF_INC | PACK_BDU) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL1_XL,   PACK_ODR_FREQ(dev->config.odr) |
+                           PACK_ODR_SCALE(dev->config.scaleA) |
+                           (uint8_t)(dev->config.accelLpfEnabled ? PACK_LPF2_XL_EN : 0U)) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL4_C,    PACK_I2C_DISABLE |
+                           (uint8_t)(dev->config.gyroLpfEnabled ? PACK_LPF1_SEL_G : 0U)) },
+            { CONFIG_ENTRY(ASM330LHB_CTRL8_XL,   PACK_IMU_FTYPE(dev))             },
+            { CONFIG_ENTRY(ASM330LHB_CTRL6_C,    PACK_GYRO_FTYPE(dev))            },
+            { CONFIG_ENTRY(ASM330LHB_CTRL2_G,    PACK_ODR_FREQ(dev->config.odr))  },
+            { CONFIG_ENTRY(ASM330LHB_FIFO_CTRL4, PACK_FIFO_CONTINUOUS)            },
+            { CONFIG_ENTRY(ASM330LHB_CTRL3_C,    PACK_IF_INC | PACK_BDU)          },
         };
 
         for (uint8_t i = 0U; i < COUNTOF(configs); i++)
@@ -294,12 +299,15 @@ bool drv_asm330_init(drv_asm330_S* dev)
             case ASM330LHB_4g:
                 dev->state.scaleA = SCALE_A_4G;
                 break;
+
             case ASM330LHB_8g:
                 dev->state.scaleA = SCALE_A_8G;
                 break;
+
             case ASM330LHB_16g:
                 dev->state.scaleA = SCALE_A_16G;
                 break;
+
             default:
                 dev->state.scaleA = DEFAULT_SCALE_A;
                 break;
@@ -307,9 +315,9 @@ bool drv_asm330_init(drv_asm330_S* dev)
 
         uint8_t freq = genCommandHeader(true, ASM330LHB_INTERNAL_FREQ_FINE);
         getParam(dev, freq, &freq);
-        dev->state.sampleTime = 1.0f / (40000.0f + (0.0015f * freq * 40000.0f));
+        dev->state.sampleTime      = 1.0f / (40000.0f + (0.0015f * freq * 40000.0f));
         dev->state.fsmStartAddress = 0U;
-        dev->state.fsmMaxProgram = 0U;
+        dev->state.fsmMaxProgram   = 0U;
     }
     else
     {
@@ -323,8 +331,8 @@ bool drv_asm330_init(drv_asm330_S* dev)
 
 bool drv_asm330_getInertialMeasurement(drv_asm330_S* dev, drv_imu_accel_S* accel)
 {
-    drv_asm330_vector_S vec = { 0U };
-    uint8_t header = genCommandHeader(true, ASM330LHB_OUTX_L_A);
+    drv_asm330_vector_S vec    = { 0U };
+    uint8_t             header = genCommandHeader(true, ASM330LHB_OUTX_L_A);
 
     if (!getVector(dev, header, &vec))
     {
@@ -338,8 +346,8 @@ bool drv_asm330_getInertialMeasurement(drv_asm330_S* dev, drv_imu_accel_S* accel
 
 bool drv_asm330_getGyroMeasurement(drv_asm330_S* dev, drv_imu_gyro_S* gyro)
 {
-    drv_asm330_vector_S vec = { 0U };
-    uint8_t header = genCommandHeader(true, ASM330LHB_OUTX_L_G);
+    drv_asm330_vector_S vec    = { 0U };
+    uint8_t             header = genCommandHeader(true, ASM330LHB_OUTX_L_G);
 
     if (!getVector(dev, header, &vec))
     {
@@ -353,8 +361,9 @@ bool drv_asm330_getGyroMeasurement(drv_asm330_S* dev, drv_imu_gyro_S* gyro)
 
 uint16_t drv_asm330_getFifoStatus(drv_asm330_S* dev)
 {
-    uint8_t command = genCommandHeader(true, ASM330LHB_FIFO_STATUS1);
+    uint8_t  command  = genCommandHeader(true, ASM330LHB_FIFO_STATUS1);
     uint16_t response = { 0U };
+
     commHelper(dev, &command, 1U, (uint8_t*)&response, 2U);
 
     return response;
@@ -362,9 +371,10 @@ uint16_t drv_asm330_getFifoStatus(drv_asm330_S* dev)
 
 bool drv_asm330_getFifoElementsDMA(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen)
 {
-    uint16_t count = drv_asm330_getFifoElementsReady(dev);
-    count = count * sizeof(drv_asm330_fifoElement_S) < maxLen ? count : maxLen / sizeof(drv_asm330_fifoElement_S);
-    uint8_t command = genCommandHeader(true, ASM330LHB_FIFO_DATA_OUT_TAG);
+    uint16_t count   = drv_asm330_getFifoElementsReady(dev);
+
+    count = (count * sizeof(drv_asm330_fifoElement_S) < maxLen) ? count : maxLen / sizeof(drv_asm330_fifoElement_S);
+    uint8_t  command = genCommandHeader(true, ASM330LHB_FIFO_DATA_OUT_TAG);
 
     return HW_SPI_dmaTransmitReceiveAsym(dev->dev, &command, sizeof(command), data, count * sizeof(drv_asm330_fifoElement_S));
 }
@@ -372,7 +382,8 @@ bool drv_asm330_getFifoElementsDMA(drv_asm330_S* dev, uint8_t* data, uint16_t ma
 uint16_t drv_asm330_getFifoElements(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen)
 {
     uint16_t count = drv_asm330_getFifoElementsReady(dev);
-    count = count * sizeof(drv_asm330_fifoElement_S) < maxLen ? count : maxLen / sizeof(drv_asm330_fifoElement_S);
+
+    count = (count * sizeof(drv_asm330_fifoElement_S) < maxLen) ? count : maxLen / sizeof(drv_asm330_fifoElement_S);
 
     if (count)
     {
@@ -401,7 +412,8 @@ void drv_asm330_getGyroFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_
 asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifoElement_S* pack, drv_imu_vector_S* vec)
 {
     drv_asm330_fifoElementUnpack_S unpack = { 0U };
-    memcpy((uint8_t*)&unpack.tag, &pack->tag, sizeof(pack->elem));
+
+    memcpy((uint8_t*)&unpack.tag,  &pack->tag, sizeof(pack->elem));
     memcpy((uint8_t*)&unpack.elem, pack->elem, sizeof(pack->elem));
 
     switch (unpack.tag.tag_sensor)
@@ -409,13 +421,17 @@ asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifo
         case ASM330LHB_GYRO_NC_TAG:
             drv_asm330_getGyroFromVec(dev, &unpack.elem.vector, (drv_imu_gyro_S*)vec);
             break;
+
         case ASM330LHB_XL_NC_TAG:
             drv_asm330_getAccelFromVec(dev, &unpack.elem.vector, (drv_imu_accel_S*)vec);
             break;
+
         case ASM330LHB_TEMPERATURE_TAG:
             break;
+
         case ASM330LHB_TIMESTAMP_TAG:
             break;
+
         case ASM330LHB_CFG_CHANGE_TAG:
             break;
     }
@@ -423,22 +439,22 @@ asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifo
     return unpack.tag.tag_sensor;
 }
 
-bool drv_asm330_loadFsmProgram(drv_asm330_S* dev,
-                               uint8_t programNumber,
-                               uint16_t startAddress,
-                               const uint8_t* program,
-                               uint16_t programLength,
+bool drv_asm330_loadFsmProgram(drv_asm330_S        * dev,
+                               uint8_t             programNumber,
+                               uint16_t            startAddress,
+                               const uint8_t       * program,
+                               uint16_t            programLength,
                                asm330lhb_fsm_odr_t odr)
 {
-    uint8_t tmp = 0U;
-    uint8_t ctrl1_xl = 0U;
-    uint8_t ctrl2_g = 0U;
-    const uint8_t odr_mask = (uint8_t)(0x0FU << BIT_POS_ODR);
-    bool ok = true;
-    uint8_t fsm_en_reg = 0U;
-    uint8_t fsm_en_mask = 0U;
-    uint8_t fsm_programs = 0U;
-    uint16_t fsm_start = 0U;
+    uint8_t       tmp          = 0U;
+    uint8_t       ctrl1_xl     = 0U;
+    uint8_t       ctrl2_g      = 0U;
+    const uint8_t odr_mask     = (uint8_t)(0x0FU << BIT_POS_ODR);
+    bool          ok           = true;
+    uint8_t       fsm_en_reg   = 0U;
+    uint8_t       fsm_en_mask  = 0U;
+    uint8_t       fsm_programs = 0U;
+    uint16_t      fsm_start    = 0U;
 
     if ((program == NULL) || (programLength == 0U))
     {
@@ -463,13 +479,15 @@ bool drv_asm330_loadFsmProgram(drv_asm330_S* dev,
     }
 
     if (!getParam(dev, ASM330LHB_CTRL1_XL, &ctrl1_xl) ||
-        !getParam(dev, ASM330LHB_CTRL2_G, &ctrl2_g))
+        !getParam(dev, ASM330LHB_CTRL2_G, &ctrl2_g)
+        )
     {
         return false;
     }
 
     if (!setParam(dev, ASM330LHB_CTRL1_XL, (uint8_t)(ctrl1_xl & ~odr_mask)) ||
-        !setParam(dev, ASM330LHB_CTRL2_G, (uint8_t)(ctrl2_g & ~odr_mask)))
+        !setParam(dev, ASM330LHB_CTRL2_G, (uint8_t)(ctrl2_g & ~odr_mask))
+        )
     {
         return false;
     }
@@ -580,17 +598,17 @@ bool drv_asm330_loadFsmProgram(drv_asm330_S* dev,
     {
         tmp |= (0b1 << BIT_POS_FSM_INIT);
         (void)setParam(dev, ASM330LHB_EMB_FUNC_INIT_B, tmp);
-        tmp &= (uint8_t)~(0b1 << BIT_POS_FSM_INIT);
+        tmp &= (uint8_t) ~(0b1 << BIT_POS_FSM_INIT);
         (void)setParam(dev, ASM330LHB_EMB_FUNC_INIT_B, tmp);
     }
 
     (void)setFuncCfgAccess(dev, false);
-restore_odr:
+   restore_odr:
     (void)setParam(dev, ASM330LHB_CTRL1_XL, ctrl1_xl);
     (void)setParam(dev, ASM330LHB_CTRL2_G, ctrl2_g);
     if (ok)
     {
-        dev->state.fsmMaxProgram = fsm_programs;
+        dev->state.fsmMaxProgram   = fsm_programs;
         dev->state.fsmStartAddress = fsm_start;
     }
     return ok;
@@ -599,8 +617,8 @@ restore_odr:
 bool drv_asm330_getFsmEvent(drv_asm330_S* dev, uint8_t programNumber, bool* eventDetected)
 {
     uint8_t status = 0U;
-    uint8_t reg = 0U;
-    uint8_t mask = 0U;
+    uint8_t reg    = 0U;
+    uint8_t mask   = 0U;
 
     if (eventDetected == NULL)
     {

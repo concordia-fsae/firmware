@@ -1,7 +1,7 @@
 /**
  * @file drv_pedalMonitor.c
  * @brief Source file for pedal monitor
- * @note Pedal positon is a float percentage between 0.0f and 1.0f where 
+ * @note Pedal positon is a float percentage between 0.0f and 1.0f where
  *       0.0f is 0% and 1.0f is 100%
  */
 
@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_pedalMonitor.h"
 #include "drv_inputAD.h"
+#include "drv_pedalMonitor.h"
 #include "lib_utility.h"
 
 /******************************************************************************
@@ -55,12 +55,13 @@ void drv_pedalMonitor_init(void)
                 lib_interpolation_init(&drv_pedalMonitor_channels[i].input.analog.pedal_map,
                                        0.0f);
                 break;
+
             default:
                 break;
         }
 
         pedals[i].percentage = 0.0f;
-        pedals[i].state = DRV_PEDALMONITOR_INIT;
+        pedals[i].state      = DRV_PEDALMONITOR_INIT;
     }
 }
 
@@ -71,44 +72,46 @@ void drv_pedalMonitor_run(void)
 {
     for (uint8_t i = 0U; i < DRV_PEDALMONITOR_CHANNEL_COUNT; i++)
     {
-        drv_pedalMonitor_state_E state = DRV_PEDALMONITOR_FAULT;
-        float32_t percentage = 0.0f;
+        drv_pedalMonitor_state_E state      = DRV_PEDALMONITOR_FAULT;
+        float32_t                percentage = 0.0f;
 
         switch (drv_pedalMonitor_channels[i].type)
         {
             case DRV_PEDALMONITOR_TYPE_ANALOG:
+            {
+                pedals[i].voltage = drv_inputAD_getAnalogVoltage(drv_pedalMonitor_channels[i].input.analog.channel);
+                if ((pedals[i].voltage <= drv_pedalMonitor_channels[i].input.analog.fault_high) &&
+                    (pedals[i].voltage >= drv_pedalMonitor_channels[i].input.analog.fault_low)
+                    )
                 {
-                    pedals[i].voltage = drv_inputAD_getAnalogVoltage(drv_pedalMonitor_channels[i].input.analog.channel);
-                    if ((pedals[i].voltage <= drv_pedalMonitor_channels[i].input.analog.fault_high) &&
-                        (pedals[i].voltage >= drv_pedalMonitor_channels[i].input.analog.fault_low))
-                    {
-                        state = DRV_PEDALMONITOR_OK;
-                        percentage = lib_interpolation_interpolate(&drv_pedalMonitor_channels[i].input.analog.pedal_map,
-                                                                   pedals[i].voltage);
-                    }
-                    else if (pedals[i].voltage > drv_pedalMonitor_channels[i].input.analog.fault_high)
-                    {
-                        state = DRV_PEDALMONITOR_FAULT_DISCONNECTED;
-                    }
-                    else if (pedals[i].voltage < drv_pedalMonitor_channels[i].input.analog.fault_low)
-                    {
-                        state = DRV_PEDALMONITOR_FAULT_SHORTED;
-                    }
+                    state      = DRV_PEDALMONITOR_OK;
+                    percentage = lib_interpolation_interpolate(&drv_pedalMonitor_channels[i].input.analog.pedal_map,
+                                                               pedals[i].voltage);
                 }
-                break;
+                else if (pedals[i].voltage > drv_pedalMonitor_channels[i].input.analog.fault_high)
+                {
+                    state = DRV_PEDALMONITOR_FAULT_DISCONNECTED;
+                }
+                else if (pedals[i].voltage < drv_pedalMonitor_channels[i].input.analog.fault_low)
+                {
+                    state = DRV_PEDALMONITOR_FAULT_SHORTED;
+                }
+            }
+            break;
+
             case DRV_PEDALMONITOR_TYPE_CAN:
+            {
+                float32_t percentage_temp = 0.0f;    // CAN percentages are 0-100
+                if (drv_pedalMonitor_channels[i].input.canrx_getPedalPosition(&percentage_temp) == CANRX_MESSAGE_VALID)
                 {
-                    float32_t percentage_temp = 0.0f; // CAN percentages are 0-100
-                    if (drv_pedalMonitor_channels[i].input.canrx_getPedalPosition(&percentage_temp) == CANRX_MESSAGE_VALID)
-                    {
-                        state = DRV_PEDALMONITOR_OK;
-                        percentage = percentage_temp / 100.0f;
-                    }
+                    state      = DRV_PEDALMONITOR_OK;
+                    percentage = percentage_temp / 100.0f;
                 }
-                break;
+            }
+            break;
         }
 
-        pedals[i].state = state;
+        pedals[i].state      = state;
         pedals[i].percentage = SATURATE(0.0f, percentage, 1.0f);
     }
 }
@@ -126,7 +129,7 @@ float32_t drv_pedalMonitor_getPedalPosition(drv_pedalMonitor_channel_E channel)
 /**
  * @brief Get the pedal state of a channel
  * @param channel The channel to retrieve
- * @return The current state of the pedal channel 
+ * @return The current state of the pedal channel
  */
 drv_pedalMonitor_state_E drv_pedalMonitor_getPedalState(drv_pedalMonitor_channel_E channel)
 {
@@ -136,7 +139,7 @@ drv_pedalMonitor_state_E drv_pedalMonitor_getPedalState(drv_pedalMonitor_channel
 /**
  * @brief Get the pedal CAN state of a channel
  * @param channel The channel to retrieve
- * @return The current state of the pedal channel 
+ * @return The current state of the pedal channel
  */
 CAN_pedalState_E drv_pedalMonitor_getPedalStateCAN(drv_pedalMonitor_channel_E channel)
 {
@@ -147,12 +150,15 @@ CAN_pedalState_E drv_pedalMonitor_getPedalStateCAN(drv_pedalMonitor_channel_E ch
         case DRV_PEDALMONITOR_OK:
             ret = CAN_PEDALSTATE_OK;
             break;
+
         case DRV_PEDALMONITOR_FAULT_SHORTED:
             ret = CAN_PEDALSTATE_SHORTED;
             break;
+
         case DRV_PEDALMONITOR_FAULT_DISCONNECTED:
             ret = CAN_PEDALSTATE_DISCONNECTED;
             break;
+
         default:
             break;
     }

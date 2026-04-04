@@ -34,7 +34,7 @@
 #ifndef LWGPS_OPTS_HDR_H
 #define LWGPS_OPTS_HDR_H
 
-#define __DOXYGEN__ 0
+#define __DOXYGEN__    0
 
 /**
  * \defgroup        LWGPS_OPT Configuration
@@ -48,7 +48,7 @@
  *
  *                  `double` is used as variable type when enabled, `float` when disabled.
  */
-#define LWGPS_CFG_DOUBLE 0
+#define LWGPS_CFG_DOUBLE                     0
 
 /**
  * \brief           Enables `1` or disables `0` status reporting callback
@@ -56,7 +56,7 @@
  *
  * \note            This is an extension, so not enabled by default.
  */
-#define LWGPS_CFG_STATUS 0
+#define LWGPS_CFG_STATUS                     0
 
 /**
  * \brief           Enables `1` or disables `0` `GGA` statement parsing.
@@ -65,7 +65,7 @@
  *                      - Latitude, Longitude, Altitude
  *                      - Number of satellites in use, fix (no fix, GPS, DGPS), UTC time
  */
-#define LWGPS_CFG_STATEMENT_GPGGA 1
+#define LWGPS_CFG_STATEMENT_GPGGA            1
 
 /**
  * \brief           Enables `1` or disables `0` `GSA` statement parsing.
@@ -75,7 +75,7 @@
  *                      - Fix mode (no fix, 2D, 3D fix)
  *                      - IDs of satellites in use
  */
-#define LWGPS_CFG_STATEMENT_GPGSA 1
+#define LWGPS_CFG_STATEMENT_GPGSA            1
 
 /**
  * \brief           Enables `1` or disables `0` `RMC` statement parsing.
@@ -86,7 +86,7 @@
  *                      - Magnetic variation
  *                      - UTC date
  */
-#define LWGPS_CFG_STATEMENT_GPRMC 1
+#define LWGPS_CFG_STATEMENT_GPRMC            1
 
 /**
  * \brief           Enables `1` or disables `0` `GSV` statement parsing.
@@ -95,7 +95,7 @@
  *                      - Number of satellites in view
  *                      - Optional details of each satellite in view. See \ref LWGPS_CFG_STATEMENT_GPGSV_SAT_DET
  */
-#define LWGPS_CFG_STATEMENT_GPGSV 1
+#define LWGPS_CFG_STATEMENT_GPGSV            1
 
 /**
  * \brief           Enables `1` or disables `0` detailed parsing of each
@@ -103,7 +103,7 @@
  *
  * \note            When this feature is disabled, only number of "satellites in view" is parsed
  */
-#define LWGPS_CFG_STATEMENT_GPGSV_SAT_DET 0
+#define LWGPS_CFG_STATEMENT_GPGSV_SAT_DET    0
 
 /**
  * \brief           Enables `1` or disables `0` parsing and generation
@@ -112,7 +112,7 @@
  *                  PUBX are a nonstandard ublox-specific extensions,
  *                  so disabled by default.
  */
-#define LWGPS_CFG_STATEMENT_PUBX 0
+#define LWGPS_CFG_STATEMENT_PUBX             0
 
 /**
  * \brief           Enables `1` or disables `0` parsing and generation
@@ -128,34 +128,34 @@
  *
  *                  This configure option requires LWGPS_CFG_STATEMENT_PUBX
  */
-#define LWGPS_CFG_STATEMENT_PUBX_TIME 0
+#define LWGPS_CFG_STATEMENT_PUBX_TIME        0
 
 /**
  * \brief           Enables `1` or disables `0` CRC calculation and check
  *
  * \note            When not enabled, CRC check is ignored
  */
-#define LWGPS_CFG_CRC 1
+#define LWGPS_CFG_CRC                        1
 
 /**
  * \brief           Enables `1` or disables `0` distance and bearing calculation
  *
  * \note            When not enabled, corresponding function is disabled
  */
-#define LWESP_CFG_DISTANCE_BEARING 1
+#define LWESP_CFG_DISTANCE_BEARING           1
 
 /**
  * \brief           Memory set function
- * 
+ *
  * \note            Function footprint is the same as \ref memset
  */
-#define LWGPS_MEMSET(dst, val, len) memset((dst), (val), (len))
+#define LWGPS_MEMSET(dst, val, len)          memset((dst), (val), (len))
 
 /**
  * \brief           Memory copy function
- * 
+ *
  * \note            Function footprint is the same as \ref memcpy
  */
-#define LWGPS_MEMCPY(dst, src, len) memcpy((dst), (src), (len))
+#define LWGPS_MEMCPY(dst, src, len)          memcpy((dst), (src), (len))
 
-#endif /* LWGPS_OPTS_HDR_H */
+#endif // LWGPS_OPTS_HDR_H

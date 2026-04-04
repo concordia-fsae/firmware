@@ -8,8 +8,8 @@
  ******************************************************************************/
 
 // System Includes
-#include "SystemConfig.h"
 #include "LIB_Types.h"
+#include "SystemConfig.h"
 
 // Firmware Includes
 #include "HW_tim.h"
@@ -31,20 +31,21 @@ TIM_HandleTypeDef htim[HW_TIM_PORT_COUNT];
  */
 HW_StatusTypeDef_E HW_TIM_init(void)
 {
-    RCC_ClkInitTypeDef      clkconfig;
-    TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
+    RCC_ClkInitTypeDef     clkconfig;
+    TIM_ClockConfigTypeDef sClockSourceConfig = { 0 };
+
 #if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
-    TIM_OC_InitTypeDef      sConfigOC          = { 0 };
+    TIM_OC_InitTypeDef     sConfigOC          = { 0 };
 #endif
-    uint32_t                uwTimclock         = 0;
-    uint32_t                pFLatency;
-    uint32_t                uwPrescalerValue   = 0;
+    uint32_t               uwTimclock         = 0;
+    uint32_t               pFLatency;
+    uint32_t               uwPrescalerValue   = 0;
 
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
 
     __HAL_RCC_TIM3_CLK_ENABLE();
-    uwTimclock                                   = HAL_RCC_GetPCLK2Freq();
-    uwPrescalerValue                             = (uint32_t)((uwTimclock / 1000000U) - 1U);
+    uwTimclock                                    = HAL_RCC_GetPCLK2Freq();
+    uwPrescalerValue                              = (uint32_t)((uwTimclock / 1000000U) - 1U);
     htim[HW_TIM_PORT_PUMP].Instance               = TIM3;
     htim[HW_TIM_PORT_PUMP].Init.Prescaler         = uwPrescalerValue;
     htim[HW_TIM_PORT_PUMP].Init.CounterMode       = TIM_COUNTERMODE_UP;
@@ -83,7 +84,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     }
     HAL_TIM_Base_Start(&htim[HW_TIM_PORT_PUMP]);
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PUMP], TIM_CHANNEL_1);
-#endif
+#endif // if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
 
     return HW_OK;
 }

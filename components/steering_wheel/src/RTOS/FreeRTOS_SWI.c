@@ -42,7 +42,7 @@ typedef struct
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static rtos_S      rtos;
+static rtos_S    rtos;
 static const char* taskNames[RTOS_SWI_PRI_COUNT] = {
     "SWI_PRI_0",
     "SWI_PRI_1",
@@ -114,7 +114,7 @@ void RTOS_SWI_Init(void)
 
         StaticTask_t* swiTask;
         StackType_t * swiTaskStack;
-        uint32_t      swiTaskStackSize;
+        uint32_t    swiTaskStackSize;
         // allocate memory for this task
         RTOS_getSwiTaskMemory((RTOS_swiPri_E)pri, &swiTask, &swiTaskStack, &swiTaskStackSize);
 
@@ -146,8 +146,8 @@ RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler)
     }
     else
     {
-        uint8_t           index = rtos.swiCountPerPri[priority]++; // index in the table where this SWI will be placed
-        RTOS_swiHandle_T* swi   = &rtos.swiTable[priority][index]; // handle entry from the SWI table
+        uint8_t         index = rtos.swiCountPerPri[priority]++;   // index in the table where this SWI will be placed
+        RTOS_swiHandle_T* swi = &rtos.swiTable[priority][index];   // handle entry from the SWI table
 
         // create the SWI
         swi->handler  = handler;                // link to SWI handler

@@ -20,9 +20,9 @@
 
 // display includes
 #include "Display/CommonDisplay.h"
-#include "Display/MainDisplay.h"
 #include "Display/DiagDisplay.h"
 #include "Display/LaunchDisplay.h"
+#include "Display/MainDisplay.h"
 
 
 /******************************************************************************
@@ -105,8 +105,8 @@ static ScrState_E process_running(void)
     {
         timer = 0;
 
-        display_start();     // start the display generation
-        common_display();    // common display elements shared on all screens
+        display_start();    // start the display generation
+        common_display();   // common display elements shared on all screens
         // display the current page
         if (pageFunctions[scr.page] != NULL)
         {
@@ -224,7 +224,8 @@ static void updateBrightness_10Hz()
 {
     if ((SCR.brightness != scr.currentBrightness)
         && (SCR.brightness >= 0x00)
-        && (SCR.brightness <= BRIGHTNESS_MAX))
+        && (SCR.brightness <= BRIGHTNESS_MAX)
+        )
     {
         EVE_memWrite8(REG_PWM_DUTY, SCR.brightness);    // setup backlight, range is from 0 = off to 0x80 = max
         scr.currentBrightness = SCR.brightness;

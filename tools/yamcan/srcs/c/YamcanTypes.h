@@ -6,13 +6,13 @@
 #pragma once
 
 #ifndef YAMCAN_CAN_TYPES_DEFINED
-#define YAMCAN_CAN_TYPES_DEFINED 1
+# define YAMCAN_CAN_TYPES_DEFINED    1
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
+# include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -20,8 +20,8 @@
 
 typedef enum
 {
-    CAN_IDENTIFIER_STD = 0U,    // Standard length CAN ID
-    CAN_IDENTIFIER_EXT,         // Extended length CAN ID
+    CAN_IDENTIFIER_STD = 0U, // Standard length CAN ID
+    CAN_IDENTIFIER_EXT,      // Extended length CAN ID
 } CAN_IdentifierLen_E;
 
 typedef enum
@@ -86,11 +86,11 @@ typedef struct
 typedef struct
 {
     const packTable_S* const packTable;
-    const uint8_t      packTableLength;
-    const uint16_t     period;
-    uint8_t            counter;
-    uint8_t            index;
-    uint32_t           lastTimestamp;
+    const uint8_t            packTableLength;
+    const uint16_t           period;
+    uint8_t                  counter;
+    uint8_t                  index;
+    uint32_t                 lastTimestamp;
 } busTable_S;
 
 typedef struct
@@ -99,4 +99,4 @@ typedef struct
     const uint8_t     busTableLength;
 } canTable_S;
 
-#endif
+#endif // ifndef YAMCAN_CAN_TYPES_DEFINED

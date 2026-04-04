@@ -30,7 +30,7 @@
 #include "Yamcan.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -41,7 +41,7 @@ typedef struct
     } type;
     const union
     {
-        drv_io_pinConfig_S     gpio;
+        drv_io_pinConfig_S gpio;
     } config;
 } drv_outputAD_configDigital_S;
 

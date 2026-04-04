@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 /**< Firmware Includes */
+#include "drv_outputAD.h"
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_can.h"
@@ -15,7 +16,6 @@
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_tim.h"
-#include "drv_outputAD.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -49,7 +49,7 @@ const lib_app_appDesc_S appDesc = {
     // .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appCrcLocation = (const uint32_t)&__app_end_addr,
     .appComponentId = APP_COMPONENT_ID,
-    .appVariantId = APP_VARIANT_ID,
+    .appVariantId   = APP_VARIANT_ID,
 };
 
 /******************************************************************************
@@ -103,7 +103,9 @@ void Error_Handler(void)
         uint32_t cnt = 6400000;
         drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
         while (cnt--)
+        {
             ;
+        }
     }
 }
 
@@ -112,5 +114,5 @@ static void SYS1Hz_PRD()
     drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
 }
 const ModuleDesc_S sys_desc = {
-    .periodic1Hz_CLK   = &SYS1Hz_PRD,
+    .periodic1Hz_CLK = &SYS1Hz_PRD,
 };

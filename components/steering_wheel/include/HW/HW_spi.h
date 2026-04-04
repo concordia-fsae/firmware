@@ -9,9 +9,9 @@ extern "C" {
 #endif
 
 // Includes ------------------------------------------------------------------
-#include "SystemConfig.h"
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_ll_spi.h"
+#include "SystemConfig.h"
 
 // extern SPI_HandleTypeDef hspi1;
 extern LL_SPI_InitTypeDef hspi1;

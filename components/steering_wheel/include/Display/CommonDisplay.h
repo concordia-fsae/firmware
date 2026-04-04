@@ -15,9 +15,9 @@
 #include "Dots.h"
 
 // other includes
+#include "printf.h"
 #include "Types.h"
 #include "Utility.h"
-#include "printf.h"
 #include <string.h>
 
 // includes for data access
@@ -93,13 +93,13 @@ DECL_infoTextUpdater(INFO_TEXT_TIRE_CIRC)
 
 static InfoDot_S  commonInfoDots[INFO_DOT_COUNT] =
 {
-    DECL_infoDot(INFO_DOT_DRS,                 "DRS",   20U,  35U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_LAUNCH_CTRL_STATE,   "LC",   460U,  35U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_DRS,                 "DRS",  20U,  35U,  160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_LAUNCH_CTRL_STATE,   "LC",   460U, 35U,  160U, INFO_REL_POS_ABOVE),
     DECL_infoDot(INFO_DOT_LAUNCH_CTRL_PAGE,    "LC",   150U, 255U, 160U, INFO_REL_POS_ABOVE),
     DECL_infoDot(INFO_DOT_AUTOSHIFT_STATE,     "AS",   210U, 255U, 160U, INFO_REL_POS_ABOVE),
     DECL_infoDot(INFO_DOT_TRACTION_CTRL_STATE, "DIAG", 270U, 255U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_RUN_STATUS,          "RUN",  160U,  35U, 160U, INFO_REL_POS_ABOVE),
-    DECL_infoDot(INFO_DOT_ADC_CONV,            "ADC",  200U,  35U, 160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_RUN_STATUS,          "RUN",  160U, 35U,  160U, INFO_REL_POS_ABOVE),
+    DECL_infoDot(INFO_DOT_ADC_CONV,            "ADC",  200U, 35U,  160U, INFO_REL_POS_ABOVE),
     // DECL_infoDot(INFO_DOT_CAN_TX,              "TX",  240U,  35U, 160U, INFO_REL_POS_ABOVE),
     // DECL_infoDot(INFO_DOT_CAN_RX,              "RX",  280U,  35U, 160U, INFO_REL_POS_ABOVE),
 };
@@ -117,8 +117,8 @@ static InfoText_S commonInfoTexts[INFO_TEXT_COUNT] =
 static void display_start(void)
 {
     EVE_start_cmd_burst();
-    EVE_cmd_dl_burst(CMD_DLSTART);             // tells EVE to start a new display-list
-    EVE_cmd_dl_burst(DL_CLEAR_RGB | BLACK);    // sets the background color
+    EVE_cmd_dl_burst(CMD_DLSTART);          // tells EVE to start a new display-list
+    EVE_cmd_dl_burst(DL_CLEAR_RGB | BLACK); // sets the background color
     EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
 }
 
@@ -129,8 +129,8 @@ static void display_start(void)
  */
 static void display_end(void)
 {
-    EVE_cmd_dl_burst(DL_DISPLAY);    // put in the display list to mark its end
-    EVE_cmd_dl_burst(CMD_SWAP);      // tell EVE to use the new display list
+    EVE_cmd_dl_burst(DL_DISPLAY);  // put in the display list to mark its end
+    EVE_cmd_dl_burst(CMD_SWAP);    // tell EVE to use the new display list
     EVE_end_cmd_burst();
 }
 
@@ -141,13 +141,13 @@ static void display_end(void)
  */
 static void common_display(void)
 {
-    update_infoDot(INFO_DOT_DRS, IO.dig.btn0);
-    update_infoDot(INFO_DOT_LAUNCH_CTRL_STATE, IO.dig.btn1);
-    update_infoDot(INFO_DOT_LAUNCH_CTRL_PAGE, IO.dig.switch0);
-    update_infoDot(INFO_DOT_AUTOSHIFT_STATE, IO.dig.switch1);
+    update_infoDot(INFO_DOT_DRS,                 IO.dig.btn0);
+    update_infoDot(INFO_DOT_LAUNCH_CTRL_STATE,   IO.dig.btn1);
+    update_infoDot(INFO_DOT_LAUNCH_CTRL_PAGE,    IO.dig.switch0);
+    update_infoDot(INFO_DOT_AUTOSHIFT_STATE,     IO.dig.switch1);
     update_infoDot(INFO_DOT_TRACTION_CTRL_STATE, IO.dig.switch3);
-    update_infoDot(INFO_DOT_RUN_STATUS, SCR.heartbeat);
-    update_infoDot(INFO_DOT_ADC_CONV, IO.heartbeat);
+    update_infoDot(INFO_DOT_RUN_STATUS,          SCR.heartbeat);
+    update_infoDot(INFO_DOT_ADC_CONV,            IO.heartbeat);
     // update_infoDot(INFO_DOT_CAN_TX, IO.dig.btn0);
     // update_infoDot(INFO_DOT_CAN_RX, IO.dig.btn0);
 

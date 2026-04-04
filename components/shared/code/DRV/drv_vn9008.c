@@ -54,7 +54,7 @@ void drv_vn9008_run(void)
         const float32_t current        = cs_voltage * drv_vn9008_channels[i].cs_amp_per_volt;
         const bool      diagnostic     = drv_outputAD_getDigitalActiveState(drv_vn9008_channels[i].enable_cs) == DRV_IO_ACTIVE;
         const float32_t currentCurrent = diagnostic ? current : drv_vn9008_data.current[i];
-        drv_vn9008_data.current[i]     = drv_vn9008_data.state[i] == DRV_HSD_STATE_ON ? currentCurrent : 0.0f;
+        drv_vn9008_data.current[i] = (drv_vn9008_data.state[i] == DRV_HSD_STATE_ON) ? currentCurrent : 0.0f;
         const bool      is_overcurrent = drv_vn9008_data.current[i] > drv_vn9008_channels[i].current_limit_amp;
 
         if (is_overcurrent)

@@ -7,110 +7,110 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "imu.h"
+#include "app_faultManager.h"
+#include "app_vehicleState.h"
 #include "crashSensor.h"
 #include "drv_asm330.h"
-#include "Module.h"
+#include "drv_timer.h"
 #include "FreeRTOS.h"
-#include "task.h"
-#include "string.h"
-#include "app_faultManager.h"
+#include "imu.h"
 #include "lib_buffer.h"
 #include "lib_madgwick.h"
 #include "lib_simpleFilter.h"
-#include "app_vehicleState.h"
-#include "drv_timer.h"
+#include "Module.h"
+#include "string.h"
+#include "task.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define IMU_IMPACT_THRESH_MPS (GRAVITY * 4)
+#define IMU_IMPACT_THRESH_MPS              (GRAVITY * 4)
 
-#define IMU_WAKE_ACCEL_DELTA_MPS2 0.4f
-#define IMU_WAKE_GYRO_DPS 3.0f
-#define IMU_WAKE_HITS_REQUIRED 5U
-#define IMU_WAKE_DELAY_MS (15U * 60000U)
+#define IMU_WAKE_ACCEL_DELTA_MPS2          0.4f
+#define IMU_WAKE_GYRO_DPS                  3.0f
+#define IMU_WAKE_HITS_REQUIRED             5U
+#define IMU_WAKE_DELAY_MS                  (15U * 60000U)
 
-#define IMU_TIMEOUT_MS 1000U
-#define BASELINE_SAMPLES 500U
-#define MADGWICK_BETA 0.01f
+#define IMU_TIMEOUT_MS                     1000U
+#define BASELINE_SAMPLES                   500U
+#define MADGWICK_BETA                      0.01f
 
-#define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
-#define DEG_TO_RAD (1 / RAD_TO_DEG)
+#define RAD_TO_DEG                         (180.0f / 3.14159265358979323846f)
+#define DEG_TO_RAD                         (1 / RAD_TO_DEG)
 
-#define IMU_LPF_CUTOFF_HZ 100.0f
-#define IMU_LPF_DT_S      0.01f
+#define IMU_LPF_CUTOFF_HZ                  100.0f
+#define IMU_LPF_DT_S                       0.01f
 
-#define IMU_FSM_CRASH_PROGRAM_NUMBER    1U
-#define IMU_FSM_IMPACT_PROGRAM_NUMBER   2U
-#define IMU_FSM_ACTIVITY_PROGRAM_NUMBER 3U
-#define IMU_FSM_CRASH_PROGRAM_SIZE      12U
-#define IMU_FSM_IMPACT_PROGRAM_SIZE     12U
-#define IMU_FSM_ACTIVITY_PROGRAM_SIZE   12U
-#define IMU_FSM_ARM_CYCLES              10U
+#define IMU_FSM_CRASH_PROGRAM_NUMBER       1U
+#define IMU_FSM_IMPACT_PROGRAM_NUMBER      2U
+#define IMU_FSM_ACTIVITY_PROGRAM_NUMBER    3U
+#define IMU_FSM_CRASH_PROGRAM_SIZE         12U
+#define IMU_FSM_IMPACT_PROGRAM_SIZE        12U
+#define IMU_FSM_ACTIVITY_PROGRAM_SIZE      12U
+#define IMU_FSM_ARM_CYCLES                 10U
 
-#define IMU_FSM_BASE_START_ADDR       0x0400U
-#define IMU_FSM_CRASH_START_ADDR      IMU_FSM_BASE_START_ADDR
-#define IMU_FSM_IMPACT_START_ADDR     (IMU_FSM_CRASH_START_ADDR + IMU_FSM_CRASH_PROGRAM_SIZE)
-#define IMU_FSM_ACTIVITY_START_ADDR   (IMU_FSM_IMPACT_START_ADDR + IMU_FSM_IMPACT_PROGRAM_SIZE)
+#define IMU_FSM_BASE_START_ADDR            0x0400U
+#define IMU_FSM_CRASH_START_ADDR           IMU_FSM_BASE_START_ADDR
+#define IMU_FSM_IMPACT_START_ADDR          (IMU_FSM_CRASH_START_ADDR + IMU_FSM_CRASH_PROGRAM_SIZE)
+#define IMU_FSM_ACTIVITY_START_ADDR        (IMU_FSM_IMPACT_START_ADDR + IMU_FSM_IMPACT_PROGRAM_SIZE)
 
-#define BUFFER_SAMPLE_SIZE 1000U
+#define BUFFER_SAMPLE_SIZE                 1000U
 
 /*
  * Produces a 3x3 rotation matrix R such that:
  *   R * normalize(meas) = (0,0,1)
  */
-#define CALC_ROTMAX_TO_Z3(meas, R) \
-    _Static_assert(COLS(meas) == 3U, "meas must be a 3D col vector"); \
-    _Static_assert(LIB_LINALG_CHECK_SIZE_RMAT(R, 3U), "R must be 3x3"); \
-    do { \
-        float32_t n = 0.0f; \
-        LIB_LINALG_GETNORM_CVEC((meas), &n); \
-        LIB_LINALG_SETIDENTITY_RMAT(R); \
-        \
-        if (n <= (EPS)) { \
-            break; \
-        } \
-        \
-        const float32_t invn = 1.0f / n; \
-        const float32_t ux = (meas)->elemCol[0] * invn; \
-        const float32_t uy = (meas)->elemCol[1] * invn; \
-        const float32_t uz = (meas)->elemCol[2] * invn; \
-        \
-        const float32_t c = uz; \
-        const float32_t vx = uy; \
-        const float32_t vy = -ux; \
-        const float32_t s2 = vx * vx + vy * vy; \
-        if (s2 < EPS * EPS) \
-        { \
-            if (c > 0.0f) { \
-                break; \
-            } else { \
-                (R)->rows[0][0]=1;  (R)->rows[0][1]=0;  (R)->rows[0][2]=0; \
-                (R)->rows[1][0]=0;  (R)->rows[1][1]=-1; (R)->rows[1][2]=0; \
-                (R)->rows[2][0]=0;  (R)->rows[2][1]=0;  (R)->rows[2][2]=-1; \
-                break; \
-            } \
-        } \
-        \
-        const float32_t s = sqrtf(s2); \
-        const float32_t invs = 1.0f / s; \
-        const float32_t kx = vx * invs; \
-        const float32_t ky = vy * invs; \
-        \
-        const float32_t one_mc = 1.0f - c; \
-        \
-        (R)->rows[0][0] = 1.0f - one_mc * ky * ky; \
-        (R)->rows[0][1] = one_mc * kx * ky; \
-        (R)->rows[0][2] = s * ky; \
-        (R)->rows[1][0] = one_mc * kx * ky; \
-        (R)->rows[1][1] = 1.0f - one_mc * kx * kx; \
-        (R)->rows[1][2] = -s * kx; \
-        (R)->rows[2][0] = -s * ky; \
-        (R)->rows[2][1] = s * kx; \
-        (R)->rows[2][2] = c; \
-    } while (0)
+#define CALC_ROTMAX_TO_Z3(meas, R)                                                         \
+        _Static_assert(COLS(meas) == 3U,                  "meas must be a 3D col vector"); \
+        _Static_assert(LIB_LINALG_CHECK_SIZE_RMAT(R, 3U), "R must be 3x3");                \
+        do {                                                                               \
+            float32_t n = 0.0f;                                                            \
+            LIB_LINALG_GETNORM_CVEC((meas), &n);                                           \
+            LIB_LINALG_SETIDENTITY_RMAT(R);                                                \
+                                                                                           \
+            if (n <= (EPS)) {                                                              \
+                break;                                                                     \
+            }                                                                              \
+                                                                                           \
+            const float32_t invn = 1.0f / n;                                               \
+            const float32_t ux   = (meas)->elemCol[0] * invn;                              \
+            const float32_t uy   = (meas)->elemCol[1] * invn;                              \
+            const float32_t uz   = (meas)->elemCol[2] * invn;                              \
+                                                                                           \
+            const float32_t c    = uz;                                                     \
+            const float32_t vx   = uy;                                                     \
+            const float32_t vy   = -ux;                                                    \
+            const float32_t s2   = vx * vx + vy * vy;                                      \
+            if (s2 < EPS * EPS)                                                            \
+            {                                                                              \
+                if (c > 0.0f) {                                                            \
+                    break;                                                                 \
+                } else {                                                                   \
+                    (R)->rows[0][0] = 1;  (R)->rows[0][1] = 0;  (R)->rows[0][2] = 0;       \
+                    (R)->rows[1][0] = 0;  (R)->rows[1][1] = -1; (R)->rows[1][2] = 0;       \
+                    (R)->rows[2][0] = 0;  (R)->rows[2][1] = 0;  (R)->rows[2][2] = -1;      \
+                    break;                                                                 \
+                }                                                                          \
+            }                                                                              \
+                                                                                           \
+            const float32_t s      = sqrtf(s2);                                            \
+            const float32_t invs   = 1.0f / s;                                             \
+            const float32_t kx     = vx * invs;                                            \
+            const float32_t ky     = vy * invs;                                            \
+                                                                                           \
+            const float32_t one_mc = 1.0f - c;                                             \
+                                                                                           \
+            (R)->rows[0][0] = 1.0f - one_mc * ky * ky;                                     \
+            (R)->rows[0][1] = one_mc * kx * ky;                                            \
+            (R)->rows[0][2] = s * ky;                                                      \
+            (R)->rows[1][0] = one_mc * kx * ky;                                            \
+            (R)->rows[1][1] = 1.0f - one_mc * kx * kx;                                     \
+            (R)->rows[1][2] = -s * kx;                                                     \
+            (R)->rows[2][0] = -s * ky;                                                     \
+            (R)->rows[2][1] = s * kx;                                                      \
+            (R)->rows[2][2] = c;                                                           \
+        } while (0)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -133,14 +133,15 @@ typedef enum
  ******************************************************************************/
 
 drv_asm330_S asm330 = {
-    .dev = HW_SPI_DEV_IMU,
+    .dev    = HW_SPI_DEV_IMU,
     .config = {
-        .odr = ASM330LHB_XL_ODR_1667Hz,
+        .odr    = ASM330LHB_XL_ODR_1667Hz,
         .scaleA = ASM330LHB_16g,
     },
 };
 
-struct imu_S {
+struct imu_S
+{
     drv_imu_accel_S accel;
     drv_imu_gyro_S  gyro;
     drv_imu_gyro_S  vehicleAngle;
@@ -171,60 +172,60 @@ static struct
     lib_simpleFilter_lpf_S gyroX;
     lib_simpleFilter_lpf_S gyroY;
     lib_simpleFilter_lpf_S gyroZ;
-    bool accelInit;
-    bool gyroInit;
-} imuLpf = { 0 };
+    bool                   accelInit;
+    bool                   gyroInit;
+}                               imuLpf                                         = { 0 };
 
-static const uint8_t imuFsmCrashProgram[IMU_FSM_CRASH_PROGRAM_SIZE] = {
-    0x50U, /* CONFIG_A: 1 threshold, 1 mask */
-    0x00U, /* CONFIG_B */
-    0x0CU, /* SIZE */
-    0x00U, /* SETTINGS */
-    0x00U, /* RESET_POINTER */
-    0x00U, /* PROGRAM_POINTER */
-    0x00U, /* THRESH1 (LSB) = 8.0g */
-    0x48U, /* THRESH1 (MSB) */
-    0x03U, /* MASKA: +/-V */
-    0x00U, /* TMASKA */
-    0x05U, /* NOP | GNTH1 */
-    0x22U, /* CONTREL */
+static const uint8_t            imuFsmCrashProgram[IMU_FSM_CRASH_PROGRAM_SIZE] = {
+    0x50U,    // CONFIG_A: 1 threshold, 1 mask
+    0x00U,    // CONFIG_B
+    0x0CU,    // SIZE
+    0x00U,    // SETTINGS
+    0x00U,    // RESET_POINTER
+    0x00U,    // PROGRAM_POINTER
+    0x00U,    // THRESH1 (LSB) = 8.0g
+    0x48U,    // THRESH1 (MSB)
+    0x03U,    // MASKA: +/-V
+    0x00U,    // TMASKA
+    0x05U,    // NOP | GNTH1
+    0x22U,    // CONTREL
 };
 
-static const uint8_t imuFsmImpactProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
-    0x50U, /* CONFIG_A: 1 threshold, 1 mask */
-    0x00U, /* CONFIG_B */
-    0x0CU, /* SIZE */
-    0x00U, /* SETTINGS */
-    0x00U, /* RESET_POINTER */
-    0x00U, /* PROGRAM_POINTER */
-    0x00U, /* THRESH1 (LSB) = 4.0g */
-    0x44U, /* THRESH1 (MSB) */
-    0x03U, /* MASKA: +/-V */
-    0x00U, /* TMASKA */
-    0x05U, /* NOP | GNTH1 */
-    0x22U, /* CONTREL */
+static const uint8_t            imuFsmImpactProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
+    0x50U,    // CONFIG_A: 1 threshold, 1 mask
+    0x00U,    // CONFIG_B
+    0x0CU,    // SIZE
+    0x00U,    // SETTINGS
+    0x00U,    // RESET_POINTER
+    0x00U,    // PROGRAM_POINTER
+    0x00U,    // THRESH1 (LSB) = 4.0g
+    0x44U,    // THRESH1 (MSB)
+    0x03U,    // MASKA: +/-V
+    0x00U,    // TMASKA
+    0x05U,    // NOP | GNTH1
+    0x22U,    // CONTREL
 };
 
-static const uint8_t imuFsmActivityProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
-    0x50U, /* CONFIG_A: 1 threshold, 1 mask */
-    0x00U, /* CONFIG_B */
-    0x0CU, /* SIZE */
-    0x00U, /* SETTINGS */
-    0x00U, /* RESET_POINTER */
-    0x00U, /* PROGRAM_POINTER */
-    0x9aU, /* THRESH1 (LSB) = 1.15g */
-    0x3cU, /* THRESH1 (MSB) */
-    0x03U, /* MASKA: +/-V */
-    0x00U, /* TMASKA */
-    0x05U, /* NOP | GNTH1 */
-    0x22U, /* CONTREL */
+static const uint8_t            imuFsmActivityProgram[IMU_FSM_IMPACT_PROGRAM_SIZE] = {
+    0x50U,    // CONFIG_A: 1 threshold, 1 mask
+    0x00U,    // CONFIG_B
+    0x0CU,    // SIZE
+    0x00U,    // SETTINGS
+    0x00U,    // RESET_POINTER
+    0x00U,    // PROGRAM_POINTER
+    0x9aU,    // THRESH1 (LSB) = 1.15g
+    0x3cU,    // THRESH1 (MSB)
+    0x03U,    // MASKA: +/-V
+    0x00U,    // TMASKA
+    0x05U,    // NOP | GNTH1
+    0x22U,    // CONTREL
 };
 
 const drv_imu_vectorTransform_S rotationToVehicleFrame = {
     .rows = {
-        { 0, -1, 0 },
-        { -1, 0, 0 },
-        { 0, 0, 1 },
+        {  0, -1, 0 },
+        { -1,  0, 0 },
+        {  0,  0, 1 },
     },
 };
 
@@ -237,10 +238,10 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
     // Wait until the next element is being filled so we know our current element is valid
     while (LIB_BUFFER_FIFO_PEEKN(&imuBuffer, 1).tag)
     {
-        drv_imu_vector_S tmp = {0};
+        drv_imu_vector_S        tmp = { 0 };
         drv_asm330_fifoElement_S* e = &LIB_BUFFER_FIFO_POP(&imuBuffer);
-        asm330lhb_fifo_tag_t tag = drv_asm330_unpackElement(&asm330, e, &tmp);
-        e->tag = 0U; // Clear the tag so its empty when we get back to this FIFO element
+        asm330lhb_fifo_tag_t    tag = drv_asm330_unpackElement(&asm330, e, &tmp);
+        e->tag = 0U;    // Clear the tag so its empty when we get back to this FIFO element
 
         switch (tag)
         {
@@ -248,6 +249,7 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
                 LIB_LINALG_SUM_CVEC(vecA, &tmp, vecA);
                 (*countA)++;
                 break;
+
             case ASM330LHB_GYRO_NC_TAG:
                 if (vecG && countG)
                 {
@@ -255,6 +257,7 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
                     (*countG)++;
                 }
                 break;
+
             default:
                 break;
         }
@@ -263,9 +266,9 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
 
 static bool disregardSamples(void)
 {
-    static uint16_t countA = 0;
-    static uint16_t countG = 0;
-    drv_imu_vector_S tmp = {0};
+    static uint16_t  countA = 0;
+    static uint16_t  countG = 0;
+    drv_imu_vector_S tmp    = { 0 };
 
     averageSamples(&tmp, &countA, &tmp, &countG);
 
@@ -284,10 +287,10 @@ static bool disregardSamples(void)
 
 static bool calculateTransform(void)
 {
-    static drv_imu_vector_S sum = {0};
-    static uint16_t count = 0;
-    drv_imu_vector_S tmp = {0};
-    drv_imu_vectorTransform_S tmpTransform = {0};
+    static drv_imu_vector_S   sum          = { 0 };
+    static uint16_t           count        = 0;
+    drv_imu_vector_S          tmp          = { 0 };
+    drv_imu_vectorTransform_S tmpTransform = { 0 };
 
     averageSamples(&tmp, &count, NULL, NULL);
     LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
@@ -308,12 +311,12 @@ static bool calculateTransform(void)
 
 static bool calculateOffset(void)
 {
-    static drv_imu_vector_S sumA = {0};
-    static uint16_t countA = 0;
-    static drv_imu_vector_S sumG = {0};
-    static uint16_t countG = 0;
-    drv_imu_vector_S tmpA = {0};
-    drv_imu_vector_S tmpG = {0};
+    static drv_imu_vector_S sumA   = { 0 };
+    static uint16_t         countA = 0;
+    static drv_imu_vector_S sumG   = { 0 };
+    static uint16_t         countG = 0;
+    drv_imu_vector_S        tmpA   = { 0 };
+    drv_imu_vector_S        tmpG   = { 0 };
 
     averageSamples(&tmpA, &countA, &tmpG, &countG);
     LIB_LINALG_SUM_CVEC(&sumA, &tmpA, &sumA);
@@ -321,7 +324,7 @@ static bool calculateOffset(void)
 
     const bool validA = countA > BASELINE_SAMPLES;
     const bool validG = countG > BASELINE_SAMPLES;
-    const bool valid = validA && validG;
+    const bool valid  = validA && validG;
 
     if (valid)
     {
@@ -345,17 +348,17 @@ static bool calculateOffset(void)
 
 static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgwick_euler_S* a)
 {
-    const uint64_t currentTime = HW_TIM_getBaseTick();
-    const float32_t dt = (float32_t)(currentTime - imu.lastCycle_us) / 1000000.0f;
-    float32_t norm = 0.0f;
+    const uint64_t  currentTime = HW_TIM_getBaseTick();
+    const float32_t dt          = (float32_t)(currentTime - imu.lastCycle_us) / 1000000.0f;
+    float32_t       norm        = 0.0f;
 
     // Dynamically reduce beta when accel magnitude deviates from 1g.
     LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)a, &norm);
-    const float32_t delta = fabsf(norm - GRAVITY) / GRAVITY;
-    const float32_t bandStart = 0.05f; // full correction within +/-5%
-    const float32_t bandEnd = 0.25f;   // min correction beyond +/-10%
-    const float32_t minScale = 0.001f;  // keep some correction
-    float32_t scale = 1.0f;
+    const float32_t delta     = fabsf(norm - GRAVITY) / GRAVITY;
+    const float32_t bandStart = 0.05f;  // full correction within +/-5%
+    const float32_t bandEnd   = 0.25f;  // min correction beyond +/-10%
+    const float32_t minScale  = 0.001f; // keep some correction
+    float32_t       scale     = 1.0f;
     if (delta > bandStart)
     {
         if (delta >= bandEnd)
@@ -370,9 +373,9 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
     }
 
     const float32_t baseBeta = f->beta;
-    f->beta = baseBeta * scale;
+    f->beta          = baseBeta * scale;
     madgwick_update_imu(f, g, a, dt);
-    f->beta = baseBeta;
+    f->beta          = baseBeta;
     imu.lastCycle_us = currentTime;
 }
 
@@ -381,10 +384,10 @@ static void lpfAccel(drv_imu_accel_S* accel);
 static void lpfGyro(drv_imu_gyro_S* gyro);
 static bool calculateVehicleAngle(void)
 {
-    static uint16_t countA = 0;
-    static uint16_t countG = 0;
-    static drv_imu_vector_S tmpA = {0};
-    static drv_imu_vector_S tmpG = {0};
+    static uint16_t         countA = 0;
+    static uint16_t         countG = 0;
+    static drv_imu_vector_S tmpA   = { 0 };
+    static drv_imu_vector_S tmpG   = { 0 };
 
     averageSamples(&tmpA, &countA, &tmpG, &countG);
 
@@ -430,18 +433,20 @@ static bool calculateVehicleAngle(void)
 
 static bool egressFifo(void)
 {
-    uint16_t elements = drv_asm330_getFifoElementsReady(&asm330);
+    uint16_t                elements       = drv_asm330_getFifoElementsReady(&asm330);
 
-    size_t maxContinuous = LIB_BUFFER_FIFO_GETMAXCONTINUOUS(&imuBuffer);
+    size_t                  maxContinuous  = LIB_BUFFER_FIFO_GETMAXCONTINUOUS(&imuBuffer);
     drv_asm330_fifoElement_S* reserveStart = &LIB_BUFFER_FIFO_PEEKEND(&imuBuffer);
-    elements = elements > maxContinuous ? (uint16_t)maxContinuous : elements;
+
+    elements = (elements > maxContinuous) ? (uint16_t)maxContinuous : elements;
     LIB_BUFFER_FIFO_RESERVE(&imuBuffer, elements);
     return drv_asm330_getFifoElementsDMA(&asm330, (uint8_t*)reserveStart, (uint16_t)(elements * sizeof(*reserveStart)));
 }
 
 static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out)
 {
-    drv_imu_vector_S rotated = {0};
+    drv_imu_vector_S rotated = { 0 };
+
     LIB_LINALG_MUL_RMATCVEC_SET(&imuCalibration_data.rotation, in, &rotated);
     LIB_LINALG_SUM_CVEC(&rotated, zero, &rotated);
     taskENTER_CRITICAL();
@@ -454,9 +459,9 @@ static void lpfAccel(drv_imu_accel_S* accel)
     if (imuLpf.accelInit)
     {
         imuLpf.accelInit = false;
-        imuLpf.accelX.y = accel->accelX;
-        imuLpf.accelY.y = accel->accelY;
-        imuLpf.accelZ.y = accel->accelZ;
+        imuLpf.accelX.y  = accel->accelX;
+        imuLpf.accelY.y  = accel->accelY;
+        imuLpf.accelZ.y  = accel->accelZ;
     }
 
     accel->accelX = lib_simpleFilter_lpf_step(&imuLpf.accelX, accel->accelX);
@@ -469,9 +474,9 @@ static void lpfGyro(drv_imu_gyro_S* gyro)
     if (imuLpf.gyroInit)
     {
         imuLpf.gyroInit = false;
-        imuLpf.gyroX.y = gyro->rotX;
-        imuLpf.gyroY.y = gyro->rotY;
-        imuLpf.gyroZ.y = gyro->rotZ;
+        imuLpf.gyroX.y  = gyro->rotX;
+        imuLpf.gyroY.y  = gyro->rotY;
+        imuLpf.gyroZ.y  = gyro->rotZ;
     }
 
     gyro->rotX = lib_simpleFilter_lpf_step(&imuLpf.gyroX, gyro->rotX);
@@ -487,17 +492,19 @@ static void transitionImuState(void)
         case INIT_VEHICLEANGLE:
             if (egressFifo())
             {
-                imu.operatingMode = imu.operatingMode == INIT_VEHICLEANGLE ? STABILIZING_VEHICLEANGLE : STABILIZING;
+                imu.operatingMode = (imu.operatingMode == INIT_VEHICLEANGLE) ? STABILIZING_VEHICLEANGLE : STABILIZING;
             }
             break;
+
         case STABILIZING:
         case STABILIZING_VEHICLEANGLE:
             if (disregardSamples())
             {
-                imu.operatingMode = imu.operatingMode == STABILIZING_VEHICLEANGLE ? GET_VEHICLEANGLE : BASELINING;
+                imu.operatingMode = (imu.operatingMode == STABILIZING_VEHICLEANGLE) ? GET_VEHICLEANGLE : BASELINING;
             }
             egressFifo();
             break;
+
         case BASELINING:
             if (calculateTransform())
             {
@@ -505,15 +512,17 @@ static void transitionImuState(void)
             }
             egressFifo();
             break;
+
         case ZEROING:
             if (calculateOffset())
             {
                 lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
                 imu.operatingMode = GET_VEHICLEANGLE;
-                imu.calibrating = false;
+                imu.calibrating   = false;
             }
             egressFifo();
             break;
+
         case GET_VEHICLEANGLE:
             if (calculateVehicleAngle())
             {
@@ -521,6 +530,7 @@ static void transitionImuState(void)
             }
             egressFifo();
             break;
+
         case RUNNING:
             break;
     }
@@ -530,10 +540,10 @@ static void handleImuSamples(void)
 {
     if ((imu.operatingMode == RUNNING) && (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
     {
-        drv_imu_vector_S sumA = {0};
-        drv_imu_vector_S sumG = {0};
-        uint16_t countA = 0;
-        uint16_t countG = 0;
+        drv_imu_vector_S sumA   = { 0 };
+        drv_imu_vector_S sumG   = { 0 };
+        uint16_t         countA = 0;
+        uint16_t         countG = 0;
 
         averageSamples(&sumA, &countA, &sumG, &countG);
 
@@ -566,9 +576,9 @@ static void handleImuSamples(void)
         madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
         taskEXIT_CRITICAL();
 
-        const float32_t rollRad = imu.vehicleAngle.rotX * DEG_TO_RAD;
+        const float32_t rollRad  = imu.vehicleAngle.rotX * DEG_TO_RAD;
         const float32_t pitchRad = imu.vehicleAngle.rotY * DEG_TO_RAD;
-        float32_t cosTheta = cosf(rollRad) * cosf(pitchRad);
+        float32_t       cosTheta = cosf(rollRad) * cosf(pitchRad);
         if (cosTheta > 1.0f)
         {
             cosTheta = 1.0f;
@@ -597,10 +607,10 @@ static bool getImuAlertStatus(void)
             uint8_t statusA = 0U;
             if (drv_asm330_getFsmStatus(&asm330, &statusA, NULL))
             {
-                const bool crashEvent = (statusA & (0x01U << (IMU_FSM_CRASH_PROGRAM_NUMBER - 1U))) != 0U;
+                const bool crashEvent  = (statusA & (0x01U << (IMU_FSM_CRASH_PROGRAM_NUMBER - 1U))) != 0U;
                 const bool impactEvent = (statusA & (0x01U << (IMU_FSM_IMPACT_PROGRAM_NUMBER - 1U))) != 0U;
                 imu.fsmActivityActive = (statusA & (0x01U << (IMU_FSM_ACTIVITY_PROGRAM_NUMBER - 1U))) != 0U;
-                ret = true;
+                ret                   = true;
 
                 if (imu.fsmCrashInitOk && crashEvent)
                 {
@@ -626,7 +636,7 @@ static bool getImuAlertStatus(void)
                     else
                     {
                         imu.fsmImpactActive = false;
-                        imu.impactAccelMax = 0.0f;
+                        imu.impactAccelMax  = 0.0f;
                     }
                 }
             }
@@ -696,7 +706,7 @@ bool imu_getCrashEvent(void)
     bool event = false;
 
     taskENTER_CRITICAL();
-    event = imu.fsmCrashEvent;
+    event             = imu.fsmCrashEvent;
     imu.fsmCrashEvent = false;
     taskEXIT_CRITICAL();
 
@@ -740,13 +750,13 @@ static void imu_init()
     lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelX, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
     lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelY, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
     lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelZ, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
-    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroX, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
-    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroY, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
-    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroZ, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
-    imuLpf.accelInit = true;
-    imuLpf.gyroInit = true;
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroX,  IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroY,  IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.gyroZ,  IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
+    imuLpf.accelInit   = true;
+    imuLpf.gyroInit    = true;
 
-    imu.operatingMode = INIT_VEHICLEANGLE;
+    imu.operatingMode  = INIT_VEHICLEANGLE;
 
     imu.fsmCrashInitOk = drv_asm330_loadFsmProgram(&asm330,
                                                    IMU_FSM_CRASH_PROGRAM_NUMBER,
@@ -766,9 +776,9 @@ static void imu_init()
                               imuFsmActivityProgram,
                               IMU_FSM_ACTIVITY_PROGRAM_SIZE,
                               ASM330LHB_ODR_FSM_104Hz);
-    imu.fsmCrashEvent = false;
-    imu.fsmImpactActive = false;
-    imu.impactAccelMax = 0.0f;
+    imu.fsmCrashEvent    = false;
+    imu.fsmImpactActive  = false;
+    imu.impactAccelMax   = 0.0f;
     imu.fsmArmCyclesLeft = IMU_FSM_ARM_CYCLES;
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUFSMINITFAILURE,
                                    !(imu.fsmCrashInitOk && imu.fsmImpactInitOk));
@@ -780,10 +790,10 @@ static void imu_init()
 static void imu100Hz_PRD(void)
 {
     const bool imuCalibrated = memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
-    const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
-    const bool gotAlerts = getImuAlertStatus();
+    const bool wasOverrun    = drv_asm330_getFifoOverrun(&asm330);
+    const bool gotAlerts     = getImuAlertStatus();
 
-    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN,      wasOverrun);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
 
     if (gotAlerts)
@@ -797,15 +807,15 @@ static void imu100Hz_PRD(void)
 
     if (imu.operatingMode == RUNNING)
     {
-        CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
-        const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
-                               (tmp == CAN_DIGITALSTATUS_ON);
+        CAN_digitalStatus_E tmp       = CAN_DIGITALSTATUS_SNA;
+        const bool          calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
+                                        (tmp == CAN_DIGITALSTATUS_ON);
 
         if (calibrate)
         {
             lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
             imu.operatingMode = INIT;
-            imu.calibrating = true;
+            imu.calibrating   = true;
         }
         else if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
         {
@@ -817,15 +827,15 @@ static void imu100Hz_PRD(void)
                 drv_timer_start(&imu.imuTimeout, IMU_TIMEOUT_MS);
             }
 
-            const bool imuTimeout = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED;
+            const bool imuTimeout    = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_EXPIRED;
             const bool imuNotStarted = drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_STOPPED;
-            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, imuTimeout);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR,   imuTimeout);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, imuTimeout || imuNotStarted || !imuCalibrated);
         }
         else
         {
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
-            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, true);
+            app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR,   true);
             app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, true);
         }
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, false);
@@ -834,8 +844,8 @@ static void imu100Hz_PRD(void)
     {
         transitionImuState();
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
-        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, false);
-        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, true);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR,   false);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA,     true);
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, true);
     }
 }

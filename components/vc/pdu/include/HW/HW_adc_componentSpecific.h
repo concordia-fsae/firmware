@@ -15,8 +15,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_REF_VOLTAGE 2.5F
-#define HW_ADC_BUF_LEN  98U
+#define ADC_REF_VOLTAGE    2.5F
+#define HW_ADC_BUF_LEN     98U
 
 /******************************************************************************
  *                             T Y P E D E F S

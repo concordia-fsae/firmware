@@ -12,9 +12,9 @@
 #include "YamcanTypes.h"
 
 #include "CANTypes_generated.h"
-#include "NetworkDefines_generated.h"
 #include "MessagePack_generated.h"
 #include "MessageUnpack_generated.h"
-#include "SigTx.h"
+#include "NetworkDefines_generated.h"
 #include "SigRx.h"
+#include "SigTx.h"
 #include "YamcanShared.h"

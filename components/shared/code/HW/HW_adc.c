@@ -12,12 +12,12 @@
 
 // System Includes
 #include "HW.h"
-#include "string.h"
 #include "lib_simpleFilter.h"
+#include "string.h"
 
-_Static_assert(HW_ADC_BUF_LEN % ADC_BANK1_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
+_Static_assert(HW_ADC_BUF_LEN % ADC_BANK1_CHANNEL_COUNT == 0,       "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((HW_ADC_BUF_LEN / 2) % ADC_BANK1_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
-_Static_assert(HW_ADC_BUF_LEN % ADC_BANK2_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
+_Static_assert(HW_ADC_BUF_LEN % ADC_BANK2_CHANNEL_COUNT == 0,       "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((HW_ADC_BUF_LEN / 2) % ADC_BANK2_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
 
 /******************************************************************************
@@ -26,11 +26,11 @@ _Static_assert((HW_ADC_BUF_LEN / 2) % ADC_BANK2_CHANNEL_COUNT == 0, "ADC Buffer 
 
 typedef struct
 {
-    uint32_t           adcBuffer[HW_ADC_BUF_LEN];
+    uint32_t                  adcBuffer[HW_ADC_BUF_LEN];
     lib_simpleFilter_cumAvg_S adcData_bank1[ADC_BANK1_CHANNEL_COUNT];
     lib_simpleFilter_cumAvg_S adcData_bank2[ADC_BANK2_CHANNEL_COUNT];
-    float32_t          voltages1[ADC_BANK1_CHANNEL_COUNT];
-    float32_t          voltages2[ADC_BANK2_CHANNEL_COUNT];
+    float32_t                 voltages1[ADC_BANK1_CHANNEL_COUNT];
+    float32_t                 voltages2[ADC_BANK2_CHANNEL_COUNT];
 } inputs_S;
 
 /******************************************************************************
@@ -69,7 +69,7 @@ static float32_t HW_ADC_private_getVFromCount(uint16_t cnt)
  */
 static HW_StatusTypeDef_E HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
 {
-    return HAL_ADCEx_Calibration_Start(hadc) == HAL_OK ? HW_OK : HW_ERROR;
+    return (HAL_ADCEx_Calibration_Start(hadc) == HAL_OK) ? HW_OK : HW_ERROR;
 }
 
 /**
@@ -83,7 +83,7 @@ static HW_StatusTypeDef_E HW_ADC_calibrate(ADC_HandleTypeDef* hadc)
  */
 static HW_StatusTypeDef_E HW_ADC_startDMA(ADC_HandleTypeDef* hadc, uint32_t* data, uint32_t size)
 {
-    return HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK ? HW_OK : HW_ERROR;
+    return (HAL_ADCEx_MultiModeStart_DMA(hadc, data, size) == HAL_OK) ? HW_OK : HW_ERROR;
 }
 
 /******************************************************************************

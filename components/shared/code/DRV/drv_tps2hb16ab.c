@@ -26,12 +26,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_tps2hb16ab.h"
 #include "drv_hsd.h"
 #include "drv_io.h"
-#include "string.h"
-#include "HW_adc.h"
 #include "drv_timer.h"
+#include "drv_tps2hb16ab.h"
+#include "HW_adc.h"
+#include "string.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -39,11 +39,11 @@
 
 struct
 {
-    float32_t         chip_temp;
-    bool              request_enabled[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
-    drv_hsd_state_E   state[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
-    float32_t         current[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
-    drv_timer_S       oc_timer[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
+    float32_t       chip_temp;
+    bool            request_enabled[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
+    drv_hsd_state_E state[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
+    float32_t       current[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
+    drv_timer_S     oc_timer[DRV_TPS2HB16AB_IC_COUNT][DRV_TPS2HB16AB_OUT_COUNT];
 } drv_tps2hb16ab_data;
 
 /******************************************************************************
@@ -58,7 +58,7 @@ void drv_tps2hb16ab_init(void)
     {
         for (uint8_t n = 0U; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
         {
-            drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OFF;
+            drv_tps2hb16ab_data.state[i][n]           = DRV_HSD_STATE_OFF;
             drv_tps2hb16ab_data.request_enabled[i][n] = false;
             drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[i].channel[n].enable, DRV_IO_INACTIVE);
             drv_timer_init(&drv_tps2hb16ab_data.oc_timer[i][n]);
@@ -74,12 +74,12 @@ void drv_tps2hb16ab_run(void)
     for (uint8_t i = 0U; i < DRV_TPS2HB16AB_IC_COUNT; i++)
     {
         const float32_t cs_voltage = drv_inputAD_getAnalogVoltage(drv_tps2hb16ab_ics[i].cs_channel);
-        const bool diag = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].diag_en) == DRV_IO_ACTIVE;
+        const bool      diag       = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].diag_en) == DRV_IO_ACTIVE;
 
         if (diag)
         {
-            const bool measuring_temp = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].sel1) == DRV_IO_ACTIVE;
-            const drv_tps2hb16ab_output_E selected_channel = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].sel2) == DRV_IO_ACTIVE ?
+            const bool                    measuring_temp   = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].sel1) == DRV_IO_ACTIVE;
+            const drv_tps2hb16ab_output_E selected_channel = (drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].sel2) == DRV_IO_ACTIVE) ?
                                                              DRV_TPS2HB16AB_OUT_2 :
                                                              DRV_TPS2HB16AB_OUT_1;
 
@@ -89,7 +89,7 @@ void drv_tps2hb16ab_run(void)
             }
             else
             {
-                const float32_t current = drv_tps2hb16ab_data.state[i][selected_channel] == DRV_HSD_STATE_ON ?
+                const float32_t current = (drv_tps2hb16ab_data.state[i][selected_channel] == DRV_HSD_STATE_ON) ?
                                           cs_voltage * drv_tps2hb16ab_ics[i].cs_amp_per_volt :
                                           0.0f;
                 drv_tps2hb16ab_data.current[i][selected_channel] = current;
@@ -127,21 +127,23 @@ void drv_tps2hb16ab_run(void)
                 // 1. If OFF and diagnostics is enabled, check for open circuit/short circuit
                 // 1.1 If HSD output is OC/SC, then set SNS line of the faulted channel high
                 // 2. If ON and over current/over temperature occurs, set SNS line of the faulted
-                //    channel high
+                // channel high
                 // 2.1 SNS line goes low once the latch pin is low, enable goes low, and the fault
-                //     condition goes away
+                // condition goes away
                 case DRV_HSD_STATE_OFF:
                     if (drv_tps2hb16ab_data.request_enabled[i][n])
                     {
                         drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_ON;
                     }
                     break;
+
                 case DRV_HSD_STATE_ON:
                     if (drv_tps2hb16ab_data.request_enabled[i][n] == false)
                     {
                         drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OFF;
                     }
                     break;
+
                 case DRV_HSD_STATE_OVERCURRENT:
                     if (drv_tps2hb16ab_data.request_enabled[i][n] == false)
                     {
@@ -156,6 +158,7 @@ void drv_tps2hb16ab_run(void)
                         }
                     }
                     break;
+
                 case DRV_HSD_STATE_OVERTEMP:
                     if ((is_overcurrent == false) && (drv_tps2hb16ab_data.request_enabled[i][n] == false))
                     {
@@ -163,6 +166,7 @@ void drv_tps2hb16ab_run(void)
                         drv_tps2hb16ab_setFaultLatch(i, true);
                     }
                     break;
+
                 default:
                     if (drv_tps2hb16ab_data.request_enabled[i][n] == false)
                     {
@@ -200,7 +204,8 @@ void drv_tps2hb16ab_setEnabled(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E outp
 
 void drv_tps2hb16ab_setCSChannel(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E output)
 {
-    const drv_io_activeState_E sel2_state = output == DRV_TPS2HB16AB_OUT_1 ? DRV_IO_INACTIVE : DRV_IO_ACTIVE;
+    const drv_io_activeState_E sel2_state = (output == DRV_TPS2HB16AB_OUT_1) ? DRV_IO_INACTIVE : DRV_IO_ACTIVE;
+
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].sel1, DRV_IO_INACTIVE);
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].sel2, sel2_state);
 }
@@ -208,11 +213,13 @@ void drv_tps2hb16ab_setCSChannel(drv_tps2hb16ab_E ic, drv_tps2hb16ab_output_E ou
 void drv_tps2hb16ab_setDiagEnabled(drv_tps2hb16ab_E ic, bool enabled)
 {
     const drv_io_activeState_E diag_state = enabled ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].diag_en, diag_state);
 }
 
 void drv_tps2hb16ab_setFaultLatch(drv_tps2hb16ab_E ic, bool latch_on_fault)
 {
     const drv_io_activeState_E latch_state = latch_on_fault ? DRV_IO_INACTIVE : DRV_IO_ACTIVE;
+
     drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[ic].latch, latch_state);
 }

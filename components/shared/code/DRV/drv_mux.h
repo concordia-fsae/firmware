@@ -10,8 +10,8 @@
  ******************************************************************************/
 
 // System Includes
-#include "LIB_Types.h"
 #include "drv_outputAD.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -32,7 +32,7 @@ typedef struct
             {
                 drv_outputAD_channelDigital_E pin_first;
                 drv_outputAD_channelDigital_E pin_last;
-                bool disable_on_ch0;
+                bool                          disable_on_ch0;
             } gpio;
             struct
             {
@@ -40,13 +40,13 @@ typedef struct
                 drv_outputAD_channelDigital_E pin_last;
                 drv_outputAD_channelDigital_E enable;
             } gpio_en;
-        } outputs;
+        }       outputs;
         uint8_t max_output_channel;
     } config;
     struct
     {
         uint8_t bit_width;
-        bool is_enabled;
+        bool    is_enabled;
         uint8_t channel_output;
     } data;
 } drv_mux_channel_S;

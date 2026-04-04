@@ -6,7 +6,7 @@
 #pragma once
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef enum
@@ -26,14 +26,14 @@ typedef enum
 
 typedef enum
 {
-    DRV_INPUTAD_ANALOG_MUX_LP1_SNS = 0U, // Bank 1
+    DRV_INPUTAD_ANALOG_MUX_LP1_SNS = 0U,    // Bank 1
     DRV_INPUTAD_ANALOG_MUX_LP2_SNS,
     DRV_INPUTAD_ANALOG_MUX_LP3_SNS,
     DRV_INPUTAD_ANALOG_MUX_LP4_SNS,
     DRV_INPUTAD_ANALOG_5V_VOLTAGE,
     DRV_INPUTAD_ANALOG_UVL_BATT,
     DRV_INPUTAD_ANALOG_MCU_TEMP,
-    DRV_INPUTAD_ANALOG_MUX_LP5_SNS, // Bank 2
+    DRV_INPUTAD_ANALOG_MUX_LP5_SNS,    // Bank 2
     DRV_INPUTAD_ANALOG_MUX_LP6_SNS,
     DRV_INPUTAD_ANALOG_MUX_LP7_SNS,
     DRV_INPUTAD_ANALOG_MUX_LP8_SNS,

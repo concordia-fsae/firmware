@@ -8,8 +8,8 @@
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
- 
- 
+
+
 typedef enum
 {
     HW_GPIO_DIG_SPARE1 = 0U,
@@ -32,7 +32,7 @@ typedef enum
     HW_GPIO_ADC_PU2,
     HW_GPIO_ADC_BR_PR,
     HW_GPIO_ADC_TEMP_1,
-    HW_GPIO_5V_NFLT2, //N implies active low
+    HW_GPIO_5V_NFLT2,    // N implies active low
     HW_GPIO_5V_NEN2,
     HW_GPIO_5V_NEN1,
     HW_GPIO_5V_NFLT1,

@@ -19,12 +19,16 @@
  */
 void drv_mux_init(drv_mux_channel_S * mux)
 {
-    if (mux == NULL) return;
+    if (mux == NULL)
+    {
+        return;
+    }
 
     // --- Compute and store bit width based on max output channels ---
-    uint8_t width = 0;
+    uint8_t width       = 0;
     uint8_t max_channel = mux->config.max_output_channel;
-    do {
+    do
+    {
         width++;
     } while ((1U << width) < max_channel);
     mux->data.bit_width = width;
@@ -39,6 +43,7 @@ void drv_mux_init(drv_mux_channel_S * mux)
             case DRV_MUX_TYPE_GPIO:
                 pin = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio.pin_first + bit);
                 break;
+
             case DRV_MUX_TYPE_GPIO_EN:
                 pin = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio_en.pin_first + bit);
                 break;
@@ -56,7 +61,7 @@ void drv_mux_init(drv_mux_channel_S * mux)
 
     // --- Initialize internal mux state ---
     mux->data.channel_output = 0;
-    mux->data.is_enabled = false;
+    mux->data.is_enabled     = false;
 }
 
 /**
@@ -68,25 +73,29 @@ void drv_mux_init(drv_mux_channel_S * mux)
  */
 void drv_mux_setMuxOutput(drv_mux_channel_S * mux, uint8_t output)
 {
-    if (mux == NULL) return;
+    if (mux == NULL)
+    {
+        return;
+    }
 
-    uint8_t max_output = mux->config.max_output_channel;
+    uint8_t max_output     = mux->config.max_output_channel;
     uint8_t output_channel = output % max_output;
     mux->data.channel_output = output_channel;
 
-    uint8_t bit_width = mux->data.bit_width;
+    uint8_t bit_width      = mux->data.bit_width;
 
     for (uint8_t bit = 0; bit < bit_width; bit++)
     {
-        drv_outputAD_channelDigital_E pin = 0U;
-        uint8_t offset = 0U;
+        drv_outputAD_channelDigital_E pin    = 0U;
+        uint8_t                       offset = 0U;
 
         switch (mux->type)
         {
             case DRV_MUX_TYPE_GPIO:
-                pin = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio.pin_first + bit);
+                pin    = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio.pin_first + bit);
                 offset = (mux->config.outputs.gpio.disable_on_ch0 ? 1U : 0U);
                 break;
+
             case DRV_MUX_TYPE_GPIO_EN:
                 pin = (drv_outputAD_channelDigital_E)(mux->config.outputs.gpio_en.pin_first + bit);
                 break;
@@ -104,7 +113,10 @@ void drv_mux_setMuxOutput(drv_mux_channel_S * mux, uint8_t output)
  */
 uint8_t drv_mux_getMuxOutput(drv_mux_channel_S * mux)
 {
-    if (mux == NULL) return 0;
+    if (mux == NULL)
+    {
+        return 0;
+    }
     return mux->data.channel_output;
 }
 
@@ -115,14 +127,17 @@ uint8_t drv_mux_getMuxOutput(drv_mux_channel_S * mux)
  */
 void drv_mux_setEnabled(drv_mux_channel_S * mux, bool enabled)
 {
-    if (mux == NULL) return;
+    if (mux == NULL)
+    {
+        return;
+    }
 
     mux->data.is_enabled = enabled;
 
     if (mux->type == DRV_MUX_TYPE_GPIO_EN)
     {
         drv_outputAD_channelDigital_E enable_pin = mux->config.outputs.gpio_en.enable;
-        drv_io_activeState_E state = enabled ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+        drv_io_activeState_E          state      = enabled ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
         drv_outputAD_setDigitalActiveState(enable_pin, state);
     }
 }
@@ -134,6 +149,9 @@ void drv_mux_setEnabled(drv_mux_channel_S * mux, bool enabled)
  */
 bool drv_mux_getEnabled(drv_mux_channel_S * mux)
 {
-    if (mux == NULL) return false;
+    if (mux == NULL)
+    {
+        return false;
+    }
     return mux->data.is_enabled;
 }

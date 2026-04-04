@@ -11,18 +11,18 @@
 #include "Module.h"
 
 /**< System Includes*/
-#include "SystemConfig.h"
 #include "stddef.h"
 #include "stdint.h"
+#include "SystemConfig.h"
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
 #include "task.h"
 
 /**< Other Includes */
-#include "Utility.h"
-#include "lib_utility.h"
 #include "FeatureDefines_generated.h"
+#include "lib_utility.h"
+#include "Utility.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -31,7 +31,7 @@
 /**
  * @brief  Modules run by the Module Manager. Order will apply to execution.
  */
-extern const ModuleDesc_S* modules[MODULE_CNT];
+extern const ModuleDesc_S * modules[MODULE_CNT];
 
 static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
 
@@ -46,7 +46,6 @@ static Module_taskStats_S stats[MODULE_TASK_CNT] = { 0 };
 #pragma weak Module_componentSpecific_Init
 void Module_componentSpecific_Init(void)
 {
-
 }
 
 /**
@@ -58,7 +57,7 @@ void Module_Init(void)
     for (uint8_t i = 0U; i < MODULE_TASK_CNT; i++)
     {
         stats[i].total_percentage = 0x00U;
-        stats[i].iterations = 0x00U;
+        stats[i].iterations       = 0x00U;
     }
 
     Module_componentSpecific_Init();
@@ -80,7 +79,6 @@ void Module_Init(void)
 #pragma weak Module_componentSpecific_1kHz
 void Module_componentSpecific_1kHz(void)
 {
-
 }
 
 /**
@@ -101,7 +99,7 @@ void Module_1kHz_TSK(void)
 
     stats[MODULE_1kHz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_1kHz_TASK].iterations++;
-    stats[MODULE_1kHz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
+    stats[MODULE_1kHz_TASK].stack_left       = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -111,7 +109,6 @@ void Module_1kHz_TSK(void)
 #pragma weak Module_componentSpecific_100Hz
 void Module_componentSpecific_100Hz(void)
 {
-
 }
 
 /**
@@ -132,7 +129,7 @@ void Module_100Hz_TSK(void)
 
     stats[MODULE_100Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_100Hz_TASK].iterations++;
-    stats[MODULE_100Hz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
+    stats[MODULE_100Hz_TASK].stack_left       = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -142,7 +139,6 @@ void Module_100Hz_TSK(void)
 #pragma weak Module_componentSpecific_10Hz
 void Module_componentSpecific_10Hz(void)
 {
-
 }
 
 /**
@@ -163,7 +159,7 @@ void Module_10Hz_TSK(void)
 
     stats[MODULE_10Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_10Hz_TASK].iterations++;
-    stats[MODULE_10Hz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
+    stats[MODULE_10Hz_TASK].stack_left       = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**
@@ -173,7 +169,6 @@ void Module_10Hz_TSK(void)
 #pragma weak Module_componentSpecific_1Hz
 void Module_componentSpecific_1Hz(void)
 {
-
 }
 
 /**
@@ -194,7 +189,7 @@ void Module_1Hz_TSK(void)
 
     stats[MODULE_1Hz_TASK].total_percentage = (uint8_t)ulTaskGetRunTimePercent(NULL);
     stats[MODULE_1Hz_TASK].iterations++;
-    stats[MODULE_1Hz_TASK].stack_left = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
+    stats[MODULE_1Hz_TASK].stack_left       = (uint16_t)uxTaskGetStackHighWaterMark(NULL);
 }
 
 /**

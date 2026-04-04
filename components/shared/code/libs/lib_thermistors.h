@@ -15,8 +15,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define KELVIN_OFFSET 273.15F
-#define lib_thermistors_getCelsiusFromR_BParameter(bparam, resistance) (lib_thermistors_getKelvinFromR_BParameter(bparam, resistance) - KELVIN_OFFSET)
+#define KELVIN_OFFSET                                                     273.15F
+#define lib_thermistors_getCelsiusFromR_BParameter(bparam, resistance)    (lib_thermistors_getKelvinFromR_BParameter(bparam, resistance) - KELVIN_OFFSET)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -33,22 +33,22 @@ typedef struct
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-static const lib_thermistors_BParameter_S MF52_bParam = { // For the MF52C1103F3380
-    .B  = 3380U,
+static const lib_thermistors_BParameter_S MF52_bParam = {    // For the MF52C1103F3380
+    .B  =               3380U,
     .T0 = 25U + KELVIN_OFFSET,
-    .R0 = 10000U,
+    .R0 =              10000U,
 };
 
-static const lib_thermistors_BParameter_S NCP21_bParam = { // For the NCP21XV103J03RA
-    .B  = 3930U,
+static const lib_thermistors_BParameter_S NCP21_bParam = {    // For the NCP21XV103J03RA
+    .B  =               3930U,
     .T0 = 25U + KELVIN_OFFSET,
-    .R0 = 10000U,
+    .R0 =              10000U,
 };
 
-static const lib_thermistors_BParameter_S NTC103JT_bParam = { // For the 103JT-100 and 103JT-050
-    .B = 3435U,
+static const lib_thermistors_BParameter_S NTC103JT_bParam = {    // For the 103JT-100 and 103JT-050
+    .B  =               3435U,
     .T0 = 25U + KELVIN_OFFSET,
-    .R0 = 10000U,
+    .R0 =              10000U,
 };
 
 /******************************************************************************

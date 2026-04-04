@@ -9,9 +9,9 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "Types.h"
-#include "LIB_app.h"
 #include "FeatureDefines_generated.h"
+#include "LIB_app.h"
+#include "Types.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -46,13 +46,13 @@
 // Address where the application code starts
 // The app descriptor is expected at this address
 #if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BL
-#define APP_FLASH_START    ((const uint32_t)__APP_FLASH_ORIGIN)
-#define APP_FLASH_END      ((const uint32_t)__FLASH_END)
-#define APP_DESC_ADDR      ((lib_app_appDesc_S * const)APP_FLASH_START)
+# define APP_FLASH_START    ((const uint32_t)__APP_FLASH_ORIGIN)
+# define APP_FLASH_END      ((const uint32_t)__FLASH_END)
+# define APP_DESC_ADDR      ((lib_app_appDesc_S * const)APP_FLASH_START)
 #elif APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
-#define APP_FLASH_START    ((const uint32_t)__FLASH_ORIGIN)
-#define APP_FLASH_END      ((const uint32_t)__BOOT_FLASH_END)
-#define APP_DESC_ADDR      ((lib_app_appDesc_S * const)(APP_FLASH_END - sizeof(lib_app_crc_t) - sizeof(lib_app_appDesc_S)))
+# define APP_FLASH_START    ((const uint32_t)__FLASH_ORIGIN)
+# define APP_FLASH_END      ((const uint32_t)__BOOT_FLASH_END)
+# define APP_DESC_ADDR      ((lib_app_appDesc_S * const)(APP_FLASH_END - sizeof(lib_app_crc_t) - sizeof(lib_app_appDesc_S)))
 #endif
 
 /******************************************************************************

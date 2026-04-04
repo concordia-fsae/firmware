@@ -20,59 +20,59 @@
 #include "HW_gpio.h"
 
 /**< Other Includes */
-#include "ModuleDesc.h"
 #include "lib_simpleFilter.h"
+#include "ModuleDesc.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define VPACK_DIVISOR 225
+#define VPACK_DIVISOR    225
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
 drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
-    [DRV_INPUTAD_DIGITAL_TSMS_CHG] = {
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_TSMS_CHG,
+    [DRV_INPUTAD_DIGITAL_TSMS_CHG] =       {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                     {
+            .pin          = HW_GPIO_TSMS_CHG,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-    [DRV_INPUTAD_DIGITAL_OK_HS] = {
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_OK_HS,
+    [DRV_INPUTAD_DIGITAL_OK_HS] =          {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                     {
+            .pin          = HW_GPIO_OK_HS,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-    [DRV_INPUTAD_DIGITAL_BMS_IMD_RESET] = {
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_BMS_IMD_RESET,
+    [DRV_INPUTAD_DIGITAL_BMS_IMD_RESET] =  {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                     {
+            .pin          = HW_GPIO_BMS_IMD_RESET,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
     [DRV_INPUTAD_DIGITAL_IMD_STATUS_MEM] = {
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_IMD_STATUS_MEM,
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                     {
+            .pin          = HW_GPIO_IMD_STATUS_MEM,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
     [DRV_INPUTAD_DIGITAL_BMS_STATUS_MEM] = {
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_BMS_STATUS_MEM,
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                     {
+            .pin          = HW_GPIO_BMS_STATUS_MEM,
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-    [DRV_INPUTAD_DIGITAL_VPACK_DIAG] = {
-        .type = INPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_VPACK_DIAG,
+    [DRV_INPUTAD_DIGITAL_VPACK_DIAG] =     {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                     {
+            .pin          = HW_GPIO_VPACK_DIAG,
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
@@ -97,11 +97,11 @@ static void drv_inputAD_1kHz_PRD(void)
 
     const float32_t vcs_diff = HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_CS) - HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_CS);
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CS, vcs_diff);
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CS,       vcs_diff);
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_MCU_TEMP));
 #if APP_VARIANT_ID == 1U
-    const float32_t vpack_p = HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_VPACK);
-    const float32_t vpack_n = HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK);
+    const float32_t vpack_p    = HW_ADC_getVFromBank1Channel(ADC_BANK_CHANNEL_VPACK);
+    const float32_t vpack_n    = HW_ADC_getVFromBank2Channel(ADC_BANK_CHANNEL_VPACK);
     const float32_t vpack_diff = vpack_p - vpack_n;
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_VPACK, vpack_diff * VPACK_DIVISOR);
 #endif

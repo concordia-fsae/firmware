@@ -9,4 +9,4 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define lib_voltageDivider_getRFromVKnownPullUp(voltage, pull_up, vref) (pull_up * ((voltage / vref) / (1.0F - (voltage / vref))))
+#define lib_voltageDivider_getRFromVKnownPullUp(voltage, pull_up, vref)    (pull_up * ((voltage / vref) / (1.0F - (voltage / vref))))

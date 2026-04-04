@@ -5,18 +5,18 @@
 
 #pragma once
 
-#include "Module.h"
-#include "LIB_Types.h"
 #include "lib_nvm.h"
+#include "LIB_Types.h"
+#include "Module.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
 {
     float32_t zero;
-    uint32_t spare[5];
+    uint32_t  spare[5];
 } LIB_NVM_STORAGE(nvm_steeringCalibration_S);
 extern nvm_steeringCalibration_S steeringCalibration_data;
 

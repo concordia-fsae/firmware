@@ -243,9 +243,15 @@ CAN_exitCode_E CAN_init(void)
     SET_BIT(pCAN->MCR, CAN_MCR_INRQ);
 
     // Wait for initialisation req ack
-    while ((pCAN->MSR & CAN_MSR_INAK) == 0U);
+    while ((pCAN->MSR & CAN_MSR_INAK) == 0U)
+    {
+        ;
+    }
     SET_BIT(pCAN->MCR, CAN_MCR_RESET);
-    while(pCAN->MCR & CAN_MCR_RESET);
+    while (pCAN->MCR & CAN_MCR_RESET)
+    {
+        ;
+    }
 
     // Request peripheral initialisation
     SET_BIT(pCAN->MCR, CAN_MCR_INRQ);

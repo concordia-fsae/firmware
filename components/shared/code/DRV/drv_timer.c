@@ -21,8 +21,8 @@
 void drv_timer_init(drv_timer_S * timer)
 {
     timer->time_start_ms = 0U;
-    timer->runtime_ms = 0U;
-    timer->state = DRV_TIMER_STOPPED;
+    timer->runtime_ms    = 0U;
+    timer->state         = DRV_TIMER_STOPPED;
 }
 
 /**
@@ -33,8 +33,8 @@ void drv_timer_init(drv_timer_S * timer)
 void drv_timer_initWithRuntime(drv_timer_S * timer, time_t runtime_ms)
 {
     timer->time_start_ms = 0U;
-    timer->runtime_ms = runtime_ms;
-    timer->state = DRV_TIMER_STOPPED;
+    timer->runtime_ms    = runtime_ms;
+    timer->state         = DRV_TIMER_STOPPED;
 }
 
 /**
@@ -45,8 +45,8 @@ void drv_timer_initWithRuntime(drv_timer_S * timer, time_t runtime_ms)
 void drv_timer_start(drv_timer_S * timer, time_t runtime_ms)
 {
     timer->time_start_ms = HW_TIM_getTimeMS();
-    timer->runtime_ms = runtime_ms;
-    timer->state = DRV_TIMER_RUNNING;
+    timer->runtime_ms    = runtime_ms;
+    timer->state         = DRV_TIMER_RUNNING;
 }
 
 /**
@@ -66,7 +66,8 @@ void drv_timer_stop(drv_timer_S * timer)
 drv_timer_state_E drv_timer_getState(drv_timer_S * timer)
 {
     if ((timer->state == DRV_TIMER_RUNNING) &&
-        (timer->runtime_ms <= drv_timer_getElapsedTimeMs(timer)))
+        (timer->runtime_ms <= drv_timer_getElapsedTimeMs(timer))
+        )
     {
         timer->state = DRV_TIMER_EXPIRED;
     }

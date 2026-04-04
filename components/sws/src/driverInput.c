@@ -63,10 +63,10 @@
  ******************************************************************************/
 
 #include "driverInput.h"
+#include "drv_timer.h"
 #include "drv_userInput.h"
 #include "Module.h"
 #include "ModuleDesc.h"
-#include "drv_timer.h"
 
 #include "app_vehicleState.h"
 #include "Yamcan.h"
@@ -75,25 +75,25 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUTTON_PAGE_PREV  USERINPUT_BUTTON_LEFT_TOP
-#define BUTTON_PAGE_NEXT  USERINPUT_BUTTON_RIGHT_TOP
-#define BUTTON_TORQUE_DEC USERINPUT_BUTTON_LEFT_MID
-#define BUTTON_TORQUE_INC USERINPUT_BUTTON_RIGHT_MID
-#define BUTTON_SLIP_DEC   USERINPUT_BUTTON_LEFT_BOT
-#define BUTTON_SLIP_INC   USERINPUT_BUTTON_RIGHT_BOT
+#define BUTTON_PAGE_PREV       USERINPUT_BUTTON_LEFT_TOP
+#define BUTTON_PAGE_NEXT       USERINPUT_BUTTON_RIGHT_TOP
+#define BUTTON_TORQUE_DEC      USERINPUT_BUTTON_LEFT_MID
+#define BUTTON_TORQUE_INC      USERINPUT_BUTTON_RIGHT_MID
+#define BUTTON_SLIP_DEC        USERINPUT_BUTTON_LEFT_BOT
+#define BUTTON_SLIP_INC        USERINPUT_BUTTON_RIGHT_BOT
 
-#define TOGGLE_TC    USERINPUT_BUTTON_LEFT_TOGGLE
-#define TOGGLE_REGEN USERINPUT_BUTTON_RIGHT_TOGGLE
+#define TOGGLE_TC              USERINPUT_BUTTON_LEFT_TOGGLE
+#define TOGGLE_REGEN           USERINPUT_BUTTON_RIGHT_TOGGLE
 
-#define NAV_DEBOUNCE_MS     250
-#define CONFIG_DEBOUNCE_MS  500
-#define RUN_DEBOUNCE_MS     250
-#define RACE_DEBOUNCE_MS    500
-#define LAUNCH_DEBOUNCE_MS  500
-#define REVERSE_DEBOUNCE_MS 500
-#define CRASH_RESET_HOLD_MS 5000
+#define NAV_DEBOUNCE_MS        250
+#define CONFIG_DEBOUNCE_MS     500
+#define RUN_DEBOUNCE_MS        250
+#define RACE_DEBOUNCE_MS       500
+#define LAUNCH_DEBOUNCE_MS     500
+#define REVERSE_DEBOUNCE_MS    500
+#define CRASH_RESET_HOLD_MS    5000
 
-#define SLEEP_TIMEOUT_MS 15*60000
+#define SLEEP_TIMEOUT_MS       15 * 60000
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -101,28 +101,29 @@
 
 typedef struct
 {
-    driverInput_page_E page;
+    driverInput_page_E            page;
     driverInput_configSelection_E config;
-    bool page_lockout;
+    bool                          page_lockout;
 
     // Timers
-    drv_timer_S nav_timer;
-    drv_timer_S config_timer;
-    drv_timer_S run_timer;
-    drv_timer_S race_timer;
-    drv_timer_S reverse_timer;
-    drv_timer_S crash_reset_timer;
-    drv_timer_S launch_timer;
+    drv_timer_S                   nav_timer;
+    drv_timer_S                   config_timer;
+    drv_timer_S                   run_timer;
+    drv_timer_S                   race_timer;
+    drv_timer_S                   reverse_timer;
+    drv_timer_S                   crash_reset_timer;
+    drv_timer_S                   launch_timer;
 
     // Latched combo state
-    bool run_active;
-    bool race_active;
-    bool reverse_active;
-    bool crash_reset_active;
-    bool launch_active;
-    bool crash_reset_lockout;
+    bool                          run_active;
+    bool                          race_active;
+    bool                          reverse_active;
+    bool                          crash_reset_active;
+    bool                          launch_active;
+    bool                          crash_reset_lockout;
 
-    struct {
+    struct
+    {
         bool is_set;
     } digital[DRIVERINPUT_REQUEST_COUNT];
 } data_S;
@@ -137,10 +138,10 @@ typedef struct
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static data_S data;
+static data_S         data;
 
 static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
-    [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] = {
+    [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] =  {
         .requestDec = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
         .requestInc = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
     },
@@ -168,19 +169,20 @@ static void driverInput_init(void)
         data.digital[i].is_set = false;
     }
 
-    data.page = DRIVERINPUT_PAGE_HOME;
-    data.config = DRIVERINPUT_CONFIG_NONE + 1U;
-    data.run_active = false;
-    data.race_active = false;
-    data.reverse_active = false;
-    data.crash_reset_active = false;
-    data.launch_active = false;
+    data.page                = DRIVERINPUT_PAGE_HOME;
+    data.config              = DRIVERINPUT_CONFIG_NONE + 1U;
+    data.run_active          = false;
+    data.race_active         = false;
+    data.reverse_active      = false;
+    data.crash_reset_active  = false;
+    data.launch_active       = false;
     data.crash_reset_lockout = false;
 }
 
 static bool getCrashResetMode(void)
 {
     CAN_crashSensorState_E crash_state = CAN_CRASHSENSORSTATE_SNA;
+
     return (CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state) == CANRX_MESSAGE_VALID) &&
            (crash_state != CAN_CRASHSENSORSTATE_OK);
 }
@@ -240,7 +242,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             {
                 data.config = (driverInput_configSelection_E)(data.config - 1);
             }
-            else if (sl_inc && data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1))
+            else if (sl_inc && (data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1)))
             {
                 data.config = (driverInput_configSelection_E)(data.config + 1);
             }
@@ -263,22 +265,22 @@ static void update_combos(const bool pg_next, const bool pg_prev,
                           const bool crash_reset_mode,
                           const bool crash_reset_lockout)
 {
-    const bool run_combo = pg_next && pg_prev;
-    const bool race_combo = sl_inc && sl_dec;
-    const bool launch_combo = tq_inc && tq_dec;
-    const bool rev_combo = race_combo && launch_combo; // highest priority
+    const bool              run_combo               = pg_next && pg_prev;
+    const bool              race_combo              = sl_inc && sl_dec;
+    const bool              launch_combo            = tq_inc && tq_dec;
+    const bool              rev_combo               = race_combo && launch_combo; // highest priority
 
     // require stability for the involved buttons to progress debounce timers
-    const bool run_stable    = run_combo    && !(db_pg_next || db_pg_prev);
-    const bool rev_stable    = rev_combo    && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
-    const bool race_stable   = race_combo   && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
-    const bool launch_stable = launch_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool              run_stable              = run_combo && !(db_pg_next || db_pg_prev);
+    const bool              rev_stable              = rev_combo && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool              race_stable             = race_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
+    const bool              launch_stable           = launch_combo && !rev_stable && !(db_sl_inc || db_sl_dec || db_tq_inc || db_tq_dec);
 
-    const drv_timer_state_E timer_state_run = drv_timer_getState(&data.run_timer);
-    const drv_timer_state_E timer_state_race = drv_timer_getState(&data.race_timer);
-    const drv_timer_state_E timer_state_reverse = drv_timer_getState(&data.reverse_timer);
+    const drv_timer_state_E timer_state_run         = drv_timer_getState(&data.run_timer);
+    const drv_timer_state_E timer_state_race        = drv_timer_getState(&data.race_timer);
+    const drv_timer_state_E timer_state_reverse     = drv_timer_getState(&data.reverse_timer);
     const drv_timer_state_E timer_state_crash_reset = drv_timer_getState(&data.crash_reset_timer);
-    const drv_timer_state_E timer_state_launch = drv_timer_getState(&data.launch_timer);
+    const drv_timer_state_E timer_state_launch      = drv_timer_getState(&data.launch_timer);
 
     if (run_stable)
     {
@@ -347,21 +349,21 @@ static void update_combos(const bool pg_next, const bool pg_prev,
         drv_timer_stop(&data.launch_timer);
     }
 
-    data.run_active = timer_state_run == DRV_TIMER_EXPIRED;
-    data.reverse_active = (!crash_reset_mode) && (timer_state_reverse == DRV_TIMER_EXPIRED);
+    data.run_active         = timer_state_run == DRV_TIMER_EXPIRED;
+    data.reverse_active     = (!crash_reset_mode) && (timer_state_reverse == DRV_TIMER_EXPIRED);
     data.crash_reset_active = crash_reset_mode && (timer_state_crash_reset == DRV_TIMER_EXPIRED);
-    data.race_active = timer_state_race == DRV_TIMER_EXPIRED;
-    data.launch_active = timer_state_launch == DRV_TIMER_EXPIRED;
+    data.race_active        = timer_state_race == DRV_TIMER_EXPIRED;
+    data.launch_active      = timer_state_launch == DRV_TIMER_EXPIRED;
 }
 
 static bool getLaunchControlActive(void)
 {
-    CAN_launchControlState_E launchControl = CAN_LAUNCHCONTROLSTATE_SNA;
-    const bool launchControlActive = (CANRX_get_signal(VEH, VCFRONT_launchControlState, &launchControl) != CANRX_MESSAGE_SNA) &&
-                                        ((launchControl == CAN_LAUNCHCONTROLSTATE_HOLDING) ||
-                                         (launchControl == CAN_LAUNCHCONTROLSTATE_SETTLING) ||
-                                         (launchControl == CAN_LAUNCHCONTROLSTATE_PRELOAD) ||
-                                         (launchControl == CAN_LAUNCHCONTROLSTATE_LAUNCH));
+    CAN_launchControlState_E launchControl       = CAN_LAUNCHCONTROLSTATE_SNA;
+    const bool               launchControlActive = (CANRX_get_signal(VEH, VCFRONT_launchControlState, &launchControl) != CANRX_MESSAGE_SNA) &&
+                                                   ((launchControl == CAN_LAUNCHCONTROLSTATE_HOLDING) ||
+                                                    (launchControl == CAN_LAUNCHCONTROLSTATE_SETTLING) ||
+                                                    (launchControl == CAN_LAUNCHCONTROLSTATE_PRELOAD) ||
+                                                    (launchControl == CAN_LAUNCHCONTROLSTATE_LAUNCH));
 
     return launchControlActive;
 }
@@ -380,11 +382,11 @@ static void update_page_nav(const bool pg_next, const bool pg_prev,
             if (drv_timer_getState(&data.nav_timer) != DRV_TIMER_RUNNING)
             {
                 // initial step immediately
-                if (pg_prev && data.page > 0)
+                if (pg_prev && (data.page > 0))
                 {
                     data.page = (driverInput_page_E)(data.page - 1);
                 }
-                else if (pg_next && data.page < (driverInput_page_E)(DRIVERINPUT_PAGE_COUNT - 1))
+                else if (pg_next && (data.page < (driverInput_page_E)(DRIVERINPUT_PAGE_COUNT - 1)))
                 {
                     data.page = (driverInput_page_E)(data.page + 1);
                 }
@@ -419,20 +421,20 @@ static void update_page_nav(const bool pg_next, const bool pg_prev,
 static void driverInput_100Hz(void)
 {
     // Pressed levels
-    const bool pg_next = drv_userInput_buttonPressed(BUTTON_PAGE_NEXT);
-    const bool pg_prev = drv_userInput_buttonPressed(BUTTON_PAGE_PREV);
-    const bool tq_inc  = drv_userInput_buttonPressed(BUTTON_TORQUE_INC);
-    const bool tq_dec  = drv_userInput_buttonPressed(BUTTON_TORQUE_DEC);
-    const bool sl_inc  = drv_userInput_buttonPressed(BUTTON_SLIP_INC);
-    const bool sl_dec  = drv_userInput_buttonPressed(BUTTON_SLIP_DEC);
+    const bool pg_next               = drv_userInput_buttonPressed(BUTTON_PAGE_NEXT);
+    const bool pg_prev               = drv_userInput_buttonPressed(BUTTON_PAGE_PREV);
+    const bool tq_inc                = drv_userInput_buttonPressed(BUTTON_TORQUE_INC);
+    const bool tq_dec                = drv_userInput_buttonPressed(BUTTON_TORQUE_DEC);
+    const bool sl_inc                = drv_userInput_buttonPressed(BUTTON_SLIP_INC);
+    const bool sl_dec                = drv_userInput_buttonPressed(BUTTON_SLIP_DEC);
 
     // Debounce states from lower layer
-    const bool db_pg_next = drv_userInput_buttonInDebounce(BUTTON_PAGE_NEXT);
-    const bool db_pg_prev = drv_userInput_buttonInDebounce(BUTTON_PAGE_PREV);
-    const bool db_tq_inc  = drv_userInput_buttonInDebounce(BUTTON_TORQUE_INC);
-    const bool db_tq_dec  = drv_userInput_buttonInDebounce(BUTTON_TORQUE_DEC);
-    const bool db_sl_inc  = drv_userInput_buttonInDebounce(BUTTON_SLIP_INC);
-    const bool db_sl_dec  = drv_userInput_buttonInDebounce(BUTTON_SLIP_DEC);
+    const bool db_pg_next            = drv_userInput_buttonInDebounce(BUTTON_PAGE_NEXT);
+    const bool db_pg_prev            = drv_userInput_buttonInDebounce(BUTTON_PAGE_PREV);
+    const bool db_tq_inc             = drv_userInput_buttonInDebounce(BUTTON_TORQUE_INC);
+    const bool db_tq_dec             = drv_userInput_buttonInDebounce(BUTTON_TORQUE_DEC);
+    const bool db_sl_inc             = drv_userInput_buttonInDebounce(BUTTON_SLIP_INC);
+    const bool db_sl_dec             = drv_userInput_buttonInDebounce(BUTTON_SLIP_DEC);
     const bool combo_buttons_pressed = pg_next || pg_prev || tq_inc || tq_dec || sl_inc || sl_dec;
 
     if (pg_next || pg_prev || tq_inc || tq_dec || sl_inc || sl_dec)
@@ -440,8 +442,8 @@ static void driverInput_100Hz(void)
         app_vehicleState_delaySleep(SLEEP_TIMEOUT_MS);
     }
 
-    bool status[DRIVERINPUT_REQUEST_COUNT] = { false };
-    const bool crash_reset_mode = getCrashResetMode();
+    bool       status[DRIVERINPUT_REQUEST_COUNT] = { false };
+    const bool crash_reset_mode                  = getCrashResetMode();
 
     update_combos(pg_next, pg_prev, tq_inc, tq_dec, sl_inc, sl_dec,
                   db_pg_next, db_pg_prev, db_tq_inc, db_tq_dec, db_sl_inc, db_sl_dec,
@@ -476,7 +478,7 @@ static void driverInput_100Hz(void)
 }
 
 const ModuleDesc_S driverInput_desc = {
-    .moduleInit = &driverInput_init,
+    .moduleInit        = &driverInput_init,
     .periodic100Hz_CLK = &driverInput_100Hz,
 };
 
@@ -491,8 +493,8 @@ bool driverInput_getDigital(driverInput_inputDigital_E input)
 
 CAN_screenPage_E driverInput_getScreenCAN(void)
 {
-    CAN_screenPage_E page = CAN_SCREENPAGE_SNA;
-    const bool launchControlActive = getLaunchControlActive();
+    CAN_screenPage_E page                = CAN_SCREENPAGE_SNA;
+    const bool       launchControlActive = getLaunchControlActive();
 
     if (launchControlActive)
     {
@@ -505,18 +507,23 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
             case DRIVERINPUT_PAGE_HOME:
                 page = CAN_SCREENPAGE_HOME;
                 break;
+
             case DRIVERINPUT_PAGE_BUTTONS:
                 page = CAN_SCREENPAGE_BUTTONS;
                 break;
+
             case DRIVERINPUT_PAGE_DATA:
                 page = CAN_SCREENPAGE_DATA;
                 break;
+
             case DRIVERINPUT_PAGE_CONFIG:
                 page = CAN_SCREENPAGE_CONFIG;
                 break;
+
             case DRIVERINPUT_PAGE_LAUNCH:
                 page = CAN_SCREENPAGE_LAUNCH;
                 break;
+
             default:
                 break;
         }
@@ -536,9 +543,11 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
             case DRIVERINPUT_CONFIG_CALIB_DYNAMICS:
                 config = CAN_CONFIGSELECTION_CALIB_DYNAMICS;
                 break;
+
             case DRIVERINPUT_CONFIG_VEHICLE_CONTROL:
                 config = CAN_CONFIGSELECTION_VEHICLE_CONTROL;
                 break;
+
             default:
                 break;
         }

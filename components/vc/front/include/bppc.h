@@ -1,9 +1,9 @@
 /**
-* @file bppc.h
-* @brief Module header for the Brake Pedal Plsuibility Check
- * @note Pedal positon is a float percentage between 0.0f and 1.0f where 
+ * @file bppc.h
+ * @brief Module header for the Brake Pedal Plsuibility Check
+ * @note Pedal positon is a float percentage between 0.0f and 1.0f where
  *       0.0f is 0% and 1.0f is 100%
-*/
+ */
 
 #pragma once
 
@@ -24,7 +24,7 @@ typedef enum
     BPPC_OK,
     BPPC_FAULT,
     BPPC_FAULT_LATCHED,
-    BPPC_ERROR, // Sensor failure
+    BPPC_ERROR,    // Sensor failure
 } bppc_state_E;
 
 /******************************************************************************

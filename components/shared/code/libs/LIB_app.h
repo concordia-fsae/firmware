@@ -12,10 +12,10 @@
 #include "FeatureDefines_generated.h"
 
 #if FEATURE_IS_ENABLED(APP_LIB_ENABLED)
-#include <stdint.h>
-#include <stdbool.h>
+# include <stdbool.h>
+# include <stdint.h>
 
-#define FDEF_TO_DID_RESPONSE(fdef) (fdef - 2U)
+# define FDEF_TO_DID_RESPONSE(fdef)    (fdef - 2U)
 
 /******************************************************************************
  *                              E X T E R N S
@@ -37,9 +37,9 @@ typedef struct
     const uint32_t appCrcLocation;
     const uint16_t appComponentId;
     const uint16_t appVariantId;
-#if FEATURE_IS_ENABLED(APP_NODE_ID)
-    const uint8_t appNodeId;
-#endif // APP_NODE_ID
+# if FEATURE_IS_ENABLED(APP_NODE_ID)
+    const uint8_t  appNodeId;
+# endif // APP_NODE_ID
 } lib_app_appDesc_S;
 
 typedef enum
@@ -55,9 +55,9 @@ typedef enum
     APP_VALID_CRC = 0U,
     APP_VALID_VARIANT_ID,
     APP_VALID_COMPONENT_ID,
-#if FEATURE_IS_ENABLED(APP_NODE_ID)
+# if FEATURE_IS_ENABLED(APP_NODE_ID)
     APP_VALID_NODE_ID,
-#endif // APP_NODE_ID
+# endif // APP_NODE_ID
     APP_VALID_COUNT,
 } lib_app_appValid_E;
 

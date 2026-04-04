@@ -12,14 +12,14 @@
 #include "UDS.h"
 
 // other includes
-#include "Yamcan.h"
 #include "FreeRTOS.h"
 #include "HW_can.h"
+#include "lib_uds.h"
 #include "ModuleDesc.h"
 #include "task.h"
 #include "Types.h"
-#include "lib_uds.h"
 #include "Utility.h"
+#include "Yamcan.h"
 
 // system includes
 #include <string.h>

@@ -8,37 +8,37 @@
  ******************************************************************************/
 
 #include "crashSensor.h"
+#include "drv_inputAD.h"
+#include "drv_outputAD.h"
 #include "FreeRTOS.h"
 #include "imu.h"
 #include "math.h"
 #include "powerManager.h"
 #include "stdbool.h"
 #include "task.h"
-#include "drv_inputAD.h"
-#include "drv_outputAD.h"
 
-#include <string.h>
-#include "app_vehicleState.h"
 #include "app_faultManager.h"
+#include "app_vehicleState.h"
 #include "drv_timer.h"
 #include "Yamcan.h"
+#include <string.h>
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define INIT_BOOT_DELAY                    (500)
+#define INIT_BOOT_DELAY                       (500)
 
-#define CRASH_THRESH_MPS                   (8 * GRAVITY)
-#define CRASH_THRESH_CONSECUTIVE_CYCLES    (3)
+#define CRASH_THRESH_MPS                      (8 * GRAVITY)
+#define CRASH_THRESH_CONSECUTIVE_CYCLES       (3)
 
-#define EXIT_CRASH_THRESH_G                (GRAVITY * 1.25f)
-#define EXIT_CRASH_THRESH_DEG_FROM_GRAVITY (25.0f)
+#define EXIT_CRASH_THRESH_G                   (GRAVITY * 1.25f)
+#define EXIT_CRASH_THRESH_DEG_FROM_GRAVITY    (25.0f)
 
-#define TASK_WAIT_DURATION_MS (15)
-#define IMU_TIMEOUT_DURATION  (50)
-#define CRASH_THRESH_MISSED_CYCLES (IMU_TIMEOUT_DURATION / TASK_WAIT_DURATION_MS)
-#define IMU_CALIBRATION_TIMEOUT_DURATION  (1000)
+#define TASK_WAIT_DURATION_MS                 (15)
+#define IMU_TIMEOUT_DURATION                  (50)
+#define CRASH_THRESH_MISSED_CYCLES            (IMU_TIMEOUT_DURATION / TASK_WAIT_DURATION_MS)
+#define IMU_CALIBRATION_TIMEOUT_DURATION      (1000)
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -47,11 +47,11 @@
 static struct
 {
     crashSensor_state_E sensorState;
-    float32_t accelMax;
-    float32_t accelTripped;
-    uint8_t   missedCycles;
-    drv_timer_S calibrationTimer;
-} cs;
+    float32_t           accelMax;
+    float32_t           accelTripped;
+    uint8_t             missedCycles;
+    drv_timer_S         calibrationTimer;
+}                   cs;
 
 static TaskHandle_t crashSensorTaskHandle = NULL;
 
@@ -62,10 +62,11 @@ static TaskHandle_t crashSensorTaskHandle = NULL;
 static bool vehicleStateOk(const float32_t currentAccel)
 {
     const float32_t angleFromGravity = imu_getAngleFromGravity();
-    bool ret = false;
+    bool            ret              = false;
 
     if ((currentAccel < EXIT_CRASH_THRESH_G) &&
-        (angleFromGravity < EXIT_CRASH_THRESH_DEG_FROM_GRAVITY))
+        (angleFromGravity < EXIT_CRASH_THRESH_DEG_FROM_GRAVITY)
+        )
     {
         ret = true;
     }
@@ -98,10 +99,13 @@ CAN_crashSensorState_E crashSensor_getStateCAN(void)
     {
         case CRASHSENSOR_OK:
             return CAN_CRASHSENSORSTATE_OK;
+
         case CRASHSENSOR_CRASHED:
             return CAN_CRASHSENSORSTATE_CRASHED;
+
         case CRASHSENSOR_ERROR:
             return CAN_CRASHSENSORSTATE_ERROR;
+
         case CRASHSENSOR_INIT:
         default:
             return CAN_CRASHSENSORSTATE_SNA;
@@ -132,7 +136,7 @@ void crashSensor_task(void)
         const app_vehicleState_state_E nvmVehiclestate = crashState_data.vehicleState;
         if (nvmVehiclestate == VEHICLESTATE_TS_RUN)
         {
-            cs.sensorState = CRASHSENSOR_IMPLAUSIBILITY;
+            cs.sensorState               = CRASHSENSOR_IMPLAUSIBILITY;
             app_faultManager_setFaultState(FM_FAULT_VCPDU_CRASHIMPLAUSIBILITY, true);
             crashState_data.crashLatched = true;
             lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
@@ -157,7 +161,7 @@ void crashSensor_task(void)
         if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(TASK_WAIT_DURATION_MS)))
         {
             const float32_t vehicleAccel = imu_getAccelNormPeak();
-            const bool crashEvent = imu_getCrashEvent();
+            const bool      crashEvent   = imu_getCrashEvent();
             cs.missedCycles = 0;
 
             drv_timer_stop(&cs.calibrationTimer);
@@ -167,9 +171,9 @@ void crashSensor_task(void)
                 {
                     crashState_data.crashLatched = true;
                     lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
-                    cs.accelTripped = vehicleAccel;
-                    cs.accelMax = vehicleAccel;
-                    cs.sensorState = CRASHSENSOR_CRASHED;
+                    cs.accelTripped              = vehicleAccel;
+                    cs.accelMax                  = vehicleAccel;
+                    cs.sensorState               = CRASHSENSOR_CRASHED;
                 }
                 else if (imu_isFaulted())
                 {
@@ -179,18 +183,18 @@ void crashSensor_task(void)
             else
             {
                 const bool driverResetting = drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DRIVER_CRASH_RESET) == DRV_IO_ACTIVE;
-                const bool vehicleOk = vehicleStateOk(vehicleAccel);
+                const bool vehicleOk       = vehicleStateOk(vehicleAccel);
 
-                cs.accelMax = vehicleAccel > cs.accelMax ? vehicleAccel : cs.accelMax;
+                cs.accelMax = (vehicleAccel > cs.accelMax) ? vehicleAccel : cs.accelMax;
 
                 if (driverResetting && vehicleOk && !imu_isFaulted())
                 {
-                    cs.sensorState = CRASHSENSOR_OK;
+                    cs.sensorState               = CRASHSENSOR_OK;
                     crashState_data.crashLatched = false;
                     app_faultManager_setFaultState(FM_FAULT_VCPDU_CRASHIMPLAUSIBILITY, false);
                     lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
-                    cs.accelTripped = 0.0f;
-                    cs.accelMax = 0.0f;
+                    cs.accelTripped              = 0.0f;
+                    cs.accelMax                  = 0.0f;
                 }
             }
         }
@@ -207,7 +211,7 @@ void crashSensor_task(void)
         }
 
 #if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR_CONTROL)
-        const drv_io_activeState_E safetyState = cs.sensorState == CRASHSENSOR_OK ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+        const drv_io_activeState_E     safetyState         = (cs.sensorState == CRASHSENSOR_OK) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, safetyState);
 #endif
         const app_vehicleState_state_E currentVehicleState = app_vehicleState_getState();

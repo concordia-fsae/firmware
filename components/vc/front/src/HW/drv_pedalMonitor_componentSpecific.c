@@ -1,7 +1,7 @@
 /**
  * @file drv_pedalMonitor_componentSpecific.c
  * @brief Header file for pedal monitor
- * @note Pedal positon is a float percentage between 0.0f and 1.0f where 
+ * @note Pedal positon is a float percentage between 0.0f and 1.0f where
  *       0.0f is 0% and 1.0f is 100%
  */
 
@@ -34,7 +34,7 @@ lib_interpolation_point_S mapping_apps1[] = {
     { .x = 1.353f, .y = 0.5f, },
     { .x = 1.403f, .y = .45f, },
     { .x = 1.423f, .y = 0.4f, },
-    { .x = 1.44f, .y = .35f, },
+    { .x =  1.44f, .y = .35f, },
     { .x = 1.488f, .y = 0.3f, },
     { .x = 1.536f, .y = .25f, },
     { .x = 1.583f, .y = 0.2f, },
@@ -49,27 +49,27 @@ lib_interpolation_point_S mapping_apps1[] = {
  * @member y [%] Pedal position 0.0f-1.0f | 0.0f = 0%, 1.0f = 100%
  */
 lib_interpolation_point_S mapping_apps2[] = {
-    { .x = 1.517f, .y = 1.0f, },
-    { .x = 1.553f, .y = .95f, },
-    { .x = 1.589f, .y = 0.9f, },
-    { .x = 1.612f, .y = .85f, },
-    { .x = 1.633f, .y = 0.8f, },
-    { .x = 1.657f, .y = .75f, },
-    { .x = 1.687f, .y = 0.7f, },
-    { .x = 1.698f, .y = .65f, },
-    { .x = 1.708f, .y = 0.6f, },
-    { .x = 1.725f, .y = .55f, },
-    { .x = 1.751f, .y = 0.5f, },
-    { .x = 1.779f, .y = .45f, },
-    { .x = 1.794f, .y = 0.4f, },
-    { .x = 1.802f, .y = .35f, },
-    { .x = 1.833f, .y = 0.3f, },
-    { .x = 1.862f, .y = 0.25f, },
-    { .x = 1.892f, .y = 0.2f, },
-    { .x = 1.910f, .y = .15f, },
-    { .x = 1.924f, .y = 0.1f, },
-    { .x = 1.939f, .y = 0.05f},
-    { .x = 1.952f, .y = 0.0f, },
+    { .x = 1.517f, .y =  1.0f,},
+    { .x = 1.553f, .y =  .95f,},
+    { .x = 1.589f, .y =  0.9f,},
+    { .x = 1.612f, .y =  .85f,},
+    { .x = 1.633f, .y =  0.8f,},
+    { .x = 1.657f, .y =  .75f,},
+    { .x = 1.687f, .y =  0.7f,},
+    { .x = 1.698f, .y =  .65f,},
+    { .x = 1.708f, .y =  0.6f,},
+    { .x = 1.725f, .y =  .55f,},
+    { .x = 1.751f, .y =  0.5f,},
+    { .x = 1.779f, .y =  .45f,},
+    { .x = 1.794f, .y =  0.4f,},
+    { .x = 1.802f, .y =  .35f,},
+    { .x = 1.833f, .y =  0.3f,},
+    { .x = 1.862f, .y = 0.25f,},
+    { .x = 1.892f, .y =  0.2f,},
+    { .x = 1.910f, .y =  .15f,},
+    { .x = 1.924f, .y =  0.1f,},
+    { .x = 1.939f, .y =0.05f },
+    { .x = 1.952f, .y =  0.0f,},
 };
 
 // TODO: Calibrate
@@ -77,69 +77,69 @@ lib_interpolation_point_S mapping_apps2[] = {
  * @member x [V] Pedal pot voltage
  * @member y [%] Pedal position 0.0f-1.0f | 0.0f = 0%, 1.0f = 100%
  */
-lib_interpolation_point_S mapping_brake_pot[] = {
-    { .x = 0.5f,   .y = 0.0f,  },
-    { .x = 1.5f,   .y = 1.0f,  },
+lib_interpolation_point_S        mapping_brake_pot[] = {
+    { .x = 0.5f, .y = 0.0f, },
+    { .x = 1.5f, .y = 1.0f, },
 };
 
-lib_interpolation_point_S mapping_brake_pr[] = {
-    { .x = 0.3f,   .y = 0.0f,  },
-    { .x = 2.7f,   .y = 1.0f,  },
+lib_interpolation_point_S        mapping_brake_pr[] = {
+    { .x = 0.3f, .y = 0.0f, },
+    { .x = 2.7f, .y = 1.0f, },
 };
 
 drv_pedalMonitor_channelConfig_S drv_pedalMonitor_channels[DRV_PEDALMONITOR_CHANNEL_COUNT] = {
-    [DRV_PEDALMONITOR_APPS1] = {
-        .type = DRV_PEDALMONITOR_TYPE_ANALOG,
-        .input.analog = {
-            .channel = DRV_INPUTAD_ANALOG_APPS_P1,
-            .fault_high = 2.5f,
-            .fault_low = 0.5f,
-            .pedal_map = {
-                .points = (lib_interpolation_point_S*)&mapping_apps1,
-                .number_points = COUNTOF(mapping_apps1),
-                .saturate_left = true,
+    [DRV_PEDALMONITOR_APPS1] =     {
+        .type         = DRV_PEDALMONITOR_TYPE_ANALOG,
+        .input.analog =            {
+            .channel    = DRV_INPUTAD_ANALOG_APPS_P1,
+            .fault_high =                                       2.5f,
+            .fault_low  =                                       0.5f,
+            .pedal_map  =          {
+                .points         = (lib_interpolation_point_S*)&mapping_apps1,
+                .number_points  = COUNTOF(mapping_apps1),
+                .saturate_left  = true,
                 .saturate_right = true,
             },
         }
     },
-    [DRV_PEDALMONITOR_APPS2] = {
-        .type = DRV_PEDALMONITOR_TYPE_ANALOG,
-        .input.analog = {
-            .channel = DRV_INPUTAD_ANALOG_APPS_P2,
-            .fault_high = 2.5f,
-            .fault_low = 0.5f,
-            .pedal_map = {
-                .points = (lib_interpolation_point_S*)&mapping_apps2,
-                .number_points = COUNTOF(mapping_apps2),
-                .saturate_left = true,
+    [DRV_PEDALMONITOR_APPS2] =     {
+        .type         = DRV_PEDALMONITOR_TYPE_ANALOG,
+        .input.analog =            {
+            .channel    = DRV_INPUTAD_ANALOG_APPS_P2,
+            .fault_high =                                       2.5f,
+            .fault_low  =                                       0.5f,
+            .pedal_map  =          {
+                .points         = (lib_interpolation_point_S*)&mapping_apps2,
+                .number_points  = COUNTOF(mapping_apps2),
+                .saturate_left  = true,
                 .saturate_right = true,
             },
         }
     },
     [DRV_PEDALMONITOR_BRAKE_POT] = {
-        .type = DRV_PEDALMONITOR_TYPE_ANALOG,
-        .input.analog = {
-            .channel = DRV_INPUTAD_ANALOG_BR_POT,
-            .fault_high = 0.0f,
-            .fault_low = 0.0f,
-            .pedal_map = {
-                .points = (lib_interpolation_point_S*)&mapping_brake_pot,
-                .number_points = COUNTOF(mapping_brake_pot),
-                .saturate_left = true,
+        .type         = DRV_PEDALMONITOR_TYPE_ANALOG,
+        .input.analog =            {
+            .channel    = DRV_INPUTAD_ANALOG_BR_POT,
+            .fault_high =                                           0.0f,
+            .fault_low  =                                           0.0f,
+            .pedal_map  =          {
+                .points         = (lib_interpolation_point_S*)&mapping_brake_pot,
+                .number_points  = COUNTOF(mapping_brake_pot),
+                .saturate_left  = true,
                 .saturate_right = true,
             },
         }
     },
-    [DRV_PEDALMONITOR_BRAKE_PR] = {
-        .type = DRV_PEDALMONITOR_TYPE_ANALOG,
-        .input.analog = {
-            .channel = DRV_INPUTAD_ANALOG_BR_PR,
-            .fault_high = 2.85f,
-            .fault_low = 0.15f,
-            .pedal_map = {
-                .points = (lib_interpolation_point_S*)&mapping_brake_pr,
-                .number_points = COUNTOF(mapping_brake_pr),
-                .saturate_left = true,
+    [DRV_PEDALMONITOR_BRAKE_PR] =  {
+        .type         = DRV_PEDALMONITOR_TYPE_ANALOG,
+        .input.analog =            {
+            .channel    = DRV_INPUTAD_ANALOG_BR_PR,
+            .fault_high =                                         2.85f,
+            .fault_low  =                                         0.15f,
+            .pedal_map  =          {
+                .points         = (lib_interpolation_point_S*)&mapping_brake_pr,
+                .number_points  = COUNTOF(mapping_brake_pr),
+                .saturate_left  = true,
                 .saturate_right = true,
             },
         }

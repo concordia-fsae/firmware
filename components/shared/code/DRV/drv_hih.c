@@ -45,16 +45,17 @@ bool drv_hih_init(drv_hih_S* hih_chip)
  */
 bool drv_hih_getData(drv_hih_S* hih_chip)
 {
-    uint8_t rdat[4] = {0x00};
+    uint8_t rdat[4] = { 0x00 };
+
     if (hih_chip->data.state == DRV_HIH_MEASURING)
     {
         if (HW_I2C_masterRead(hih_chip->dev, (uint8_t*)&rdat, 4, 10))
         {
-            hih_chip->data.rh = ((rdat[0] & 0x3f) << 8) | rdat[1];
-            hih_chip->data.temp = (rdat[2] << 6) | (rdat[3] >> 2);
-            hih_chip->data.state = DRV_HIH_WAITING;
-            hih_chip->temperature = ((float32_t)hih_chip->data.temp)/16382*165-40;
-            hih_chip->rh = ((float32_t)hih_chip->data.rh)/16382*100;
+            hih_chip->data.rh     = ((rdat[0] & 0x3f) << 8) | rdat[1];
+            hih_chip->data.temp   = (rdat[2] << 6) | (rdat[3] >> 2);
+            hih_chip->data.state  = DRV_HIH_WAITING;
+            hih_chip->temperature = ((float32_t)hih_chip->data.temp) / 16382 * 165 - 40;
+            hih_chip->rh          = ((float32_t)hih_chip->data.rh) / 16382 * 100;
             return true;
         }
     }

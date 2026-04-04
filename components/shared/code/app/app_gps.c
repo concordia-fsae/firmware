@@ -7,30 +7,30 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "app_faultManager.h"
 #include "app_gps.h"
+#include "drv_outputAD.h"
+#include "drv_timer.h"
+#include "FreeRTOS.h"
+#include "HW_gpio.h"
+#include "HW_uart.h"
+#include "lib_buffer.h"
+#include "lwgps.h"
+#include "task.h"
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lwgps.h"
-#include "drv_timer.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include "lib_buffer.h"
-#include "app_faultManager.h"
-#include "HW_uart.h"
-#include "HW_gpio.h"
-#include "drv_outputAD.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUFFER_SIZE 2048U
-#define MAX_NMEA_SENTENCE 82U
-#define GPS_TIMEOUT_MS 2000U
+#define BUFFER_SIZE           2048U
+#define MAX_NMEA_SENTENCE     82U
+#define GPS_TIMEOUT_MS        2000U
 
-#define GPS_DEVICE_ERROR FM_FAULT_VCFRONT_GPSDEVICEERROR
-#define GPS_DEVICE_OVERRUN FM_FAULT_VCFRONT_GPSOVERRUN
+#define GPS_DEVICE_ERROR      FM_FAULT_VCFRONT_GPSDEVICEERROR
+#define GPS_DEVICE_OVERRUN    FM_FAULT_VCFRONT_GPSOVERRUN
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -38,30 +38,30 @@
 
 static struct
 {
-    app_gps_pos_S pos;
+    app_gps_pos_S     pos;
     app_gps_heading_S heading;
-    app_gps_time_S time;
+    app_gps_time_S    time;
     app_gps_pairmsg_S pairmsg;
 
-    drv_timer_S timeout;
+    drv_timer_S       timeout;
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
     LIB_BUFFER_CIRC_CREATE(dmaBuffer, volatile uint8_t, BUFFER_SIZE);
     LIB_BUFFER_FIFO_CREATE(sentence, uint8_t, MAX_NMEA_SENTENCE);
-    lwgps_t currentGPS;
-    uint16_t crcFailures;
-    uint16_t invalidTransactions;
-    uint16_t samples;
-    uint16_t sentenceCountGga;
-    uint16_t sentenceCountGsa;
-    uint16_t sentenceCountGsv;
-    uint16_t sentenceCountRmc;
-    uint16_t sentenceCountPairMsg;
+    lwgps_t           currentGPS;
+    uint16_t          crcFailures;
+    uint16_t          invalidTransactions;
+    uint16_t          samples;
+    uint16_t          sentenceCountGga;
+    uint16_t          sentenceCountGsa;
+    uint16_t          sentenceCountGsv;
+    uint16_t          sentenceCountRmc;
+    uint16_t          sentenceCountPairMsg;
     volatile uint16_t uartErrorOreCount;
     volatile uint16_t uartErrorFeCount;
     volatile uint16_t uartErrorNeCount;
     volatile uint16_t uartErrorPeCount;
-#endif
+#endif // if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
 } gps;
 
 /******************************************************************************
@@ -76,15 +76,19 @@ static void recordNonPairmsgCount(lwgps_statement_t statement)
         case STAT_GGA:
             gps.sentenceCountGga++;
             break;
+
         case STAT_GSA:
             gps.sentenceCountGsa++;
             break;
+
         case STAT_GSV:
             gps.sentenceCountGsv++;
             break;
+
         case STAT_RMC:
             gps.sentenceCountRmc++;
             break;
+
         default:
             break;
     }
@@ -93,26 +97,26 @@ static void recordNonPairmsgCount(lwgps_statement_t statement)
 static void updateGPS(void)
 {
     taskENTER_CRITICAL();
-    gps.pos.lat = gps.currentGPS.latitude;
-    gps.pos.lon = gps.currentGPS.longitude;
-    gps.pos.alt = gps.currentGPS.altitude;
+    gps.pos.lat          = gps.currentGPS.latitude;
+    gps.pos.lon          = gps.currentGPS.longitude;
+    gps.pos.alt          = gps.currentGPS.altitude;
 
-    gps.heading.course = gps.currentGPS.course;
+    gps.heading.course   = gps.currentGPS.course;
     gps.heading.speedMps = lwgps_to_speed(gps.currentGPS.speed, LWGPS_SPEED_MPS);
 
-    gps.time.date = gps.currentGPS.date;
-    gps.time.month = gps.currentGPS.month;
-    gps.time.year = gps.currentGPS.year;
-    gps.time.hours = gps.currentGPS.hours;
-    gps.time.seconds = gps.currentGPS.seconds;
+    gps.time.date        = gps.currentGPS.date;
+    gps.time.month       = gps.currentGPS.month;
+    gps.time.year        = gps.currentGPS.year;
+    gps.time.hours       = gps.currentGPS.hours;
+    gps.time.seconds     = gps.currentGPS.seconds;
     taskEXIT_CRITICAL();
 }
 
 static bool parsePairmsgUtcMs(const char* field, uint32_t* utcMs)
 {
-    uint32_t hour = 0U;
-    uint32_t minute = 0U;
-    uint32_t second = 0U;
+    uint32_t hour        = 0U;
+    uint32_t minute      = 0U;
+    uint32_t second      = 0U;
     uint32_t millisecond = 0U;
 
     if ((field == NULL) || (field[0] == '\0'))
@@ -122,12 +126,13 @@ static bool parsePairmsgUtcMs(const char* field, uint32_t* utcMs)
 
     if (!(isdigit((unsigned char)field[0]) && isdigit((unsigned char)field[1]) &&
           isdigit((unsigned char)field[2]) && isdigit((unsigned char)field[3]) &&
-          isdigit((unsigned char)field[4]) && isdigit((unsigned char)field[5])))
+          isdigit((unsigned char)field[4]) && isdigit((unsigned char)field[5]))
+        )
     {
         return false;
     }
 
-    hour = (uint32_t)((field[0] - '0') * 10 + (field[1] - '0'));
+    hour   = (uint32_t)((field[0] - '0') * 10 + (field[1] - '0'));
     minute = (uint32_t)((field[2] - '0') * 10 + (field[3] - '0'));
     second = (uint32_t)((field[4] - '0') * 10 + (field[5] - '0'));
 
@@ -139,12 +144,12 @@ static bool parsePairmsgUtcMs(const char* field, uint32_t* utcMs)
     const char* dot = strchr(field, '.');
     if (dot != NULL)
     {
-        uint32_t scale = 100U;
-        const char* p = dot + 1;
+        uint32_t  scale = 100U;
+        const char* p   = dot + 1;
         while ((*p != '\0') && isdigit((unsigned char)*p) && (scale > 0U))
         {
             millisecond += (uint32_t)(*p - '0') * scale;
-            scale /= 10U;
+            scale       /= 10U;
             p++;
         }
     }
@@ -155,8 +160,8 @@ static bool parsePairmsgUtcMs(const char* field, uint32_t* utcMs)
 
 static bool parsePairmsgChecksum(const char* payload, const char* checksum)
 {
-    uint8_t calc = 0U;
-    const char* p = payload;
+    uint8_t   calc = 0U;
+    const char* p  = payload;
 
     while ((p != NULL) && (*p != '\0'))
     {
@@ -189,9 +194,9 @@ static bool parsePairmsgChecksum(const char* payload, const char* checksum)
 
 static bool parsePairmsg(const uint8_t* sentence, size_t len)
 {
-    char buffer[MAX_NMEA_SENTENCE + 1U];
-    size_t copyLen = len;
-    char* cursor = NULL;
+    char   buffer[MAX_NMEA_SENTENCE + 1U];
+    size_t copyLen  = len;
+    char   * cursor = NULL;
 
     if (copyLen > MAX_NMEA_SENTENCE)
     {
@@ -271,11 +276,11 @@ static bool parsePairmsg(const uint8_t* sentence, size_t len)
         return true;
     }
 
-    const long messageId = strtol(token, NULL, 10);
-    uint32_t utcMs = 0U;
-    uint8_t drStage = gps.pairmsg.drStage;
-    uint8_t dynamicStatus = gps.pairmsg.dynamicStatus;
-    uint8_t alarmStatus = gps.pairmsg.alarmStatus;
+    const long messageId     = strtol(token, NULL, 10);
+    uint32_t   utcMs         = 0U;
+    uint8_t    drStage       = gps.pairmsg.drStage;
+    uint8_t    dynamicStatus = gps.pairmsg.dynamicStatus;
+    uint8_t    alarmStatus   = gps.pairmsg.alarmStatus;
 
     token = cursor;
     if (token != NULL)
@@ -319,9 +324,9 @@ static bool parsePairmsg(const uint8_t* sentence, size_t len)
             return true;
         }
 
-        drStage = (uint8_t)strtoul(token, NULL, 10);
+        drStage             = (uint8_t)strtoul(token, NULL, 10);
         taskENTER_CRITICAL();
-        gps.pairmsg.utcMs = utcMs;
+        gps.pairmsg.utcMs   = utcMs;
         gps.pairmsg.drStage = drStage;
         taskEXIT_CRITICAL();
         return true;
@@ -349,7 +354,7 @@ static bool parsePairmsg(const uint8_t* sentence, size_t len)
         }
         dynamicStatus = (uint8_t)strtoul(token, NULL, 10);
 
-        token = cursor;
+        token         = cursor;
         if (token != NULL)
         {
             comma = strchr(token, ',');
@@ -368,12 +373,12 @@ static bool parsePairmsg(const uint8_t* sentence, size_t len)
             gps.invalidTransactions++;
             return true;
         }
-        alarmStatus = (uint8_t)strtoul(token, NULL, 10);
+        alarmStatus               = (uint8_t)strtoul(token, NULL, 10);
 
         taskENTER_CRITICAL();
-        gps.pairmsg.utcMs = utcMs;
+        gps.pairmsg.utcMs         = utcMs;
         gps.pairmsg.dynamicStatus = dynamicStatus;
-        gps.pairmsg.alarmStatus = alarmStatus;
+        gps.pairmsg.alarmStatus   = alarmStatus;
         taskEXIT_CRITICAL();
         return true;
     }
@@ -411,7 +416,7 @@ static void parse(uint8_t* sentence, size_t len)
         gps.samples++;
     }
 }
-#endif
+#endif // if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -453,17 +458,17 @@ void app_gps_getPairmsg(app_gps_pairmsg_S* pairmsg)
 
 app_gps_pos_S* app_gps_getPosRef(void)
 {
-     return &gps.pos;
+    return &gps.pos;
 }
 
 app_gps_heading_S* app_gps_getHeadingRef(void)
 {
-     return &gps.heading;
+    return &gps.heading;
 }
 
 app_gps_time_S* app_gps_getTimeRef(void)
 {
-     return &gps.time;
+    return &gps.time;
 }
 
 app_gps_pairmsg_S* app_gps_getPairmsgRef(void)
@@ -477,6 +482,7 @@ bool app_gps_isValid(void)
                      (gps.pairmsg.drStage != 0x00U) &&
                      (gps.pairmsg.drStage != 0x01U) &&
                      (gps.pairmsg.dynamicStatus != 0x00U);
+
     return ret;
 }
 
@@ -602,7 +608,7 @@ static void app_gps_periodic_100Hz(void)
 
     const bool gpsValid = drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING;
 
-    app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid);
+    app_faultManager_setFaultState(GPS_DEVICE_ERROR,   !gpsValid);
     app_faultManager_setFaultState(GPS_DEVICE_OVERRUN, overrun);
 #else // FEATURE_GPSTRANSCEIVER
     // TODO: Implement GPS listener
@@ -610,6 +616,6 @@ static void app_gps_periodic_100Hz(void)
 }
 
 const ModuleDesc_S app_gps_desc = {
-    .moduleInit = &app_gps_init,
+    .moduleInit        = &app_gps_init,
     .periodic100Hz_CLK = &app_gps_periodic_100Hz,
 };

@@ -1,7 +1,7 @@
 /**
-* @file drv_vn9008_componentSpecific.h
-* @brief Source file for the component specific VN9008 driver
-*/
+ * @file drv_vn9008_componentSpecific.h
+ * @brief Source file for the component specific VN9008 driver
+ */
 
 #pragma once
 
