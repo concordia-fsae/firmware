@@ -242,6 +242,15 @@ void UDS_extendBootTimeout(uint8_t timeoutMs)
                         : uds.appBootTimer + timeoutMs;
 }
 
+/**
+ * UDS_downloadingBinary
+ * @brief Check if the server is currently downloading a binary
+ */
+bool UDS_downloadingBinary(void)
+{
+    return uds.bit.downloadStarted;
+}
+
 
 /******************************************************************************
  *                U D S   L I B R A R Y   C A L L B A C K S
