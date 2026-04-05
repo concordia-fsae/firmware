@@ -604,3 +604,40 @@ signals:
         max: 5.12
       resolution: 0.005
     continuous: true
+
+  dbgThermVoltage1:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 1
+
+  dbgThermVoltage2:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 2
+
+  dbgThermVoltage3:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 3
+
+  dbgThermVoltage4:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 4
+
+  dbgThermVoltage5:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 5
+
+  dbgThermVoltage6:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 6
+
+  dbgThermVoltage7:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 7
+
+  dbgThermVoltage8:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 8
+
+  dbgThermVoltage9:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 9
+

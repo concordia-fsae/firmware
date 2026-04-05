@@ -86,6 +86,19 @@
 #if APP_VARIANT_ID == 1U
 #define set_tempBoard(m, b, n, s)                set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BOARD))
 #endif
+#define set_dbgThermVoltage1(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1))
+#define set_dbgThermVoltage2(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH2))
+#define set_dbgThermVoltage3(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH3))
+#define set_dbgThermVoltage4(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH4))
+#define set_dbgThermVoltage5(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH5))
+#define set_dbgThermVoltage6(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH6))
+#define set_dbgThermVoltage7(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH7))
+#define set_dbgThermVoltage8(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH8))
+#if APP_VARIANT_ID == 0U
+#define set_dbgThermVoltage9(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1))
+#elif APP_VARIANT_ID == 1U
+#define set_dbgThermVoltage9(m,b,n,s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_THERM9))
+#endif
 #define set_fan1RPM(m, b, n, s)                  set(m,b,n,s, drv_cooling_getRate(&cooling[COOLING_CHANNEL_FAN2]))
 #define set_fan0RPM(m, b, n, s)                  set(m,b,n,s, drv_cooling_getRate(&cooling[COOLING_CHANNEL_FAN1]))
 #define set_coolPct1(m, b, n, s)                 set(m,b,n,s, (drv_cooling_getPower(&cooling[COOLING_CHANNEL_FAN2]) * 100.0f))
