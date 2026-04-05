@@ -152,6 +152,15 @@ signals:
         min: 0.0
         max: 2.5
     continuous: true
+  dbgThermVoltage:
+    unit: 'V'
+    nativeRepresentation:
+      bitWidth: 7
+      resolution: 0.03
+      range:
+        min: 0
+        max: 3
+    continuous: true
   amps:
     unit: 'A'
     nativeRepresentation:
