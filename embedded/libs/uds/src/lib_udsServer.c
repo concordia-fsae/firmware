@@ -13,17 +13,17 @@
 #include "lib_uds.h"
 
 #if UDS_ENABLE_LIB
-#include "isotp.h"
+# include "isotp.h"
 
-#include <stddef.h>    // NULL
-#include <string.h>    // memset
+# include <stddef.h>   // NULL
+# include <string.h>   // memset
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define UDS_SESSION_EXPIRE_TIME    100 // [ms] time without a tester present being received
+# define UDS_SESSION_EXPIRE_TIME    100// [ms] time without a tester present being received
                                        // after which the current session will be exited
 
 /******************************************************************************
@@ -41,8 +41,8 @@ typedef struct
 
     struct
     {
-        bool initialized: 1;    // true if the uds module has been initialized
-        bool unprocessed_message: 1; // true if a message was received 
+        bool initialized        : 1; // true if the uds module has been initialized
+        bool unprocessed_message: 1; // true if a message was received
     } bit;
 } udsSrv_S;
 
@@ -143,20 +143,20 @@ static inline void handleDiagnosticSessionControl(udsRequestDesc_S *req)
 
 static inline void handleEcuReset(udsRequestDesc_S *req)
 {
-#if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
+# if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
     if (req->payloadLengthBytes > 0U)
     {
         uds_cb_ecuReset((udsResetType_E)req->payload[0]);
     }
-#else // * if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
+# else // * if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
     uds_sendNegativeResponse(UDS_SID_ECU_RESET, UDS_NRC_SERVICE_NOT_SUPPORTED);
-#endif // if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
+# endif // if defined(UDS_SERVICE_SUPPORTED_ECU_RESET)
 }
 
 
 static inline void handleRoutineControl(udsRequestDesc_S *req)
 {
-#if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
+# if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
     udsRoutineControlType_E routineControlType = UDS_ROUTINE_CONTROL_NONE;
     uint8_t                 payloadLen         = 0U;
     uint8_t                 payloadStartIdx    = 0U;
@@ -176,49 +176,49 @@ static inline void handleRoutineControl(udsRequestDesc_S *req)
         &req->payload[payloadStartIdx],
         payloadLen
         );
-#else // if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
+# else // if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
     uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SERVICE_NOT_SUPPORTED);
-#endif // if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
+# endif // if defined(UDS_SERVICE_SUPPORTED_ROUTINE_CONTROL)
 }
 
 
 static inline void handleDownloadStart(udsRequestDesc_S *req)
 {
-#if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD)
+# if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD)
     uds_cb_transferStart(UDS_TRANSFER_TYPE_DOWNLOAD, req->payload, req->payloadLengthBytes);
-#else
+# else
     uds_sendNegativeResponse(UDS_SID_DOWNLOAD_START, UDS_NRC_SERVICE_NOT_SUPPORTED);
-#endif
+# endif
 }
 
 
 static inline void handleTransfer(udsRequestDesc_S *req)
 {
-#if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD) || defined(UDS_SERVICE_SUPPORTED_UPLOAD)
+# if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD) || defined(UDS_SERVICE_SUPPORTED_UPLOAD)
     uds_cb_transferPayload(req->payload, req->payloadLengthBytes);
-#else
+# else
     uds_sendNegativeResponse(UDS_SID_TRANSFER, UDS_NRC_SERVICE_NOT_SUPPORTED);
-#endif
+# endif
 }
 
 
 static inline void handleTransferStop(udsRequestDesc_S *req)
 {
-#if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD) || defined(UDS_SERVICE_SUPPORTED_UPLOAD)
+# if defined(UDS_SERVICE_SUPPORTED_DOWNLOAD) || defined(UDS_SERVICE_SUPPORTED_UPLOAD)
     uds_cb_transferStop(req->payload, req->payloadLengthBytes);
-#else
+# else
     uds_sendNegativeResponse(UDS_SID_TRANSFER_STOP, UDS_NRC_SERVICE_NOT_SUPPORTED);
-#endif
+# endif
 }
 
 
 static inline void handleDIDRead(udsRequestDesc_S *req)
 {
-#if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+# if defined(UDS_SERVICE_SUPPORTED_DID_READ)
     uds_cb_DIDRead(req->payload, req->payloadLengthBytes);
-#else // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+# else // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
     uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_SERVICE_NOT_SUPPORTED);
-#endif // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+# endif // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
 }
 
 
@@ -321,7 +321,7 @@ void udsSrv_init(void)
                     udsSrv.rxBuf,
                     ISOTP_RX_BUF_SIZE);
 
-    udsSrv.bit.initialized = true;
+    udsSrv.bit.initialized         = true;
     udsSrv.bit.unprocessed_message = false;
 }
 
@@ -398,7 +398,7 @@ udsResult_E udsSrv_periodic(void)
             .payloadLengthBytes = parsedLen - 1U,
             .payload            = &payload[1U],
         };
-        ret = udsSrv_handleReceive(&req);
+        ret                            = udsSrv_handleReceive(&req);
         udsSrv.bit.unprocessed_message = false;
     }
 

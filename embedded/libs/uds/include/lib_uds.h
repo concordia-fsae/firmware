@@ -241,7 +241,7 @@ udsNegativeResponse_E uds_cb_sessionChangeAllowed(udsSessionType_E currentSessio
  * @brief performs a reset of the component
  * @param resetType udsResetType_E the type of reset to perform
  */
-void uds_cb_ecuReset(udsResetType_E resetType);
+void                  uds_cb_ecuReset(udsResetType_E resetType);
 
 
 /*

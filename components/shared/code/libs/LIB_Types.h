@@ -9,9 +9,9 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "LIB_FloatTypes.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include "LIB_FloatTypes.h"
 
 /******************************************************************************
  *                             T Y P E D E F S

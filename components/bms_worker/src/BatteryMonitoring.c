@@ -12,11 +12,11 @@
 #include "Yamcan.h"
 
 /**< Driver Includes */
+#include "drv_inputAD.h"
+#include "drv_timer.h"
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_tim.h"
-#include "drv_inputAD.h"
-#include "drv_timer.h"
 
 /**< Other Includes */
 #include "Module.h"
@@ -28,22 +28,22 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BMS_CONFIGURED_BALANCING_TIMEOUT 1100
-#define BMS_CONFIGURED_BALANCING_MARGIN 0.050f // [V], precision 1mV
-#define BMS_START_DELAY_MS 100U
+#define BMS_CONFIGURED_BALANCING_TIMEOUT    1100
+#define BMS_CONFIGURED_BALANCING_MARGIN     0.050f // [V], precision 1mV
+#define BMS_START_DELAY_MS                  100U
 
-#define BMS_CONFIGURED_SAMPLING_TIME_MS 20
-#define BMS_CONFIGURED_BALANCING_TIME_MS 500
+#define BMS_CONFIGURED_SAMPLING_TIME_MS     20
+#define BMS_CONFIGURED_BALANCING_TIME_MS    500
 
-#define CELL_DISCONNECTED_TIMEOUT_MS 15000U
-#define CELL_UNDERVOLTAGE_TIMEOUT_MS 1000U
-#define CELL_CHIPERROR_TIMEOUT_MS 500U
+#define CELL_DISCONNECTED_TIMEOUT_MS        15000U
+#define CELL_UNDERVOLTAGE_TIMEOUT_MS        1000U
+#define CELL_CHIPERROR_TIMEOUT_MS           500U
 
-#define CELL_DISCONNECTED_THRESH_LOW  1.5f
-#define CELL_DISCONNECTED_THRESH_HIGH 4.5f
+#define CELL_DISCONNECTED_THRESH_LOW        1.5f
+#define CELL_DISCONNECTED_THRESH_HIGH       4.5f
 
-#define CELL_VOLTAGE_THRESH_UV 2.0f
-#define CELL_VOLTAGE_THRESH_OV 4.225f
+#define CELL_VOLTAGE_THRESH_UV              2.0f
+#define CELL_VOLTAGE_THRESH_OV              4.225f
 
 /******************************************************************************
  *                              E X T E R N S
@@ -77,10 +77,10 @@ static struct bms_S
  */
 static void checkFault(void)
 {
-    bool hasUv = false, hasOv = false, hasNc = false;
+    bool       hasUv = false, hasOv = false, hasNc = false;
     const bool analogError = max_chip.state.va_undervoltage;
-    const bool packError = max_chip.state.vp_undervoltage;
-    const bool chipError = analogError || packError;
+    const bool packError   = max_chip.state.vp_undervoltage;
+    const bool chipError   = analogError || packError;
 
     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
     {
@@ -91,11 +91,11 @@ static void checkFault(void)
 
     const bool cellDisconnected = drv_timer_run(&bms.timerDisconnected, hasNc) == DRV_TIMER_EXPIRED;
     const bool cellUndervoltage = drv_timer_run(&bms.timerUndervoltage, hasUv) == DRV_TIMER_EXPIRED;
-    const bool chipInError = drv_timer_run(&bms.timerChipError, chipError) == DRV_TIMER_EXPIRED;
+    const bool chipInError      = drv_timer_run(&bms.timerChipError, chipError) == DRV_TIMER_EXPIRED;
 
-    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLDISCONNECTED, cellDisconnected);
-    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLUNDERVOLTAGE, cellUndervoltage);
-    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLOVERVOLTAGE, hasOv);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLDISCONNECTED,   cellDisconnected);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLUNDERVOLTAGE,   cellUndervoltage);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLOVERVOLTAGE,    hasOv);
     app_faultManager_setFaultState(FM_FAULT_BMSW_ANALOGREF5VHWERROR, analogError);
     app_faultManager_setFaultState(FM_FAULT_BMSW_PACKVOLTAGEHWERROR, packError);
 
@@ -111,7 +111,8 @@ static void calcSegStats(void)
     {
         BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i) + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > CELL_DISCONNECTED_THRESH_LOW) &&
-            (BMS.cells[i].voltage < CELL_DISCONNECTED_THRESH_HIGH))
+            (BMS.cells[i].voltage < CELL_DISCONNECTED_THRESH_HIGH)
+            )
         {
             if (BMS.cells[i].voltage < CELL_VOLTAGE_THRESH_UV)
             {
@@ -123,7 +124,7 @@ static void calcSegStats(void)
                 BMS.cells[i].state = BMS_CELL_FAULT_OV;
                 continue;
             }
-            BMS.cells[i].state    = BMS_CELL_CONNECTED;
+            BMS.cells[i].state = BMS_CELL_CONNECTED;
         }
         else
         {
@@ -142,9 +143,9 @@ static void calcSegStats(void)
     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
     {
         tmp_count++;
-        BMS.voltage.max = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
-        BMS.voltage.min = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
-        batt_tmp += BMS.cells[i].voltage;
+        BMS.voltage.max              = (BMS.voltage.max > BMS.cells[i].voltage) ? BMS.voltage.max : BMS.cells[i].voltage;
+        BMS.voltage.min              = (BMS.voltage.min < BMS.cells[i].voltage) ? BMS.voltage.min : BMS.cells[i].voltage;
+        batt_tmp                    += BMS.cells[i].voltage;
         BMS.calculated_pack_voltage += BMS.cells[i].voltage;
     }
 
@@ -214,9 +215,9 @@ void BMS_measurementComplete(void)
     max_chip.config.sampling           = false;
     max_chip.config.low_power_mode     = false;
     max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
+    max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
     MAX_readWriteToChip();
-    BMS.state = BMS_CALIBRATING;
+    BMS.state                          = BMS_CALIBRATING;
 
     calcSegStats();
 }
@@ -230,7 +231,7 @@ static void BMS_Init(void)
 
     drv_timer_initWithRuntime(&bms.timerDisconnected, CELL_DISCONNECTED_TIMEOUT_MS);
     drv_timer_initWithRuntime(&bms.timerUndervoltage, CELL_UNDERVOLTAGE_TIMEOUT_MS);
-    drv_timer_initWithRuntime(&bms.timerChipError, CELL_CHIPERROR_TIMEOUT_MS);
+    drv_timer_initWithRuntime(&bms.timerChipError,    CELL_CHIPERROR_TIMEOUT_MS);
 
     if (!MAX_init())
     {
@@ -246,8 +247,8 @@ static void BMS_Init(void)
         max_chip.config.output.state       = MAX_PARASITIC_ERROR_CALIBRATION;
 
         MAX_readWriteToChip();
-        max_chip.config.sampling_start = HW_TIM_getTimeMS();
-        BMS.state                      = BMS_PARASITIC;
+        max_chip.config.sampling_start     = HW_TIM_getTimeMS();
+        BMS.state                          = BMS_PARASITIC;
     }
 }
 
@@ -257,7 +258,8 @@ static void BMS_Init(void)
 static void BMS100Hz_PRD()
 {
     if ((BMS.state == BMS_PARASITIC) &&
-        (HW_TIM_getTimeMS() >= (max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS)))
+        (HW_TIM_getTimeMS() >= (max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS))
+        )
     {
         max_chip.config.sampling_start     = UINT32_MAX;
         max_chip.config.sampling           = false;
@@ -265,7 +267,7 @@ static void BMS100Hz_PRD()
         max_chip.config.low_power_mode     = false;
         max_chip.config.balancing          = 0x00;
         max_chip.config.output.state       = MAX_CELL_VOLTAGE;
-        max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
+        max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
         BMS.delayed_measurement            = true;
         BMS.state                          = BMS_PARASITIC_MEASUREMENT;
     }
@@ -278,25 +280,25 @@ static void BMS100Hz_PRD()
             max_chip.config.low_power_mode     = false;
             max_chip.config.balancing          = 0x00;
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
+            max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
 
             MAX_readWriteToChip();
-            max_chip.config.sampling_start = HW_TIM_getTimeMS();
+            max_chip.config.sampling_start     = HW_TIM_getTimeMS();
             return;
         }
         else if (HW_TIM_getTimeMS() >= (max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS))
         {
-            max_chip.config.sampling_start       = UINT32_MAX;
-            BMS.pack_voltage                     = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT) * 16;
+            max_chip.config.sampling_start = UINT32_MAX;
+            BMS.pack_voltage               = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT) * 16;
             BMS_setOutputCell(BMS_CONFIGURED_SERIES_CELLS - 1);
-            BMS.delayed_measurement              = true;
-            BMS.state                            = BMS_HOLDING;
+            BMS.delayed_measurement        = true;
+            BMS.state                      = BMS_HOLDING;
         }
     }
     else if (BMS.state == BMS_WAITING)
     {
-        BMS.state                            = BMS_SAMPLING;
-        max_chip.config.sampling_start       = UINT32_MAX;
+        BMS.state                      = BMS_SAMPLING;
+        max_chip.config.sampling_start = UINT32_MAX;
     }
     else if (BMS.state == BMS_CALIBRATING)
     {
@@ -308,26 +310,26 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling           = true;
             max_chip.config.low_power_mode     = false;
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
+            max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
             MAX_readWriteToChip();
 
-            max_chip.config.sampling_start = HW_TIM_getTimeMS();
-            BMS.state                      = BMS_DIAGNOSTIC;
+            max_chip.config.sampling_start     = HW_TIM_getTimeMS();
+            BMS.state                          = BMS_DIAGNOSTIC;
         }
     }
     else if (BMS.state == BMS_DIAGNOSTIC)
     {
         if ((max_chip.config.sampling_start + BMS_CONFIGURED_SAMPLING_TIME_MS) < HW_TIM_getTimeMS())
         {
-            max_chip.config.sampling             = false;
-            max_chip.config.diagnostic_enabled   = false;
-            max_chip.config.low_power_mode       = false;
-            max_chip.config.balancing            = 0x00;
-            max_chip.config.output.state         = MAX_PACK_VOLTAGE;
-            max_chip.config.output.output.cell   = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
+            max_chip.config.sampling           = false;
+            max_chip.config.diagnostic_enabled = false;
+            max_chip.config.low_power_mode     = false;
+            max_chip.config.balancing          = 0x00;
+            max_chip.config.output.state       = MAX_PACK_VOLTAGE;
+            max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
             MAX_readWriteToChip();
-            BMS.state                            = BMS_SAMPLING;
-            max_chip.config.sampling_start       = UINT32_MAX;
+            BMS.state                          = BMS_SAMPLING;
+            max_chip.config.sampling_start     = UINT32_MAX;
         }
     }
 }
@@ -336,6 +338,6 @@ static void BMS100Hz_PRD()
  * @brief  BMS Module descriptor
  */
 const ModuleDesc_S BMS_desc = {
-    .moduleInit       = &BMS_Init,
+    .moduleInit        = &BMS_Init,
     .periodic100Hz_CLK = &BMS100Hz_PRD,
 };

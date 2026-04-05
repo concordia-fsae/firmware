@@ -1,5 +1,5 @@
 /**
- RX_config* CAN.h
+ * RX_config* CAN.h
  * Header file for CANRX configuration
  */
 
@@ -16,16 +16,16 @@
 // imports for CAN generated types
 
 // imports for data access
-#include "Module.h"
-#include "app_vehicleState.h"
-#include "drv_vn9008.h"
-#include "drv_tps2hb16ab.h"
-#include "powerManager.h"
-#include "Module.h"
 #include "app_faultManager.h"
-#include "imu.h"
+#include "app_vehicleState.h"
 #include "crashSensor.h"
+#include "drv_tps2hb16ab.h"
+#include "drv_vn9008.h"
+#include "imu.h"
 #include "lib_nvm.h"
+#include "Module.h"
+#include "Module.h"
+#include "powerManager.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -35,103 +35,103 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define CANIO_UDS_BUFFER_LENGTH 8U
-#define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+#define CANIO_UDS_BUFFER_LENGTH                          8U
+#define CANIO_getTimeMs()                                (HW_TIM_getTimeMS())
 
-#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+#define set_fault_message                                (*(CAN_data_T*)app_faultManager_transmit())
 
-#define set_vehicleState(m,b,n,s) set(m,b,n,s, app_vehicleState_getStateCAN())
-#define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
-#define set_pumpHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP)))
-#define set_fanHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN)))
-#define set_bms1HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1)))
-#define set_shutdownHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_2)))
-#define set_bms2HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_1)))
-#define set_accumHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_2)))
-#define set_bms3HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_1)))
-#define set_sensorHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_2)))
-#define set_vc1HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_1)))
-#define set_vc2HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_2)))
-#define set_mcHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_1)))
-#define set_vcu3HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_2)))
-#define set_hveHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_1)))
-#define set_cockpitHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_2)))
-#define set_spareHsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_1)))
-#define set_bms4HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_2)))
-#define set_vcu1HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1)))
-#define set_vcu2HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2)))
-#define set_bms5HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1)))
-#define set_bms6HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))
-#define set_pumpCurrent(m,b,n,s) set(m,b,n,s, drv_vn9008_getCurrent(DRV_VN9008_CHANNEL_PUMP))
-#define set_fanCurrent(m,b,n,s) set(m,b,n,s, drv_vn9008_getCurrent(DRV_VN9008_CHANNEL_FAN))
-#define set_bms1Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1))
-#define set_shutdownCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_2))
-#define set_bms2Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_1))
-#define set_accumCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_2))
-#define set_bms3Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_1))
-#define set_sensorCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_2))
-#define set_pduCurrent(m,b,n,s) set(m,b,n,s, powerManager_getPduCurrent())
-#define set_pdu5vVoltage(m,b,n,s) set(m,b,n,s, powerManager_getPdu5vVoltage())
-#define set_vc1Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_1))
-#define set_vc2Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_2))
-#define set_mcCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_1))
-#define set_vcu3Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_2))
-#define set_hveCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_1))
-#define set_cockpitCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_2))
-#define set_spareCurrent(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_1))
-#define set_bms4Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_2))
-#define set_vcu1Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1))
-#define set_vcu2Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2))
-#define set_bms5Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1))
-#define set_bms6Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2))
-#define set_glvVoltage(m,b,n,s) set(m,b,n,s, powerManager_getGLVVoltage())
-#define set_glvCurrent(m,b,n,s) set(m,b,n,s, powerManager_getGLVCurrent())
-#define set_runButton(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
-                                             CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
-#define set_pduSafetyReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_VCU_SFTY_RESET) == DRV_IO_ACTIVE) ? \
-                                                 CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
-#define set_bmsSafetyReset(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_RESET) == DRV_IO_ACTIVE) ? \
-                                                 CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
-#define set_safetyReset(m,b,n,s) set(m,b,n,s,  app_vehicleState_getFaultReset() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_bmsbSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_SAFETY_EN) == DRV_IO_ACTIVE) ? \
-                                                    CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
-#define set_imdSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_IMD_SAFETY_EN) == DRV_IO_ACTIVE) ? \
-                                                   CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
-#define set_bspdSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BSPD_MEM) == DRV_IO_ACTIVE) ? \
-                                                    CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
-#define set_vcSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN) == DRV_IO_ACTIVE) && \
-                                                  powerManager_getSafetyHsdOk() ? \
-                                                  CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
-#define set_tsmsSafetyStatus(m,b,n,s) set(m,b,n,s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
-                                                    CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_vehicleState(m, b, n, s)                     set(m, b, n, s, app_vehicleState_getStateCAN())
+#define set_sleepable(m, b, n, s)                        set(m, b, n, s, app_vehicleState_getSleepableStateCAN())
+#define set_pumpHsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP)))
+#define set_fanHsdState(m, b, n, s)                      set(m, b, n, s, drv_hsd_getCANState(drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN)))
+#define set_bms1HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1)))
+#define set_shutdownHsdState(m, b, n, s)                 set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_2)))
+#define set_bms2HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_1)))
+#define set_accumHsdState(m, b, n, s)                    set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_2)))
+#define set_bms3HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_1)))
+#define set_sensorHsdState(m, b, n, s)                   set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_2)))
+#define set_vc1HsdState(m, b, n, s)                      set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_1)))
+#define set_vc2HsdState(m, b, n, s)                      set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_2)))
+#define set_mcHsdState(m, b, n, s)                       set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_1)))
+#define set_vcu3HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_2)))
+#define set_hveHsdState(m, b, n, s)                      set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_1)))
+#define set_cockpitHsdState(m, b, n, s)                  set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_2)))
+#define set_spareHsdState(m, b, n, s)                    set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_1)))
+#define set_bms4HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_2)))
+#define set_vcu1HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1)))
+#define set_vcu2HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2)))
+#define set_bms5HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1)))
+#define set_bms6HsdState(m, b, n, s)                     set(m, b, n, s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))
+#define set_pumpCurrent(m, b, n, s)                      set(m, b, n, s, drv_vn9008_getCurrent(DRV_VN9008_CHANNEL_PUMP))
+#define set_fanCurrent(m, b, n, s)                       set(m, b, n, s, drv_vn9008_getCurrent(DRV_VN9008_CHANNEL_FAN))
+#define set_bms1Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1))
+#define set_shutdownCurrent(m, b, n, s)                  set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_2))
+#define set_bms2Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_1))
+#define set_accumCurrent(m, b, n, s)                     set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_2))
+#define set_bms3Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_1))
+#define set_sensorCurrent(m, b, n, s)                    set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_2))
+#define set_pduCurrent(m, b, n, s)                       set(m, b, n, s, powerManager_getPduCurrent())
+#define set_pdu5vVoltage(m, b, n, s)                     set(m, b, n, s, powerManager_getPdu5vVoltage())
+#define set_vc1Current(m, b, n, s)                       set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_1))
+#define set_vc2Current(m, b, n, s)                       set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_2))
+#define set_mcCurrent(m, b, n, s)                        set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_1))
+#define set_vcu3Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_2))
+#define set_hveCurrent(m, b, n, s)                       set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_1))
+#define set_cockpitCurrent(m, b, n, s)                   set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_2))
+#define set_spareCurrent(m, b, n, s)                     set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_1))
+#define set_bms4Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_2))
+#define set_vcu1Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1))
+#define set_vcu2Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2))
+#define set_bms5Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1))
+#define set_bms6Current(m, b, n, s)                      set(m, b, n, s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2))
+#define set_glvVoltage(m, b, n, s)                       set(m, b, n, s, powerManager_getGLVVoltage())
+#define set_glvCurrent(m, b, n, s)                       set(m, b, n, s, powerManager_getGLVCurrent())
+#define set_runButton(m, b, n, s)                        set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
+                                                             CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_pduSafetyReset(m, b, n, s)                   set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_VCU_SFTY_RESET) == DRV_IO_ACTIVE) ? \
+                                                             CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_bmsSafetyReset(m, b, n, s)                   set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_RESET) == DRV_IO_ACTIVE) ? \
+                                                             CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
+#define set_safetyReset(m, b, n, s)                      set(m, b, n, s, app_vehicleState_getFaultReset() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_bmsbSafetyStatus(m, b, n, s)                 set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BMS_SAFETY_EN) == DRV_IO_ACTIVE) ? \
+                                                             CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_imdSafetyStatus(m, b, n, s)                  set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_IMD_SAFETY_EN) == DRV_IO_ACTIVE) ? \
+                                                             CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_bspdSafetyStatus(m, b, n, s)                 set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_BSPD_MEM) == DRV_IO_ACTIVE) ? \
+                                                             CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_vcSafetyStatus(m, b, n, s)                   set(m, b, n, s, (drv_outputAD_getDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN) == DRV_IO_ACTIVE) && \
+                                                             powerManager_getSafetyHsdOk() ?                                                                \
+                                                             CAN_SHUTDOWNCIRCUITSTATUS_CLOSED: CAN_SHUTDOWNCIRCUITSTATUS_OPEN)
+#define set_tsmsSafetyStatus(m, b, n, s)                 set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_TSCHG_MS) == DRV_IO_ACTIVE) ? \
+                                                             CAN_DIGITALSTATUS_ON: CAN_DIGITALSTATUS_OFF)
 
-#define set_crashSensorState(m,b,n,s) set(m,b,n,s, crashSensor_getStateCAN())
-#define set_crashSensorAccelMax(m,b,n,s) set(m,b,n,s, crashSensor_getMaxAcceleration())
-#define set_crashSensorAccelTripped(m,b,n,s) set(m,b,n,s, crashSensor_getTrippedAcceleration())
-#define set_crashSensorImpactActive(m,b,n,s) set(m,b,n,s, imu_getImpactActive() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_crashSensorImpactAccelMax(m,b,n,s) set(m,b,n,s, imu_getImpactAccelMax())
-#define set_crashSensorImpactAccelCurrent(m,b,n,s) set(m,b,n,s, imu_getImpactAccelCurrent())
+#define set_crashSensorState(m, b, n, s)                 set(m, b, n, s, crashSensor_getStateCAN())
+#define set_crashSensorAccelMax(m, b, n, s)              set(m, b, n, s, crashSensor_getMaxAcceleration())
+#define set_crashSensorAccelTripped(m, b, n, s)          set(m, b, n, s, crashSensor_getTrippedAcceleration())
+#define set_crashSensorImpactActive(m, b, n, s)          set(m, b, n, s, imu_getImpactActive() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_crashSensorImpactAccelMax(m, b, n, s)        set(m, b, n, s, imu_getImpactAccelMax())
+#define set_crashSensorImpactAccelCurrent(m, b, n, s)    set(m, b, n, s, imu_getImpactAccelCurrent())
 
-#define set_lon(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelX)
-#define set_lat(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelY)
-#define set_vert(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelZ)
-#define set_accelNorm(m,b,n,s) set(m,b,n,s, imu_getAccelNorm())
-#define set_accelNormPeak(m,b,n,s) set(m,b,n,s, imu_getAccelNormPeak())
-#define set_yaw(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotZ)
-#define set_roll(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotY)
-#define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)
-#define set_angleRoll(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotX)
-#define set_anglePitch(m,b,n,s) set(m,b,n,s, imu_getVehicleAngleRef()->rotY)
+#define set_lon(m, b, n, s)                              set(m, b, n, s, imu_getAccelRef()->accelX)
+#define set_lat(m, b, n, s)                              set(m, b, n, s, imu_getAccelRef()->accelY)
+#define set_vert(m, b, n, s)                             set(m, b, n, s, imu_getAccelRef()->accelZ)
+#define set_accelNorm(m, b, n, s)                        set(m, b, n, s, imu_getAccelNorm())
+#define set_accelNormPeak(m, b, n, s)                    set(m, b, n, s, imu_getAccelNormPeak())
+#define set_yaw(m, b, n, s)                              set(m, b, n, s, imu_getGyroRef()->rotZ)
+#define set_roll(m, b, n, s)                             set(m, b, n, s, imu_getGyroRef()->rotY)
+#define set_pitch(m, b, n, s)                            set(m, b, n, s, imu_getGyroRef()->rotX)
+#define set_angleRoll(m, b, n, s)                        set(m, b, n, s, imu_getVehicleAngleRef()->rotX)
+#define set_anglePitch(m, b, n, s)                       set(m, b, n, s, imu_getVehicleAngleRef()->rotY)
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-# define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
-# define set_nvmRecordWrites(m, b, n, s)            set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())
-# define set_nvmBlockErases(m, b, n, s)             set(m, b, n, s, (uint8_t)lib_nvm_getTotalBlockErases())
-# define set_nvmFailedCrc(m, b, n, s)               set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedCrc())
-# define set_nvmRecordFailedInit(m, b, n, s)        set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedRecordInit())
-# define set_nvmRecordEmptyInit(m, b, n, s)         set(m, b, n, s, (uint8_t)lib_nvm_getTotalEmptyRecordInit())
-# define set_nvmRecordsVersionFailed(m, b, n, s)    set(m, b, n, s, (uint8_t)lib_nvm_getTotalRecordsVersionFailed())
+# define set_nvmBootCycles(m, b, n, s)                   set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
+# define set_nvmRecordWrites(m, b, n, s)                 set(m, b, n, s, (uint16_t)lib_nvm_getTotalRecordWrites())
+# define set_nvmBlockErases(m, b, n, s)                  set(m, b, n, s, (uint8_t)lib_nvm_getTotalBlockErases())
+# define set_nvmFailedCrc(m, b, n, s)                    set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedCrc())
+# define set_nvmRecordFailedInit(m, b, n, s)             set(m, b, n, s, (uint8_t)lib_nvm_getTotalFailedRecordInit())
+# define set_nvmRecordEmptyInit(m, b, n, s)              set(m, b, n, s, (uint8_t)lib_nvm_getTotalEmptyRecordInit())
+# define set_nvmRecordsVersionFailed(m, b, n, s)         set(m, b, n, s, (uint8_t)lib_nvm_getTotalRecordsVersionFailed())
 #else
-# define transmit_VCPDU_nvmInformation               false
+# define transmit_VCPDU_nvmInformation                   false
 #endif
 

@@ -8,10 +8,10 @@
  ******************************************************************************/
 
 /**< Module Header */
-#include "Module.h"
+#include "app_vehicleState.h"
 #include "drv_inputAD.h"
 #include "drv_userInput.h"
-#include "app_vehicleState.h"
+#include "Module.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S

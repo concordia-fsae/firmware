@@ -32,8 +32,7 @@ extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 void NMI_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -44,8 +43,7 @@ void HardFault_Handler(void)
     volatile uint8_t c = 0;
 
     while (c == 0)
-    {
-    }
+    {}
 }
 
 /**
@@ -54,8 +52,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -64,8 +61,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -74,8 +70,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -98,7 +93,7 @@ void DMA1_Channel1_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&hadc1);
-    //    HAL_ADC_IRQHandler(&hadc2);
+    // HAL_ADC_IRQHandler(&hadc2);
 }
 
 void TIM2_IRQHandler(void)

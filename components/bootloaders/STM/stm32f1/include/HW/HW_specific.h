@@ -32,12 +32,12 @@
 # define CAN_TX_PORT       GPIOB
 # define CAN_TX_PIN        9U
 
-#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_VARIANT_ID == 1U)) || \
-      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_VARIANT_ID == 0U)) || \
-      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_VARIANT_ID == 0U)) || \
-      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_VARIANT_ID == 0U)) || \
-      ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_VARIANT_ID == 0U)) || \
-      (APP_VARIANT_ID == 10U)
+#elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_VARIANT_ID == 1U)) ||  \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_VARIANT_ID == 0U)) ||   \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_VARIANT_ID == 0U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_VARIANT_ID == 0U)) ||  \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_VARIANT_ID == 0U)) ||     \
+    (APP_VARIANT_ID == 10U)
 
 # define CAN_AFIO_REMAP    false
 # define CAN_RX_PORT       GPIOA
@@ -46,35 +46,35 @@
 # define CAN_TX_PORT       GPIOA
 # define CAN_TX_PIN        12U
 
-#else
-#error "Invalid configuration"
+#else // if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_VARIANT_ID == 0U)) || ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSW) && (APP_VARIANT_ID == 0U)) || ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSW) && (APP_VARIANT_ID == 1U))
+# error "Invalid configuration"
 #endif // if PCB_ID == 0
 
 #if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_VARIANT_ID == 0U))
 
-# define CAN_SLEEP true
-# define CAN_SLEEP_PIN 8U
-# define CAN_SLEEP_PORT GPIOA
+# define CAN_SLEEP         true
+# define CAN_SLEEP_PIN     8U
+# define CAN_SLEEP_PORT    GPIOA
 
 #else
 
-# define CAN_SLEEP false
+# define CAN_SLEEP    false
 
 #endif
 
 #if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU)
-#if (APP_VARIANT_ID == 0U)
+# if (APP_VARIANT_ID == 0U)
 
-# define CARCOMP_CONTROL_EN 9U
-# define CARCOMP_CONTROL_EN_PORT GPIOC
+#  define CARCOMP_CONTROL_EN         9U
+#  define CARCOMP_CONTROL_EN_PORT    GPIOC
 
-# define POE_EN 8U
-# define POE_PORT GPIOC
+#  define POE_EN                     8U
+#  define POE_PORT                   GPIOC
 
-#else
-#error "Unsupported VCPDU variant"
-#endif
-#endif
+# else
+#  error "Unsupported VCPDU variant"
+# endif
+#endif // if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU)
 
 // Use Boot1 (PB2)
 #define BUTTON_PORT             GPIOB
@@ -82,28 +82,28 @@
 #define BUTTON_PRESSED_STATE    1U
 
 #if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_VARIANT_ID == 0U))
-# define LED_PORT GPIOB
-# define LED_PIN  8U
+# define LED_PORT               GPIOB
+# define LED_PIN                8U
 #elif ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_VARIANT_ID == 0U))
-# define LED_PORT GPIOB
-# define LED_PIN  6U
+# define LED_PORT               GPIOB
+# define LED_PIN                6U
 #else
-# define LED_PORT GPIOC
-# define LED_PIN  13U
+# define LED_PORT               GPIOC
+# define LED_PIN                13U
 #endif
-# define LED_ON_STATE 0U // this can probably be refactored
+#define LED_ON_STATE            0U // this can probably be refactored
 
-#if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_VARIANT_ID == 1U)) || \
-    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_VARIANT_ID == 0U)) || \
+#if ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSB) && (APP_VARIANT_ID == 1U)) ||    \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCPDU) && (APP_VARIANT_ID == 0U)) ||   \
     ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) && (APP_VARIANT_ID == 0U)) || \
-    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_VARIANT_ID == 0U)) || \
-    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_VARIANT_ID == 0U)) || \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR) && (APP_VARIANT_ID == 0U)) ||  \
+    ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_SWS) && (APP_VARIANT_ID == 0U)) ||     \
     ((APP_COMPONENT_ID == FDEFS_COMPONENT_ID_BMSW) && (APP_VARIANT_ID == 1U))
 # define LED_MODE               GPIO_CFG_OUTPUT_PUSH_PULL
 #elif APP_VARIANT_ID == 0
 # define LED_MODE               GPIO_CFG_OUTPUT_OPEN_DRAIN
 #else
-#error "Invalid configuration"
+# error "Invalid configuration"
 #endif
 
 

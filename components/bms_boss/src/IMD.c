@@ -5,20 +5,20 @@
 
 #include "IMD.h"
 
-#include <string.h>
-#include "lib_utility.h"
-#include "HW.h"
 #include "BMS.h"
+#include "HW.h"
+#include "lib_utility.h"
+#include <string.h>
 
-#define IMD_OHMS_PER_VOLT 500
+#define IMD_OHMS_PER_VOLT           500
 
 #ifndef IMD_MEASUREMENT_TIMEOUT
-# define IMD_MEASUREMENT_TIMEOUT 500    // ms
-#endif                                  // ifndef IMD_MEASUREMENT_TIMEOUT
+# define IMD_MEASUREMENT_TIMEOUT    500 // ms
+#endif // ifndef IMD_MEASUREMENT_TIMEOUT
 
 #ifndef IMD_ISOLATION_MIN
-# define IMD_ISOLATION_MIN ((BMS_CONFIGURED_PACK_MAX_VOLTAGE * IMD_OHMS_PER_VOLT) / 1000)
-#endif    // ifndef IMD_ISOLATION_MIN
+# define IMD_ISOLATION_MIN    ((BMS_CONFIGURED_PACK_MAX_VOLTAGE * IMD_OHMS_PER_VOLT) / 1000)
+#endif // ifndef IMD_ISOLATION_MIN
 
 
 typedef struct
@@ -43,12 +43,13 @@ void IMD_init(void)
 void IMD_setMlsMeasurement(uint32_t freq, uint32_t duty)
 {
     float32_t dutyf = (float32_t)duty;
-    float32_t kOhm = 0;
+    float32_t kOhm  = 0;
 
     SATURATE(5.1f, dutyf, 94.9);
 
-    if (freq < 25) {
-        kOhm = (0.9f * 1200) / ((dutyf / 100) - 0.05f) - 1200.0f;
+    if (freq < 25)
+    {
+        kOhm                 = (0.9f * 1200) / ((dutyf / 100) - 0.05f) - 1200.0f;
         IMD_setFault(false);
         IMD_setSST(true);
         imd.isolation        = kOhm;
@@ -56,7 +57,8 @@ void IMD_setMlsMeasurement(uint32_t freq, uint32_t duty)
     }
     else if ((freq >= 25) && (freq <= 35))
     {
-        if (duty < 15) {
+        if (duty < 15)
+        {
             IMD_setSST(true);
         }
         else

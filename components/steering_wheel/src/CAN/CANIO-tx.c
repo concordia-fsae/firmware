@@ -27,9 +27,9 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define packTableName(bus, name)                            SNAKE3(bus, packTable, name)
-#define packTableLength(bus, name)                          SNAKE4(bus, packTable, name, length)
-#define packNextBusMessage(bus, name, idx, msg, counter)    packNextMessage(packTableName(bus, name), packTableLength(bus, name), idx, msg, counter)
+#define packTableName(bus, name)                             SNAKE3(bus, packTable, name)
+#define packTableLength(bus, name)                           SNAKE4(bus, packTable, name, length)
+#define packNextBusMessage(bus, name, idx, msg, counter)     packNextMessage(packTableName(bus, name), packTableLength(bus, name), idx, msg, counter)
 
 
 #define set_raw(msg, bus, node, signal, val)                 SNAKE4(setRaw, bus, node, signal)(msg, val)
@@ -87,10 +87,10 @@ static cantx_S cantx;
  * @return current packTable entry
  */
 static const packTable_S* packNextMessage(const packTable_S *packTable,
-                                          const uint8_t packTableLength,
-                                          uint8_t *index,
-                                          CAN_data_T *message,
-                                          uint8_t *nextCounter)
+                                          const uint8_t     packTableLength,
+                                          uint8_t           *index,
+                                          CAN_data_T        *message,
+                                          uint8_t           *nextCounter)
 {
     while (*index < packTableLength)
     {
@@ -125,7 +125,7 @@ void CANTX_BUS_A_10ms_SWI(void)
     static uint8_t    counter = 0U;
     CAN_data_T        message;
 
-    const packTable_S *entry = packNextBusMessage(BUS_A, 10ms, &cantx.txBusA10msIdx, &message, &counter);
+    const packTable_S *entry  = packNextBusMessage(BUS_A, 10ms, &cantx.txBusA10msIdx, &message, &counter);
 
     if (entry != NULL)
     {

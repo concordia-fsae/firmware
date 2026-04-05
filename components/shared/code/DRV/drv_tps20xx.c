@@ -7,13 +7,13 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_tps20xx.h"
 #include "drv_io.h"
 #include "drv_outputAD.h"
-#include "string.h"
 #include "drv_timer.h"
+#include "drv_tps20xx.h"
+#include "string.h"
 
-#define DEFAULT_FAULT_RETRY_TIME 1000U // Default to waiting 1 second between retries if not specified
+#define DEFAULT_FAULT_RETRY_TIME    1000U // Default to waiting 1 second between retries if not specified
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -54,7 +54,7 @@ HW_StatusTypeDef_E drv_tps20xx_init(void)
     for (uint8_t channel = 0U; channel < DRV_TPS20XX_CHANNEL_COUNT; channel++)
     {
         drv_tps20xx_private_setICEnabled(channel, false);
-        drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_INIT;
+        drv_tps20xx_data[channel].state          = DRV_TPS20XX_STATE_INIT;
         drv_tps20xx_data[channel].enable_request = false;
         drv_timer_init(&drv_tps20xx_data[channel].retry_timer);
     }
@@ -62,8 +62,8 @@ HW_StatusTypeDef_E drv_tps20xx_init(void)
     for (uint8_t channel = 0U; channel < DRV_TPS20XX_CHANNEL_COUNT; channel++)
     {
         drv_tps20xx_data[channel].state = (drv_tps20xx_private_getICFaulted(channel)) ?
-                                            DRV_TPS20XX_STATE_ERROR:
-                                            DRV_TPS20XX_STATE_OFF;
+                                          DRV_TPS20XX_STATE_ERROR:
+                                          DRV_TPS20XX_STATE_OFF;
     }
 
     return HW_OK;
@@ -92,7 +92,7 @@ void drv_tps20xx_run(void)
     for (uint8_t channel = 0U; channel < DRV_TPS20XX_CHANNEL_COUNT; channel++)
     {
         const bool timer_expired = drv_timer_getState(&drv_tps20xx_data[channel].retry_timer) == DRV_TIMER_EXPIRED;
-        const bool ic_faulted = drv_tps20xx_private_getICFaulted(channel);
+        const bool ic_faulted    = drv_tps20xx_private_getICFaulted(channel);
 
         switch (drv_tps20xx_data[channel].state)
         {
@@ -103,6 +103,7 @@ void drv_tps20xx_run(void)
                     drv_tps20xx_private_setICEnabled(channel, true);
                 }
                 break;
+
             case DRV_TPS20XX_STATE_ENABLED:
                 if (drv_tps20xx_private_getICFaulted(channel))
                 {
@@ -110,49 +111,51 @@ void drv_tps20xx_run(void)
                     drv_tps20xx_private_setICEnabled(channel, false);
 
                     uint32_t retry_time = (drv_tps20xx_channels[channel].retry_wait_ms != 0U) ?
-                                           drv_tps20xx_channels[channel].retry_wait_ms :
-                                           DEFAULT_FAULT_RETRY_TIME; // If nothing configured, use default
+                                          drv_tps20xx_channels[channel].retry_wait_ms :
+                                          DEFAULT_FAULT_RETRY_TIME;    // If nothing configured, use default
 
-                    drv_timer_start(&drv_tps20xx_data[channel].retry_timer,retry_time);
+                    drv_timer_start(&drv_tps20xx_data[channel].retry_timer, retry_time);
                 }
                 break;
+
             case DRV_TPS20XX_STATE_FAULTED_OC:
             case DRV_TPS20XX_STATE_FAULTED_OT:
+            {
+                drv_tps20xx_private_setICEnabled(channel, false);
+                if ((drv_tps20xx_data[channel].state != DRV_TPS20XX_STATE_FAULTED_OT) && ic_faulted)
                 {
-                    drv_tps20xx_private_setICEnabled(channel, false);
-                    if ((drv_tps20xx_data[channel].state != DRV_TPS20XX_STATE_FAULTED_OT) && ic_faulted)
-                    {
-                            drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_FAULTED_OT;
-                    }
-                    else if (timer_expired && (ic_faulted == false))
-                    {
-                        drv_timer_stop(&drv_tps20xx_data[channel].retry_timer);
+                    drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_FAULTED_OT;
+                }
+                else if (timer_expired && (ic_faulted == false))
+                {
+                    drv_timer_stop(&drv_tps20xx_data[channel].retry_timer);
 
-                        if (drv_tps20xx_channels[channel].auto_reset)
-                        {
-                            // Only other way to recover from faulted is the application
-                            // idsabling and re-enabling the channel
-                            drv_tps20xx_private_setICEnabled(channel, true);
-                            drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_RETRY;
-                        }
-                    }
-
-                    if ((ic_faulted == false) && (drv_tps20xx_data[channel].enable_request == false))
+                    if (drv_tps20xx_channels[channel].auto_reset)
                     {
-                        drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_OFF;
+                        // Only other way to recover from faulted is the application
+                        // idsabling and re-enabling the channel
+                        drv_tps20xx_private_setICEnabled(channel, true);
+                        drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_RETRY;
                     }
                 }
-                break;
+
+                if ((ic_faulted == false) && (drv_tps20xx_data[channel].enable_request == false))
+                {
+                    drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_OFF;
+                }
+            }
+            break;
+
             case DRV_TPS20XX_STATE_RETRY:
                 if (drv_tps20xx_private_getICFaulted(channel))
                 {
                     drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_FAULTED_OC;
                     drv_tps20xx_private_setICEnabled(channel, false);
                     uint32_t retry_time = (drv_tps20xx_channels[channel].retry_wait_ms != 0U) ?
-                                           drv_tps20xx_channels[channel].retry_wait_ms :
-                                           DEFAULT_FAULT_RETRY_TIME; // If nothing configured, use default
+                                          drv_tps20xx_channels[channel].retry_wait_ms :
+                                          DEFAULT_FAULT_RETRY_TIME;    // If nothing configured, use default
 
-                    drv_timer_start(&drv_tps20xx_data[channel].retry_timer,retry_time);
+                    drv_timer_start(&drv_tps20xx_data[channel].retry_timer, retry_time);
                 }
                 else
                 {
@@ -163,24 +166,24 @@ void drv_tps20xx_run(void)
             case DRV_TPS20XX_STATE_INIT:
             case DRV_TPS20XX_STATE_ERROR:
             default:
-                {
-                    drv_tps20xx_private_setICEnabled(channel, false);
+            {
+                drv_tps20xx_private_setICEnabled(channel, false);
 
-                    if (drv_timer_getState(&drv_tps20xx_data[channel].retry_timer) == DRV_TIMER_STOPPED)
-                    {
-                        drv_timer_start(&drv_tps20xx_data[channel].retry_timer, DEFAULT_FAULT_RETRY_TIME);
-                    }
-                    else if (timer_expired && (ic_faulted == false))
-                    {
-                        drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_OFF;
-                        drv_timer_stop(&drv_tps20xx_data[channel].retry_timer);
-                    }
-                    else if (timer_expired && ic_faulted)
-                    {
-                        drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_ERROR;
-                    }
+                if (drv_timer_getState(&drv_tps20xx_data[channel].retry_timer) == DRV_TIMER_STOPPED)
+                {
+                    drv_timer_start(&drv_tps20xx_data[channel].retry_timer, DEFAULT_FAULT_RETRY_TIME);
                 }
-                break;
+                else if (timer_expired && (ic_faulted == false))
+                {
+                    drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_OFF;
+                    drv_timer_stop(&drv_tps20xx_data[channel].retry_timer);
+                }
+                else if (timer_expired && ic_faulted)
+                {
+                    drv_tps20xx_data[channel].state = DRV_TPS20XX_STATE_ERROR;
+                }
+            }
+            break;
         }
     }
 }
@@ -193,6 +196,7 @@ void drv_tps20xx_run(void)
 drv_tps20xx_state_E drv_tps20xx_getState(drv_tps20xx_channel_E channel)
 {
     drv_tps20xx_state_E ret = drv_tps20xx_data[channel].state;
+
     if (drv_tps20xx_data[channel].state == DRV_TPS20XX_STATE_ENABLED)
     {
         if (drv_tps20xx_private_getICFaulted(channel))
@@ -213,21 +217,27 @@ CAN_hsdState_E drv_tps20xx_getStateCAN(drv_tps20xx_channel_E channel)
         case DRV_TPS20XX_STATE_OFF:
             ret = CAN_HSDSTATE_OFF;
             break;
+
         case DRV_TPS20XX_STATE_ENABLED:
             ret = CAN_HSDSTATE_ON;
             break;
+
         case DRV_TPS20XX_STATE_FAULTED_OC:
             ret = CAN_HSDSTATE_OVERCURRENT;
             break;
+
         case DRV_TPS20XX_STATE_FAULTED_OT:
             ret = CAN_HSDSTATE_OVERTEMP;
             break;
+
         case DRV_TPS20XX_STATE_RETRY:
             ret = CAN_HSDSTATE_RETRY;
             break;
+
         case DRV_TPS20XX_STATE_ERROR:
             ret = CAN_HSDSTATE_FAULT;
             break;
+
         case DRV_TPS20XX_STATE_INIT:
         default:
             break;
@@ -237,7 +247,7 @@ CAN_hsdState_E drv_tps20xx_getStateCAN(drv_tps20xx_channel_E channel)
 }
 
 /**
- * @brief Set the state of a channel. 
+ * @brief Set the state of a channel.
  * @note If a channel is off and it is set to on, the driver will enable
  * it the next time the periodic is called.
  * @param channel The channel to enable
@@ -271,6 +281,7 @@ void drv_tps20xx_setEnabled(drv_tps20xx_channel_E channel, bool enabled)
 static void drv_tps20xx_private_setICEnabled(drv_tps20xx_channel_E channel, bool enabled)
 {
     const drv_io_activeState_E state_to_set = (enabled) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+
     drv_outputAD_setDigitalActiveState(drv_tps20xx_channels[channel].enable, state_to_set);
 }
 

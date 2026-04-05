@@ -9,14 +9,15 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include <stdint.h>
 #include "drv_imu.h"
+#include <stdint.h>
 
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef struct {
+typedef struct
+{
     float q0, q1, q2, q3;
     float beta;
 } lib_madgwick_S;
@@ -68,17 +69,17 @@ void madgwick_euler_rad_to_deg(lib_madgwick_euler_S* e);
  * @brief Update using gyro (deg/s) and accel (g or m/s^2; only direction matters).
  * @param dt Seconds since last update.
  */
-void madgwick_update_imu(lib_madgwick_S* f,
+void madgwick_update_imu(lib_madgwick_S            * f,
                          const lib_madgwick_euler_S* g,
                          const lib_madgwick_euler_S* a,
-                         float dt);
+                         float                     dt);
 
 /**
  * @brief Update using gyro (deg/s), accel, and magnetometer (any units; only direction matters).
  * @param dt Seconds since last update.
  */
-void madgwick_update_mag(lib_madgwick_S* f,
+void madgwick_update_mag(lib_madgwick_S            * f,
                          const lib_madgwick_euler_S* g,
                          const lib_madgwick_euler_S* a,
                          const lib_madgwick_euler_S* m,
-                         float dt);
+                         float                     dt);

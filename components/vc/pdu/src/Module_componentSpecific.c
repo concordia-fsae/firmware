@@ -8,8 +8,8 @@
  ******************************************************************************/
 
 /**< Module Header */
-#include "Module.h"
 #include "drv_inputAD.h"
+#include "Module.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -37,7 +37,6 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
-
 }
 
 /**

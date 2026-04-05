@@ -24,18 +24,18 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
-#define ADC_CALIBRATION_TIMEOUT                 10U
+#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES    2U
+#define ADC_CALIBRATION_TIMEOUT                    10U
 
-#define ADC_BANK1_CHANNEL_AIN2                  ADC_CHANNEL_2
-#define ADC_BANK1_CHANNEL_AIN4                  ADC_CHANNEL_4
-#define ADC_BANK1_CHANNEL_AIN6                  ADC_CHANNEL_6
-#define ADC_BANK1_CHANNEL_MCU_TEMP              ADC_CHANNEL_TEMPSENSOR
+#define ADC_BANK1_CHANNEL_AIN2                     ADC_CHANNEL_2
+#define ADC_BANK1_CHANNEL_AIN4                     ADC_CHANNEL_4
+#define ADC_BANK1_CHANNEL_AIN6                     ADC_CHANNEL_6
+#define ADC_BANK1_CHANNEL_MCU_TEMP                 ADC_CHANNEL_TEMPSENSOR
 
-#define ADC_BANK2_CHANNEL_AIN1                  ADC_CHANNEL_1
-#define ADC_BANK2_CHANNEL_AIN3                  ADC_CHANNEL_3
-#define ADC_BANK2_CHANNEL_AIN5                  ADC_CHANNEL_5
-#define ADC_BANK2_CHANNEL_AIN7                  ADC_CHANNEL_7
+#define ADC_BANK2_CHANNEL_AIN1                     ADC_CHANNEL_1
+#define ADC_BANK2_CHANNEL_AIN3                     ADC_CHANNEL_3
+#define ADC_BANK2_CHANNEL_AIN5                     ADC_CHANNEL_5
+#define ADC_BANK2_CHANNEL_AIN7                     ADC_CHANNEL_7
 
 /******************************************************************************
  *                              E X T E R N S

@@ -48,12 +48,15 @@ CAN_brakeLightState_E brakeLight_getStateCAN(void)
         case BRAKELIGHT_ON:
             ret = CAN_BRAKELIGHTSTATE_ON;
             break;
+
         case BRAKELIGHT_OFF:
             ret = CAN_BRAKELIGHTSTATE_OFF;
             break;
+
         case BRAKELIGHT_FAULT:
             ret = CAN_BRAKELIGHTSTATE_FAULT;
             break;
+
         default:
             break;
     }
@@ -70,7 +73,7 @@ static void brakeLight_init(void)
 
 static void brakeLight_periodic_10Hz(void)
 {
-    float32_t percentage = 0U; // Can percentage 0.0f - 100.0f
+    float32_t percentage = 0U;    // Can percentage 0.0f - 100.0f
 
     if (CANRX_get_signal(VEH, VCFRONT_brakePosition, &percentage) == CANRX_MESSAGE_VALID)
     {
@@ -93,9 +96,11 @@ static void brakeLight_periodic_10Hz(void)
         case BRAKELIGHT_ON:
             drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_BR_LIGHT_EN, DRV_IO_ACTIVE);
             break;
+
         case BRAKELIGHT_OFF:
             drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_BR_LIGHT_EN, DRV_IO_INACTIVE);
             break;
+
         case BRAKELIGHT_FAULT:
         default:
             drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_BR_LIGHT_EN);
@@ -108,6 +113,6 @@ static void brakeLight_periodic_10Hz(void)
  ******************************************************************************/
 
 const ModuleDesc_S brakeLight_desc = {
-    .moduleInit = &brakeLight_init,
+    .moduleInit       = &brakeLight_init,
     .periodic10Hz_CLK = &brakeLight_periodic_10Hz,
 };

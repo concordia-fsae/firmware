@@ -16,7 +16,7 @@
  ******************************************************************************/
 
 #define LIB_SIMPLEFILTER_WEIGHTAVG(a, b, weightA, out) \
-    *(out) = *(a) * weightA + (1 - weightA) * *(b)
+        *(out) = *(a) * weightA + (1 - weightA) * *(b)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -24,7 +24,7 @@
 
 typedef struct
 {
-    uint32_t raw;
+    uint32_t  raw;
     float32_t value;
     uint16_t  count;
 } lib_simpleFilter_cumAvg_S;

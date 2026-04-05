@@ -16,15 +16,15 @@
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-const HW_spi_port_S HW_spi_ports[HW_SPI_PORT_COUNT] = {
+const HW_spi_port_S   HW_spi_ports[HW_SPI_PORT_COUNT] = {
     [HW_SPI_PORT_SPI1] = {
-        .handle  = SPI1,
+        .handle = SPI1,
     },
 };
 
 const HW_SPI_Device_S HW_spi_devices[HW_SPI_DEV_COUNT] = {
     [HW_SPI_DEV_BMS] = {
-        .port  = HW_SPI_PORT_SPI1,
+        .port    = HW_SPI_PORT_SPI1,
         .ncs_pin = HW_GPIO_SPI1_MAX_NCS,
     },
 };

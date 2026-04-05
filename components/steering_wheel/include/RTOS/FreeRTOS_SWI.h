@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "FreeRTOSConfig.h"
 #include "FreeRTOS_types.h"
+#include "FreeRTOSConfig.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -46,19 +46,18 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void RTOS_SWI_Init(void);
+void              RTOS_SWI_Init(void);
 
 RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler);
 
-void SWI_invoke(RTOS_swiHandle_T* handle);
-bool SWI_invokeFromISR(RTOS_swiHandle_T* handle);
-void SWI_disable(void);
-void SWI_enable(void);
+void              SWI_invoke(RTOS_swiHandle_T* handle);
+bool              SWI_invokeFromISR(RTOS_swiHandle_T* handle);
+void              SWI_disable(void);
+void              SWI_enable(void);
 
 
-void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
-                           StaticTask_t **ppxSwiTaskTCBBuffer,
-                           StackType_t **ppxSwiTaskStackBuffer,
-                           uint32_t *pusSwiTaskStackSize);
-
+void              RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
+                                        StaticTask_t  **ppxSwiTaskTCBBuffer,
+                                        StackType_t   **ppxSwiTaskStackBuffer,
+                                        uint32_t      *pusSwiTaskStackSize);
 

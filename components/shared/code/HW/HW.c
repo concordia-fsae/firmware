@@ -15,9 +15,9 @@
 #include "string.h"
 
 // Firmware Includes
-#include "stm32f1xx.h"
 #include "HW_tim.h"
 #include "lib_nvm.h"
+#include "stm32f1xx.h"
 
 #include "FeatureDefines_generated.h"
 
@@ -40,13 +40,13 @@ typedef struct
     volatile uint32_t       BFAR;
     volatile uint32_t       AFSR;
 } SCB_regMap;
-#define pSCB               ((SCB_regMap*)SCB_BASE)
+# define pSCB               ((SCB_regMap*)SCB_BASE)
 
-#define AIRCR_RESET        (0x05FA0000UL)
-#define AIRCR_RESET_REQ    (AIRCR_RESET | 0x04UL)
-#else
-#error "Chipset not supported"
-#endif
+# define AIRCR_RESET        (0x05FA0000UL)
+# define AIRCR_RESET_REQ    (AIRCR_RESET | 0x04UL)
+#else // if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105) || (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB)
+# error "Chipset not supported"
+#endif // if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105) || (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB)
 
 typedef struct
 {
@@ -62,12 +62,12 @@ static data_S data;
 /**
  * @brief  Initializes the generic low-level firmware
  *
- * @retval Always true 
+ * @retval Always true
  */
-HW_StatusTypeDef_E HW_init(void) 
+HW_StatusTypeDef_E HW_init(void)
 {
     memset(&data, 0x00, sizeof(data));
-    return HAL_Init() == HAL_OK ? HW_OK : HW_ERROR;
+    return (HAL_Init() == HAL_OK) ? HW_OK : HW_ERROR;
 }
 
 /**
@@ -99,7 +99,10 @@ void HW_usDelay(uint8_t us)
 {
     uint64_t us_start = HW_TIM_getBaseTick();
 
-    while (HW_TIM_getBaseTick() < us_start + us);
+    while (HW_TIM_getBaseTick() < us_start + us)
+    {
+        ;
+    }
 }
 
 void HW_systemHardReset(void)
@@ -113,7 +116,7 @@ void HW_systemHardReset(void)
     (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB)
     pSCB->AIRCR = AIRCR_RESET_REQ;
 #else
-#error "Chipset not supported"
+# error "Chipset not supported"
 #endif
 }
 

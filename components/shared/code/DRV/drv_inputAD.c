@@ -9,10 +9,10 @@
 
 #include "drv_inputAD.h"
 #include "drv_inputAD_private.h"
-#include <string.h>
-#include "HW_gpio.h"
-#include "HW_adc.h"
 #include "drv_io.h"
+#include "HW_adc.h"
+#include "HW_gpio.h"
+#include <string.h>
 
 /******************************************************************************
  *                              E X T E R N S
@@ -21,7 +21,7 @@
 extern drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT];
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -51,15 +51,17 @@ static void inputAD_getDigitalInput(drv_inputAD_channelDigital_E channel)
         case INPUT_DIGITAL:
             inputs.logic_levels[channel] = HW_GPIO_readPin(drv_inputAD_configDigital[channel].config.gpio.pin) ? DRV_IO_LOGIC_HIGH : DRV_IO_LOGIC_LOW;
             break;
+
         case INPUT_DIGITAL_CAN:
+        {
+            CAN_digitalStatus_E status = CAN_DIGITALSTATUS_OFF;
+            if (drv_inputAD_configDigital[channel].config.canrx_digitalStatus(&status) == CANRX_MESSAGE_VALID)
             {
-                CAN_digitalStatus_E status = CAN_DIGITALSTATUS_OFF;
-                if (drv_inputAD_configDigital[channel].config.canrx_digitalStatus(&status) == CANRX_MESSAGE_VALID)
-                {
-                    inputs.logic_levels[channel] = (status == CAN_DIGITALSTATUS_ON) ? DRV_IO_LOGIC_HIGH : DRV_IO_LOGIC_LOW;
-                }
+                inputs.logic_levels[channel] = (status == CAN_DIGITALSTATUS_ON) ? DRV_IO_LOGIC_HIGH : DRV_IO_LOGIC_LOW;
             }
-            break;
+        }
+        break;
+
         default:
             break;
     }
@@ -82,7 +84,7 @@ void drv_inputAD_private_init(void)
  */
 void drv_inputAD_private_runDigital(void)
 {
-    for(uint8_t i = 0U; i < DRV_INPUTAD_DIGITAL_COUNT; i++)
+    for (uint8_t i = 0U; i < DRV_INPUTAD_DIGITAL_COUNT; i++)
     {
         inputAD_getDigitalInput(i);
     }
@@ -132,12 +134,14 @@ drv_io_activeState_E drv_inputAD_getDigitalActiveState(drv_inputAD_channelDigita
     {
         case INPUT_DIGITAL:
             ret = (drv_inputAD_getLogicLevel(channel) == drv_inputAD_configDigital[channel].config.gpio.active_level) ?
-                   DRV_IO_ACTIVE :
-                   DRV_IO_INACTIVE;
+                  DRV_IO_ACTIVE :
+                  DRV_IO_INACTIVE;
             break;
+
         case INPUT_DIGITAL_CAN:
             ret = (drv_inputAD_getLogicLevel(channel) == DRV_IO_LOGIC_HIGH) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
             break;
+
         default:
             break;
     }

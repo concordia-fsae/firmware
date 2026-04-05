@@ -11,12 +11,12 @@
 
 #include "HW_can.h"
 
-#include "FreeRTOS_SWI.h"
-#include "ModuleDesc.h"
-#include "Utility.h"
-#include "string.h"
-#include "lib_uds.h"
 #include "CANIO_componentSpecific.h"
+#include "FreeRTOS_SWI.h"
+#include "lib_uds.h"
+#include "ModuleDesc.h"
+#include "string.h"
+#include "Utility.h"
 
 #include "FeatureDefines_generated.h"
 #include "Yamcan.h"
@@ -36,8 +36,8 @@ typedef struct
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
     FLAG_create(fifoNotify[CAN_BUS_COUNT], CAN_RX_FIFO_COUNT);
     CAN_RxMessage_T udsBuffer[CANIO_UDS_BUFFER_LENGTH];
-    uint8_t bufferStartIndex;
-    uint8_t bufferEndIndex;
+    uint8_t         bufferStartIndex;
+    uint8_t         bufferEndIndex;
 #endif // FEATURE_CANRX_SWI
 } canrx_S;
 
@@ -105,8 +105,8 @@ static void CANIO_rx_init(void)
 }
 
 const ModuleDesc_S CANIO_rx = {
-    .moduleInit        = &CANIO_rx_init,
-    .periodic1kHz_CLK  = &CANIO_rx_1kHz_PRD,
+    .moduleInit       = &CANIO_rx_init,
+    .periodic1kHz_CLK = &CANIO_rx_1kHz_PRD,
 };
 
 /******************************************************************************
@@ -136,12 +136,12 @@ void CANRX_SWI(void)
 
             do
             {
-                CAN_RxMessage_T msg       = { 0U };
+                CAN_RxMessage_T msg = { 0U };
                 rxSuccess = HW_CAN_getRxMessage(bus, rxFifo, &msg);
 
                 if (rxSuccess)
                 {
-#if APP_UDS
+# if APP_UDS
                     if (msg.id == UDS_REQUEST_ID)
                     {
                         udsResult_E result = udsSrv_processMessage((uint8_t*)&msg.data, (uint8_t)msg.lengthBytes);
@@ -156,7 +156,7 @@ void CANRX_SWI(void)
                         }
                     }
                     else
-#endif // APP_UDS
+# endif // APP_UDS
                     {
                         CANRX_unpackMessage(bus, msg.id, &msg.data);
                     }

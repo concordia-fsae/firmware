@@ -23,7 +23,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define SPI_MAX HW_SPI_DEV_BMS
+#define SPI_MAX    HW_SPI_DEV_BMS
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -51,14 +51,14 @@ bool MAX_init(void)
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
-    max_chip.dev                         = SPI_MAX;
-    max_chip.config.low_power_mode       = false;
-    max_chip.config.diagnostic_enabled   = false;
-    max_chip.config.sampling             = false;
-    max_chip.config.sampling_start       = UINT32_MAX;
-    max_chip.config.balancing            = 0x00;
-    max_chip.config.output.state         = MAX_AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell   = MAX_CELL1;
+    max_chip.dev                       = SPI_MAX;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.sampling           = false;
+    max_chip.config.sampling_start     = UINT32_MAX;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
+    max_chip.config.output.output.cell = MAX_CELL1;
 
     MAX_readWriteToChip();
 

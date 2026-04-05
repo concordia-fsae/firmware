@@ -15,11 +15,12 @@
 
 static float32_t lib_interpolation_private_doInterpolation(lib_interpolation_point_S *const start,
                                                            lib_interpolation_point_S *const stop,
-                                                           float32_t x)
+                                                           float32_t                        x)
 {
     const float32_t dx2x1 = stop->x - start->x;
     const float32_t dy2y1 = stop->y - start->y;
-    const float32_t dxx1 = x - start->x;
+    const float32_t dxx1  = x - start->x;
+
     return start->y + dy2y1 * (dxx1 / dx2x1);
 }
 
@@ -48,7 +49,7 @@ float32_t lib_interpolation_interpolate(lib_interpolation_mapping_S * const mapp
     if (x <= mapping->points[0].x)
     {
         return (mapping->saturate_left) ? mapping->points[0].y :
-            lib_interpolation_private_doInterpolation(&mapping->points[0], &mapping->points[1], x);
+               lib_interpolation_private_doInterpolation(&mapping->points[0], &mapping->points[1], x);
     }
 
     for (uint8_t i = 0; i < mapping->number_points - 1; i++)
@@ -60,7 +61,7 @@ float32_t lib_interpolation_interpolate(lib_interpolation_mapping_S * const mapp
     }
 
     return (mapping->saturate_right) ? mapping->points[mapping->number_points - 1].y :
-        lib_interpolation_private_doInterpolation(&mapping->points[mapping->number_points - 2],
-                                                  &mapping->points[mapping->number_points - 1],
-                                                  x);
+           lib_interpolation_private_doInterpolation(&mapping->points[mapping->number_points - 2],
+                                                     &mapping->points[mapping->number_points - 1],
+                                                     x);
 }

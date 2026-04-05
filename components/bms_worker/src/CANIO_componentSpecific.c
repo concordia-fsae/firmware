@@ -1,5 +1,5 @@
 /**
- RX_config* CAN.h
+ * RX_config* CAN.h
  * Header file for CANRX configuration
  */
 

@@ -9,19 +9,19 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW_spi.h"
-#include "drv_imu.h"
 #include "asm330lhb_reg.h"
+#include "drv_imu.h"
+#include "HW_spi.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define drv_asm330_getFifoOverrun(dev)       ((drv_asm330_getFifoStatus(dev) & MASK_FIFO_OVR) != 0U)
-#define drv_asm330_getFifoElementsReady(dev) (drv_asm330_getFifoStatus(dev) & MASK_DIFF_FIFO)
+#define drv_asm330_getFifoOverrun(dev)          ((drv_asm330_getFifoStatus(dev) &MASK_FIFO_OVR) != 0U)
+#define drv_asm330_getFifoElementsReady(dev)    (drv_asm330_getFifoStatus(dev) &MASK_DIFF_FIFO)
 
-#define MASK_DIFF_FIFO  0x3ff
-#define MASK_FIFO_OVR   (1U << 14U)
+#define MASK_DIFF_FIFO                          0x3ff
+#define MASK_FIFO_OVR                           (1U << 14U)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -46,7 +46,7 @@ typedef uint32_t drv_asm330_timestamp_t;
 typedef union
 {
     drv_asm330_timestamp_t timestamp;
-    drv_asm330_vector_S vector;
+    drv_asm330_vector_S    vector;
 } drv_asm330_result_U;
 
 typedef struct
@@ -58,13 +58,14 @@ typedef struct
 typedef struct
 {
     asm330lhb_fifo_data_out_tag_t tag;
-    drv_asm330_result_U elem;
+    drv_asm330_result_U           elem;
 } drv_asm330_fifoElementUnpack_S;
 
 typedef struct
 {
     HW_spi_device_E dev;
-    struct {
+    struct
+    {
         asm330lhb_odr_xl_t odr;
         asm330lhb_fs_xl_t  scaleA;
         bool               gyroLpfEnabled;
@@ -72,12 +73,13 @@ typedef struct
         bool               accelLpfEnabled;
         asm330lhb_ftype_t  accelFtype;
     } config;
-    struct {
-        float32_t scaleA;
+    struct
+    {
+        float32_t          scaleA;
         drv_asm330_state_E state;
-        float32_t sampleTime;
-        uint16_t fsmStartAddress;
-        uint8_t  fsmMaxProgram;
+        float32_t          sampleTime;
+        uint16_t           fsmStartAddress;
+        uint8_t            fsmMaxProgram;
     } state;
 } drv_asm330_S;
 
@@ -85,24 +87,24 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-bool drv_asm330_init(drv_asm330_S* dev);
-bool drv_asm330_getInertialMeasurement(drv_asm330_S* dev, drv_imu_accel_S* accel);
-bool drv_asm330_getGyroMeasurement(drv_asm330_S* dev, drv_imu_gyro_S* gyro);
-void drv_asm330_getAccelFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_accel_S* accel);
-void drv_asm330_getGyroFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_gyro_S* gyro);
-drv_asm330_state_E drv_asm330_getState(drv_asm330_S* dev);
+bool                 drv_asm330_init(drv_asm330_S* dev);
+bool                 drv_asm330_getInertialMeasurement(drv_asm330_S* dev, drv_imu_accel_S* accel);
+bool                 drv_asm330_getGyroMeasurement(drv_asm330_S* dev, drv_imu_gyro_S* gyro);
+void                 drv_asm330_getAccelFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_accel_S* accel);
+void                 drv_asm330_getGyroFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_gyro_S* gyro);
+drv_asm330_state_E   drv_asm330_getState(drv_asm330_S* dev);
 
-uint16_t drv_asm330_getFifoStatus(drv_asm330_S* dev);
-uint16_t drv_asm330_getFifoElements(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen);
-bool drv_asm330_getFifoElementsDMA(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen);
+uint16_t             drv_asm330_getFifoStatus(drv_asm330_S* dev);
+uint16_t             drv_asm330_getFifoElements(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen);
+bool                 drv_asm330_getFifoElementsDMA(drv_asm330_S* dev, uint8_t* data, uint16_t maxLen);
 asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifoElement_S* pack, drv_imu_vector_S* vec);
 
-bool drv_asm330_loadFsmProgram(drv_asm330_S* dev,
-                               uint8_t programNumber,
-                               uint16_t startAddress,
-                               const uint8_t* program,
-                               uint16_t programLength,
-                               asm330lhb_fsm_odr_t odr);
+bool                 drv_asm330_loadFsmProgram(drv_asm330_S        * dev,
+                                               uint8_t             programNumber,
+                                               uint16_t            startAddress,
+                                               const uint8_t       * program,
+                                               uint16_t            programLength,
+                                               asm330lhb_fsm_odr_t odr);
 bool drv_asm330_getFsmEvent(drv_asm330_S* dev, uint8_t programNumber, bool* eventDetected);
 bool drv_asm330_clearFsmStatus(drv_asm330_S* dev);
 bool drv_asm330_getFsmStatus(drv_asm330_S* dev, uint8_t* statusA, uint8_t* statusB);

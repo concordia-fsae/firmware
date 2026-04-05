@@ -13,10 +13,10 @@
 #include "UDS.h"
 #include "Utilities.h"
 
-#include <string.h>    // memset
 #include "FeatureDefines_generated.h"
-#include "LIB_app.h"
 #include "HW_FLASH.h"
+#include "LIB_app.h"
+#include <string.h>    // memset
 
 
 /******************************************************************************
@@ -62,7 +62,8 @@ static void periodic_100Hz(void)
 static void periodic_10Hz(void)
 {
     extern lib_app_appDesc_S hwDesc;
-    CAN_TxMessage_S msg = { 0U };
+    CAN_TxMessage_S          msg = { 0U };
+
     msg.id          = 0x299;
     msg.lengthBytes = 8U;
     msg.data.u16[0] = hwDesc.appComponentId;
@@ -136,18 +137,18 @@ static void tryBoot(void)
         }
         else
         {
-#if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
+# if FEATURE_IS_ENABLED(FEATURE_CAN_DEBUG)
             CAN_TxMessage_S msg = { 0U };
             msg.id          = 0x401;
             msg.lengthBytes = 2;
             msg.mailbox     = 2;
             msg.data.u64    = 0ULL;
 
-            msg.data.u8[0] = 0xFF;
+            msg.data.u8[0]  = 0xFF;
             msg.data.u8[1] |= appValid ? 1U : 0U;
 
             CAN_sendMsg(msg);
-#endif // FEATURE_CAN_DEBUG
+# endif // FEATURE_CAN_DEBUG
         }
     }
 }

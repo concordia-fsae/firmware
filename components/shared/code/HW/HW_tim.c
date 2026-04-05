@@ -8,8 +8,8 @@
  ******************************************************************************/
 
 // System Includes
-#include "SystemConfig.h"
 #include "LIB_Types.h"
+#include "SystemConfig.h"
 
 // Firmware Includes
 #include "HW_tim.h"
@@ -37,12 +37,15 @@ void HW_TIM_setDuty(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t perc
         case HW_TIM_CHANNEL_1:
             htim[port].Instance->CCR1 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
             break;
+
         case HW_TIM_CHANNEL_2:
             htim[port].Instance->CCR2 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
             break;
+
         case HW_TIM_CHANNEL_3:
             htim[port].Instance->CCR3 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
             break;
+
         case HW_TIM_CHANNEL_4:
             htim[port].Instance->CCR4 = (uint16_t)(percentage * (float32_t)htim[port].Init.Period);
             break;
@@ -64,12 +67,15 @@ float32_t HW_TIM_getDuty(HW_TIM_port_E port, HW_TIM_channel_E channel)
         case HW_TIM_CHANNEL_1:
             ret = (((float32_t)htim[port].Instance->CCR1) / ((float32_t)htim[port].Init.Period));
             break;
+
         case HW_TIM_CHANNEL_2:
             ret = (((float32_t)htim[port].Instance->CCR2) / ((float32_t)htim[port].Init.Period));
             break;
+
         case HW_TIM_CHANNEL_3:
             ret = (((float32_t)htim[port].Instance->CCR3) / ((float32_t)htim[port].Init.Period));
             break;
+
         case HW_TIM_CHANNEL_4:
             ret = (((float32_t)htim[port].Instance->CCR4) / ((float32_t)htim[port].Init.Period));
             break;
@@ -172,9 +178,9 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
 
     // Compute TIM2 clock
-    uwTimclock       = HW_TIM_TICK_GETCLKFREQ();
+    uwTimclock         = HW_TIM_TICK_GETCLKFREQ();
     // Compute the prescaler value to have HW_TIM_TICK counter clock equal to 1MHz
-    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
+    uwPrescalerValue   = (uint32_t)((uwTimclock / 1000000U) - 1U);
 
     // Initialize HW_TIM_TICK
     htim_tick.Instance = HW_TIM_TICK;

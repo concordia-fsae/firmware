@@ -29,14 +29,14 @@ extern "C" {
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void CAN_Start(void);
-void HW_CAN_Init(void);
+void    CAN_Start(void);
+void    HW_CAN_Init(void);
 
-bool CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len);
+bool    CAN_sendMsgBus0(CAN_TX_Priorities_E priority, CAN_data_T data, uint16_t id, uint8_t len);
 
-bool CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx);
+bool    CAN_getRxMessageBus0(CAN_RxFifo_E rxFifo, CAN_RxMessage_T *rx);
 uint8_t CAN_getRxFifoFillLevelBus0(CAN_RxFifo_E rxFifo);
-bool CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo);
+bool    CAN_getRxFifoEmptyBus0(CAN_RxFifo_E rxFifo);
 
 #ifdef __cplusplus
 }

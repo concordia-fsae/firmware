@@ -16,6 +16,7 @@
 // imports for CAN generated types
 
 // imports for data access
+#include "app_faultManager.h"
 #include "BMS.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
@@ -25,7 +26,6 @@
 #include "IMD.h"
 #include "lib_nvm.h"
 #include "Module.h"
-#include "app_faultManager.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -42,7 +42,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define CANIO_UDS_BUFFER_LENGTH                        8U
 #define CANIO_getTimeMs()                              (HW_TIM_getTimeMS())
 
-#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+#define set_fault_message                              (*(CAN_data_T*)app_faultManager_transmit())
 
 #define set_packChargeLimit(m, b, n, s)                set(m, b, n, s, BMS.charge_limit)
 #define set_packDischargeLimit(m, b, n, s)             set(m, b, n, s, BMS.discharge_limit)
@@ -107,7 +107,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 # define set_contactorSohHvp(m, b, n, s)               set(m, b, n, s, BMSB_getContactorSohHvp() * 100.0f)
 # define set_contactorSohHvn(m, b, n, s)               set(m, b, n, s, BMSB_getContactorSohHvn() * 100.0f)
 # define set_contactorSohPrecharge(m, b, n, s)         set(m, b, n, s, BMSB_getContactorSohPrecharge() * 100.0f)
-#else
+#else // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define transmit_BMSB_nvmInformation                  false
-#endif
+#endif // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 

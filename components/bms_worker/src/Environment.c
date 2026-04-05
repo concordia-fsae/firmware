@@ -16,35 +16,35 @@
 #include <stdint.h>
 
 /**< Driver Includes */
-#include "HW_adc.h"
-#include "drv_sht40.h"
+#include "app_faultManager.h"
+#include "BatteryMonitoring.h"
 #include "drv_inputAD.h"
+#include "drv_sht40.h"
 #include "drv_tempSensors.h"
 #include "drv_timer.h"
+#include "HW_adc.h"
 #include "lib_voltageDivider.h"
-#include "BatteryMonitoring.h"
 #include "Module.h"
-#include "app_faultManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TEMP_CHIP_V_PER_DEG_C 0.0043F    // [V/degC] slope of built-in temp sensor
-#define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
-#define TEMP_CHIP_FROM_V(v)   (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
+#define TEMP_CHIP_V_PER_DEG_C    0.0043F // [V/degC] slope of built-in temp sensor
+#define TEMP_CHIP_V_AT_25_C      1.43F   // [V] voltage at 25 degC
+#define TEMP_CHIP_FROM_V(v)      (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
 
-#define THERM_PULLUP  10000.0F
-#define RES_FROM_V(v) (lib_voltageDivider_getRFromVKnownPullUp(v, THERM_PULLUP, ADC_REF_VOLTAGE))
+#define THERM_PULLUP             10000.0F
+#define RES_FROM_V(v)            (lib_voltageDivider_getRFromVKnownPullUp(v, THERM_PULLUP, ADC_REF_VOLTAGE))
 
-#define ENV_ERROR_TIMEOUT_MS 1000U
+#define ENV_ERROR_TIMEOUT_MS     1000U
 
 #if APP_VARIANT_ID == 0U
-#define CELL_THERM_BPARAM MF52_bParam
+# define CELL_THERM_BPARAM       MF52_bParam
 #elif APP_VARIANT_ID == 1U
-#define CELL_THERM_BPARAM NTC103JT_bParam
+# define CELL_THERM_BPARAM       NTC103JT_bParam
 #else
-#error "Variant not supported"
+# error "Variant not supported"
 #endif
 
 /******************************************************************************
@@ -68,7 +68,7 @@ HW_I2C_Device_S I2C_SHT40 = {
     .handle = &i2c2,
 };
 
-drv_sht40_S sht_chip = {
+drv_sht40_S     sht_chip = {
     .dev = &I2C_SHT40,
 };
 
@@ -103,22 +103,22 @@ static void ENV_calcTempStats(void)
 
         connected_channels++;
         ENV.values.temps[i].therm_error = false;
-        ENV.values.avg_temp += ENV.values.temps[i].temp;
-        ENV.values.max_temp = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
-        ENV.values.min_temp = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
+        ENV.values.avg_temp            += ENV.values.temps[i].temp;
+        ENV.values.max_temp             = (ENV.values.temps[i].temp > ENV.values.max_temp) ? ENV.values.temps[i].temp : ENV.values.max_temp;
+        ENV.values.min_temp             = (ENV.values.temps[i].temp < ENV.values.min_temp) ? ENV.values.temps[i].temp : ENV.values.min_temp;
     }
 
     ENV.values.avg_temp /= connected_channels;
 
-    const bool disconnectedCell = connected_channels != CHANNEL_COUNT;
+    const bool disconnectedCell        = connected_channels != CHANNEL_COUNT;
     const bool insufficientThermistors = connected_channels <= (0.2f * BMS_CONFIGURED_PARALLEL_CELLS * BMS_CONFIGURED_SERIES_CELLS);
-    const bool thermistorFaulted = drv_timer_run(&env.timerDisconnected, disconnectedCell) == DRV_TIMER_EXPIRED;
-    const bool insufficientFaulted = drv_timer_run(&env.timerInsufficient, insufficientThermistors) == DRV_TIMER_EXPIRED;
-    const bool cellOvertemp = ENV.values.max_temp >= 60;
+    const bool thermistorFaulted       = drv_timer_run(&env.timerDisconnected, disconnectedCell) == DRV_TIMER_EXPIRED;
+    const bool insufficientFaulted     = drv_timer_run(&env.timerInsufficient, insufficientThermistors) == DRV_TIMER_EXPIRED;
+    const bool cellOvertemp            = ENV.values.max_temp >= 60;
 
-    app_faultManager_setFaultState(FM_FAULT_BMSW_THERMISTORDISCONNECTED, disconnectedCell);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_THERMISTORDISCONNECTED,  disconnectedCell);
     app_faultManager_setFaultState(FM_FAULT_BMSW_INSUFFICIENTTHERMISTORS, insufficientThermistors);
-    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLOVERTEMP, cellOvertemp);
+    app_faultManager_setFaultState(FM_FAULT_BMSW_CELLOVERTEMP,            cellOvertemp);
 
     ENV.fault = (insufficientFaulted || thermistorFaulted || cellOvertemp);
 }
@@ -144,7 +144,7 @@ static void Environment_Init()
  */
 static void Environment10Hz_PRD()
 {
-    if (sht_chip.state == SHT40_MEASURING || sht_chip.state == SHT40_HEATING)
+    if ((sht_chip.state == SHT40_MEASURING) || (sht_chip.state == SHT40_HEATING))
     {
         if (drv_sht40_getData(&sht_chip))
         {
@@ -172,26 +172,26 @@ static void Environment10Hz_PRD()
         const float32_t mux2 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + i);
         const float32_t mux3 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + i);
 #endif
-        ENV.values.temps[i].temp     = (mux1 > 0.25F && mux1 < 2.25F) ? 
-                                        lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux1)) :
-                                        0.0F;
+        ENV.values.temps[i].temp = ((mux1 > 0.25F) && (mux1 < 2.25F)) ?
+                                       lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux1)) :
+                                   0.0F;
 #if APP_VARIANT_ID == 0U
-        ENV.values.temps[i + 8].temp = (mux2 > 0.1F && mux2 < 2.9F) ?
-                                        lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux2)) :
-                                        0.0F;
+        ENV.values.temps[i + 8].temp = ((mux2 > 0.1F) && (mux2 < 2.9F)) ?
+                                       lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux2)) :
+                                       0.0F;
         if (i < 4)
         {
-            ENV.values.temps[i + 16].temp = (mux3 > 0.1F && mux3 < 2.9F) ? 
-                                             lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux3)) :
-                                             0.0F;
+            ENV.values.temps[i + 16].temp = ((mux3 > 0.1F) && (mux3 < 2.9F)) ?
+                                            lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux3)) :
+                                            0.0F;
         }
 #endif
     }
 #if APP_VARIANT_ID == 1U
     const float32_t therm9 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_THERM9);
-    ENV.values.temps[CH9].temp     = (therm9 > 0.25F && therm9 < 2.25F) ? 
-                                      lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(therm9)) :
-                                      0.0F;
+    ENV.values.temps[CH9].temp = ((therm9 > 0.25F) && (therm9 < 2.25F)) ?
+                                 lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(therm9)) :
+                                 0.0F;
 #endif
 
     ENV_calcTempStats();

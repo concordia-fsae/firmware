@@ -27,20 +27,20 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
-#define ADC_CALIBRATION_TIMEOUT                 10U
-#define ADC_CHANNEL_MUX1                        ADC_CHANNEL_1
-#define ADC_CHANNEL_BALANCING1                  ADC_CHANNEL_4
-#define ADC_CHANNEL_BALANCING2                  ADC_CHANNEL_5
+#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES    2U
+#define ADC_CALIBRATION_TIMEOUT                    10U
+#define ADC_CHANNEL_MUX1                           ADC_CHANNEL_1
+#define ADC_CHANNEL_BALANCING1                     ADC_CHANNEL_4
+#define ADC_CHANNEL_BALANCING2                     ADC_CHANNEL_5
 #if APP_VARIANT_ID == 0U
-#define ADC_CHANNEL_CELL_MEASUREMENT            ADC_CHANNEL_0
-#define ADC_CHANNEL_MUX2                        ADC_CHANNEL_2
-#define ADC_CHANNEL_MUX3                        ADC_CHANNEL_3
+# define ADC_CHANNEL_CELL_MEASUREMENT              ADC_CHANNEL_0
+# define ADC_CHANNEL_MUX2                          ADC_CHANNEL_2
+# define ADC_CHANNEL_MUX3                          ADC_CHANNEL_3
 #elif APP_VARIANT_ID == 1U
-#define ADC_CHANNEL_CELL_MEASUREMENT            ADC_CHANNEL_7
-#define ADC_CHANNEL_TEMP_BOARD                  ADC_CHANNEL_6
-#define ADC_CHANNEL_TEMP_THERM9                 ADC_CHANNEL_2
-#define ADC_CHANNEL_VSNS_7V5                    ADC_CHANNEL_0
+# define ADC_CHANNEL_CELL_MEASUREMENT              ADC_CHANNEL_7
+# define ADC_CHANNEL_TEMP_BOARD                    ADC_CHANNEL_6
+# define ADC_CHANNEL_TEMP_THERM9                   ADC_CHANNEL_2
+# define ADC_CHANNEL_VSNS_7V5                      ADC_CHANNEL_0
 #endif
 
 /******************************************************************************
@@ -155,7 +155,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     {
         Error_Handler();
     }
-#endif
+#endif // if APP_VARIANT_ID == 0U
 
     // Common config
     hadc2.Instance                   = ADC2;

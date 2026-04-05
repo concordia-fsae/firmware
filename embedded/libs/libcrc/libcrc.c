@@ -43,7 +43,7 @@ uint8_t crc8_calculate(uint8_t crc, const uint8_t *data, uint16_t len)
         return 0xff;
     }
 
-    for(; len > 0U; len--)
+    for (; len > 0U; len--)
     {
         crc = CRC8_TABLE[crc ^ *data++];
     }
@@ -60,7 +60,7 @@ uint8_t crc8_calculate(uint8_t crc, const uint8_t *data, uint16_t len)
         return 0xff;
     }
 
-    for(; len > 0U; len--)
+    for (; len > 0U; len--)
     {
         crc ^= *data;
         data++;

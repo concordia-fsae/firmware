@@ -26,14 +26,14 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES 2U
-#define ADC_CALIBRATION_TIMEOUT                 10U
+#define ADC_PRECALIBRATION_DELAY_ADCCLOCKCYCLES    2U
+#define ADC_CALIBRATION_TIMEOUT                    10U
 
-#define ADC_CS_P_CHANNEL ADC_CHANNEL_9
-#define ADC_PACK_P_CHANNEL ADC_CHANNEL_11
+#define ADC_CS_P_CHANNEL                           ADC_CHANNEL_9
+#define ADC_PACK_P_CHANNEL                         ADC_CHANNEL_11
 
-#define ADC_CS_N_CHANNEL ADC_CHANNEL_8
-#define ADC_PACK_N_CHANNEL ADC_CHANNEL_12
+#define ADC_CS_N_CHANNEL                           ADC_CHANNEL_8
+#define ADC_PACK_N_CHANNEL                         ADC_CHANNEL_12
 
 /******************************************************************************
  *                              E X T E R N S
@@ -68,9 +68,9 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
 #if APP_VARIANT_ID == 1U
-    hadc1.Init.NbrOfConversion = 3;
+    hadc1.Init.NbrOfConversion       = 3;
 #else
-    hadc1.Init.NbrOfConversion = 2;
+    hadc1.Init.NbrOfConversion       = 2;
 #endif
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
@@ -122,9 +122,9 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc2.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc2.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
 #if APP_VARIANT_ID == 1U
-    hadc2.Init.NbrOfConversion = 3;
+    hadc2.Init.NbrOfConversion       = 3;
 #else
-    hadc2.Init.NbrOfConversion = 1;
+    hadc2.Init.NbrOfConversion       = 1;
 #endif
     if (HAL_ADC_Init(&hadc2) != HAL_OK)
     {
@@ -154,7 +154,7 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     {
         Error_Handler();
     }
-#endif
+#endif // if APP_VARIANT_ID == 1U
 
     return HW_OK;
 }

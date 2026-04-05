@@ -51,7 +51,7 @@ void HW_I2C_init(void)
  */
 void HW_I2C_deInit(void)
 {
-	HAL_I2C_DeInit(&i2c2);
+    HAL_I2C_DeInit(&i2c2);
 }
 
 

@@ -27,10 +27,10 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
-#include "HW_tim.h"
 #include "drv_tempSensors.h"
+#include "HW_tim.h"
 #include "lib_interpolation.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -86,7 +86,7 @@ typedef struct
     union
     {
         float32_t (*func)(void);
-    } feedback;
+    }         feedback;
     float32_t scale;
 } drv_cooling_feedback_S;
 

@@ -9,16 +9,16 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "FreeRTOSConfig.h"
 #include "FreeRTOS_types.h"
+#include "FreeRTOSConfig.h"
 
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define RTOS_SWI_PRI_OFFSET  12U                 // SWI priority offset from other interrupts
-#define RTOS_SWI_MAX_PER_PRI RTOS_EVENT_COUNT    // number of SWIs allowed per priority level
+#define RTOS_SWI_PRI_OFFSET     12U              // SWI priority offset from other interrupts
+#define RTOS_SWI_MAX_PER_PRI    RTOS_EVENT_COUNT // number of SWIs allowed per priority level
 
 
 /******************************************************************************
@@ -38,9 +38,9 @@ typedef void (*RTOS_swiFn_t)(void);
 
 typedef struct
 {
-    RTOS_swiFn_t handler;                     // function to be called when SWI runs
-    uint32_t     priority: 2;                 // priority of this SWI
-    uint32_t     event : RTOS_EVENT_COUNT;    // bitmask for the event bit for this SWI
+    RTOS_swiFn_t handler;                    // function to be called when SWI runs
+    uint32_t     priority: 2;                // priority of this SWI
+    uint32_t     event   : RTOS_EVENT_COUNT; // bitmask for the event bit for this SWI
 } RTOS_swiHandle_T;
 
 
@@ -48,16 +48,16 @@ typedef struct
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void RTOS_SWI_Init(void);
+void              RTOS_SWI_Init(void);
 
 RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler);
 
-void SWI_invoke(RTOS_swiHandle_T* handle);
-bool SWI_invokeFromISR(RTOS_swiHandle_T* handle);
-void SWI_disable(void);
-void SWI_enable(void);
+void              SWI_invoke(RTOS_swiHandle_T* handle);
+bool              SWI_invokeFromISR(RTOS_swiHandle_T* handle);
+void              SWI_disable(void);
+void              SWI_enable(void);
 
-void RTOS_getSwiTaskMemory(RTOS_swiPri_E  swiPriority,
-                           StaticTask_t** ppxSwiTaskTCBBuffer,
-                           StackType_t**  ppxSwiTaskStackBuffer,
-                           uint32_t*      pusSwiTaskStackSize);
+void              RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
+                                        StaticTask_t  ** ppxSwiTaskTCBBuffer,
+                                        StackType_t   ** ppxSwiTaskStackBuffer,
+                                        uint32_t      * pusSwiTaskStackSize);

@@ -7,12 +7,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_timer.h"
 #include "drv_userInput.h"
 #include "stdbool.h"
-#include "drv_timer.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -45,6 +45,7 @@ void drv_userInput_init(void)
             case USERINPUT_TYPE_GPIO:
                 drv_timer_init(&data.buttons[i].debounce_timer);
                 break;
+
             default:
                 break;
         }
@@ -73,8 +74,8 @@ void drv_userInput_run(void)
                     if (timer_state == DRV_TIMER_STOPPED)
                     {
                         drv_timer_start(&data.buttons[i].debounce_timer, is_active ?
-                            userInput_configButtons[i].config.gpio.debounce_on_ms :
-                            userInput_configButtons[i].config.gpio.debounce_off_ms);
+                                        userInput_configButtons[i].config.gpio.debounce_on_ms :
+                                        userInput_configButtons[i].config.gpio.debounce_off_ms);
                     }
                     else if (timer_state == DRV_TIMER_EXPIRED)
                     {
@@ -83,9 +84,11 @@ void drv_userInput_run(void)
                 }
                 break;
             }
+
             case USERINPUT_TYPE_CALLBACK:
                 data.buttons[i].is_pressed = userInput_configButtons[i].config.callback.func();
                 break;
+
             default:
                 break;
         }

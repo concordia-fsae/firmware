@@ -20,7 +20,7 @@
 #define CRC_DR          (CRC_BASE + 0x00UL) // Data register address
 #define CRC_CR          (CRC_BASE + 0x08UL) // Control register address
 
-#define CRC_CR_RESET    (0x01UL) // reset the data register to all Fs
+#define CRC_CR_RESET    (0x01UL)            // reset the data register to all Fs
 
 
 /******************************************************************************
