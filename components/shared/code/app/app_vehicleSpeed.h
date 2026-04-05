@@ -60,6 +60,10 @@ typedef struct
 extern nvm_odometer_S odometer_data;
 #endif
 
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+NVM_SIZE_ASSERT(nvm_odometer_S, 24U);
+#endif
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
