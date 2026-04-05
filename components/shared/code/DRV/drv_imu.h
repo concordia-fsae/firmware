@@ -57,6 +57,8 @@ typedef struct
 extern nvm_imuCalibration_S imuCalibration_data;
 extern const nvm_imuCalibration_S imuCalibration_default;
 
+NVM_SIZE_ASSERT(nvm_imuCalibration_S, 60U);
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
