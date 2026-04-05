@@ -75,6 +75,22 @@ messages:
       cellTemp12:
       cellTemp11:
 
+  dbgThermistorVoltages:
+    description: Raw thermistor ADC voltages for debug
+    cycleTimeMs: 500
+    id: 0x780
+    lengthBytes: 8
+    signals:
+      dbgThermVoltage9:
+      dbgThermVoltage8:
+      dbgThermVoltage7:
+      dbgThermVoltage6:
+      dbgThermVoltage5:
+      dbgThermVoltage4:
+      dbgThermVoltage3:
+      dbgThermVoltage2:
+      dbgThermVoltage1:
+
   cellVoltages0:
     description: First set of cell voltages
     cycleTimeMs: 1000
