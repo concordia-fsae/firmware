@@ -172,7 +172,7 @@ static void Environment10Hz_PRD()
         const float32_t mux2 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + i);
         const float32_t mux3 = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + i);
 #endif
-        ENV.values.temps[i].temp     = (mux1 > 0.25F && mux1 < 2.25F) ? 
+        ENV.values.temps[i].temp     = (mux1 > 0.1F && mux1 < 2.9F) ? 
                                         lib_thermistors_getCelsiusFromR_BParameter(&CELL_THERM_BPARAM, RES_FROM_V(mux1)) :
                                         0.0F;
 #if APP_VARIANT_ID == 0U
