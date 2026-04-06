@@ -23,6 +23,12 @@
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+static void toggleLed(void)
+{
+    static bool led = true;
+    GPIO_assignPin(LED_PORT, LED_PIN, led);
+    led = !led;
+}
 /*
  * 1kHz periodic function
  */
@@ -98,10 +104,6 @@ static void periodic_1Hz(void)
     msg.mailbox     = 2U;
     CAN_sendMsg(msg);
 #endif // FEATURE_CAN_DEBUG
-
-    static bool led = true;
-    GPIO_assignPin(LED_PORT, LED_PIN, led);
-    led = !led;
 }
 
 
@@ -160,9 +162,9 @@ int main(void)
 
     for (;;)
     {
-        static uint16_t timerMs  = 1U;
-        static uint32_t lastTick = 0U;
-        uint32_t        tick     = TIM_getTimeMs();
+        static uint16_t timerMs       = 1U;
+        static uint32_t lastTick      = 0U;
+        uint32_t        tick          = TIM_getTimeMs();
 
         if (lastTick != tick)
         {
@@ -177,11 +179,21 @@ int main(void)
 
             if (timerMs % 100U == 0U)
             {
+                if (UDS_downloadingBinary())
+                {
+                    toggleLed();
+                }
+
                 periodic_10Hz();
             }
 
             if (timerMs % 1000U == 0U)
             {
+                if (!UDS_downloadingBinary())
+                {
+                    toggleLed();
+                }
+
                 periodic_1Hz();
             }
 

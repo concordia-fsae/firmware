@@ -66,6 +66,8 @@ static struct bms_S
     drv_timer_S timerDisconnected;
     drv_timer_S timerUndervoltage;
     drv_timer_S timerChipError;
+
+    uint8_t     startBalanceSeq;
 } bms;
 
 /******************************************************************************
@@ -197,7 +199,14 @@ void BMS_measurementComplete(void)
         else
 #endif // FEATURE_CELL_BALANCING
         {
-            max_chip.config.balancing = 0x00;
+            if (bms.startBalanceSeq < BMS_CONFIGURED_SERIES_CELLS)
+            {
+                max_chip.config.balancing = 0x01 << bms.startBalanceSeq;
+            }
+            else
+            {
+                max_chip.config.balancing = 0x00;
+            }
         }
         MAX_readWriteToChip();
     }
@@ -322,7 +331,6 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling             = false;
             max_chip.config.diagnostic_enabled   = false;
             max_chip.config.low_power_mode       = false;
-            max_chip.config.balancing            = 0x00;
             max_chip.config.output.state         = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell   = BMS_CONFIGURED_SERIES_CELLS - 1; /**< Prepare for next step */
             MAX_readWriteToChip();
@@ -333,9 +341,21 @@ static void BMS100Hz_PRD()
 }
 
 /**
+ * @brief  10 Hz BMS periodic function
+ */
+static void BMS1Hz_PRD()
+{
+    if (bms.startBalanceSeq < BMS_CONFIGURED_SERIES_CELLS)
+    {
+        bms.startBalanceSeq++;
+    }
+}
+
+/**
  * @brief  BMS Module descriptor
  */
 const ModuleDesc_S BMS_desc = {
     .moduleInit       = &BMS_Init,
     .periodic100Hz_CLK = &BMS100Hz_PRD,
+    .periodic1Hz_CLK = &BMS1Hz_PRD,
 };

@@ -38,6 +38,13 @@ def bootloader(
         manifest = "//network:manifest-uds",
         node = variant.name,
     )
+    openocd_run(
+        name = "{}-gdb".format(variant.variant_id),
+        toolchain = toolchain,
+        src = ":" + "{}-elf".format(variant.variant_id),
+        interface = "stlink",
+        mcu = "stm32f103c8",
+    )
 
     if variant.has_updater:
         _bootloader_impl(variant, compiler_flags, linker_flags, True)
