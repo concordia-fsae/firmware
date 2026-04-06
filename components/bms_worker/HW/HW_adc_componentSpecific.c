@@ -76,7 +76,11 @@ HW_StatusTypeDef_E HW_ADC_init_componentSpecific(void)
     hadc1.Init.DiscontinuousConvMode = DISABLE;
     hadc1.Init.ExternalTrigConv      = ADC_SOFTWARE_START;
     hadc1.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+#if APP_VARIANT_ID == 0U
     hadc1.Init.NbrOfConversion       = 6;
+#elif APP_VARIANT_ID == 1U
+    hadc1.Init.NbrOfConversion       = 7;
+#endif
     if (HAL_ADC_Init(&hadc1) != HAL_OK)
     {
         Error_Handler();
