@@ -67,10 +67,10 @@ pub struct Opts {
     )]
     pub routine_manifest: String,
 
-    #[arg(long, default_value = "vcanVeh")]
+    #[arg(long, default_value = "can0")]
     pub veh_iface: String,
 
-    #[arg(long)]
+    #[arg(long, default_value = "can1")]
     pub body_iface: Option<String>,
 
     #[arg(long, hide = true, default_value_t = false)]
@@ -2124,7 +2124,7 @@ fn decode_veh_frame(
 
 fn run_veh_worker(opts: &Opts) -> Result<()> {
     let iface = opts.veh_iface.clone();
-    let iface_map = [(iface.as_str(), yamcan::Bus::VcanVeh)];
+    let iface_map = [(iface.as_str(), yamcan::Bus::Veh)];
     let binding = yamcan::configure_iface(&iface, &iface_map)
         .map_err(|e| anyhow::anyhow!("failed to configure veh decoder for {iface}: {e}"))?;
     run_can_worker(&iface, "vehicle", &binding)
@@ -2135,7 +2135,7 @@ fn run_body_worker(opts: &Opts) -> Result<()> {
         .body_iface
         .clone()
         .ok_or_else(|| anyhow::anyhow!("--body-worker requires --body-iface"))?;
-    let iface_map = [(iface.as_str(), yamcan::Bus::VcanBody)];
+    let iface_map = [(iface.as_str(), yamcan::Bus::Body)];
     let binding = yamcan::configure_iface(&iface, &iface_map)
         .map_err(|e| anyhow::anyhow!("failed to configure body decoder for {iface}: {e}"))?;
     run_can_worker(&iface, "body", &binding)
