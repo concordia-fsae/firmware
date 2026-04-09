@@ -63,8 +63,14 @@ pub struct Opts {
     #[arg(long, default_value = "vcanVeh")]
     pub veh_iface: String,
 
+    #[arg(long)]
+    pub body_iface: Option<String>,
+
     #[arg(long, hide = true, default_value_t = false)]
     pub veh_worker: bool,
+
+    #[arg(long, hide = true, default_value_t = false)]
+    pub body_worker: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -417,10 +423,17 @@ pub async fn run(opts: Opts) -> Result<()> {
     if opts.veh_worker {
         return run_veh_worker(&opts);
     }
+    if opts.body_worker {
+        return run_body_worker(&opts);
+    }
 
     info!(
-        "initializing dashboard with uds_manifest='{}', routine_manifest='{}', veh_iface='{}', port={}",
-        opts.uds_manifest, opts.routine_manifest, opts.veh_iface, opts.port
+        "initializing dashboard with uds_manifest='{}', routine_manifest='{}', veh_iface='{}', body_iface='{}', port={}",
+        opts.uds_manifest,
+        opts.routine_manifest,
+        opts.veh_iface,
+        opts.body_iface.as_deref().unwrap_or("disabled"),
+        opts.port
     );
     let capabilities = Arc::new(load_controller_capabilities(
         &opts.uds_manifest,
@@ -651,6 +664,13 @@ pub async fn run(opts: Opts) -> Result<()> {
         Arc::clone(&tracked_controllers),
         updates_tx.clone(),
     );
+    if let Some(body_iface) = &opts.body_iface {
+        spawn_body_worker(
+            body_iface.clone(),
+            Arc::clone(&tracked_controllers),
+            updates_tx.clone(),
+        );
+    }
 
     server.await;
     Ok(())
@@ -1248,6 +1268,84 @@ fn spawn_veh_worker(
     });
 }
 
+fn spawn_body_worker(
+    iface: String,
+    tracked_controllers: Arc<BTreeSet<String>>,
+    updates_tx: mpsc::UnboundedSender<NormalizedUpdate>,
+) {
+    thread::spawn(move || {
+        info!("spawning body CAN worker supervisor for iface='{iface}'");
+        loop {
+            let exe = match std::env::current_exe() {
+                Ok(exe) => exe,
+                Err(e) => {
+                    warn!("failed to resolve dashboard executable for worker: {e}");
+                    thread::sleep(Duration::from_secs(1));
+                    continue;
+                }
+            };
+            let mut child = match Command::new(exe)
+                .arg("--body-worker")
+                .arg("--body-iface")
+                .arg(&iface)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::inherit())
+                .spawn()
+            {
+                Ok(child) => child,
+                Err(e) => {
+                    warn!("failed to spawn body worker for {iface}: {e}");
+                    thread::sleep(Duration::from_secs(1));
+                    continue;
+                }
+            };
+
+            info!("body worker started for iface='{iface}'");
+            let Some(stdout) = child.stdout.take() else {
+                warn!("body worker stdout unavailable for iface='{iface}'");
+                let _ = child.kill();
+                thread::sleep(Duration::from_secs(1));
+                continue;
+            };
+
+            let reader = BufReader::new(stdout);
+            for line in reader.lines() {
+                let line = match line {
+                    Ok(line) => line,
+                    Err(e) => {
+                        warn!("failed reading body worker output for {iface}: {e}");
+                        break;
+                    }
+                };
+                if line.trim().is_empty() {
+                    continue;
+                }
+                let update: NormalizedUpdate = match serde_json::from_str(&line) {
+                    Ok(update) => update,
+                    Err(e) => {
+                        warn!("failed parsing body worker update for {iface}: {e}");
+                        continue;
+                    }
+                };
+                if !tracked_controllers.contains(&update.controller) {
+                    continue;
+                }
+                if updates_tx.send(update).is_err() {
+                    warn!("body update channel closed; stopping worker supervisor");
+                    let _ = child.kill();
+                    return;
+                }
+            }
+
+            match child.wait() {
+                Ok(status) => warn!("body worker exited for {iface} with status {status}"),
+                Err(e) => warn!("failed waiting for body worker on {iface}: {e}"),
+            }
+            thread::sleep(Duration::from_secs(1));
+        }
+    });
+}
+
 fn decode_veh_frame(
     binding: &yamcan::BusBinding<yamcan::Bus>,
     frame: yamcan::CanFrame,
@@ -1280,31 +1378,48 @@ fn decode_veh_frame(
 }
 
 fn run_veh_worker(opts: &Opts) -> Result<()> {
-    let tracked_controllers = SUPPORTED_CONTROLLERS
-        .iter()
-        .map(|controller| controller.to_string())
-        .collect::<BTreeSet<_>>();
-
     let iface = opts.veh_iface.clone();
     let iface_map = [(iface.as_str(), yamcan::Bus::VcanVeh)];
     let binding = yamcan::configure_iface(&iface, &iface_map)
         .map_err(|e| anyhow::anyhow!("failed to configure veh decoder for {iface}: {e}"))?;
-    let socket =
-        open_raw_can_socket(&iface).with_context(|| format!("failed to open {iface}"))?;
+    run_can_worker(&iface, "vehicle", &binding)
+}
 
-    info!("listening on {iface} for vehicle dashboard updates");
+fn run_body_worker(opts: &Opts) -> Result<()> {
+    let iface = opts
+        .body_iface
+        .clone()
+        .ok_or_else(|| anyhow::anyhow!("--body-worker requires --body-iface"))?;
+    let iface_map = [(iface.as_str(), yamcan::Bus::VcanBody)];
+    let binding = yamcan::configure_iface(&iface, &iface_map)
+        .map_err(|e| anyhow::anyhow!("failed to configure body decoder for {iface}: {e}"))?;
+    run_can_worker(&iface, "body", &binding)
+}
+
+fn run_can_worker(
+    iface: &str,
+    bus_label: &str,
+    binding: &yamcan::BusBinding<yamcan::Bus>,
+) -> Result<()> {
+    let tracked_controllers = SUPPORTED_CONTROLLERS
+        .iter()
+        .map(|controller| controller.to_string())
+        .collect::<BTreeSet<_>>();
+    let socket = open_raw_can_socket(iface).with_context(|| format!("failed to open {iface}"))?;
+
+    info!("listening on {iface} for {bus_label} dashboard updates");
     let stdout = io::stdout();
     let mut writer = BufWriter::new(stdout.lock());
 
     loop {
         let (frame, id) = recv_veh_frame(&socket).with_context(|| format!("read error on {iface}"))?;
-        let Some(update) = decode_veh_frame(&binding, frame, id, &tracked_controllers) else {
+        let Some(update) = decode_veh_frame(binding, frame, id, &tracked_controllers) else {
             continue;
         };
         serde_json::to_writer(&mut writer, &update)
-            .context("serializing vehicle worker update")?;
-        writer.write_all(b"\n").context("writing vehicle worker newline")?;
-        writer.flush().context("flushing vehicle worker update")?;
+            .context("serializing worker update")?;
+        writer.write_all(b"\n").context("writing worker newline")?;
+        writer.flush().context("flushing worker update")?;
     }
 }
 
