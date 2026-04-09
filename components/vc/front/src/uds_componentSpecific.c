@@ -66,6 +66,15 @@ static void routine_resetOdometer(udsRoutineControlType_E routineControlType, ui
     UNUSED(payloadLengthBytes);
     UNUSED(payload);
 
+    if (udsSrv_getCurrentSession() != UDS_SESSION_TYPE_EXTENDED_DIAG)
+    {
+        uds_sendNegativeResponse(
+            UDS_SID_ROUTINE_CONTROL,
+            UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED_SESSION
+        );
+        return;
+    }
+
     switch (routineControlType)
     {
         case UDS_ROUTINE_CONTROL_START:
