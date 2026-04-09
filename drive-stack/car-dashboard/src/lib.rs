@@ -1,9 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
 use std::ffi::CString;
+use std::fs;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::mem::{size_of, zeroed};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::thread;
@@ -15,6 +17,7 @@ use conUDS::config::Config as UdsConfig;
 use conUDS::modules::uds::{
     DiagnosticSessionKind, DiagnosticSessionResponse, RoutineStartResponse, UdsSession,
 };
+use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
 use futures::StreamExt;
 use libc::{
@@ -27,8 +30,10 @@ use libc::{
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, RwLock, broadcast, mpsc, oneshot};
+use warp::Buf;
 use warp::sse::Event;
 use warp::{Filter, Reply};
+use warp::multipart::{FormData, Part};
 
 mod views;
 
@@ -193,6 +198,11 @@ struct PlainMeasurement {
     name: String,
     value: f64,
     label: Option<String>,
+}
+
+struct FlashUpload {
+    path: PathBuf,
+    display_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -583,6 +593,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_reset_controller);
 
+    let flash_controller = warp::path!("api" / "controllers" / String / "flash")
+        .and(warp::post())
+        .and(warp::multipart::form().max_length(64 * 1024 * 1024))
+        .and(state_filter.clone())
+        .and_then(handle_flash_controller);
+
     let start_tester_present = warp::path!("api" / "controllers" / String / "tester-present")
         .and(warp::post())
         .and(state_filter.clone())
@@ -727,6 +743,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(enter_session)
         .or(run_routine)
         .or(reset_controller)
+        .or(flash_controller)
         .or(start_tester_present)
         .or(stop_tester_present)
         .or(tester_present_state)
@@ -735,7 +752,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -988,6 +1005,54 @@ async fn handle_reset_controller(
     let job_id = job.id.clone();
     tokio::spawn(async move {
         run_reset_job(state_for_job, capability, job_id, reset_type).await;
+    });
+
+    Ok(json_success_response(ActionAcceptedResponse {
+        ok: true,
+        job_id: job.id.clone(),
+        job,
+    }))
+}
+
+async fn handle_flash_controller(
+    controller_name: String,
+    form: FormData,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    };
+
+    let upload = match receive_flash_upload(form).await {
+        Ok(upload) => upload,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    let detail = format!("Queued flash {}", upload.display_name);
+    let job = match create_job(&state, &controller_name, "flash-ecu", detail).await {
+        Ok(job) => job,
+        Err(error) => {
+            let _ = fs::remove_file(&upload.path);
+            return Ok(json_error_response(
+                warp::http::StatusCode::CONFLICT,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    let state_for_job = state.clone();
+    let job_id = job.id.clone();
+    tokio::spawn(async move {
+        run_flash_job(state_for_job, capability, job_id, upload.path, upload.display_name).await;
     });
 
     Ok(json_success_response(ActionAcceptedResponse {
@@ -1301,6 +1366,60 @@ fn parse_reset_key(reset: &str) -> Result<SupportedResetTypes> {
     }
 }
 
+async fn receive_flash_upload(form: FormData) -> Result<FlashUpload> {
+    let mut parts = form;
+    while let Some(part_result) = parts.next().await {
+        let part = part_result?;
+        if part.name() != "firmware" {
+            continue;
+        }
+        return save_flash_upload(part).await;
+    }
+
+    Err(anyhow::anyhow!("firmware file is required"))
+}
+
+async fn save_flash_upload(part: Part) -> Result<FlashUpload> {
+    let filename = part
+        .filename()
+        .map(str::to_string)
+        .ok_or_else(|| anyhow::anyhow!("firmware filename is required"))?;
+    let display_name = sanitize_upload_name(&filename);
+    if display_name.is_empty() {
+        return Err(anyhow::anyhow!("firmware filename is invalid"));
+    }
+
+    let mut data = Vec::new();
+    let mut stream = part.stream();
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result?;
+        data.extend_from_slice(chunk.chunk());
+    }
+
+    if data.is_empty() {
+        return Err(anyhow::anyhow!("firmware upload is empty"));
+    }
+
+    let temp_name = format!("dashboard-flash-{}-{}", now_ms(), display_name);
+    let path = std::env::temp_dir().join(temp_name);
+    fs::write(&path, data)?;
+
+    Ok(FlashUpload { path, display_name })
+}
+
+fn sanitize_upload_name(name: &str) -> String {
+    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+    base.chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '.' || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 async fn create_job(
     state: &AppState,
     controller_name: &str,
@@ -1470,6 +1589,69 @@ async fn run_reset_job(
     }
 
     let _ = state.publish_jobs_if_changed().await;
+}
+
+async fn run_flash_job(
+    state: AppState,
+    capability: ControllerCapability,
+    job_id: String,
+    firmware_path: PathBuf,
+    firmware_name: String,
+) {
+    info!(
+        "starting flash job '{}' for controller='{}' file='{}' on iface='{}'",
+        job_id, capability.name, firmware_name, capability.uds_iface
+    );
+    {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_started(&job_id, format!("Flashing ECU with {firmware_name}"));
+    }
+    let _ = state.publish_jobs_if_changed().await;
+
+    let mut uds = UdsSession::new(
+        &capability.uds_iface,
+        capability.request_id,
+        capability.response_id,
+        false,
+    )
+    .await;
+    let result = uds.download_app_to_target(&firmware_path, false).await;
+    uds.teardown().await;
+
+    {
+        let mut jobs = state.jobs.write().await;
+        match result.result {
+            FlashStatus::DownloadSuccess => jobs.mark_succeeded(
+                &job_id,
+                format!(
+                    "Flash completed from {firmware_name} in {:.2}s",
+                    result.duration.as_secs_f32()
+                ),
+                None,
+                None,
+            ),
+            FlashStatus::CrcMatch => jobs.mark_succeeded(
+                &job_id,
+                format!("Flash skipped for {firmware_name}: CRC already matches"),
+                None,
+                None,
+            ),
+            FlashStatus::Skipped => jobs.mark_succeeded(
+                &job_id,
+                format!("Flash skipped for {firmware_name}"),
+                None,
+                None,
+            ),
+            FlashStatus::Failed(error) => jobs.mark_failed(
+                &job_id,
+                format!("Flash failed for {firmware_name}: {error}"),
+                None,
+                None,
+            ),
+        }
+    }
+    let _ = state.publish_jobs_if_changed().await;
+    let _ = fs::remove_file(&firmware_path);
 }
 
 async fn run_tester_present_job(
