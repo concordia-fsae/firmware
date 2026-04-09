@@ -215,6 +215,24 @@ static inline void handleTransferStop(udsRequestDesc_S *req)
 static inline void handleDIDRead(udsRequestDesc_S *req)
 {
 #if defined(UDS_SERVICE_SUPPORTED_DID_READ)
+    if (req->payloadLengthBytes != 2U)
+    {
+        uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_INVALID_LEN_FORMAT);
+        return;
+    }
+
+    union
+    {
+        uint8_t  u8[2U];
+        uint16_t u16;
+    } did;
+
+    memcpy(did.u8, req->payload, 2U);
+    if (uds_handleCommonDIDRead(did.u16))
+    {
+        return;
+    }
+
     uds_cb_DIDRead(req->payload, req->payloadLengthBytes);
 #else // if defined(UDS_SERVICE_SUPPORTED_DID_READ)
     uds_sendNegativeResponse(UDS_SID_READ_DID, UDS_NRC_SERVICE_NOT_SUPPORTED);
@@ -434,6 +452,23 @@ uint32_t udsSrv_timeSinceLastTp(void)
 bool uds_checkResponseRequired(udsRequestDesc_S *req)
 {
     return (req->payloadLengthBytes == 0U) || !(req->payload[0] & UDS_RESPONSE_NOT_REQUIRED);
+}
+
+
+bool uds_handleCommonDIDRead(uint16_t did)
+{
+    switch (did)
+    {
+        case UDS_DID_CURRENT_SESSION:
+        {
+            uint8_t session = (uint8_t)udsSrv_getCurrentSession();
+            uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_SUB_FUNCTION_NONE, &session, 1U);
+            return true;
+        }
+
+        default:
+            return false;
+    }
 }
 
 
