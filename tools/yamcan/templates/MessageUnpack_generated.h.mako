@@ -80,7 +80,13 @@ void CANRX_${bus.upper()}_unpackMessage(const uint32_t id, const CAN_data_T *con
 %for node in nodes:
   %for bus in node.on_buses:
     %for signal in node.received_sigs:
-      %if bus in node.received_sigs[signal].message_ref.source_buses:
+<%
+  signal_on_bus = any(
+    bus in node.received_msgs[msg].source_buses and signal in node.received_msgs[msg].signal_objs
+    for msg in node.received_msgs
+  )
+%>\
+      %if signal_on_bus:
 <%
   duplicate = node.received_sigs[signal].message_ref.node_ref.duplicateNode
   offset = node.received_sigs[signal].message_ref.node_ref.offset
