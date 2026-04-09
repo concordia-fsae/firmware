@@ -15,6 +15,7 @@ use conUDS::config::Config as UdsConfig;
 use conUDS::modules::uds::{
     DiagnosticSessionKind, DiagnosticSessionResponse, RoutineStartResponse, UdsSession,
 };
+use conUDS::SupportedResetTypes;
 use futures::StreamExt;
 use libc::{
     AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK,
@@ -91,6 +92,7 @@ struct ControllerCapability {
     response_id: u32,
     uds_iface: String,
     sessions: Vec<DiagnosticSessionOption>,
+    resets: Vec<ResetOption>,
     routines: Vec<RoutineCapability>,
 }
 
@@ -105,6 +107,12 @@ pub struct RoutineCapability {
     pub name: String,
     pub label: String,
     pub id_hex: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct ResetOption {
+    pub key: String,
+    pub label: String,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -134,6 +142,11 @@ struct SessionActionRequest {
 #[derive(Debug, Deserialize)]
 struct RoutineActionRequest {
     payload_hex: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResetActionRequest {
+    reset: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -525,6 +538,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_run_routine);
 
+    let reset_controller = warp::path!("api" / "controllers" / String / "reset")
+        .and(warp::post())
+        .and(warp::body::form())
+        .and(state_filter.clone())
+        .and_then(handle_reset_controller);
+
     let events = warp::path("events")
         .and(warp::get())
         .and(state_filter.clone())
@@ -648,11 +667,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(controller)
         .or(enter_session)
         .or(run_routine)
+        .or(reset_controller)
         .or(events)
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -854,6 +874,63 @@ async fn handle_run_routine(
     }))
 }
 
+async fn handle_reset_controller(
+    controller_name: String,
+    request: ResetActionRequest,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    let reset_type = match parse_reset_key(&request.reset) {
+        Ok(reset_type) => reset_type,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    };
+
+    if !capability
+        .resets
+        .iter()
+        .any(|option| option.key == request.reset)
+    {
+        return Ok(json_error_response(
+            warp::http::StatusCode::BAD_REQUEST,
+            "unsupported reset type for controller",
+        ));
+    }
+
+    let detail = format!("Queued {} reset", request.reset);
+    let job = match create_job(&state, &controller_name, "ecu-reset", detail).await {
+        Ok(job) => job,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::CONFLICT,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    let state_for_job = state.clone();
+    let job_id = job.id.clone();
+    tokio::spawn(async move {
+        run_reset_job(state_for_job, capability, job_id, reset_type).await;
+    });
+
+    Ok(json_success_response(ActionAcceptedResponse {
+        ok: true,
+        job_id: job.id,
+    }))
+}
+
 fn load_controller_capabilities(
     uds_manifest: &str,
     routine_manifest: &str,
@@ -893,6 +970,7 @@ fn load_controller_capabilities(
                 response_id: node.response_id,
                 uds_iface: veh_iface.to_string(),
                 sessions: default_session_options(),
+                resets: default_reset_options(),
                 routines,
             },
         );
@@ -917,6 +995,19 @@ fn default_session_options() -> Vec<DiagnosticSessionOption> {
         DiagnosticSessionOption {
             key: "programming".to_string(),
             label: "Programming".to_string(),
+        },
+    ]
+}
+
+fn default_reset_options() -> Vec<ResetOption> {
+    vec![
+        ResetOption {
+            key: "hard".to_string(),
+            label: "Hard".to_string(),
+        },
+        ResetOption {
+            key: "soft".to_string(),
+            label: "Soft".to_string(),
         },
     ]
 }
@@ -983,6 +1074,14 @@ fn parse_hex_payload(input: Option<&str>) -> Result<Option<Vec<u8>>> {
         );
     }
     Ok(Some(bytes))
+}
+
+fn parse_reset_key(reset: &str) -> Result<SupportedResetTypes> {
+    match reset {
+        "hard" => Ok(SupportedResetTypes::Hard),
+        "soft" => Ok(SupportedResetTypes::Soft),
+        _ => Err(anyhow::anyhow!("unsupported reset type '{reset}'")),
+    }
 }
 
 async fn create_job(
@@ -1107,12 +1206,68 @@ async fn run_routine_job(
     let _ = state.publish_jobs_if_changed().await;
 }
 
+async fn run_reset_job(
+    state: AppState,
+    capability: ControllerCapability,
+    job_id: String,
+    reset_type: SupportedResetTypes,
+) {
+    let reset_label = reset_key_label(&reset_type).to_string();
+    info!(
+        "starting reset job '{}' for controller='{}' reset='{}' on iface='{}'",
+        job_id,
+        capability.name,
+        reset_label,
+        capability.uds_iface
+    );
+    {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_started(&job_id, format!("Performing {reset_label} reset"));
+    }
+    let _ = state.publish_jobs_if_changed().await;
+
+    let mut uds = UdsSession::new(
+        &capability.uds_iface,
+        capability.request_id,
+        capability.response_id,
+        false,
+    )
+    .await;
+    let result = uds.reset_node(reset_type).await;
+    uds.teardown().await;
+
+    match result {
+        Ok(()) => {
+            let mut jobs = state.jobs.write().await;
+            jobs.mark_succeeded(
+                &job_id,
+                format!("{reset_label} reset completed"),
+                None,
+                None,
+            );
+        }
+        Err(error) => {
+            let mut jobs = state.jobs.write().await;
+            jobs.mark_failed(&job_id, error.to_string(), None, None);
+        }
+    }
+
+    let _ = state.publish_jobs_if_changed().await;
+}
+
 fn session_key_label(session: DiagnosticSessionKind) -> &'static str {
     match session {
         DiagnosticSessionKind::Default => "Default",
         DiagnosticSessionKind::Programming => "Programming",
         DiagnosticSessionKind::Extended => "Extended",
         DiagnosticSessionKind::SafetySystem => "Safety System",
+    }
+}
+
+fn reset_key_label(reset: &SupportedResetTypes) -> &'static str {
+    match reset {
+        SupportedResetTypes::Hard => "Hard",
+        SupportedResetTypes::Soft => "Soft",
     }
 }
 

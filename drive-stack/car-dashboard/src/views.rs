@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::{
     ActiveFault, ControllerCapability, ControllerStatus, DashboardJob, DashboardSnapshot,
-    DiagnosticSessionOption, LiveSignal, RoutineCapability,
+    DiagnosticSessionOption, LiveSignal, ResetOption, RoutineCapability,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -42,6 +42,7 @@ struct ControllerView {
     critical_signal_count: usize,
     critical_signals: Vec<SignalView>,
     session_options: Vec<SessionOptionView>,
+    reset_options: Vec<ResetOptionView>,
     routine_options: Vec<RoutineOptionView>,
     supports_operations: bool,
 }
@@ -57,6 +58,12 @@ struct RoutineOptionView {
     name: String,
     label: String,
     id_hex: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ResetOptionView {
+    key: String,
+    label: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -143,6 +150,7 @@ impl ControllerView {
                 .map(SignalView::from_signal)
                 .collect(),
             session_options: Vec::new(),
+            reset_options: Vec::new(),
             routine_options: Vec::new(),
             supports_operations: false,
         }
@@ -169,6 +177,11 @@ impl ControllerView {
                 .iter()
                 .map(SessionOptionView::from_option)
                 .collect(),
+            reset_options: capability
+                .resets
+                .iter()
+                .map(ResetOptionView::from_option)
+                .collect(),
             routine_options: capability
                 .routines
                 .iter()
@@ -194,6 +207,15 @@ impl RoutineOptionView {
             name: routine.name.clone(),
             label: routine.label.clone(),
             id_hex: routine.id_hex.clone(),
+        }
+    }
+}
+
+impl ResetOptionView {
+    fn from_option(option: &ResetOption) -> Self {
+        Self {
+            key: option.key.clone(),
+            label: option.label.clone(),
         }
     }
 }

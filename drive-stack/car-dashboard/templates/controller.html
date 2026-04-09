@@ -33,6 +33,17 @@
             <button type="submit">Enter Session</button>
           </div>
         </form>
+        <form id="reset-form" class="stack-form">
+          <label class="field-label" for="reset-select">ECU reset</label>
+          <div class="inline-field">
+            <select id="reset-select" name="reset">
+              {% for reset in controller.reset_options %}
+                <option value="{{ reset.key }}">{{ reset.label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Reset ECU</button>
+          </div>
+        </form>
         <form id="routine-form" class="stack-form">
           <label class="field-label" for="routine-select">UDS routine</label>
           <select id="routine-select" name="routine">
@@ -142,6 +153,7 @@
     const jobsContent = document.getElementById("jobs-content");
     const feedback = document.getElementById("operation-feedback");
     const sessionForm = document.getElementById("session-form");
+    const resetForm = document.getElementById("reset-form");
     const routineForm = document.getElementById("routine-form");
     let latestController = initialController;
     let latestJobs = initialJobsSnapshot.jobs || [];
@@ -312,6 +324,16 @@
       try {
         const payload = await submitForm(`/api/controllers/${encodeURIComponent(controllerName)}/session`, new FormData(sessionForm));
         setFeedback(`Session job queued: ${payload.job_id}`, false);
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    resetForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const payload = await submitForm(`/api/controllers/${encodeURIComponent(controllerName)}/reset`, new FormData(resetForm));
+        setFeedback(`Reset job queued: ${payload.job_id}`, false);
       } catch (error) {
         setFeedback(error.message, true);
       }
