@@ -22,15 +22,14 @@
       <p class="page-copy">Actions run as background jobs so the page stays responsive.</p>
       <div id="operation-feedback" class="feedback" hidden></div>
       <div class="ops-grid">
-        <form id="session-form" class="stack-form">
-          <label class="field-label" for="session-select">Diagnostic session</label>
+        <form id="tester-present-form" class="stack-form">
+          <label class="field-label" for="tester-present-enabled">Persistent tester present</label>
           <div class="inline-field">
-            <select id="session-select" name="session">
-              {% for session in controller.session_options %}
-                <option value="{{ session.key }}">{{ session.label }}</option>
-              {% endfor %}
-            </select>
-            <button type="submit">Enter Session</button>
+            <label class="checkbox-field" for="tester-present-enabled">
+              <input id="tester-present-enabled" type="checkbox">
+              <span>Tester Present Enabled</span>
+            </label>
+            <button type="submit">Apply</button>
           </div>
         </form>
         <form id="reset-form" class="stack-form">
@@ -44,29 +43,39 @@
             <button type="submit">Reset ECU</button>
           </div>
         </form>
-        <form id="tester-present-form" class="stack-form">
-          <label class="field-label" for="tester-present-enabled">Persistent tester present</label>
+        <form id="session-form" class="stack-form">
+          <label class="field-label" for="session-select">Diagnostic session</label>
           <div class="inline-field">
-            <label class="checkbox-field" for="tester-present-enabled">
-              <input id="tester-present-enabled" type="checkbox">
-              <span>Tester Present Enabled</span>
-            </label>
+            <select id="session-select" name="session">
+              {% for session in controller.session_options %}
+                <option value="{{ session.key }}">{{ session.label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Enter Session</button>
           </div>
         </form>
         <form id="routine-form" class="stack-form">
           <label class="field-label" for="routine-select">UDS routine</label>
-          <select id="routine-select" name="routine">
-            {% if controller.routine_options|length == 0 %}
-              <option value="">No configured routines</option>
-            {% else %}
-              {% for routine in controller.routine_options %}
-                <option value="{{ routine.name }}">{{ routine.label }} ({{ routine.id_hex }})</option>
-              {% endfor %}
-            {% endif %}
-          </select>
-          <label class="field-label" for="routine-payload">Routine payload hex</label>
-          <textarea id="routine-payload" name="payload_hex" rows="3" placeholder="Optional. Example: 01 02 0A FF"></textarea>
-          <button type="submit" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Run Routine</button>
+          <div class="inline-field">
+            <select id="routine-select" name="routine">
+              {% if controller.routine_options|length == 0 %}
+                <option value="">No configured routines</option>
+              {% else %}
+                {% for routine in controller.routine_options %}
+                  <option value="{{ routine.name }}">{{ routine.label }} ({{ routine.id_hex }})</option>
+                {% endfor %}
+              {% endif %}
+            </select>
+            <input id="routine-payload" name="payload_hex" type="text" placeholder="Optional hex payload">
+            <button type="submit" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Run Routine</button>
+          </div>
+        </form>
+        <form id="flash-form" class="stack-form">
+          <label class="field-label" for="flash-file">Flash ECU</label>
+          <div class="inline-field">
+            <input id="flash-file" name="firmware" type="file" required>
+            <button type="submit">Upload And Flash</button>
+          </div>
         </form>
       </div>
     </article>
@@ -165,6 +174,7 @@
     const resetForm = document.getElementById("reset-form");
     const testerPresentForm = document.getElementById("tester-present-form");
     const testerPresentEnabled = document.getElementById("tester-present-enabled");
+    const flashForm = document.getElementById("flash-form");
     const routineForm = document.getElementById("routine-form");
     let latestController = initialController;
     let latestJobs = initialJobsSnapshot.jobs || [];
@@ -362,6 +372,18 @@
       return payload;
     }
 
+    async function submitMultipartForm(url, formData) {
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Request failed");
+      }
+      return payload;
+    }
+
     async function refreshJobs() {
       const response = await fetch(`/api/controllers/${encodeURIComponent(controllerName)}/jobs`, {
         headers: { "Accept": "application/json" },
@@ -406,7 +428,8 @@
       }
     });
 
-    testerPresentEnabled.addEventListener("change", async () => {
+    testerPresentForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
       testerPresentEnabled.disabled = true;
       try {
         if (testerPresentEnabled.checked) {
@@ -435,6 +458,26 @@
         setFeedback(error.message, true);
       } finally {
         testerPresentEnabled.disabled = false;
+      }
+    });
+
+    flashForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fileInput = document.getElementById("flash-file");
+      if (!fileInput.files || !fileInput.files.length) {
+        setFeedback("Select a firmware file to flash.", true);
+        return;
+      }
+      try {
+        const payload = await submitMultipartForm(
+          `/api/controllers/${encodeURIComponent(controllerName)}/flash`,
+          new FormData(flashForm),
+        );
+        mergeJob(payload.job);
+        setFeedback(`Flash job queued: ${payload.job_id}`, false);
+        flashForm.reset();
+      } catch (error) {
+        setFeedback(error.message, true);
       }
     });
 
