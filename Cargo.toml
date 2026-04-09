@@ -6,7 +6,6 @@ members = [
   "drive-stack/can-bridge",
   "drive-stack/net-detec",
   "tools/log-processor",
-  "third_party",
 ]
 
 [workspace.package]
@@ -16,8 +15,9 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = "1.0.80"
 argh = "0.1.12"
+askama = "0.12"
 axum = "0.7"
-automotive_diag = { version = "0.1.6", features = [
+automotive_diag = { version = "=0.1.22", features = [
   "display",
   "std",
   "with-uds",
@@ -33,7 +33,6 @@ futures = "0.3.30"
 hex = "0.4"
 hostname = "0.3"
 if_addrs = { package = "if-addrs", version = "0.14" }
-get_if_addrs = { package = "if-addrs", version = "0.14" }
 indicatif = "0.17.8"
 libc = "0.2.175"
 log = { version = "0.4.21", features = ["std"] }
@@ -43,7 +42,6 @@ ratatui = "0.29.0"
 reqwest = { version = "0.12", default-features = false, features = [
   "multipart",
   "json",
-  "http1",
   "stream",
 ] }
 serde = { version = "1.0.219", features = ["derive"] }
