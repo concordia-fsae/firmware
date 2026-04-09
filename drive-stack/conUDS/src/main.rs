@@ -13,7 +13,7 @@ use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 use conUDS::SupportedResetTypes;
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
-use conUDS::modules::uds::UdsSession;
+use conUDS::modules::uds::{RoutineStartResponse, UdsSession};
 use conUDS::{FlashStatus, UpdateResult};
 
 #[tokio::main]
@@ -48,7 +48,7 @@ async fn main() {
     let args: Arguments = argh::from_env();
     debug!("Command-line arguments processed: {:#?}", args);
 
-    let cfg = Config::new(&args.node_manifest).unwrap_or_else(|e| {
+    let cfg = Config::new(&args.node_manifest, &args.routine_manifest).unwrap_or_else(|e| {
         error!("Configuration error: {:?}", e);
         std::process::exit(1)
     });
@@ -227,15 +227,24 @@ async fn main() {
             println!("{:?}", resp);
         }
 
-        ArgSubCommands::NVMHardReset(_) => {
+        ArgSubCommands::RoutineStart(routine) => {
             let node = args.node.clone().unwrap_or_else(|| {
-                error!("-n <node> is required for 'nvmHardReset'.");
+                error!("-n <node> is required for 'routineStart'.");
                 std::process::exit(1)
             });
             let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
                 error!("UDS node '{}' not defined", node);
                 std::process::exit(1)
             });
+
+            let Some(routine_id) = routine_id_for_node(uds_node, &routine.routine) else {
+                let available = fmt_available_routines(uds_node);
+                error!(
+                    "Routine '{}' not defined for node '{}'. Available: {}",
+                    routine.routine, node, available
+                );
+                std::process::exit(1)
+            };
 
             let mut uds = UdsSession::new(
                 &args.device,
@@ -244,15 +253,55 @@ async fn main() {
                 true,
             )
             .await;
-            info!("Performing NVM hard reset for node '{}'", node);
-            if let Err(e) = uds.client.routine_start(0xf0f0, None).await {
-                error!("While starting NVM erase: {}", e);
-            } else {
-                let _result = uds.client.routine_get_results(0xf0f0).await;
-                // TODO: Implement error checking
-                info!("Successful NVM erase");
+            info!(
+                "Starting routine '{}' (0x{:04X}) for node '{}'",
+                routine.routine, routine_id, node
+            );
+            match uds.client.routine_start(routine_id, None).await {
+                Ok(resp) => println!("{}", fmt_routine_start_response(&resp)),
+                Err(e) => error!("While starting routine '{}': {}", routine.routine, e),
             }
             uds.teardown().await;
+        }
+
+        ArgSubCommands::RoutineList(_) => {
+            if let Some(node) = args.node.clone() {
+                let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                    error!("UDS node '{}' not defined", node);
+                    std::process::exit(1)
+                });
+
+                let mut routines: Vec<_> = uds_node.routines.iter().collect();
+                routines.sort_by_key(|(name, _cfg)| *name);
+                if routines.is_empty() {
+                    println!("No routines configured for node '{}'", node);
+                    return;
+                }
+
+                println!("Routines for node '{}':", node);
+                for (name, cfg) in routines {
+                    println!("  {}: 0x{:04X}", name, cfg.id);
+                }
+            } else {
+                let mut nodes: Vec<_> = cfg.nodes.iter().collect();
+                nodes.sort_by_key(|(name, _node)| *name);
+                let mut any = false;
+                for (node_name, uds_node) in nodes {
+                    if uds_node.routines.is_empty() {
+                        continue;
+                    }
+                    any = true;
+                    let mut routines: Vec<_> = uds_node.routines.iter().collect();
+                    routines.sort_by_key(|(name, _cfg)| *name);
+                    println!("Routines for node '{}':", node_name);
+                    for (name, cfg) in routines {
+                        println!("  {}: 0x{:04X}", name, cfg.id);
+                    }
+                }
+                if !any {
+                    println!("No routines configured for any node");
+                }
+            }
         }
     }
 }
@@ -352,4 +401,58 @@ fn average_duration(durations: &[Duration]) -> Duration {
     let total_nanos: u128 = durations.iter().map(|d| d.as_nanos()).sum();
     let avg_nanos = total_nanos / (durations.len() as u128);
     Duration::from_nanos(avg_nanos as u64)
+}
+
+fn fmt_routine_start_response(resp: &RoutineStartResponse) -> String {
+    match resp {
+        RoutineStartResponse::Positive { payload, text, .. } => {
+            let text = text
+                .as_ref()
+                .map(|text| format!(" text=\"{text}\""))
+                .unwrap_or_default();
+            let data = fmt_payload(payload);
+            format!("Routine start positive response:{text}{data}")
+        }
+        RoutineStartResponse::Negative {
+            nrc,
+            description,
+            payload,
+            text,
+            ..
+        } => {
+            let text = text
+                .as_ref()
+                .map(|text| format!(" text=\"{text}\""))
+                .unwrap_or_default();
+            let data = fmt_payload(payload);
+            format!("Routine start negative response: NRC=0x{nrc:02X} ({description}){text}{data}")
+        }
+    }
+}
+
+fn fmt_payload(payload: &[u8]) -> String {
+    if payload.is_empty() {
+        String::new()
+    } else {
+        let hex = payload
+            .iter()
+            .map(|byte| format!("{byte:02X}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        format!(" data=[{hex}]")
+    }
+}
+
+fn routine_id_for_node(uds_node: &conUDS::config::Node, routine: &str) -> Option<u16> {
+    uds_node.routines.get(routine).map(|cfg| cfg.id)
+}
+
+fn fmt_available_routines(uds_node: &conUDS::config::Node) -> String {
+    if uds_node.routines.is_empty() {
+        "<none>".to_string()
+    } else {
+        let mut names: Vec<_> = uds_node.routines.keys().cloned().collect();
+        names.sort();
+        names.join(", ")
+    }
 }

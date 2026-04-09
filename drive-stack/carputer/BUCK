@@ -6,6 +6,7 @@ load("//tools:defs.bzl", "sh_run")
 CARPUTER_APP_TARGETS = [
     "//drive-stack/can-bridge:carputer-veh-target",
     "//drive-stack/can-bridge:carputer-body-target",
+    "//drive-stack/conUDS:carputer-target",
     "//drive-stack/net-detec:carputer-target",
     "//drive-stack/ota-agent:carputer-target",
     "//tools/log-processor:carputer-target",
@@ -14,6 +15,7 @@ CARPUTER_APP_TARGETS = [
 CARPUTER_APPS = [
     "//drive-stack/can-bridge:carputer-veh-app",
     "//drive-stack/can-bridge:carputer-body-app",
+    "//drive-stack/conUDS:carputer-app",
     "//drive-stack/net-detec:carputer-app",
     "//drive-stack/ota-agent:carputer-app",
     "//tools/log-processor:carputer-app",
@@ -101,6 +103,7 @@ carputer_platform_targets(
     firmware = CFR25_FIRMWARE,
     include_artifact_hashes = False,
     uds_manifest = "//network:manifest-uds",
+    uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
     uds_start_services = [
         "can-bridge-veh.service",
         "can-bridge-body.service",
@@ -120,6 +123,7 @@ carputer_platform_targets(
     firmware = CFR26_FIRMWARE,
     include_artifact_hashes = False,
     uds_manifest = "//network:manifest-uds",
+    uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
     uds_start_services = [
         "can-bridge-veh.service",
         "can-bridge-body.service",

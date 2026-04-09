@@ -1,3 +1,6 @@
+load(":defs.bzl", "conuds_run")
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
+
 rust_library(
     name = "lib",
     crate = "conUDS",
@@ -43,4 +46,30 @@ configured_alias(
     actual = ":conUDS",
     platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "routines-manifest",
+    src = "routines.yml",
+    visibility = ["PUBLIC"],
+)
+
+conuds_run(
+    name = "run",
+    binary = ":conUDS",
+    uds_manifest = "//network:manifest-uds",
+    routines_manifest = ":routines-manifest",
+    visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer",
+    target_node = "conUDS",
+    binary = ":bin-arm64",
+    binary_install_name = "conUDS",
+    resource_deps = {
+        "application/config/ota-agent/uds-manifest.yaml": "//network:manifest-uds",
+        "application/config/ota-agent/uds-routines.yaml": ":routines-manifest",
+    },
+    include_artifact_hash = False,
 )

@@ -23,9 +23,17 @@ pub struct Arguments {
     #[argh(
         option,
         short = 'm',
-        default = "String::from(\"drive-stack/conUDS/nodes.yml\")"
+        default = "String::from(\"/application/config/ota-agent/uds-manifest.yaml\")"
     )]
     pub node_manifest: String,
+
+    /// the manifest of per-node UDS routines
+    #[argh(
+        option,
+        short = 'r',
+        default = "String::from(\"/application/config/ota-agent/uds-routines.yaml\")"
+    )]
+    pub routine_manifest: String,
 
     #[argh(subcommand)]
     pub subcmd: ArgSubCommands,
@@ -38,8 +46,9 @@ pub enum ArgSubCommands {
     BootloaderDownload(SubArgBootloaderDownload),
     Batch(SubArgBatch),
     Reset(SubArgReset),
-    NVMHardReset(SubArgNVMHardReset),
     ReadDID(SubArgReadDID),
+    RoutineStart(SubArgRoutineStart),
+    RoutineList(SubArgRoutineList),
 }
 
 /// Download an application to an ECU
@@ -90,7 +99,16 @@ pub struct SubArgReadDID {
     pub id: String,
 }
 
-/// Hard reset entire NVM including internal values
+/// Start a named routine
 #[derive(Debug, FromArgs)]
-#[argh(subcommand, name = "nvmHardReset")]
-pub struct SubArgNVMHardReset {}
+#[argh(subcommand, name = "routineStart")]
+pub struct SubArgRoutineStart {
+    /// routine name (as defined in the node manifest)
+    #[argh(positional)]
+    pub routine: String,
+}
+
+/// List routines available for a node
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "routineList")]
+pub struct SubArgRoutineList {}

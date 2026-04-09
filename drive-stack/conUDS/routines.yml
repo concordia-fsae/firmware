@@ -1,0 +1,5 @@
+nodes:
+  vcfront:
+    routines:
+      resetOdometer:
+        id: 0x1000
