@@ -5,6 +5,8 @@ PartOf=drive-stack.target
 
 [Service]
 ExecStart=/bin/cfr/can-bridge-body can1 --forward-iface vcanBody -j -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 5 --log-size 250000000
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=29
 Restart=always
 RestartSec=5s
 StartLimitBurst=0
