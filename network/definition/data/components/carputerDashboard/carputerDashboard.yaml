@@ -1,4 +1,4 @@
 description: "Carputer dashboard listener"
 onBuses:
-  - "vcanVeh"
-  - "vcanBody"
+  - "veh"
+  - "body"
