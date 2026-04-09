@@ -431,25 +431,61 @@ impl UdsClient {
         reset_type: SupportedResetTypes,
         recoverable: bool,
     ) -> Result<()> {
+        let reset_kind: ResetType = reset_type.into();
         let buf = [
             UdsCommand::ECUReset.into(),
-            <SupportedResetTypes as Into<ResetType>>::into(reset_type).into(),
+            reset_kind.into(),
         ];
 
         info!("Resetting ECU...");
 
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
         debug!("ECU Reset results: {:02x?}", resp);
-        if resp.len() > 0 {
-            let nrc = UdsErrorByte::from(*resp.last().unwrap());
+
+        if resp.is_empty() {
+            if !recoverable {
+                return Err(anyhow!("ECU reset failed: empty ECU response"));
+            }
+            return Ok(());
+        }
+
+        if resp[0] == 0x7F {
+            if resp.len() < 3 {
+                return Err(anyhow!(
+                    "ECU reset failed: malformed negative response {:02X?}",
+                    resp
+                ));
+            }
+
+            let nrc = UdsErrorByte::from(resp[2]);
             if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
                 error!(
                     "ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex."
                 );
             }
-        } else if !recoverable {
+            return Err(anyhow!("ECU reset rejected: {}", nrc.desc()));
+        }
+
+        let expected_sid = u8::from(UdsCommand::ECUReset) + 0x40;
+        if resp[0] != expected_sid {
             return Err(anyhow!("ECU reset failed"));
         }
+
+        if resp.len() < 2 {
+            return Err(anyhow!(
+                "ECU reset failed: malformed positive response {:02X?}",
+                resp
+            ));
+        }
+
+        if resp[1] != u8::from(reset_kind) {
+            return Err(anyhow!(
+                "ECU reset failed: unexpected reset echo 0x{:02X}, expected 0x{:02X}",
+                resp[1],
+                u8::from(reset_kind)
+            ));
+        }
+
         Ok(())
     }
 
