@@ -253,6 +253,7 @@
       const jobs = latestJobs.filter((job) => job.controller === controllerName);
       if (!jobs.length) {
         jobsContent.innerHTML = `<p class="empty">No operations queued yet.</p>`;
+        feedback.hidden = true;
         return;
       }
       jobsContent.innerHTML = `
@@ -287,6 +288,26 @@
           </table>
         </div>
       `;
+      const latestJob = jobs[0];
+      const isError = latestJob.state === "failed";
+      const detail = latestJob.detail ? `: ${latestJob.detail}` : "";
+      setFeedback(
+        `Latest job ${latestJob.id} is ${latestJob.state}${detail}`,
+        isError,
+      );
+    }
+
+    function mergeJob(job) {
+      if (!job || job.controller !== controllerName) {
+        return;
+      }
+      latestJobs = [job, ...latestJobs.filter((existing) => existing.id !== job.id)];
+      renderJobs();
+    }
+
+    function applyJobsSnapshot(snapshot) {
+      latestJobs = (snapshot.jobs || []).filter((job) => job.controller === controllerName);
+      renderJobs();
     }
 
     function renderController(controller) {
@@ -319,10 +340,21 @@
       return payload;
     }
 
+    async function refreshJobs() {
+      const response = await fetch(`/api/controllers/${encodeURIComponent(controllerName)}/jobs`, {
+        headers: { "Accept": "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to refresh jobs");
+      }
+      applyJobsSnapshot(await response.json());
+    }
+
     sessionForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       try {
         const payload = await submitForm(`/api/controllers/${encodeURIComponent(controllerName)}/session`, new FormData(sessionForm));
+        mergeJob(payload.job);
         setFeedback(`Session job queued: ${payload.job_id}`, false);
       } catch (error) {
         setFeedback(error.message, true);
@@ -333,6 +365,7 @@
       event.preventDefault();
       try {
         const payload = await submitForm(`/api/controllers/${encodeURIComponent(controllerName)}/reset`, new FormData(resetForm));
+        mergeJob(payload.job);
         setFeedback(`Reset job queued: ${payload.job_id}`, false);
       } catch (error) {
         setFeedback(error.message, true);
@@ -351,6 +384,7 @@
           `/api/controllers/${encodeURIComponent(controllerName)}/routines/${encodeURIComponent(routineName)}`,
           new FormData(routineForm),
         );
+        mergeJob(payload.job);
         setFeedback(`Routine job queued: ${payload.job_id}`, false);
       } catch (error) {
         setFeedback(error.message, true);
@@ -363,6 +397,11 @@
       renderController(latestController);
       renderJobs();
     }, 1000);
+    setInterval(() => {
+      refreshJobs().catch((error) => {
+        console.error("job refresh failed", error);
+      });
+    }, 1000);
 
     const source = new EventSource("/events");
     source.addEventListener("state", (event) => {
@@ -373,8 +412,7 @@
       }
     });
     source.addEventListener("jobs", (event) => {
-      latestJobs = JSON.parse(event.data).jobs || [];
-      renderJobs();
+      applyJobsSnapshot(JSON.parse(event.data));
     });
   </script>
 {% endblock %}

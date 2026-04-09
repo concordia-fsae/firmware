@@ -153,6 +153,7 @@ struct ResetActionRequest {
 struct ActionAcceptedResponse {
     ok: bool,
     job_id: String,
+    job: DashboardJob,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -544,6 +545,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_reset_controller);
 
+    let controller_jobs = warp::path!("api" / "controllers" / String / "jobs")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_controller_jobs);
+
     let events = warp::path("events")
         .and(warp::get())
         .and(state_filter.clone())
@@ -668,11 +674,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(enter_session)
         .or(run_routine)
         .or(reset_controller)
+        .or(controller_jobs)
         .or(events)
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/jobs', '/events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -812,7 +819,8 @@ async fn handle_enter_session(
 
     Ok(json_success_response(ActionAcceptedResponse {
         ok: true,
-        job_id: job.id,
+        job_id: job.id.clone(),
+        job,
     }))
 }
 
@@ -870,7 +878,8 @@ async fn handle_run_routine(
 
     Ok(json_success_response(ActionAcceptedResponse {
         ok: true,
-        job_id: job.id,
+        job_id: job.id.clone(),
+        job,
     }))
 }
 
@@ -927,8 +936,25 @@ async fn handle_reset_controller(
 
     Ok(json_success_response(ActionAcceptedResponse {
         ok: true,
-        job_id: job.id,
+        job_id: job.id.clone(),
+        job,
     }))
+}
+
+async fn handle_controller_jobs(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    if !state.capabilities.contains_key(&controller_name) {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    }
+
+    let snapshot = state.jobs_snapshot().await;
+    Ok(json_jobs_response(snapshot))
 }
 
 fn load_controller_capabilities(
@@ -1343,6 +1369,10 @@ fn json_error_response(status: warp::http::StatusCode, message: &str) -> warp::r
 fn json_success_response(body: ActionAcceptedResponse) -> warp::reply::Response {
     warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::ACCEPTED)
         .into_response()
+}
+
+fn json_jobs_response(body: JobsSnapshot) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
 }
 
 fn spawn_veh_worker(
