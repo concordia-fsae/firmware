@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title }}</title>
+    <style>
+      :root {
+        --bg: #f5f1e8;
+        --panel: #fffdf9;
+        --ink: #1f2a2f;
+        --muted: #6a7378;
+        --online: #1f7a46;
+        --offline: #b03a2e;
+        --border: #d7d0c3;
+        --accent: #274c77;
+        --fault: #a63d40;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top left, rgba(39, 76, 119, 0.12), transparent 30%),
+          linear-gradient(180deg, #f8f5ee 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+      .shell { max-width: 1100px; margin: 0 auto; padding: 24px 20px 48px; }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+      .brand { color: var(--ink); text-decoration: none; }
+      .brand-title { margin: 0; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -0.04em; }
+      .brand-copy { margin: 6px 0 0; color: var(--muted); font-size: 0.98rem; }
+      .nav { display: flex; gap: 12px; flex-wrap: wrap; }
+      .nav a, .back-link { color: var(--accent); text-decoration: none; font-weight: 700; }
+      .page-header { margin-bottom: 24px; }
+      .page-title { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: -0.04em; }
+      .page-copy { margin: 0; color: var(--muted); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: 0 18px 42px rgba(31, 42, 47, 0.06);
+      }
+      .card-link { color: inherit; text-decoration: none; display: block; }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .controller-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: white;
+      }
+      .badge.online { background: var(--online); }
+      .badge.offline { background: var(--offline); }
+      .status-line { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .meta { color: var(--muted); font-size: 0.92rem; }
+      details { border-top: 1px solid var(--border); padding-top: 10px; }
+      summary { cursor: pointer; color: var(--accent); font-weight: 700; }
+      .fault-list { margin: 10px 0 0; padding-left: 18px; }
+      .fault-list li { margin: 7px 0; }
+      .fault-label { color: var(--fault); font-weight: 700; }
+      .fault-meta { color: var(--muted); font-size: 0.88rem; }
+      .empty { color: var(--muted); margin: 10px 0 0; }
+      .table-card { margin-top: 18px; }
+      .section-title { margin: 0 0 12px; font-size: 1.1rem; }
+      .ops-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 14px; }
+      .stack-form { display: grid; gap: 10px; }
+      .field-label { font-size: 0.9rem; font-weight: 700; color: var(--muted); }
+      .inline-field { display: flex; gap: 10px; flex-wrap: wrap; }
+      select, textarea, button {
+        font: inherit;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+      select, textarea { width: 100%; padding: 10px 12px; color: var(--ink); }
+      button {
+        padding: 10px 14px;
+        color: white;
+        background: var(--accent);
+        cursor: pointer;
+        font-weight: 700;
+      }
+      button[disabled] { cursor: not-allowed; opacity: 0.55; }
+      .feedback {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(39, 76, 119, 0.1);
+        color: var(--accent);
+      }
+      .feedback.error {
+        background: rgba(166, 61, 64, 0.12);
+        color: var(--fault);
+      }
+      .job-meta { color: var(--muted); font-size: 0.86rem; margin-top: 4px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      td code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.9em; }
+      @media (max-width: 640px) {
+        .shell { padding: 20px 14px 40px; }
+        .topbar { align-items: flex-start; flex-direction: column; }
+      }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a href="/" class="brand">
+          <h1 class="brand-title">Controller Dashboard</h1>
+          <p class="brand-copy">Live status, faults, and room to grow into deeper pages.</p>
+        </a>
+        <nav class="nav">
+          <a href="/">Home</a>
+        </nav>
+      </header>
+      {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

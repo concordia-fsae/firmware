@@ -16,7 +16,6 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = "1.0.80"
 argh = "0.1.12"
-askama = "0.12"
 axum = "0.7"
 automotive_diag = { version = "=0.1.22", features = [
   "display",
@@ -64,3 +63,4 @@ tokio = { version = "1.36.0", features = [
 ] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+minijinja = "2"

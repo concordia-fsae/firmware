@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <a class="back-link" href="/">Back to all controllers</a>
+  <section class="page-header">
+    <h2 class="page-title">{{ controller.name }}</h2>
+    <p class="page-copy">Faults, critical data, and UDS operations update live over SSE.</p>
+  </section>
+  <section id="controller-page">
+    <article class="card">
+      <div class="card-header">
+        <div class="controller-name">{{ controller.name }}</div>
+        <span id="status-badge" class="badge {{ controller.status_class }}">{{ controller.status_label }}</span>
+      </div>
+      <div class="status-line">
+        <span id="last-seen" class="meta">Last seen: {{ controller.last_seen_label }}</span>
+        <span id="fault-count" class="meta">Faults: {{ controller.fault_count }}</span>
+      </div>
+    </article>
+    <article class="card table-card">
+      <h3 class="section-title">UDS Operations</h3>
+      <p class="page-copy">Actions run as background jobs so the page stays responsive.</p>
+      <div id="operation-feedback" class="feedback" hidden></div>
+      <div class="ops-grid">
+        <form id="session-form" class="stack-form">
+          <label class="field-label" for="session-select">Diagnostic session</label>
+          <div class="inline-field">
+            <select id="session-select" name="session">
+              {% for session in controller.session_options %}
+                <option value="{{ session.key }}">{{ session.label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Enter Session</button>
+          </div>
+        </form>
+        <form id="routine-form" class="stack-form">
+          <label class="field-label" for="routine-select">UDS routine</label>
+          <select id="routine-select" name="routine">
+            {% if controller.routine_options|length == 0 %}
+              <option value="">No configured routines</option>
+            {% else %}
+              {% for routine in controller.routine_options %}
+                <option value="{{ routine.name }}">{{ routine.label }} ({{ routine.id_hex }})</option>
+              {% endfor %}
+            {% endif %}
+          </select>
+          <label class="field-label" for="routine-payload">Routine payload hex</label>
+          <textarea id="routine-payload" name="payload_hex" rows="3" placeholder="Optional. Example: 01 02 0A FF"></textarea>
+          <button type="submit" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Run Routine</button>
+        </form>
+      </div>
+    </article>
+    <article class="card table-card">
+      <h3 class="section-title">Operation Jobs</h3>
+      <div id="jobs-content">
+        <p class="empty">No operations queued yet.</p>
+      </div>
+    </article>
+    <article class="card table-card">
+      <h3 class="section-title">Active Faults</h3>
+      <div id="faults-content">
+        {% if controller.fault_count == 0 %}
+          <p class="empty">No active faults.</p>
+        {% else %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Signal</th>
+                  <th>State</th>
+                  <th>Value</th>
+                  <th>Source</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for fault in controller.faults %}
+                  <tr>
+                    <td><code>{{ fault.signal_name }}</code></td>
+                    <td>{% if fault.has_label %}{{ fault.label }}{% else %}FAULT{% endif %}</td>
+                    <td>{{ fault.value }}</td>
+                    <td><code>{{ fault.source_message }}</code></td>
+                    <td>{{ fault.updated_at_label }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </article>
+    {% if controller.supports_critical_data %}
+      <article class="card table-card">
+        <h3 class="section-title">Critical Data</h3>
+        <div id="critical-content">
+          {% if controller.critical_signal_count == 0 %}
+            <p class="empty">No critical data received yet.</p>
+          {% else %}
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Signal</th>
+                    <th>Value</th>
+                    <th>Label</th>
+                    <th>Source</th>
+                    <th>Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for signal in controller.critical_signals %}
+                    <tr>
+                      <td><code>{{ signal.signal_name }}</code></td>
+                      <td>{{ signal.value }}</td>
+                      <td>{% if signal.has_label %}{{ signal.label }}{% endif %}</td>
+                      <td><code>{{ signal.source_message }}</code></td>
+                      <td>{{ signal.updated_at_label }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </div>
+      </article>
+    {% endif %}
+  </section>
+  <script id="initial-controller" type="application/json">{{ initial_controller_json|safe }}</script>
+  <script id="initial-jobs" type="application/json">{{ initial_jobs_json|safe }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const initialController = JSON.parse(document.getElementById("initial-controller").textContent);
+    const initialJobsSnapshot = JSON.parse(document.getElementById("initial-jobs").textContent);
+    const controllerName = initialController.name;
+    const statusBadge = document.getElementById("status-badge");
+    const lastSeen = document.getElementById("last-seen");
+    const faultCount = document.getElementById("fault-count");
+    const faultsContent = document.getElementById("faults-content");
+    const criticalContent = document.getElementById("critical-content");
+    const jobsContent = document.getElementById("jobs-content");
+    const feedback = document.getElementById("operation-feedback");
+    const sessionForm = document.getElementById("session-form");
+    const routineForm = document.getElementById("routine-form");
+    let latestController = initialController;
+    let latestJobs = initialJobsSnapshot.jobs || [];
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function ageLabel(timestampMs) {
+      if (!timestampMs) return "Never";
+      const diffMs = Math.max(0, Date.now() - timestampMs);
+      if (diffMs < 1000) return "just now";
+      const secs = Math.floor(diffMs / 1000);
+      if (secs < 60) return `${secs}s ago`;
+      const mins = Math.floor(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.floor(mins / 60);
+      return `${hours}h ago`;
+    }
+
+    function renderFaultRows(controller) {
+      const faults = controller.faults || [];
+      if (!faults.length) {
+        return `<p class="empty">No active faults.</p>`;
+      }
+      return `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Signal</th>
+                <th>State</th>
+                <th>Value</th>
+                <th>Source</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${faults.map((fault) => `
+                <tr>
+                  <td><code>${escapeHtml(fault.signal_name)}</code></td>
+                  <td>${fault.label ? escapeHtml(fault.label) : "FAULT"}</td>
+                  <td>${escapeHtml(fault.value)}</td>
+                  <td><code>${escapeHtml(fault.source_message)}</code></td>
+                  <td>${ageLabel(fault.updated_at_ms)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderCriticalData(controller) {
+      if (!criticalContent) {
+        return;
+      }
+      const signals = controller.critical_signals || [];
+      if (!signals.length) {
+        criticalContent.innerHTML = `<p class="empty">No critical data received yet.</p>`;
+        return;
+      }
+      criticalContent.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Signal</th>
+                <th>Value</th>
+                <th>Label</th>
+                <th>Source</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${signals.map((signal) => `
+                <tr>
+                  <td><code>${escapeHtml(signal.signal_name)}</code></td>
+                  <td>${escapeHtml(signal.value)}</td>
+                  <td>${signal.label ? escapeHtml(signal.label) : ""}</td>
+                  <td><code>${escapeHtml(signal.source_message)}</code></td>
+                  <td>${ageLabel(signal.updated_at_ms)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderJobs() {
+      const jobs = latestJobs.filter((job) => job.controller === controllerName);
+      if (!jobs.length) {
+        jobsContent.innerHTML = `<p class="empty">No operations queued yet.</p>`;
+        return;
+      }
+      jobsContent.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Operation</th>
+                <th>State</th>
+                <th>Detail</th>
+                <th>Created</th>
+                <th>Finished</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${jobs.map((job) => `
+                <tr>
+                  <td><code>${escapeHtml(job.id)}</code></td>
+                  <td>${escapeHtml(job.operation)}</td>
+                  <td>${escapeHtml(job.state)}</td>
+                  <td>
+                    ${escapeHtml(job.detail)}
+                    ${job.payload_text ? `<div class="job-meta">text=${escapeHtml(job.payload_text)}</div>` : ""}
+                    ${job.payload_hex ? `<div class="job-meta">data=${escapeHtml(job.payload_hex)}</div>` : ""}
+                  </td>
+                  <td>${ageLabel(job.created_at_ms)}</td>
+                  <td>${ageLabel(job.finished_at_ms)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderController(controller) {
+      latestController = controller;
+      const online = Boolean(controller.online);
+      statusBadge.className = `badge ${online ? "online" : "offline"}`;
+      statusBadge.textContent = online ? "ONLINE" : "OFFLINE";
+      lastSeen.textContent = `Last seen: ${ageLabel(controller.last_seen_ms)}`;
+      faultCount.textContent = `Faults: ${(controller.faults || []).length}`;
+      faultsContent.innerHTML = renderFaultRows(controller);
+      renderCriticalData(controller);
+    }
+
+    function setFeedback(message, isError) {
+      feedback.hidden = false;
+      feedback.className = isError ? "feedback error" : "feedback";
+      feedback.textContent = message;
+    }
+
+    async function submitForm(url, formData) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(formData),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Request failed");
+      }
+      return payload;
+    }
+
+    sessionForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const payload = await submitForm(`/api/controllers/${encodeURIComponent(controllerName)}/session`, new FormData(sessionForm));
+        setFeedback(`Session job queued: ${payload.job_id}`, false);
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    routineForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const routineName = document.getElementById("routine-select").value;
+      if (!routineName) {
+        setFeedback("No routine is configured for this controller.", true);
+        return;
+      }
+      try {
+        const payload = await submitForm(
+          `/api/controllers/${encodeURIComponent(controllerName)}/routines/${encodeURIComponent(routineName)}`,
+          new FormData(routineForm),
+        );
+        setFeedback(`Routine job queued: ${payload.job_id}`, false);
+      } catch (error) {
+        setFeedback(error.message, true);
+      }
+    });
+
+    renderController(initialController);
+    renderJobs();
+    setInterval(() => {
+      renderController(latestController);
+      renderJobs();
+    }, 1000);
+
+    const source = new EventSource("/events");
+    source.addEventListener("state", (event) => {
+      const snapshot = JSON.parse(event.data);
+      const controller = (snapshot.controllers || []).find((entry) => entry.name === controllerName);
+      if (controller) {
+        renderController(controller);
+      }
+    });
+    source.addEventListener("jobs", (event) => {
+      latestJobs = JSON.parse(event.data).jobs || [];
+      renderJobs();
+    });
+  </script>
+{% endblock %}

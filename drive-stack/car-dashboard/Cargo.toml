@@ -9,14 +9,15 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = { workspace = true }
-askama = { workspace = true }
 clap = { workspace = true }
+conUDS = { path = "../conUDS" }
 env_logger = { workspace = true }
 futures = { workspace = true }
+libc = { workspace = true }
 log = { workspace = true }
+minijinja = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-socketcan = { workspace = true }
 tokio = { workspace = true }
 warp = "0.3"
