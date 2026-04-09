@@ -26,7 +26,7 @@ use libc::{
 };
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{Mutex, RwLock, broadcast, mpsc};
+use tokio::sync::{Mutex, RwLock, broadcast, mpsc, oneshot};
 use warp::sse::Event;
 use warp::{Filter, Reply};
 
@@ -225,6 +225,18 @@ struct JobStore {
     next_job_id: u64,
 }
 
+struct TesterPresentHandle {
+    stop_tx: oneshot::Sender<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct TesterPresentStateResponse {
+    ok: bool,
+    enabled: bool,
+    job_id: Option<String>,
+    job: Option<DashboardJob>,
+}
+
 #[derive(Clone)]
 struct AppState {
     store: Arc<RwLock<DashboardStore>>,
@@ -234,6 +246,7 @@ struct AppState {
     last_state_payload: Arc<Mutex<String>>,
     last_jobs_payload: Arc<Mutex<String>>,
     jobs: Arc<RwLock<JobStore>>,
+    tester_present: Arc<Mutex<BTreeMap<String, TesterPresentHandle>>>,
 }
 
 impl DashboardStore {
@@ -337,6 +350,30 @@ impl JobStore {
             .insert(controller.to_string(), id.clone());
         self.jobs.insert(id.clone(), job.clone());
         Ok(job)
+    }
+
+    fn create_background_job(
+        &mut self,
+        controller: &str,
+        operation: String,
+        detail: String,
+    ) -> DashboardJob {
+        let id = format!("job-{:05}", self.next_job_id);
+        self.next_job_id += 1;
+        let job = DashboardJob {
+            id: id.clone(),
+            controller: controller.to_string(),
+            operation,
+            state: "queued".to_string(),
+            detail,
+            payload_text: None,
+            payload_hex: None,
+            created_at_ms: now_ms(),
+            started_at_ms: None,
+            finished_at_ms: None,
+        };
+        self.jobs.insert(id, job.clone());
+        job
     }
 
     fn mark_started(&mut self, job_id: &str, detail: String) {
@@ -481,6 +518,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         last_state_payload: Arc::new(Mutex::new(String::new())),
         last_jobs_payload: Arc::new(Mutex::new(String::new())),
         jobs,
+        tester_present: Arc::new(Mutex::new(BTreeMap::new())),
     };
 
     info!("seeding initial dashboard snapshot");
@@ -544,6 +582,21 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::body::form())
         .and(state_filter.clone())
         .and_then(handle_reset_controller);
+
+    let start_tester_present = warp::path!("api" / "controllers" / String / "tester-present")
+        .and(warp::post())
+        .and(state_filter.clone())
+        .and_then(handle_start_tester_present);
+
+    let stop_tester_present = warp::path!("api" / "controllers" / String / "tester-present")
+        .and(warp::delete())
+        .and(state_filter.clone())
+        .and_then(handle_stop_tester_present);
+
+    let tester_present_state = warp::path!("api" / "controllers" / String / "tester-present")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_tester_present_state);
 
     let controller_jobs = warp::path!("api" / "controllers" / String / "jobs")
         .and(warp::get())
@@ -674,12 +727,15 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(enter_session)
         .or(run_routine)
         .or(reset_controller)
+        .or(start_tester_present)
+        .or(stop_tester_present)
+        .or(tester_present_state)
         .or(controller_jobs)
         .or(events)
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/jobs', '/events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -955,6 +1011,141 @@ async fn handle_controller_jobs(
 
     let snapshot = state.jobs_snapshot().await;
     Ok(json_jobs_response(snapshot))
+}
+
+async fn handle_start_tester_present(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    };
+
+    {
+        let tester_present = state.tester_present.lock().await;
+        if tester_present.contains_key(&controller_name) {
+            return Ok(json_error_response(
+                warp::http::StatusCode::CONFLICT,
+                "persistent tester present is already active for this controller",
+            ));
+        }
+    }
+
+    let job = {
+        let mut jobs = state.jobs.write().await;
+        jobs.create_background_job(
+            &controller_name,
+            "tester-present".to_string(),
+            "Queued persistent tester present".to_string(),
+        )
+    };
+    if let Err(error) = state.publish_jobs_if_changed().await {
+        return Ok(json_error_response(
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+            &error.to_string(),
+        ));
+    }
+
+    let (stop_tx, stop_rx) = oneshot::channel();
+    {
+        let mut tester_present = state.tester_present.lock().await;
+        tester_present.insert(controller_name.clone(), TesterPresentHandle { stop_tx });
+    }
+
+    let state_for_job = state.clone();
+    let job_id = job.id.clone();
+    tokio::spawn(async move {
+        run_tester_present_job(state_for_job, capability, job_id, stop_rx).await;
+    });
+
+    Ok(json_success_response(ActionAcceptedResponse {
+        ok: true,
+        job_id: job.id.clone(),
+        job,
+    }))
+}
+
+async fn handle_stop_tester_present(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    if !state.capabilities.contains_key(&controller_name) {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    }
+
+    let handle = {
+        let mut tester_present = state.tester_present.lock().await;
+        tester_present.remove(&controller_name)
+    };
+
+    let Some(handle) = handle else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::CONFLICT,
+            "persistent tester present is not active for this controller",
+        ));
+    };
+
+    let job = {
+        let mut jobs = state.jobs.write().await;
+        jobs.create_background_job(
+            &controller_name,
+            "tester-present-stop".to_string(),
+            "Queued stop persistent tester present".to_string(),
+        )
+    };
+    if let Err(error) = state.publish_jobs_if_changed().await {
+        return Ok(json_error_response(
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+            &error.to_string(),
+        ));
+    }
+
+    let _ = handle.stop_tx.send(job.id.clone());
+    Ok(json_tester_present_state_response(
+        TesterPresentStateResponse {
+            ok: true,
+            enabled: false,
+            job_id: Some(job.id.clone()),
+            job: Some(job),
+        },
+        warp::http::StatusCode::OK,
+    ))
+}
+
+async fn handle_tester_present_state(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    if !state.capabilities.contains_key(&controller_name) {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    }
+
+    let enabled = {
+        let tester_present = state.tester_present.lock().await;
+        tester_present.contains_key(&controller_name)
+    };
+
+    Ok(json_tester_present_state_response(
+        TesterPresentStateResponse {
+            ok: true,
+            enabled,
+            job_id: None,
+            job: None,
+        },
+        warp::http::StatusCode::OK,
+    ))
 }
 
 fn load_controller_capabilities(
@@ -1281,6 +1472,127 @@ async fn run_reset_job(
     let _ = state.publish_jobs_if_changed().await;
 }
 
+async fn run_tester_present_job(
+    state: AppState,
+    capability: ControllerCapability,
+    job_id: String,
+    stop_rx: oneshot::Receiver<String>,
+) {
+    info!(
+        "starting persistent tester present job '{}' for controller='{}' on iface='{}'",
+        job_id, capability.name, capability.uds_iface
+    );
+    {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_started(
+            &job_id,
+            "Starting persistent tester present".to_string(),
+        );
+    }
+    let _ = state.publish_jobs_if_changed().await;
+
+    let mut uds = UdsSession::new(
+        &capability.uds_iface,
+        capability.request_id,
+        capability.response_id,
+        false,
+    )
+    .await;
+
+    match uds.client.start_persistent_tp().await {
+        Ok(()) => {
+            {
+                let mut jobs = state.jobs.write().await;
+                jobs.mark_started(
+                    &job_id,
+                    "Persistent tester present active".to_string(),
+                );
+            }
+            let _ = state.publish_jobs_if_changed().await;
+
+            let stop_job_id = match stop_rx.await {
+                Ok(stop_job_id) => stop_job_id,
+                Err(_) => {
+                    {
+                        let mut jobs = state.jobs.write().await;
+                        jobs.mark_failed(
+                            &job_id,
+                            "Persistent tester present ended unexpectedly".to_string(),
+                            None,
+                            None,
+                        );
+                    }
+                    let _ = state.publish_jobs_if_changed().await;
+                    uds.teardown().await;
+                    let mut tester_present = state.tester_present.lock().await;
+                    tester_present.remove(&capability.name);
+                    return;
+                }
+            };
+            {
+                let mut jobs = state.jobs.write().await;
+                jobs.mark_started(
+                    &stop_job_id,
+                    "Stopping persistent tester present".to_string(),
+                );
+            }
+            let _ = state.publish_jobs_if_changed().await;
+
+            if let Err(error) = uds.client.stop_persistent_tp().await {
+                {
+                    let mut jobs = state.jobs.write().await;
+                    jobs.mark_failed(
+                        &stop_job_id,
+                        format!("failed to stop persistent tester present: {error}"),
+                        None,
+                        None,
+                    );
+                    jobs.mark_failed(
+                        &job_id,
+                        format!("failed to stop persistent tester present: {error}"),
+                        None,
+                        None,
+                    );
+                }
+                let _ = state.publish_jobs_if_changed().await;
+            } else {
+                {
+                    let mut jobs = state.jobs.write().await;
+                    jobs.mark_succeeded(
+                        &stop_job_id,
+                        "Persistent tester present stop completed".to_string(),
+                        None,
+                        None,
+                    );
+                    jobs.mark_succeeded(
+                        &job_id,
+                        "Persistent tester present stopped".to_string(),
+                        None,
+                        None,
+                    );
+                }
+                let _ = state.publish_jobs_if_changed().await;
+            }
+        }
+        Err(error) => {
+            {
+                let mut jobs = state.jobs.write().await;
+                jobs.mark_failed(
+                    &job_id,
+                    format!("failed to start persistent tester present: {error}"),
+                    None,
+                    None,
+                );
+            }
+            let _ = state.publish_jobs_if_changed().await;
+        }
+    }
+
+    uds.teardown().await;
+    let mut tester_present = state.tester_present.lock().await;
+    tester_present.remove(&capability.name);
+}
+
 fn session_key_label(session: DiagnosticSessionKind) -> &'static str {
     match session {
         DiagnosticSessionKind::Default => "Default",
@@ -1373,6 +1685,13 @@ fn json_success_response(body: ActionAcceptedResponse) -> warp::reply::Response 
 
 fn json_jobs_response(body: JobsSnapshot) -> warp::reply::Response {
     warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_tester_present_state_response(
+    body: TesterPresentStateResponse,
+    status: warp::http::StatusCode,
+) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), status).into_response()
 }
 
 fn spawn_veh_worker(
