@@ -13,7 +13,7 @@ path = "/dev/null"
 [dependencies]
 anyhow = "1.0.80"
 argh = "0.1.12"
-askama = "0.12"
+minijinja = "2"
 automotive_diag = { version = "=0.1.22", features = [
   "display",
   "std",

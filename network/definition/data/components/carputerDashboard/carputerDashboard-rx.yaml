@@ -1,0 +1,5 @@
+receiveAllMessagesOnBuses:
+  - "vcanVeh"
+  - "vcanBody"
+messages:
+signals:

@@ -2,16 +2,16 @@ load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "gen
 load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
 
 generate_resources(
-    name = "yamcan-veh-codegen",
+    name = "yamcan-codegen",
     network_dep = "//network:network",
-    node = "carputerVeh",
+    node = "carputerDashboard",
     rust_wrapper = True,
     visibility = ["PUBLIC"],
 )
 
 generate_c_library(
-    name = "yamcan-veh",
-    codegen_target = ":yamcan-veh-codegen",
+    name = "yamcan",
+    codegen_target = ":yamcan-codegen",
     extra_srcs = [
         "//components/shared/code:libs/Utility.c",
     ],
@@ -29,47 +29,10 @@ generate_c_library(
 )
 
 generate_rust_library(
-    name = "yamcan-veh-rust",
-    crate = "yamcan_dashboard_veh",
-    codegen_target = ":yamcan-veh-codegen",
-    c_dep = ":yamcan-veh",
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
-    visibility = ["PUBLIC"],
-)
-
-generate_resources(
-    name = "yamcan-body-codegen",
-    network_dep = "//network:network",
-    node = "carputerBody",
-    rust_wrapper = True,
-    visibility = ["PUBLIC"],
-)
-
-generate_c_library(
-    name = "yamcan-body",
-    codegen_target = ":yamcan-body-codegen",
-    extra_srcs = [
-        "//components/shared/code:libs/Utility.c",
-    ],
-    extra_exported_headers = {
-        "CANIO_componentSpecific.h": "//drive-stack/can-bridge:CANIO_componentSpecific.h",
-    },
-    library_deps = [
-        "//components/shared/code:headers",
-    ],
-    visibility = ["PUBLIC"],
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
-)
-
-generate_rust_library(
-    name = "yamcan-body-rust",
-    crate = "yamcan_dashboard_body",
-    codegen_target = ":yamcan-body-codegen",
-    c_dep = ":yamcan-body",
+    name = "yamcan-rust",
+    crate = "yamcan_dashboard",
+    codegen_target = ":yamcan-codegen",
+    c_dep = ":yamcan",
     target_compatible_with = [
         "prelude//os/constraints:linux",
     ],
@@ -79,24 +42,24 @@ generate_rust_library(
 rust_library(
     name = "lib",
     crate = "dashboard",
-    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
+    srcs = glob(["src/**/*.rs", "templates/**/*.html"], exclude=["main.rs"]),
     edition = "2024",
     env = {
         "CARGO_MANIFEST_DIR": "drive-stack/car-dashboard",
     },
     deps = [
-        ":yamcan-body-rust",
-        ":yamcan-veh-rust",
+        "//drive-stack/conUDS:lib",
+        ":yamcan-rust",
         "//third_party:anyhow",
-        "//third_party:askama",
         "//third_party:clap",
         "//third_party:env_logger",
         "//third_party:futures",
+        "//third_party:libc",
         "//third_party:log",
+        "//third_party:minijinja",
         "//third_party:serde",
         "//third_party:serde_json",
         "//third_party:serde_yaml",
-        "//third_party:socketcan",
         "//third_party:tokio",
         "//third_party:warp",
     ],
@@ -139,6 +102,7 @@ carputer_application_target(
     service_install_name = "dashboard.service",
     resource_deps = {
         "application/config/ota-agent/uds-manifest.yaml": "//network:manifest-uds",
+        "application/config/ota-agent/uds-routines.yaml": "//drive-stack/conUDS:routines-manifest",
     },
     include_artifact_hash = False,
 )
@@ -149,10 +113,8 @@ native.command_alias(
     args = [
         "--uds-manifest",
         "$(location //network:manifest-uds)",
-        "--veh-iface",
-        "vcanVeh",
-        "--body-iface",
-        "vcanBody",
+        "--routine-manifest",
+        "$(location //drive-stack/conUDS:routines-manifest)",
     ],
     visibility = ["PUBLIC"],
 )

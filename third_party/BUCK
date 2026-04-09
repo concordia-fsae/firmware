@@ -378,121 +378,6 @@ cargo.rust_library(
     deps = [":serde-1.0.219"],
 )
 
-alias(
-    name = "askama",
-    actual = ":askama-0.12.1",
-    visibility = ["PUBLIC"],
-)
-
-http_archive(
-    name = "askama-0.12.1.crate",
-    sha256 = "b79091df18a97caea757e28cd2d5fda49c6cd4bd01ddffd7ff01ace0c0ad2c28",
-    strip_prefix = "askama-0.12.1",
-    urls = ["https://static.crates.io/crates/askama/0.12.1/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "askama-0.12.1",
-    srcs = [":askama-0.12.1.crate"],
-    crate = "askama",
-    crate_root = "askama-0.12.1.crate/src/lib.rs",
-    edition = "2021",
-    features = [
-        "config",
-        "default",
-        "dep_humansize",
-        "dep_num_traits",
-        "humansize",
-        "num-traits",
-        "percent-encoding",
-        "urlencode",
-    ],
-    named_deps = {
-        "dep_humansize": ":humansize-2.1.3",
-        "dep_num_traits": ":num-traits-0.2.19",
-    },
-    visibility = [],
-    deps = [
-        ":askama_derive-0.12.5",
-        ":askama_escape-0.10.3",
-        ":percent-encoding-2.3.2",
-    ],
-)
-
-http_archive(
-    name = "askama_derive-0.12.5.crate",
-    sha256 = "19fe8d6cb13c4714962c072ea496f3392015f0989b1a2847bb4b2d9effd71d83",
-    strip_prefix = "askama_derive-0.12.5",
-    urls = ["https://static.crates.io/crates/askama_derive/0.12.5/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "askama_derive-0.12.5",
-    srcs = [":askama_derive-0.12.5.crate"],
-    crate = "askama_derive",
-    crate_root = "askama_derive-0.12.5.crate/src/lib.rs",
-    edition = "2021",
-    features = [
-        "basic-toml",
-        "config",
-        "humansize",
-        "num-traits",
-        "serde",
-        "urlencode",
-    ],
-    named_deps = {
-        "parser": ":askama_parser-0.2.1",
-    },
-    proc_macro = True,
-    visibility = [],
-    deps = [
-        ":basic-toml-0.1.10",
-        ":mime-0.3.17",
-        ":mime_guess-2.0.5",
-        ":proc-macro2-1.0.106",
-        ":quote-1.0.45",
-        ":serde-1.0.219",
-        ":syn-2.0.117",
-    ],
-)
-
-http_archive(
-    name = "askama_escape-0.10.3.crate",
-    sha256 = "619743e34b5ba4e9703bba34deac3427c72507c7159f5fd030aea8cac0cfe341",
-    strip_prefix = "askama_escape-0.10.3",
-    urls = ["https://static.crates.io/crates/askama_escape/0.10.3/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "askama_escape-0.10.3",
-    srcs = [":askama_escape-0.10.3.crate"],
-    crate = "askama_escape",
-    crate_root = "askama_escape-0.10.3.crate/src/lib.rs",
-    edition = "2018",
-    visibility = [],
-)
-
-http_archive(
-    name = "askama_parser-0.2.1.crate",
-    sha256 = "acb1161c6b64d1c3d83108213c2a2533a342ac225aabd0bda218278c2ddb00c0",
-    strip_prefix = "askama_parser-0.2.1",
-    urls = ["https://static.crates.io/crates/askama_parser/0.2.1/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "askama_parser-0.2.1",
-    srcs = [":askama_parser-0.2.1.crate"],
-    crate = "askama_parser",
-    crate_root = "askama_parser-0.2.1.crate/src/lib.rs",
-    edition = "2021",
-    visibility = [],
-    deps = [":nom-7.1.3"],
-)
-
 http_archive(
     name = "atomic-waker-1.1.2.crate",
     sha256 = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0",
@@ -627,24 +512,6 @@ cargo.rust_library(
         "std",
     ],
     visibility = [],
-)
-
-http_archive(
-    name = "basic-toml-0.1.10.crate",
-    sha256 = "ba62675e8242a4c4e806d12f11d136e626e6c8361d6b829310732241652a178a",
-    strip_prefix = "basic-toml-0.1.10",
-    urls = ["https://static.crates.io/crates/basic-toml/0.1.10/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "basic-toml-0.1.10",
-    srcs = [":basic-toml-0.1.10.crate"],
-    crate = "basic_toml",
-    crate_root = "basic-toml-0.1.10.crate/src/lib.rs",
-    edition = "2021",
-    visibility = [],
-    deps = [":serde-1.0.219"],
 )
 
 http_archive(
@@ -2851,24 +2718,6 @@ cargo.rust_library(
 )
 
 http_archive(
-    name = "humansize-2.1.3.crate",
-    sha256 = "6cb51c9a029ddc91b07a787f1d86b53ccfa49b0e86688c946ebe8d3555685dd7",
-    strip_prefix = "humansize-2.1.3",
-    urls = ["https://static.crates.io/crates/humansize/2.1.3/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "humansize-2.1.3",
-    srcs = [":humansize-2.1.3.crate"],
-    crate = "humansize",
-    crate_root = "humansize-2.1.3.crate/src/lib.rs",
-    edition = "2021",
-    visibility = [],
-    deps = [":libm-0.2.16"],
-)
-
-http_archive(
     name = "hyper-0.14.32.crate",
     sha256 = "41dfc780fdec9373c01bae43289ea34c972e40ee3c9f6b3c8801a35f35586ce7",
     strip_prefix = "hyper-0.14.32",
@@ -3343,23 +3192,23 @@ cargo.rust_library(
 
 alias(
     name = "indicatif",
-    actual = ":indicatif-0.17.11",
+    actual = ":indicatif-0.17.8",
     visibility = ["PUBLIC"],
 )
 
 http_archive(
-    name = "indicatif-0.17.11.crate",
-    sha256 = "183b3088984b400f4cfac3620d5e076c84da5364016b4f49473de574b2586235",
-    strip_prefix = "indicatif-0.17.11",
-    urls = ["https://static.crates.io/crates/indicatif/0.17.11/download"],
+    name = "indicatif-0.17.8.crate",
+    sha256 = "763a5a8f45087d6bcea4222e7b72c291a054edf80e4ef6efd2a4979878c7bea3",
+    strip_prefix = "indicatif-0.17.8",
+    urls = ["https://static.crates.io/crates/indicatif/0.17.8/download"],
     visibility = [],
 )
 
 cargo.rust_library(
-    name = "indicatif-0.17.11",
-    srcs = [":indicatif-0.17.11.crate"],
+    name = "indicatif-0.17.8",
+    srcs = [":indicatif-0.17.8.crate"],
     crate = "indicatif",
-    crate_root = "indicatif-0.17.11.crate/src/lib.rs",
+    crate_root = "indicatif-0.17.8.crate/src/lib.rs",
     edition = "2021",
     features = [
         "default",
@@ -3369,8 +3218,8 @@ cargo.rust_library(
     deps = [
         ":console-0.15.11",
         ":number_prefix-0.4.0",
-        ":portable-atomic-1.13.1",
-        ":unicode-width-0.2.0",
+        ":portable-atomic-1.11.1",
+        ":unicode-width-0.1.14",
     ],
 )
 
@@ -3801,27 +3650,6 @@ cargo.rust_library(
 )
 
 http_archive(
-    name = "libm-0.2.16.crate",
-    sha256 = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981",
-    strip_prefix = "libm-0.2.16",
-    urls = ["https://static.crates.io/crates/libm/0.2.16/download"],
-    visibility = [],
-)
-
-cargo.rust_library(
-    name = "libm-0.2.16",
-    srcs = [":libm-0.2.16.crate"],
-    crate = "libm",
-    crate_root = "libm-0.2.16.crate/src/lib.rs",
-    edition = "2021",
-    features = [
-        "arch",
-        "default",
-    ],
-    visibility = [],
-)
-
-http_archive(
     name = "linux-raw-sys-0.12.1.crate",
     sha256 = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53",
     strip_prefix = "linux-raw-sys-0.12.1",
@@ -4055,6 +3883,23 @@ cargo.rust_library(
 )
 
 http_archive(
+    name = "memo-map-0.3.3.crate",
+    sha256 = "38d1115007560874e373613744c6fba374c17688327a71c1476d1a5954cc857b",
+    strip_prefix = "memo-map-0.3.3",
+    urls = ["https://static.crates.io/crates/memo-map/0.3.3/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "memo-map-0.3.3",
+    srcs = [":memo-map-0.3.3.crate"],
+    crate = "memo_map",
+    crate_root = "memo-map-0.3.3.crate/src/lib.rs",
+    edition = "2018",
+    visibility = [],
+)
+
+http_archive(
     name = "memoffset-0.6.5.crate",
     sha256 = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce",
     strip_prefix = "memoffset-0.6.5",
@@ -4246,6 +4091,44 @@ buildscript_run(
         "rev-mappings",
     ],
     version = "2.0.5",
+)
+
+alias(
+    name = "minijinja",
+    actual = ":minijinja-2.19.0",
+    visibility = ["PUBLIC"],
+)
+
+http_archive(
+    name = "minijinja-2.19.0.crate",
+    sha256 = "805bfd7352166bae857ee569628b52bcd85a1cecf7810861ebceb1686b72b75d",
+    strip_prefix = "minijinja-2.19.0",
+    urls = ["https://static.crates.io/crates/minijinja/2.19.0/download"],
+    visibility = [],
+)
+
+cargo.rust_library(
+    name = "minijinja-2.19.0",
+    srcs = [":minijinja-2.19.0.crate"],
+    crate = "minijinja",
+    crate_root = "minijinja-2.19.0.crate/src/lib.rs",
+    edition = "2021",
+    features = [
+        "adjacent_loop_items",
+        "builtins",
+        "debug",
+        "default",
+        "deserialization",
+        "macros",
+        "multi_template",
+        "serde",
+        "std_collections",
+    ],
+    visibility = [],
+    deps = [
+        ":memo-map-0.3.3",
+        ":serde-1.0.219",
+    ],
 )
 
 http_archive(
@@ -5051,36 +4934,36 @@ cargo.rust_library(
 )
 
 http_archive(
-    name = "portable-atomic-1.13.1.crate",
-    sha256 = "c33a9471896f1c69cecef8d20cbe2f7accd12527ce60845ff44c153bb2a21b49",
-    strip_prefix = "portable-atomic-1.13.1",
-    urls = ["https://static.crates.io/crates/portable-atomic/1.13.1/download"],
+    name = "portable-atomic-1.11.1.crate",
+    sha256 = "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483",
+    strip_prefix = "portable-atomic-1.11.1",
+    urls = ["https://static.crates.io/crates/portable-atomic/1.11.1/download"],
     visibility = [],
 )
 
 cargo.rust_library(
-    name = "portable-atomic-1.13.1",
-    srcs = [":portable-atomic-1.13.1.crate"],
+    name = "portable-atomic-1.11.1",
+    srcs = [":portable-atomic-1.11.1.crate"],
     crate = "portable_atomic",
-    crate_root = "portable-atomic-1.13.1.crate/src/lib.rs",
+    crate_root = "portable-atomic-1.11.1.crate/src/lib.rs",
     edition = "2018",
     env = {
         "CARGO_PKG_NAME": "portable-atomic",
-        "OUT_DIR": "$(location :portable-atomic-1.13.1-build-script-run[out_dir])",
+        "OUT_DIR": "$(location :portable-atomic-1.11.1-build-script-run[out_dir])",
     },
     features = [
         "default",
         "fallback",
     ],
-    rustc_flags = ["@$(location :portable-atomic-1.13.1-build-script-run[rustc_flags])"],
+    rustc_flags = ["@$(location :portable-atomic-1.11.1-build-script-run[rustc_flags])"],
     visibility = [],
 )
 
 cargo.rust_binary(
-    name = "portable-atomic-1.13.1-build-script-build",
-    srcs = [":portable-atomic-1.13.1.crate"],
+    name = "portable-atomic-1.11.1-build-script-build",
+    srcs = [":portable-atomic-1.11.1.crate"],
     crate = "build_script_build",
-    crate_root = "portable-atomic-1.13.1.crate/build.rs",
+    crate_root = "portable-atomic-1.11.1.crate/build.rs",
     edition = "2018",
     env = {
         "CARGO_PKG_NAME": "portable-atomic",
@@ -5093,9 +4976,9 @@ cargo.rust_binary(
 )
 
 buildscript_run(
-    name = "portable-atomic-1.13.1-build-script-run",
+    name = "portable-atomic-1.11.1-build-script-run",
     package_name = "portable-atomic",
-    buildscript_rule = ":portable-atomic-1.13.1-build-script-build",
+    buildscript_rule = ":portable-atomic-1.11.1-build-script-build",
     features = [
         "default",
         "fallback",
@@ -5114,7 +4997,7 @@ buildscript_run(
             },
         ),
     },
-    version = "1.13.1",
+    version = "1.11.1",
 )
 
 http_archive(
