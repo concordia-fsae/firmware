@@ -1,6 +1,18 @@
 load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "generate_rust_library")
 load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
 
+export_file(
+    name = "CANIO_componentSpecific.h",
+    src = "include/CANIO_componentSpecific.h",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "YamcanConfig.h",
+    src = "include/YamcanConfig.h",
+    visibility = ["PUBLIC"],
+)
+
 generate_resources(
     name = "yamcan-carputer-veh-codegen",
     network_dep = "//network:network",
