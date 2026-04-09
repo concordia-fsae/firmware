@@ -16,6 +16,10 @@
         <span id="last-seen" class="meta">Last seen: {{ controller.last_seen_label }}</span>
         <span id="fault-count" class="meta">Faults: {{ controller.fault_count }}</span>
       </div>
+      <div class="status-line">
+        <span id="current-session" class="meta">Current session: Unknown</span>
+        <button id="refresh-session" type="button">Read Session</button>
+      </div>
     </article>
     <article class="card table-card">
       <h3 class="section-title">UDS Operations</h3>
@@ -29,7 +33,6 @@
               <input id="tester-present-enabled" type="checkbox">
               <span>Tester Present Enabled</span>
             </label>
-            <button type="submit">Apply</button>
           </div>
         </form>
         <form id="reset-form" class="stack-form">
@@ -166,6 +169,8 @@
     const statusBadge = document.getElementById("status-badge");
     const lastSeen = document.getElementById("last-seen");
     const faultCount = document.getElementById("fault-count");
+    const currentSession = document.getElementById("current-session");
+    const refreshSessionButton = document.getElementById("refresh-session");
     const faultsContent = document.getElementById("faults-content");
     const criticalContent = document.getElementById("critical-content");
     const jobsContent = document.getElementById("jobs-content");
@@ -342,6 +347,11 @@
       testerPresentEnabled.checked = testerPresentActive;
     }
 
+    function setCurrentSession(payload) {
+      const label = payload && payload.session_label ? payload.session_label : "Unknown";
+      currentSession.textContent = `Current session: ${label}`;
+    }
+
     function renderController(controller) {
       latestController = controller;
       const online = Boolean(controller.online);
@@ -406,12 +416,28 @@
       setTesterPresentEnabled(payload.enabled);
     }
 
+    async function refreshCurrentSession() {
+      const response = await fetch(
+        `/api/controllers/${encodeURIComponent(controllerName)}/current-session`,
+        { headers: { "Accept": "application/json" } },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to read current session");
+      }
+      setCurrentSession(payload);
+      return payload;
+    }
+
     sessionForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       try {
         const payload = await submitForm(`/api/controllers/${encodeURIComponent(controllerName)}/session`, new FormData(sessionForm));
         mergeJob(payload.job);
         setFeedback(`Session job queued: ${payload.job_id}`, false);
+        refreshCurrentSession().catch((error) => {
+          console.error("current session refresh failed", error);
+        });
       } catch (error) {
         setFeedback(error.message, true);
       }
@@ -428,8 +454,7 @@
       }
     });
 
-    testerPresentForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    testerPresentEnabled.addEventListener("change", async () => {
       testerPresentEnabled.disabled = true;
       try {
         if (testerPresentEnabled.checked) {
@@ -458,6 +483,18 @@
         setFeedback(error.message, true);
       } finally {
         testerPresentEnabled.disabled = false;
+      }
+    });
+
+    refreshSessionButton.addEventListener("click", async () => {
+      refreshSessionButton.disabled = true;
+      try {
+        const payload = await refreshCurrentSession();
+        setFeedback(`Current session: ${payload.session_label}`, false);
+      } catch (error) {
+        setFeedback(error.message, true);
+      } finally {
+        refreshSessionButton.disabled = false;
       }
     });
 
@@ -530,6 +567,9 @@
     });
     refreshTesterPresentState().catch((error) => {
       console.error("initial tester present refresh failed", error);
+    });
+    refreshCurrentSession().catch((error) => {
+      console.error("initial current session refresh failed", error);
     });
   </script>
 {% endblock %}

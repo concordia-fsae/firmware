@@ -15,7 +15,8 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use conUDS::config::Config as UdsConfig;
 use conUDS::modules::uds::{
-    DiagnosticSessionKind, DiagnosticSessionResponse, RoutineStartResponse, UdsSession,
+    CurrentDiagnosticSession, DiagnosticSessionKind, DiagnosticSessionResponse,
+    RoutineStartResponse, UdsSession,
 };
 use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
@@ -245,6 +246,14 @@ struct TesterPresentStateResponse {
     enabled: bool,
     job_id: Option<String>,
     job: Option<DashboardJob>,
+}
+
+#[derive(Debug, Serialize)]
+struct CurrentSessionResponse {
+    ok: bool,
+    session_key: String,
+    session_label: String,
+    session_value: u8,
 }
 
 #[derive(Clone)]
@@ -581,6 +590,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_enter_session);
 
+    let read_current_session = warp::path!("api" / "controllers" / String / "current-session")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_current_session);
+
     let run_routine = warp::path!("api" / "controllers" / String / "routines" / String)
         .and(warp::post())
         .and(warp::body::form())
@@ -740,6 +754,7 @@ pub async fn run(opts: Opts) -> Result<()> {
 
     let routes = home
         .or(controller)
+        .or(read_current_session)
         .or(enter_session)
         .or(run_routine)
         .or(reset_controller)
@@ -752,7 +767,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -837,6 +852,46 @@ async fn handle_controller(
         ),
         warp::http::StatusCode::OK,
     ))
+}
+
+async fn handle_current_session(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    };
+
+    let mut uds = UdsSession::new(
+        &capability.uds_iface,
+        capability.request_id,
+        capability.response_id,
+        false,
+    )
+    .await;
+    let result = uds.read_current_session().await;
+    uds.teardown().await;
+
+    let session = match result {
+        Ok(session) => session,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_GATEWAY,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    Ok(json_current_session_response(CurrentSessionResponse {
+        ok: true,
+        session_key: session.key().to_string(),
+        session_label: session.label().to_string(),
+        session_value: session.raw_value(),
+    }))
 }
 
 async fn handle_enter_session(
@@ -1874,6 +1929,10 @@ fn json_tester_present_state_response(
     status: warp::http::StatusCode,
 ) -> warp::reply::Response {
     warp::reply::with_status(warp::reply::json(&body), status).into_response()
+}
+
+fn json_current_session_response(body: CurrentSessionResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
 }
 
 fn spawn_veh_worker(
