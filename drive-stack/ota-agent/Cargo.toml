@@ -15,7 +15,6 @@ serde_json = { workspace = true }
 futures = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-get_if_addrs = { workspace = true }
 net_detec = { workspace = true }
 if_addrs = { workspace = true }
 hostname = { workspace = true }

@@ -3,6 +3,8 @@ name = "rust-third-party"
 publish = false
 edition = "2021"
 
+[workspace]
+
 # Dummy target to keep Cargo happy
 [[bin]]
 name = "fake"
@@ -11,7 +13,8 @@ path = "/dev/null"
 [dependencies]
 anyhow = "1.0.80"
 argh = "0.1.12"
-automotive_diag = { version = "0.1.6", features = [
+askama = "0.12"
+automotive_diag = { version = "=0.1.22", features = [
   "display",
   "std",
   "with-uds",
