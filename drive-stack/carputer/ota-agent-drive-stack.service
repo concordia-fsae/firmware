@@ -2,7 +2,6 @@
 Description=Activate drive-stack overlay for the carputer
 DefaultDependencies=no
 After=local-fs.target
-Wants=drive-stack.target
 Before=drive-stack.target
 
 [Service]

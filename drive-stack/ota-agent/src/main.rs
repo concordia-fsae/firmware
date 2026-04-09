@@ -2967,94 +2967,58 @@ async fn install_global_bundle(
         return Err(e);
     }
 
-    let script_path_str = script_path
-        .to_str()
-        .ok_or_else(|| anyhow!("invalid script path {}", script_path.display()))?;
-    let active_root_arg = active_root
-        .to_str()
-        .ok_or_else(|| anyhow!("invalid active path {}", active_root.display()))?;
-    if let Err(e) = run_command(script_path_str, &[active_root_arg]).await {
-        let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
-        return Err(e);
-    }
     if let Err(e) = run_command("systemctl", &["daemon-reload"]).await {
         let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
         return Err(e);
     }
-    let bootstrap_startup = PathBuf::from("/usr/local/libexec/ota-agent/bootstrap-startup.sh");
-    if fs::try_exists(&bootstrap_startup).await? {
-        let bootstrap_startup_str = bootstrap_startup.to_str().ok_or_else(|| {
-            anyhow!(
-                "invalid startup script path {}",
-                bootstrap_startup.display()
-            )
-        })?;
-        info!("Running bootstrap startup script");
-        if let Err(e) = run_command(bootstrap_startup_str, &[]).await {
+    if let Err(e) = systemd_service("enable", "ota-agent-drive-stack.service").await {
+        let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
+        return Err(e);
+    }
+    if let Err(restart_err) =
+        run_command("systemctl", &["restart", "--no-block", "ota-agent-drive-stack.service"]).await
+    {
+        if let Err(start_err) =
+            run_command("systemctl", &["start", "--no-block", "ota-agent-drive-stack.service"])
+                .await
+        {
             let _ =
                 unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
-            return Err(e);
+            return Err(anyhow!(
+                "failed to trigger ota-agent-drive-stack.service: restart error: {restart_err}; start error: {start_err}"
+            ));
         }
     }
     let _ = systemd_service("disable", "bootstrap-carputer.service").await;
 
     let mut enable_units = Vec::new();
-    let mut restart_units = Vec::new();
-    let mut start_units = Vec::new();
     for target in state.cfg.targets.values() {
         match target {
             DeployTarget::LocalPackage {
                 enable_services,
-                restart_services,
                 ..
             } => {
                 enable_units.extend(enable_services.iter().cloned());
-                restart_units.extend(restart_services.iter().cloned());
             }
-            DeployTarget::Uds { start_services, .. } => {
-                start_units.extend(start_services.iter().cloned());
-            }
+            DeployTarget::Uds { .. } => {}
             DeployTarget::LocalBundle { .. } => {}
         }
     }
     enable_units.sort();
     enable_units.dedup();
-    restart_units.sort();
-    restart_units.dedup();
-    start_units.sort();
-    start_units.dedup();
 
-    info!(
-        "Service actions: enable={} start={} restart={}",
-        enable_units.len(),
-        start_units.len(),
-        restart_units.len()
-    );
+    info!("Service actions: enable={}", enable_units.len());
     if !enable_units.is_empty() {
         info!("Enable services: {:?}", enable_units);
     }
-    if !start_units.is_empty() {
-        info!("Start services: {:?}", start_units);
-    }
-    if !restart_units.is_empty() {
-        info!("Restart services: {:?}", restart_units);
-    }
+    info!("Triggered ota-agent-drive-stack.service for local bundle activation");
     for unit in &enable_units {
         let _ = systemd_service("enable", unit).await;
     }
-    for unit in &start_units {
-        let _ = systemd_service("start", unit).await;
-    }
-    for unit in &restart_units {
-        let _ = systemd_service("restart", unit).await;
-    }
-    for unit in enable_units
-        .iter()
-        .chain(start_units.iter())
-        .chain(restart_units.iter())
-    {
+    for unit in &enable_units {
         log_systemd_status(unit).await;
     }
+    log_systemd_status("ota-agent-drive-stack.service").await;
 
     let current_link = baseline_root.join("current");
     if fs::try_exists(&current_link).await? {

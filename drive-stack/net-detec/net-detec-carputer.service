@@ -1,6 +1,6 @@
 [Unit]
 Description=Carputer Device Discovery Service
-After=network.target
+After=ota-agent-drive-stack.service network.target
 PartOf=drive-stack.target
 
 [Service]
