@@ -198,7 +198,7 @@ enable_units() {
 restart_units() {
 	while IFS= read -r unit; do
 		[ -n "${unit}" ] || continue
-		systemctl restart "${unit}" || systemctl start "${unit}" || true
+		systemctl restart --no-block "${unit}" || systemctl start --no-block "${unit}" || true
 	done
 }
 

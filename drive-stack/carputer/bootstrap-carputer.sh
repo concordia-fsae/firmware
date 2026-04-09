@@ -125,8 +125,9 @@ if [[ "${LOCAL_MODE}" -eq 1 ]]; then
 
 	echo "[bootstrap] Starting activation service"
 	sudo systemctl daemon-reload
-	sudo systemctl enable --now ota-agent-drive-stack.service
-	sudo systemctl restart ota-agent-drive-stack.service
+	sudo systemctl enable ota-agent-drive-stack.service
+	sudo systemctl restart --no-block ota-agent-drive-stack.service ||
+		sudo systemctl start --no-block ota-agent-drive-stack.service
 
 	if [ -x /usr/local/libexec/ota-agent/bootstrap-startup.sh ]; then
 		echo "[bootstrap] Running bootstrap startup script"
@@ -225,8 +226,9 @@ fi
 
 echo "[bootstrap] Starting activation service"
 sudo systemctl daemon-reload
-sudo systemctl enable --now ota-agent-drive-stack.service
-sudo systemctl restart ota-agent-drive-stack.service
+sudo systemctl enable ota-agent-drive-stack.service
+sudo systemctl restart --no-block ota-agent-drive-stack.service || \
+    sudo systemctl start --no-block ota-agent-drive-stack.service
 ota_service_src="${state_root}/current/payload/etc/systemd/system/ota-agent.service"
 if [ -f "${ota_service_src}" ]; then
     echo "[bootstrap] Installing ota-agent.service from payload"

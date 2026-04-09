@@ -1,7 +1,7 @@
 [Unit]
 Description=Carputer OTA agent
 After=network.target ota-agent-drive-stack.service
-Requires=ota-agent-drive-stack.service
+Wants=ota-agent-drive-stack.service
 
 [Service]
 Environment=OTA_AGENT_CONFIG_TOML=/application/config/ota-agent/ota-agent.toml
