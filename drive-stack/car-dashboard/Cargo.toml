@@ -1,0 +1,22 @@
+[package]
+name = "dashboard"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "dashboard"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+askama = { workspace = true }
+clap = { workspace = true }
+env_logger = { workspace = true }
+futures = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+socketcan = { workspace = true }
+tokio = { workspace = true }
+warp = "0.3"

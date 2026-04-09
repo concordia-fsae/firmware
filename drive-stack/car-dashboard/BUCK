@@ -1,0 +1,158 @@
+load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "generate_rust_library")
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
+
+generate_resources(
+    name = "yamcan-veh-codegen",
+    network_dep = "//network:network",
+    node = "carputerVeh",
+    rust_wrapper = True,
+    visibility = ["PUBLIC"],
+)
+
+generate_c_library(
+    name = "yamcan-veh",
+    codegen_target = ":yamcan-veh-codegen",
+    extra_srcs = [
+        "//components/shared/code:libs/Utility.c",
+    ],
+    extra_exported_headers = {
+        "CANIO_componentSpecific.h": "//drive-stack/can-bridge:CANIO_componentSpecific.h",
+        "YamcanConfig.h": "//drive-stack/can-bridge:YamcanConfig.h",
+    },
+    library_deps = [
+        "//components/shared/code:headers",
+    ],
+    visibility = ["PUBLIC"],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+)
+
+generate_rust_library(
+    name = "yamcan-veh-rust",
+    crate = "yamcan_dashboard_veh",
+    codegen_target = ":yamcan-veh-codegen",
+    c_dep = ":yamcan-veh",
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+generate_resources(
+    name = "yamcan-body-codegen",
+    network_dep = "//network:network",
+    node = "carputerBody",
+    rust_wrapper = True,
+    visibility = ["PUBLIC"],
+)
+
+generate_c_library(
+    name = "yamcan-body",
+    codegen_target = ":yamcan-body-codegen",
+    extra_srcs = [
+        "//components/shared/code:libs/Utility.c",
+    ],
+    extra_exported_headers = {
+        "CANIO_componentSpecific.h": "//drive-stack/can-bridge:CANIO_componentSpecific.h",
+    },
+    library_deps = [
+        "//components/shared/code:headers",
+    ],
+    visibility = ["PUBLIC"],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+)
+
+generate_rust_library(
+    name = "yamcan-body-rust",
+    crate = "yamcan_dashboard_body",
+    codegen_target = ":yamcan-body-codegen",
+    c_dep = ":yamcan-body",
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_library(
+    name = "lib",
+    crate = "dashboard",
+    srcs = glob(["src/**/*.rs"], exclude=["main.rs"]),
+    edition = "2024",
+    env = {
+        "CARGO_MANIFEST_DIR": "drive-stack/car-dashboard",
+    },
+    deps = [
+        ":yamcan-body-rust",
+        ":yamcan-veh-rust",
+        "//third_party:anyhow",
+        "//third_party:askama",
+        "//third_party:clap",
+        "//third_party:env_logger",
+        "//third_party:futures",
+        "//third_party:log",
+        "//third_party:serde",
+        "//third_party:serde_json",
+        "//third_party:serde_yaml",
+        "//third_party:socketcan",
+        "//third_party:tokio",
+        "//third_party:warp",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "dashboard",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        ":lib",
+        "//third_party:anyhow",
+        "//third_party:clap",
+        "//third_party:env_logger",
+        "//third_party:tokio",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":dashboard",
+    platform = "//buck2/platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer",
+    target_node = "dashboard",
+    binary = ":bin-arm64",
+    binary_install_name = "dashboard",
+    service_src = "dashboard.service",
+    service_install_name = "dashboard.service",
+    resource_deps = {
+        "application/config/ota-agent/uds-manifest.yaml": "//network:manifest-uds",
+    },
+    include_artifact_hash = False,
+)
+
+native.command_alias(
+    name = "run",
+    exe = ":dashboard",
+    args = [
+        "--uds-manifest",
+        "$(location //network:manifest-uds)",
+        "--veh-iface",
+        "vcanVeh",
+        "--body-iface",
+        "vcanBody",
+    ],
+    visibility = ["PUBLIC"],
+)
