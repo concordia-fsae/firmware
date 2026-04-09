@@ -54,7 +54,13 @@ contains_message = True
     }
 }
     %for signal in node.received_sigs:
-      %if bus in node.received_sigs[signal].message_ref.source_buses:
+<%
+  signal_on_bus = any(
+    bus in node.received_msgs[msg].source_buses and signal in node.received_msgs[msg].signal_objs
+    for msg in node.received_msgs
+  )
+%>\
+      %if signal_on_bus:
 <%
   duplicate = node.received_sigs[signal].message_ref.node_ref.duplicateNode
   if duplicate and node.received_sigs[signal].message_ref.node_ref.offset != 0:

@@ -48,7 +48,13 @@ typedef struct
 typedef struct
 {
     %for sig in node.received_sigs:
-      %if bus in node.received_sigs[sig].message_ref.source_buses:
+<%
+  signal_on_bus = any(
+    bus in node.received_msgs[msg].source_buses and sig in node.received_msgs[msg].signal_objs
+    for msg in node.received_msgs
+  )
+%>\
+      %if signal_on_bus:
         %if node.received_sigs[sig].message_ref.node_ref.duplicateNode:
           %if node.received_sigs[sig].message_ref.node_ref.offset != 0:
 <%continue%>\
