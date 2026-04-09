@@ -44,6 +44,15 @@
             <button type="submit">Reset ECU</button>
           </div>
         </form>
+        <form id="tester-present-form" class="stack-form">
+          <label class="field-label" for="tester-present-enabled">Persistent tester present</label>
+          <div class="inline-field">
+            <label class="checkbox-field" for="tester-present-enabled">
+              <input id="tester-present-enabled" type="checkbox">
+              <span>Tester Present Enabled</span>
+            </label>
+          </div>
+        </form>
         <form id="routine-form" class="stack-form">
           <label class="field-label" for="routine-select">UDS routine</label>
           <select id="routine-select" name="routine">
@@ -154,9 +163,12 @@
     const feedback = document.getElementById("operation-feedback");
     const sessionForm = document.getElementById("session-form");
     const resetForm = document.getElementById("reset-form");
+    const testerPresentForm = document.getElementById("tester-present-form");
+    const testerPresentEnabled = document.getElementById("tester-present-enabled");
     const routineForm = document.getElementById("routine-form");
     let latestController = initialController;
     let latestJobs = initialJobsSnapshot.jobs || [];
+    let testerPresentActive = false;
 
     function escapeHtml(value) {
       return String(value)
@@ -253,6 +265,7 @@
       const jobs = latestJobs.filter((job) => job.controller === controllerName);
       if (!jobs.length) {
         jobsContent.innerHTML = `<p class="empty">No operations queued yet.</p>`;
+        setTesterPresentEnabled(false);
         feedback.hidden = true;
         return;
       }
@@ -291,6 +304,10 @@
       const latestJob = jobs[0];
       const isError = latestJob.state === "failed";
       const detail = latestJob.detail ? `: ${latestJob.detail}` : "";
+      const activeTesterPresentJob = jobs.find((job) =>
+        job.operation === "tester-present" && job.state === "running"
+      );
+      setTesterPresentEnabled(Boolean(activeTesterPresentJob));
       setFeedback(
         `Latest job ${latestJob.id} is ${latestJob.state}${detail}`,
         isError,
@@ -308,6 +325,11 @@
     function applyJobsSnapshot(snapshot) {
       latestJobs = (snapshot.jobs || []).filter((job) => job.controller === controllerName);
       renderJobs();
+    }
+
+    function setTesterPresentEnabled(enabled) {
+      testerPresentActive = Boolean(enabled);
+      testerPresentEnabled.checked = testerPresentActive;
     }
 
     function renderController(controller) {
@@ -350,6 +372,18 @@
       applyJobsSnapshot(await response.json());
     }
 
+    async function refreshTesterPresentState() {
+      const response = await fetch(
+        `/api/controllers/${encodeURIComponent(controllerName)}/tester-present`,
+        { headers: { "Accept": "application/json" } },
+      );
+      if (!response.ok) {
+        throw new Error("Failed to refresh tester present state");
+      }
+      const payload = await response.json();
+      setTesterPresentEnabled(payload.enabled);
+    }
+
     sessionForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       try {
@@ -369,6 +403,38 @@
         setFeedback(`Reset job queued: ${payload.job_id}`, false);
       } catch (error) {
         setFeedback(error.message, true);
+      }
+    });
+
+    testerPresentEnabled.addEventListener("change", async () => {
+      testerPresentEnabled.disabled = true;
+      try {
+        if (testerPresentEnabled.checked) {
+          const payload = await submitForm(
+            `/api/controllers/${encodeURIComponent(controllerName)}/tester-present`,
+            new FormData(testerPresentForm),
+          );
+          mergeJob(payload.job);
+          setTesterPresentEnabled(true);
+          setFeedback(`Tester present job queued: ${payload.job_id}`, false);
+        } else {
+          const response = await fetch(
+            `/api/controllers/${encodeURIComponent(controllerName)}/tester-present`,
+            { method: "DELETE" },
+          );
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error || "Request failed");
+          }
+          mergeJob(payload.job);
+          setTesterPresentEnabled(payload.enabled);
+          setFeedback(`Tester present stop queued: ${payload.job_id}`, false);
+        }
+      } catch (error) {
+        testerPresentEnabled.checked = testerPresentActive;
+        setFeedback(error.message, true);
+      } finally {
+        testerPresentEnabled.disabled = false;
       }
     });
 
@@ -402,6 +468,11 @@
         console.error("job refresh failed", error);
       });
     }, 1000);
+    setInterval(() => {
+      refreshTesterPresentState().catch((error) => {
+        console.error("tester present refresh failed", error);
+      });
+    }, 1000);
 
     const source = new EventSource("/events");
     source.addEventListener("state", (event) => {
@@ -413,6 +484,9 @@
     });
     source.addEventListener("jobs", (event) => {
       applyJobsSnapshot(JSON.parse(event.data));
+    });
+    refreshTesterPresentState().catch((error) => {
+      console.error("initial tester present refresh failed", error);
     });
   </script>
 {% endblock %}
