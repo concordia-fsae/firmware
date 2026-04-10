@@ -1,4 +1,0 @@
-description: "Carputer body bridge"
-onBuses:
-  - "body"
-  - "vcanBody"

@@ -1,5 +1,4 @@
 receiveAllMessagesOnBuses:
   - "veh"
-  - "body"
 messages:
 signals:
