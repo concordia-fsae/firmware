@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title }}</title>
+    <style>
+      :root {
+        --bg: #f5f1e8;
+        --panel: #fffdf9;
+        --ink: #1f2a2f;
+        --muted: #6a7378;
+        --online: #1f7a46;
+        --offline: #b03a2e;
+        --border: #d7d0c3;
+        --accent: #274c77;
+        --fault: #a63d40;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top left, rgba(39, 76, 119, 0.12), transparent 30%),
+          linear-gradient(180deg, #f8f5ee 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+      .shell { max-width: 1560px; margin: 0 auto; padding: 24px 20px 48px; }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+      .brand { color: var(--ink); text-decoration: none; }
+      .brand-title { margin: 0; font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -0.04em; }
+      .brand-copy { margin: 6px 0 0; color: var(--muted); font-size: 0.98rem; }
+      .nav { display: flex; gap: 12px; flex-wrap: wrap; }
+      .nav a, .back-link { color: var(--accent); text-decoration: none; font-weight: 700; }
+      .page-header { margin-bottom: 24px; }
+      .page-title { margin: 0 0 8px; font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: -0.04em; }
+      .page-copy { margin: 0; color: var(--muted); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: 0 18px 42px rgba(31, 42, 47, 0.06);
+      }
+      .card-link { color: inherit; text-decoration: none; display: block; }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .controller-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .badge {
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: white;
+      }
+      .badge.online { background: var(--online); }
+      .badge.offline { background: var(--offline); }
+      .status-line { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .meta { color: var(--muted); font-size: 0.92rem; }
+      details { border-top: 1px solid var(--border); padding-top: 10px; }
+      summary { cursor: pointer; color: var(--accent); font-weight: 700; }
+      .fault-list { margin: 10px 0 0; padding-left: 18px; }
+      .fault-list li { margin: 7px 0; }
+      .fault-label { color: var(--fault); font-weight: 700; }
+      .fault-meta { color: var(--muted); font-size: 0.88rem; }
+      .empty { color: var(--muted); margin: 10px 0 0; }
+      .table-card { margin-top: 18px; }
+      .section-title { margin: 0 0 12px; font-size: 1.1rem; }
+      .ops-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+      .stack-form { display: grid; gap: 8px; }
+      .field-label { font-size: 0.9rem; font-weight: 700; color: var(--muted); }
+      .inline-field { display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; }
+      .inline-field > select,
+      .inline-field > input[type="file"],
+      .inline-field > textarea,
+      .inline-field > .checkbox-field { flex: 1 1 auto; min-width: 0; }
+      .inline-field > button { flex: 0 0 auto; }
+      .checkbox-field { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+      .checkbox-field span { white-space: nowrap; }
+      select, textarea, button {
+        font: inherit;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+      select, textarea { width: 100%; padding: 10px 12px; color: var(--ink); }
+      button {
+        padding: 10px 14px;
+        color: white;
+        background: var(--accent);
+        cursor: pointer;
+        font-weight: 700;
+      }
+      button[disabled] { cursor: not-allowed; opacity: 0.55; }
+      .feedback {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(39, 76, 119, 0.1);
+        color: var(--accent);
+      }
+      .feedback.error {
+        background: rgba(166, 61, 64, 0.12);
+        color: var(--fault);
+      }
+      .job-meta { color: var(--muted); font-size: 0.86rem; margin-top: 4px; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      td code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.9em; }
+      .split-layout { display: grid; grid-template-columns: minmax(300px, 420px) minmax(0, 1fr); gap: 18px; align-items: start; }
+      .toolbar { display: grid; gap: 12px; }
+      .search-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #fff;
+        font: inherit;
+        color: var(--ink);
+      }
+      .signal-groups { display: grid; gap: 12px; max-height: 68vh; overflow: auto; padding-right: 6px; }
+      .signal-group { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: rgba(255,255,255,0.72); }
+      .signal-group-title { margin: 0 0 8px; font-size: 1rem; }
+      .signal-group-meta { margin: 0 0 10px; color: var(--muted); font-size: 0.88rem; }
+      .signal-options { display: grid; gap: 8px; }
+      .signal-option { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: #fff; border: 1px solid transparent; }
+      .signal-option:hover { border-color: var(--border); }
+      .signal-option input { margin-right: 8px; }
+      .signal-option-header { display: flex; align-items: center; gap: 8px; }
+      .signal-option-name { font-weight: 700; }
+      .signal-option-meta { color: var(--muted); font-size: 0.84rem; padding-left: 26px; }
+      .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; font-size: 0.76rem; font-weight: 700; background: rgba(39, 76, 119, 0.1); color: var(--accent); }
+      .plot-grid { display: grid; gap: 14px; }
+      .plot-card { padding: 14px 16px; }
+      .plot-header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 10px; }
+      .plot-name { font-weight: 700; }
+      .plot-meta { color: var(--muted); font-size: 0.88rem; }
+      .plot-svg { width: 100%; height: 170px; display: block; background: linear-gradient(180deg, rgba(39, 76, 119, 0.06), rgba(255,255,255,0.5)); border-radius: 12px; border: 1px solid var(--border); }
+      .plot-empty { display: grid; place-items: center; height: 170px; color: var(--muted); background: rgba(255,255,255,0.6); border: 1px dashed var(--border); border-radius: 12px; }
+      .swatch { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+      .plot-axis-text { fill: var(--muted); font-size: 12px; font-family: "SFMono-Regular", Consolas, monospace; }
+      .plot-frame { display: grid; grid-template-columns: 92px minmax(0, 1fr) 92px; gap: 10px; align-items: stretch; }
+      .plot-rail { display: flex; flex-direction: column; justify-content: space-between; color: var(--muted); font-size: 0.82rem; font-family: "SFMono-Regular", Consolas, monospace; }
+      .plot-rail.end { text-align: right; }
+      .plot-rail strong { color: var(--ink); font-size: 0.88rem; }
+      .plot-rail.labels { position: relative; height: 170px; display: block; }
+      .plot-mark { position: absolute; left: 0; right: 0; transform: translateY(-50%); }
+      .plot-mark strong { display: block; }
+      @media (max-width: 640px) {
+        .shell { padding: 20px 14px 40px; }
+        .topbar { align-items: flex-start; flex-direction: column; }
+      }
+      @media (max-width: 900px) {
+        .split-layout { grid-template-columns: 1fr; }
+        .signal-groups { max-height: none; }
+      }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a href="/" class="brand">
+          <h1 class="brand-title">Controller Dashboard</h1>
+          <p class="brand-copy">Live status, faults, and room to grow into deeper pages.</p>
+        </a>
+        <nav class="nav">
+          <a href="/">Home</a>
+          <a href="/signals">Signals</a>
+        </nav>
+      </header>
+      {% block content %}{% endblock %}
+    </main>
+    <script>
+      (() => {
+        const storageKey = "dashboard.signal-cache-client-id";
+        let clientId = sessionStorage.getItem(storageKey);
+        if (!clientId) {
+          clientId = `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+          sessionStorage.setItem(storageKey, clientId);
+        }
+
+        let port = null;
+        let requestId = 1;
+        const listeners = new Set();
+        const pending = new Map();
+
+        function ensureWorker() {
+          if (port || !("SharedWorker" in window)) {
+            return;
+          }
+          const worker = new SharedWorker("/assets/signal-cache-worker.js");
+          port = worker.port;
+          port.start();
+          port.onmessage = (event) => {
+            const data = event.data || {};
+            if (data.clientId && data.clientId !== clientId) {
+              return;
+            }
+            if (data.type === "snapshot" && pending.has(data.requestId)) {
+              const resolve = pending.get(data.requestId);
+              pending.delete(data.requestId);
+              resolve(data.payload || { signals: [] });
+              return;
+            }
+            listeners.forEach((listener) => listener(data));
+          };
+          port.postMessage({ type: "init", clientId });
+        }
+
+        window.dashboardSignalCache = {
+          isAvailable() {
+            return "SharedWorker" in window;
+          },
+          subscribe(listener) {
+            ensureWorker();
+            listeners.add(listener);
+            return () => listeners.delete(listener);
+          },
+          setSubscription(signalIds, paused) {
+            ensureWorker();
+            if (!port) {
+              return;
+            }
+            port.postMessage({
+              type: "set-subscription",
+              clientId,
+              signalIds,
+              paused,
+            });
+          },
+          getSnapshot(signalIds) {
+            ensureWorker();
+            if (!port) {
+              return Promise.resolve({ signals: [] });
+            }
+            const id = requestId++;
+            return new Promise((resolve) => {
+              pending.set(id, resolve);
+              port.postMessage({
+                type: "get-snapshot",
+                clientId,
+                requestId: id,
+                signalIds,
+              });
+            });
+          },
+        };
+
+        ensureWorker();
+        window.addEventListener("pagehide", () => {
+          if (port) {
+            port.postMessage({ type: "disconnect", clientId });
+          }
+        });
+      })();
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

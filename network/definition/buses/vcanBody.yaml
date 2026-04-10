@@ -1,4 +1,0 @@
-name: "vcanBody"
-description: "Virtual body bus for local forwarding"
-defaultEndianness: "little"
-interfaceType: "virtual"

@@ -1,8 +1,0 @@
-receiveAllMessagesOnBuses:
-  - "body"
-forwarding:
-  - sourceBus: "body"
-    destBus: "vcanBody"
-    policy: "all"
-messages:
-signals:

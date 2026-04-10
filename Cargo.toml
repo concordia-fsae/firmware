@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "drive-stack/ota-agent",
   "drive-stack/conUDS",
+  "drive-stack/car-dashboard",
   "drive-stack/can-bridge",
   "drive-stack/net-detec",
   "tools/log-processor",
@@ -15,7 +16,6 @@ edition = "2024"
 [workspace.dependencies]
 anyhow = "1.0.80"
 argh = "0.1.12"
-askama = "0.12"
 axum = "0.7"
 automotive_diag = { version = "=0.1.22", features = [
   "display",
@@ -44,13 +44,13 @@ reqwest = { version = "0.12", default-features = false, features = [
   "json",
   "stream",
 ] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_derive = { version = "1.0.197" }
-serde_json = "1.0.143"
-serde_yaml = { version = "0.9.34" }
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_derive = { version = "=1.0.219" }
+serde_json = "=1.0.143"
+serde_yaml = { version = "=0.9.34" }
 sha2 = "0.10"
 simplelog = "0.12.2"
-socketcan = "3.5.0"
+socketcan = "=3.5.0"
 thiserror = "1.0"
 tokio = { version = "1.36.0", features = [
   "full",
@@ -63,3 +63,4 @@ tokio = { version = "1.36.0", features = [
 ] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+minijinja = "2"

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="page-header">
+    <h2 class="page-title">Deployable Controllers</h2>
+    <p class="page-copy">Controllers update live over SSE. Select a controller page as deeper views are added.</p>
+  </section>
+  <section id="controllers" class="grid">
+    {% for controller in controllers %}
+      <article class="card">
+        <a class="card-link" href="/controllers/{{ controller.slug }}">
+          <div class="card-header">
+            <div class="controller-name">{{ controller.name }}</div>
+            <span class="badge {{ controller.status_class }}">{{ controller.status_label }}</span>
+          </div>
+          <div class="status-line">
+            <span class="meta">Last seen: {{ controller.last_seen_label }}</span>
+            <span class="meta">Faults: {{ controller.fault_count }}</span>
+          </div>
+        </a>
+        <details>
+          <summary>Fault Details</summary>
+          {% if controller.fault_count == 0 %}
+            <p class="empty">No active faults.</p>
+          {% else %}
+            <ul class="fault-list">
+              {% for fault in controller.faults %}
+                <li>
+                  <span class="fault-label">{{ fault.signal_name }}</span>
+                  {% if fault.has_label %}
+                    <span>{{ fault.label }}</span>
+                  {% endif %}
+                  <div class="fault-meta">
+                    value={{ fault.value }} · source={{ fault.source_message }} · updated {{ fault.updated_at_label }}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </details>
+      </article>
+    {% endfor %}
+  </section>
+  <script id="initial-state" type="application/json">{{ initial_state_json|safe }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const initialState = JSON.parse(document.getElementById("initial-state").textContent);
+    const container = document.getElementById("controllers");
+    let latestState = initialState;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function ageLabel(timestampMs) {
+      if (!timestampMs) return "Never";
+      const diffMs = Math.max(0, Date.now() - timestampMs);
+      if (diffMs < 1000) return "just now";
+      const secs = Math.floor(diffMs / 1000);
+      if (secs < 60) return `${secs}s ago`;
+      const mins = Math.floor(secs / 60);
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.floor(mins / 60);
+      return `${hours}h ago`;
+    }
+
+    function renderFaults(controller) {
+      const faults = controller.faults || [];
+      if (!faults.length) {
+        return `<p class="empty">No active faults.</p>`;
+      }
+      return `<ul class="fault-list">${faults.map((fault) => `
+        <li>
+          <span class="fault-label">${escapeHtml(fault.signal_name)}</span>
+          ${fault.label ? `<span>${escapeHtml(fault.label)}</span>` : ""}
+          <div
+            class="fault-meta"
+            data-fault-updated-ms="${Number(fault.updated_at_ms) || 0}"
+            data-fault-value="${escapeHtml(fault.value)}"
+            data-fault-source="${escapeHtml(fault.source_message)}"
+          >
+            value=${escapeHtml(fault.value)} · source=${escapeHtml(fault.source_message)} · updated ${ageLabel(fault.updated_at_ms)}
+          </div>
+        </li>
+      `).join("")}</ul>`;
+    }
+
+    function expandedFaults() {
+      return new Set(
+        Array.from(container.querySelectorAll("details[data-controller]"))
+          .filter((details) => details.open)
+          .map((details) => details.dataset.controller)
+      );
+    }
+
+    function createCard(controller, expanded) {
+      const article = document.createElement("article");
+      article.className = "card";
+      article.dataset.controller = controller.name;
+      article.innerHTML = `
+        <a class="card-link" href="/controllers/${encodeURIComponent(controller.name)}">
+          <div class="card-header">
+            <div class="controller-name"></div>
+            <span class="badge"></span>
+          </div>
+          <div class="status-line">
+            <span class="meta" data-last-seen-ms="0"></span>
+            <span class="meta" data-fault-count></span>
+          </div>
+        </a>
+        <details data-controller="${escapeHtml(controller.name)}">
+          <summary>Fault Details</summary>
+          <div data-faults-body></div>
+        </details>
+      `;
+      article.querySelector("details").open = expanded;
+      updateCard(article, controller);
+      return article;
+    }
+
+    function updateCard(article, controller) {
+      const online = Boolean(controller.online);
+      const statusClass = online ? "online" : "offline";
+      const statusLabel = online ? "ONLINE" : "OFFLINE";
+      const faultCount = (controller.faults || []).length;
+      const link = article.querySelector(".card-link");
+      const nameNode = article.querySelector(".controller-name");
+      const badge = article.querySelector(".badge");
+      const lastSeenNode = article.querySelector("[data-last-seen-ms]");
+      const faultCountNode = article.querySelector("[data-fault-count]");
+      const details = article.querySelector("details");
+      const faultsBody = article.querySelector("[data-faults-body]");
+
+      link.href = `/controllers/${encodeURIComponent(controller.name)}`;
+      nameNode.textContent = controller.name;
+      badge.className = `badge ${statusClass}`;
+      badge.textContent = statusLabel;
+      lastSeenNode.dataset.lastSeenMs = String(Number(controller.last_seen_ms) || 0);
+      lastSeenNode.textContent = `Last seen: ${ageLabel(controller.last_seen_ms)}`;
+      faultCountNode.textContent = `Faults: ${faultCount}`;
+      details.dataset.controller = controller.name;
+
+      if (!details.open) {
+        faultsBody.innerHTML = renderFaults(controller);
+      }
+    }
+
+    function render(state) {
+      latestState = state;
+      const expanded = expandedFaults();
+      const existing = new Map(
+        Array.from(container.querySelectorAll("article.card[data-controller]"))
+          .map((card) => [card.dataset.controller, card])
+      );
+      const fragment = document.createDocumentFragment();
+
+      state.controllers.forEach((controller) => {
+        const name = controller.name;
+        const card = existing.get(name) || createCard(controller, expanded.has(name));
+        updateCard(card, controller);
+        fragment.appendChild(card);
+        existing.delete(name);
+      });
+
+      existing.forEach((card) => card.remove());
+      container.replaceChildren(fragment);
+    }
+
+    function refreshAges() {
+      container.querySelectorAll("[data-last-seen-ms]").forEach((node) => {
+        node.textContent = `Last seen: ${ageLabel(Number(node.dataset.lastSeenMs) || 0)}`;
+      });
+      container.querySelectorAll("[data-fault-updated-ms]").forEach((node) => {
+        node.textContent = `value=${node.dataset.faultValue} · source=${node.dataset.faultSource} · updated ${ageLabel(Number(node.dataset.faultUpdatedMs) || 0)}`;
+      });
+    }
+
+    render(initialState);
+    setInterval(refreshAges, 1000);
+
+    const source = new EventSource("/events");
+    source.addEventListener("state", (event) => {
+      render(JSON.parse(event.data));
+    });
+  </script>
+{% endblock %}

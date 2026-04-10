@@ -5,7 +5,7 @@ load("//tools:defs.bzl", "sh_run")
 
 CARPUTER_APP_TARGETS = [
     "//drive-stack/can-bridge:carputer-veh-target",
-    "//drive-stack/can-bridge:carputer-body-target",
+    "//drive-stack/car-dashboard:carputer-target",
     "//drive-stack/conUDS:carputer-target",
     "//drive-stack/net-detec:carputer-target",
     "//drive-stack/ota-agent:carputer-target",
@@ -14,7 +14,7 @@ CARPUTER_APP_TARGETS = [
 
 CARPUTER_APPS = [
     "//drive-stack/can-bridge:carputer-veh-app",
-    "//drive-stack/can-bridge:carputer-body-app",
+    "//drive-stack/car-dashboard:carputer-app",
     "//drive-stack/conUDS:carputer-app",
     "//drive-stack/net-detec:carputer-app",
     "//drive-stack/ota-agent:carputer-app",
@@ -23,11 +23,11 @@ CARPUTER_APPS = [
 
 CFR_STACK = [
     "//drive-stack/carputer:carputer-package-cfr26",
+    "//drive-stack/car-dashboard:bin-arm64",
     "//drive-stack/conUDS:bin-arm64",
     "//drive-stack/net-detec:bin-arm64",
     "//drive-stack/ota-agent:bin-arm64",
     "//drive-stack/can-bridge:bin-veh-arm64",
-    "//drive-stack/can-bridge:bin-body-arm64",
     "//tools/log-processor:bin-arm64",
 ]
 
@@ -106,12 +106,10 @@ carputer_platform_targets(
     uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
     uds_start_services = [
         "can-bridge-veh.service",
-        "can-bridge-body.service",
         "log-processor.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
-        "can-bridge-body.service",
         "log-processor.service",
     ],
 )
@@ -126,12 +124,10 @@ carputer_platform_targets(
     uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
     uds_start_services = [
         "can-bridge-veh.service",
-        "can-bridge-body.service",
         "log-processor.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
-        "can-bridge-body.service",
         "log-processor.service",
     ],
 )
@@ -148,12 +144,10 @@ carputer_deploy_targets_manifest(
     uds_manifest = "//network:manifest-uds",
     uds_start_services = [
         "can-bridge-veh.service",
-        "can-bridge-body.service",
         "log-processor.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
-        "can-bridge-body.service",
         "log-processor.service",
     ],
     visibility = ["PUBLIC"],

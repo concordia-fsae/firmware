@@ -1,6 +1,18 @@
 load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "generate_rust_library")
 load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
 
+export_file(
+    name = "CANIO_componentSpecific.h",
+    src = "include/CANIO_componentSpecific.h",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "YamcanConfig.h",
+    src = "include/YamcanConfig.h",
+    visibility = ["PUBLIC"],
+)
+
 generate_resources(
     name = "yamcan-carputer-veh-codegen",
     network_dep = "//network:network",
@@ -39,43 +51,6 @@ generate_rust_library(
     visibility = ["PUBLIC"],
 )
 
-generate_resources(
-    name = "yamcan-carputer-body-codegen",
-    network_dep = "//network:network",
-    node = "carputerBody",
-    rust_wrapper = True,
-    visibility = ["PUBLIC"],
-)
-
-generate_c_library(
-    name = "yamcan-carputer-body",
-    codegen_target = ":yamcan-carputer-body-codegen",
-    extra_srcs = [
-        "//components/shared/code:libs/Utility.c",
-    ],
-    extra_exported_headers = {
-        "CANIO_componentSpecific.h": "include/CANIO_componentSpecific.h",
-    },
-    library_deps = [
-        "//components/shared/code:headers",
-    ],
-    visibility = ["PUBLIC"],
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
-)
-
-generate_rust_library(
-    name = "yamcan-carputer-body-rust",
-    crate = "yamcan_generated",
-    codegen_target = ":yamcan-carputer-body-codegen",
-    c_dep = ":yamcan-carputer-body",
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
-    visibility = ["PUBLIC"],
-)
-
 rust_library(
     name = "lib-veh",
     crate = "can_bridge",
@@ -97,27 +72,6 @@ rust_library(
     visibility = ["PUBLIC"],
 )
 
-rust_library(
-    name = "lib-body",
-    crate = "can_bridge",
-    srcs = glob(["src/**/*.rs"], exclude=["main_*.rs"]),
-    edition = "2024",
-    deps = [
-        "//third_party:chrono",
-        "//third_party:flate2",
-        "//third_party:libc",
-        "//third_party:clap",
-        "//third_party:serde_json",
-        "//third_party:socketcan",
-        "//third_party:tar",
-        ":yamcan-carputer-body-rust",
-    ],
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
-    visibility = ["PUBLIC"],
-)
-
 rust_binary(
     name = "can-bridge-veh",
     srcs = ["src/main_veh.rs"],
@@ -132,30 +86,9 @@ rust_binary(
     visibility = ["PUBLIC"],
 )
 
-rust_binary(
-    name = "can-bridge-body",
-    srcs = ["src/main_body.rs"],
-    crate_root = "src/main_body.rs",
-    edition = "2024",
-    deps = [
-        ":lib-body",
-    ],
-    target_compatible_with = [
-        "prelude//os/constraints:linux",
-    ],
-    visibility = ["PUBLIC"],
-)
-
 configured_alias(
     name = "bin-veh-arm64",
     actual = ":can-bridge-veh",
-    platform = "//buck2/platforms:arm64-linux",
-    visibility = ["PUBLIC"],
-)
-
-configured_alias(
-    name = "bin-body-arm64",
-    actual = ":can-bridge-body",
     platform = "//buck2/platforms:arm64-linux",
     visibility = ["PUBLIC"],
 )
@@ -164,7 +97,6 @@ filegroup(
     name = "bin-arm64",
     srcs = [
         ":bin-veh-arm64",
-        ":bin-body-arm64",
     ],
     visibility = ["PUBLIC"],
 )
@@ -176,14 +108,5 @@ carputer_application_target(
     binary_install_name = "can-bridge-veh",
     service_src = "can-bridge-veh.service",
     service_install_name = "can-bridge-veh.service",
-    include_artifact_hash = False,
-)
-carputer_application_target(
-    name = "carputer-body",
-    target_node = "can-bridge-body",
-    binary = ":bin-body-arm64",
-    binary_install_name = "can-bridge-body",
-    service_src = "can-bridge-body.service",
-    service_install_name = "can-bridge-body.service",
     include_artifact_hash = False,
 )

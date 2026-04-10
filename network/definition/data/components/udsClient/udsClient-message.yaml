@@ -93,7 +93,6 @@ messages:
     id: 0x631
     sourceBuses:
       - veh
-      - ass
     template: uds
 
   vcpduUdsRequest:
