@@ -42,7 +42,7 @@ generate_rust_library(
 rust_library(
     name = "lib",
     crate = "dashboard",
-    srcs = glob(["src/**/*.rs", "templates/**/*.html"], exclude=["main.rs"]),
+    srcs = glob(["src/**/*.rs", "templates/**/*.html", "static/**/*"], exclude=["main.rs"]),
     edition = "2024",
     env = {
         "CARGO_MANIFEST_DIR": "drive-stack/car-dashboard",
