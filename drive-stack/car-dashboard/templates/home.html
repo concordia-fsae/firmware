@@ -80,7 +80,12 @@
         <li>
           <span class="fault-label">${escapeHtml(fault.signal_name)}</span>
           ${fault.label ? `<span>${escapeHtml(fault.label)}</span>` : ""}
-          <div class="fault-meta">
+          <div
+            class="fault-meta"
+            data-fault-updated-ms="${Number(fault.updated_at_ms) || 0}"
+            data-fault-value="${escapeHtml(fault.value)}"
+            data-fault-source="${escapeHtml(fault.source_message)}"
+          >
             value=${escapeHtml(fault.value)} · source=${escapeHtml(fault.source_message)} · updated ${ageLabel(fault.updated_at_ms)}
           </div>
         </li>
@@ -95,38 +100,90 @@
       );
     }
 
+    function createCard(controller, expanded) {
+      const article = document.createElement("article");
+      article.className = "card";
+      article.dataset.controller = controller.name;
+      article.innerHTML = `
+        <a class="card-link" href="/controllers/${encodeURIComponent(controller.name)}">
+          <div class="card-header">
+            <div class="controller-name"></div>
+            <span class="badge"></span>
+          </div>
+          <div class="status-line">
+            <span class="meta" data-last-seen-ms="0"></span>
+            <span class="meta" data-fault-count></span>
+          </div>
+        </a>
+        <details data-controller="${escapeHtml(controller.name)}">
+          <summary>Fault Details</summary>
+          <div data-faults-body></div>
+        </details>
+      `;
+      article.querySelector("details").open = expanded;
+      updateCard(article, controller);
+      return article;
+    }
+
+    function updateCard(article, controller) {
+      const online = Boolean(controller.online);
+      const statusClass = online ? "online" : "offline";
+      const statusLabel = online ? "ONLINE" : "OFFLINE";
+      const faultCount = (controller.faults || []).length;
+      const link = article.querySelector(".card-link");
+      const nameNode = article.querySelector(".controller-name");
+      const badge = article.querySelector(".badge");
+      const lastSeenNode = article.querySelector("[data-last-seen-ms]");
+      const faultCountNode = article.querySelector("[data-fault-count]");
+      const details = article.querySelector("details");
+      const faultsBody = article.querySelector("[data-faults-body]");
+
+      link.href = `/controllers/${encodeURIComponent(controller.name)}`;
+      nameNode.textContent = controller.name;
+      badge.className = `badge ${statusClass}`;
+      badge.textContent = statusLabel;
+      lastSeenNode.dataset.lastSeenMs = String(Number(controller.last_seen_ms) || 0);
+      lastSeenNode.textContent = `Last seen: ${ageLabel(controller.last_seen_ms)}`;
+      faultCountNode.textContent = `Faults: ${faultCount}`;
+      details.dataset.controller = controller.name;
+
+      if (!details.open) {
+        faultsBody.innerHTML = renderFaults(controller);
+      }
+    }
+
     function render(state) {
       latestState = state;
       const expanded = expandedFaults();
-      container.innerHTML = state.controllers.map((controller) => {
-        const online = Boolean(controller.online);
-        const statusClass = online ? "online" : "offline";
-        const statusLabel = online ? "ONLINE" : "OFFLINE";
-        const faultCount = (controller.faults || []).length;
-        const isExpanded = expanded.has(controller.name);
-        return `
-          <article class="card">
-            <a class="card-link" href="/controllers/${encodeURIComponent(controller.name)}">
-              <div class="card-header">
-                <div class="controller-name">${escapeHtml(controller.name)}</div>
-                <span class="badge ${statusClass}">${statusLabel}</span>
-              </div>
-              <div class="status-line">
-                <span class="meta">Last seen: ${ageLabel(controller.last_seen_ms)}</span>
-                <span class="meta">Faults: ${faultCount}</span>
-              </div>
-            </a>
-            <details data-controller="${escapeHtml(controller.name)}" ${isExpanded ? "open" : ""}>
-              <summary>Fault Details</summary>
-              ${renderFaults(controller)}
-            </details>
-          </article>
-        `;
-      }).join("");
+      const existing = new Map(
+        Array.from(container.querySelectorAll("article.card[data-controller]"))
+          .map((card) => [card.dataset.controller, card])
+      );
+      const fragment = document.createDocumentFragment();
+
+      state.controllers.forEach((controller) => {
+        const name = controller.name;
+        const card = existing.get(name) || createCard(controller, expanded.has(name));
+        updateCard(card, controller);
+        fragment.appendChild(card);
+        existing.delete(name);
+      });
+
+      existing.forEach((card) => card.remove());
+      container.replaceChildren(fragment);
+    }
+
+    function refreshAges() {
+      container.querySelectorAll("[data-last-seen-ms]").forEach((node) => {
+        node.textContent = `Last seen: ${ageLabel(Number(node.dataset.lastSeenMs) || 0)}`;
+      });
+      container.querySelectorAll("[data-fault-updated-ms]").forEach((node) => {
+        node.textContent = `value=${node.dataset.faultValue} · source=${node.dataset.faultSource} · updated ${ageLabel(Number(node.dataset.faultUpdatedMs) || 0)}`;
+      });
     }
 
     render(initialState);
-    setInterval(() => render(latestState), 1000);
+    setInterval(refreshAges, 1000);
 
     const source = new EventSource("/events");
     source.addEventListener("state", (event) => {
