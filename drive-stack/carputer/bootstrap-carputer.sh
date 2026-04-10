@@ -112,9 +112,16 @@ if [[ "${LOCAL_MODE}" -eq 1 ]]; then
 	sudo mkdir -p /usr/local/libexec/ota-agent
 	sudo cp "${release_root}/bootstrap/ota-agent-drive-stack-activate.sh" \
 		/usr/local/libexec/ota-agent/drive-stack-activate.sh
+	if [ -f "${release_root}/bootstrap/bootstrap-startup.sh" ]; then
+		sudo cp "${release_root}/bootstrap/bootstrap-startup.sh" \
+			/usr/local/libexec/ota-agent/bootstrap-startup.sh
+	fi
 	sudo cp "${release_root}/bootstrap/ota-agent-drive-stack.service" \
 		/etc/systemd/system/ota-agent-drive-stack.service
 	sudo chmod 0755 /usr/local/libexec/ota-agent/drive-stack-activate.sh
+	if [ -f /usr/local/libexec/ota-agent/bootstrap-startup.sh ]; then
+		sudo chmod 0755 /usr/local/libexec/ota-agent/bootstrap-startup.sh
+	fi
 
 	echo "[bootstrap] Starting activation service"
 	sudo systemctl daemon-reload
@@ -205,9 +212,16 @@ echo "[bootstrap] Installing activation scripts"
 sudo mkdir -p /usr/local/libexec/ota-agent
 sudo cp "${state_root}/current/bootstrap/ota-agent-drive-stack-activate.sh" \
     /usr/local/libexec/ota-agent/drive-stack-activate.sh
+if [ -f "${state_root}/current/bootstrap/bootstrap-startup.sh" ]; then
+    sudo cp "${state_root}/current/bootstrap/bootstrap-startup.sh" \
+        /usr/local/libexec/ota-agent/bootstrap-startup.sh
+fi
 sudo cp "${state_root}/current/bootstrap/ota-agent-drive-stack.service" \
     /etc/systemd/system/ota-agent-drive-stack.service
 sudo chmod 0755 /usr/local/libexec/ota-agent/drive-stack-activate.sh
+if [ -f /usr/local/libexec/ota-agent/bootstrap-startup.sh ]; then
+    sudo chmod 0755 /usr/local/libexec/ota-agent/bootstrap-startup.sh
+fi
 
 echo "[bootstrap] Starting activation service"
 sudo systemctl daemon-reload
