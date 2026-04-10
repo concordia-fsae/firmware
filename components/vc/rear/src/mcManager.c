@@ -13,6 +13,7 @@
 #include "string.h"
 
 #include "lib_utility.h"
+#include "lib_rateLimit.h"
 #include "app_faultManager.h"
 #include "Yamcan.h"
 
@@ -29,6 +30,7 @@
 
 #define DRIVETRAIN_MULTIPLIER 4.6f
 
+#define RAMPRATE_NM_PER_S 1000
 #define MOTOR_BACKWARDS true
 #define MC_COMMAND_REVERSE (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_FORWARD : CAN_PM100DXDIRECTIONCOMMAND_REVERSE)
 #define MC_COMMAND_FORWARD (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_REVERSE : CAN_PM100DXDIRECTIONCOMMAND_FORWARD)
@@ -39,7 +41,7 @@
 
 static struct
 {
-    float32_t torque_command;
+    lib_rateLimit_linear_S torque_command;
     mcManager_direction_E direction;
     mcManager_enable_E enable;
     float32_t torque_limit;
@@ -56,7 +58,7 @@ static struct
 
 float32_t mcManager_getTorqueCommand(void)
 {
-    return mcManager_data.torque_command;
+    return mcManager_data.torque_command.y_n;
 }
 
 float32_t mcManager_getAxleRPM(void)
@@ -114,7 +116,8 @@ static void mcManager_init(void)
 {
     memset(&mcManager_data, 0x00, sizeof(mcManager_data));
 
-    mcManager_data.torque_command = 0.0f;
+    mcManager_data.torque_command.y_n = 0.0f;
+    mcManager_data.torque_command.maxStepDelta = RAMPRATE_NM_PER_S / 100;
     mcManager_data.torque_limit = MCMANAGER_TORQUE_LIMIT;
     mcManager_data.direction = MCMANAGER_FORWARD;
     mcManager_data.enable = MCMANAGER_DISABLE;
@@ -226,7 +229,8 @@ static void mcManager_periodic_100Hz(void)
 
     mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable = enable;
-    mcManager_data.torque_command = SATURATE(min_torque, torque_command, MCMANAGER_TORQUE_LIMIT);
+    torque_command = SATURATE(min_torque, torque_command, MCMANAGER_TORQUE_LIMIT);
+    lib_rateLimit_linear_update(&mcManager_data.torque_command, torque_command);
 }
 
 /******************************************************************************
