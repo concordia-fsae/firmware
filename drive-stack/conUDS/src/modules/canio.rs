@@ -125,8 +125,8 @@ impl<'a> CANIO<'a> {
                 } => {
                     let resp = self.uds_send_recv(&buf, 5, timeout_ms);
                     match resp {
-                        Err(e) => {
-                            resp_channel.send(None);
+                        Err(_e) => {
+                            let _ = resp_channel.send(None);
                         }
                         Ok(b) => {
                             let _ = resp_channel.send(Some(b));

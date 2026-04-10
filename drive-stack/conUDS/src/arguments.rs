@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use argh::FromArgs;
 
-use crate::SupportedResetTypes;
+use crate::{SupportedDiagnosticSessions, SupportedResetTypes};
 
 /// canUDS - a UDS client deigned for use by Concordia FSAE to interact with ECUs on their vehicles
 /// using the UDS protocol
@@ -47,6 +47,9 @@ pub enum ArgSubCommands {
     Batch(SubArgBatch),
     Reset(SubArgReset),
     ReadDID(SubArgReadDID),
+    ReadSession(SubArgReadSession),
+    SetSession(SubArgSetSession),
+    PersistentTesterPresent(SubArgPersistentTesterPresent),
     RoutineStart(SubArgRoutineStart),
     RoutineList(SubArgRoutineList),
 }
@@ -98,6 +101,25 @@ pub struct SubArgReadDID {
     #[argh(positional)]
     pub id: String,
 }
+
+/// Read the current diagnostic session from an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "read-session")]
+pub struct SubArgReadSession {}
+
+/// Change the active diagnostic session on an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "set-session")]
+pub struct SubArgSetSession {
+    /// diagnostic session: default, programming, extended, or safety-system
+    #[argh(positional)]
+    pub session: SupportedDiagnosticSessions,
+}
+
+/// Start persistent tester present until interrupted
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "tp")]
+pub struct SubArgPersistentTesterPresent {}
 
 /// Start a named routine
 #[derive(Debug, FromArgs)]

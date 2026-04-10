@@ -9,7 +9,6 @@ use std::io::stdin;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -28,6 +27,7 @@ use tokio::task::JoinHandle;
 
 use crate::CRC8;
 use crate::DownloadParams;
+use crate::SupportedDiagnosticSessions;
 use crate::SupportedResetTypes;
 use crate::UdsDownloadStart;
 use crate::modules::canio::CANIO;
@@ -68,6 +68,17 @@ impl DiagnosticSessionKind {
             Self::Programming => UdsSessionType::Programming,
             Self::Extended => UdsSessionType::Extended,
             Self::SafetySystem => UdsSessionType::SafetySystem,
+        }
+    }
+}
+
+impl From<SupportedDiagnosticSessions> for DiagnosticSessionKind {
+    fn from(value: SupportedDiagnosticSessions) -> Self {
+        match value {
+            SupportedDiagnosticSessions::Default => Self::Default,
+            SupportedDiagnosticSessions::Programming => Self::Programming,
+            SupportedDiagnosticSessions::Extended => Self::Extended,
+            SupportedDiagnosticSessions::SafetySystem => Self::SafetySystem,
         }
     }
 }
@@ -345,6 +356,14 @@ impl UdsSession {
         self.client.read_current_session().await
     }
 
+    pub async fn start_persistent_tp(&mut self) -> Result<()> {
+        self.client.start_persistent_tp().await
+    }
+
+    pub async fn stop_persistent_tp(&mut self) -> Result<()> {
+        self.client.stop_persistent_tp().await
+    }
+
     pub async fn file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
         if self.interactive_session {
             info!("Waiting for the user to hit enter before continuing with download");
@@ -366,7 +385,6 @@ impl UdsSession {
         skip: bool,
     ) -> UpdateResult {
         let node_start = Instant::now();
-        let mut err_msg: Option<String> = None;
 
         if skip {
             let mut file = File::open(binary_path).expect("Binary does not exist!");
@@ -403,7 +421,7 @@ impl UdsSession {
             }
         }
 
-        self.client.start_persistent_tp().await;
+        let _ = self.client.start_persistent_tp().await;
         if !self.interactive_session {
             if let Err(_) = self
                 .client
@@ -523,13 +541,13 @@ impl UdsClient {
     }
 
     pub async fn read_current_session(&mut self) -> Result<CurrentDiagnosticSession> {
-        let payload = self
-            .did_read(UDS_DID_CURRENT_SESSION)
-            .await
-            .map_err(|error| match error {
-                Some(error) => anyhow!("failed to read current session DID: {error:?}"),
-                None => anyhow!("failed to read current session DID"),
-            })?;
+        let payload =
+            self.did_read(UDS_DID_CURRENT_SESSION)
+                .await
+                .map_err(|error| match error {
+                    Some(error) => anyhow!("failed to read current session DID: {error:?}"),
+                    None => anyhow!("failed to read current session DID"),
+                })?;
         CurrentDiagnosticSession::from_did_payload(&payload)
     }
 
@@ -589,10 +607,7 @@ impl UdsClient {
         recoverable: bool,
     ) -> Result<()> {
         let reset_kind: ResetType = reset_type.into();
-        let buf = [
-            UdsCommand::ECUReset.into(),
-            reset_kind.into(),
-        ];
+        let buf = [UdsCommand::ECUReset.into(), reset_kind.into()];
 
         info!("Resetting ECU...");
 
