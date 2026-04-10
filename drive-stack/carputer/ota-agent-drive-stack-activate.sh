@@ -94,6 +94,11 @@ for bin_path in /bin/cfr/*; do
 	ln -sf "${bin_path}" "/usr/local/bin/${bin_name}"
 done
 
+if [ -x /usr/local/libexec/ota-agent/bootstrap-startup.sh ]; then
+	log "Running bootstrap startup script"
+	/usr/local/libexec/ota-agent/bootstrap-startup.sh
+fi
+
 log "Copying payload to /application and other roots"
 allowed_roots=("application" "etc" "usr" "var" "opt" "lib")
 is_allowed_root() {
@@ -137,9 +142,82 @@ if [ -d "${PAYLOAD_DIR}/local" ]; then
 	done
 fi
 
+DEPLOY_TARGETS_MANIFEST="/application/config/ota-agent/deploy-targets.yaml"
+read_manifest_units() {
+	local section="$1"
+	local manifest="$2"
+	awk -v section="${section}" '
+		$0 ~ "^    " section ":" {
+			in_section = 1
+			next
+		}
+		in_section && $0 ~ /^      - "/ {
+			line = $0
+			sub(/^      - "/, "", line)
+			sub(/"$/, "", line)
+			print line
+			next
+		}
+		in_section && $0 !~ /^      - "/ {
+			in_section = 0
+		}
+	' "${manifest}"
+}
+
+read_payload_service_units() {
+	local seen=()
+	local unit_dir=""
+
+	if [ -d "${PAYLOAD_DIR}/etc/systemd/system" ]; then
+		unit_dir="${PAYLOAD_DIR}/etc/systemd/system"
+		for unit_path in "${unit_dir}"/*.service; do
+			[ -f "${unit_path}" ] || continue
+			basename "${unit_path}"
+		done
+	fi
+
+	if [ -d "${PAYLOAD_DIR}/local" ]; then
+		for unit_dir in "${PAYLOAD_DIR}"/local/*/etc/systemd/system; do
+			[ -d "${unit_dir}" ] || continue
+			for unit_path in "${unit_dir}"/*.service; do
+				[ -f "${unit_path}" ] || continue
+				basename "${unit_path}"
+			done
+		done
+	fi
+}
+
+enable_units() {
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		systemctl enable "${unit}" || true
+	done
+}
+
+restart_units() {
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		systemctl restart "${unit}" || systemctl start "${unit}" || true
+	done
+}
+log "Reloading systemd units"
+systemctl daemon-reload || true
+
+if [ -f "${DEPLOY_TARGETS_MANIFEST}" ]; then
+	log "Enabling services from ${DEPLOY_TARGETS_MANIFEST}"
+	enable_units < <(read_manifest_units "enable_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+
+	log "Restarting services from ${DEPLOY_TARGETS_MANIFEST}"
+	restart_units < <(read_manifest_units "restart_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+else
+	log "No deploy-targets manifest found; enabling payload service units directly"
+	enable_units < <(read_payload_service_units | sort -u)
+
+	log "No deploy-targets manifest found; restarting payload service units directly"
+	restart_units < <(read_payload_service_units | sort -u)
+fi
+
 if [ -f /etc/systemd/system/drive-stack.target ]; then
-	log "Reloading systemd units"
-	systemctl daemon-reload || true
 	log "Starting drive-stack.target"
 	systemctl start --no-block drive-stack.target || true
 fi
