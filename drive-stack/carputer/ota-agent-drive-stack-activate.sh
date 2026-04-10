@@ -2,6 +2,7 @@
 set -euo pipefail
 
 STATE_ROOT="/var/lib/ota-agent/local-deploy"
+MANAGED_UNITS_FILE="${STATE_ROOT}/managed-service-units.txt"
 if [ -n "${1:-}" ]; then
 	RELEASE_ROOT="$1"
 elif [ -d "${STATE_ROOT}/active/payload" ]; then
@@ -94,6 +95,11 @@ for bin_path in /bin/cfr/*; do
 	ln -sf "${bin_path}" "/usr/local/bin/${bin_name}"
 done
 
+if [ -x /usr/local/libexec/ota-agent/bootstrap-startup.sh ]; then
+	log "Running bootstrap startup script"
+	/usr/local/libexec/ota-agent/bootstrap-startup.sh
+fi
+
 log "Copying payload to /application and other roots"
 allowed_roots=("application" "etc" "usr" "var" "opt" "lib")
 is_allowed_root() {
@@ -137,9 +143,142 @@ if [ -d "${PAYLOAD_DIR}/local" ]; then
 	done
 fi
 
-if [ -f /etc/systemd/system/drive-stack.target ]; then
-	log "Reloading systemd units"
+DEPLOY_TARGETS_MANIFEST="/application/config/ota-agent/deploy-targets.yaml"
+read_manifest_units() {
+	local section="$1"
+	local manifest="$2"
+	awk -v section="${section}" '
+		$0 ~ "^    " section ":" {
+			in_section = 1
+			next
+		}
+		in_section && $0 ~ /^      - "/ {
+			line = $0
+			sub(/^      - "/, "", line)
+			sub(/"$/, "", line)
+			print line
+			next
+		}
+		in_section && $0 !~ /^      - "/ {
+			in_section = 0
+		}
+	' "${manifest}"
+}
+
+read_payload_service_units() {
+	local seen=()
+	local unit_dir=""
+
+	if [ -d "${PAYLOAD_DIR}/etc/systemd/system" ]; then
+		unit_dir="${PAYLOAD_DIR}/etc/systemd/system"
+		for unit_path in "${unit_dir}"/*.service; do
+			[ -f "${unit_path}" ] || continue
+			basename "${unit_path}"
+		done
+	fi
+
+	if [ -d "${PAYLOAD_DIR}/local" ]; then
+		for unit_dir in "${PAYLOAD_DIR}"/local/*/etc/systemd/system; do
+			[ -d "${unit_dir}" ] || continue
+			for unit_path in "${unit_dir}"/*.service; do
+				[ -f "${unit_path}" ] || continue
+				basename "${unit_path}"
+			done
+		done
+	fi
+}
+
+enable_units() {
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		systemctl enable "${unit}" || true
+	done
+}
+
+restart_units() {
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		systemctl restart --no-block "${unit}" || systemctl start --no-block "${unit}" || true
+	done
+}
+
+stop_and_disable_units() {
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		log "Stopping stale unit ${unit}"
+		systemctl stop "${unit}" || true
+		log "Disabling stale unit ${unit}"
+		systemctl disable "${unit}" || true
+		if [ -f "/etc/systemd/system/${unit}" ]; then
+			log "Removing stale unit file /etc/systemd/system/${unit}"
+			rm -f "/etc/systemd/system/${unit}"
+		fi
+	done
+}
+
+write_managed_units() {
+	local out="$1"
+	shift
+	: >"${out}"
+	for unit in "$@"; do
+		[ -n "${unit}" ] || continue
+		printf '%s\n' "${unit}" >>"${out}"
+	done
+}
+
+log "Reloading systemd units"
+systemctl daemon-reload || true
+
+desired_units=()
+if [ -f "${DEPLOY_TARGETS_MANIFEST}" ]; then
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units+=("${unit}")
+	done < <(read_manifest_units "enable_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units+=("${unit}")
+	done < <(read_manifest_units "restart_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+
+	log "Enabling services from ${DEPLOY_TARGETS_MANIFEST}"
+	enable_units < <(read_manifest_units "enable_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+
+	log "Restarting services from ${DEPLOY_TARGETS_MANIFEST}"
+	restart_units < <(read_manifest_units "restart_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+else
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units+=("${unit}")
+	done < <(read_payload_service_units | sort -u)
+
+	log "No deploy-targets manifest found; enabling payload service units directly"
+	enable_units < <(read_payload_service_units | sort -u)
+
+	log "No deploy-targets manifest found; restarting payload service units directly"
+	restart_units < <(read_payload_service_units | sort -u)
+fi
+
+desired_units_sorted=()
+if [ "${#desired_units[@]}" -gt 0 ]; then
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units_sorted+=("${unit}")
+	done < <(printf '%s\n' "${desired_units[@]}" | sort -u)
+fi
+
+if [ -f "${MANAGED_UNITS_FILE}" ]; then
+	log "Cleaning up removed managed services"
+	stop_and_disable_units < <(
+		comm -23 \
+			<(sort -u "${MANAGED_UNITS_FILE}") \
+			<(printf '%s\n' "${desired_units_sorted[@]}" | sort -u)
+	)
 	systemctl daemon-reload || true
+fi
+
+write_managed_units "${MANAGED_UNITS_FILE}" "${desired_units_sorted[@]}"
+
+if [ -f /etc/systemd/system/drive-stack.target ]; then
 	log "Starting drive-stack.target"
 	systemctl start --no-block drive-stack.target || true
 fi

@@ -1,5 +1,5 @@
 load("//drive-stack/defs.bzl", "DeployableFirmwareAsset", "DeployableNodeInfo", "deployable_target")
-load("//drive-stack/ota-agent/defs.bzl", "ota_agent", "ota_agent_batch", "ota_agent_bootstrap", "ota_agent_revert", "ota_agent_status")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent", "ota_agent_batch", "ota_agent_bootstrap", "ota_agent_promote", "ota_agent_revert", "ota_agent_status")
 load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS", "platform_output_name")
 
 CarputerApplicationInfo = provider(
@@ -685,6 +685,7 @@ def carputer_platform_targets(
     ota_asset_name = "ota-asset-carputer-{}".format(platform_name)
     ota_name = "ota-carputer-{}".format(platform_name)
     bootstrap_name = "ota-bootstrap-carputer-{}".format(platform_name)
+    promote_name = "promote-carputer-{}".format(platform_name)
     batch_name = "{}-ota".format(platform_name)
 
     carputer_deploy_targets_manifest(
@@ -742,6 +743,13 @@ def carputer_platform_targets(
 
     ota_agent_bootstrap(
         name = bootstrap_name,
+        src = ":" + ota_asset_name,
+        platform = platform_name,
+        visibility = visibility,
+    )
+
+    ota_agent_promote(
+        name = promote_name,
         src = ":" + ota_asset_name,
         platform = platform_name,
         visibility = visibility,

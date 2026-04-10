@@ -1,19 +1,16 @@
-use std::error::Error;
 use std::fs::File;
-use std::io::Read;
-use std::io::Seek;
-use std::io::SeekFrom;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use anyhow::anyhow;
 use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 
 use conUDS::SupportedResetTypes;
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
-use conUDS::modules::uds::{RoutineStartResponse, UdsSession};
+use conUDS::modules::uds::{
+    CurrentDiagnosticSession, DiagnosticSessionResponse, RoutineStartResponse, UdsSession,
+};
 use conUDS::{FlashStatus, UpdateResult};
 
 #[tokio::main]
@@ -227,6 +224,108 @@ async fn main() {
             println!("{:?}", resp);
         }
 
+        ArgSubCommands::ReadSession(_) => {
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'read-session'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
+            match uds.read_current_session().await {
+                Ok(session) => println!("{}", fmt_current_session(session)),
+                Err(e) => error!(
+                    "Failed to read diagnostic session for node '{}': {}",
+                    node, e
+                ),
+            }
+            uds.teardown().await;
+        }
+
+        ArgSubCommands::SetSession(session) => {
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'set-session'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let target_session = session.session.into();
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
+            match uds.client.enter_diagnostic_session(target_session).await {
+                Ok(resp) => println!("{}", fmt_diagnostic_session_response(&resp)),
+                Err(e) => error!(
+                    "Failed to change diagnostic session for node '{}' to '{}': {}",
+                    node,
+                    session.session.key(),
+                    e
+                ),
+            }
+            uds.teardown().await;
+        }
+
+        ArgSubCommands::PersistentTesterPresent(_) => {
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'persistent-tester-present'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let mut uds = UdsSession::new(
+                &args.device,
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            )
+            .await;
+
+            if let Err(e) = uds.start_persistent_tp().await {
+                error!(
+                    "Failed to start persistent tester present for node '{}': {}",
+                    node, e
+                );
+                uds.teardown().await;
+                std::process::exit(1);
+            }
+
+            println!(
+                "Persistent tester present active for node '{}' on '{}'. Press Ctrl+C to stop.",
+                node, args.device
+            );
+
+            if let Err(e) = tokio::signal::ctrl_c().await {
+                error!("Failed while waiting for Ctrl+C: {}", e);
+            }
+
+            if let Err(e) = uds.stop_persistent_tp().await {
+                error!(
+                    "Failed to stop persistent tester present for node '{}': {}",
+                    node, e
+                );
+            }
+            uds.teardown().await;
+        }
+
         ArgSubCommands::RoutineStart(routine) => {
             let node = args.node.clone().unwrap_or_else(|| {
                 error!("-n <node> is required for 'routineStart'.");
@@ -430,17 +529,61 @@ fn fmt_routine_start_response(resp: &RoutineStartResponse) -> String {
     }
 }
 
+fn fmt_current_session(session: CurrentDiagnosticSession) -> String {
+    match session {
+        CurrentDiagnosticSession::Unknown(raw) => {
+            format!("Current diagnostic session: unknown (0x{raw:02X})")
+        }
+        _ => format!(
+            "Current diagnostic session: {} ({}, 0x{:02X})",
+            session.label(),
+            session.key(),
+            session.raw_value()
+        ),
+    }
+}
+
+fn fmt_diagnostic_session_response(resp: &DiagnosticSessionResponse) -> String {
+    match resp {
+        DiagnosticSessionResponse::Positive {
+            session,
+            payload,
+            raw,
+        } => format!(
+            "Diagnostic session changed to {:?} raw=[{}]{}",
+            session,
+            fmt_hex(raw),
+            fmt_payload(payload)
+        ),
+        DiagnosticSessionResponse::Negative {
+            session,
+            nrc,
+            description,
+            payload,
+            raw,
+        } => format!(
+            "Diagnostic session change to {:?} rejected: NRC=0x{nrc:02X} ({description}) raw=[{}]{}",
+            session,
+            fmt_hex(raw),
+            fmt_payload(payload)
+        ),
+    }
+}
+
 fn fmt_payload(payload: &[u8]) -> String {
     if payload.is_empty() {
         String::new()
     } else {
-        let hex = payload
-            .iter()
-            .map(|byte| format!("{byte:02X}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        format!(" data=[{hex}]")
+        format!(" data=[{}]", fmt_hex(payload))
     }
+}
+
+fn fmt_hex(payload: &[u8]) -> String {
+    payload
+        .iter()
+        .map(|byte| format!("{byte:02X}"))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn routine_id_for_node(uds_node: &conUDS::config::Node, routine: &str) -> Option<u16> {

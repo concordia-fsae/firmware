@@ -9,7 +9,6 @@ use std::io::stdin;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -17,7 +16,7 @@ use anyhow::anyhow;
 use automotive_diag::uds::UdsCommand;
 use automotive_diag::uds::UdsError;
 use automotive_diag::uds::UdsErrorByte;
-use automotive_diag::uds::{ResetType, RoutineControlType};
+use automotive_diag::uds::{ResetType, RoutineControlType, UdsSessionType};
 use ecu_diagnostics::dynamic_diag::DiagProtocol;
 use ecu_diagnostics::dynamic_diag::EcuNRC;
 use ecu_diagnostics::uds::UDSProtocol;
@@ -28,6 +27,7 @@ use tokio::task::JoinHandle;
 
 use crate::CRC8;
 use crate::DownloadParams;
+use crate::SupportedDiagnosticSessions;
 use crate::SupportedResetTypes;
 use crate::UdsDownloadStart;
 use crate::modules::canio::CANIO;
@@ -35,6 +35,7 @@ use crate::{CanioCmd, PrdCmd};
 use crate::{FlashStatus, UpdateResult};
 
 const UDS_DID_CRC: u16 = 0x03;
+const UDS_DID_CURRENT_SESSION: u16 = 0x0102;
 
 #[derive(Debug, Clone)]
 pub enum RoutineStartResponse {
@@ -50,6 +51,158 @@ pub enum RoutineStartResponse {
         text: Option<String>,
         raw: Vec<u8>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DiagnosticSessionKind {
+    Default,
+    Programming,
+    Extended,
+    SafetySystem,
+}
+
+impl DiagnosticSessionKind {
+    pub fn as_uds_session_type(self) -> UdsSessionType {
+        match self {
+            Self::Default => UdsSessionType::Default,
+            Self::Programming => UdsSessionType::Programming,
+            Self::Extended => UdsSessionType::Extended,
+            Self::SafetySystem => UdsSessionType::SafetySystem,
+        }
+    }
+}
+
+impl From<SupportedDiagnosticSessions> for DiagnosticSessionKind {
+    fn from(value: SupportedDiagnosticSessions) -> Self {
+        match value {
+            SupportedDiagnosticSessions::Default => Self::Default,
+            SupportedDiagnosticSessions::Programming => Self::Programming,
+            SupportedDiagnosticSessions::Extended => Self::Extended,
+            SupportedDiagnosticSessions::SafetySystem => Self::SafetySystem,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CurrentDiagnosticSession {
+    Default,
+    Programming,
+    Extended,
+    SafetySystem,
+    Unknown(u8),
+}
+
+impl CurrentDiagnosticSession {
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Programming => "programming",
+            Self::Extended => "extended",
+            Self::SafetySystem => "safety-system",
+            Self::Unknown(_) => "unknown",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Default => "Default",
+            Self::Programming => "Programming",
+            Self::Extended => "Extended",
+            Self::SafetySystem => "Safety System",
+            Self::Unknown(_) => "Unknown",
+        }
+    }
+
+    pub fn raw_value(self) -> u8 {
+        match self {
+            Self::Default => 0x01,
+            Self::Programming => 0x02,
+            Self::Extended => 0x03,
+            Self::SafetySystem => 0x04,
+            Self::Unknown(value) => value,
+        }
+    }
+
+    fn from_did_payload(payload: &[u8]) -> Result<Self> {
+        let Some(value) = payload.first().copied() else {
+            return Err(anyhow!("Current session DID returned an empty payload"));
+        };
+        Ok(match value {
+            0x01 => Self::Default,
+            0x02 => Self::Programming,
+            0x03 => Self::Extended,
+            0x04 => Self::SafetySystem,
+            _ => Self::Unknown(value),
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum DiagnosticSessionResponse {
+    Positive {
+        session: DiagnosticSessionKind,
+        payload: Vec<u8>,
+        raw: Vec<u8>,
+    },
+    Negative {
+        session: DiagnosticSessionKind,
+        nrc: u8,
+        description: String,
+        payload: Vec<u8>,
+        raw: Vec<u8>,
+    },
+}
+
+impl DiagnosticSessionResponse {
+    fn from_raw(session: DiagnosticSessionKind, resp: Vec<u8>) -> Result<Self> {
+        if resp.is_empty() {
+            return Err(anyhow!("Empty ECU response"));
+        }
+
+        if resp[0] == 0x7F {
+            if resp.len() < 3 {
+                return Err(anyhow!(
+                    "Malformed negative diagnostic session response: {:02X?}",
+                    resp
+                ));
+            }
+
+            let payload = if resp.len() > 3 {
+                resp[3..].to_vec()
+            } else {
+                Vec::new()
+            };
+
+            return Ok(Self::Negative {
+                session,
+                nrc: resp[2],
+                description: UdsErrorByte::from(resp[2]).desc().to_string(),
+                payload,
+                raw: resp,
+            });
+        }
+
+        let expected_sid = u8::from(UdsCommand::DiagnosticSessionControl) + 0x40;
+        if resp[0] != expected_sid {
+            return Err(anyhow!(
+                "Unexpected diagnostic session response SID 0x{:02X}, expected 0x{:02X}",
+                resp[0],
+                expected_sid
+            ));
+        }
+
+        let payload = if resp.len() > 2 {
+            resp[2..].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(Self::Positive {
+            session,
+            payload,
+            raw: resp,
+        })
+    }
 }
 
 impl RoutineStartResponse {
@@ -199,6 +352,18 @@ impl UdsSession {
         }
     }
 
+    pub async fn read_current_session(&mut self) -> Result<CurrentDiagnosticSession> {
+        self.client.read_current_session().await
+    }
+
+    pub async fn start_persistent_tp(&mut self) -> Result<()> {
+        self.client.start_persistent_tp().await
+    }
+
+    pub async fn stop_persistent_tp(&mut self) -> Result<()> {
+        self.client.stop_persistent_tp().await
+    }
+
     pub async fn file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
         if self.interactive_session {
             info!("Waiting for the user to hit enter before continuing with download");
@@ -220,7 +385,6 @@ impl UdsSession {
         skip: bool,
     ) -> UpdateResult {
         let node_start = Instant::now();
-        let mut err_msg: Option<String> = None;
 
         if skip {
             let mut file = File::open(binary_path).expect("Binary does not exist!");
@@ -257,7 +421,7 @@ impl UdsSession {
             }
         }
 
-        self.client.start_persistent_tp().await;
+        let _ = self.client.start_persistent_tp().await;
         if !self.interactive_session {
             if let Err(_) = self
                 .client
@@ -376,6 +540,17 @@ impl UdsClient {
             .await?)
     }
 
+    pub async fn read_current_session(&mut self) -> Result<CurrentDiagnosticSession> {
+        let payload =
+            self.did_read(UDS_DID_CURRENT_SESSION)
+                .await
+                .map_err(|error| match error {
+                    Some(error) => anyhow!("failed to read current session DID: {error:?}"),
+                    None => anyhow!("failed to read current session DID"),
+                })?;
+        CurrentDiagnosticSession::from_did_payload(&payload)
+    }
+
     pub async fn did_read(&mut self, did: u16) -> Result<Vec<u8>, Option<UdsError>> {
         let id: [u8; 2] = [
             (did & 0xff).try_into().unwrap(),
@@ -431,26 +606,85 @@ impl UdsClient {
         reset_type: SupportedResetTypes,
         recoverable: bool,
     ) -> Result<()> {
-        let buf = [
-            UdsCommand::ECUReset.into(),
-            <SupportedResetTypes as Into<ResetType>>::into(reset_type).into(),
-        ];
+        let reset_kind: ResetType = reset_type.into();
+        let buf = [UdsCommand::ECUReset.into(), reset_kind.into()];
 
         info!("Resetting ECU...");
 
         let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
         debug!("ECU Reset results: {:02x?}", resp);
-        if resp.len() > 0 {
-            let nrc = UdsErrorByte::from(*resp.last().unwrap());
+
+        if resp.is_empty() {
+            if !recoverable {
+                return Err(anyhow!("ECU reset failed: empty ECU response"));
+            }
+            return Ok(());
+        }
+
+        if resp[0] == 0x7F {
+            if resp.len() < 3 {
+                return Err(anyhow!(
+                    "ECU reset failed: malformed negative response {:02X?}",
+                    resp
+                ));
+            }
+
+            let nrc = UdsErrorByte::from(resp[2]);
             if nrc == ecu_diagnostics::Standard(UdsError::ConditionsNotCorrect) {
                 error!(
                     "ECU Reset conditions have not been met. If this is a bootloader updater, reflash with a correct hex."
                 );
             }
-        } else if !recoverable {
+            return Err(anyhow!("ECU reset rejected: {}", nrc.desc()));
+        }
+
+        let expected_sid = u8::from(UdsCommand::ECUReset) + 0x40;
+        if resp[0] != expected_sid {
             return Err(anyhow!("ECU reset failed"));
         }
+
+        if resp.len() < 2 {
+            return Err(anyhow!(
+                "ECU reset failed: malformed positive response {:02X?}",
+                resp
+            ));
+        }
+
+        if resp[1] != u8::from(reset_kind) {
+            return Err(anyhow!(
+                "ECU reset failed: unexpected reset echo 0x{:02X}, expected 0x{:02X}",
+                resp[1],
+                u8::from(reset_kind)
+            ));
+        }
+
         Ok(())
+    }
+
+    pub async fn enter_diagnostic_session(
+        &mut self,
+        session: DiagnosticSessionKind,
+    ) -> Result<DiagnosticSessionResponse> {
+        let buf = [
+            UdsCommand::DiagnosticSessionControl.into(),
+            session.as_uds_session_type().into(),
+        ];
+
+        debug!("Entering diagnostic session {:?}: {:02x?}", session, buf);
+
+        match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await {
+            Ok(resp) => {
+                debug!("Diagnostic session response: {:02x?}", resp);
+                DiagnosticSessionResponse::from_raw(session, resp)
+            }
+            Err(e) => {
+                error!(
+                    "When waiting for diagnostic session response from ECU: {}",
+                    e
+                );
+                Err(e.into())
+            }
+        }
     }
 
     /// Start the given routine
