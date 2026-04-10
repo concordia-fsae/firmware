@@ -5005,6 +5005,10 @@ cargo.rust_library(
     crate = "portable_atomic",
     crate_root = "portable-atomic-1.13.1.crate/src/lib.rs",
     edition = "2018",
+    env = {
+        "CARGO_PKG_NAME": "portable-atomic",
+        "OUT_DIR": "$(location :portable-atomic-1.13.1-build-script-run[out_dir])",
+    },
     features = [
         "default",
         "fallback",
@@ -5033,24 +5037,24 @@ buildscript_run(
     name = "portable-atomic-1.13.1-build-script-run",
     package_name = "portable-atomic",
     buildscript_rule = ":portable-atomic-1.13.1-build-script-build",
-    platform = {
-        "linux-arm64": {
-            "env": {
-                "CARGO_CFG_TARGET_ARCH": "aarch64",
-                "CARGO_CFG_TARGET_OS": "linux",
-            },
-        },
-        "linux-x86_64": {
-            "env": {
-                "CARGO_CFG_TARGET_ARCH": "x86_64",
-                "CARGO_CFG_TARGET_OS": "linux",
-            },
-        },
-    },
     features = [
         "default",
         "fallback",
     ],
+    platform = {
+        "linux-arm64": dict(
+            env = {
+                "CARGO_CFG_TARGET_ARCH": "aarch64",
+                "CARGO_CFG_TARGET_OS": "linux",
+            },
+        ),
+        "linux-x86_64": dict(
+            env = {
+                "CARGO_CFG_TARGET_ARCH": "x86_64",
+                "CARGO_CFG_TARGET_OS": "linux",
+            },
+        ),
+    },
     version = "1.13.1",
 )
 
@@ -6003,6 +6007,7 @@ cargo.rust_library(
     crate_root = "serde-1.0.228.crate/src/lib.rs",
     edition = "2021",
     env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
         "OUT_DIR": "$(location :serde-1.0.228-build-script-run[out_dir])",
     },
     features = [
@@ -6026,6 +6031,9 @@ cargo.rust_binary(
     crate = "build_script_build",
     crate_root = "serde-1.0.228.crate/build.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
+    },
     features = [
         "alloc",
         "default",
@@ -6068,6 +6076,7 @@ cargo.rust_library(
     crate_root = "serde_core-1.0.228.crate/src/lib.rs",
     edition = "2021",
     env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
         "OUT_DIR": "$(location :serde_core-1.0.228-build-script-run[out_dir])",
     },
     features = [
@@ -6086,6 +6095,9 @@ cargo.rust_binary(
     crate = "build_script_build",
     crate_root = "serde_core-1.0.228.crate/build.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
+    },
     features = [
         "alloc",
         "default",
@@ -7353,6 +7365,7 @@ cargo.rust_library(
     crate_root = "thiserror-1.0.69.crate/src/lib.rs",
     edition = "2021",
     env = {
+        "CARGO_PKG_VERSION_PATCH": "69",
         "OUT_DIR": "$(location :thiserror-1.0.69-build-script-run[out_dir])",
     },
     rustc_flags = ["@$(location :thiserror-1.0.69-build-script-run[rustc_flags])"],
@@ -7366,6 +7379,9 @@ cargo.rust_binary(
     crate = "build_script_build",
     crate_root = "thiserror-1.0.69.crate/build.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "69",
+    },
     visibility = [],
 )
 
@@ -7373,6 +7389,9 @@ buildscript_run(
     name = "thiserror-1.0.69-build-script-run",
     package_name = "thiserror",
     buildscript_rule = ":thiserror-1.0.69-build-script-build",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "69",
+    },
     version = "1.0.69",
 )
 
@@ -7391,6 +7410,7 @@ cargo.rust_library(
     crate_root = "thiserror-2.0.18.crate/src/lib.rs",
     edition = "2021",
     env = {
+        "CARGO_PKG_VERSION_PATCH": "18",
         "OUT_DIR": "$(location :thiserror-2.0.18-build-script-run[out_dir])",
     },
     features = [
@@ -7408,6 +7428,9 @@ cargo.rust_binary(
     crate = "build_script_build",
     crate_root = "thiserror-2.0.18.crate/build.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "18",
+    },
     features = [
         "default",
         "std",
@@ -7443,6 +7466,9 @@ cargo.rust_library(
     crate = "thiserror_impl",
     crate_root = "thiserror-impl-1.0.69.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "69",
+    },
     proc_macro = True,
     visibility = [],
     deps = [
@@ -9053,8 +9079,34 @@ cargo.rust_library(
     crate = "zerocopy",
     crate_root = "zerocopy-0.8.48.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION": "0.8.48",
+        "OUT_DIR": "$(location :zerocopy-0.8.48-build-script-run[out_dir])",
+    },
+    features = ["simd"],
+    rustc_flags = ["@$(location :zerocopy-0.8.48-build-script-run[rustc_flags])"],
+    visibility = [],
+)
+
+cargo.rust_binary(
+    name = "zerocopy-0.8.48-build-script-build",
+    srcs = [":zerocopy-0.8.48.crate"],
+    crate = "build_script_build",
+    crate_root = "zerocopy-0.8.48.crate/build.rs",
+    edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION": "0.8.48",
+    },
     features = ["simd"],
     visibility = [],
+)
+
+buildscript_run(
+    name = "zerocopy-0.8.48-build-script-run",
+    package_name = "zerocopy",
+    buildscript_rule = ":zerocopy-0.8.48-build-script-build",
+    features = ["simd"],
+    version = "0.8.48",
 )
 
 http_archive(
