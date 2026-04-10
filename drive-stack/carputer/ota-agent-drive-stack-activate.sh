@@ -2,6 +2,7 @@
 set -euo pipefail
 
 STATE_ROOT="/var/lib/ota-agent/local-deploy"
+MANAGED_UNITS_FILE="${STATE_ROOT}/managed-service-units.txt"
 if [ -n "${1:-}" ]; then
 	RELEASE_ROOT="$1"
 elif [ -d "${STATE_ROOT}/active/payload" ]; then
@@ -200,22 +201,82 @@ restart_units() {
 		systemctl restart "${unit}" || systemctl start "${unit}" || true
 	done
 }
+
+stop_and_disable_units() {
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		log "Stopping stale unit ${unit}"
+		systemctl stop "${unit}" || true
+		log "Disabling stale unit ${unit}"
+		systemctl disable "${unit}" || true
+		if [ -f "/etc/systemd/system/${unit}" ]; then
+			log "Removing stale unit file /etc/systemd/system/${unit}"
+			rm -f "/etc/systemd/system/${unit}"
+		fi
+	done
+}
+
+write_managed_units() {
+	local out="$1"
+	shift
+	: >"${out}"
+	for unit in "$@"; do
+		[ -n "${unit}" ] || continue
+		printf '%s\n' "${unit}" >>"${out}"
+	done
+}
+
 log "Reloading systemd units"
 systemctl daemon-reload || true
 
+desired_units=()
 if [ -f "${DEPLOY_TARGETS_MANIFEST}" ]; then
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units+=("${unit}")
+	done < <(read_manifest_units "enable_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units+=("${unit}")
+	done < <(read_manifest_units "restart_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
+
 	log "Enabling services from ${DEPLOY_TARGETS_MANIFEST}"
 	enable_units < <(read_manifest_units "enable_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
 
 	log "Restarting services from ${DEPLOY_TARGETS_MANIFEST}"
 	restart_units < <(read_manifest_units "restart_services" "${DEPLOY_TARGETS_MANIFEST}" | sort -u)
 else
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units+=("${unit}")
+	done < <(read_payload_service_units | sort -u)
+
 	log "No deploy-targets manifest found; enabling payload service units directly"
 	enable_units < <(read_payload_service_units | sort -u)
 
 	log "No deploy-targets manifest found; restarting payload service units directly"
 	restart_units < <(read_payload_service_units | sort -u)
 fi
+
+desired_units_sorted=()
+if [ "${#desired_units[@]}" -gt 0 ]; then
+	while IFS= read -r unit; do
+		[ -n "${unit}" ] || continue
+		desired_units_sorted+=("${unit}")
+	done < <(printf '%s\n' "${desired_units[@]}" | sort -u)
+fi
+
+if [ -f "${MANAGED_UNITS_FILE}" ]; then
+	log "Cleaning up removed managed services"
+	stop_and_disable_units < <(
+		comm -23 \
+			<(sort -u "${MANAGED_UNITS_FILE}") \
+			<(printf '%s\n' "${desired_units_sorted[@]}" | sort -u)
+	)
+	systemctl daemon-reload || true
+fi
+
+write_managed_units "${MANAGED_UNITS_FILE}" "${desired_units_sorted[@]}"
 
 if [ -f /etc/systemd/system/drive-stack.target ]; then
 	log "Starting drive-stack.target"

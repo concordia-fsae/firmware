@@ -123,6 +123,11 @@ alias(
 )
 
 alias(
+    name = "cfr26-promote",
+    actual = "//drive-stack/carputer:promote-carputer-cfr26",
+)
+
+alias(
     name = "status",
     actual = "//drive-stack/carputer:status",
 )

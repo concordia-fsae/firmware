@@ -73,6 +73,7 @@ pub enum SubAction {
     Flash(SubActionFlash),
     Ota(SubActionOta),
     Bootstrap(SubActionBootstrap),
+    Promote(SubActionPromote),
     Batch(SubActionBatch),
     Status(SubActionStatus),
     UdsPing(SubActionUdsPing),
@@ -143,6 +144,18 @@ pub struct SubActionBootstrap {
     /// force flashing even if there is a binary match
     #[argh(switch, short = 'f')]
     force: bool,
+}
+
+/// Mark a staged artifact as the production baseline for a node
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "promote")]
+pub struct SubActionPromote {
+    /// the node to promote
+    #[argh(option, short = 'n')]
+    pub node: String,
+    /// expected target platform, e.g. cfr25 or cfr26
+    #[argh(option, short = 'p')]
+    pub platform: Option<String>,
 }
 
 /// OTA a set of applications to their ECUs
@@ -388,6 +401,14 @@ struct FlashReply {
     error: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct PromoteReply {
+    node: String,
+    filename: String,
+    sha256: String,
+    status: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct BootstrapNodeResult {
     node: String,
@@ -620,6 +641,13 @@ async fn main() -> Result<()> {
                 .and(state_filter.clone())
                 .and_then(bootstrap_status_handler);
 
+            let promote_route = warp::path("ota")
+                .and(warp::path("promote"))
+                .and(warp::post())
+                .and(warp::query::<FlashParams>())
+                .and(state_filter.clone())
+                .and_then(promote_handler);
+
             let status_route = warp::path("ota")
                 .and(warp::path("status"))
                 .and(warp::get())
@@ -646,6 +674,7 @@ async fn main() -> Result<()> {
                 .or(flash_route)
                 .or(bootstrap_route)
                 .or(bootstrap_status_route)
+                .or(promote_route)
                 .or(status_route)
                 .or(uds_ping_route)
                 .or(revert_route)
@@ -1303,6 +1332,33 @@ async fn main() -> Result<()> {
                     let table =
                         render_table(&["node", "kind", "staged_sha", "production_sha"], &rows);
                     println!("{table}");
+                }
+                SubAction::Promote(promote) => {
+                    let url = build_url(result.addresses[0], result.port, "/ota/promote");
+                    info!("Requesting promote for '{}'...", promote.node);
+                    let response = Client::new()
+                        .post(url)
+                        .query(&FlashParams {
+                            node: promote.node.clone(),
+                            platform: promote.platform.clone(),
+                            sha: None,
+                            force: None,
+                            lease_id: None,
+                            release_lease: None,
+                        })
+                        .send()
+                        .await?;
+                    let status = response.status();
+                    let body = response.text().await?;
+                    if !status.is_success() {
+                        bail!("promote failed: {}", body);
+                    }
+                    let reply: PromoteReply = serde_json::from_str(&body)
+                        .with_context(|| format!("parsing promote reply: {}", body))?;
+                    println!(
+                        "promoted {} to production: {} ({})",
+                        reply.node, reply.sha256, reply.filename
+                    );
                 }
                 SubAction::UdsPing(_) => {
                     let mp = MultiProgress::new();
@@ -3555,6 +3611,46 @@ async fn flash_handler(
 }
 
 #[cfg(target_os = "linux")]
+async fn promote_handler(
+    p: FlashParams,
+    state: Arc<AppState>,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    validate_platform_param(&state, p.platform.as_deref())?;
+    validate_target(&state, &p.node)?;
+    info!("Promote request: node='{}' platform={:?}", p.node, p.platform);
+
+    let promoted = {
+        let _guard = state.manifest_lock.lock().await;
+        promote_staged_to_production(&state.manifest_path, &p.node)
+            .await
+            .map_err(|e| {
+                warp::reject::custom(HttpError(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to promote '{}': {}", p.node, e),
+                ))
+            })?
+    };
+
+    let Some(entry) = promoted else {
+        return Err(warp::reject::custom(HttpError(
+            StatusCode::BAD_REQUEST,
+            ManifestError::NoStaged(p.node.clone()).to_string(),
+        )));
+    };
+
+    let body = PromoteReply {
+        node: p.node,
+        filename: entry.filename,
+        sha256: entry.hash,
+        status: "promoted".to_string(),
+    };
+    Ok(warp::reply::with_status(
+        warp::reply::json(&body),
+        StatusCode::OK,
+    ))
+}
+
+#[cfg(target_os = "linux")]
 // POST /ota/bootstrap?node=...
 async fn bootstrap_handler(
     p: FlashParams,
@@ -4367,6 +4463,23 @@ async fn clear_staged_entry(
         .and_then(|entry| entry.staged.take());
     write_manifest(manifest_path, &manifest).await?;
     Ok(cleared)
+}
+
+#[cfg(target_os = "linux")]
+async fn promote_staged_to_production(
+    manifest_path: &Path,
+    node: &str,
+) -> anyhow::Result<Option<BinaryEntry>> {
+    let mut manifest = read_manifest_compat(manifest_path).await?;
+    let Some(entry) = manifest.nodes.get_mut(node) else {
+        return Ok(None);
+    };
+    let Some(staged) = entry.staged.take() else {
+        return Ok(None);
+    };
+    entry.production = Some(staged.clone());
+    write_manifest(manifest_path, &manifest).await?;
+    Ok(Some(staged))
 }
 
 #[cfg(target_os = "linux")]
