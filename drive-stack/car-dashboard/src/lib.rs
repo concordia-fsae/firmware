@@ -884,13 +884,6 @@ pub async fn run(opts: Opts) -> Result<()> {
         Arc::clone(&tracked_controllers),
         updates_tx.clone(),
     );
-    if let Some(body_iface) = &opts.body_iface {
-        spawn_body_worker(
-            body_iface.clone(),
-            Arc::clone(&tracked_controllers),
-            updates_tx.clone(),
-        );
-    }
 
     server.await;
     Ok(())
@@ -2097,14 +2090,6 @@ fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl 
             selected_ids.clone(),
             tx.clone(),
         );
-        if let Some(body_iface) = state.body_iface.as_ref().as_ref() {
-            spawn_signal_session_worker(
-                body_iface.clone(),
-                yamcan::Bus::Body,
-                selected_ids,
-                tx,
-            );
-        }
     }
 
     tokio::spawn(async move {
@@ -2339,14 +2324,10 @@ fn run_veh_worker(opts: &Opts) -> Result<()> {
 }
 
 fn run_body_worker(opts: &Opts) -> Result<()> {
-    let iface = opts
-        .body_iface
-        .clone()
-        .ok_or_else(|| anyhow::anyhow!("--body-worker requires --body-iface"))?;
-    let iface_map = [(iface.as_str(), yamcan::Bus::Body)];
-    let binding = yamcan::configure_iface(&iface, &iface_map)
-        .map_err(|e| anyhow::anyhow!("failed to configure body decoder for {iface}: {e}"))?;
-    run_can_worker(&iface, "body", &binding)
+    let iface = opts.body_iface.as_deref().unwrap_or("unknown");
+    Err(anyhow::anyhow!(
+        "body CAN worker is no longer supported (requested iface: {iface})"
+    ))
 }
 
 fn run_can_worker(
