@@ -194,10 +194,58 @@ pub struct DashboardSnapshot {
     pub controllers: Vec<ControllerStatus>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SignalPlotKind {
+    Numeric,
+    Boolean,
+    Enum,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct SignalManifestEntry {
+    pub id: String,
+    pub bus: String,
+    pub message_name: String,
+    pub message_id: u32,
+    pub signal_name: String,
+    pub unit: Option<String>,
+    pub kind: SignalPlotKind,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct SignalManifestResponse {
+    pub signals: Vec<SignalManifestEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SignalSample {
+    pub signal_id: String,
+    pub signal_name: String,
+    pub value: f64,
+    pub label: Option<String>,
+    pub unit: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SignalSampleEvent {
+    pub timestamp_ms: u64,
+    pub bus: String,
+    pub message_name: String,
+    pub message_id: u32,
+    pub samples: Vec<SignalSample>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SignalSampleBatch {
+    pub events: Vec<SignalSampleEvent>,
+}
+
 #[derive(Debug, Clone)]
 struct PlainMeasurement {
     name: String,
     value: f64,
+    unit: Option<String>,
     label: Option<String>,
 }
 
@@ -212,6 +260,12 @@ struct NormalizedUpdate {
     seen_at_ms: u64,
     active_faults: Option<Vec<ActiveFault>>,
     critical_signals: Option<Vec<LiveSignal>>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+struct SignalEventQuery {
+    #[serde(default)]
+    signals: String,
 }
 
 #[derive(Debug, Clone)]
@@ -260,6 +314,9 @@ struct CurrentSessionResponse {
 struct AppState {
     store: Arc<RwLock<DashboardStore>>,
     capabilities: Arc<BTreeMap<String, ControllerCapability>>,
+    signal_manifest: Arc<SignalManifestResponse>,
+    veh_iface: Arc<String>,
+    body_iface: Arc<Option<String>>,
     state_events: broadcast::Sender<String>,
     job_events: broadcast::Sender<String>,
     last_state_payload: Arc<Mutex<String>>,
@@ -454,6 +511,10 @@ impl AppState {
         store.snapshot(Instant::now())
     }
 
+    fn signal_manifest_json(&self) -> Result<String> {
+        serde_json::to_string(&*self.signal_manifest).context("serializing signal manifest")
+    }
+
     async fn snapshot_json(&self) -> Result<String> {
         let snapshot = self.snapshot().await;
         serde_json::to_string(&snapshot).context("serializing dashboard snapshot")
@@ -510,6 +571,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         &opts.routine_manifest,
         &opts.veh_iface,
     )?);
+    let signal_manifest = Arc::new(build_signal_manifest());
     let controller_names = capabilities.keys().cloned().collect::<Vec<_>>();
     info!(
         "loaded {} deployable controller(s) from UDS manifest: {}",
@@ -532,6 +594,9 @@ pub async fn run(opts: Opts) -> Result<()> {
     let state = AppState {
         store,
         capabilities,
+        signal_manifest,
+        veh_iface: Arc::new(opts.veh_iface.clone()),
+        body_iface: Arc::new(opts.body_iface.clone()),
         state_events,
         job_events,
         last_state_payload: Arc::new(Mutex::new(String::new())),
@@ -555,9 +620,6 @@ pub async fn run(opts: Opts) -> Result<()> {
                 let mut store = state_for_updates.store.write().await;
                 store.apply_update(update, now);
             }
-            if let Err(e) = state_for_updates.publish_state_if_changed().await {
-                warn!("failed to publish dashboard update: {e}");
-            }
         }
     });
 
@@ -579,10 +641,21 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_home);
 
+    let signals = warp::path("signals")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_signals);
+
     let controller = warp::path!("controllers" / String)
         .and(warp::get())
         .and(state_filter.clone())
         .and_then(handle_controller);
+
+    let signal_manifest = warp::path!("api" / "signals" / "manifest")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_signal_manifest);
 
     let enter_session = warp::path!("api" / "controllers" / String / "session")
         .and(warp::post())
@@ -632,6 +705,20 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::get())
         .and(state_filter.clone())
         .and_then(handle_controller_jobs);
+
+    let signal_events_with_query = warp::path("signal-events")
+        .and(warp::get())
+        .and(warp::query::<SignalEventQuery>())
+        .and(state_filter.clone())
+        .map(|query: SignalEventQuery, state: AppState| {
+            let selected_ids = query
+                .signals
+                .split(',')
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+                .collect::<BTreeSet<_>>();
+            signal_events_reply(state, selected_ids)
+        });
 
     let events = warp::path("events")
         .and(warp::get())
@@ -753,7 +840,9 @@ pub async fn run(opts: Opts) -> Result<()> {
         .map(|| warp::reply::with_status("ok", warp::http::StatusCode::OK));
 
     let routes = home
+        .or(signals)
         .or(controller)
+        .or(signal_manifest)
         .or(read_current_session)
         .or(enter_session)
         .or(run_routine)
@@ -763,11 +852,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(stop_tester_present)
         .or(tester_present_state)
         .or(controller_jobs)
+        .or(signal_events_with_query)
         .or(events)
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/controllers/:name', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -804,6 +894,25 @@ async fn handle_home(state: AppState) -> Result<warp::reply::Response, Infallibl
         views::render_home(&snapshot, initial_state_json),
         warp::http::StatusCode::OK,
     ))
+}
+
+async fn handle_signals(state: AppState) -> Result<warp::reply::Response, Infallible> {
+    debug!("serving signal explorer page");
+    let initial_manifest_json = state
+        .signal_manifest_json()
+        .unwrap_or_else(|_| serde_json::to_string(&SignalManifestResponse { signals: Vec::new() }).unwrap());
+    Ok(render_template_response(
+        views::render_signals(&initial_manifest_json),
+        warp::http::StatusCode::OK,
+    ))
+}
+
+async fn handle_signal_manifest(state: AppState) -> Result<warp::reply::Response, Infallible> {
+    Ok(warp::reply::with_status(
+        warp::reply::json(&*state.signal_manifest),
+        warp::http::StatusCode::OK,
+    )
+    .into_response())
 }
 
 async fn handle_controller(
@@ -1935,9 +2044,76 @@ fn json_current_session_response(body: CurrentSessionResponse) -> warp::reply::R
     warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
 }
 
+fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl Reply {
+    let (tx, mut rx) = mpsc::unbounded_channel::<SignalSampleEvent>();
+    let (batched_tx, batched_rx) = mpsc::unbounded_channel::<String>();
+
+    if !selected_ids.is_empty() {
+        spawn_signal_session_worker(
+            (*state.veh_iface).clone(),
+            yamcan::Bus::Veh,
+            selected_ids.clone(),
+            tx.clone(),
+        );
+        if let Some(body_iface) = state.body_iface.as_ref().as_ref() {
+            spawn_signal_session_worker(
+                body_iface.clone(),
+                yamcan::Bus::Body,
+                selected_ids,
+                tx,
+            );
+        }
+    }
+
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_millis(250));
+        let mut pending: Vec<SignalSampleEvent> = Vec::new();
+        loop {
+            tokio::select! {
+                maybe_event = rx.recv() => {
+                    match maybe_event {
+                        Some(event) => pending.push(event),
+                        None => {
+                            if !pending.is_empty() {
+                                let payload = serde_json::to_string(&SignalSampleBatch { events: pending })
+                                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
+                                let _ = batched_tx.send(payload);
+                            }
+                            break;
+                        }
+                    }
+                }
+                _ = interval.tick() => {
+                    if pending.is_empty() {
+                        continue;
+                    }
+                    let payload = serde_json::to_string(&SignalSampleBatch {
+                        events: std::mem::take(&mut pending),
+                    })
+                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
+                    if batched_tx.send(payload).is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+    });
+
+    let stream = futures::stream::unfold(batched_rx, |mut rx| async move {
+        rx.recv().await.map(|payload| {
+            (
+                Ok::<Event, Infallible>(Event::default().event("signal-sample").data(payload)),
+                rx,
+            )
+        })
+    });
+
+    warp::sse::reply(warp::sse::keep_alive().stream(stream))
+}
+
 fn spawn_veh_worker(
     iface: String,
-    tracked_controllers: Arc<BTreeSet<String>>,
+    _tracked_controllers: Arc<BTreeSet<String>>,
     updates_tx: mpsc::UnboundedSender<NormalizedUpdate>,
 ) {
     thread::spawn(move || {
@@ -1994,9 +2170,6 @@ fn spawn_veh_worker(
                         continue;
                     }
                 };
-                if !tracked_controllers.contains(&update.controller) {
-                    continue;
-                }
                 if updates_tx.send(update).is_err() {
                     warn!("vehicle update channel closed; stopping worker supervisor");
                     let _ = child.kill();
@@ -2015,7 +2188,7 @@ fn spawn_veh_worker(
 
 fn spawn_body_worker(
     iface: String,
-    tracked_controllers: Arc<BTreeSet<String>>,
+    _tracked_controllers: Arc<BTreeSet<String>>,
     updates_tx: mpsc::UnboundedSender<NormalizedUpdate>,
 ) {
     thread::spawn(move || {
@@ -2072,9 +2245,6 @@ fn spawn_body_worker(
                         continue;
                     }
                 };
-                if !tracked_controllers.contains(&update.controller) {
-                    continue;
-                }
                 if updates_tx.send(update).is_err() {
                     warn!("body update channel closed; stopping worker supervisor");
                     let _ = child.kill();
@@ -2098,28 +2268,24 @@ fn decode_veh_frame(
     tracked_controllers: &BTreeSet<String>,
 ) -> Option<NormalizedUpdate> {
     let decoded = yamcan::maybe_decode(Some(binding), &frame, id, true, true, &[], &[])?;
-    if controller_key_for_message_name(&decoded.message_name, tracked_controllers).is_none() {
-        return None;
-    }
-    if !is_fault_message(&decoded.message_name) && !is_critical_data_message(&decoded.message_name)
-    {
-        return None;
-    }
-    Some(normalize_update(
-        binding.bus.as_str(),
+    let seen_at_ms = now_ms();
+    let members = decoded
+        .members
+        .into_iter()
+        .map(|member| PlainMeasurement {
+            name: member.name,
+            value: member.value,
+            unit: member.unit,
+            label: member.label,
+        })
+        .collect::<Vec<_>>();
+    normalize_update(
+        &decoded.bus_name,
         decoded.message_name,
-        decoded
-            .members
-            .into_iter()
-            .map(|member| PlainMeasurement {
-                name: member.name,
-                value: member.value,
-                label: member.label,
-            })
-            .collect(),
+        members,
         tracked_controllers,
-        now_ms(),
-    )?)
+        seen_at_ms,
+    )
 }
 
 fn run_veh_worker(opts: &Opts) -> Result<()> {
@@ -2196,6 +2362,150 @@ fn normalize_update(
         active_faults,
         critical_signals,
     })
+}
+
+fn build_signal_manifest() -> SignalManifestResponse {
+    let mut signals = yamcan::signal_descriptors()
+        .iter()
+        .map(|descriptor| SignalManifestEntry {
+            id: descriptor.fqid.to_string(),
+            bus: descriptor.bus.as_str().to_string(),
+            message_name: descriptor.message_name.to_string(),
+            message_id: descriptor.message_id,
+            signal_name: descriptor.signal_name.to_string(),
+            unit: descriptor.unit.map(str::to_string),
+            kind: map_signal_kind(descriptor.kind),
+        })
+        .collect::<Vec<_>>();
+    signals.sort_by(|a, b| {
+        a.bus
+            .cmp(&b.bus)
+            .then_with(|| a.message_name.cmp(&b.message_name))
+            .then_with(|| a.signal_name.cmp(&b.signal_name))
+    });
+    SignalManifestResponse { signals }
+}
+
+fn map_signal_kind(kind: yamcan::SignalKind) -> SignalPlotKind {
+    match kind {
+        yamcan::SignalKind::Numeric => SignalPlotKind::Numeric,
+        yamcan::SignalKind::Boolean => SignalPlotKind::Boolean,
+        yamcan::SignalKind::Enum => SignalPlotKind::Enum,
+    }
+}
+
+fn sample_event_from_members(
+    bus_name: &str,
+    message_name: &str,
+    message_id: u32,
+    members: &[PlainMeasurement],
+    timestamp_ms: u64,
+) -> Option<SignalSampleEvent> {
+    let samples = members
+        .iter()
+        .map(|member| SignalSample {
+            signal_id: format!("{bus_name}/{message_name}/{}", member.name),
+            signal_name: member.name.clone(),
+            value: member.value,
+            label: member.label.clone(),
+            unit: member.unit.clone(),
+        })
+        .collect::<Vec<_>>();
+    if samples.is_empty() {
+        return None;
+    }
+
+    Some(SignalSampleEvent {
+        timestamp_ms,
+        bus: bus_name.to_string(),
+        message_name: message_name.to_string(),
+        message_id,
+        samples,
+    })
+}
+
+fn filter_signal_event(
+    event: SignalSampleEvent,
+    selected_ids: &BTreeSet<String>,
+) -> Option<SignalSampleEvent> {
+    let samples = event
+        .samples
+        .into_iter()
+        .filter(|sample| selected_ids.contains(&sample.signal_id))
+        .collect::<Vec<_>>();
+    if samples.is_empty() {
+        return None;
+    }
+
+    Some(SignalSampleEvent { samples, ..event })
+}
+
+fn spawn_signal_session_worker(
+    iface: String,
+    bus: yamcan::Bus,
+    selected_ids: BTreeSet<String>,
+    tx: mpsc::UnboundedSender<SignalSampleEvent>,
+) {
+    thread::spawn(move || {
+        let iface_map = [(iface.as_str(), bus)];
+        let binding = match yamcan::configure_iface(&iface, &iface_map) {
+            Ok(binding) => binding,
+            Err(error) => {
+                warn!("failed to configure signal stream decoder for {iface}: {error}");
+                return;
+            }
+        };
+        let socket = match open_raw_can_socket(&iface) {
+            Ok(socket) => socket,
+            Err(error) => {
+                warn!("failed to open signal stream socket for {iface}: {error}");
+                return;
+            }
+        };
+
+        loop {
+            let (frame, id) = match recv_veh_frame(&socket) {
+                Ok(frame) => frame,
+                Err(error) => {
+                    warn!("signal stream read error on {iface}: {error}");
+                    return;
+                }
+            };
+            let Some(event) = decode_signal_frame(&binding, frame, id, &selected_ids) else {
+                continue;
+            };
+            if tx.send(event).is_err() {
+                return;
+            }
+        }
+    });
+}
+
+fn decode_signal_frame(
+    binding: &yamcan::BusBinding<yamcan::Bus>,
+    frame: yamcan::CanFrame,
+    id: u32,
+    selected_ids: &BTreeSet<String>,
+) -> Option<SignalSampleEvent> {
+    let decoded = yamcan::maybe_decode(Some(binding), &frame, id, true, true, &[], &[])?;
+    let members = decoded
+        .members
+        .into_iter()
+        .map(|member| PlainMeasurement {
+            name: member.name,
+            value: member.value,
+            unit: member.unit,
+            label: member.label,
+        })
+        .collect::<Vec<_>>();
+    let event = sample_event_from_members(
+        &decoded.bus_name,
+        &decoded.message_name,
+        decoded.message_id,
+        &members,
+        now_ms(),
+    )?;
+    filter_signal_event(event, selected_ids)
 }
 
 fn open_raw_can_socket(iface: &str) -> io::Result<OwnedFd> {
@@ -2467,11 +2777,13 @@ mod tests {
                 PlainMeasurement {
                     name: "appsDisabled".to_string(),
                     value: 1.0,
+                    unit: None,
                     label: Some("FAULT".to_string()),
                 },
                 PlainMeasurement {
                     name: "faulted5vCritical".to_string(),
                     value: 0.0,
+                    unit: None,
                     label: Some("OK".to_string()),
                 },
             ],
@@ -2491,11 +2803,13 @@ mod tests {
                 PlainMeasurement {
                     name: "cellVoltage".to_string(),
                     value: 3.712,
+                    unit: Some("V".to_string()),
                     label: None,
                 },
                 PlainMeasurement {
                     name: "balancingState".to_string(),
                     value: 1.0,
+                    unit: None,
                     label: Some("ACTIVE".to_string()),
                 },
             ],

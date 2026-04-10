@@ -12,8 +12,8 @@ pub use rust_model_generated::{AnyMessage, Bus};
 pub use yamcan::{
     bus_descriptor_for, BusBinding, BusDescriptor, BusInterfaceType, BusRouter, CanData,
     CanFrame, DecodedCanMessage, DecodedMessage, ForwardMessage, ForwardPolicy, ForwardRoute,
-    MessageDecodeResult, MessageMetadata, NetworkBus, ReceivedCanMessage, SignalAccessor,
-    SignalMeasurement, UnhandledMessage,
+    MessageDecodeResult, MessageDescriptor, MessageMetadata, NetworkBus, ReceivedCanMessage,
+    SignalAccessor, SignalDescriptor, SignalKind, SignalMeasurement, UnhandledMessage,
 };
 
 pub type YamcanRouter = BusRouter<rust_decode_generated::GeneratedNetwork>;
@@ -72,4 +72,12 @@ pub fn maybe_decode(
 
 pub fn bus_descriptor(bus: Bus) -> Option<&'static BusDescriptor<Bus>> {
     yamcan::bus_descriptor_for::<rust_decode_generated::GeneratedNetwork>(bus)
+}
+
+pub fn message_descriptors() -> &'static [MessageDescriptor<Bus>] {
+    rust_model_generated::message_descriptors()
+}
+
+pub fn signal_descriptors() -> &'static [SignalDescriptor<Bus>] {
+    rust_model_generated::signal_descriptors()
 }

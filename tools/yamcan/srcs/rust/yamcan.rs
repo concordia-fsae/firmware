@@ -50,8 +50,36 @@ pub struct SignalMeasurement {
 
 #[derive(Clone, Debug)]
 pub struct DecodedMessage {
+    pub bus_name: String,
     pub message_name: String,
+    pub message_id: u32,
     pub members: Vec<SignalMeasurement>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SignalKind {
+    Numeric,
+    Boolean,
+    Enum,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MessageDescriptor<B: NetworkBus> {
+    pub bus: B,
+    pub name: &'static str,
+    pub id: u32,
+    pub len: u8,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SignalDescriptor<B: NetworkBus> {
+    pub bus: B,
+    pub message_name: &'static str,
+    pub message_id: u32,
+    pub signal_name: &'static str,
+    pub fqid: &'static str,
+    pub unit: Option<&'static str>,
+    pub kind: SignalKind,
 }
 
 #[derive(Clone, Copy)]
@@ -319,7 +347,9 @@ pub fn maybe_decode<N: NetworkDecoder>(
             message
                 .measurements(sig_filters, allow_empty_signals)
                 .map(|members| DecodedMessage {
+                    bus_name: metadata.bus.as_str().to_string(),
                     message_name: message_name.to_string(),
+                    message_id: metadata.id,
                     members,
                 })
         }
