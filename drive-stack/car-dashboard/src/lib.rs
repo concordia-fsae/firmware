@@ -657,6 +657,18 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_signal_manifest);
 
+    let uplot_js = warp::path!("assets" / "uPlot.iife.min.js")
+        .and(warp::get())
+        .map(handle_uplot_js);
+
+    let uplot_css = warp::path!("assets" / "uPlot.min.css")
+        .and(warp::get())
+        .map(handle_uplot_css);
+
+    let signal_cache_worker_js = warp::path!("assets" / "signal-cache-worker.js")
+        .and(warp::get())
+        .map(handle_signal_cache_worker_js);
+
     let enter_session = warp::path!("api" / "controllers" / String / "session")
         .and(warp::post())
         .and(warp::body::form())
@@ -843,6 +855,9 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(signals)
         .or(controller)
         .or(signal_manifest)
+        .or(uplot_js)
+        .or(uplot_css)
+        .or(signal_cache_worker_js)
         .or(read_current_session)
         .or(enter_session)
         .or(run_routine)
@@ -857,7 +872,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -913,6 +928,33 @@ async fn handle_signal_manifest(state: AppState) -> Result<warp::reply::Response
         warp::http::StatusCode::OK,
     )
     .into_response())
+}
+
+fn handle_uplot_js() -> warp::reply::Response {
+    warp::reply::with_header(
+        include_str!("../static/uPlot.iife.min.js"),
+        "content-type",
+        "application/javascript; charset=utf-8",
+    )
+    .into_response()
+}
+
+fn handle_uplot_css() -> warp::reply::Response {
+    warp::reply::with_header(
+        include_str!("../static/uPlot.min.css"),
+        "content-type",
+        "text/css; charset=utf-8",
+    )
+    .into_response()
+}
+
+fn handle_signal_cache_worker_js() -> warp::reply::Response {
+    warp::reply::with_header(
+        include_str!("../static/signal-cache-worker.js"),
+        "content-type",
+        "application/javascript; charset=utf-8",
+    )
+    .into_response()
 }
 
 async fn handle_controller(

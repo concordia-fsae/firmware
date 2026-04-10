@@ -1,62 +1,272 @@
 {% extends "base.html" %}
 
+{% block head %}
+  <link rel="stylesheet" href="/assets/uPlot.min.css">
+  <style>
+    .signals-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 420px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .chart-stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .pane-shell > summary {
+      cursor: pointer;
+      font-weight: 700;
+      list-style: none;
+      margin: -16px -18px 12px;
+      padding: 14px 18px 12px;
+      border-bottom: 1px solid rgba(39, 76, 119, 0.08);
+    }
+
+    .pane-shell > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .pane-shell[open] > summary {
+      margin-bottom: 16px;
+    }
+
+    .pane-body {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    #signals-pane,
+    #signals-pane .pane-body,
+    #signal-groups,
+    .signal-group,
+    .signal-options,
+    .signal-option {
+      min-width: 0;
+    }
+
+    .signal-chart-panel {
+      border: 1px dashed rgba(39, 76, 119, 0.16);
+      border-radius: 16px;
+      padding: 0.9rem;
+      background: rgba(255, 253, 249, 0.6);
+    }
+
+    .signal-chart-panel.is-drop-target {
+      border-color: #274c77;
+      background: rgba(39, 76, 119, 0.08);
+    }
+
+    .legend-shell summary {
+      cursor: pointer;
+      font-weight: 700;
+      list-style: none;
+    }
+
+    .legend-shell summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .legend-drop-zone {
+      margin: 0.75rem 0 1rem;
+      padding: 0.8rem 1rem;
+      border: 1px dashed rgba(39, 76, 119, 0.22);
+      border-radius: 14px;
+      color: #41515b;
+      background: rgba(39, 76, 119, 0.04);
+    }
+
+    .legend-drop-zone.is-drop-target {
+      border-color: #274c77;
+      background: rgba(39, 76, 119, 0.1);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.55rem 0;
+      border-top: 1px solid rgba(39, 76, 119, 0.08);
+    }
+
+    .legend-row:first-child {
+      border-top: 0;
+    }
+
+    .legend-main {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    .signal-option-header,
+    .signal-option-meta,
+    .signal-option-name,
+    .legend-main .meta,
+    .legend-main code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .signal-option-header {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .legend-drag {
+      cursor: grab;
+      user-select: none;
+      color: #6a7378;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .legend-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chart-value-strip {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 0.25rem 0 0.75rem;
+    }
+
+    .chart-value-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(39, 76, 119, 0.08);
+      color: var(--ink);
+      font-size: 0.84rem;
+    }
+
+    .chart-value-badge strong {
+      font-weight: 700;
+    }
+
+    @media (max-width: 900px) {
+      .signals-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
   <section class="page-header">
     <h2 class="page-title">Signal Explorer</h2>
-    <p class="page-copy">Browse every decodable `veh` and `body` signal from `yamcan` and plot any number of them live in this browser session.</p>
+    <p class="page-copy">Select any number of signals, drag to zoom, and switch between separate charts or one combined chart.</p>
   </section>
-  <section class="split-layout">
-    <article class="card">
-      <div class="toolbar">
-        <input id="signal-search" class="search-input" type="search" placeholder="Search bus, message, or signal">
-        <div class="status-line">
-          <span id="selection-count" class="meta">Selected: 0</span>
-          <span id="manifest-count" class="meta">Signals: 0</span>
-        </div>
-        <label class="field-label" for="time-window">Time Window</label>
-        <select id="time-window">
-          <option value="10000">10 seconds</option>
-          <option value="30000">30 seconds</option>
-          <option value="60000" selected>60 seconds</option>
-          <option value="300000">5 minutes</option>
-        </select>
-      </div>
-      <div id="signal-groups" class="signal-groups"></div>
-    </article>
-    <section class="plot-grid">
-      <article class="card plot-card">
-        <div class="plot-header">
-          <div>
-            <div class="plot-name">Live Plots</div>
-            <div class="plot-meta">History starts when this tab connects and resets on reload.</div>
+  <section class="signals-layout">
+    <details id="graphs-pane" class="pane-shell card" open>
+      <summary>Charts</summary>
+      <div class="pane-body">
+        <article class="plot-card">
+          <div class="plot-header">
+            <div>
+              <div class="plot-name">Charts</div>
+              <div class="plot-meta">Signals start on separate charts. Drag a signal from the legend onto another chart to combine them.</div>
+            </div>
+            <button id="reset-zoom" type="button">Reset Zoom</button>
           </div>
+          <div id="chart-wrap" class="chart-stack" hidden></div>
+        </article>
+      </div>
+    </details>
+    <details id="signals-pane" class="card pane-shell" open>
+      <summary>Signal List</summary>
+      <div class="pane-body">
+        <div class="toolbar">
+          <input id="signal-search" class="search-input" type="search" placeholder="Search bus, message, or signal">
+          <div class="status-line">
+            <span id="selection-count" class="meta">Selected: 0</span>
+            <span id="manifest-count" class="meta">Signals: 0</span>
+          </div>
+          <label class="field-label" for="time-window">Rolling Window</label>
+          <select id="time-window">
+            <option value="10000">10 seconds</option>
+            <option value="30000">30 seconds</option>
+            <option value="60000" selected>60 seconds</option>
+            <option value="300000">5 minutes</option>
+            <option value="900000">15 minutes</option>
+            <option value="1800000">30 minutes</option>
+          </select>
+          <label class="checkbox-field" for="pause-stream">
+            <input id="pause-stream" type="checkbox">
+            <span>Pause data loading</span>
+          </label>
         </div>
-        <div id="plot-list">
-          <div class="plot-empty">Select signals to begin plotting.</div>
-        </div>
-      </article>
-    </section>
+        <div id="signal-groups" class="signal-groups"></div>
+        <details class="plot-card legend-shell" open>
+          <summary class="section-title">Selected Signals</summary>
+          <div class="plot-meta">Drag rows onto a chart drop zone to combine signals, or drop a row below to move it back to its own chart.</div>
+          <div id="new-chart-drop" class="legend-drop-zone">Drop here to move a signal into its own chart.</div>
+          <div id="series-legend">
+            <p class="empty">No signals selected.</p>
+          </div>
+        </details>
+      </div>
+    </details>
   </section>
   <script id="initial-manifest" type="application/json">{{ initial_manifest_json|safe }}</script>
 {% endblock %}
 
 {% block scripts %}
+  <script src="/assets/uPlot.iife.min.js"></script>
   <script>
     const initialManifest = JSON.parse(document.getElementById("initial-manifest").textContent);
     const searchInput = document.getElementById("signal-search");
     const groupsContainer = document.getElementById("signal-groups");
-    const plotList = document.getElementById("plot-list");
     const selectionCount = document.getElementById("selection-count");
     const manifestCount = document.getElementById("manifest-count");
     const timeWindowSelect = document.getElementById("time-window");
+    const pauseStreamCheckbox = document.getElementById("pause-stream");
+    const chartWrap = document.getElementById("chart-wrap");
+    const legendContainer = document.getElementById("series-legend");
+    const resetZoomButton = document.getElementById("reset-zoom");
+    const newChartDrop = document.getElementById("new-chart-drop");
+    const signalsPane = document.getElementById("signals-pane");
+    const graphsPane = document.getElementById("graphs-pane");
+
     const manifestById = new Map();
     const selectedIds = new Set();
     const histories = new Map();
-    const palette = ["#274c77", "#a63d40", "#1f7a46", "#c97b2a", "#6c5b7b", "#177e89", "#8c5e34", "#7a1f5c"];
+    const palette = ["#274c77", "#a63d40", "#1f7a46", "#c97b2a", "#6c5b7b", "#177e89", "#8c5e34", "#7a1f5c", "#6a994e", "#bc4749"];
     const storageKey = "dashboard.signal-view";
+
     let plotWindowMs = Number(timeWindowSelect.value);
+    let streamPaused = false;
     let signalSource = null;
     let manifestSignals = [];
+    let charts = [];
+    let suppressScaleHook = false;
+    let legendRows = new Map();
+    let signalGroupById = new Map();
+    let signalColorById = new Map();
+    let signalOrder = [];
+    let chartGroups = [];
+    let nextGroupId = 1;
+    let draggedSignalId = null;
+    let dirtySignalIds = new Set();
+    let updateScheduled = false;
+    let signalsPaneOpen = true;
+    let graphsPaneOpen = true;
+    let sharedXWindow = null;
+    let manualZoomActive = false;
+    let chartValueNodes = new Map();
+    let signalCacheUnsubscribe = null;
 
     function escapeHtml(value) {
       return String(value)
@@ -67,41 +277,40 @@
         .replaceAll("'", "&#39;");
     }
 
+    function displayUnit(unit) {
+      if (!unit) return "";
+      const normalized = String(unit).trim();
+      if (!normalized || normalized.toLowerCase() === "none") return "";
+      return normalized;
+    }
+
     function kindLabel(kind) {
       if (kind === "boolean") return "bool";
       if (kind === "enum") return "enum";
       return "numeric";
     }
 
-    function displayUnit(unit) {
-      if (!unit) {
-        return "";
-      }
-      const normalized = String(unit).trim();
-      if (!normalized || normalized.toLowerCase() === "none") {
-        return "";
-      }
-      return normalized;
+    function numericLabel(value, entry) {
+      if (!Number.isFinite(value)) return "NaN";
+      const text = Math.abs(value) >= 100 ? value.toFixed(1) : value.toFixed(3);
+      const unit = displayUnit(entry.unit);
+      return unit ? `${text} ${unit}` : text;
     }
 
-    function sampleNumber(sample) {
-      if (!sample) {
-        return NaN;
+    function displayValue(entry, point) {
+      if (!point) return "Waiting for data";
+      if (!Number.isFinite(point.v)) {
+        if (entry.kind === "enum") return point.label || "UNKNOWN";
+        if (entry.kind === "boolean") return "UNKNOWN";
+        return "NaN";
       }
-      if (typeof sample.value === "number") {
-        return sample.value;
-      }
-      if (typeof sample.v === "number") {
-        return sample.v;
-      }
-      return Number.NaN;
+      if (entry.kind === "enum") return point.label || numericLabel(point.v, entry);
+      if (entry.kind === "boolean") return point.v >= 0.5 ? "TRUE" : "FALSE";
+      return numericLabel(point.v, entry);
     }
 
-    function sampleLabel(sample) {
-      if (!sample) {
-        return "";
-      }
-      return sample.label || "";
+    function colorFor(signalId) {
+      return signalColorById.get(signalId) || palette[0];
     }
 
     function persistViewState() {
@@ -109,6 +318,10 @@
         sessionStorage.setItem(storageKey, JSON.stringify({
           selectedIds: Array.from(selectedIds),
           plotWindowMs,
+          streamPaused,
+          chartGroups: chartGroups.map((group) => group.signalIds.filter((signalId) => selectedIds.has(signalId))),
+          signalsPaneOpen,
+          graphsPaneOpen,
         }));
       } catch (error) {
         console.error("failed to persist signal view state", error);
@@ -118,14 +331,20 @@
     function restoreViewState() {
       try {
         const raw = sessionStorage.getItem(storageKey);
-        if (!raw) {
-          return;
-        }
+        if (!raw) return;
         const state = JSON.parse(raw);
         const restoredWindow = Number(state.plotWindowMs);
         if (Number.isFinite(restoredWindow) && restoredWindow > 0) {
           plotWindowMs = restoredWindow;
           timeWindowSelect.value = String(restoredWindow);
+        }
+        streamPaused = Boolean(state.streamPaused);
+        pauseStreamCheckbox.checked = streamPaused;
+        if (typeof state.signalsPaneOpen === "boolean") {
+          signalsPaneOpen = state.signalsPaneOpen;
+        }
+        if (typeof state.graphsPaneOpen === "boolean") {
+          graphsPaneOpen = state.graphsPaneOpen;
         }
         for (const signalId of state.selectedIds || []) {
           if (manifestById.has(signalId)) {
@@ -133,37 +352,100 @@
             histories.set(signalId, []);
           }
         }
+        chartGroups = Array.isArray(state.chartGroups)
+          ? state.chartGroups
+              .filter((group) => Array.isArray(group))
+              .map((signalIds) => makeGroup(signalIds.filter((signalId) => manifestById.has(signalId))))
+          : [];
+        normalizeChartGroups();
       } catch (error) {
         console.error("failed to restore signal view state", error);
       }
     }
 
-    function displayValue(entry, sample) {
-      if (!sample) return "Waiting for data";
-      const value = sampleNumber(sample);
-      const label = sampleLabel(sample);
-      if (!Number.isFinite(value)) {
-        if (entry.kind === "enum") return label || "UNKNOWN";
-        if (entry.kind === "boolean") return "UNKNOWN";
-        return "NaN";
+    function applyPaneState() {
+      signalsPane.open = signalsPaneOpen;
+      graphsPane.open = graphsPaneOpen;
+      if (graphsPaneOpen && charts.length) {
+        requestAnimationFrame(() => {
+          renderChart();
+        });
       }
-      if (entry.kind === "enum") return label || numericLabel(value, entry);
-      if (entry.kind === "boolean") return value >= 0.5 ? "TRUE" : "FALSE";
-      return numericLabel(value, entry);
     }
 
-    function colorFor(signalId) {
-      const ids = Array.from(selectedIds);
-      const index = Math.max(0, ids.indexOf(signalId));
-      return palette[index % palette.length];
+    function makeGroup(signalIds) {
+      return {
+        id: `group-${nextGroupId++}`,
+        signalIds: [...signalIds],
+      };
+    }
+
+    function normalizeChartGroups() {
+      const assigned = new Set();
+      const normalized = [];
+      signalGroupById = new Map();
+      for (const group of chartGroups) {
+        const signalIds = [];
+        for (const signalId of group.signalIds || []) {
+          if (!selectedIds.has(signalId) || assigned.has(signalId)) {
+            continue;
+          }
+          signalIds.push(signalId);
+          assigned.add(signalId);
+        }
+        if (signalIds.length) {
+          const normalizedGroup = {
+            id: group.id || `group-${nextGroupId++}`,
+            signalIds,
+          };
+          normalized.push(normalizedGroup);
+          signalIds.forEach((signalId) => signalGroupById.set(signalId, normalizedGroup.id));
+        }
+      }
+      for (const signalId of selectedIds) {
+        if (!assigned.has(signalId)) {
+          const group = makeGroup([signalId]);
+          normalized.push(group);
+          signalGroupById.set(signalId, group.id);
+        }
+      }
+      chartGroups = normalized;
+    }
+
+    function chartNumberForGroup(groupId) {
+      return chartGroups.findIndex((group) => group.id === groupId) + 1;
+    }
+
+    function groupForSignal(signalId) {
+      const groupId = signalGroupById.get(signalId);
+      return chartGroups.find((group) => group.id === groupId) || null;
+    }
+
+    function refreshSelectionState() {
+      signalOrder = signalOrder.filter((signalId) => selectedIds.has(signalId));
+      for (const signalId of selectedIds) {
+        if (!signalOrder.includes(signalId)) {
+          signalOrder.push(signalId);
+        }
+      }
+      signalColorById = new Map();
+      signalOrder.forEach((signalId, index) => {
+        signalColorById.set(signalId, palette[index % palette.length]);
+      });
     }
 
     function trimHistory(signalId) {
       const points = histories.get(signalId) || [];
       const cutoff = Date.now() - plotWindowMs;
-      const trimmed = points.filter((point) => point.t >= cutoff);
-      histories.set(signalId, trimmed);
-      return trimmed;
+      let trimCount = 0;
+      while (trimCount < points.length && points[trimCount].t < cutoff) {
+        trimCount += 1;
+      }
+      if (trimCount > 0) {
+        points.splice(0, trimCount);
+      }
+      histories.set(signalId, points);
+      return points;
     }
 
     function groupedSignals() {
@@ -171,13 +453,10 @@
       const groups = new Map();
       for (const signal of manifestSignals) {
         const haystack = `${signal.bus} ${signal.message_name} ${signal.signal_name} ${signal.id}`.toLowerCase();
-        if (query && !haystack.includes(query)) {
-          continue;
-        }
+        if (query && !haystack.includes(query)) continue;
         const key = `${signal.bus}/${signal.message_name}`;
         if (!groups.has(key)) {
           groups.set(key, {
-            key,
             bus: signal.bus,
             message_name: signal.message_name,
             message_id: signal.message_id,
@@ -187,30 +466,6 @@
         groups.get(key).signals.push(signal);
       }
       return Array.from(groups.values());
-    }
-
-    function numericLabel(value, entry) {
-      if (!Number.isFinite(value)) {
-        return "NaN";
-      }
-      const text = Math.abs(value) >= 100 ? value.toFixed(1) : value.toFixed(3);
-      const unit = displayUnit(entry.unit);
-      return unit ? `${text} ${unit}` : text;
-    }
-
-    function labelForPoint(entry, point) {
-      if (point.label) {
-        return point.label;
-      }
-      if (!Number.isFinite(point.v)) {
-        if (entry.kind === "enum") return "UNKNOWN";
-        if (entry.kind === "boolean") return "UNKNOWN";
-        return "NaN";
-      }
-      if (entry.kind === "boolean") {
-        return point.v >= 0.5 ? "TRUE" : "FALSE";
-      }
-      return numericLabel(point.v, entry);
     }
 
     function renderSignalGroups() {
@@ -227,17 +482,18 @@
           <p class="signal-group-meta">CAN ID 0x${group.message_id.toString(16).toUpperCase().padStart(3, "0")} · ${group.signals.length} signals</p>
           <div class="signal-options">
             ${group.signals.map((signal) => {
-              const checked = selectedIds.has(signal.id);
               const unit = displayUnit(signal.unit);
               return `
                 <label class="signal-option">
                   <div class="signal-option-header">
-                    <input type="checkbox" data-signal-id="${escapeHtml(signal.id)}" ${checked ? "checked" : ""}>
+                    <input type="checkbox" data-signal-id="${escapeHtml(signal.id)}" ${selectedIds.has(signal.id) ? "checked" : ""}>
                     <span class="signal-option-name">${escapeHtml(signal.signal_name)}</span>
                     <span class="pill">${escapeHtml(kindLabel(signal.kind))}</span>
                     ${unit ? `<span class="pill">${escapeHtml(unit)}</span>` : ""}
                   </div>
-                  <div class="signal-option-meta"><code>${escapeHtml(signal.id)}</code></div>
+                  <div class="signal-option-meta">
+                    bus=<code>${escapeHtml(signal.bus)}</code> · message=<code>${escapeHtml(signal.message_name)}</code>
+                  </div>
                 </label>
               `;
             }).join("")}
@@ -246,150 +502,493 @@
       `).join("");
     }
 
-    function pathForPoints(points, kind) {
-      const width = 800;
-      const height = 170;
-      const padX = 8;
-      const padY = 8;
-      const finitePoints = points.filter((point) => Number.isFinite(point.v));
-      const maxX = Date.now();
-      const minX = maxX - plotWindowMs;
-      if (finitePoints.length < 2) {
-        return { path: "", minY: 0, maxY: 1, minX, maxX };
+    function formatTimestampMs(ts) {
+      const date = new Date(ts);
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      const millis = String(date.getMilliseconds()).padStart(3, "0");
+      return `${hours}:${minutes}:${seconds}.${millis}`;
+    }
+
+    function formatTimestampForWindow(ts) {
+      const date = new Date(ts);
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      const millis = String(date.getMilliseconds()).padStart(3, "0");
+
+      if (plotWindowMs <= 30_000) {
+        return `${hours}:${minutes}:${seconds}.${millis}`;
       }
-      const ys = finitePoints.map((point) => point.v);
-      let minY = Math.min(...ys);
-      let maxY = Math.max(...ys);
-      if (minY === maxY) {
-        minY -= 1;
-        maxY += 1;
+      if (plotWindowMs <= 5 * 60_000) {
+        return `${hours}:${minutes}:${seconds}`;
       }
-      const xFor = (t) => padX + ((t - minX) / Math.max(1, maxX - minX)) * (width - padX * 2);
-      const yFor = (v) => height - padY - ((v - minY) / (maxY - minY)) * (height - padY * 2);
-      const commands = [`M ${xFor(finitePoints[0].t).toFixed(2)} ${yFor(finitePoints[0].v).toFixed(2)}`];
-      for (let index = 1; index < finitePoints.length; index += 1) {
-        const point = finitePoints[index];
-        const x = xFor(point.t).toFixed(2);
-        const y = yFor(point.v).toFixed(2);
-        if (kind === "boolean" || kind === "enum") {
-          const prevX = xFor(point.t).toFixed(2);
-          const prevY = yFor(finitePoints[index - 1].v).toFixed(2);
-          commands.push(`L ${prevX} ${prevY}`);
+      return `${hours}:${minutes}`;
+    }
+
+    function buildChartData(entries) {
+      const cutoff = Date.now() - plotWindowMs;
+      const now = Date.now();
+      if (entries.length === 1) {
+        const points = trimHistory(entries[0].id)
+          .filter((point) => point.t >= cutoff)
+          .sort((a, b) => a.t - b.t);
+        if (!points.length) {
+          return [[cutoff, now], [null, null]];
         }
-        commands.push(`L ${x} ${y}`);
+        return [
+          points.map((point) => point.t),
+          points.map((point) => point.v),
+        ];
       }
+      const xSet = new Set();
+      const valueMaps = [];
+
+      entries.forEach((entry) => {
+        const points = trimHistory(entry.id)
+          .filter((point) => point.t >= cutoff)
+          .sort((a, b) => a.t - b.t);
+        const map = new Map();
+        points.forEach((point) => {
+          xSet.add(point.t);
+          map.set(point.t, point.v);
+        });
+        valueMaps.push(map);
+      });
+
+      const xs = Array.from(xSet).sort((a, b) => a - b);
+      if (!xs.length) {
+        const placeholderXs = [cutoff, now];
+        return [placeholderXs, ...entries.map(() => [null, null])];
+      }
+
+      const data = [xs];
+      valueMaps.forEach((map) => {
+        data.push(xs.map((x) => map.has(x) ? map.get(x) : null));
+      });
+      return data;
+    }
+
+    function destroyCharts() {
+      charts.forEach((record) => record.chart.destroy());
+      charts = [];
+    }
+
+    function syncChartWindows(force) {
+      const defaultWindow = {
+        min: Date.now() - plotWindowMs,
+        max: Date.now(),
+      };
+      const window = !manualZoomActive || force ? defaultWindow : (sharedXWindow || defaultWindow);
+      if (!manualZoomActive || force) {
+        sharedXWindow = null;
+      }
+      charts.forEach((record) => {
+        const chart = record.chart;
+        suppressScaleHook = true;
+        chart.setScale("x", window);
+        suppressScaleHook = false;
+      });
+    }
+
+    function buildLegendRow(entry) {
+      const group = groupForSignal(entry.id);
+      const chartNumber = group ? chartNumberForGroup(group.id) : 0;
+      return `
+        <div class="legend-row" data-legend-id="${escapeHtml(entry.id)}" draggable="true">
+          <div class="legend-main">
+            <span class="legend-drag" aria-hidden="true">::</span>
+            <span class="meta">
+              <span class="swatch" style="background:${colorFor(entry.id)}"></span>
+              <code>${escapeHtml(entry.bus)}</code> / <code>${escapeHtml(entry.message_name)}</code> / <code>${escapeHtml(entry.signal_name)}</code>
+            </span>
+          </div>
+          <div class="legend-meta">
+            <span class="pill">Chart ${chartNumber}</span>
+            <button type="button" data-remove-signal="${escapeHtml(entry.id)}">Remove</button>
+            <span class="meta" data-legend-value></span>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateLegendValues(entries) {
+      for (const entry of entries) {
+        const row = legendRows.get(entry.id);
+        if (!row) {
+          continue;
+        }
+        const valueNode = row.querySelector("[data-legend-value]");
+        if (!valueNode) {
+          continue;
+        }
+        const points = trimHistory(entry.id);
+        const latest = points[points.length - 1];
+        valueNode.textContent = displayValue(entry, latest);
+      }
+    }
+
+    function renderLegend(entries) {
+      if (!entries.length) {
+        legendContainer.innerHTML = `<p class="empty">No signals selected.</p>`;
+        legendRows = new Map();
+        return;
+      }
+      legendContainer.innerHTML = entries.map(buildLegendRow).join("");
+      legendRows = new Map();
+      legendContainer.querySelectorAll("[data-legend-id]").forEach((row) => {
+        legendRows.set(row.dataset.legendId, row);
+      });
+      updateLegendValues(entries);
+    }
+
+    function updateDirtyLegendValues() {
+      if (!dirtySignalIds.size) {
+        return;
+      }
+      const dirtyEntries = Array.from(dirtySignalIds)
+        .map((signalId) => manifestById.get(signalId))
+        .filter(Boolean);
+      updateLegendValues(dirtyEntries);
+    }
+
+    function chartBadgeText(entry) {
+      const points = trimHistory(entry.id);
+      const latest = points[points.length - 1];
+      return displayValue(entry, latest);
+    }
+
+    function renderChartValueStrip(entries) {
+      return `
+        <div class="chart-value-strip">
+          ${entries.map((entry) => `
+            <div class="chart-value-badge">
+              <span class="swatch" style="background:${colorFor(entry.id)}"></span>
+              ${entries.length > 1 ? `<span>${escapeHtml(entry.signal_name)}</span>` : ""}
+              <strong data-chart-value-id="${escapeHtml(entry.id)}">${escapeHtml(chartBadgeText(entry))}</strong>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function updateChartValueNodes(entries) {
+      for (const entry of entries) {
+        const node = chartValueNodes.get(entry.id);
+        if (!node) {
+          continue;
+        }
+        node.textContent = chartBadgeText(entry);
+      }
+    }
+
+    function discreteAxisLevels(entries) {
+      const levels = new Map();
+      for (const entry of entries) {
+        const points = trimHistory(entry.id);
+        for (const point of points) {
+          if (!Number.isFinite(point.v)) {
+            continue;
+          }
+          if (entry.kind === "boolean") {
+            levels.set(point.v >= 0.5 ? 1 : 0, point.v >= 0.5 ? "TRUE" : "FALSE");
+            continue;
+          }
+          if (entry.kind === "enum") {
+            levels.set(point.v, point.label || String(point.v));
+          }
+        }
+      }
+      if (!levels.size && entries.every((entry) => entry.kind === "boolean")) {
+        levels.set(0, "FALSE");
+        levels.set(1, "TRUE");
+      }
+      return Array.from(levels.entries()).sort((a, b) => a[0] - b[0]);
+    }
+
+    function discreteAxisWidth(entries) {
+      const labels = discreteAxisLevels(entries).map(([, label]) => String(label));
+      if (!labels.length) {
+        return 72;
+      }
+      const longest = labels.reduce((max, label) => Math.max(max, label.length), 0);
+      return Math.max(72, Math.min(240, 30 + longest * 10));
+    }
+
+    function chartOptions(entries, chartKey, title) {
+      const allDiscrete = entries.length > 0 && entries.every((entry) => entry.kind === "enum" || entry.kind === "boolean");
+      const yAxisWidth = allDiscrete ? discreteAxisWidth(entries) : 52;
+      const series = [{}];
+      for (const entry of entries) {
+        const color = colorFor(entry.id);
+        series.push({
+          label: entry.signal_name,
+          stroke: color,
+          width: 2,
+          spanGaps: false,
+          points: {
+            show: true,
+            size: 6,
+            stroke: color,
+            fill: "#fffdf9",
+            width: 2,
+          },
+        });
+      }
+
       return {
-        path: commands.join(" "),
-        minY,
-        maxY,
-        minX,
-        maxX,
+        width: Math.max(680, chartWrap.clientWidth || 900),
+        height: 320,
+        tzDate: (ts) => new Date(ts),
+        title: "",
+        scales: {
+          x: {
+            time: true,
+          },
+        },
+        axes: [
+          {
+            stroke: "#6a7378",
+            grid: { stroke: "rgba(39, 76, 119, 0.12)" },
+            values: (u, values) => values.map((value) => formatTimestampForWindow(value)),
+          },
+          {
+            stroke: "#6a7378",
+            grid: { stroke: "rgba(39, 76, 119, 0.08)" },
+            size: yAxisWidth,
+            splits: allDiscrete ? () => discreteAxisLevels(entries).map(([value]) => value) : null,
+            values: allDiscrete
+              ? (u, values) => values.map((value) => {
+                  const match = discreteAxisLevels(entries).find(([level]) => level === value);
+                  return match ? match[1] : "";
+                })
+              : null,
+          },
+        ],
+        cursor: {
+          drag: {
+            x: true,
+            y: false,
+            setScale: true,
+          },
+        },
+        legend: {
+          show: false,
+        },
+        hooks: {
+          setScale: [
+            (u, scaleKey) => {
+              if (scaleKey === "x" && !suppressScaleHook) {
+                const nextWindow = {
+                  min: u.scales.x.min,
+                  max: u.scales.x.max,
+                };
+                const defaultMin = Date.now() - plotWindowMs;
+                const defaultMax = Date.now();
+                const nearDefaultMin = Math.abs(nextWindow.min - defaultMin) < 250;
+                const nearDefaultMax = Math.abs(nextWindow.max - defaultMax) < 250;
+                if (nearDefaultMin && nearDefaultMax) {
+                  manualZoomActive = false;
+                  sharedXWindow = null;
+                  return;
+                }
+                manualZoomActive = true;
+                sharedXWindow = nextWindow;
+                charts.forEach((record) => {
+                  if (record.key === chartKey) {
+                    return;
+                  }
+                  suppressScaleHook = true;
+                  record.chart.setScale("x", sharedXWindow);
+                  suppressScaleHook = false;
+                });
+              }
+            },
+          ],
+        },
+        series,
       };
     }
 
-    function gridLines() {
-      return [1, 2, 3].map((index) => {
-        const y = 16 + ((170 - 32) * index) / 4;
-        return `<line x1="18" y1="${y}" x2="782" y2="${y}" stroke="rgba(39, 76, 119, 0.14)" stroke-width="1" />`;
-      }).join("");
+    function chartConfigs(entries) {
+      normalizeChartGroups();
+      return chartGroups.map((group) => {
+        const groupEntries = group.signalIds
+          .map((signalId) => manifestById.get(signalId))
+          .filter(Boolean);
+        const title = groupEntries.length === 1
+          ? `${groupEntries[0].bus} / ${groupEntries[0].message_name} / ${groupEntries[0].signal_name}`
+          : "Multiple Signals";
+        const meta = groupEntries.length === 1
+          ? `${groupEntries[0].bus} / ${groupEntries[0].message_name}`
+          : `Chart ${chartNumberForGroup(group.id)} · ${groupEntries.length} signals`;
+        return {
+          key: group.id,
+          title,
+          meta,
+          entries: groupEntries,
+        };
+      }).filter((config) => config.entries.length);
     }
 
-    function discreteAxisMarks(entry, points, plot) {
-      const byValue = new Map();
-      for (const point of points) {
-        if (!Number.isFinite(point.v)) {
-          continue;
-        }
-        const key = String(point.v);
-        if (!byValue.has(key)) {
-          byValue.set(key, { value: point.v, label: labelForPoint(entry, point) });
-        }
-      }
-      const marks = Array.from(byValue.values()).sort((a, b) => b.value - a.value);
-      if (!marks.length) {
-        return "";
-      }
-      const height = 170;
-      const padY = 8;
-      return marks.map((mark) => {
-        const ratio = (mark.value - plot.minY) / Math.max(1e-9, plot.maxY - plot.minY);
-        const y = height - padY - (ratio * (height - padY * 2));
-        return `
-          <div class="plot-mark" style="top:${y.toFixed(2)}px">
-            <strong>${escapeHtml(mark.label)}</strong>
-            <span>${escapeHtml(numericLabel(mark.value, entry))}</span>
-          </div>
-        `;
-      }).join("");
-    }
-
-    function renderPlots() {
-      const selectedEntries = Array.from(selectedIds)
+    function renderChart() {
+      const entries = Array.from(selectedIds)
         .map((id) => manifestById.get(id))
         .filter(Boolean);
-      if (!selectedEntries.length) {
-        plotList.innerHTML = `<div class="plot-empty">Select signals to begin plotting.</div>`;
+
+      renderLegend(entries);
+      destroyCharts();
+      chartWrap.replaceChildren();
+
+      if (!entries.length) {
+        chartWrap.hidden = true;
+        resetZoomButton.disabled = true;
         return;
       }
-      plotList.innerHTML = selectedEntries.map((entry) => {
-        const points = trimHistory(entry.id);
-        const latest = points[points.length - 1];
-        const color = colorFor(entry.id);
-        const plot = pathForPoints(points, entry.kind);
-        const elapsedSecs = Math.max(1, Math.round(plotWindowMs / 1000));
-        const unit = displayUnit(entry.unit);
-        const minLabel = numericLabel(plot.minY, entry);
-        const maxLabel = numericLabel(plot.maxY, entry);
-        const latestLabel = displayValue(entry, latest);
-        const leftRail = (entry.kind === "enum" || entry.kind === "boolean")
-          ? `<div class="plot-rail labels">${discreteAxisMarks(entry, points, plot)}</div>`
-          : `
-              <div class="plot-rail">
-                <div><strong>${escapeHtml(maxLabel)}</strong></div>
-                <div>${entry.kind === "boolean" ? "high" : "min/max"}</div>
-                <div><strong>${escapeHtml(minLabel)}</strong></div>
-              </div>
-            `;
-        return `
-          <section class="card plot-card">
-            <div class="plot-header">
-              <div>
-                <div class="plot-name"><span class="swatch" style="background:${color}"></span> ${escapeHtml(entry.signal_name)}</div>
-                <div class="plot-meta">
-                  bus=<code>${escapeHtml(entry.bus)}</code> ·
-                  message=<code>${escapeHtml(entry.message_name)}</code> ·
-                  signal=<code>${escapeHtml(entry.signal_name)}</code>
-                </div>
-              </div>
-              <div class="plot-meta">${escapeHtml(displayValue(entry, latest))}${unit && entry.kind !== "enum" ? ` ${escapeHtml(unit)}` : ""}</div>
+
+      const configs = chartConfigs(entries);
+
+      let renderedCount = 0;
+      for (const config of configs) {
+        const data = buildChartData(config.entries);
+        if (!data) {
+          continue;
+        }
+        const panel = document.createElement("section");
+        panel.className = "signal-chart-panel";
+        panel.dataset.chartGroup = config.key;
+        panel.innerHTML = `
+          <div class="plot-header">
+            <div>
+              <div class="plot-name">${escapeHtml(config.title)}</div>
+              <div class="plot-meta">${escapeHtml(config.meta)} · Drop another selected signal into this chart to combine it.</div>
             </div>
-            ${!plot.path ? `
-              <div class="plot-frame">
-                ${leftRail}
-                <div class="plot-empty">Waiting for enough samples in the current window.</div>
-                <div class="plot-rail end">
-                  <div><strong>${escapeHtml(latestLabel)}</strong></div>
-                  <div>latest</div>
-                  <div><strong>-${elapsedSecs}s to now</strong></div>
-                </div>
-              </div>
-            ` : `
-              <div class="plot-frame">
-                ${leftRail}
-                <svg class="plot-svg" viewBox="0 0 800 170" preserveAspectRatio="none" aria-label="${escapeHtml(entry.id)} plot">
-                  ${gridLines()}
-                  <path d="${plot.path}" fill="none" stroke="${color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
-                </svg>
-                <div class="plot-rail end">
-                  <div><strong>${escapeHtml(latestLabel)}</strong></div>
-                  <div>latest</div>
-                  <div><strong>-${elapsedSecs}s to now</strong></div>
-                </div>
-              </div>
-            `}
-          </section>
+          </div>
+          ${renderChartValueStrip(config.entries)}
         `;
-      }).join("");
+        const container = document.createElement("div");
+        container.dataset.chartKey = config.key;
+        panel.appendChild(container);
+        chartWrap.appendChild(panel);
+        panel.querySelectorAll("[data-chart-value-id]").forEach((node) => {
+          chartValueNodes.set(node.dataset.chartValueId, node);
+        });
+        const chart = new uPlot(chartOptions(config.entries, config.key, config.title), data, container);
+        charts.push({
+          key: config.key,
+          chart,
+          entries: config.entries,
+          signalIds: config.entries.map((entry) => entry.id),
+        });
+        renderedCount += 1;
+      }
+
+      if (!renderedCount) {
+        chartWrap.hidden = true;
+        resetZoomButton.disabled = true;
+        return;
+      }
+
+      chartWrap.hidden = false;
+      resetZoomButton.disabled = false;
+      syncChartWindows(Boolean(sharedXWindow));
+    }
+
+    function updateChartsInPlace() {
+      if (!selectedIds.size) {
+        if (charts.length) {
+          renderChart();
+        }
+        dirtySignalIds.clear();
+        updateScheduled = false;
+        return;
+      }
+
+      const dirtyIds = new Set(dirtySignalIds);
+      let needsFullRender = false;
+      for (const record of charts) {
+        const isDirty = record.signalIds.some((signalId) => dirtyIds.has(signalId));
+        if (!isDirty) {
+          continue;
+        }
+        const data = buildChartData(record.entries);
+        if (!data) {
+          needsFullRender = true;
+          break;
+        }
+        record.chart.setData(data);
+      }
+
+      if (needsFullRender) {
+        renderChart();
+      } else {
+        updateDirtyLegendValues();
+        updateChartValueNodes(Array.from(dirtyIds).map((signalId) => manifestById.get(signalId)).filter(Boolean));
+        chartWrap.hidden = false;
+        resetZoomButton.disabled = false;
+        syncChartWindows(false);
+      }
+
+      dirtySignalIds.clear();
+      updateScheduled = false;
+    }
+
+    function scheduleChartUpdate() {
+      if (updateScheduled) {
+        return;
+      }
+      updateScheduled = true;
+      requestAnimationFrame(() => {
+        updateChartsInPlace();
+      });
+    }
+
+    function rebuildCharts() {
+      refreshSelectionState();
+      normalizeChartGroups();
+      chartValueNodes = new Map();
+      renderChart();
+      dirtySignalIds.clear();
+    }
+
+    function ensureSignalCacheBridge() {
+      if (!window.dashboardSignalCache || !window.dashboardSignalCache.isAvailable()) {
+        return false;
+      }
+      if (!signalCacheUnsubscribe) {
+        signalCacheUnsubscribe = window.dashboardSignalCache.subscribe((message) => {
+          if (message.type === "signal-batch") {
+            applySampleBatch(message.payload || { events: [] });
+          }
+        });
+      }
+      return true;
+    }
+
+    async function hydrateFromSignalCache() {
+      if (!ensureSignalCacheBridge() || !selectedIds.size) {
+        return;
+      }
+      try {
+        const snapshot = await window.dashboardSignalCache.getSnapshot(Array.from(selectedIds));
+        for (const signalId of selectedIds) {
+          histories.set(signalId, []);
+        }
+        for (const entry of snapshot.signals || []) {
+          if (!selectedIds.has(entry.signalId)) {
+            continue;
+          }
+          histories.set(entry.signalId, (entry.points || []).map((point) => ({
+            t: point.t,
+            v: point.v,
+            label: point.label,
+          })));
+          dirtySignalIds.add(entry.signalId);
+        }
+      } catch (error) {
+        console.error("failed to hydrate signal cache", error);
+      }
     }
 
     function connectSignalSource() {
@@ -397,10 +996,13 @@
         signalSource.close();
         signalSource = null;
       }
-      if (!selectedIds.size) {
+      if (ensureSignalCacheBridge()) {
+        window.dashboardSignalCache.setSubscription(Array.from(selectedIds), streamPaused);
         return;
       }
-
+      if (!selectedIds.size || streamPaused) {
+        return;
+      }
       const signals = Array.from(selectedIds).sort().join(",");
       signalSource = new EventSource(`/signal-events?signals=${encodeURIComponent(signals)}`);
       signalSource.addEventListener("signal-sample", (event) => {
@@ -413,21 +1015,84 @@
 
     function onSelectionChange(event) {
       const checkbox = event.target.closest("input[data-signal-id]");
-      if (!checkbox) {
-        return;
-      }
+      if (!checkbox) return;
       const signalId = checkbox.dataset.signalId;
       if (checkbox.checked) {
         selectedIds.add(signalId);
         histories.set(signalId, []);
+        signalOrder.push(signalId);
+        chartGroups.push(makeGroup([signalId]));
       } else {
         selectedIds.delete(signalId);
         histories.delete(signalId);
+        const sourceGroup = groupForSignal(signalId);
+        if (sourceGroup) {
+          sourceGroup.signalIds = sourceGroup.signalIds.filter((candidate) => candidate !== signalId);
+        }
       }
+      sharedXWindow = null;
+      manualZoomActive = false;
       persistViewState();
       renderSignalGroups();
-      renderPlots();
+      rebuildCharts();
       connectSignalSource();
+    }
+
+    function moveSignalToOwnChart(signalId) {
+      const sourceGroup = groupForSignal(signalId);
+      if (!sourceGroup || sourceGroup.signalIds.length === 1) {
+        return;
+      }
+      sourceGroup.signalIds = sourceGroup.signalIds.filter((candidate) => candidate !== signalId);
+      chartGroups.push(makeGroup([signalId]));
+      sharedXWindow = null;
+      manualZoomActive = false;
+      persistViewState();
+      rebuildCharts();
+    }
+
+    function moveSignalToGroup(signalId, targetGroupId) {
+      const sourceGroup = groupForSignal(signalId);
+      const targetGroup = chartGroups.find((group) => group.id === targetGroupId);
+      if (!sourceGroup || !targetGroup || sourceGroup.id === targetGroup.id) {
+        return;
+      }
+      sourceGroup.signalIds = sourceGroup.signalIds.filter((candidate) => candidate !== signalId);
+      if (!targetGroup.signalIds.includes(signalId)) {
+        targetGroup.signalIds.push(signalId);
+      }
+      sharedXWindow = null;
+      manualZoomActive = false;
+      persistViewState();
+      rebuildCharts();
+    }
+
+    function removeSignalFromView(signalId) {
+      if (!selectedIds.has(signalId)) {
+        return;
+      }
+      const sourceGroup = groupForSignal(signalId);
+      selectedIds.delete(signalId);
+      histories.delete(signalId);
+      signalGroupById.delete(signalId);
+      if (sourceGroup) {
+        sourceGroup.signalIds = sourceGroup.signalIds.filter((candidate) => candidate !== signalId);
+      }
+      const checkbox = groupsContainer.querySelector(`input[data-signal-id="${CSS.escape(signalId)}"]`);
+      if (checkbox) {
+        checkbox.checked = false;
+      }
+      sharedXWindow = null;
+      manualZoomActive = false;
+      persistViewState();
+      renderSignalGroups();
+      rebuildCharts();
+      connectSignalSource();
+    }
+
+    function clearDropTargets() {
+      chartWrap.querySelectorAll(".is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+      newChartDrop.classList.remove("is-drop-target");
     }
 
     function applySampleBatch(payload) {
@@ -438,14 +1103,19 @@
             continue;
           }
           const points = histories.get(sample.signal_id) || [];
-          points.push({ t: event.timestamp_ms, v: sample.value, label: sample.label });
+          points.push({
+            t: event.timestamp_ms,
+            v: sample.value,
+            label: sample.label,
+          });
           histories.set(sample.signal_id, points);
           trimHistory(sample.signal_id);
+          dirtySignalIds.add(sample.signal_id);
           changed = true;
         }
       }
       if (changed) {
-        renderPlots();
+        scheduleChartUpdate();
       }
     }
 
@@ -466,8 +1136,10 @@
         manifestById.set(signal.id, signal);
       }
       restoreViewState();
+      await hydrateFromSignalCache();
+      applyPaneState();
       renderSignalGroups();
-      renderPlots();
+      rebuildCharts();
       connectSignalSource();
     }
 
@@ -475,8 +1147,114 @@
     searchInput.addEventListener("input", renderSignalGroups);
     timeWindowSelect.addEventListener("change", () => {
       plotWindowMs = Number(timeWindowSelect.value);
+      sharedXWindow = null;
+      manualZoomActive = false;
       persistViewState();
-      renderPlots();
+      rebuildCharts();
+    });
+    pauseStreamCheckbox.addEventListener("change", () => {
+      streamPaused = pauseStreamCheckbox.checked;
+      persistViewState();
+      connectSignalSource();
+    });
+    signalsPane.addEventListener("toggle", () => {
+      signalsPaneOpen = signalsPane.open;
+      persistViewState();
+    });
+    graphsPane.addEventListener("toggle", () => {
+      graphsPaneOpen = graphsPane.open;
+      if (graphsPaneOpen && charts.length) {
+        requestAnimationFrame(() => {
+          renderChart();
+        });
+      }
+      persistViewState();
+    });
+    legendContainer.addEventListener("dragstart", (event) => {
+      const row = event.target.closest("[data-legend-id]");
+      if (!row) {
+        return;
+      }
+      draggedSignalId = row.dataset.legendId;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", draggedSignalId);
+      }
+    });
+    legendContainer.addEventListener("dragend", () => {
+      draggedSignalId = null;
+      clearDropTargets();
+    });
+    legendContainer.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-remove-signal]");
+      if (!button) {
+        return;
+      }
+      removeSignalFromView(button.dataset.removeSignal);
+    });
+    chartWrap.addEventListener("dragover", (event) => {
+      const panel = event.target.closest("[data-chart-group]");
+      if (!panel || !draggedSignalId) {
+        return;
+      }
+      event.preventDefault();
+      clearDropTargets();
+      panel.classList.add("is-drop-target");
+      const chartPanel = panel.closest(".signal-chart-panel");
+      if (chartPanel) {
+        chartPanel.classList.add("is-drop-target");
+      }
+    });
+    chartWrap.addEventListener("drop", (event) => {
+      const panel = event.target.closest("[data-chart-group]");
+      if (!panel || !draggedSignalId) {
+        return;
+      }
+      event.preventDefault();
+      moveSignalToGroup(draggedSignalId, panel.dataset.chartGroup);
+      draggedSignalId = null;
+      clearDropTargets();
+    });
+    chartWrap.addEventListener("dragleave", (event) => {
+      const panel = event.target.closest("[data-chart-group]");
+      if (!panel) {
+        return;
+      }
+      panel.classList.remove("is-drop-target");
+      const chartPanel = panel.closest(".signal-chart-panel");
+      if (chartPanel) {
+        chartPanel.classList.remove("is-drop-target");
+      }
+    });
+    newChartDrop.addEventListener("dragover", (event) => {
+      if (!draggedSignalId) {
+        return;
+      }
+      event.preventDefault();
+      clearDropTargets();
+      newChartDrop.classList.add("is-drop-target");
+    });
+    newChartDrop.addEventListener("dragleave", () => {
+      newChartDrop.classList.remove("is-drop-target");
+    });
+    newChartDrop.addEventListener("drop", (event) => {
+      if (!draggedSignalId) {
+        return;
+      }
+      event.preventDefault();
+      moveSignalToOwnChart(draggedSignalId);
+      draggedSignalId = null;
+      clearDropTargets();
+    });
+    resetZoomButton.addEventListener("click", () => {
+      sharedXWindow = null;
+      manualZoomActive = false;
+      syncChartWindows(true);
+    });
+    window.addEventListener("resize", () => {
+      if (charts.length) {
+        renderChart();
+      }
     });
 
     loadManifest();
