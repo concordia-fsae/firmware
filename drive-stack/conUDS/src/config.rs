@@ -66,7 +66,10 @@ fn merge_routines(nodes: &mut HashMap<String, Node>, routine_manifest: &str) -> 
     let file = match File::open(routine_manifest) {
         Ok(file) => file,
         Err(_) => {
-            warn!("Routine manifest `{}` not found; no routines loaded", routine_manifest);
+            warn!(
+                "Routine manifest `{}` not found; no routines loaded",
+                routine_manifest
+            );
             return Ok(());
         }
     };
@@ -82,10 +85,7 @@ fn merge_routines(nodes: &mut HashMap<String, Node>, routine_manifest: &str) -> 
         if let Some(node) = nodes.get_mut(&node_name) {
             node.routines = routine_node.routines;
         } else {
-            warn!(
-                "Routine manifest references unknown node '{}'",
-                node_name
-            );
+            warn!("Routine manifest references unknown node '{}'", node_name);
         }
     }
 
