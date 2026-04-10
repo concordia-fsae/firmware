@@ -201,6 +201,12 @@ for node in nodes:
                 method_name = sanitize_ident(method_source)
                 signal_struct_ident = f"{msg_ident}_{sanitize_ident(sig_display).upper()}_SIGNAL"
                 signal_static_ident = f"{signal_struct_ident}_INSTANCE"
+                if enum_type:
+                    signal_kind = "SignalKind::Enum"
+                elif field_type == "bool":
+                    signal_kind = "SignalKind::Boolean"
+                else:
+                    signal_kind = "SignalKind::Numeric"
 
                 signal_entries.append(
                     {
@@ -214,6 +220,7 @@ for node in nodes:
                         "enum_type": enum_type,
                         "value_getter_name": value_getter_name,
                         "field_type": field_type,
+                        "kind": signal_kind,
                     }
                 )
 
@@ -242,10 +249,13 @@ use crate::SignalMeasurement;
 use crate::yamcan::{
     CanData,
     DecodedCanMessage,
+    MessageDescriptor,
     MessageMetadata,
     NetworkBus,
     ReceivedCanMessage,
     SignalAccessor,
+    SignalDescriptor,
+    SignalKind,
 };
 
 unsafe extern "C" {
@@ -474,6 +484,45 @@ impl From<ReceivedCanMessage<Bus>> for ${message["struct_ident"]} {
 }
   %endfor
 %endfor
+
+pub fn message_descriptors() -> &'static [MessageDescriptor<Bus>] {
+    YAMCAN_MESSAGES
+}
+
+pub fn signal_descriptors() -> &'static [SignalDescriptor<Bus>] {
+    YAMCAN_SIGNALS
+}
+
+static YAMCAN_MESSAGES: &[MessageDescriptor<Bus>] = &[
+%for bus in bus_order:
+  %for message in bus_messages[bus]:
+    MessageDescriptor {
+        bus: Bus::${rust_pascal(bus)},
+        name: "${message["name"]}",
+        id: ${message["id"]}u32,
+        len: ${message["len"]}u8,
+    },
+  %endfor
+%endfor
+];
+
+static YAMCAN_SIGNALS: &[SignalDescriptor<Bus>] = &[
+%for bus in bus_order:
+  %for message in bus_messages[bus]:
+    %for signal in message["signals"]:
+    SignalDescriptor {
+        bus: Bus::${rust_pascal(bus)},
+        message_name: "${message["name"]}",
+        message_id: ${message["id"]}u32,
+        signal_name: "${signal["name"]}",
+        fqid: "${bus}/${message["name"]}/${signal["name"]}",
+        unit: ${'None' if signal["unit"] == '' else 'Some("' + signal["unit"] + '")'},
+        kind: ${signal["kind"]},
+    },
+    %endfor
+  %endfor
+%endfor
+];
 
 #[derive(Clone, Debug)]
 pub enum AnyMessage {

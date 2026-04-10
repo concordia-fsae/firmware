@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
-use minijinja::{Environment, context};
+use minijinja::{context, Environment};
 use serde::Serialize;
 
 use crate::{
@@ -94,6 +94,17 @@ pub fn render_home(snapshot: &DashboardSnapshot, initial_state_json: String) -> 
             initial_state_json => initial_state_json,
         })
         .context("rendering home.html template")
+}
+
+pub fn render_signals(initial_manifest_json: &str) -> Result<String> {
+    environment()?
+        .get_template("signals.html")
+        .context("loading signals.html template")?
+        .render(context! {
+            page_title => "Signal Explorer",
+            initial_manifest_json => initial_manifest_json,
+        })
+        .context("rendering signals.html template")
 }
 
 pub fn render_controller(
@@ -276,6 +287,12 @@ fn environment() -> Result<&'static Environment<'static>> {
         if let Err(error) = env
             .add_template("home.html", include_str!("../templates/home.html"))
             .context("adding home.html template")
+        {
+            return Err(error.to_string());
+        }
+        if let Err(error) = env
+            .add_template("signals.html", include_str!("../templates/signals.html"))
+            .context("adding signals.html template")
         {
             return Err(error.to_string());
         }
