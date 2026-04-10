@@ -53,6 +53,7 @@
     const selectedIds = new Set();
     const histories = new Map();
     const palette = ["#274c77", "#a63d40", "#1f7a46", "#c97b2a", "#6c5b7b", "#177e89", "#8c5e34", "#7a1f5c"];
+    const storageKey = "dashboard.signal-view";
     let plotWindowMs = Number(timeWindowSelect.value);
     let signalSource = null;
     let manifestSignals = [];
@@ -101,6 +102,40 @@
         return "";
       }
       return sample.label || "";
+    }
+
+    function persistViewState() {
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify({
+          selectedIds: Array.from(selectedIds),
+          plotWindowMs,
+        }));
+      } catch (error) {
+        console.error("failed to persist signal view state", error);
+      }
+    }
+
+    function restoreViewState() {
+      try {
+        const raw = sessionStorage.getItem(storageKey);
+        if (!raw) {
+          return;
+        }
+        const state = JSON.parse(raw);
+        const restoredWindow = Number(state.plotWindowMs);
+        if (Number.isFinite(restoredWindow) && restoredWindow > 0) {
+          plotWindowMs = restoredWindow;
+          timeWindowSelect.value = String(restoredWindow);
+        }
+        for (const signalId of state.selectedIds || []) {
+          if (manifestById.has(signalId)) {
+            selectedIds.add(signalId);
+            histories.set(signalId, []);
+          }
+        }
+      } catch (error) {
+        console.error("failed to restore signal view state", error);
+      }
     }
 
     function displayValue(entry, sample) {
@@ -389,6 +424,7 @@
         selectedIds.delete(signalId);
         histories.delete(signalId);
       }
+      persistViewState();
       renderSignalGroups();
       renderPlots();
       connectSignalSource();
@@ -429,14 +465,17 @@
       for (const signal of manifestSignals) {
         manifestById.set(signal.id, signal);
       }
+      restoreViewState();
       renderSignalGroups();
       renderPlots();
+      connectSignalSource();
     }
 
     groupsContainer.addEventListener("change", onSelectionChange);
     searchInput.addEventListener("input", renderSignalGroups);
     timeWindowSelect.addEventListener("change", () => {
       plotWindowMs = Number(timeWindowSelect.value);
+      persistViewState();
       renderPlots();
     });
 
