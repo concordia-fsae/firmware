@@ -1,1 +1,10 @@
+cargo_env = ["CARGO_PKG_NAME"]
 buildscript.run = true
+
+['cfg(all(target_os = "linux", target_arch = "x86_64"))'.buildscript.run.env]
+CARGO_CFG_TARGET_ARCH = "x86_64"
+CARGO_CFG_TARGET_OS = "linux"
+
+['cfg(all(target_os = "linux", target_arch = "aarch64"))'.buildscript.run.env]
+CARGO_CFG_TARGET_ARCH = "aarch64"
+CARGO_CFG_TARGET_OS = "linux"
