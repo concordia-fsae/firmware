@@ -38,3 +38,6 @@ CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void);
 CAN_pm100dxEnableState_E      mcManager_getEnableCommand(void);
 float32_t                     mcManager_getTorqueLimit(void);
 bool                          mcManager_clearEepromCommand(void);
+bool                          mcManager_startResolverCalibration(void);
+bool                          mcManager_isResolverCalibrating(void);
+bool                          mcManager_requestContactorsOpen(void);
