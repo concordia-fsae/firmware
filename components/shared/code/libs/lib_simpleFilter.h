@@ -31,6 +31,13 @@ typedef struct
 
 typedef struct
 {
+    float32_t raw;
+    float32_t value;
+    uint16_t  count;
+} lib_simpleFilter_cumAvgF_S;
+
+typedef struct
+{
     float32_t smoothing_factor;
 
     float32_t y;
@@ -44,6 +51,10 @@ typedef struct
 void      lib_simpleFilter_cumAvg_clear(lib_simpleFilter_cumAvg_S* filter);
 void      lib_simpleFilter_cumAvg_increment(lib_simpleFilter_cumAvg_S* filter, uint32_t sum);
 float32_t lib_simpleFilter_cumAvg_average(lib_simpleFilter_cumAvg_S* filter);
+
+void      lib_simpleFilter_cumAvgF_clear(lib_simpleFilter_cumAvgF_S* filter);
+void      lib_simpleFilter_cumAvgF_increment(lib_simpleFilter_cumAvgF_S* filter, float32_t sum);
+float32_t lib_simpleFilter_cumAvgF_average(lib_simpleFilter_cumAvgF_S* filter);
 
 void      lib_simpleFilter_lpf_calcSmoothingFactor(lib_simpleFilter_lpf_S* filter, float32_t cutoffFreq, float32_t dt);
 float32_t lib_simpleFilter_lpf_step(lib_simpleFilter_lpf_S* filter, float32_t x_n);
