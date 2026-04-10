@@ -23,6 +23,9 @@ messages:
     sourceBuses: veh
     signals:
       requestContactorsOpen:
+      mcCalibrationAttempts:
+      mcCalibrationConfiguredAngle:
+      mcCalibrationDeltaFilteredMeasured:
 
   udsResponse:
     description: UDS response message from the VCREAR

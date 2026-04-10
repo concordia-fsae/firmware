@@ -156,3 +156,33 @@ signals:
   requestContactorsOpen:
     description: Request open contactor state from the battery
     discreteValues: digitalStatus
+
+  mcCalibrationAttempts:
+    description: Resolver calibration write attempts made by the motor controller manager
+    template: count8Bit
+
+  mcCalibrationConfiguredAngle:
+    description: Resolver calibration configured gamma adjust angle
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  mcCalibrationDeltaFilteredMeasured:
+    description: Resolver calibration filtered measured delta
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true
