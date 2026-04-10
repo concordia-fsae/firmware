@@ -171,6 +171,12 @@ alias(
     visibility = ["PUBLIC"],
 )
 
+alias(
+    name = "promote-carputer",
+    actual = ":promote-carputer-cfr26",
+    visibility = ["PUBLIC"],
+)
+
 ota_agent_status(
     name = "status",
     visibility = ["PUBLIC"],

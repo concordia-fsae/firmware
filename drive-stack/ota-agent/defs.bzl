@@ -62,6 +62,28 @@ ota_agent_bootstrap = rule(
     },
 )
 
+def _ota_agent_promote(ctx: AnalysisContext):
+    tool = ctx.attrs.tool[RunInfo]
+    asset = ctx.attrs.src[DeployableFirmwareAsset]
+
+    argv = cmd_args(tool)
+    argv.add("client")
+    argv.add("promote")
+    argv.add(["-n", "{}".format(asset.node)])
+    if ctx.attrs.platform != None:
+        argv.add(["-p", ctx.attrs.platform])
+
+    return [RunInfo(args = argv), DefaultInfo()]
+
+ota_agent_promote = rule(
+    impl = _ota_agent_promote,
+    attrs = {
+        "platform": attrs.option(attrs.string(), default = None),
+        "src": attrs.dep(providers = [DeployableFirmwareAsset]),
+        "tool": attrs.exec_dep(default = "//drive-stack/ota-agent:ota-agent"),
+    },
+)
+
 def _ota_agent_batch(ctx: AnalysisContext):
     tool = ctx.attrs.tool[RunInfo]
 
