@@ -5009,7 +5009,49 @@ cargo.rust_library(
         "default",
         "fallback",
     ],
+    rustc_flags = ["@$(location :portable-atomic-1.13.1-build-script-run[rustc_flags])"],
     visibility = [],
+)
+
+cargo.rust_binary(
+    name = "portable-atomic-1.13.1-build-script-build",
+    srcs = [":portable-atomic-1.13.1.crate"],
+    crate = "build_script_build",
+    crate_root = "portable-atomic-1.13.1.crate/build.rs",
+    edition = "2018",
+    env = {
+        "CARGO_PKG_NAME": "portable-atomic",
+    },
+    features = [
+        "default",
+        "fallback",
+    ],
+    visibility = [],
+)
+
+buildscript_run(
+    name = "portable-atomic-1.13.1-build-script-run",
+    package_name = "portable-atomic",
+    buildscript_rule = ":portable-atomic-1.13.1-build-script-build",
+    platform = {
+        "linux-arm64": {
+            "env": {
+                "CARGO_CFG_TARGET_ARCH": "aarch64",
+                "CARGO_CFG_TARGET_OS": "linux",
+            },
+        },
+        "linux-x86_64": {
+            "env": {
+                "CARGO_CFG_TARGET_ARCH": "x86_64",
+                "CARGO_CFG_TARGET_OS": "linux",
+            },
+        },
+    },
+    features = [
+        "default",
+        "fallback",
+    ],
+    version = "1.13.1",
 )
 
 http_archive(
@@ -5998,6 +6040,9 @@ buildscript_run(
     name = "serde-1.0.228-build-script-run",
     package_name = "serde",
     buildscript_rule = ":serde-1.0.228-build-script-build",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
+    },
     features = [
         "alloc",
         "default",
@@ -6022,6 +6067,25 @@ cargo.rust_library(
     crate = "serde_core",
     crate_root = "serde_core-1.0.228.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "OUT_DIR": "$(location :serde_core-1.0.228-build-script-run[out_dir])",
+    },
+    features = [
+        "alloc",
+        "default",
+        "result",
+        "std",
+    ],
+    rustc_flags = ["@$(location :serde_core-1.0.228-build-script-run[rustc_flags])"],
+    visibility = [],
+)
+
+cargo.rust_binary(
+    name = "serde_core-1.0.228-build-script-build",
+    srcs = [":serde_core-1.0.228.crate"],
+    crate = "build_script_build",
+    crate_root = "serde_core-1.0.228.crate/build.rs",
+    edition = "2021",
     features = [
         "alloc",
         "default",
@@ -6029,6 +6093,22 @@ cargo.rust_library(
         "std",
     ],
     visibility = [],
+)
+
+buildscript_run(
+    name = "serde_core-1.0.228-build-script-run",
+    package_name = "serde_core",
+    buildscript_rule = ":serde_core-1.0.228-build-script-build",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
+    },
+    features = [
+        "alloc",
+        "default",
+        "result",
+        "std",
+    ],
+    version = "1.0.228",
 )
 
 alias(
@@ -6051,6 +6131,9 @@ cargo.rust_library(
     crate = "serde_derive",
     crate_root = "serde_derive-1.0.228.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "228",
+    },
     features = ["default"],
     proc_macro = True,
     visibility = [],
@@ -7336,6 +7419,9 @@ buildscript_run(
     name = "thiserror-2.0.18-build-script-run",
     package_name = "thiserror",
     buildscript_rule = ":thiserror-2.0.18-build-script-build",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "18",
+    },
     features = [
         "default",
         "std",
@@ -7380,6 +7466,9 @@ cargo.rust_library(
     crate = "thiserror_impl",
     crate_root = "thiserror-impl-2.0.18.crate/src/lib.rs",
     edition = "2021",
+    env = {
+        "CARGO_PKG_VERSION_PATCH": "18",
+    },
     proc_macro = True,
     visibility = [],
     deps = [
