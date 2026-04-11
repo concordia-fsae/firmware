@@ -16,7 +16,7 @@ use clap::Parser;
 use conUDS::config::Config as UdsConfig;
 use conUDS::modules::uds::{
     CurrentDiagnosticSession, DiagnosticSessionKind, DiagnosticSessionResponse,
-    RoutineStartResponse, UdsSession,
+    RoutineStartResponse, UdsWorkerHandle,
 };
 use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
@@ -314,6 +314,7 @@ struct CurrentSessionResponse {
 struct AppState {
     store: Arc<RwLock<DashboardStore>>,
     capabilities: Arc<BTreeMap<String, ControllerCapability>>,
+    uds_workers: Arc<BTreeMap<String, UdsWorkerHandle>>,
     signal_manifest: Arc<SignalManifestResponse>,
     veh_iface: Arc<String>,
     body_iface: Arc<Option<String>>,
@@ -473,7 +474,9 @@ impl JobStore {
             job.payload_text = payload_text;
             job.payload_hex = payload_hex;
             job.finished_at_ms = Some(now_ms());
-            self.active_by_controller.remove(&job.controller);
+            if self.active_by_controller.get(&job.controller) == Some(&job.id) {
+                self.active_by_controller.remove(&job.controller);
+            }
         }
     }
 
@@ -490,7 +493,9 @@ impl JobStore {
             job.payload_text = payload_text;
             job.payload_hex = payload_hex;
             job.finished_at_ms = Some(now_ms());
-            self.active_by_controller.remove(&job.controller);
+            if self.active_by_controller.get(&job.controller) == Some(&job.id) {
+                self.active_by_controller.remove(&job.controller);
+            }
         }
     }
 
@@ -573,6 +578,22 @@ pub async fn run(opts: Opts) -> Result<()> {
     )?);
     let signal_manifest = Arc::new(build_signal_manifest());
     let controller_names = capabilities.keys().cloned().collect::<Vec<_>>();
+    let uds_workers = Arc::new(
+        capabilities
+            .iter()
+            .map(|(name, capability)| {
+                (
+                    name.clone(),
+                    UdsWorkerHandle::new(
+                        capability.uds_iface.clone(),
+                        capability.request_id,
+                        capability.response_id,
+                        false,
+                    ),
+                )
+            })
+            .collect::<BTreeMap<_, _>>(),
+    );
     info!(
         "loaded {} deployable controller(s) from UDS manifest: {}",
         controller_names.len(),
@@ -594,6 +615,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     let state = AppState {
         store,
         capabilities,
+        uds_workers,
         signal_manifest,
         veh_iface: Arc::new(opts.veh_iface.clone()),
         body_iface: Arc::new(opts.body_iface.clone()),
@@ -1003,22 +1025,20 @@ async fn handle_current_session(
     state: AppState,
 ) -> Result<warp::reply::Response, Infallible> {
     let controller_name = controller_name.to_ascii_lowercase();
-    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+    if !state.capabilities.contains_key(&controller_name) {
         return Ok(json_error_response(
             warp::http::StatusCode::NOT_FOUND,
             "unknown controller",
         ));
+    }
+    let Some(worker) = state.uds_workers.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::BAD_GATEWAY,
+            "UDS worker unavailable for controller",
+        ));
     };
 
-    let mut uds = UdsSession::new(
-        &capability.uds_iface,
-        capability.request_id,
-        capability.response_id,
-        false,
-    )
-    .await;
-    let result = uds.read_current_session().await;
-    uds.teardown().await;
+    let result = worker.read_current_session().await;
 
     let session = match result {
         Ok(session) => session,
@@ -1643,6 +1663,12 @@ async fn run_session_job(
     job_id: String,
     session: DiagnosticSessionKind,
 ) {
+    let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        let _ = state.publish_jobs_if_changed().await;
+        return;
+    };
     info!(
         "starting session job '{}' for controller='{}' session='{:?}' on iface='{}'",
         job_id, capability.name, session, capability.uds_iface
@@ -1656,15 +1682,7 @@ async fn run_session_job(
     }
     let _ = state.publish_jobs_if_changed().await;
 
-    let mut uds = UdsSession::new(
-        &capability.uds_iface,
-        capability.request_id,
-        capability.response_id,
-        false,
-    )
-    .await;
-    let result = uds.client.enter_diagnostic_session(session).await;
-    uds.teardown().await;
+    let result = worker.enter_diagnostic_session(session).await;
 
     match result {
         Ok(response) => {
@@ -1690,6 +1708,12 @@ async fn run_routine_job(
     routine: RoutineCapability,
     payload: Option<Vec<u8>>,
 ) {
+    let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        let _ = state.publish_jobs_if_changed().await;
+        return;
+    };
     info!(
         "starting routine job '{}' for controller='{}' routine='{}' on iface='{}'",
         job_id, capability.name, routine.name, capability.uds_iface
@@ -1717,15 +1741,7 @@ async fn run_routine_job(
         }
     };
 
-    let mut uds = UdsSession::new(
-        &capability.uds_iface,
-        capability.request_id,
-        capability.response_id,
-        false,
-    )
-    .await;
-    let result = uds.client.routine_start(routine_id, payload).await;
-    uds.teardown().await;
+    let result = worker.routine_start(routine_id, payload).await;
 
     match result {
         Ok(response) => {
@@ -1751,6 +1767,12 @@ async fn run_reset_job(
     job_id: String,
     reset_type: SupportedResetTypes,
 ) {
+    let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        let _ = state.publish_jobs_if_changed().await;
+        return;
+    };
     let reset_label = reset_key_label(&reset_type).to_string();
     info!(
         "starting reset job '{}' for controller='{}' reset='{}' on iface='{}'",
@@ -1765,15 +1787,7 @@ async fn run_reset_job(
     }
     let _ = state.publish_jobs_if_changed().await;
 
-    let mut uds = UdsSession::new(
-        &capability.uds_iface,
-        capability.request_id,
-        capability.response_id,
-        false,
-    )
-    .await;
-    let result = uds.reset_node(reset_type).await;
-    uds.teardown().await;
+    let result = worker.reset_node(reset_type).await;
 
     match result {
         Ok(()) => {
@@ -1801,6 +1815,13 @@ async fn run_flash_job(
     firmware_path: PathBuf,
     firmware_name: String,
 ) {
+    let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        let _ = state.publish_jobs_if_changed().await;
+        let _ = fs::remove_file(&firmware_path);
+        return;
+    };
     info!(
         "starting flash job '{}' for controller='{}' file='{}' on iface='{}'",
         job_id, capability.name, firmware_name, capability.uds_iface
@@ -1811,41 +1832,41 @@ async fn run_flash_job(
     }
     let _ = state.publish_jobs_if_changed().await;
 
-    let mut uds = UdsSession::new(
-        &capability.uds_iface,
-        capability.request_id,
-        capability.response_id,
-        false,
-    )
-    .await;
-    let result = uds.download_app_to_target(&firmware_path, false).await;
-    uds.teardown().await;
+    let result = worker.download_app_to_target(firmware_path.clone(), false).await;
 
     {
         let mut jobs = state.jobs.write().await;
-        match result.result {
-            FlashStatus::DownloadSuccess => jobs.mark_succeeded(
-                &job_id,
-                format!(
-                    "Flash completed from {firmware_name} in {:.2}s",
-                    result.duration.as_secs_f32()
+        match result {
+            Ok(result) => match result.result {
+                FlashStatus::DownloadSuccess => jobs.mark_succeeded(
+                    &job_id,
+                    format!(
+                        "Flash completed from {firmware_name} in {:.2}s",
+                        result.duration.as_secs_f32()
+                    ),
+                    None,
+                    None,
                 ),
-                None,
-                None,
-            ),
-            FlashStatus::CrcMatch => jobs.mark_succeeded(
-                &job_id,
-                format!("Flash skipped for {firmware_name}: CRC already matches"),
-                None,
-                None,
-            ),
-            FlashStatus::Skipped => jobs.mark_succeeded(
-                &job_id,
-                format!("Flash skipped for {firmware_name}"),
-                None,
-                None,
-            ),
-            FlashStatus::Failed(error) => jobs.mark_failed(
+                FlashStatus::CrcMatch => jobs.mark_succeeded(
+                    &job_id,
+                    format!("Flash skipped for {firmware_name}: CRC already matches"),
+                    None,
+                    None,
+                ),
+                FlashStatus::Skipped => jobs.mark_succeeded(
+                    &job_id,
+                    format!("Flash skipped for {firmware_name}"),
+                    None,
+                    None,
+                ),
+                FlashStatus::Failed(error) => jobs.mark_failed(
+                    &job_id,
+                    format!("Flash failed for {firmware_name}: {error}"),
+                    None,
+                    None,
+                ),
+            },
+            Err(error) => jobs.mark_failed(
                 &job_id,
                 format!("Flash failed for {firmware_name}: {error}"),
                 None,
@@ -1863,6 +1884,14 @@ async fn run_tester_present_job(
     job_id: String,
     stop_rx: oneshot::Receiver<String>,
 ) {
+    let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        let _ = state.publish_jobs_if_changed().await;
+        let mut tester_present = state.tester_present.lock().await;
+        tester_present.remove(&capability.name);
+        return;
+    };
     info!(
         "starting persistent tester present job '{}' for controller='{}' on iface='{}'",
         job_id, capability.name, capability.uds_iface
@@ -1876,15 +1905,7 @@ async fn run_tester_present_job(
     }
     let _ = state.publish_jobs_if_changed().await;
 
-    let mut uds = UdsSession::new(
-        &capability.uds_iface,
-        capability.request_id,
-        capability.response_id,
-        false,
-    )
-    .await;
-
-    match uds.client.start_persistent_tp().await {
+    match worker.start_persistent_tp().await {
         Ok(()) => {
             {
                 let mut jobs = state.jobs.write().await;
@@ -1908,7 +1929,6 @@ async fn run_tester_present_job(
                         );
                     }
                     let _ = state.publish_jobs_if_changed().await;
-                    uds.teardown().await;
                     let mut tester_present = state.tester_present.lock().await;
                     tester_present.remove(&capability.name);
                     return;
@@ -1923,7 +1943,7 @@ async fn run_tester_present_job(
             }
             let _ = state.publish_jobs_if_changed().await;
 
-            if let Err(error) = uds.client.stop_persistent_tp().await {
+            if let Err(error) = worker.stop_persistent_tp().await {
                 {
                     let mut jobs = state.jobs.write().await;
                     jobs.mark_failed(
@@ -1973,9 +1993,9 @@ async fn run_tester_present_job(
         }
     }
 
-    uds.teardown().await;
     let mut tester_present = state.tester_present.lock().await;
     tester_present.remove(&capability.name);
+    let _ = state.publish_jobs_if_changed().await;
 }
 
 fn session_key_label(session: DiagnosticSessionKind) -> &'static str {
