@@ -246,6 +246,11 @@ static inline void handleDIDRead(udsRequestDesc_S *req)
  */
 static udsResult_E udsSrv_handleReceive(udsRequestDesc_S *req)
 {
+    // Any completed UDS request indicates an active tester connection.
+    // Keeping the session alive only on TesterPresent causes long-running
+    // requests to expire back to default mid-transaction.
+    udsSrv.testerPresentTimerMs = 0U;
+
     switch (req->id)
     {
         case UDS_SID_TESTER_PRESENT:
