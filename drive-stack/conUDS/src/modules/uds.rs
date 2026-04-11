@@ -772,6 +772,7 @@ async fn worker_download_app_to_target(
     persistent_tp: &mut Option<PersistentTpTask>,
 ) -> UpdateResult {
     let node_start = Instant::now();
+    let mut node_crc: Option<u32> = None;
 
     if skip {
         let mut file = File::open(binary_path).expect("Binary does not exist!");
@@ -783,14 +784,15 @@ async fn worker_download_app_to_target(
 
         let crc = match get_app_crc(uds).await {
             Err(e) => {
-                let node_dur = node_start.elapsed();
-                return UpdateResult {
-                    bin: binary_path.to_path_buf(),
-                    result: FlashStatus::Failed(format!("{:?}", e)),
-                    duration: node_dur,
-                };
+                info!(
+                    "CRC read failed before download ({e:?}); continuing with download path"
+                );
+                0
             }
-            Ok(crc) => crc,
+            Ok(crc) => {
+                node_crc = Some(crc);
+                crc
+            }
         };
 
         if crc == app_crc {
@@ -806,6 +808,31 @@ async fn worker_download_app_to_target(
                 crc, app_crc
             );
         }
+    } else if let Ok(crc) = get_app_crc(uds).await {
+        node_crc = Some(crc);
+    }
+
+    if node_crc == Some(0xffff_ffff) {
+        info!("ECU appears to already be in bootloader; starting download without reset");
+        let result = match uds.file_download(binary_path, 0x08002000).await {
+            Ok(()) => {
+                let node_dur = node_start.elapsed();
+                UpdateResult {
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::DownloadSuccess,
+                    duration: node_dur,
+                }
+            }
+            Err(e) => {
+                let node_dur = node_start.elapsed();
+                UpdateResult {
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::Failed(format!("Error downloading binary: '{}'", e)),
+                    duration: node_dur,
+                }
+            }
+        };
+        return result;
     }
 
     let restore_persistent_tp_after_download = persistent_tp.is_some();
