@@ -184,13 +184,14 @@ static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake
                                      (gear_change_request == CAN_DIGITALSTATUS_ON);
     const bool gear_change_rising = !gear_change_was_requested && torque_data.gear_change_active;
     const float32_t vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
-    const bool ok_to_change = (accelerator_position < PEDAL_APPLIED_THRESHOLD) &&
-                              (brake_position > PEDAL_APPLIED_THRESHOLD) &&
-                              (vehicleSpeed < VEHICLE_STOPPED_THRESHOLD);
-
     if (gear_change_rising)
     {
 #if FEATURE_IS_ENABLED(FEATURE_REVERSE)
+        const bool resolverCalibrating = app_faultManager_getNetworkedFault_state(VEH, VCREAR_faults, FM_FAULT_VCREAR_MCCALIBRATINGRESOLVER);
+        const bool ok_to_change = (accelerator_position < PEDAL_APPLIED_THRESHOLD) &&
+                                (brake_position > PEDAL_APPLIED_THRESHOLD) &&
+                                (vehicleSpeed < VEHICLE_STOPPED_THRESHOLD) &&
+                                !resolverCalibrating;
         if (ok_to_change)
         {
             ret = true;

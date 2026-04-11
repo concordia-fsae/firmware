@@ -13,6 +13,8 @@ messages:
       miaBms:
       miaVcpdu:
       miaMc:
+      mcCalibratingResolver:
+      mcCalibratingResolverFailed:
 
   request:
     description: VCREAR request states
