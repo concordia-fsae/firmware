@@ -1477,6 +1477,10 @@ fn default_session_options() -> Vec<DiagnosticSessionOption> {
             key: "programming".to_string(),
             label: "Programming".to_string(),
         },
+        DiagnosticSessionOption {
+            key: "safety-system".to_string(),
+            label: "Safety Diagnostic".to_string(),
+        },
     ]
 }
 
@@ -2898,5 +2902,13 @@ mod tests {
 
         let snapshot = store.snapshot(now + Duration::from_secs(1));
         assert!(snapshot.controllers[0].faults.is_empty());
+    }
+
+    #[test]
+    fn default_session_options_include_safety_diagnostic() {
+        let sessions = default_session_options();
+        assert!(sessions.iter().any(|session| {
+            session.key == "safety-system" && session.label == "Safety Diagnostic"
+        }));
     }
 }
