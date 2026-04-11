@@ -51,6 +51,7 @@ static struct
     float32_t accelTripped;
     uint8_t   missedCycles;
     drv_timer_S calibrationTimer;
+    bool requestCrashReset;
 } cs;
 
 static TaskHandle_t crashSensorTaskHandle = NULL;
@@ -183,7 +184,7 @@ void crashSensor_task(void)
 
                 cs.accelMax = vehicleAccel > cs.accelMax ? vehicleAccel : cs.accelMax;
 
-                if (driverResetting && vehicleOk && !imu_isFaulted())
+                if ((driverResetting || cs.requestCrashReset) && vehicleOk && !imu_isFaulted())
                 {
                     cs.sensorState = CRASHSENSOR_OK;
                     crashState_data.crashLatched = false;
@@ -191,6 +192,7 @@ void crashSensor_task(void)
                     lib_nvm_requestWrite(NVM_ENTRYID_CRASH_STATE);
                     cs.accelTripped = 0.0f;
                     cs.accelMax = 0.0f;
+                    cs.requestCrashReset = false;
                 }
             }
         }
@@ -225,4 +227,9 @@ void crashSensor_notifyFromImu(void)
     {
         (void)xTaskNotifyGive(crashSensorTaskHandle);
     }
+}
+
+void crashSensor_requestCrashReset(void)
+{
+    cs.requestCrashReset = true;
 }

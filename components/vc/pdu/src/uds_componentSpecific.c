@@ -28,6 +28,7 @@
 #include "lib_uds.h"
 #include "LIB_app.h"
 #include "Utility.h"
+#include "crashSensor.h"
 
 // system includes
 #include <string.h>
@@ -66,6 +67,35 @@ extern void     isotp_user_debug(const char* message, ...);
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+static void routine_resetCrash(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
+{
+    UNUSED(payloadLengthBytes);
+    UNUSED(payload);
+
+    if (udsSrv_getCurrentSession() != UDS_SESSION_TYPE_SAFETY_DIAG)
+    {
+        uds_sendNegativeResponse(
+            UDS_SID_ROUTINE_CONTROL,
+            UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED_SESSION
+        );
+        return;
+    }
+
+    switch (routineControlType)
+    {
+        case UDS_ROUTINE_CONTROL_START:
+            crashSensor_requestCrashReset();
+            uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
+            break;
+
+        case UDS_ROUTINE_CONTROL_GET_RESULT:
+        case UDS_ROUTINE_CONTROL_STOP:
+        case UDS_ROUTINE_CONTROL_NONE:
+        default:
+            uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
+            break;
+    }
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -175,6 +205,9 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
 
     switch (routineId.u16)
     {
+        case 0x1000:
+            routine_resetCrash(routineControlType, payload + 2U, payloadLengthBytes);
+            break;
         default:
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SERVICE_NOT_SUPPORTED);
             break;
