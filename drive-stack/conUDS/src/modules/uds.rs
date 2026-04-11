@@ -22,7 +22,7 @@ use ecu_diagnostics::dynamic_diag::EcuNRC;
 use ecu_diagnostics::uds::UDSProtocol;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, error, info};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinHandle;
 
 use crate::CRC8;
@@ -287,6 +287,50 @@ pub struct UdsSession {
     interactive_session: bool,
 }
 
+enum UdsWorkerCommand {
+    DidRead {
+        did: u16,
+        resp: oneshot::Sender<Result<Vec<u8>, String>>,
+    },
+    ReadCurrentSession {
+        resp: oneshot::Sender<Result<CurrentDiagnosticSession, String>>,
+    },
+    EnterDiagnosticSession {
+        session: DiagnosticSessionKind,
+        resp: oneshot::Sender<Result<DiagnosticSessionResponse, String>>,
+    },
+    RoutineStart {
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+        resp: oneshot::Sender<Result<RoutineStartResponse, String>>,
+    },
+    ResetNode {
+        reset_type: SupportedResetTypes,
+        resp: oneshot::Sender<Result<(), String>>,
+    },
+    StartPersistentTp {
+        resp: oneshot::Sender<Result<(), String>>,
+    },
+    StopPersistentTp {
+        resp: oneshot::Sender<Result<(), String>>,
+    },
+    DownloadApp {
+        binary_path: PathBuf,
+        skip: bool,
+        resp: oneshot::Sender<Result<UpdateResult, String>>,
+    },
+    FileDownload {
+        binary_path: PathBuf,
+        address: u32,
+        resp: oneshot::Sender<Result<(), String>>,
+    },
+}
+
+#[derive(Clone)]
+pub struct UdsWorkerHandle {
+    tx: mpsc::Sender<UdsWorkerCommand>,
+}
+
 impl UdsSession {
     pub async fn new(
         device: &str,
@@ -354,6 +398,28 @@ impl UdsSession {
 
     pub async fn read_current_session(&mut self) -> Result<CurrentDiagnosticSession> {
         self.client.read_current_session().await
+    }
+
+    pub async fn did_read(&mut self, did: u16) -> Result<Vec<u8>> {
+        self.client.did_read(did).await.map_err(|error| match error {
+            Some(error) => anyhow!("failed to read DID 0x{did:04X}: {error:?}"),
+            None => anyhow!("failed to read DID 0x{did:04X}"),
+        })
+    }
+
+    pub async fn enter_diagnostic_session(
+        &mut self,
+        session: DiagnosticSessionKind,
+    ) -> Result<DiagnosticSessionResponse> {
+        self.client.enter_diagnostic_session(session).await
+    }
+
+    pub async fn routine_start(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineStartResponse> {
+        self.client.routine_start(routine_id, data).await
     }
 
     pub async fn start_persistent_tp(&mut self) -> Result<()> {
@@ -457,6 +523,216 @@ impl UdsSession {
     }
 }
 
+impl UdsWorkerHandle {
+    pub fn new(
+        device: String,
+        request_id: u32,
+        response_id: u32,
+        is_interactive: bool,
+    ) -> Self {
+        let (tx, mut rx) = mpsc::channel(32);
+        tokio::spawn(async move {
+            let mut session: Option<UdsSession> = None;
+
+            while let Some(cmd) = rx.recv().await {
+                if session.is_none() {
+                    session = Some(
+                        UdsSession::new(&device, request_id, response_id, is_interactive).await,
+                    );
+                }
+                let uds = session.as_mut().expect("session initialized");
+
+                match cmd {
+                    UdsWorkerCommand::DidRead { did, resp } => {
+                        let _ = resp.send(uds.did_read(did).await.map_err(|e| e.to_string()));
+                    }
+                    UdsWorkerCommand::ReadCurrentSession { resp } => {
+                        let _ = resp.send(uds.read_current_session().await.map_err(|e| e.to_string()));
+                    }
+                    UdsWorkerCommand::EnterDiagnosticSession { session, resp } => {
+                        let _ = resp.send(
+                            uds.enter_diagnostic_session(session)
+                                .await
+                                .map_err(|e| e.to_string()),
+                        );
+                    }
+                    UdsWorkerCommand::RoutineStart {
+                        routine_id,
+                        data,
+                        resp,
+                    } => {
+                        let _ = resp.send(
+                            uds.routine_start(routine_id, data)
+                                .await
+                                .map_err(|e| e.to_string()),
+                        );
+                    }
+                    UdsWorkerCommand::ResetNode { reset_type, resp } => {
+                        let _ = resp.send(uds.reset_node(reset_type).await.map_err(|e| e.to_string()));
+                    }
+                    UdsWorkerCommand::StartPersistentTp { resp } => {
+                        let _ =
+                            resp.send(uds.start_persistent_tp().await.map_err(|e| e.to_string()));
+                    }
+                    UdsWorkerCommand::StopPersistentTp { resp } => {
+                        let _ =
+                            resp.send(uds.stop_persistent_tp().await.map_err(|e| e.to_string()));
+                    }
+                    UdsWorkerCommand::DownloadApp {
+                        binary_path,
+                        skip,
+                        resp,
+                    } => {
+                        let _ = resp.send(Ok(uds.download_app_to_target(&binary_path, skip).await));
+                    }
+                    UdsWorkerCommand::FileDownload {
+                        binary_path,
+                        address,
+                        resp,
+                    } => {
+                        let _ = resp.send(
+                            uds.file_download(&binary_path, address)
+                                .await
+                                .map_err(|e| e.to_string()),
+                        );
+                    }
+                }
+            }
+
+            if let Some(session) = session {
+                session.teardown().await;
+            }
+        });
+
+        Self { tx }
+    }
+
+    pub async fn read_current_session(&self) -> Result<CurrentDiagnosticSession> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::ReadCurrentSession { resp: tx })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn did_read(&self, did: u16) -> Result<Vec<u8>> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::DidRead { did, resp: tx })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn enter_diagnostic_session(
+        &self,
+        session: DiagnosticSessionKind,
+    ) -> Result<DiagnosticSessionResponse> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::EnterDiagnosticSession { session, resp: tx })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn routine_start(
+        &self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineStartResponse> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::RoutineStart {
+                routine_id,
+                data,
+                resp: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn reset_node(&self, reset_type: SupportedResetTypes) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::ResetNode {
+                reset_type,
+                resp: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn start_persistent_tp(&self) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::StartPersistentTp { resp: tx })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn stop_persistent_tp(&self) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::StopPersistentTp { resp: tx })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn download_app_to_target(
+        &self,
+        binary_path: PathBuf,
+        skip: bool,
+    ) -> Result<UpdateResult> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::DownloadApp {
+                binary_path,
+                skip,
+                resp: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn file_download(&self, binary_path: PathBuf, address: u32) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::FileDownload {
+                binary_path,
+                address,
+                resp: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+}
+
 /// CANIO task
 ///
 /// Owns the CAN hardware and handles all transmitting and receiving functions
@@ -499,12 +775,11 @@ async fn tsk_10ms(
             }
         } else {
             if send_tp {
-                let _resp = CanioCmd::send_recv(
-                    &UDSProtocol::create_tp_msg(true).to_bytes(),
-                    uds_queue.clone(),
-                    10,
-                )
-                .await;
+                let _ = uds_queue
+                    .send(CanioCmd::UdsCmdNoResponse(
+                        UDSProtocol::create_tp_msg(false).to_bytes(),
+                    ))
+                    .await;
             }
         }
 

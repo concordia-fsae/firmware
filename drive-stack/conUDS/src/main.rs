@@ -5,11 +5,10 @@ use std::time::{Duration, Instant};
 use log::{debug, error, info};
 use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 
-use conUDS::SupportedResetTypes;
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
 use conUDS::modules::uds::{
-    CurrentDiagnosticSession, DiagnosticSessionResponse, RoutineStartResponse, UdsSession,
+    CurrentDiagnosticSession, DiagnosticSessionResponse, RoutineStartResponse, UdsWorkerHandle,
 };
 use conUDS::{FlashStatus, UpdateResult};
 
@@ -92,15 +91,20 @@ async fn main() {
 
                 info!("Downloading binary {:?} to node '{}'", bin, node);
 
-                let mut uds = UdsSession::new(
-                    &args.device,
+                let uds = UdsWorkerHandle::new(
+                    args.device.clone(),
                     uds_node.request_id,
                     uds_node.response_id,
                     false,
-                )
-                .await;
-                let result = uds.download_app_to_target(&bin, true).await;
-                uds.teardown().await;
+                );
+                let result = uds
+                    .download_app_to_target(bin.clone(), true)
+                    .await
+                    .unwrap_or_else(|e| UpdateResult {
+                        bin: bin.clone(),
+                        result: FlashStatus::Failed(e.to_string()),
+                        duration: Duration::from_secs(0),
+                    });
 
                 results.push((node.clone(), result));
             }
@@ -119,13 +123,12 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
+            );
             info!(
                 "Performing {:?} reset for node '{}'",
                 reset.reset_type, node
@@ -133,7 +136,6 @@ async fn main() {
             if let Err(e) = uds.reset_node(reset.reset_type).await {
                 error!("Error while resetting ecu: {}", e);
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::Download(dl) => {
@@ -146,31 +148,26 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
-                dl.no_skip,
-            )
-            .await;
+                false,
+            );
             info!("Downloading binary {:?} to node '{}'", dl.binary, node);
-
-            if let Err(e) = uds.reset_node(SupportedResetTypes::Hard).await {
-                error!("Error while resetting ecu: {}", e);
-                if !dl.no_skip {
-                    return;
-                }
-            }
-            if let FlashStatus::Failed(e) = uds
-                .download_app_to_target(&dl.binary, !dl.no_skip)
+            match uds
+                .download_app_to_target(dl.binary.clone(), !dl.no_skip)
                 .await
-                .result
             {
-                error!("Download failed for node '{}': {}", node, e);
-            } else {
-                info!("Download successful for node '{}'...", node);
+                Ok(result) => {
+                    if let FlashStatus::Failed(e) = result.result {
+                        error!("Download failed for node '{}': {}", node, e);
+                    } else {
+                        info!("Download successful for node '{}'...", node);
+                    }
+                }
+                Err(e) => error!("Download failed for node '{}': {}", node, e),
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::BootloaderDownload(dl) => {
@@ -183,18 +180,16 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
+            );
             info!("Downloading bootloader {:?} to node '{}'", dl.binary, node);
-            if let Err(e) = uds.file_download(&dl.binary, 0x08000000).await {
+            if let Err(e) = uds.file_download(dl.binary.clone(), 0x08000000).await {
                 error!("While downloading bootloader: {}", e);
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::ReadDID(did) => {
@@ -207,20 +202,18 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
+            );
             info!(
                 "Performing DID read on id {:#?} for node '{}'",
                 did.id, node
             );
             let id = u16::from_str_radix(&did.id, 16).unwrap();
-            let resp = uds.client.did_read(id).await;
-            uds.teardown().await;
+            let resp = uds.did_read(id).await;
             println!("{:?}", resp);
         }
 
@@ -234,13 +227,12 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
+            );
             match uds.read_current_session().await {
                 Ok(session) => println!("{}", fmt_current_session(session)),
                 Err(e) => error!(
@@ -248,7 +240,6 @@ async fn main() {
                     node, e
                 ),
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::SetSession(session) => {
@@ -262,14 +253,13 @@ async fn main() {
             });
 
             let target_session = session.session.into();
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
-            match uds.client.enter_diagnostic_session(target_session).await {
+            );
+            match uds.enter_diagnostic_session(target_session).await {
                 Ok(resp) => println!("{}", fmt_diagnostic_session_response(&resp)),
                 Err(e) => error!(
                     "Failed to change diagnostic session for node '{}' to '{}': {}",
@@ -278,7 +268,6 @@ async fn main() {
                     e
                 ),
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::PersistentTesterPresent(_) => {
@@ -291,20 +280,18 @@ async fn main() {
                 std::process::exit(1)
             });
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
+            );
 
             if let Err(e) = uds.start_persistent_tp().await {
                 error!(
                     "Failed to start persistent tester present for node '{}': {}",
                     node, e
                 );
-                uds.teardown().await;
                 std::process::exit(1);
             }
 
@@ -323,7 +310,6 @@ async fn main() {
                     node, e
                 );
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::RoutineStart(routine) => {
@@ -345,22 +331,20 @@ async fn main() {
                 std::process::exit(1)
             };
 
-            let mut uds = UdsSession::new(
-                &args.device,
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
                 uds_node.request_id,
                 uds_node.response_id,
                 true,
-            )
-            .await;
+            );
             info!(
                 "Starting routine '{}' (0x{:04X}) for node '{}'",
                 routine.routine, routine_id, node
             );
-            match uds.client.routine_start(routine_id, None).await {
+            match uds.routine_start(routine_id, None).await {
                 Ok(resp) => println!("{}", fmt_routine_start_response(&resp)),
                 Err(e) => error!("While starting routine '{}': {}", routine.routine, e),
             }
-            uds.teardown().await;
         }
 
         ArgSubCommands::RoutineList(_) => {
