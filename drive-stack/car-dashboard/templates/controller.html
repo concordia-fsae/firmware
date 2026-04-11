@@ -27,12 +27,18 @@
       <div id="operation-feedback" class="feedback" hidden></div>
       <div class="ops-grid">
         <form id="tester-present-form" class="stack-form">
-          <label class="field-label" for="tester-present-enabled">Persistent tester present</label>
+          <label class="field-label" for="tester-present-enabled">Persistent Tester Present</label>
           <div class="inline-field">
             <label class="checkbox-field" for="tester-present-enabled">
               <input id="tester-present-enabled" type="checkbox">
-              <span>Tester Present Enabled</span>
+              <span>Persistent Tester Present Enabled</span>
             </label>
+          </div>
+        </form>
+        <form id="tester-present-request-form" class="stack-form">
+          <label class="field-label" for="tester-present-request-button">Tester Present With Response</label>
+          <div class="inline-field">
+            <button id="tester-present-request-button" type="submit">Send Tester Present</button>
           </div>
         </form>
         <form id="reset-form" class="stack-form">
@@ -178,6 +184,8 @@
     const sessionForm = document.getElementById("session-form");
     const resetForm = document.getElementById("reset-form");
     const testerPresentForm = document.getElementById("tester-present-form");
+    const testerPresentRequestForm = document.getElementById("tester-present-request-form");
+    const testerPresentRequestButton = document.getElementById("tester-present-request-button");
     const testerPresentEnabled = document.getElementById("tester-present-enabled");
     const flashForm = document.getElementById("flash-form");
     const routineForm = document.getElementById("routine-form");
@@ -483,6 +491,27 @@
         setFeedback(error.message, true);
       } finally {
         testerPresentEnabled.disabled = false;
+      }
+    });
+
+    testerPresentRequestForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      testerPresentRequestButton.disabled = true;
+      try {
+        const response = await fetch(
+          `/api/controllers/${encodeURIComponent(controllerName)}/tester-present/request`,
+          { method: "POST" },
+        );
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || "Request failed");
+        }
+        mergeJob(payload.job);
+        setFeedback(`Tester present request queued: ${payload.job_id}`, false);
+      } catch (error) {
+        setFeedback(error.message, true);
+      } finally {
+        testerPresentRequestButton.disabled = false;
       }
     });
 
