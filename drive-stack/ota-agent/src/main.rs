@@ -29,7 +29,7 @@ use tracing_subscriber::EnvFilter;
 use warp::{Filter, http::StatusCode};
 
 #[cfg(target_os = "linux")]
-use conUDS::modules::uds::UdsSession;
+use conUDS::modules::uds::UdsWorkerHandle;
 use conUDS::{FlashStatus, UpdateResult};
 use net_detec::Client as MdnsClient;
 use net_detec::Server as MdnsServer;
@@ -2065,9 +2065,8 @@ async fn uds_ping_handler(state: Arc<AppState>) -> Result<impl warp::Reply, warp
             continue;
         }
 
-        let mut uds = UdsSession::new(&state.can_device, request_id, response_id, false).await;
-        let resp = uds.client.did_read(UDS_DID_CRC).await;
-        uds.teardown().await;
+        let uds = UdsWorkerHandle::new(state.can_device.clone(), request_id, response_id, false);
+        let resp = uds.did_read(UDS_DID_CRC).await;
 
         match resp {
             Ok(bytes) => {
@@ -2130,8 +2129,18 @@ async fn flash_node(
             duration: Duration::from_secs(0),
         };
     }
-    let mut uds = UdsSession::new(bus, request_id, response_id, false).await;
-    let result = uds.download_app_to_target(&binary.into(), !force).await;
+    let uds = UdsWorkerHandle::new(bus.to_string(), request_id, response_id, false);
+    let result = match uds
+        .download_app_to_target(binary.to_path_buf(), !force)
+        .await
+    {
+        Ok(result) => result,
+        Err(e) => UpdateResult {
+            bin: binary.into(),
+            result: FlashStatus::Failed(e.to_string()),
+            duration: Duration::from_secs(0),
+        },
+    };
     unlock_manifest_node(&manifest_path, &node, &lock).await;
 
     result
