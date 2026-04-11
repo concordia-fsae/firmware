@@ -137,3 +137,7 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  requestContactorsOpen:
+    description: Request open contactor state from the battery
+    discreteValues: digitalStatus
