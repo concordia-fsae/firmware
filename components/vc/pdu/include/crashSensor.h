@@ -47,3 +47,4 @@ float32_t crashSensor_getTrippedAcceleration(void);
 float32_t crashSensor_getMaxAcceleration(void);
 
 void crashSensor_notifyFromImu(void);
+void crashSensor_requestCrashReset(void);
