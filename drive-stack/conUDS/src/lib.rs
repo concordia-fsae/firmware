@@ -71,10 +71,6 @@ pub enum FlashStatus {
     Skipped,
 }
 
-pub enum PrdCmd {
-    PersistentTesterPresent(bool),
-}
-
 pub struct UdsDownloadStart {
     pub compression: u8,
     pub encryption: u8,
