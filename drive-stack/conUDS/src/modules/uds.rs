@@ -291,6 +291,10 @@ enum UdsWorkerCommand {
         did: u16,
         resp: oneshot::Sender<Result<Vec<u8>, String>>,
     },
+    TesterPresent {
+        response_required: bool,
+        resp: oneshot::Sender<Result<Vec<u8>, String>>,
+    },
     ReadCurrentSession {
         resp: oneshot::Sender<Result<CurrentDiagnosticSession, String>>,
     },
@@ -405,6 +409,10 @@ impl UdsSession {
             Some(error) => anyhow!("failed to read DID 0x{did:04X}: {error:?}"),
             None => anyhow!("failed to read DID 0x{did:04X}"),
         })
+    }
+
+    pub async fn tester_present(&mut self, response_required: bool) -> Result<Vec<u8>> {
+        self.client.tester_present(response_required).await
     }
 
     pub async fn enter_diagnostic_session(
@@ -539,6 +547,16 @@ impl UdsWorkerHandle {
                     UdsWorkerCommand::DidRead { did, resp } => {
                         let _ = resp.send(uds.did_read(did).await.map_err(|e| e.to_string()));
                     }
+                    UdsWorkerCommand::TesterPresent {
+                        response_required,
+                        resp,
+                    } => {
+                        let _ = resp.send(
+                            uds.tester_present(response_required)
+                                .await
+                                .map_err(|e| e.to_string()),
+                        );
+                    }
                     UdsWorkerCommand::ReadCurrentSession { resp } => {
                         let _ = resp.send(uds.read_current_session().await.map_err(|e| e.to_string()));
                     }
@@ -615,6 +633,20 @@ impl UdsWorkerHandle {
         let (tx, rx) = oneshot::channel();
         self.tx
             .send(UdsWorkerCommand::ReadCurrentSession { resp: tx })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn tester_present(&self, response_required: bool) -> Result<Vec<u8>> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::TesterPresent {
+                response_required,
+                resp: tx,
+            })
             .await
             .map_err(|_| anyhow!("UDS worker is unavailable"))?;
         rx.await
@@ -908,6 +940,18 @@ impl UdsClient {
     /// Create a UDS client
     pub fn new(uds_queue_tx: mpsc::Sender<CanioCmd>) -> Self {
         Self { uds_queue_tx }
+    }
+
+    pub async fn tester_present(&mut self, response_required: bool) -> Result<Vec<u8>> {
+        let payload = UDSProtocol::create_tp_msg(response_required).to_bytes();
+        if response_required {
+            CanioCmd::send_recv(&payload, self.uds_queue_tx.clone(), 50).await
+        } else {
+            self.uds_queue_tx
+                .send(CanioCmd::UdsCmdNoResponse(payload))
+                .await?;
+            Ok(Vec::new())
+        }
     }
 
     pub async fn read_current_session(&mut self) -> Result<CurrentDiagnosticSession> {
