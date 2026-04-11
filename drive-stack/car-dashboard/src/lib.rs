@@ -725,6 +725,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_start_tester_present);
 
+    let send_tester_present = warp::path!("api" / "controllers" / String / "tester-present" / "request")
+        .and(warp::post())
+        .and(state_filter.clone())
+        .and_then(handle_send_tester_present);
+
     let stop_tester_present = warp::path!("api" / "controllers" / String / "tester-present")
         .and(warp::delete())
         .and(state_filter.clone())
@@ -885,6 +890,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(run_routine)
         .or(reset_controller)
         .or(flash_controller)
+        .or(send_tester_present)
         .or(start_tester_present)
         .or(stop_tester_present)
         .or(tester_present_state)
@@ -894,7 +900,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1344,6 +1350,48 @@ async fn handle_start_tester_present(
     let job_id = job.id.clone();
     tokio::spawn(async move {
         run_tester_present_job(state_for_job, capability, job_id, stop_rx).await;
+    });
+
+    Ok(json_success_response(ActionAcceptedResponse {
+        ok: true,
+        job_id: job.id.clone(),
+        job,
+    }))
+}
+
+async fn handle_send_tester_present(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    };
+
+    let job = match create_job(
+        &state,
+        &controller_name,
+        "tester-present-request",
+        "Queued tester present with response".to_string(),
+    )
+    .await
+    {
+        Ok(job) => job,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::CONFLICT,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    let state_for_job = state.clone();
+    let job_id = job.id.clone();
+    tokio::spawn(async move {
+        run_tester_present_request_job(state_for_job, capability, job_id).await;
     });
 
     Ok(json_success_response(ActionAcceptedResponse {
@@ -1998,6 +2046,42 @@ async fn run_tester_present_job(
     let _ = state.publish_jobs_if_changed().await;
 }
 
+async fn run_tester_present_request_job(
+    state: AppState,
+    capability: ControllerCapability,
+    job_id: String,
+) {
+    let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        let _ = state.publish_jobs_if_changed().await;
+        return;
+    };
+    info!(
+        "starting tester present request job '{}' for controller='{}' on iface='{}'",
+        job_id, capability.name, capability.uds_iface
+    );
+    {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_started(&job_id, "Sending tester present with response".to_string());
+    }
+    let _ = state.publish_jobs_if_changed().await;
+
+    match worker.tester_present(true).await {
+        Ok(response) => {
+            let (detail, payload_hex) = format_tester_present_response(&response);
+            let mut jobs = state.jobs.write().await;
+            jobs.mark_succeeded(&job_id, detail, None, payload_hex);
+        }
+        Err(error) => {
+            let mut jobs = state.jobs.write().await;
+            jobs.mark_failed(&job_id, error.to_string(), None, None);
+        }
+    }
+
+    let _ = state.publish_jobs_if_changed().await;
+}
+
 fn session_key_label(session: DiagnosticSessionKind) -> &'static str {
     match session {
         DiagnosticSessionKind::Default => "Default",
@@ -2038,6 +2122,40 @@ fn format_session_response(response: DiagnosticSessionResponse) -> (String, Opti
             (!payload.is_empty()).then(|| hex_string(&payload)),
         ),
     }
+}
+
+fn format_tester_present_response(response: &[u8]) -> (String, Option<String>) {
+    if response.is_empty() {
+        return ("Tester present sent".to_string(), None);
+    }
+
+    if response[0] == 0x7F {
+        if response.len() >= 3 {
+            return (
+                format!(
+                    "Tester present rejected: NRC 0x{:02X}",
+                    response[2]
+                ),
+                Some(hex_string(response)),
+            );
+        }
+        return (
+            "Tester present rejected: malformed negative response".to_string(),
+            Some(hex_string(response)),
+        );
+    }
+
+    if response[0] == 0x7E {
+        return (
+            "Tester present acknowledged".to_string(),
+            Some(hex_string(response)),
+        );
+    }
+
+    (
+        format!("Unexpected tester present response SID 0x{:02X}", response[0]),
+        Some(hex_string(response)),
+    )
 }
 
 fn format_routine_response(
