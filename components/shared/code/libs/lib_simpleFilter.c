@@ -44,6 +44,37 @@ float32_t lib_simpleFilter_cumAvg_average(lib_simpleFilter_cumAvg_S* filter)
     return filter->value;
 }
 
+/**
+ * @brief Clear a simple float averaging filter
+ * @param filter Filter to clear
+ */
+void lib_simpleFilter_cumAvgF_clear(lib_simpleFilter_cumAvgF_S* filter)
+{
+    filter->raw = 0;
+    filter->count = 0;
+}
+
+/**
+ * @brief Add value to a float simple filter
+ * @param filter Filter to increment
+ * @param sum Value to increment by
+ */
+void lib_simpleFilter_cumAvgF_increment(lib_simpleFilter_cumAvgF_S* filter, float32_t sum)
+{
+    filter->raw += sum;
+    filter->count++;
+}
+
+/**
+ * @brief Calculate value of a float simple filter
+ * @param filter Filter to average
+ */
+float32_t lib_simpleFilter_cumAvgF_average(lib_simpleFilter_cumAvgF_S* filter)
+{
+    filter->value = (filter->count != 0) ? (((float32_t)filter->raw) / ((float32_t)filter->count)) : 0.0f;
+    return filter->value;
+}
+
 void lib_simpleFilter_lpf_calcSmoothingFactor(lib_simpleFilter_lpf_S* filter, float32_t cutoffFreq, float32_t dt)
 {
     const float32_t fdt = cutoffFreq * dt;
