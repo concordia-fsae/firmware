@@ -1772,6 +1772,8 @@ fn bundle_relative_path(path: &str) -> anyhow::Result<PathBuf> {
 
 #[cfg(target_os = "linux")]
 const UDS_DID_CRC: u16 = 0x03;
+#[cfg(target_os = "linux")]
+const UDS_DID_FUNCTION_STATE: u16 = 0x0101;
 
 #[cfg(target_os = "linux")]
 // POST /ota/stage?node=...   (multipart form with part name "file")
@@ -2066,36 +2068,43 @@ async fn uds_ping_handler(state: Arc<AppState>) -> Result<impl warp::Reply, warp
         }
 
         let uds = UdsWorkerHandle::new(state.can_device.clone(), request_id, response_id, false);
-        let resp = uds.did_read(UDS_DID_CRC).await;
+        let function_state = uds.did_read(UDS_DID_FUNCTION_STATE).await;
 
-        match resp {
-            Ok(bytes) => {
-                if let Ok(arr) = <[u8; 4]>::try_from(bytes.as_slice()) {
-                    let crc = u32::from_le_bytes(arr);
-                    if crc == 0xffffffff {
-                        results.push(UdsPingNode {
-                            node,
-                            status: "bootloader".to_string(),
-                            crc: Some("0xffffffff".to_string()),
-                            error: None,
-                        });
-                    } else {
+        match function_state {
+            Ok(bytes) if matches!(bytes.first().copied(), Some(0x00 | 0x02)) => {
+                results.push(UdsPingNode {
+                    node,
+                    status: "bootloader".to_string(),
+                    crc: None,
+                    error: None,
+                });
+            }
+            Ok(_) => match uds.did_read(UDS_DID_CRC).await {
+                Ok(bytes) => {
+                    if let Ok(arr) = <[u8; 4]>::try_from(bytes.as_slice()) {
+                        let crc = u32::from_le_bytes(arr);
                         results.push(UdsPingNode {
                             node,
                             status: "online".to_string(),
                             crc: Some(format!("0x{:08x}", crc)),
                             error: None,
                         });
+                    } else {
+                        results.push(UdsPingNode {
+                            node,
+                            status: "online".to_string(),
+                            crc: None,
+                            error: Some("invalid crc response".to_string()),
+                        });
                     }
-                } else {
-                    results.push(UdsPingNode {
-                        node,
-                        status: "online".to_string(),
-                        crc: None,
-                        error: Some("invalid crc response".to_string()),
-                    });
                 }
-            }
+                Err(_) => results.push(UdsPingNode {
+                    node,
+                    status: "online".to_string(),
+                    crc: None,
+                    error: Some("crc unavailable".to_string()),
+                }),
+            },
             Err(_) => results.push(UdsPingNode {
                 node,
                 status: "offline".to_string(),

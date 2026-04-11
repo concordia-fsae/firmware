@@ -35,7 +35,16 @@ use crate::CanioCmd;
 use crate::{FlashStatus, UpdateResult};
 
 const UDS_DID_CRC: u16 = 0x03;
+const UDS_DID_FUNCTION_STATE: u16 = 0x0101;
 const UDS_DID_CURRENT_SESSION: u16 = 0x0102;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NodeExecutionState {
+    Bootloader,
+    BootloaderUpdater,
+    App,
+    Unknown(u8),
+}
 
 #[derive(Debug, Clone)]
 pub enum RoutineStartResponse {
@@ -442,6 +451,21 @@ impl UdsSession {
             tokio::time::sleep(time::Duration::from_millis(50)).await;
         }
 
+        self.client.transfer_file(path.to_path_buf(), address).await
+    }
+
+    pub async fn app_file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
+        if self.interactive_session {
+            info!("Waiting for the user to hit enter before continuing with download");
+            let mut garbage = String::new();
+            while stdin().read_line(&mut garbage).is_err() {
+                // wait for user to hit enter
+            }
+            info!("Enter key detected, proceeding with download");
+        } else {
+            tokio::time::sleep(time::Duration::from_millis(50)).await;
+        }
+
         self.client.app_download(path.to_path_buf(), address).await
     }
 
@@ -502,7 +526,7 @@ impl UdsSession {
                 };
             }
         }
-        match self.file_download(&binary_path, 0x08002000).await {
+        match self.app_file_download(&binary_path, 0x08002000).await {
             Ok(()) => {
                 let node_dur = node_start.elapsed();
                 return UpdateResult {
@@ -611,6 +635,18 @@ impl UdsWorkerHandle {
                         address,
                         resp,
                     } => {
+                        if get_node_execution_state(uds).await.ok()
+                            == Some(NodeExecutionState::BootloaderUpdater)
+                        {
+                            if let Err(error) = uds
+                                .client
+                                .ecu_reset(SupportedResetTypes::Hard, uds.interactive_session)
+                                .await
+                            {
+                                let _ = resp.send(Err(error.to_string()));
+                                continue;
+                            }
+                        }
                         let _ = resp.send(
                             uds.file_download(&binary_path, address)
                                 .await
@@ -804,7 +840,26 @@ async fn worker_download_app_to_target(
     persistent_tp: &mut Option<PersistentTpTask>,
 ) -> UpdateResult {
     let node_start = Instant::now();
-    let mut node_crc: Option<u32> = None;
+    let node_execution_state = get_node_execution_state(uds).await.ok();
+
+    if node_execution_state == Some(NodeExecutionState::Bootloader) {
+        info!("ECU appears to already be in bootloader; starting download without reset");
+        return run_app_download(uds, binary_path, node_start).await;
+    }
+
+    if node_execution_state == Some(NodeExecutionState::BootloaderUpdater) {
+        info!("ECU appears to be in bootloader updater; resetting before download");
+        if let Err(error) = uds
+            .client
+            .ecu_reset(SupportedResetTypes::Hard, uds.interactive_session)
+            .await
+        {
+            info!("Reset before download did not respond ({error}); attempting direct download");
+            return run_app_download(uds, binary_path, node_start).await;
+        }
+
+        return run_app_download(uds, binary_path, node_start).await;
+    }
 
     if skip {
         let mut file = File::open(binary_path).expect("Binary does not exist!");
@@ -821,10 +876,7 @@ async fn worker_download_app_to_target(
                 );
                 0
             }
-            Ok(crc) => {
-                node_crc = Some(crc);
-                crc
-            }
+            Ok(crc) => crc,
         };
 
         if crc == app_crc {
@@ -840,31 +892,6 @@ async fn worker_download_app_to_target(
                 crc, app_crc
             );
         }
-    } else if let Ok(crc) = get_app_crc(uds).await {
-        node_crc = Some(crc);
-    }
-
-    if node_crc == Some(0xffff_ffff) {
-        info!("ECU appears to already be in bootloader; starting download without reset");
-        let result = match uds.file_download(binary_path, 0x08002000).await {
-            Ok(()) => {
-                let node_dur = node_start.elapsed();
-                UpdateResult {
-                    bin: binary_path.to_path_buf(),
-                    result: FlashStatus::DownloadSuccess,
-                    duration: node_dur,
-                }
-            }
-            Err(e) => {
-                let node_dur = node_start.elapsed();
-                UpdateResult {
-                    bin: binary_path.to_path_buf(),
-                    result: FlashStatus::Failed(format!("Error downloading binary: '{}'", e)),
-                    duration: node_dur,
-                }
-            }
-        };
-        return result;
     }
 
     let restore_persistent_tp_after_download = persistent_tp.is_some();
@@ -873,7 +900,7 @@ async fn worker_download_app_to_target(
     }
 
     if !uds.interactive_session {
-        if let Err(_) = uds
+        if let Err(error) = uds
             .client
             .ecu_reset(SupportedResetTypes::Hard, uds.interactive_session)
             .await
@@ -882,19 +909,19 @@ async fn worker_download_app_to_target(
             if restore_persistent_tp_after_download {
                 *persistent_tp = Some(spawn_persistent_tp_task(uds.client.uds_queue_tx.clone()));
             }
-            let node_dur = node_start.elapsed();
-            return UpdateResult {
-                bin: binary_path.to_path_buf(),
-                result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
-                duration: node_dur,
-            };
+            info!("Reset before download did not respond ({error}); attempting direct download");
+            let result = run_app_download(uds, binary_path, node_start).await;
+            if restore_persistent_tp_after_download {
+                *persistent_tp = Some(spawn_persistent_tp_task(uds.client.uds_queue_tx.clone()));
+            }
+            return result;
         }
     }
 
     // The bootloader does not tolerate periodic tester present during the actual transfer.
     stop_persistent_tp_task(persistent_tp).await;
 
-    let result = match uds.file_download(binary_path, 0x08002000).await {
+    let result = match uds.app_file_download(binary_path, 0x08002000).await {
         Ok(()) => {
             let node_dur = node_start.elapsed();
             UpdateResult {
@@ -918,6 +945,25 @@ async fn worker_download_app_to_target(
     }
 
     result
+}
+
+async fn run_app_download(
+    uds: &mut UdsSession,
+    binary_path: &PathBuf,
+    node_start: Instant,
+) -> UpdateResult {
+    match uds.app_file_download(binary_path, 0x08002000).await {
+        Ok(()) => UpdateResult {
+            bin: binary_path.to_path_buf(),
+            result: FlashStatus::DownloadSuccess,
+            duration: node_start.elapsed(),
+        },
+        Err(e) => UpdateResult {
+            bin: binary_path.to_path_buf(),
+            result: FlashStatus::Failed(format!("Error downloading binary: '{}'", e)),
+            duration: node_start.elapsed(),
+        },
+    }
 }
 
 /// CANIO task
@@ -1336,6 +1382,12 @@ impl UdsClient {
         // start by erasing the app
         self.app_erase().await?;
 
+        self.transfer_file(file, address).await
+    }
+
+    /// Transfer a file using the current ECU state without first erasing the application.
+    pub async fn transfer_file(&mut self, file: PathBuf, address: u32) -> Result<()> {
+
         // figure out how many bytes we need to transfer
         let file_len_bytes = std::fs::metadata(&file)?.len();
 
@@ -1414,4 +1466,22 @@ async fn get_app_crc(uds_session: &mut UdsSession) -> Result<u32> {
     }
 
     return Err(anyhow!("CRC read failure"));
+}
+
+async fn get_node_execution_state(uds_session: &mut UdsSession) -> Result<NodeExecutionState> {
+    debug!("Getting node execution state");
+    let resp = uds_session.client.did_read(UDS_DID_FUNCTION_STATE).await;
+    if let Ok(data) = resp {
+        let Some(value) = data.first().copied() else {
+            return Err(anyhow!("Invalid response length for execution state"));
+        };
+        return Ok(match value {
+            0x00 => NodeExecutionState::Bootloader,
+            0x02 => NodeExecutionState::BootloaderUpdater,
+            0x01 => NodeExecutionState::App,
+            other => NodeExecutionState::Unknown(other),
+        });
+    }
+
+    Err(anyhow!("Execution state read failure"))
 }
