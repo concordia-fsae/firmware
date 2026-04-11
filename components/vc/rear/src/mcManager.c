@@ -220,6 +220,7 @@ static void mcManager_periodic_100Hz(void)
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAVCFRONT, miaFront);
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAVCPDU, miaPdu);
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MIABMS, miaBms);
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVER, mcManager_data.calibrating);
     mcManager_data.tempTsCap = drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_TS_CAP);
 
     const bool motorSpinningPhysicallyForward = motor_rpm > 0;
@@ -299,6 +300,7 @@ static void mcManager_periodic_100Hz(void)
         {
             calibrationData.state = REQUEST_PARAMETER;
             mcManager_data.calibrating = false;
+            app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED, true);
         }
     }
 
@@ -393,6 +395,7 @@ static void mcManager_periodic_100Hz(void)
                         {
                             calibrationData.state = REQUEST_PARAMETER;
                             mcManager_data.calibrating = false;
+                            app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED, false);
                             break;
                         }
                         else
