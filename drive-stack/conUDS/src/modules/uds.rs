@@ -31,7 +31,7 @@ use crate::SupportedDiagnosticSessions;
 use crate::SupportedResetTypes;
 use crate::UdsDownloadStart;
 use crate::modules::canio::CANIO;
-use crate::{CanioCmd, PrdCmd};
+use crate::CanioCmd;
 use crate::{FlashStatus, UpdateResult};
 
 const UDS_DID_CRC: u16 = 0x03;
@@ -276,14 +276,13 @@ fn decode_routine_payload_text(payload: &[u8]) -> Option<String> {
 
 #[derive(Debug)]
 pub struct UdsClient {
-    cmd_queue_tx: mpsc::Sender<PrdCmd>,
     uds_queue_tx: mpsc::Sender<CanioCmd>,
 }
 
 pub struct UdsSession {
     pub client: UdsClient,
     exit: Arc<Mutex<bool>>,
-    threads: [JoinHandle<Result<()>>; 2],
+    threads: [JoinHandle<Result<()>>; 1],
     interactive_session: bool,
 }
 
@@ -331,6 +330,11 @@ pub struct UdsWorkerHandle {
     tx: mpsc::Sender<UdsWorkerCommand>,
 }
 
+struct PersistentTpTask {
+    stop_tx: oneshot::Sender<()>,
+    handle: JoinHandle<()>,
+}
+
 impl UdsSession {
     pub async fn new(
         device: &str,
@@ -340,12 +344,10 @@ impl UdsSession {
     ) -> Self {
         let exit = Arc::new(Mutex::new(bool::default()));
         let app_canio = Arc::clone(&exit);
-        let app_10ms = Arc::clone(&exit);
 
         let (uds_queue_tx, uds_queue_rx) = mpsc::channel::<CanioCmd>(100);
-        let (cmd_queue_tx, mut cmd_queue_rx) = mpsc::channel::<PrdCmd>(10);
 
-        let uds_client = UdsClient::new(cmd_queue_tx.clone(), uds_queue_tx.clone());
+        let uds_client = UdsClient::new(uds_queue_tx.clone());
         debug!("UDS client initialized: {:#?}", uds_client);
 
         let canio = {
@@ -362,12 +364,10 @@ impl UdsSession {
 
         debug!("Spawning threads");
         let t1 = tokio::spawn(async move { tsk_canio(app_canio, canio).await });
-        let t2 =
-            tokio::spawn(async move { tsk_10ms(app_10ms, &mut cmd_queue_rx, uds_queue_tx).await });
         Self {
             exit: exit,
             client: uds_client,
-            threads: [t1, t2],
+            threads: [t1],
             interactive_session: is_interactive,
         }
     }
@@ -420,14 +420,6 @@ impl UdsSession {
         data: Option<Vec<u8>>,
     ) -> Result<RoutineStartResponse> {
         self.client.routine_start(routine_id, data).await
-    }
-
-    pub async fn start_persistent_tp(&mut self) -> Result<()> {
-        self.client.start_persistent_tp().await
-    }
-
-    pub async fn stop_persistent_tp(&mut self) -> Result<()> {
-        self.client.stop_persistent_tp().await
     }
 
     pub async fn file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
@@ -487,8 +479,8 @@ impl UdsSession {
             }
         }
 
-        let _ = self.client.start_persistent_tp().await;
         if !self.interactive_session {
+            let _ = self.client.tester_present(false).await;
             if let Err(_) = self
                 .client
                 .ecu_reset(SupportedResetTypes::Hard, self.interactive_session)
@@ -533,6 +525,7 @@ impl UdsWorkerHandle {
         let (tx, mut rx) = mpsc::channel(32);
         tokio::spawn(async move {
             let mut session: Option<UdsSession> = None;
+            let mut persistent_tp: Option<PersistentTpTask> = None;
 
             while let Some(cmd) = rx.recv().await {
                 if session.is_none() {
@@ -571,19 +564,29 @@ impl UdsWorkerHandle {
                         let _ = resp.send(uds.reset_node(reset_type).await.map_err(|e| e.to_string()));
                     }
                     UdsWorkerCommand::StartPersistentTp { resp } => {
-                        let _ =
-                            resp.send(uds.start_persistent_tp().await.map_err(|e| e.to_string()));
+                        if persistent_tp.is_none() {
+                            persistent_tp = Some(spawn_persistent_tp_task(uds.client.uds_queue_tx.clone()));
+                        }
+                        let _ = resp.send(Ok(()));
                     }
                     UdsWorkerCommand::StopPersistentTp { resp } => {
-                        let _ =
-                            resp.send(uds.stop_persistent_tp().await.map_err(|e| e.to_string()));
+                        stop_persistent_tp_task(&mut persistent_tp).await;
+                        let _ = resp.send(Ok(()));
                     }
                     UdsWorkerCommand::DownloadApp {
                         binary_path,
                         skip,
                         resp,
                     } => {
-                        let _ = resp.send(Ok(uds.download_app_to_target(&binary_path, skip).await));
+                        let _ = resp.send(Ok(
+                            worker_download_app_to_target(
+                                uds,
+                                &binary_path,
+                                skip,
+                                &mut persistent_tp,
+                            )
+                            .await,
+                        ));
                     }
                     UdsWorkerCommand::FileDownload {
                         binary_path,
@@ -599,6 +602,7 @@ impl UdsWorkerHandle {
                 }
             }
 
+            stop_persistent_tp_task(&mut persistent_tp).await;
             if let Some(session) = session {
                 session.teardown().await;
             }
@@ -733,6 +737,130 @@ impl UdsWorkerHandle {
     }
 }
 
+fn spawn_persistent_tp_task(uds_queue_tx: mpsc::Sender<CanioCmd>) -> PersistentTpTask {
+    let (stop_tx, mut stop_rx) = oneshot::channel();
+    let handle = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(time::Duration::from_millis(10));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                _ = interval.tick() => {
+                    let _ = uds_queue_tx
+                        .send(CanioCmd::UdsCmdNoResponse(
+                            UDSProtocol::create_tp_msg(false).to_bytes(),
+                        ))
+                        .await;
+                }
+                _ = &mut stop_rx => break,
+            }
+        }
+    });
+    PersistentTpTask { stop_tx, handle }
+}
+
+async fn stop_persistent_tp_task(task: &mut Option<PersistentTpTask>) {
+    if let Some(PersistentTpTask { stop_tx, handle }) = task.take() {
+        let _ = stop_tx.send(());
+        let _ = handle.await;
+    }
+}
+
+async fn worker_download_app_to_target(
+    uds: &mut UdsSession,
+    binary_path: &PathBuf,
+    skip: bool,
+    persistent_tp: &mut Option<PersistentTpTask>,
+) -> UpdateResult {
+    let node_start = Instant::now();
+
+    if skip {
+        let mut file = File::open(binary_path).expect("Binary does not exist!");
+        file.seek(SeekFrom::End(-4)).expect("Seek failed");
+        let mut buffer = [0u8; 4];
+        file.read_exact(&mut buffer).expect("CRC read failed");
+        let app_crc = u32::from_le_bytes(buffer);
+        info!("Application CRC to download: 0x{:08X}", app_crc);
+
+        let crc = match get_app_crc(uds).await {
+            Err(e) => {
+                let node_dur = node_start.elapsed();
+                return UpdateResult {
+                    bin: binary_path.to_path_buf(),
+                    result: FlashStatus::Failed(format!("{:?}", e)),
+                    duration: node_dur,
+                };
+            }
+            Ok(crc) => crc,
+        };
+
+        if crc == app_crc {
+            let node_dur = node_start.elapsed();
+            return UpdateResult {
+                bin: binary_path.to_path_buf(),
+                result: FlashStatus::CrcMatch,
+                duration: node_dur,
+            };
+        } else {
+            info!(
+                "CRC mismatch: node=0x{:08X}, app=0x{:08X}. Downloading...",
+                crc, app_crc
+            );
+        }
+    }
+
+    let restore_persistent_tp_after_download = persistent_tp.is_some();
+    if !restore_persistent_tp_after_download {
+        *persistent_tp = Some(spawn_persistent_tp_task(uds.client.uds_queue_tx.clone()));
+    }
+
+    if !uds.interactive_session {
+        if let Err(_) = uds
+            .client
+            .ecu_reset(SupportedResetTypes::Hard, uds.interactive_session)
+            .await
+        {
+            stop_persistent_tp_task(persistent_tp).await;
+            if restore_persistent_tp_after_download {
+                *persistent_tp = Some(spawn_persistent_tp_task(uds.client.uds_queue_tx.clone()));
+            }
+            let node_dur = node_start.elapsed();
+            return UpdateResult {
+                bin: binary_path.to_path_buf(),
+                result: FlashStatus::Failed("Unable to communicate with ECU".to_string()),
+                duration: node_dur,
+            };
+        }
+    }
+
+    // The bootloader does not tolerate periodic tester present during the actual transfer.
+    stop_persistent_tp_task(persistent_tp).await;
+
+    let result = match uds.file_download(binary_path, 0x08002000).await {
+        Ok(()) => {
+            let node_dur = node_start.elapsed();
+            UpdateResult {
+                bin: binary_path.to_path_buf(),
+                result: FlashStatus::DownloadSuccess,
+                duration: node_dur,
+            }
+        }
+        Err(e) => {
+            let node_dur = node_start.elapsed();
+            UpdateResult {
+                bin: binary_path.to_path_buf(),
+                result: FlashStatus::Failed(format!("Error downloading binary: '{}'", e)),
+                duration: node_dur,
+            }
+        }
+    };
+
+    if restore_persistent_tp_after_download {
+        *persistent_tp = Some(spawn_persistent_tp_task(uds.client.uds_queue_tx.clone()));
+    }
+
+    result
+}
+
 /// CANIO task
 ///
 /// Owns the CAN hardware and handles all transmitting and receiving functions
@@ -749,70 +877,10 @@ async fn tsk_canio(exit: Arc<Mutex<bool>>, mut canio: CANIO<'_>) -> Result<()> {
     Ok(())
 }
 
-/// 10ms(100Hz) periodic task
-///
-/// This task will run at 100Hz in order to handle periodic actions
-async fn tsk_10ms(
-    exit: Arc<Mutex<bool>>,
-    cmd_queue: &mut mpsc::Receiver<PrdCmd>,
-    uds_queue: mpsc::Sender<CanioCmd>,
-) -> Result<()> {
-    debug!("10ms thread starting");
-
-    let mut send_tp = false;
-
-    while !exit.try_lock().is_ok_and(|exit| *exit) {
-        if let Ok(cmd) = cmd_queue.try_recv() {
-            match cmd {
-                PrdCmd::PersistentTesterPresent(state) => {
-                    if state {
-                        info!("Enabling persistent TP");
-                    } else {
-                        info!("Disabling persistent TP");
-                    }
-                    send_tp = state
-                }
-            }
-        } else {
-            if send_tp {
-                let _ = uds_queue
-                    .send(CanioCmd::UdsCmdNoResponse(
-                        UDSProtocol::create_tp_msg(false).to_bytes(),
-                    ))
-                    .await;
-            }
-        }
-
-        tokio::time::sleep(time::Duration::from_millis(10)).await;
-    }
-
-    debug!("10ms thread exiting");
-    Ok(())
-}
-
 impl UdsClient {
     /// Create a UDS client
-    pub fn new(cmd_queue_tx: mpsc::Sender<PrdCmd>, uds_queue_tx: mpsc::Sender<CanioCmd>) -> Self {
-        Self {
-            cmd_queue_tx,
-            uds_queue_tx,
-        }
-    }
-
-    /// Send a cmd to the 10ms periodic task
-    async fn send_cmd(&mut self, cmd: PrdCmd) -> Result<(), mpsc::error::SendError<PrdCmd>> {
-        self.cmd_queue_tx.send(cmd).await
-    }
-
-    pub async fn start_persistent_tp(&mut self) -> Result<()> {
-        Ok(self.send_cmd(PrdCmd::PersistentTesterPresent(true)).await?)
-    }
-
-    pub async fn stop_persistent_tp(&mut self) -> Result<()> {
-        info!("Stopping persistent TP");
-        Ok(self
-            .send_cmd(PrdCmd::PersistentTesterPresent(false))
-            .await?)
+    pub fn new(uds_queue_tx: mpsc::Sender<CanioCmd>) -> Self {
+        Self { uds_queue_tx }
     }
 
     pub async fn read_current_session(&mut self) -> Result<CurrentDiagnosticSession> {
@@ -1159,7 +1227,7 @@ impl UdsClient {
         let buf = [UdsCommand::RequestTransferExit.into()];
         debug!("Stopping UDS transfer: {:02x?}", buf);
 
-        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await?;
+        let resp = CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 1000).await?;
         debug!("Transfer stop response: {:02x?}", resp);
 
         Ok(())
@@ -1194,11 +1262,6 @@ impl UdsClient {
     /// Starts by telling the device to erase the current app, then starts the app download, and lastly
     /// starts actually transferring the app
     pub async fn app_download(&mut self, file: PathBuf, address: u32) -> Result<()> {
-        // disable tester present. bootloader is not currently robust to having tester present enabled
-        // during an app download
-        self.send_cmd(PrdCmd::PersistentTesterPresent(false))
-            .await?;
-
         // start by erasing the app
         self.app_erase().await?;
 
