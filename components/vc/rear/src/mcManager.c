@@ -21,7 +21,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define MCMANAGER_TORQUE_LIMIT 150.0f
+#define MCMANAGER_TORQUE_LIMIT 180.0f
 #define MCMANAGER_TORQUE_LIMIT_REVERSE 25.0f
 
 #define LASH_TORQUE 2.0f
@@ -104,11 +104,6 @@ CAN_pm100dxEnableState_E mcManager_getEnableCommand(void)
 
 float32_t mcManager_getTorqueLimit(void)
 {
-    if (mcManager_data.direction == MCMANAGER_REVERSE)
-    {
-        return MCMANAGER_TORQUE_LIMIT_REVERSE;
-    }
-
     return mcManager_data.torque_limit;
 }
 
@@ -118,7 +113,7 @@ static void mcManager_init(void)
 
     mcManager_data.torque_command.y_n = 0.0f;
     mcManager_data.torque_command.maxStepDelta = RAMPRATE_NM_PER_S / 100;
-    mcManager_data.torque_limit = MCMANAGER_TORQUE_LIMIT;
+    mcManager_data.torque_limit = 0.0f;
     mcManager_data.direction = MCMANAGER_FORWARD;
     mcManager_data.enable = MCMANAGER_DISABLE;
     mcManager_data.last_contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
@@ -216,20 +211,21 @@ static void mcManager_periodic_100Hz(void)
     const bool direction_valid = CANRX_get_signal(VEH, VCFRONT_gear, &direction) == CANRX_MESSAGE_VALID;
     if (direction_valid && (direction == CAN_GEAR_REVERSE))
     {
+        mcManager_data.torque_limit = enable == MCMANAGER_ENABLE ? MCMANAGER_TORQUE_LIMIT_REVERSE : 0.0f;
         mcManager_data.direction = MCMANAGER_REVERSE;
-        torque_command = SATURATE(0.0f, torque_command, MCMANAGER_TORQUE_LIMIT_REVERSE);
     }
     else
+#endif
     {
+        mcManager_data.torque_limit = enable == MCMANAGER_ENABLE ? MCMANAGER_TORQUE_LIMIT : 0.0f;
         mcManager_data.direction = MCMANAGER_FORWARD;
     }
-#endif
 
     const float32_t min_torque = mcManager_data.lash_enabled ? LASH_TORQUE : 0.0f;
 
     mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable = enable;
-    torque_command = SATURATE(min_torque, torque_command, MCMANAGER_TORQUE_LIMIT);
+    torque_command = SATURATE(min_torque, torque_command, mcManager_data.torque_limit);
     lib_rateLimit_linear_update(&mcManager_data.torque_command, torque_command);
 }
 
