@@ -22,19 +22,19 @@ use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
 use futures::StreamExt;
 use libc::{
-    AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK,
-    EINTR, SO_TIMESTAMPING, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE,
+    bind, c_void, can_frame, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t, sockaddr,
+    sockaddr_can, socket, socklen_t, AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW,
+    CAN_RTR_FLAG, CAN_SFF_MASK, EINTR, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE,
     SOF_TIMESTAMPING_RX_HARDWARE, SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
-    SOL_SOCKET, bind, c_void, can_frame, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t,
-    sockaddr, sockaddr_can, socket, socklen_t,
+    SOL_SOCKET, SO_TIMESTAMPING,
 };
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
-use tokio::sync::{Mutex, RwLock, broadcast, mpsc, oneshot};
-use warp::Buf;
-use warp::sse::Event;
-use warp::{Filter, Reply};
+use tokio::sync::{broadcast, mpsc, oneshot, Mutex, RwLock};
 use warp::multipart::{FormData, Part};
+use warp::sse::Event;
+use warp::Buf;
+use warp::{Filter, Reply};
 
 mod views;
 
@@ -46,7 +46,7 @@ const DEFAULT_OFFLINE_TIMEOUT_SECS: u64 = 3;
 const DEFAULT_SWEEP_INTERVAL_MS: u64 = 250;
 const SUPPORTED_CONTROLLERS: &[&str] = &[
     "bmsb", "bmsw0", "bmsw1", "bmsw2", "bmsw3", "bmsw4", "bmsw5", "bmsw6", "bmsw7", "sws",
-    "vcfront", "vcrear", "vcpdu",
+    "vcfront", "vcrear", "vcpdu", "pm100dx",
 ];
 
 #[derive(Debug, Parser, Clone)]
@@ -577,7 +577,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         &opts.veh_iface,
     )?);
     let signal_manifest = Arc::new(build_signal_manifest());
-    let controller_names = capabilities.keys().cloned().collect::<Vec<_>>();
+    let controller_names = tracked_controller_names();
     let uds_workers = Arc::new(
         capabilities
             .iter()
@@ -596,6 +596,11 @@ pub async fn run(opts: Opts) -> Result<()> {
     );
     info!(
         "loaded {} deployable controller(s) from UDS manifest: {}",
+        capabilities.len(),
+        capabilities.keys().cloned().collect::<Vec<_>>().join(", ")
+    );
+    info!(
+        "tracking {} controller(s) on the dashboard homepage: {}",
         controller_names.len(),
         controller_names.join(", ")
     );
@@ -725,10 +730,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_start_tester_present);
 
-    let send_tester_present = warp::path!("api" / "controllers" / String / "tester-present" / "request")
-        .and(warp::post())
-        .and(state_filter.clone())
-        .and_then(handle_send_tester_present);
+    let send_tester_present =
+        warp::path!("api" / "controllers" / String / "tester-present" / "request")
+            .and(warp::post())
+            .and(state_filter.clone())
+            .and_then(handle_send_tester_present);
 
     let stop_tester_present = warp::path!("api" / "controllers" / String / "tester-present")
         .and(warp::delete())
@@ -905,7 +911,10 @@ pub async fn run(opts: Opts) -> Result<()> {
     );
     let (_, server) = warp::serve(routes)
         .try_bind_ephemeral(addr)
-        .context(format!("binding dashboard HTTP server to 0.0.0.0:{}", opts.port))?;
+        .context(format!(
+            "binding dashboard HTTP server to 0.0.0.0:{}",
+            opts.port
+        ))?;
 
     spawn_veh_worker(
         opts.veh_iface.clone(),
@@ -920,6 +929,7 @@ pub async fn run(opts: Opts) -> Result<()> {
 async fn handle_home(state: AppState) -> Result<warp::reply::Response, Infallible> {
     debug!("serving dashboard homepage");
     let snapshot = state.snapshot().await;
+    let deployable_controllers = state.capabilities.keys().cloned().collect::<BTreeSet<_>>();
     let initial_state_json = serde_json::to_string(&snapshot).unwrap_or_else(|_| {
         serde_json::to_string(&DashboardSnapshot {
             controllers: Vec::new(),
@@ -927,16 +937,19 @@ async fn handle_home(state: AppState) -> Result<warp::reply::Response, Infallibl
         .unwrap()
     });
     Ok(render_template_response(
-        views::render_home(&snapshot, initial_state_json),
+        views::render_home(&snapshot, &deployable_controllers, initial_state_json),
         warp::http::StatusCode::OK,
     ))
 }
 
 async fn handle_signals(state: AppState) -> Result<warp::reply::Response, Infallible> {
     debug!("serving signal explorer page");
-    let initial_manifest_json = state
-        .signal_manifest_json()
-        .unwrap_or_else(|_| serde_json::to_string(&SignalManifestResponse { signals: Vec::new() }).unwrap());
+    let initial_manifest_json = state.signal_manifest_json().unwrap_or_else(|_| {
+        serde_json::to_string(&SignalManifestResponse {
+            signals: Vec::new(),
+        })
+        .unwrap()
+    });
     Ok(render_template_response(
         views::render_signals(&initial_manifest_json),
         warp::http::StatusCode::OK,
@@ -1277,7 +1290,14 @@ async fn handle_flash_controller(
     let state_for_job = state.clone();
     let job_id = job.id.clone();
     tokio::spawn(async move {
-        run_flash_job(state_for_job, capability, job_id, upload.path, upload.display_name).await;
+        run_flash_job(
+            state_for_job,
+            capability,
+            job_id,
+            upload.path,
+            upload.display_name,
+        )
+        .await;
     });
 
     Ok(json_success_response(ActionAcceptedResponse {
@@ -1531,6 +1551,13 @@ fn is_supported_controller(controller_name: &str) -> bool {
     SUPPORTED_CONTROLLERS.contains(&controller_name)
 }
 
+fn tracked_controller_names() -> Vec<String> {
+    SUPPORTED_CONTROLLERS
+        .iter()
+        .map(|controller| controller.to_string())
+        .collect()
+}
+
 fn default_session_options() -> Vec<DiagnosticSessionOption> {
     vec![
         DiagnosticSessionOption {
@@ -1713,7 +1740,12 @@ async fn run_session_job(
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        jobs.mark_failed(
+            &job_id,
+            "UDS worker unavailable for controller".to_string(),
+            None,
+            None,
+        );
         let _ = state.publish_jobs_if_changed().await;
         return;
     };
@@ -1758,7 +1790,12 @@ async fn run_routine_job(
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        jobs.mark_failed(
+            &job_id,
+            "UDS worker unavailable for controller".to_string(),
+            None,
+            None,
+        );
         let _ = state.publish_jobs_if_changed().await;
         return;
     };
@@ -1817,17 +1854,19 @@ async fn run_reset_job(
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        jobs.mark_failed(
+            &job_id,
+            "UDS worker unavailable for controller".to_string(),
+            None,
+            None,
+        );
         let _ = state.publish_jobs_if_changed().await;
         return;
     };
     let reset_label = reset_key_label(&reset_type).to_string();
     info!(
         "starting reset job '{}' for controller='{}' reset='{}' on iface='{}'",
-        job_id,
-        capability.name,
-        reset_label,
-        capability.uds_iface
+        job_id, capability.name, reset_label, capability.uds_iface
     );
     {
         let mut jobs = state.jobs.write().await;
@@ -1865,7 +1904,12 @@ async fn run_flash_job(
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        jobs.mark_failed(
+            &job_id,
+            "UDS worker unavailable for controller".to_string(),
+            None,
+            None,
+        );
         let _ = state.publish_jobs_if_changed().await;
         let _ = fs::remove_file(&firmware_path);
         return;
@@ -1880,7 +1924,9 @@ async fn run_flash_job(
     }
     let _ = state.publish_jobs_if_changed().await;
 
-    let result = worker.download_app_to_target(firmware_path.clone(), false).await;
+    let result = worker
+        .download_app_to_target(firmware_path.clone(), false)
+        .await;
 
     {
         let mut jobs = state.jobs.write().await;
@@ -1934,7 +1980,12 @@ async fn run_tester_present_job(
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        jobs.mark_failed(
+            &job_id,
+            "UDS worker unavailable for controller".to_string(),
+            None,
+            None,
+        );
         let _ = state.publish_jobs_if_changed().await;
         let mut tester_present = state.tester_present.lock().await;
         tester_present.remove(&capability.name);
@@ -1946,10 +1997,7 @@ async fn run_tester_present_job(
     );
     {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_started(
-            &job_id,
-            "Starting persistent tester present".to_string(),
-        );
+        jobs.mark_started(&job_id, "Starting persistent tester present".to_string());
     }
     let _ = state.publish_jobs_if_changed().await;
 
@@ -1957,10 +2005,7 @@ async fn run_tester_present_job(
         Ok(()) => {
             {
                 let mut jobs = state.jobs.write().await;
-                jobs.mark_started(
-                    &job_id,
-                    "Persistent tester present active".to_string(),
-                );
+                jobs.mark_started(&job_id, "Persistent tester present active".to_string());
             }
             let _ = state.publish_jobs_if_changed().await;
 
@@ -2053,7 +2098,12 @@ async fn run_tester_present_request_job(
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_failed(&job_id, "UDS worker unavailable for controller".to_string(), None, None);
+        jobs.mark_failed(
+            &job_id,
+            "UDS worker unavailable for controller".to_string(),
+            None,
+            None,
+        );
         let _ = state.publish_jobs_if_changed().await;
         return;
     };
@@ -2132,10 +2182,7 @@ fn format_tester_present_response(response: &[u8]) -> (String, Option<String>) {
     if response[0] == 0x7F {
         if response.len() >= 3 {
             return (
-                format!(
-                    "Tester present rejected: NRC 0x{:02X}",
-                    response[2]
-                ),
+                format!("Tester present rejected: NRC 0x{:02X}", response[2]),
                 Some(hex_string(response)),
             );
         }
@@ -2153,7 +2200,10 @@ fn format_tester_present_response(response: &[u8]) -> (String, Option<String>) {
     }
 
     (
-        format!("Unexpected tester present response SID 0x{:02X}", response[0]),
+        format!(
+            "Unexpected tester present response SID 0x{:02X}",
+            response[0]
+        ),
         Some(hex_string(response)),
     )
 }
@@ -2488,12 +2538,12 @@ fn run_can_worker(
     let mut writer = BufWriter::new(stdout.lock());
 
     loop {
-        let (frame, id) = recv_veh_frame(&socket).with_context(|| format!("read error on {iface}"))?;
+        let (frame, id) =
+            recv_veh_frame(&socket).with_context(|| format!("read error on {iface}"))?;
         let Some(update) = decode_veh_frame(binding, frame, id, &tracked_controllers) else {
             continue;
         };
-        serde_json::to_writer(&mut writer, &update)
-            .context("serializing worker update")?;
+        serde_json::to_writer(&mut writer, &update).context("serializing worker update")?;
         writer.write_all(b"\n").context("writing worker newline")?;
         writer.flush().context("flushing worker update")?;
     }
@@ -2924,7 +2974,14 @@ mod tests {
     fn supported_controller_allowlist_rejects_stw() {
         assert!(is_supported_controller("vcfront"));
         assert!(is_supported_controller("bmsw0"));
+        assert!(is_supported_controller("pm100dx"));
         assert!(!is_supported_controller("stw"));
+    }
+
+    #[test]
+    fn tracked_controller_names_include_non_uds_pm100dx() {
+        let tracked = tracked_controller_names();
+        assert!(tracked.iter().any(|controller| controller == "pm100dx"));
     }
 
     #[test]
