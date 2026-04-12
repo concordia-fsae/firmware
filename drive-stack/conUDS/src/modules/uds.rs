@@ -1443,8 +1443,19 @@ impl UdsClient {
         }
 
         // finish the download, either because it completed successfully or because it failed
-        // early
-        self.transfer_stop().await?;
+        // early. Some nodes complete the flash but never deliver the final transfer-exit
+        // response, so treat that specific timeout as success after a full payload transfer.
+        if let Err(transfer_stop_error) = self.transfer_stop().await {
+            if transfer_stop_error
+                .to_string()
+                .contains("No responses received")
+                && !error
+            {
+                info!("Transfer exit produced no response after full payload transfer; treating download as complete");
+            } else {
+                return Err(transfer_stop_error);
+            }
+        }
 
         if error {
             return Err(anyhow!("Download failed!"));
