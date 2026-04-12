@@ -28,11 +28,11 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define DEFAULT_BOOT_TORQUE 110.0f
+#define DEFAULT_BOOT_TORQUE 130.0f
 #define DEFAULT_TORQUE_PITS 25.0f
 #define DEFAULT_TORQUE_LIMIT_REVERSE 20.0f
 
-#define ABSOLUTE_MAX_TORQUE 150.0f
+#define ABSOLUTE_MAX_TORQUE 175.0f
 #define ABSOLUTE_MIN_TORQUE 0.0f
 #define MIN_TORQUE_RANGE    90.0f
 #define MAX_TORQUE_NM_PER_S 500
