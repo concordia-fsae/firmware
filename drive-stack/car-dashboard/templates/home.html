@@ -2,13 +2,17 @@
 
 {% block content %}
   <section class="page-header">
-    <h2 class="page-title">Deployable Controllers</h2>
-    <p class="page-copy">Controllers update live over SSE. Select a controller page as deeper views are added.</p>
+    <h2 class="page-title">Controllers</h2>
+    <p class="page-copy">Controllers update live over SSE. Only UDS-capable controllers link to deeper operation pages.</p>
   </section>
   <section id="controllers" class="grid">
     {% for controller in controllers %}
       <article class="card">
+        {% if controller.supports_operations %}
         <a class="card-link" href="/controllers/{{ controller.slug }}">
+        {% else %}
+        <div class="card-link">
+        {% endif %}
           <div class="card-header">
             <div class="controller-name">{{ controller.name }}</div>
             <span class="badge {{ controller.status_class }}">{{ controller.status_label }}</span>
@@ -17,7 +21,11 @@
             <span class="meta">Last seen: {{ controller.last_seen_label }}</span>
             <span class="meta">Faults: {{ controller.fault_count }}</span>
           </div>
+        {% if controller.supports_operations %}
         </a>
+        {% else %}
+        </div>
+        {% endif %}
         <details>
           <summary>Fault Details</summary>
           {% if controller.fault_count == 0 %}
@@ -42,11 +50,13 @@
     {% endfor %}
   </section>
   <script id="initial-state" type="application/json">{{ initial_state_json|safe }}</script>
+  <script id="deployable-controllers" type="application/json">{{ deployable_controllers_json|safe }}</script>
 {% endblock %}
 
 {% block scripts %}
   <script>
     const initialState = JSON.parse(document.getElementById("initial-state").textContent);
+    const deployableControllers = new Set(JSON.parse(document.getElementById("deployable-controllers").textContent));
     const container = document.getElementById("controllers");
     let latestState = initialState;
 
@@ -100,12 +110,20 @@
       );
     }
 
+    function isDeployableController(name) {
+      return deployableControllers.has(name);
+    }
+
     function createCard(controller, expanded) {
+      const wrapperTag = isDeployableController(controller.name) ? "a" : "div";
+      const wrapperAttrs = isDeployableController(controller.name)
+        ? `class="card-link" href="/controllers/${encodeURIComponent(controller.name)}"`
+        : `class="card-link"`;
       const article = document.createElement("article");
       article.className = "card";
       article.dataset.controller = controller.name;
       article.innerHTML = `
-        <a class="card-link" href="/controllers/${encodeURIComponent(controller.name)}">
+        <${wrapperTag} ${wrapperAttrs}>
           <div class="card-header">
             <div class="controller-name"></div>
             <span class="badge"></span>
@@ -114,7 +132,7 @@
             <span class="meta" data-last-seen-ms="0"></span>
             <span class="meta" data-fault-count></span>
           </div>
-        </a>
+        </${wrapperTag}>
         <details data-controller="${escapeHtml(controller.name)}">
           <summary>Fault Details</summary>
           <div data-faults-body></div>
@@ -138,7 +156,9 @@
       const details = article.querySelector("details");
       const faultsBody = article.querySelector("[data-faults-body]");
 
-      link.href = `/controllers/${encodeURIComponent(controller.name)}`;
+      if (link.tagName === "A") {
+        link.href = `/controllers/${encodeURIComponent(controller.name)}`;
+      }
       nameNode.textContent = controller.name;
       badge.className = `badge ${statusClass}`;
       badge.textContent = statusLabel;

@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
@@ -78,12 +79,23 @@ struct JobView {
     finished_at_label: String,
 }
 
-pub fn render_home(snapshot: &DashboardSnapshot, initial_state_json: String) -> Result<String> {
+pub fn render_home(
+    snapshot: &DashboardSnapshot,
+    deployable_controllers: &BTreeSet<String>,
+    initial_state_json: String,
+) -> Result<String> {
     let controllers = snapshot
         .controllers
         .iter()
-        .map(ControllerView::from_summary_status)
+        .map(|status| {
+            ControllerView::from_summary_status(
+                status,
+                deployable_controllers.contains(&status.name),
+            )
+        })
         .collect::<Vec<_>>();
+    let deployable_controllers_json = serde_json::to_string(deployable_controllers)
+        .context("serializing deployable controllers")?;
 
     environment()?
         .get_template("home.html")
@@ -92,6 +104,7 @@ pub fn render_home(snapshot: &DashboardSnapshot, initial_state_json: String) -> 
             page_title => "Dashboard",
             controllers => controllers,
             initial_state_json => initial_state_json,
+            deployable_controllers_json => deployable_controllers_json,
         })
         .context("rendering home.html template")
 }
@@ -144,7 +157,7 @@ pub fn render_not_found(controller_name: &str) -> Result<String> {
 }
 
 impl ControllerView {
-    fn from_summary_status(status: &ControllerStatus) -> Self {
+    fn from_summary_status(status: &ControllerStatus, supports_operations: bool) -> Self {
         Self {
             name: status.name.clone(),
             slug: status.name.clone(),
@@ -163,7 +176,7 @@ impl ControllerView {
             session_options: Vec::new(),
             reset_options: Vec::new(),
             routine_options: Vec::new(),
-            supports_operations: false,
+            supports_operations,
         }
     }
 
