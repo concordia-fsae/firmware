@@ -62,6 +62,8 @@ messages:
       requestCalibImu:
       requestCalibSteerAngle:
       requestAppsBypass:
+      requestTestPump:
+      requestTestFan:
       validatorRequest:
         template: criticalDataChecksum
 

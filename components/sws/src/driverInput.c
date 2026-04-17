@@ -140,6 +140,10 @@ typedef struct
 static data_S data;
 
 static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
+    [DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN] = {
+        .requestDec = DRIVERINPUT_REQUEST_TEST_PUMP,
+        .requestInc = DRIVERINPUT_REQUEST_TEST_FAN,
+    },
     [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] = {
         .requestDec = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
         .requestInc = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,

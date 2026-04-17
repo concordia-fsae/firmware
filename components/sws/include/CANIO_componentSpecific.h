@@ -83,6 +83,8 @@
 #define set_requestCalibImu(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_IMU)         ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestCalibSteerAngle(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestAppsBypass(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_APPS_BYPASS)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTestPump(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TEST_PUMP)             ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTestFan(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TEST_FAN)              ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m,b,n,s)         set(m,b,n,s, driverInput_getScreenCAN())
 #define set_driverConfigSelection(m,b,n,s) set(m,b,n,s, driverInput_getConfigSelectedCAN())
