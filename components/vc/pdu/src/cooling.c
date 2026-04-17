@@ -32,6 +32,11 @@ static void cooling_init()
  */
 static void cooling10Hz_PRD(void)
 {
+    CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
+    const bool testPump = (CANRX_get_signal(VEH, SWS_requestTestPump, &tmp) == CANRX_MESSAGE_VALID) &&
+                          (tmp == CAN_DIGITALSTATUS_ON);
+    const bool testFan = (CANRX_get_signal(VEH, SWS_requestTestFan, &tmp) == CANRX_MESSAGE_VALID) &&
+                         (tmp == CAN_DIGITALSTATUS_ON);
     const bool isHV  = app_vehicleState_getState() == VEHICLESTATE_ON_HV;
     const bool isRun = app_vehicleState_getState() == VEHICLESTATE_TS_RUN;
 
@@ -40,10 +45,10 @@ static void cooling10Hz_PRD(void)
     const bool faultFan = (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERCURRENT) ||
                           (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERTEMP);
 
-    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_PUMP, (isHV || isRun) && !faultPump);
-    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, isRun && !faultFan);
+    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_PUMP, (isHV || isRun || testPump) && !faultPump);
+    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, (isRun || testFan) && !faultFan);
 
-    if (isHV || isRun)
+    if (isHV || isRun || testPump)
     {
 #if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
         HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.75f);
