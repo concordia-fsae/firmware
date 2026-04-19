@@ -74,6 +74,7 @@ float32_t                     torque_getSlipErrorP(void);
 float32_t                     torque_getSlipErrorI(void);
 float32_t                     torque_getSlipErrorD(void);
 float32_t                     torque_getTorqueReduction(void);
+float32_t                     torque_getVdMaxTorqueRequest(void);
 torque_state_E                torque_getState(void);
 CAN_torqueManagerState_E      torque_getStateCAN(void);
 torque_gear_E                 torque_getGear(void);

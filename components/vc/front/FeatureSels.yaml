@@ -20,3 +20,4 @@ features:
   hw_flash_delay: true
   feature_gpsTransceiver: true
   feature_bypassable_apps: true
+  feature_limit_lon_tire_accel: true

@@ -31,6 +31,7 @@
 #include "app_vehicleSpeed.h"
 #include "app_vehicleState.h"
 #include "app_faultManager.h"
+#include "vd.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -147,6 +148,13 @@
 #define set_gpsPairAlarmRollover(m,b,n,s) set(m,b,n,s, (app_gps_getPairmsgRef()->alarmStatus & 0x20U) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_gpsPairAlarmStabilityWarning(m,b,n,s) set(m,b,n,s, (app_gps_getPairmsgRef()->alarmStatus & 0x40U) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_gpsPairAlarmEulerAnomaly(m,b,n,s) set(m,b,n,s, (app_gps_getPairmsgRef()->alarmStatus & 0x80U) ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
+
+#define set_vdMaxTireForceFL(m,b,n,s) set(m,b,n,s, vd_getMaxLonTireForce(WHEEL_FL))
+#define set_vdMaxTireForceFR(m,b,n,s) set(m,b,n,s, vd_getMaxLonTireForce(WHEEL_FR))
+#define set_vdMaxTireForceRL(m,b,n,s) set(m,b,n,s, vd_getMaxLonTireForce(WHEEL_RL))
+#define set_vdMaxTireForceRR(m,b,n,s) set(m,b,n,s, vd_getMaxLonTireForce(WHEEL_RR))
+#define set_vdIntendedRadius(m,b,n,s) set(m,b,n,s, vd_getIntendedRadius())
+#define set_vdMaxTorqueRequest(m,b,n,s) set(m,b,n,s, torque_getVdMaxTorqueRequest())
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())
