@@ -221,11 +221,14 @@ static void mcManager_periodic_100Hz(void)
         mcManager_data.direction = MCMANAGER_FORWARD;
     }
 
-    const float32_t min_torque = mcManager_data.lash_enabled ? LASH_TORQUE : 0.0f;
+    const bool isRegenTorque = torque_command < 0.0f;
+    const float32_t min_torque = mcManager_data.lash_enabled ? (!isRegenTorque ? LASH_TORQUE : -LASH_TORQUE) : 0.0f;
+    const float32_t maxLimit = !isRegenTorque ? mcManager_data.torque_limit : min_torque;
+    const float32_t minLimit = !isRegenTorque ? min_torque : -mcManager_data.torque_limit;
 
     mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable = enable;
-    torque_command = SATURATE(min_torque, torque_command, mcManager_data.torque_limit);
+    torque_command = SATURATE(minLimit, torque_command, maxLimit);
     lib_rateLimit_linear_update(&mcManager_data.torque_command, torque_command);
 }
 

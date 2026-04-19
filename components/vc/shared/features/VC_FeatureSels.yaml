@@ -3,3 +3,4 @@ features:
   feature_reverse: true
   feature_launch_control: true
   feature_traction_control: true
+  feature_regen: true
