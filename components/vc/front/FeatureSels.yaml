@@ -10,7 +10,7 @@ features:
   app_uds: true
   feature_brakepedal_from_pressure: true
   feature_vehicleState_mode: follower
-  feature_wiggly_pedal: true
+  feature_wiggly_pedal: false
   feature_vehicleSpeed_leader: true
   nvm_lib_enabled: true
   nvm_flash_backed: true
