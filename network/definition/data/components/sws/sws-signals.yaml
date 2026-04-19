@@ -100,6 +100,12 @@ signals:
   requestAppsBypass:
     description: Request bypass of the apps sensor in testing
     discreteValues: digitalStatus
+  requestTestPump:
+    description: Request Pump ON
+    discreteValues: digitalStatus
+  requestTestFan:
+    description: Request Fan ON
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested

@@ -53,6 +53,10 @@ signals:
     sourceBuses: veh
   SWS_requestCrashReset:
     sourceBuses: veh
+  SWS_requestTestPump:
+    sourceBuses: veh
+  SWS_requestTestFan:
+    sourceBuses: veh
   VCFRONT_brakePosition:
     sourceBuses: veh
   VCFRONT_vehicleSpeed:
