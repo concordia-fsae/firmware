@@ -88,26 +88,18 @@ static void bppc_periodic_100Hz(void)
     {
         const float32_t brake_pos = drv_pedalMonitor_getPedalPosition(BRAKE_CHANNEL);
         const float32_t accelerator_pos = apps_getPedalPosition();
-        const bool in_launch_control = torque_isLaunching();
 
         bppc_data.position = brake_pos;
 
-        if (in_launch_control == false)
+        if ((accelerator_pos > 0.25f) && (brake_pos > 0.10f))
         {
-            if ((accelerator_pos > 0.25f) && (brake_pos > 0.10f))
-            {
-                state = BPPC_FAULT;
-            }
-            else if ((bppc_data.state == BPPC_FAULT) && (brake_pos <= 0.10f))
-            {
-                state = BPPC_FAULT_LATCHED;
-            }
-            else if ((accelerator_pos < 0.05f) || (bppc_data.state == BPPC_OK))
-            {
-                state = BPPC_OK;
-            }
+            state = BPPC_FAULT;
         }
-        else
+        else if ((bppc_data.state == BPPC_FAULT) && (brake_pos <= 0.10f))
+        {
+            state = BPPC_FAULT_LATCHED;
+        }
+        else if ((accelerator_pos < 0.05f) || (bppc_data.state == BPPC_OK))
         {
             state = BPPC_OK;
         }
