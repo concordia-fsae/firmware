@@ -54,6 +54,7 @@ messages:
       requestScreen:
       requestLaunchControl:
       requestTractionControl:
+      requestRegenEnabled:
       requestPreloadTorqueInc:
       requestPreloadTorqueDec:
       requestCrashReset:
