@@ -203,10 +203,10 @@ signals:
     description: Torque request from the torque manager
     unit: Nm
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 9
       range:
-        min: -100
-        max: 150
+        min: -200
+        max: 200
       resolution: 1
     continuous: true
 
@@ -338,4 +338,65 @@ signals:
         min: -50
         max: 50
       signedness: signed
+    continuous: true
+
+  vdMaxTireForceFL:
+    description: Max longitudanal force appliable fy the front left tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdMaxTireForceFR:
+    description: Max longitudanal force appliable fy the front right tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdMaxTireForceRL:
+    description: Max longitudanal force appliable fy the rear left tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdMaxTireForceRR:
+    description: Max longitudanal force appliable fy the rear right tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdIntendedRadius:
+    description: Intended turn radius of vehicle from driver input
+    unit: m
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 50
+      resolution: 0.05
+    continuous: true
+  vdMaxTorqueRequest:
+    description: Torque request from the torque manager
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 9
+      range:
+        min: -200
+        max: 200
+      resolution: 1
     continuous: true

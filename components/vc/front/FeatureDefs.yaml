@@ -7,3 +7,4 @@ defs:
   brakepedal_from_pressure:
   wiggly_pedal:
   bypassable_apps:
+  limit_lon_tire_accel:

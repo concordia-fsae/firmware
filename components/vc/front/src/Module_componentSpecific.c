@@ -36,6 +36,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &steeringAngle_desc,
     &shockpot_desc,
     &sys_desc,
+    &vd_desc,
     &CANIO_tx,
 };
 
