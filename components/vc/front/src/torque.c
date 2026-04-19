@@ -48,7 +48,8 @@
 #define LC_REJECTED_MS 2000
 #define LC_BRAKE_THRESHOLD 0.30
 #define LC_BRAKE_THRESHOLD_LAUNCH 0.05
-#define LC_THROTTLE_THRESHOLD 0.50
+#define LC_THROTTLE_THRESHOLD 0.15
+#define LC_THROTTLE_DISABLE_HYST 0.05
 #define LC_THROTTLE_START_CUTOFF 0.10
 
 #define TC_MAX 0.7f
@@ -99,6 +100,7 @@ static struct
 
     torque_launchControlState_E launchControlState;
     torque_tractionControlState_E tractionControlState;
+    float32_t acceleratorMaxLaunchValue;
 
     uint32_t  lastTimeampMS;
     float32_t slipRear;
@@ -202,7 +204,7 @@ static float32_t evaluate_torque_max(void)
     return torque_request_max;
 }
 
-static void evaluate_launch_control(float32_t accelerator_position, float32_t brake_position)
+static void evaluate_launch_control(float32_t accelerator_position, float32_t brake_position, bool bppc_ok)
 {
     bool launchRejected = false;
 
@@ -228,7 +230,8 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
                 else if (launch_control_request_rising)
                 {
                     if ((brake_position > LC_BRAKE_THRESHOLD) &&
-                        (accelerator_position < LC_THROTTLE_START_CUTOFF))
+                        (accelerator_position < LC_THROTTLE_START_CUTOFF) &&
+                        bppc_ok)
                     {
                         torque_data.launchControlState = LC_STATE_HOLDING;
                         drv_timer_stop(&torque_data.launch_control_timer);
@@ -246,10 +249,16 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             {
                 torque_data.launchControlState = LC_STATE_INACTIVE;
             }
+            else if (!bppc_ok)
+            {
+                torque_data.launchControlState = LC_STATE_REJECTED;
+                drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
+            }
             else if (accelerator_position > LC_THROTTLE_THRESHOLD)
             {
                 drv_timer_start(&torque_data.launch_control_timer, LC_SETTLING_MS);
                 torque_data.launchControlState = LC_STATE_SETTLING;
+                torque_data.acceleratorMaxLaunchValue = 0.0f;
             }
             break;
         case LC_STATE_SETTLING:
@@ -257,6 +266,11 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             {
                 torque_data.launchControlState = LC_STATE_PRELOAD;
                 drv_timer_stop(&torque_data.launch_control_timer);
+            }
+            else if (!bppc_ok)
+            {
+                torque_data.launchControlState = LC_STATE_REJECTED;
+                drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
             }
             else if (accelerator_position < LC_THROTTLE_THRESHOLD)
             {
@@ -272,16 +286,32 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             {
                 torque_data.launchControlState = LC_STATE_INACTIVE;
             }
+            else if (!bppc_ok)
+            {
+                torque_data.launchControlState = LC_STATE_REJECTED;
+                drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
+            }
             else if (brake_position < LC_BRAKE_THRESHOLD_LAUNCH)
             {
                 torque_data.launchControlState = LC_STATE_LAUNCH;
             }
+
+            torque_data.acceleratorMaxLaunchValue = accelerator_position;
             break;
         case LC_STATE_LAUNCH:
-            if ((accelerator_position < LC_THROTTLE_THRESHOLD) ||
-                (brake_position > LC_BRAKE_THRESHOLD))
+            if (!bppc_ok)
+            {
+                torque_data.launchControlState = LC_STATE_REJECTED;
+                drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
+            }
+            else if ((accelerator_position < torque_data.acceleratorMaxLaunchValue - LC_THROTTLE_DISABLE_HYST) ||
+                     (brake_position > LC_BRAKE_THRESHOLD))
             {
                 torque_data.launchControlState = LC_STATE_INACTIVE;
+            }
+            else if (accelerator_position > torque_data.acceleratorMaxLaunchValue)
+            {
+                torque_data.acceleratorMaxLaunchValue = accelerator_position;
             }
             break;
         default:
@@ -290,6 +320,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 #else
     UNUSED(accelerator_position);
     UNUSED(brake_position);
+    UNUSED(bppc_ok);
 #endif
 
     app_faultManager_setFaultState(FM_FAULT_VCFRONT_LAUNCHREJECTED, launchRejected);
@@ -724,19 +755,12 @@ static void torque_periodic_100Hz(void)
     evaluate_slip_request();
     evaluate_preload_torque();
 
-    evaluate_launch_control(accelerator_position, brake_position);
+    evaluate_launch_control(accelerator_position, brake_position, bppc_ok);
     torque_data.torqueReduction = evaluate_traction_control();
 
     float32_t torque_request_max = evaluate_torque_max();
-
-    if (torque_data.race_mode != RACEMODE_ENABLED)
-    {
-        torque_request_max = DEFAULT_TORQUE_PITS;
-    }
-    if (torque_data.gear != GEAR_F)
-    {
-        torque_request_max = DEFAULT_TORQUE_LIMIT_REVERSE;
-    }
+    torque_request_max = torque_data.race_mode != RACEMODE_ENABLED ? DEFAULT_TORQUE_PITS : torque_request_max;
+    torque_request_max = torque_data.gear != GEAR_F ? DEFAULT_TORQUE_LIMIT_REVERSE : torque_request_max;
 
     if (gear_change || mode_change || !bppc_ok)
     {
@@ -757,13 +781,12 @@ static void torque_periodic_100Hz(void)
     }
     else if (torque_data.launchControlState == LC_STATE_PRELOAD)
     {
-        torque = torque_data.torquePreload;
-        torque = lib_rateLimit_linear_update(&torque_data.preloadRateLimit, torque);
+        torque = lib_rateLimit_linear_update(&torque_data.preloadRateLimit, torque_data.torquePreload);
         torque_data.launchRateLimit.y_n = torque;
     }
     else if (torque_data.launchControlState == LC_STATE_LAUNCH)
     {
-        torque = lib_rateLimit_linear_update(&torque_data.launchRateLimit, torque);
+        torque = lib_rateLimit_linear_update(&torque_data.launchRateLimit, torque_request_max);
         torque_data.torqueRateLimit.y_n = torque;
     }
     else
