@@ -18,6 +18,7 @@
 #include "lib_buffer.h"
 #include "lib_madgwick.h"
 #include "lib_simpleFilter.h"
+#include "lib_utility.h"
 #include "app_vehicleState.h"
 #include "drv_timer.h"
 
@@ -35,9 +36,6 @@
 #define IMU_TIMEOUT_MS 1000U
 #define BASELINE_SAMPLES 500U
 #define MADGWICK_BETA 0.01f
-
-#define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
-#define DEG_TO_RAD (1 / RAD_TO_DEG)
 
 #define IMU_LPF_CUTOFF_HZ 100.0f
 #define IMU_LPF_DT_S      0.01f

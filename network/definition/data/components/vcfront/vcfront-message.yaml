@@ -240,3 +240,22 @@ messages:
       gpsPairAlarmRollover:
       gpsPairAlarmStabilityWarning:
       gpsPairAlarmEulerAnomaly:
+
+  vdMaxTireForce:
+    description: Max applicable force by each tire from model
+    id: 0x2f0
+    cycleTimeMs: 20
+    sourceBuses: veh
+    signals:
+      vdMaxTireForceFL:
+      vdMaxTireForceFR:
+      vdMaxTireForceRL:
+      vdMaxTireForceRR:
+  vdDiagnostics:
+    description: VD metrics
+    id: 0x2f1
+    cycleTimeMs: 20
+    sourceBuses: veh
+    signals:
+      vdIntendedRadius:
+      vdMaxTorqueRequest:

@@ -35,6 +35,9 @@
 #define MODIFY_REG(REG, CLEARMASK, SETMASK)    WRITE_REG((REG), (((READ_REG(REG)) & (~(CLEARMASK))) | (SETMASK)))
 #endif
 
+#define RAD_TO_DEG (180.0f / 3.14159265358979323846f)
+#define DEG_TO_RAD (1 / RAD_TO_DEG)
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/

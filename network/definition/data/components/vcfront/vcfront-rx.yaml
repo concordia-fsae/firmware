@@ -4,6 +4,8 @@ messages:
     unrecorded: true
   SWS_driverRequest:
     sourceBuses: veh
+  VCPDU_imuAccel:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh

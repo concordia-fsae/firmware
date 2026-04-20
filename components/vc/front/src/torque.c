@@ -18,6 +18,8 @@
 #include "lib_utility.h"
 #include "app_vehicleState.h"
 #include "app_faultManager.h"
+#include "vd.h"
+#include "FeatureDefines.h"
 
 #include "drv_timer.h"
 #include "lib_rateLimit.h"
@@ -38,6 +40,7 @@
 #define MAX_TORQUE_NM_PER_S 500
 #define MAX_LAUNCH_NM_PER_S 1000
 #define PRELOAD_NM_PER_S    100
+#define GEAR_RATIO          4.6f
 
 #define TORQUE_CHANGE_DELAY 250
 
@@ -114,6 +117,7 @@ static struct
     float32_t slipRear;
     float32_t torqueCorrection;
     float32_t torqueReduction;
+    float32_t maxVdTorque;
     lib_pid_S tractionControlPID;
 } torque_data;
 
@@ -587,6 +591,11 @@ float32_t torque_getPreloadTorque(void)
     return torque_data.torquePreload;
 }
 
+float32_t torque_getVdMaxTorqueRequest(void)
+{
+    return torque_data.maxVdTorque;
+}
+
 /**
  * @brief Get current gear
  * @return State of the torque manager
@@ -842,6 +851,12 @@ static void torque_periodic_100Hz(void)
         torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -regenTorque;
         torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     }
+
+    const float32_t maxVdTorque = ((vd_getMaxLonTireForce(WHEEL_RL) + vd_getMaxLonTireForce(WHEEL_RR)) * TIRE_RADIUS_M) / GEAR_RATIO;
+    torque_data.maxVdTorque = maxVdTorque;
+#if FEATURE_IS_ENABLED(FEATURE_LIMIT_LON_TIRE_ACCEL)
+    torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
+#endif
 
     const float32_t minTorque = torque_data.gear == GEAR_F ? -REGEN_MAX_TORQUE_N : ABSOLUTE_MIN_TORQUE;
     torque_data.torque = SATURATE(minTorque, torque, ABSOLUTE_MAX_TORQUE);
