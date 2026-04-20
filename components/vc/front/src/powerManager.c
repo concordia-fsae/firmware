@@ -48,7 +48,7 @@ static void powerManager_periodic_10Hz(void)
     // TODO: Improve
     for (uint8_t i = 0; i < DRV_TPS20XX_CHANNEL_COUNT; i++)
     {
-        drv_tps20xx_setEnabled(i, !sleeping);
+        drv_tps20xx_setEnabled(i, !sleeping || (i == DRV_TPS20XX_CHANNEL_5V_CRITICAL));
     }
 
     drv_tps20xx_run();
