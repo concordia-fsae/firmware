@@ -250,6 +250,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
                     }
                     else
                     {
+                        launchRejected = true;
                         torque_data.launchControlState = LC_STATE_REJECTED;
                         drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
                     }
@@ -263,6 +264,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             }
             else if (!bppc_ok)
             {
+                launchRejected = true;
                 torque_data.launchControlState = LC_STATE_REJECTED;
                 drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
             }
@@ -281,6 +283,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             }
             else if (!bppc_ok)
             {
+                launchRejected = true;
                 torque_data.launchControlState = LC_STATE_REJECTED;
                 drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
             }
@@ -300,6 +303,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             }
             else if (!bppc_ok)
             {
+                launchRejected = true;
                 torque_data.launchControlState = LC_STATE_REJECTED;
                 drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
             }
@@ -313,6 +317,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
         case LC_STATE_LAUNCH:
             if (!bppc_ok)
             {
+                launchRejected = true;
                 torque_data.launchControlState = LC_STATE_REJECTED;
                 drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
             }
@@ -334,6 +339,17 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
     UNUSED(brake_position);
     UNUSED(bppc_ok);
 #endif
+
+    if ((torque_data.launchControlState != LC_STATE_INACTIVE) &&
+        (torque_data.launchControlState != LC_STATE_REJECTED) &&
+        ((torque_data.race_mode != RACEMODE_ENABLED) ||
+         (torque_data.gear != GEAR_F) ||
+         (torque_data.state != TORQUE_ACTIVE)))
+    {
+        launchRejected = true;
+        torque_data.launchControlState = LC_STATE_REJECTED;
+        drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
+    }
 
     app_faultManager_setFaultState(FM_FAULT_VCFRONT_LAUNCHREJECTED, launchRejected);
 }
