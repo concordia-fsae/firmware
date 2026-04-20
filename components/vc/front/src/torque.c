@@ -52,6 +52,12 @@
 #define LC_THROTTLE_DISABLE_HYST 0.05
 #define LC_THROTTLE_START_CUTOFF 0.10
 
+#define REGEN_BRAKE_START_THRESH 0.10f
+#define REGEN_BRAKE_STOP_THRESH 0.05f
+#define REGEN_ACCEL_CUTOFF 0.15f
+#define REGEN_MAX_TORQUE_N 50
+#define REGEN_SPEED_CUTOFF_MPS 1.38f // Rules limitation to regen
+
 #define TC_MAX 0.7f
 #define TC_MIN 0.0f
 #define TC_TARGET_SLIP 0.10f
@@ -92,6 +98,8 @@ static struct
     bool gear_change_active;
     bool torque_control_request_active;
     bool race_mode_change_active;
+    bool regenEnabled;
+    bool isRegenerating;
 
     drv_timer_S torque_change_timer;
     drv_timer_S launch_control_timer;
@@ -382,6 +390,44 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.slipRear = slip;
     return multiplier;
+}
+
+static void evaluateRegenEnabled(float32_t accelPosition, float32_t brakePosition)
+{
+#if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
+    CAN_digitalStatus_E regenEnabled = CAN_DIGITALSTATUS_SNA;
+    bool requested = (CANRX_get_signal(VEH, SWS_requestRegenEnabled, &regenEnabled) != CANRX_MESSAGE_SNA) &&
+                     (regenEnabled == CAN_DIGITALSTATUS_ON);
+    const float32_t vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
+
+    torque_data.regenEnabled = requested && (torque_data.gear == GEAR_F) &&
+                               (vehicleSpeed > REGEN_SPEED_CUTOFF_MPS) &&
+                               (accelPosition < REGEN_ACCEL_CUTOFF);
+#else
+    torque_data.regenEnabled = false;
+#endif
+
+    if (torque_data.regenEnabled)
+    {
+        if (torque_data.isRegenerating)
+        {
+            if (brakePosition < REGEN_BRAKE_STOP_THRESH)
+            {
+                torque_data.isRegenerating = false;
+            }
+        }
+        else
+        {
+            if (brakePosition > REGEN_BRAKE_START_THRESH)
+            {
+                torque_data.isRegenerating = true;
+            }
+        }
+    }
+    else
+    {
+        torque_data.isRegenerating = false;
+    }
 }
 
 static void evaluate_slip_request(void)
@@ -756,6 +802,7 @@ static void torque_periodic_100Hz(void)
     evaluate_preload_torque();
 
     evaluate_launch_control(accelerator_position, brake_position, bppc_ok);
+    evaluateRegenEnabled(accelerator_position, brake_position);
     torque_data.torqueReduction = evaluate_traction_control();
 
     float32_t torque_request_max = evaluate_torque_max();
@@ -768,6 +815,7 @@ static void torque_periodic_100Hz(void)
     }
 
     float32_t torque = (bppc_ok) ? accelerator_position * torque_request_max : 0.0f;
+    const float32_t regenTorque = REGEN_MAX_TORQUE_N * brake_position;
     torque_data.torqueDriverInput = torque;
     torque_data.torqueCorrection = torque_data.torqueReduction * torque;
 
@@ -791,11 +839,12 @@ static void torque_periodic_100Hz(void)
     }
     else
     {
-        torque -= torque_data.torqueCorrection;
+        torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -regenTorque;
         torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     }
 
-    torque_data.torque = SATURATE(ABSOLUTE_MIN_TORQUE, torque, ABSOLUTE_MAX_TORQUE);
+    const float32_t minTorque = torque_data.gear == GEAR_F ? -REGEN_MAX_TORQUE_N : ABSOLUTE_MIN_TORQUE;
+    torque_data.torque = SATURATE(minTorque, torque, ABSOLUTE_MAX_TORQUE);
 }
 
 /******************************************************************************

@@ -85,6 +85,9 @@ signals:
   requestTractionControl:
     description: Status of traction control request
     discreteValues: digitalStatus
+  requestRegenEnabled:
+    description: Status of regen request
+    discreteValues: digitalStatus
   requestSlipInc:
     description: Status of slip increase request
     discreteValues: digitalStatus
