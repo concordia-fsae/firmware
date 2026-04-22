@@ -65,6 +65,7 @@ messages:
       requestAppsBypass:
       requestTestPump:
       requestTestFan:
+      requestTcTireModelLimit:
       validatorRequest:
         template: criticalDataChecksum
 

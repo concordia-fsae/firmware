@@ -109,6 +109,9 @@ signals:
   requestTestFan:
     description: Request Fan ON
     discreteValues: digitalStatus
+  requestTcTireModelLimit:
+    description: Request traction control torque limits defined by the tire model
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested

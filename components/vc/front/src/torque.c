@@ -119,7 +119,13 @@ static struct
     float32_t torqueReduction;
     float32_t maxVdTorque;
     lib_pid_S tractionControlPID;
+
+    FLAG_create(tcParamsWasRequested, PARAMSTATE_COUNT);
 } torque_data;
+
+static CANRX_MESSAGE_health_E (*paramRequestStateCanSignal[PARAMSTATE_COUNT])(CAN_digitalStatus_E* status) = {
+    [PARAMSTATE_TC_TIRE_MODEL_LIMIT] = CANRX_get_signal_func(VEH, SWS_requestTcTireModelLimit),
+};
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -523,6 +529,28 @@ static void evaluate_preload_torque(void)
     }
 }
 
+static void tcEvaluateParams(void)
+{
+    for (uint8_t i = 0U; i < PARAMSTATE_COUNT; i++)
+    {
+        CAN_digitalStatus_E request = CAN_DIGITALSTATUS_SNA;
+        const bool wasRequested = FLAG_get(torque_data.tcParamsWasRequested, i);
+        const bool isRequested = (paramRequestStateCanSignal[i](&request) == CANRX_MESSAGE_VALID) &&
+                                 (request == CAN_DIGITALSTATUS_ON);
+        const bool isRisingRequest = isRequested && !wasRequested;
+        const bool isParamSet = FLAG_get(tcParamState_data.params, i);
+
+        FLAG_assign(tcParamState_data.params, i, isRisingRequest ^ isParamSet);
+
+        if (isRisingRequest)
+        {
+            lib_nvm_requestWrite(NVM_ENTRYID_TC_PARAMSTATE);
+        }
+
+        FLAG_assign(torque_data.tcParamsWasRequested, i, isRequested);
+    }
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -785,6 +813,11 @@ CAN_tractionControlState_E torque_getTractionControlStateCAN(void)
     return ret;
 }
 
+bool tc_isParamEnabled(tc_paramState_E param)
+{
+    return FLAG_get(tcParamState_data.params, param);
+}
+
 static void torque_init(void)
 {
     memset(&torque_data, 0x00U, sizeof(torque_data));
@@ -815,6 +848,7 @@ static void torque_init(void)
 
 static void torque_periodic_100Hz(void)
 {
+    tcEvaluateParams();
     const float32_t accelerator_position = apps_getPedalPosition();
     const float32_t brake_position = bppc_getPedalPosition();
     const bppc_state_E bppc_ok = bppc_getState() == BPPC_OK;
