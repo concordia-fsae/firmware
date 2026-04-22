@@ -905,7 +905,10 @@ static void torque_periodic_100Hz(void)
     const float32_t maxVdTorque = ((vd_getMaxLonTireForce(WHEEL_RL) + vd_getMaxLonTireForce(WHEEL_RR)) * TIRE_RADIUS_M) / GEAR_RATIO;
     torque_data.maxVdTorque = maxVdTorque;
 #if FEATURE_IS_ENABLED(FEATURE_LIMIT_LON_TIRE_ACCEL)
-    torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
+    if (FLAG_get(tcParamState_data.params, PARAMSTATE_TC_TIRE_MODEL_LIMIT))
+    {
+        torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
+    }
 #endif
 
     const float32_t minTorque = torque_data.gear == GEAR_F ? -REGEN_MAX_TORQUE_N : ABSOLUTE_MIN_TORQUE;
