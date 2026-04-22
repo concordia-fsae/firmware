@@ -264,6 +264,11 @@ configSelection:
   TEST_PUMP_FAN: 3
   OPTION13: 4
   TC_TIRE_MODEL_LIM: 5
+  PARAM_TC_KP: 6
+  PARAM_TC_KI: 7
+  PARAM_TC_KD: 8
+  PARAM_TC_MAX_LIM: 9
+  PARAM_TC_ILIM: 10
 
 configOption:
   SNA: 0

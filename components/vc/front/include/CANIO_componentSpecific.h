@@ -159,8 +159,8 @@
 #define set_paramTcKp(m,b,n,s)             set(m,b,n,s, TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp))
 #define set_paramTcKi(m,b,n,s)             set(m,b,n,s, TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi))
 #define set_paramTcKd(m,b,n,s)             set(m,b,n,s, TC_PID_CONV_THOU_F32(tcPid_data.thousandthKd))
-#define set_paramTcPidMax(m,b,n,s)         set(m,b,n,s, tcPid_data.percentMaxTcLimit)
-#define set_paramTcILim(m,b,n,s)           set(m,b,n,s, tcPid_data.percentILim)
+#define set_paramTcPidMax(m,b,n,s)         set(m,b,n,s, TC_PID_CONV_PERCENT_F32(tcPid_data.percentMaxTcLimit))
+#define set_paramTcILim(m,b,n,s)           set(m,b,n,s, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim))
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)              set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())

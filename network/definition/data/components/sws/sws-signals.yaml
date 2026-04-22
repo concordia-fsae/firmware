@@ -112,6 +112,36 @@ signals:
   requestTcTireModelLimit:
     description: Request traction control torque limits defined by the tire model
     discreteValues: digitalStatus
+  requestTcKpDec:
+    description: Request decrement of traction control proportional coefficient
+    discreteValues: digitalStatus
+  requestTcKpInc:
+    description: Request increment of traction control proportional coefficient
+    discreteValues: digitalStatus
+  requestTcKiDec:
+    description: Request decrement of traction control integral coefficient
+    discreteValues: digitalStatus
+  requestTcKiInc:
+    description: Request increment of traction control integral coefficient
+    discreteValues: digitalStatus
+  requestTcKdDec:
+    description: Request decrement of traction control derivative coefficient
+    discreteValues: digitalStatus
+  requestTcKdInc:
+    description: Request increment of traction control derivative coefficient
+    discreteValues: digitalStatus
+  requestTcMaxLimDec:
+    description: Request decrement of traction control max limit
+    discreteValues: digitalStatus
+  requestTcMaxLimInc:
+    description: Request increment of traction control max limit
+    discreteValues: digitalStatus
+  requestTcILimDec:
+    description: Request decrement of traction control integral limit
+    discreteValues: digitalStatus
+  requestTcILimInc:
+    description: Request increment of traction control integral limit
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested
