@@ -134,6 +134,21 @@ typedef struct
     driverInput_inputDigital_E requestButtonRight;
     CAN_configOption_E         optionButtonLeft;
     CAN_configOption_E         optionButtonRight;
+    enum
+    {
+        NONE = 0x00U,
+        CAN_CONTINUOUS,
+        CAN_DIGITAL,
+    } valueSource;
+    union
+    {
+        CANRX_MESSAGE_health_E (*fnF32)(float32_t* val);
+        struct
+        {
+            CANRX_MESSAGE_health_E (*fnLeft)(CAN_digitalStatus_E* val);
+            CANRX_MESSAGE_health_E (*fnRight)(CAN_digitalStatus_E* val);
+        } dig;
+    } value;
 } configAction_S;
 
 /******************************************************************************
@@ -201,6 +216,12 @@ static bool getCrashResetMode(void)
            (crash_state != CAN_CRASHSENSORSTATE_OK);
 }
 
+static CAN_configOption_E canDigitalToConfigOption(CAN_digitalStatus_E status)
+{
+    // When we are enabled, we would want to _disable_ the parameter, so logic is inverse current state
+    return status == CAN_DIGITALSTATUS_ON ? CAN_CONFIGOPTION_DISABLE : CAN_CONFIGOPTION_ENABLE;
+}
+
 static void update_params(const bool tq_inc, const bool tq_dec,
                           const bool sl_inc, const bool sl_dec,
                           const bool db_tq_inc, const bool db_tq_dec,
@@ -210,6 +231,21 @@ static void update_params(const bool tq_inc, const bool tq_dec,
     // Axis mutual exclusion (within-axis), but defer assertion while related buttons are debouncing
     const bool axis_any_db = db_tq_inc || db_tq_dec || db_sl_inc || db_sl_dec;
     const bool option13WasRequested = driverInput_getDigital(DRIVERINPUT_REQUEST_OPTION13);
+
+    if (configActions[data.config].valueSource == CAN_DIGITAL)
+    {
+        CAN_digitalStatus_E tmp;
+        configActions[data.config].optionButtonLeft = configActions[data.config].value.dig.fnLeft ?
+                                                      ((configActions[data.config].value.dig.fnLeft(&tmp) == CANRX_MESSAGE_VALID) ?
+                                                       canDigitalToConfigOption(tmp) :
+                                                       CAN_CONFIGOPTION_SNA) :
+                                                      CAN_CONFIGOPTION_NONE;
+        configActions[data.config].optionButtonRight = configActions[data.config].value.dig.fnRight ?
+                                                       ((configActions[data.config].value.dig.fnRight(&tmp) == CANRX_MESSAGE_VALID) ?
+                                                        canDigitalToConfigOption(tmp) :
+                                                        CAN_CONFIGOPTION_SNA) :
+                                                       CAN_CONFIGOPTION_NONE;
+    }
 
     // Torque axis
     if (!axis_any_db && (tq_inc ^ tq_dec))
@@ -591,4 +627,29 @@ CAN_configOption_E driverInput_getConfigOptionLeftCAN(void)
 CAN_configOption_E driverInput_getConfigOptionRightCAN(void)
 {
     return configActions[data.config].optionButtonRight;
+}
+
+float32_t driverInput_getConfigValueF32(void)
+{
+    float32_t val = 0.0f;
+
+    switch (configActions[data.config].valueSource)
+    {
+        case CAN_CONTINUOUS:
+            val = configActions[data.config].value.fnF32 ?
+                  configActions[data.config].value.fnF32(&val) :
+                  0.0f;
+            break;
+        case NONE:
+        case CAN_DIGITAL:
+            break;
+    }
+
+    return val;
+}
+
+bool driverInput_getConfigHasValueF32(void)
+{
+    return (configActions[data.config].valueSource == CAN_CONTINUOUS) &&
+           configActions[data.config].value.fnF32;
 }

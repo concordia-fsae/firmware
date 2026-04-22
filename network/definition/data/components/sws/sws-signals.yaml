@@ -128,6 +128,9 @@ signals:
   driverConfigOptionRight:
     description: Current selected left button config option
     discreteValues: configOption
+  configHasValue:
+    description: Sets whether the config parameter has a numerical value
+    discreteValues: digitalStatus
   option13:
     description: Lockout for advanced vehicle functions which are not rules legal
     discreteValues: digitalStatus

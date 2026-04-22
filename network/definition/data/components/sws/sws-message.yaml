@@ -95,5 +95,7 @@ messages:
         startBit: 16
       option13:
         startBit: 24
+      configHasValue:
+        startBit: 26
       displayValue:
         startBit: 32
