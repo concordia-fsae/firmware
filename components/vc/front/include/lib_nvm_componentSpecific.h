@@ -28,5 +28,6 @@ typedef enum
     NVM_ENTRYID_CYCLE,
     NVM_ENTRYID_ODOMETER,
     NVM_ENTRYID_STEERINGCALIBRATION,
+    NVM_ENTRYID_TC_PARAMSTATE,
     NVM_ENTRYID_COUNT, // All entries must be added to the end!
 } lib_nvm_entryId_E;

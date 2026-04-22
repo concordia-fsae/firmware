@@ -400,3 +400,7 @@ signals:
         max: 200
       resolution: 1
     continuous: true
+
+  paramTcTireModelLimit:
+    description: Active status of the traction control tire model algorithm
+    discreteValues: digitalStatus

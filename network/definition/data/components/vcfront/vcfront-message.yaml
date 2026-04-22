@@ -259,3 +259,11 @@ messages:
     signals:
       vdIntendedRadius:
       vdMaxTorqueRequest:
+
+  params:
+    description: Current states of the VCFRONT parameter states
+    id: 0x4f0
+    cycleTimeMs: 100
+    sourceBuses: veh
+    signals:
+      paramTcTireModelLimit:

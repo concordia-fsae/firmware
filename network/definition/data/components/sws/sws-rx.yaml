@@ -5,6 +5,7 @@ messages:
   VCPDU_faults:
   VCFRONT_faults:
   BMSB_faults:
+  VCFRONT_params:
 signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:

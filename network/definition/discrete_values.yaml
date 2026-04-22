@@ -263,6 +263,7 @@ configSelection:
   VEHICLE_CONTROL: 2
   TEST_PUMP_FAN: 3
   OPTION13: 4
+  TC_TIRE_MODEL_LIM: 5
 
 configOption:
   SNA: 0

@@ -10,6 +10,7 @@
 #include "lib_nvm.h"
 #include "app_vehicleSpeed.h"
 #include "steeringAngle.h"
+#include "torque.h"
 #include <string.h>
 
 /******************************************************************************
@@ -32,11 +33,16 @@ static const nvm_odometer_S odometer_data_default = {
     .km = 0.0f,
     .spare = { 0U },
 };
+LIB_NVM_MEMORY_REGION(nvm_odometer_S odometer_data) = { 0U };
 static const nvm_steeringCalibration_S steerinCalibration_data_default = {
     .zero = 0.0f,
     .spare = { 0U },
 };
-LIB_NVM_MEMORY_REGION(nvm_odometer_S odometer_data) = { 0U };
+static const nvm_tcParamState_S tcParamState_data_default = {
+    .params = { 0U },
+    .spare = { 0U },
+};
+LIB_NVM_MEMORY_REGION(nvm_tcParamState_S tcParamState_data) = { 0U };
 
 const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
     [NVM_ENTRYID_LOG] = {
@@ -65,6 +71,13 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .entryDefault_Ptr = &steerinCalibration_data_default,
         .entryRam_Ptr = &steeringCalibration_data,
         .minTimeBetweenWritesMs = 60000U,
+        .version = 0U,
+    },
+    [NVM_ENTRYID_TC_PARAMSTATE] = {
+        .entrySize = sizeof(nvm_tcParamState_S),
+        .entryDefault_Ptr = &tcParamState_data_default,
+        .entryRam_Ptr = &tcParamState_data,
+        .minTimeBetweenWritesMs = 10000U,
         .version = 0U,
     },
 };

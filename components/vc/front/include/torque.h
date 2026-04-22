@@ -12,6 +12,8 @@
 
 #include "LIB_Types.h"
 #include "Yamcan.h"
+#include "Utility.h"
+#include "lib_nvm.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -59,6 +61,20 @@ typedef enum
     RACEMODE_ENABLED,
 } torque_raceMode_E;
 
+// This backs our NVM parameters, each new parameter should be added before COUNT
+typedef enum
+{
+    PARAMSTATE_TC_TIRE_MODEL_LIMIT = 0x00U,
+    PARAMSTATE_COUNT,
+} tc_paramState_E;
+
+typedef struct
+{
+    FLAG_create(params, PARAMSTATE_COUNT);
+    uint16_t spare[2];
+} LIB_NVM_STORAGE(nvm_tcParamState_S);
+extern nvm_tcParamState_S tcParamState_data;
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -86,3 +102,4 @@ CAN_launchControlState_E      torque_getLaunchControlStateCAN(void);
 bool                          torque_isLaunching(void);
 torque_tractionControlState_E torque_getTractionControlState(void);
 CAN_tractionControlState_E    torque_getTractionControlStateCAN(void);
+bool                          tc_isParamEnabled(tc_paramState_E param);

@@ -158,6 +158,13 @@ typedef struct
 static data_S data;
 
 static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
+    [DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM] = {
+        .requestButtonLeft = DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM,
+        .requestButtonRight = DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM,
+        .valueSource = CAN_DIGITAL,
+        .value.dig.fnLeft = CANRX_get_signal_func(VEH, VCFRONT_paramTcTireModelLimit),
+        .value.dig.fnRight = CANRX_get_signal_func(VEH, VCFRONT_paramTcTireModelLimit),
+    },
     [DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN] = {
         .requestButtonLeft = DRIVERINPUT_REQUEST_TEST_PUMP,
         .requestButtonRight = DRIVERINPUT_REQUEST_TEST_FAN,
@@ -598,6 +605,9 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
     {
         switch (data.config)
         {
+            case DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM:
+                config = CAN_CONFIGSELECTION_TC_TIRE_MODEL_LIM;
+                break;
             case DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN:
                 config = CAN_CONFIGSELECTION_TEST_PUMP_FAN;
                 break;
