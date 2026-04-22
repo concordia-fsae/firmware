@@ -269,7 +269,6 @@ configSelection:
   PARAM_TC_KD: 8
   PARAM_TC_MAX_LIM: 9
   PARAM_TC_ILIM: 10
-
 configOption:
   SNA: 0
   NONE: 1
@@ -282,3 +281,15 @@ configOption:
   APPS_BYPASS: 8
   TEST_PUMP: 9
   TEST_FAN: 10
+configUnit:
+  NONE: 0
+  N: 1
+  PERCENT: 2
+configScale:
+  ONE: 0
+  TIMES_10: 1
+  TIMES_100: 2
+  TIMES_1000: 3
+  DIV_10: 4
+  DIV_100: 5
+  DIV_1000: 6

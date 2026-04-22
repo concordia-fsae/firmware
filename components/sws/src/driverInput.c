@@ -95,15 +95,13 @@
 
 #define SLEEP_TIMEOUT_MS 15*60000
 
-#define PARAM_VALUE(param, canbus, signal, inc, dec) \
-    [param] = { \
+#define PARAM_VALUE(canbus, signal, inc, dec) \
         .requestButtonLeft = dec, \
         .requestButtonRight = inc, \
         .optionButtonLeft = CAN_CONFIGOPTION_DEC, \
         .optionButtonRight = CAN_CONFIGOPTION_INC, \
         .valueSource = CAN_CONTINUOUS, \
-        .value.fnF32 = CANRX_get_signal_func(canbus, signal), \
-    }
+        .value.cont.fnF32 = CANRX_get_signal_func(canbus, signal)
 #define PARAM_STATE(param, canbus, signal, request) \
     [param] = { \
         .requestButtonLeft = request, \
@@ -162,7 +160,12 @@ typedef struct
     } valueSource;
     union
     {
-        CANRX_MESSAGE_health_E (*fnF32)(float32_t* val);
+        struct
+        {
+            CANRX_MESSAGE_health_E (*fnF32)(float32_t* val);
+            CAN_configScale_E      scale;
+            CAN_configUnit_E       unit;
+        } cont;
         struct
         {
             CANRX_MESSAGE_health_E (*fnLeft)(CAN_digitalStatus_E* val);
@@ -201,26 +204,46 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
         .requestButtonLeft = DRIVERINPUT_REQUEST_APPS_BYPASS,
         .optionButtonLeft = CAN_CONFIGOPTION_APPS_BYPASS,
     },
-    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_KP, VEH, VCFRONT_paramTcKp,
-        DRIVERINPUT_REQUEST_TC_KP_INC,
-        DRIVERINPUT_REQUEST_TC_KP_DEC
-    ),
-    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_KI, VEH, VCFRONT_paramTcKi,
-        DRIVERINPUT_REQUEST_TC_KI_INC,
-        DRIVERINPUT_REQUEST_TC_KI_DEC
-    ),
-    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_KD, VEH, VCFRONT_paramTcKd,
-        DRIVERINPUT_REQUEST_TC_KD_INC,
-        DRIVERINPUT_REQUEST_TC_KD_DEC
-    ),
-    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM, VEH, VCFRONT_paramTcPidMax,
-        DRIVERINPUT_REQUEST_TC_MAX_LIM_INC,
-        DRIVERINPUT_REQUEST_TC_MAX_LIM_DEC
-    ),
-    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_ILIM, VEH, VCFRONT_paramTcILim,
-        DRIVERINPUT_REQUEST_TC_ILIM_INC,
-        DRIVERINPUT_REQUEST_TC_ILIM_DEC
-    ),
+    [DRIVERINPUT_CONFIG_PARAM_TC_KP] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcKp,
+            DRIVERINPUT_REQUEST_TC_KP_INC,
+            DRIVERINPUT_REQUEST_TC_KP_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_NONE,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_KI] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcKi,
+            DRIVERINPUT_REQUEST_TC_KI_INC,
+            DRIVERINPUT_REQUEST_TC_KI_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_NONE,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_KD] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcKd,
+            DRIVERINPUT_REQUEST_TC_KD_INC,
+            DRIVERINPUT_REQUEST_TC_KD_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_NONE,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcPidMax,
+            DRIVERINPUT_REQUEST_TC_MAX_LIM_INC,
+            DRIVERINPUT_REQUEST_TC_MAX_LIM_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_100,
+        .value.cont.unit = CAN_CONFIGUNIT_PERCENT,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_ILIM] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcILim,
+            DRIVERINPUT_REQUEST_TC_ILIM_INC,
+            DRIVERINPUT_REQUEST_TC_ILIM_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_100,
+        .value.cont.unit = CAN_CONFIGUNIT_PERCENT,
+    },
 };
 
 /******************************************************************************
@@ -317,7 +340,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
         }
     }
 
-    const bool option13IsRequested = driverInput_getDigital(DRIVERINPUT_REQUEST_OPTION13);
+    const bool option13IsRequested = status[DRIVERINPUT_REQUEST_OPTION13];
     data.option13 ^= option13IsRequested && !option13WasRequested;
     configActions[DRIVERINPUT_CONFIG_OPTION13].optionButtonLeft = !data.option13 ?
                                                                   CAN_CONFIGOPTION_ENABLE :
@@ -648,7 +671,7 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
                 config = CAN_CONFIGSELECTION_PARAM_TC_KP;
                 break;
             case DRIVERINPUT_CONFIG_PARAM_TC_KI:
-                config = CAN_CONFIGSELECTION_PARAM_TC_KD;
+                config = CAN_CONFIGSELECTION_PARAM_TC_KI;
                 break;
             case DRIVERINPUT_CONFIG_PARAM_TC_KD:
                 config = CAN_CONFIGSELECTION_PARAM_TC_KD;
@@ -690,27 +713,67 @@ CAN_configOption_E driverInput_getConfigOptionRightCAN(void)
     return configActions[data.config].optionButtonRight;
 }
 
-float32_t driverInput_getConfigValueF32(void)
+uint16_t driverInput_getConfigValueU16(void)
 {
     float32_t val = 0.0f;
+    float32_t scalar = 1.0f;
+
+    switch (configActions[data.config].value.cont.scale)
+    {
+        case CAN_CONFIGSCALE_DIV_10:
+            scalar = 10.0f;
+            break;
+        case CAN_CONFIGSCALE_DIV_100:
+            scalar = 100.0f;
+            break;
+        case CAN_CONFIGSCALE_DIV_1000:
+            scalar = 1000.0f;
+            break;
+        case CAN_CONFIGSCALE_TIMES_10:
+            scalar = 0.1f;
+            break;
+        case CAN_CONFIGSCALE_TIMES_100:
+            scalar = 0.01f;
+            break;
+        case CAN_CONFIGSCALE_TIMES_1000:
+            scalar = 0.001f;
+            break;
+        case CAN_CONFIGSCALE_ONE:
+            break;
+    }
 
     switch (configActions[data.config].valueSource)
     {
         case CAN_CONTINUOUS:
-            val = configActions[data.config].value.fnF32 ?
-                  configActions[data.config].value.fnF32(&val) :
-                  0.0f;
+            if (configActions[data.config].value.cont.fnF32)
+            {
+                configActions[data.config].value.cont.fnF32(&val);
+            }
             break;
         case NONE:
         case CAN_DIGITAL:
             break;
     }
 
-    return val;
+    return (uint16_t)(val * scalar);
 }
 
-bool driverInput_getConfigHasValueF32(void)
+bool driverInput_getConfigHasValueU16(void)
 {
     return (configActions[data.config].valueSource == CAN_CONTINUOUS) &&
-           configActions[data.config].value.fnF32;
+           configActions[data.config].value.cont.fnF32;
+}
+
+CAN_configScale_E driverInput_getConfigScaleCAN(void)
+{
+    return configActions[data.config].valueSource == CAN_CONTINUOUS ?
+           configActions[data.config].value.cont.scale :
+           CAN_CONFIGSCALE_ONE;
+}
+
+CAN_configUnit_E driverInput_getConfigUnitCAN(void)
+{
+    return configActions[data.config].valueSource == CAN_CONTINUOUS ?
+           configActions[data.config].value.cont.unit :
+           CAN_CONFIGUNIT_NONE;
 }

@@ -113,5 +113,9 @@ messages:
         startBit: 24
       configHasValue:
         startBit: 26
-      displayValue:
+      configValueScale:
         startBit: 32
+      configValueUnit:
+        startBit: 40
+      displayValue:
+        startBit: 48
