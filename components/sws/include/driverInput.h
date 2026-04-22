@@ -72,3 +72,5 @@ CAN_screenPage_E      driverInput_getScreenCAN(void);
 CAN_configSelection_E driverInput_getConfigSelectedCAN(void);
 CAN_configOption_E    driverInput_getConfigOptionLeftCAN(void);
 CAN_configOption_E    driverInput_getConfigOptionRightCAN(void);
+float32_t             driverInput_getConfigValueF32(void);
+bool                  driverInput_getConfigHasValueF32(void);

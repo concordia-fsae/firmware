@@ -265,13 +265,14 @@ configSelection:
   OPTION13: 4
 
 configOption:
-  NONE: 0
-  ENABLE: 1
-  DISABLE: 2
-  INC: 3
-  DEC: 4
-  CALIB_STW_ANGLE: 5
-  CALIB_IMU: 6
-  APPS_BYPASS: 7
-  TEST_PUMP: 8
-  TEST_FAN: 9
+  SNA: 0
+  NONE: 1
+  ENABLE: 2
+  DISABLE: 3
+  INC: 4
+  DEC: 5
+  CALIB_STW_ANGLE: 6
+  CALIB_IMU: 7
+  APPS_BYPASS: 8
+  TEST_PUMP: 9
+  TEST_FAN: 10
