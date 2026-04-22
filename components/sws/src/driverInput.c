@@ -104,6 +104,7 @@ typedef struct
     driverInput_page_E page;
     driverInput_configSelection_E config;
     bool page_lockout;
+    bool option13;
 
     // Timers
     drv_timer_S nav_timer;
@@ -129,8 +130,10 @@ typedef struct
 
 typedef struct
 {
-    driverInput_inputDigital_E requestDec;
-    driverInput_inputDigital_E requestInc;
+    driverInput_inputDigital_E requestButtonLeft;
+    driverInput_inputDigital_E requestButtonRight;
+    CAN_configOption_E         optionButtonLeft;
+    CAN_configOption_E         optionButtonRight;
 } configAction_S;
 
 /******************************************************************************
@@ -141,15 +144,24 @@ static data_S data;
 
 static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
     [DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN] = {
-        .requestDec = DRIVERINPUT_REQUEST_TEST_PUMP,
-        .requestInc = DRIVERINPUT_REQUEST_TEST_FAN,
+        .requestButtonLeft = DRIVERINPUT_REQUEST_TEST_PUMP,
+        .requestButtonRight = DRIVERINPUT_REQUEST_TEST_FAN,
+        .optionButtonLeft = CAN_CONFIGOPTION_TEST_PUMP,
+        .optionButtonRight = CAN_CONFIGOPTION_TEST_FAN,
     },
     [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] = {
-        .requestDec = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
-        .requestInc = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+        .requestButtonLeft = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
+        .requestButtonRight = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+        .optionButtonLeft = CAN_CONFIGOPTION_CALIB_IMU,
+        .optionButtonRight = CAN_CONFIGOPTION_CALIB_STW_ANGLE,
+    },
+    [DRIVERINPUT_CONFIG_OPTION13] = {
+        .requestButtonLeft = DRIVERINPUT_REQUEST_OPTION13,
+        .optionButtonLeft = CAN_CONFIGOPTION_ENABLE,
     },
     [DRIVERINPUT_CONFIG_VEHICLE_CONTROL] = {
-        .requestDec = DRIVERINPUT_REQUEST_APPS_BYPASS,
+        .requestButtonLeft = DRIVERINPUT_REQUEST_APPS_BYPASS,
+        .optionButtonLeft = CAN_CONFIGOPTION_APPS_BYPASS,
     },
 };
 
@@ -197,6 +209,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
 {
     // Axis mutual exclusion (within-axis), but defer assertion while related buttons are debouncing
     const bool axis_any_db = db_tq_inc || db_tq_dec || db_sl_inc || db_sl_dec;
+    const bool option13WasRequested = driverInput_getDigital(DRIVERINPUT_REQUEST_OPTION13);
 
     // Torque axis
     if (!axis_any_db && (tq_inc ^ tq_dec))
@@ -209,7 +222,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             }
             else
             {
-                status[configActions[data.config].requestInc] = true;
+                status[configActions[data.config].requestButtonRight] = true;
             }
         }
         else if (tq_dec && !tq_inc)
@@ -220,31 +233,38 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             }
             else
             {
-                status[configActions[data.config].requestDec] = true;
+                status[configActions[data.config].requestButtonLeft] = true;
             }
         }
     }
 
+    const bool option13IsRequested = driverInput_getDigital(DRIVERINPUT_REQUEST_OPTION13);
+    data.option13 ^= option13IsRequested && !option13WasRequested;
+    configActions[DRIVERINPUT_CONFIG_OPTION13].optionButtonLeft = !data.option13 ?
+                                                                  CAN_CONFIGOPTION_ENABLE :
+                                                                  CAN_CONFIGOPTION_DISABLE;
+
     // Slip axis (independent of torque axis, but uses the same stability gate)
     if (!axis_any_db && (sl_inc ^ sl_dec))
     {
-        if (sl_inc && !sl_dec)
+        if (sl_inc && !sl_dec && (data.page != DRIVERINPUT_PAGE_CONFIG))
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_INC] = true;
         }
-        else if (sl_dec && !sl_inc)
+        else if (sl_dec && !sl_inc && (data.page != DRIVERINPUT_PAGE_CONFIG))
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_DEC] = true;
         }
-
-        if (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING)
+        else if (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING)
         {
             // initial step immediately
             if (sl_dec && (data.config > (DRIVERINPUT_CONFIG_NONE + 1)))
             {
                 data.config = (driverInput_configSelection_E)(data.config - 1);
             }
-            else if (sl_inc && data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1))
+            else if (sl_inc && 
+                    (data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1)) &&
+                    ((data.config < DRIVERINPUT_CONFIG_OPTION13) || data.option13))
             {
                 data.config = (driverInput_configSelection_E)(data.config + 1);
             }
@@ -493,6 +513,11 @@ bool driverInput_getDigital(driverInput_inputDigital_E input)
     return data.digital[input].is_set;
 }
 
+bool driverInput_getOption13(void)
+{
+    return data.option13;
+}
+
 CAN_screenPage_E driverInput_getScreenCAN(void)
 {
     CAN_screenPage_E page = CAN_SCREENPAGE_SNA;
@@ -521,7 +546,7 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
             case DRIVERINPUT_PAGE_LAUNCH:
                 page = CAN_SCREENPAGE_LAUNCH;
                 break;
-            default:
+            case DRIVERINPUT_PAGE_COUNT:
                 break;
         }
     }
@@ -537,16 +562,33 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
     {
         switch (data.config)
         {
+            case DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN:
+                config = CAN_CONFIGSELECTION_TEST_PUMP_FAN;
+                break;
             case DRIVERINPUT_CONFIG_CALIB_DYNAMICS:
                 config = CAN_CONFIGSELECTION_CALIB_DYNAMICS;
+                break;
+            case DRIVERINPUT_CONFIG_OPTION13:
+                config = CAN_CONFIGSELECTION_OPTION13;
                 break;
             case DRIVERINPUT_CONFIG_VEHICLE_CONTROL:
                 config = CAN_CONFIGSELECTION_VEHICLE_CONTROL;
                 break;
-            default:
+            case DRIVERINPUT_CONFIG_NONE:
+            case DRIVERINPUT_CONFIG_COUNT:
                 break;
         }
     }
 
     return config;
+}
+
+CAN_configOption_E driverInput_getConfigOptionLeftCAN(void)
+{
+    return configActions[data.config].optionButtonLeft;
+}
+
+CAN_configOption_E driverInput_getConfigOptionRightCAN(void)
+{
+    return configActions[data.config].optionButtonRight;
 }
