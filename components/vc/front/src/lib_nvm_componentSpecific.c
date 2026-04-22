@@ -43,6 +43,8 @@ static const nvm_tcParamState_S tcParamState_data_default = {
     .spare = { 0U },
 };
 LIB_NVM_MEMORY_REGION(nvm_tcParamState_S tcParamState_data) = { 0U };
+TC_SET_DEFAULT_PID(static const nvm_tcPid_S tcPid_data_default);
+LIB_NVM_MEMORY_REGION(nvm_tcPid_S tcPid_data) = { 0U };
 
 const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
     [NVM_ENTRYID_LOG] = {
@@ -77,6 +79,13 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .entrySize = sizeof(nvm_tcParamState_S),
         .entryDefault_Ptr = &tcParamState_data_default,
         .entryRam_Ptr = &tcParamState_data,
+        .minTimeBetweenWritesMs = 10000U,
+        .version = 0U,
+    },
+    [NVM_ENTRYID_TC_PID] = {
+        .entrySize = sizeof(nvm_tcPid_S),
+        .entryDefault_Ptr = &tcPid_data_default,
+        .entryRam_Ptr = &tcPid_data,
         .minTimeBetweenWritesMs = 10000U,
         .version = 0U,
     },

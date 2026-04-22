@@ -6,6 +6,8 @@ messages:
     sourceBuses: veh
   VCPDU_imuAccel:
     sourceBuses: veh
+  SWS_driverParamRequest:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
     sourceBuses: veh

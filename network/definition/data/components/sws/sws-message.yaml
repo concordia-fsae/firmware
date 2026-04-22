@@ -69,6 +69,21 @@ messages:
       validatorRequest:
         template: criticalDataChecksum
 
+  driverParamRequest:
+    id: 0x48f
+    cycleTimeMs: 100
+    signals:
+      requestTcKpDec:
+      requestTcKpInc:
+      requestTcKiDec:
+      requestTcKiInc:
+      requestTcKdDec:
+      requestTcKdInc:
+      requestTcMaxLimDec:
+      requestTcMaxLimInc:
+      requestTcILimDec:
+      requestTcILimInc:
+
   sleep:
     description: SWS sleep information
     id: 0x7b0

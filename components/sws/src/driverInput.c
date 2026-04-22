@@ -95,6 +95,26 @@
 
 #define SLEEP_TIMEOUT_MS 15*60000
 
+#define PARAM_VALUE(param, canbus, signal, inc, dec) \
+    [param] = { \
+        .requestButtonLeft = dec, \
+        .requestButtonRight = inc, \
+        .optionButtonLeft = CAN_CONFIGOPTION_DEC, \
+        .optionButtonRight = CAN_CONFIGOPTION_INC, \
+        .valueSource = CAN_CONTINUOUS, \
+        .value.fnF32 = CANRX_get_signal_func(canbus, signal), \
+    }
+#define PARAM_STATE(param, canbus, signal, request) \
+    [param] = { \
+        .requestButtonLeft = request, \
+        .requestButtonRight = request, \
+        .optionButtonLeft = CAN_CONFIGOPTION_ENABLE, \
+        .optionButtonRight = CAN_CONFIGOPTION_ENABLE, \
+        .valueSource = CAN_DIGITAL, \
+        .value.dig.fnLeft = CANRX_get_signal_func(canbus, signal), \
+        .value.dig.fnRight = CANRX_get_signal_func(canbus, signal), \
+    }
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -158,13 +178,9 @@ typedef struct
 static data_S data;
 
 static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
-    [DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM] = {
-        .requestButtonLeft = DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM,
-        .requestButtonRight = DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM,
-        .valueSource = CAN_DIGITAL,
-        .value.dig.fnLeft = CANRX_get_signal_func(VEH, VCFRONT_paramTcTireModelLimit),
-        .value.dig.fnRight = CANRX_get_signal_func(VEH, VCFRONT_paramTcTireModelLimit),
-    },
+    PARAM_STATE(DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM, VEH, VCFRONT_paramTcTireModelLimit,
+        DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM
+    ),
     [DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN] = {
         .requestButtonLeft = DRIVERINPUT_REQUEST_TEST_PUMP,
         .requestButtonRight = DRIVERINPUT_REQUEST_TEST_FAN,
@@ -185,6 +201,26 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
         .requestButtonLeft = DRIVERINPUT_REQUEST_APPS_BYPASS,
         .optionButtonLeft = CAN_CONFIGOPTION_APPS_BYPASS,
     },
+    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_KP, VEH, VCFRONT_paramTcKp,
+        DRIVERINPUT_REQUEST_TC_KP_INC,
+        DRIVERINPUT_REQUEST_TC_KP_DEC
+    ),
+    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_KI, VEH, VCFRONT_paramTcKi,
+        DRIVERINPUT_REQUEST_TC_KI_INC,
+        DRIVERINPUT_REQUEST_TC_KI_DEC
+    ),
+    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_KD, VEH, VCFRONT_paramTcKd,
+        DRIVERINPUT_REQUEST_TC_KD_INC,
+        DRIVERINPUT_REQUEST_TC_KD_DEC
+    ),
+    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM, VEH, VCFRONT_paramTcPidMax,
+        DRIVERINPUT_REQUEST_TC_MAX_LIM_INC,
+        DRIVERINPUT_REQUEST_TC_MAX_LIM_DEC
+    ),
+    PARAM_VALUE(DRIVERINPUT_CONFIG_PARAM_TC_ILIM, VEH, VCFRONT_paramTcILim,
+        DRIVERINPUT_REQUEST_TC_ILIM_INC,
+        DRIVERINPUT_REQUEST_TC_ILIM_DEC
+    ),
 };
 
 /******************************************************************************
@@ -607,6 +643,21 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
         {
             case DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM:
                 config = CAN_CONFIGSELECTION_TC_TIRE_MODEL_LIM;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_KP:
+                config = CAN_CONFIGSELECTION_PARAM_TC_KP;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_KI:
+                config = CAN_CONFIGSELECTION_PARAM_TC_KD;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_KD:
+                config = CAN_CONFIGSELECTION_PARAM_TC_KD;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM:
+                config = CAN_CONFIGSELECTION_PARAM_TC_MAX_LIM;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_ILIM:
+                config = CAN_CONFIGSELECTION_PARAM_TC_ILIM;
                 break;
             case DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN:
                 config = CAN_CONFIGSELECTION_TEST_PUMP_FAN;
