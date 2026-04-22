@@ -103,7 +103,9 @@
 #define set_driverConfigOptionLeft(m,b,n,s)  set(m,b,n,s, driverInput_getConfigOptionLeftCAN())
 #define set_driverConfigOptionRight(m,b,n,s) set(m,b,n,s, driverInput_getConfigOptionRightCAN())
 #define set_option13(m,b,n,s)                set(m,b,n,s, driverInput_getOption13() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_configHasValue(m,b,n,s)          set(m,b,n,s, driverInput_getConfigHasValueF32() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_configValue(m,b,n,s)             set(m,b,n,s, driverInput_getConfigValueF32())
+#define set_configHasValue(m,b,n,s)          set(m,b,n,s, driverInput_getConfigHasValueU16() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_displayValue(m,b,n,s)            set(m,b,n,s, driverInput_getConfigValueU16())
+#define set_configValueScale(m,b,n,s)        set(m,b,n,s, driverInput_getConfigScaleCAN())
+#define set_configValueunit(m,b,n,s)         set(m,b,n,s, driverInput_getConfigUnitCAN())
 
 #define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())

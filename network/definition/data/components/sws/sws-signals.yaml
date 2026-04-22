@@ -167,8 +167,14 @@ signals:
   option13:
     description: Lockout for advanced vehicle functions which are not rules legal
     discreteValues: digitalStatus
+  configValueScale:
+    description: The scale of the config parameter
+    discreteValues: configScale
+  configValueUnit:
+    description: The unit of the config parameter
+    discreteValues: configUnit
   displayValue:
     description: Value to display on the screen config page
     nativeRepresentation:
-      bitWidth: 32
-      resolution: 0.001
+      bitWidth: 16
+      resolution: 1
