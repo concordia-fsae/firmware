@@ -25,3 +25,7 @@
 
 [build]
   execution_platforms = prelude//platforms:default
+
+[cache]
+  mode = file
+  dir = .cache/
