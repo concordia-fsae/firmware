@@ -26,6 +26,9 @@
 
 #define TURNING_THRESHOLD_DEG 2.5f
 
+// Assumes small angle approx
+#define STW_TO_WHEEL_ROTATION_SCALAR 0.2147f
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -72,8 +75,7 @@ static struct
 static void setIntendedRadius(float32_t steeringAngle)
 {
     const float32_t steeringRad = steeringAngle * DEG_TO_RAD;
-    // TODO: Convert steering angle to wheel angle
-    const float32_t wheelRad = steeringRad;
+    const float32_t wheelRad = steeringRad * STW_TO_WHEEL_ROTATION_SCALAR;
     const bool driverTurning = fabsf(steeringAngle) > TURNING_THRESHOLD_DEG;
     vdData.driverTurning = driverTurning;
 
