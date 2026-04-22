@@ -420,7 +420,7 @@ static float32_t evaluate_traction_control(void)
 
 static void evaluateRegenEnabled(float32_t accelPosition, float32_t brakePosition)
 {
-#if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
+#if FEATURE_IS_ENABLED(FEATURE_REGEN)
     CAN_digitalStatus_E regenEnabled = CAN_DIGITALSTATUS_SNA;
     bool requested = (CANRX_get_signal(VEH, SWS_requestRegenEnabled, &regenEnabled) != CANRX_MESSAGE_SNA) &&
                      (regenEnabled == CAN_DIGITALSTATUS_ON);
