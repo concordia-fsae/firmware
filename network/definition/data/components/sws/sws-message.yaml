@@ -89,5 +89,11 @@ messages:
     signals:
       driverConfigSelection:
         startBit: 0
+      driverConfigOptionLeft:
+        startBit: 8
+      driverConfigOptionRight:
+        startBit: 16
+      option13:
+        startBit: 24
       displayValue:
         startBit: 32

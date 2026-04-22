@@ -37,6 +37,7 @@ typedef enum
     DRIVERINPUT_REQUEST_APPS_BYPASS,
     DRIVERINPUT_REQUEST_TEST_PUMP,
     DRIVERINPUT_REQUEST_TEST_FAN,
+    DRIVERINPUT_REQUEST_OPTION13,
     DRIVERINPUT_REQUEST_COUNT,
 } driverInput_inputDigital_E;
 
@@ -55,6 +56,8 @@ typedef enum
     DRIVERINPUT_CONFIG_NONE = 0x00U,
     DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN,
     DRIVERINPUT_CONFIG_CALIB_DYNAMICS,
+    // Any rules illegal functions shall come after OPTION13
+    DRIVERINPUT_CONFIG_OPTION13,
     DRIVERINPUT_CONFIG_VEHICLE_CONTROL,
     DRIVERINPUT_CONFIG_COUNT,
 } driverInput_configSelection_E;
@@ -64,5 +67,8 @@ typedef enum
  ******************************************************************************/
 
 bool                  driverInput_getDigital(driverInput_inputDigital_E input);
+bool                  driverInput_getOption13(void);
 CAN_screenPage_E      driverInput_getScreenCAN(void);
 CAN_configSelection_E driverInput_getConfigSelectedCAN(void);
+CAN_configOption_E    driverInput_getConfigOptionLeftCAN(void);
+CAN_configOption_E    driverInput_getConfigOptionRightCAN(void);

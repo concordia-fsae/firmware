@@ -122,6 +122,15 @@ signals:
   driverConfigSelection:
     description: Current selected config value
     discreteValues: configSelection
+  driverConfigOptionLeft:
+    description: Current selected left button config option
+    discreteValues: configOption
+  driverConfigOptionRight:
+    description: Current selected left button config option
+    discreteValues: configOption
+  option13:
+    description: Lockout for advanced vehicle functions which are not rules legal
+    discreteValues: digitalStatus
   displayValue:
     description: Value to display on the screen config page
     nativeRepresentation:
