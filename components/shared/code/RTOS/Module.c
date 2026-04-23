@@ -23,6 +23,7 @@
 #include "Utility.h"
 #include "lib_utility.h"
 #include "FeatureDefines_generated.h"
+#include "CAN.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -229,4 +230,9 @@ uint32_t Module_getTotalRuntimeIterations(Module_taskSpeeds_E task)
 uint8_t Module_getMinStackLeft(Module_taskSpeeds_E task)
 {
     return (uint8_t)SATURATE(0, stats[task].stack_left, 256);
+}
+
+uint32_t Module_getCANDeadlineMissCount(void)
+{
+    return CANIO_getDeadlineMissCount();
 }

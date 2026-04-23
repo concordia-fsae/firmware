@@ -15,6 +15,7 @@
 #include "CANIO_componentSpecific.h"
 #include "Yamcan.h"
 
+static uint32_t can_deadlineMissCount = 0U;
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -108,8 +109,13 @@ static void CANIO_tx_1kHz_PRD(void)
                 continue;
             }
 
-            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
-                // all the message weren't sent. TO-DO: error handling
+            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) 
+            {
+                if ((CANIO_getTimeMs() - CAN_table[bus].busTable[table].lastTimestamp) 
+                                            >   CAN_table[bus].busTable[table].period) //deadline is missed
+                {
+                    can_deadlineMissCount++;
+                }
             }
 
             CAN_table[bus].busTable[table].index = 0U;
@@ -162,3 +168,7 @@ const ModuleDesc_S CANIO_tx = {
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
 };
 
+uint32_t CANIO_getDeadlineMissCount(void)
+{
+    return can_deadlineMissCount;
+}
