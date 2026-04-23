@@ -245,6 +245,7 @@ screenAlerts:
   FAULT_EM: 7
   REVERSE: 8
   CRASH: 9
+  IMU_YAW_CALIBRATING: 10
 
 screenWarnings:
   NONE: 0
@@ -256,6 +257,7 @@ screenWarnings:
   IMU_UNCALIBRATED: 6
   APPS_DISABLED: 7
   CONTACTOR_SOH_LOW: 8
+  IMU_YAW_CALIBRATION_FAILED: 9
 
 configSelection:
   NONE: 0
@@ -269,6 +271,7 @@ configSelection:
   PARAM_TC_KD: 8
   PARAM_TC_MAX_LIM: 9
   PARAM_TC_ILIM: 10
+  CALIB_STEER_ANGLE: 11
 configOption:
   SNA: 0
   NONE: 1
@@ -281,6 +284,7 @@ configOption:
   APPS_BYPASS: 8
   TEST_PUMP: 9
   TEST_FAN: 10
+  CALIB_IMU_YAW: 11
 configUnit:
   NONE: 0
   N: 1

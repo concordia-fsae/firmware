@@ -67,3 +67,5 @@ signals:
     sourceBuses: veh
   SWS_requestCalibImu:
     sourceBuses: veh
+  SWS_requestCalibImuYaw:
+    sourceBuses: veh

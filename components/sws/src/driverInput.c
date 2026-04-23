@@ -192,9 +192,13 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
     },
     [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] = {
         .requestButtonLeft = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
-        .requestButtonRight = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+        .requestButtonRight = DRIVERINPUT_REQUEST_CALIBRATE_IMU_YAW,
         .optionButtonLeft = CAN_CONFIGOPTION_CALIB_IMU,
-        .optionButtonRight = CAN_CONFIGOPTION_CALIB_STW_ANGLE,
+        .optionButtonRight = CAN_CONFIGOPTION_CALIB_IMU_YAW,
+    },
+    [DRIVERINPUT_CONFIG_CALIB_STEER_ANGLE] = {
+        .requestButtonLeft = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+        .optionButtonLeft = CAN_CONFIGOPTION_CALIB_STW_ANGLE,
     },
     [DRIVERINPUT_CONFIG_OPTION13] = {
         .requestButtonLeft = DRIVERINPUT_REQUEST_OPTION13,
@@ -687,6 +691,9 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
                 break;
             case DRIVERINPUT_CONFIG_CALIB_DYNAMICS:
                 config = CAN_CONFIGSELECTION_CALIB_DYNAMICS;
+                break;
+            case DRIVERINPUT_CONFIG_CALIB_STEER_ANGLE:
+                config = CAN_CONFIGSELECTION_CALIB_STEER_ANGLE;
                 break;
             case DRIVERINPUT_CONFIG_OPTION13:
                 config = CAN_CONFIGSELECTION_OPTION13;

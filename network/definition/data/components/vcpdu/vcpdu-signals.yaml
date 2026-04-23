@@ -46,6 +46,12 @@ signals:
   crashImplausibility:
     description: NVM vehicle state is in TS_RUN on boot
     discreteValues: faultStatus
+  imuYawCalibrating:
+    description: IMU yaw calibration is in progress
+    discreteValues: faultStatus
+  imuYawCalibrationFailed:
+    description: IMU yaw calibration request failed
+    discreteValues: faultStatus
 
   vehicleState:
     description: "Current state of the vehicle"

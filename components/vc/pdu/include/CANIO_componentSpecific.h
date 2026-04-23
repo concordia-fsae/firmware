@@ -134,4 +134,3 @@
 #else
 # define transmit_VCPDU_nvmInformation               false
 #endif
-
