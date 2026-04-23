@@ -145,6 +145,12 @@ signals:
   requestTcILimInc:
     description: Request increment of traction control integral limit
     discreteValues: digitalStatus
+  requestTcTLeakMsDec:
+    description: Request decrement of traction control integral leak time constant
+    discreteValues: digitalStatus
+  requestTcTLeakMsInc:
+    description: Request increment of traction control integral leak time constant
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested

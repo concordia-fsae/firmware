@@ -84,6 +84,8 @@ messages:
       requestTcMaxLimInc:
       requestTcILimDec:
       requestTcILimInc:
+      requestTcTLeakMsDec:
+      requestTcTLeakMsInc:
 
   sleep:
     description: SWS sleep information

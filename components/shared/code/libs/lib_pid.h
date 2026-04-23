@@ -42,3 +42,6 @@ void lib_pid_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, f
 void lib_pid_typeb_sum(lib_pid_S* pid, float32_t out_min, float32_t out_max);
 
 void lib_pid_util_ilim(lib_pid_S* pid, float i_min, float i_max);
+
+// kLeak = 1 / tLeak where tLeak is the time constant
+void lib_pid_util_ileak(lib_pid_S* pid, float32_t kLeak, float32_t dt);

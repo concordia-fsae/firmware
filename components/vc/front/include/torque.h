@@ -19,11 +19,16 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TC_MAX 0.7f
-#define TC_KP 0.325f
-#define TC_KI 0.44f
+#define TC_MAX 0.7f // Handle heavy slip conditions
+#define TC_ILIM 0.55f // Allow heavy integral limits in sustained slip with leak
+// Cutoff: TC_MAX. Point of full cutoff: 50% slip error
+// 70% aggressivity (vibes)
+#define TC_KP ((TC_MAX / 0.5f) * 0.7f)
+// Ki = Kp / tIntegrator
+// Ki = TC_KP / 0.250
+#define TC_KI (4 * TC_KP)
 #define TC_KD 0.0f
-#define TC_ILIM 0.55f
+#define TC_ILEAK_MS 500U
 
 #define TC_PID_CONV_PERCENT_F32(x) (((float32_t)x) / 100.0f)
 #define TC_PID_CONV_THOU_F32(x) (((float32_t)x) / 1000.0f)
@@ -36,6 +41,8 @@
         .thousandthKp = (uint16_t)TC_PID_CONV_THOU_U16(TC_KP), \
         .thousandthKi = (uint16_t)TC_PID_CONV_THOU_U16(TC_KI), \
         .thousandthKd = (uint16_t)TC_PID_CONV_THOU_U16(TC_KD), \
+        .tLeakMs = TC_ILEAK_MS, \
+        .spare = { 0U }, \
     };
 
 /******************************************************************************
@@ -105,6 +112,8 @@ typedef struct
     uint16_t thousandthKp;
     uint16_t thousandthKi;
     uint16_t thousandthKd;
+    uint16_t tLeakMs;
+    uint16_t spare[6U];
 } LIB_NVM_STORAGE(nvm_tcPid_S);
 extern nvm_tcPid_S tcPid_data;
 
