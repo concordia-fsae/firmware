@@ -3,6 +3,8 @@ nodes:
     routines:
       resetOdometer:
         id: 0x1000
+      resetTcPid:
+        id: 0x1001
   vcpdu:
     routines:
       resetCrash:
