@@ -413,6 +413,7 @@ static float32_t calc_traction_control_reduction(float32_t target_slip, float32_
     torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKd);
     lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
     lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
+    lib_pid_util_lpf_dTerm(&torque_data.tractionControlPID, dt);
     lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentMaxTcLimit));
 
     return torque_data.tractionControlPID.y;
@@ -990,6 +991,7 @@ static void torque_init(void)
     torque_data.torquePreload = LC_PRELOAD_TORQUE_INIT;
 
     lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, 0.0f);
+    lib_pid_util_lpf_dTermSetCutoff(&torque_data.tractionControlPID, TC_DTERM_LPF_CUTOFF_FREQ);
 }
 
 static void torque_periodic_100Hz(void)
