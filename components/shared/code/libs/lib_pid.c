@@ -27,7 +27,17 @@ void lib_pid_init(lib_pid_S* pid, float32_t x_1, float32_t y_previous,
     pid->i_term = 0.0f;
     pid->d_term = 0.0f;
 
+    pid->cutoffFreqDTerm = 0.0f;
+    pid->filterDTerm.smoothing_factor = 1.0f;
+    pid->filterDTerm.y = 0.0f;
+    pid->filterDTerm.y_1 = 0.0f;
+
     pid->y = y_previous;
+}
+
+void lib_pid_util_lpf_dTermSetCutoff(lib_pid_S* pid, float32_t cutoffFreq)
+{
+    pid->cutoffFreqDTerm = cutoffFreq;
 }
 
 void lib_pi_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, float32_t dt)
@@ -78,4 +88,10 @@ void lib_pid_util_ilim(lib_pid_S* pid, float i_min, float i_max)
 void lib_pid_util_ileak(lib_pid_S* pid, float32_t kLeak, float32_t dt)
 {
     pid->i_term = (1.0f - kLeak * dt) * pid->i_term;
+}
+
+void lib_pid_util_lpf_dTerm(lib_pid_S* pid, float32_t dt)
+{
+    lib_simpleFilter_lpf_calcSmoothingFactor(&pid->filterDTerm, pid->cutoffFreqDTerm, dt);
+    pid->d_term = lib_simpleFilter_lpf_step(&pid->filterDTerm, pid->d_term);
 }
