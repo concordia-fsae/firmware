@@ -24,7 +24,7 @@
 
 #define CONVERT_PERTIRE_N_TO_G(n) (n / (VEHICLE_MASS_KG / (2.0f * 9.81f)))
 
-#define TURNING_THRESHOLD_DEG 2.5f
+#define TURNING_THRESHOLD_DEG 4.5f
 
 // Assumes small angle approx
 #define STW_TO_WHEEL_ROTATION_SCALAR 0.2147f
