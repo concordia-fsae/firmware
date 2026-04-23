@@ -248,6 +248,14 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
         .value.cont.scale = CAN_CONFIGSCALE_DIV_100,
         .value.cont.unit = CAN_CONFIGUNIT_PERCENT,
     },
+    [DRIVERINPUT_CONFIG_PARAM_TC_TLEAK] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcTLeak,
+            DRIVERINPUT_REQUEST_TC_TLEAK_MS_INC,
+            DRIVERINPUT_REQUEST_TC_TLEAK_MS_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_SECONDS,
+    },
 };
 
 /******************************************************************************
@@ -685,6 +693,9 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
                 break;
             case DRIVERINPUT_CONFIG_PARAM_TC_ILIM:
                 config = CAN_CONFIGSELECTION_PARAM_TC_ILIM;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_TLEAK:
+                config = CAN_CONFIGSELECTION_PARAM_TC_TLEAK;
                 break;
             case DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN:
                 config = CAN_CONFIGSELECTION_TEST_PUMP_FAN;

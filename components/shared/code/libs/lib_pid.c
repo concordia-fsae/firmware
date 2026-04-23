@@ -74,3 +74,8 @@ void lib_pid_util_ilim(lib_pid_S* pid, float i_min, float i_max)
         pid->i_term = i_min;
     }
 }
+
+void lib_pid_util_ileak(lib_pid_S* pid, float32_t kLeak, float32_t dt)
+{
+    pid->i_term = (1.0f - kLeak * dt) * pid->i_term;
+}

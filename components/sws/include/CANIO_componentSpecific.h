@@ -98,6 +98,8 @@
 #define set_requestTcMaxLimInc(m,b,n,s)      set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_MAX_LIM_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTcILimDec(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_ILIM_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTcILimInc(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_ILIM_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcTLeakMsDec(m,b,n,s)     set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_TLEAK_MS_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcTLeakMsInc(m,b,n,s)     set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_TLEAK_MS_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m,b,n,s)           set(m,b,n,s, driverInput_getScreenCAN())
 #define set_driverConfigSelection(m,b,n,s)   set(m,b,n,s, driverInput_getConfigSelectedCAN())

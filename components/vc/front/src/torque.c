@@ -130,6 +130,7 @@ typedef enum
     PARAMVALUE_TC_KD,
     PARAMVALUE_TC_MAX_LIM,
     PARAMVALUE_TC_ILIM,
+    PARAMVALUE_TC_TLEAK_MS,
     PARAMVALUE_COUNT
 } paramConfig_E;
 
@@ -159,6 +160,10 @@ static paramValueConfig_S paramValues[PARAMVALUE_COUNT] = {
     [PARAMVALUE_TC_ILIM] = {
         .requestInc = CANRX_get_signal_func(VEH, SWS_requestTcILimInc),
         .requestDec = CANRX_get_signal_func(VEH, SWS_requestTcILimDec),
+    },
+    [PARAMVALUE_TC_TLEAK_MS] = {
+        .requestInc = CANRX_get_signal_func(VEH, SWS_requestTcTLeakMsInc),
+        .requestDec = CANRX_get_signal_func(VEH, SWS_requestTcTLeakMsDec),
     },
 };
 
@@ -401,11 +406,13 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 
 static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
 {
+    const float32_t kLeak = 1.0f / TC_PID_CONV_THOU_F32(tcPid_data.tLeakMs);
+    lib_pid_util_ileak(&torque_data.tractionControlPID, kLeak, dt);
     torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp);
     torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi);
     torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKd);
     lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
-    lib_pid_util_ilim(&torque_data.tractionControlPID, 0.0f, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
+    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
     lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentMaxTcLimit));
 
     return torque_data.tractionControlPID.y;
@@ -655,6 +662,14 @@ static void tcEvaluateParams(void)
                     ((tcPid_data.percentILim == 100U) && (requestSum < 0)))
                 {
                     tcPid_data.percentILim = (uint8_t)(tcPid_data.percentILim + requestSum);
+                }
+                break;
+            case PARAMVALUE_TC_TLEAK_MS:
+                if (((tcPid_data.tLeakMs > 1U) && (tcPid_data.tLeakMs < 65535U)) ||
+                    ((tcPid_data.tLeakMs == 1U) && (requestSum > 0)) ||
+                    ((tcPid_data.tLeakMs == 65535U) && (requestSum < 0)))
+                {
+                    tcPid_data.tLeakMs = (uint16_t)(tcPid_data.tLeakMs + requestSum);
                 }
                 break;
         }

@@ -184,6 +184,7 @@ messages:
       paramTcKp:
       paramTcKi:
       paramTcKd:
+      paramTcTLeak:
 
   sleep:
     description: VCFRONT sleep information
