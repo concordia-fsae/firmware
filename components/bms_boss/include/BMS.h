@@ -104,6 +104,9 @@ extern nvm_bmsbContactorData_S contactor_data;
 
 extern BMSB_S BMS;
 
+NVM_SIZE_ASSERT(nvm_bmsData_S, (4U + (4U * BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS) + 16U));
+NVM_SIZE_ASSERT(nvm_bmsbContactorData_S, 28U);
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
