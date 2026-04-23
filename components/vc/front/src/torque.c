@@ -1005,6 +1005,14 @@ static void torque_periodic_100Hz(void)
     }
 
     float32_t torque = (bppc_ok) ? accelerator_position * torque_request_max : 0.0f;
+    const float32_t maxVdTorque = ((vd_getMaxLonTireForce(WHEEL_RL) + vd_getMaxLonTireForce(WHEEL_RR)) * TIRE_RADIUS_M) / GEAR_RATIO;
+    torque_data.maxVdTorque = maxVdTorque;
+#if FEATURE_IS_ENABLED(FEATURE_LIMIT_LON_TIRE_ACCEL)
+    if (FLAG_get(tcParamState_data.params, PARAMSTATE_TC_TIRE_MODEL_LIMIT))
+    {
+        torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
+    }
+#endif
     const float32_t regenTorque = REGEN_MAX_TORQUE_N * brake_position;
     torque_data.torqueDriverInput = torque;
     torque_data.torqueCorrection = torque_data.torqueReduction * torque;
@@ -1032,15 +1040,6 @@ static void torque_periodic_100Hz(void)
         torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -regenTorque;
         torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     }
-
-    const float32_t maxVdTorque = ((vd_getMaxLonTireForce(WHEEL_RL) + vd_getMaxLonTireForce(WHEEL_RR)) * TIRE_RADIUS_M) / GEAR_RATIO;
-    torque_data.maxVdTorque = maxVdTorque;
-#if FEATURE_IS_ENABLED(FEATURE_LIMIT_LON_TIRE_ACCEL)
-    if (FLAG_get(tcParamState_data.params, PARAMSTATE_TC_TIRE_MODEL_LIMIT))
-    {
-        torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
-    }
-#endif
 
     const float32_t minTorque = torque_data.gear == GEAR_F ? -REGEN_MAX_TORQUE_N : ABSOLUTE_MIN_TORQUE;
     torque_data.torque = SATURATE(minTorque, torque, ABSOLUTE_MAX_TORQUE);
