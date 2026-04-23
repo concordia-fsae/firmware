@@ -410,7 +410,7 @@ static float32_t calc_traction_control_reduction(float32_t target_slip, float32_
     lib_pid_util_ileak(&torque_data.tractionControlPID, kLeak, dt);
     torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp);
     torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi);
-    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKd);
+    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(-tcPid_data.thousandthKd);
     lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
     lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
     lib_pid_util_lpf_dTerm(&torque_data.tractionControlPID, dt);
@@ -464,7 +464,7 @@ static float32_t evaluate_traction_control(void)
         lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f,
             TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp),
             TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi),
-            TC_PID_CONV_THOU_F32(tcPid_data.thousandthKd));
+            TC_PID_CONV_THOU_F32(-tcPid_data.thousandthKd));
     }
 
     torque_data.slipRear = slip;
@@ -990,7 +990,7 @@ static void torque_init(void)
 
     torque_data.torquePreload = LC_PRELOAD_TORQUE_INIT;
 
-    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, 0.0f);
+    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, -TC_KD);
     lib_pid_util_lpf_dTermSetCutoff(&torque_data.tractionControlPID, TC_DTERM_LPF_CUTOFF_FREQ);
 }
 

@@ -27,7 +27,10 @@
 // Ki = Kp / tIntegrator
 // Ki = TC_KP / 0.250
 #define TC_KI (4 * TC_KP)
-#define TC_KD 0.0f
+// Kd = Kp * tDerivative
+// Kd = TC_KP * 0.100
+#define TC_KD (0.1f * TC_KP)
+#define TC_DTERM_LPF_CUTOFF_FREQ 100
 #define TC_ILEAK_MS 500U
 
 #define TC_PID_CONV_PERCENT_F32(x) (((float32_t)x) / 100.0f)
