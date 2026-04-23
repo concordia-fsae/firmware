@@ -387,8 +387,8 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 50
-      resolution: 0.05
+        max: 100
+      resolution: 0.1
     continuous: true
   vdMaxTorqueRequest:
     description: Torque request from the torque manager

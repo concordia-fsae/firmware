@@ -97,6 +97,9 @@ signals:
   requestCalibImu:
     description: Request IMU calibration
     discreteValues: digitalStatus
+  requestCalibImuYaw:
+    description: Request IMU yaw calibration
+    discreteValues: digitalStatus
   requestCalibSteerAngle:
     description: Request calibration of the steering angle sensor
     discreteValues: digitalStatus
