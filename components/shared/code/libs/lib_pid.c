@@ -42,7 +42,7 @@ void lib_pi_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, fl
 void lib_pid_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, float32_t dt)
 {
     lib_pi_typeb_calc(pid, setpoint, measure, dt);
-    pid->d_term += pid->kd * (pid->x / dt);
+    pid->d_term = pid->kd * (pid->x / dt);
 }
 
 void lib_pid_typeb_sum(lib_pid_S* pid, float32_t out_min, float32_t out_max)
