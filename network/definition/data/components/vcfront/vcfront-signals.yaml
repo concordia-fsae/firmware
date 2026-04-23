@@ -400,3 +400,54 @@ signals:
         max: 200
       resolution: 1
     continuous: true
+
+  paramTcTireModelLimit:
+    description: Active status of the traction control tire model algorithm
+    discreteValues: digitalStatus
+  paramTcPidMax:
+    description: Max percentage limit of the driver input torque
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 1
+      resolution: 0.01
+    continuous: true
+  paramTcILim:
+    description: Max percentage limit of the driver input torque
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 1
+      resolution: 0.01
+    continuous: true
+  paramTcKp:
+    description: Proportional coefficient of traction control PID
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4
+      resolution: 0.001
+    continuous: true
+  paramTcKi:
+    description: Integral coefficient of traction control PID
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4
+      resolution: 0.001
+    continuous: true
+  paramTcKd:
+    description: Derivative coefficient of traction control PID
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4
+      resolution: 0.001
+    continuous: true

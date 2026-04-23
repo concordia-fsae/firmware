@@ -65,8 +65,24 @@ messages:
       requestAppsBypass:
       requestTestPump:
       requestTestFan:
+      requestTcTireModelLimit:
       validatorRequest:
         template: criticalDataChecksum
+
+  driverParamRequest:
+    id: 0x48f
+    cycleTimeMs: 100
+    signals:
+      requestTcKpDec:
+      requestTcKpInc:
+      requestTcKiDec:
+      requestTcKiInc:
+      requestTcKdDec:
+      requestTcKdInc:
+      requestTcMaxLimDec:
+      requestTcMaxLimInc:
+      requestTcILimDec:
+      requestTcILimInc:
 
   sleep:
     description: SWS sleep information
@@ -89,5 +105,17 @@ messages:
     signals:
       driverConfigSelection:
         startBit: 0
-      displayValue:
+      driverConfigOptionLeft:
+        startBit: 8
+      driverConfigOptionRight:
+        startBit: 16
+      option13:
+        startBit: 24
+      configHasValue:
+        startBit: 26
+      configValueScale:
         startBit: 32
+      configValueUnit:
+        startBit: 40
+      displayValue:
+        startBit: 48

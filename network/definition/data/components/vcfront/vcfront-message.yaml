@@ -174,6 +174,17 @@ messages:
       slipTarget:
         template: percentageAccurate
 
+  paramTcPid:
+    description: Traction Control PID parameters
+    id: 0x4e3
+    cycleTimeMs: 100
+    signals:
+      paramTcPidMax:
+      paramTcILim:
+      paramTcKp:
+      paramTcKi:
+      paramTcKd:
+
   sleep:
     description: VCFRONT sleep information
     id: 0x7b1
@@ -259,3 +270,11 @@ messages:
     signals:
       vdIntendedRadius:
       vdMaxTorqueRequest:
+
+  params:
+    description: Current states of the VCFRONT parameter states
+    id: 0x4f0
+    cycleTimeMs: 100
+    sourceBuses: veh
+    signals:
+      paramTcTireModelLimit:

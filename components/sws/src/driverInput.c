@@ -95,6 +95,24 @@
 
 #define SLEEP_TIMEOUT_MS 15*60000
 
+#define PARAM_VALUE(canbus, signal, inc, dec) \
+        .requestButtonLeft = dec, \
+        .requestButtonRight = inc, \
+        .optionButtonLeft = CAN_CONFIGOPTION_DEC, \
+        .optionButtonRight = CAN_CONFIGOPTION_INC, \
+        .valueSource = CAN_CONTINUOUS, \
+        .value.cont.fnF32 = CANRX_get_signal_func(canbus, signal)
+#define PARAM_STATE(param, canbus, signal, request) \
+    [param] = { \
+        .requestButtonLeft = request, \
+        .requestButtonRight = request, \
+        .optionButtonLeft = CAN_CONFIGOPTION_ENABLE, \
+        .optionButtonRight = CAN_CONFIGOPTION_ENABLE, \
+        .valueSource = CAN_DIGITAL, \
+        .value.dig.fnLeft = CANRX_get_signal_func(canbus, signal), \
+        .value.dig.fnRight = CANRX_get_signal_func(canbus, signal), \
+    }
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -104,6 +122,7 @@ typedef struct
     driverInput_page_E page;
     driverInput_configSelection_E config;
     bool page_lockout;
+    bool option13;
 
     // Timers
     drv_timer_S nav_timer;
@@ -129,8 +148,30 @@ typedef struct
 
 typedef struct
 {
-    driverInput_inputDigital_E requestDec;
-    driverInput_inputDigital_E requestInc;
+    driverInput_inputDigital_E requestButtonLeft;
+    driverInput_inputDigital_E requestButtonRight;
+    CAN_configOption_E         optionButtonLeft;
+    CAN_configOption_E         optionButtonRight;
+    enum
+    {
+        NONE = 0x00U,
+        CAN_CONTINUOUS,
+        CAN_DIGITAL,
+    } valueSource;
+    union
+    {
+        struct
+        {
+            CANRX_MESSAGE_health_E (*fnF32)(float32_t* val);
+            CAN_configScale_E      scale;
+            CAN_configUnit_E       unit;
+        } cont;
+        struct
+        {
+            CANRX_MESSAGE_health_E (*fnLeft)(CAN_digitalStatus_E* val);
+            CANRX_MESSAGE_health_E (*fnRight)(CAN_digitalStatus_E* val);
+        } dig;
+    } value;
 } configAction_S;
 
 /******************************************************************************
@@ -140,16 +181,68 @@ typedef struct
 static data_S data;
 
 static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
+    PARAM_STATE(DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM, VEH, VCFRONT_paramTcTireModelLimit,
+        DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM
+    ),
     [DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN] = {
-        .requestDec = DRIVERINPUT_REQUEST_TEST_PUMP,
-        .requestInc = DRIVERINPUT_REQUEST_TEST_FAN,
+        .requestButtonLeft = DRIVERINPUT_REQUEST_TEST_PUMP,
+        .requestButtonRight = DRIVERINPUT_REQUEST_TEST_FAN,
+        .optionButtonLeft = CAN_CONFIGOPTION_TEST_PUMP,
+        .optionButtonRight = CAN_CONFIGOPTION_TEST_FAN,
     },
     [DRIVERINPUT_CONFIG_CALIB_DYNAMICS] = {
-        .requestDec = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
-        .requestInc = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+        .requestButtonLeft = DRIVERINPUT_REQUEST_CALIBRATE_IMU,
+        .requestButtonRight = DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE,
+        .optionButtonLeft = CAN_CONFIGOPTION_CALIB_IMU,
+        .optionButtonRight = CAN_CONFIGOPTION_CALIB_STW_ANGLE,
+    },
+    [DRIVERINPUT_CONFIG_OPTION13] = {
+        .requestButtonLeft = DRIVERINPUT_REQUEST_OPTION13,
+        .optionButtonLeft = CAN_CONFIGOPTION_ENABLE,
     },
     [DRIVERINPUT_CONFIG_VEHICLE_CONTROL] = {
-        .requestDec = DRIVERINPUT_REQUEST_APPS_BYPASS,
+        .requestButtonLeft = DRIVERINPUT_REQUEST_APPS_BYPASS,
+        .optionButtonLeft = CAN_CONFIGOPTION_APPS_BYPASS,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_KP] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcKp,
+            DRIVERINPUT_REQUEST_TC_KP_INC,
+            DRIVERINPUT_REQUEST_TC_KP_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_NONE,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_KI] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcKi,
+            DRIVERINPUT_REQUEST_TC_KI_INC,
+            DRIVERINPUT_REQUEST_TC_KI_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_NONE,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_KD] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcKd,
+            DRIVERINPUT_REQUEST_TC_KD_INC,
+            DRIVERINPUT_REQUEST_TC_KD_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
+        .value.cont.unit = CAN_CONFIGUNIT_NONE,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcPidMax,
+            DRIVERINPUT_REQUEST_TC_MAX_LIM_INC,
+            DRIVERINPUT_REQUEST_TC_MAX_LIM_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_100,
+        .value.cont.unit = CAN_CONFIGUNIT_PERCENT,
+    },
+    [DRIVERINPUT_CONFIG_PARAM_TC_ILIM] = {
+        PARAM_VALUE(VEH, VCFRONT_paramTcILim,
+            DRIVERINPUT_REQUEST_TC_ILIM_INC,
+            DRIVERINPUT_REQUEST_TC_ILIM_DEC
+        ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_100,
+        .value.cont.unit = CAN_CONFIGUNIT_PERCENT,
     },
 };
 
@@ -189,6 +282,12 @@ static bool getCrashResetMode(void)
            (crash_state != CAN_CRASHSENSORSTATE_OK);
 }
 
+static CAN_configOption_E canDigitalToConfigOption(CAN_digitalStatus_E status)
+{
+    // When we are enabled, we would want to _disable_ the parameter, so logic is inverse current state
+    return status == CAN_DIGITALSTATUS_ON ? CAN_CONFIGOPTION_DISABLE : CAN_CONFIGOPTION_ENABLE;
+}
+
 static void update_params(const bool tq_inc, const bool tq_dec,
                           const bool sl_inc, const bool sl_dec,
                           const bool db_tq_inc, const bool db_tq_dec,
@@ -197,6 +296,22 @@ static void update_params(const bool tq_inc, const bool tq_dec,
 {
     // Axis mutual exclusion (within-axis), but defer assertion while related buttons are debouncing
     const bool axis_any_db = db_tq_inc || db_tq_dec || db_sl_inc || db_sl_dec;
+    const bool option13WasRequested = driverInput_getDigital(DRIVERINPUT_REQUEST_OPTION13);
+
+    if (configActions[data.config].valueSource == CAN_DIGITAL)
+    {
+        CAN_digitalStatus_E tmp;
+        configActions[data.config].optionButtonLeft = configActions[data.config].value.dig.fnLeft ?
+                                                      ((configActions[data.config].value.dig.fnLeft(&tmp) == CANRX_MESSAGE_VALID) ?
+                                                       canDigitalToConfigOption(tmp) :
+                                                       CAN_CONFIGOPTION_SNA) :
+                                                      CAN_CONFIGOPTION_NONE;
+        configActions[data.config].optionButtonRight = configActions[data.config].value.dig.fnRight ?
+                                                       ((configActions[data.config].value.dig.fnRight(&tmp) == CANRX_MESSAGE_VALID) ?
+                                                        canDigitalToConfigOption(tmp) :
+                                                        CAN_CONFIGOPTION_SNA) :
+                                                       CAN_CONFIGOPTION_NONE;
+    }
 
     // Torque axis
     if (!axis_any_db && (tq_inc ^ tq_dec))
@@ -209,7 +324,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             }
             else
             {
-                status[configActions[data.config].requestInc] = true;
+                status[configActions[data.config].requestButtonRight] = true;
             }
         }
         else if (tq_dec && !tq_inc)
@@ -220,31 +335,38 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             }
             else
             {
-                status[configActions[data.config].requestDec] = true;
+                status[configActions[data.config].requestButtonLeft] = true;
             }
         }
     }
 
+    const bool option13IsRequested = status[DRIVERINPUT_REQUEST_OPTION13];
+    data.option13 ^= option13IsRequested && !option13WasRequested;
+    configActions[DRIVERINPUT_CONFIG_OPTION13].optionButtonLeft = !data.option13 ?
+                                                                  CAN_CONFIGOPTION_ENABLE :
+                                                                  CAN_CONFIGOPTION_DISABLE;
+
     // Slip axis (independent of torque axis, but uses the same stability gate)
     if (!axis_any_db && (sl_inc ^ sl_dec))
     {
-        if (sl_inc && !sl_dec)
+        if (sl_inc && !sl_dec && (data.page != DRIVERINPUT_PAGE_CONFIG))
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_INC] = true;
         }
-        else if (sl_dec && !sl_inc)
+        else if (sl_dec && !sl_inc && (data.page != DRIVERINPUT_PAGE_CONFIG))
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_DEC] = true;
         }
-
-        if (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING)
+        else if (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING)
         {
             // initial step immediately
             if (sl_dec && (data.config > (DRIVERINPUT_CONFIG_NONE + 1)))
             {
                 data.config = (driverInput_configSelection_E)(data.config - 1);
             }
-            else if (sl_inc && data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1))
+            else if (sl_inc && 
+                    (data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1)) &&
+                    ((data.config < DRIVERINPUT_CONFIG_OPTION13) || data.option13))
             {
                 data.config = (driverInput_configSelection_E)(data.config + 1);
             }
@@ -493,6 +615,11 @@ bool driverInput_getDigital(driverInput_inputDigital_E input)
     return data.digital[input].is_set;
 }
 
+bool driverInput_getOption13(void)
+{
+    return data.option13;
+}
+
 CAN_screenPage_E driverInput_getScreenCAN(void)
 {
     CAN_screenPage_E page = CAN_SCREENPAGE_SNA;
@@ -521,7 +648,7 @@ CAN_screenPage_E driverInput_getScreenCAN(void)
             case DRIVERINPUT_PAGE_LAUNCH:
                 page = CAN_SCREENPAGE_LAUNCH;
                 break;
-            default:
+            case DRIVERINPUT_PAGE_COUNT:
                 break;
         }
     }
@@ -537,16 +664,116 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
     {
         switch (data.config)
         {
+            case DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM:
+                config = CAN_CONFIGSELECTION_TC_TIRE_MODEL_LIM;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_KP:
+                config = CAN_CONFIGSELECTION_PARAM_TC_KP;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_KI:
+                config = CAN_CONFIGSELECTION_PARAM_TC_KI;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_KD:
+                config = CAN_CONFIGSELECTION_PARAM_TC_KD;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM:
+                config = CAN_CONFIGSELECTION_PARAM_TC_MAX_LIM;
+                break;
+            case DRIVERINPUT_CONFIG_PARAM_TC_ILIM:
+                config = CAN_CONFIGSELECTION_PARAM_TC_ILIM;
+                break;
+            case DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN:
+                config = CAN_CONFIGSELECTION_TEST_PUMP_FAN;
+                break;
             case DRIVERINPUT_CONFIG_CALIB_DYNAMICS:
                 config = CAN_CONFIGSELECTION_CALIB_DYNAMICS;
+                break;
+            case DRIVERINPUT_CONFIG_OPTION13:
+                config = CAN_CONFIGSELECTION_OPTION13;
                 break;
             case DRIVERINPUT_CONFIG_VEHICLE_CONTROL:
                 config = CAN_CONFIGSELECTION_VEHICLE_CONTROL;
                 break;
-            default:
+            case DRIVERINPUT_CONFIG_NONE:
+            case DRIVERINPUT_CONFIG_COUNT:
                 break;
         }
     }
 
     return config;
+}
+
+CAN_configOption_E driverInput_getConfigOptionLeftCAN(void)
+{
+    return configActions[data.config].optionButtonLeft;
+}
+
+CAN_configOption_E driverInput_getConfigOptionRightCAN(void)
+{
+    return configActions[data.config].optionButtonRight;
+}
+
+uint16_t driverInput_getConfigValueU16(void)
+{
+    float32_t val = 0.0f;
+    float32_t scalar = 1.0f;
+
+    switch (configActions[data.config].value.cont.scale)
+    {
+        case CAN_CONFIGSCALE_DIV_10:
+            scalar = 10.0f;
+            break;
+        case CAN_CONFIGSCALE_DIV_100:
+            scalar = 100.0f;
+            break;
+        case CAN_CONFIGSCALE_DIV_1000:
+            scalar = 1000.0f;
+            break;
+        case CAN_CONFIGSCALE_TIMES_10:
+            scalar = 0.1f;
+            break;
+        case CAN_CONFIGSCALE_TIMES_100:
+            scalar = 0.01f;
+            break;
+        case CAN_CONFIGSCALE_TIMES_1000:
+            scalar = 0.001f;
+            break;
+        case CAN_CONFIGSCALE_ONE:
+            break;
+    }
+
+    switch (configActions[data.config].valueSource)
+    {
+        case CAN_CONTINUOUS:
+            if (configActions[data.config].value.cont.fnF32)
+            {
+                configActions[data.config].value.cont.fnF32(&val);
+            }
+            break;
+        case NONE:
+        case CAN_DIGITAL:
+            break;
+    }
+
+    return (uint16_t)(val * scalar);
+}
+
+bool driverInput_getConfigHasValueU16(void)
+{
+    return (configActions[data.config].valueSource == CAN_CONTINUOUS) &&
+           configActions[data.config].value.cont.fnF32;
+}
+
+CAN_configScale_E driverInput_getConfigScaleCAN(void)
+{
+    return configActions[data.config].valueSource == CAN_CONTINUOUS ?
+           configActions[data.config].value.cont.scale :
+           CAN_CONFIGSCALE_ONE;
+}
+
+CAN_configUnit_E driverInput_getConfigUnitCAN(void)
+{
+    return configActions[data.config].valueSource == CAN_CONTINUOUS ?
+           configActions[data.config].value.cont.unit :
+           CAN_CONFIGUNIT_NONE;
 }

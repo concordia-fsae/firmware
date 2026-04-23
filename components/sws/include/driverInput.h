@@ -27,6 +27,16 @@ typedef enum
     DRIVERINPUT_REQUEST_TORQUE_INC,
     DRIVERINPUT_REQUEST_TC_SLIP_DEC,
     DRIVERINPUT_REQUEST_TC_SLIP_INC,
+    DRIVERINPUT_REQUEST_TC_KP_DEC,
+    DRIVERINPUT_REQUEST_TC_KP_INC,
+    DRIVERINPUT_REQUEST_TC_KI_DEC,
+    DRIVERINPUT_REQUEST_TC_KI_INC,
+    DRIVERINPUT_REQUEST_TC_KD_DEC,
+    DRIVERINPUT_REQUEST_TC_KD_INC,
+    DRIVERINPUT_REQUEST_TC_MAX_LIM_DEC,
+    DRIVERINPUT_REQUEST_TC_MAX_LIM_INC,
+    DRIVERINPUT_REQUEST_TC_ILIM_DEC,
+    DRIVERINPUT_REQUEST_TC_ILIM_INC,
     DRIVERINPUT_REQUEST_TC,
     DRIVERINPUT_REQUEST_REGEN,
     DRIVERINPUT_REQUEST_LAUNCH_CONTROL,
@@ -37,6 +47,8 @@ typedef enum
     DRIVERINPUT_REQUEST_APPS_BYPASS,
     DRIVERINPUT_REQUEST_TEST_PUMP,
     DRIVERINPUT_REQUEST_TEST_FAN,
+    DRIVERINPUT_REQUEST_OPTION13,
+    DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM,
     DRIVERINPUT_REQUEST_COUNT,
 } driverInput_inputDigital_E;
 
@@ -53,8 +65,16 @@ typedef enum
 typedef enum
 {
     DRIVERINPUT_CONFIG_NONE = 0x00U,
+    DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM,
     DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN,
+    DRIVERINPUT_CONFIG_PARAM_TC_KP,
+    DRIVERINPUT_CONFIG_PARAM_TC_KI,
+    DRIVERINPUT_CONFIG_PARAM_TC_KD,
+    DRIVERINPUT_CONFIG_PARAM_TC_MAX_LIM,
+    DRIVERINPUT_CONFIG_PARAM_TC_ILIM,
     DRIVERINPUT_CONFIG_CALIB_DYNAMICS,
+    // Any rules illegal functions shall come after OPTION13
+    DRIVERINPUT_CONFIG_OPTION13,
     DRIVERINPUT_CONFIG_VEHICLE_CONTROL,
     DRIVERINPUT_CONFIG_COUNT,
 } driverInput_configSelection_E;
@@ -64,5 +84,12 @@ typedef enum
  ******************************************************************************/
 
 bool                  driverInput_getDigital(driverInput_inputDigital_E input);
+bool                  driverInput_getOption13(void);
 CAN_screenPage_E      driverInput_getScreenCAN(void);
 CAN_configSelection_E driverInput_getConfigSelectedCAN(void);
+CAN_configOption_E    driverInput_getConfigOptionLeftCAN(void);
+CAN_configOption_E    driverInput_getConfigOptionRightCAN(void);
+uint16_t              driverInput_getConfigValueU16(void);
+bool                  driverInput_getConfigHasValueU16(void);
+CAN_configScale_E     driverInput_getConfigScaleCAN(void);
+CAN_configUnit_E      driverInput_getConfigUnitCAN(void);

@@ -12,6 +12,31 @@
 
 #include "LIB_Types.h"
 #include "Yamcan.h"
+#include "Utility.h"
+#include "lib_nvm.h"
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define TC_MAX 0.7f
+#define TC_KP 0.325f
+#define TC_KI 0.44f
+#define TC_KD 0.0f
+#define TC_ILIM 0.55f
+
+#define TC_PID_CONV_PERCENT_F32(x) (((float32_t)x) / 100.0f)
+#define TC_PID_CONV_THOU_F32(x) (((float32_t)x) / 1000.0f)
+#define TC_PID_CONV_PERCENT_U8(x) (x * 100U)
+#define TC_PID_CONV_THOU_U16(x) (x * 1000U)
+#define TC_SET_DEFAULT_PID(decl) \
+    decl = { \
+        .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_MAX), \
+        .percentILim = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_ILIM), \
+        .thousandthKp = (uint16_t)TC_PID_CONV_THOU_U16(TC_KP), \
+        .thousandthKi = (uint16_t)TC_PID_CONV_THOU_U16(TC_KI), \
+        .thousandthKd = (uint16_t)TC_PID_CONV_THOU_U16(TC_KD), \
+    };
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -59,6 +84,30 @@ typedef enum
     RACEMODE_ENABLED,
 } torque_raceMode_E;
 
+// This backs our NVM parameters, each new parameter should be added before COUNT
+typedef enum
+{
+    PARAMSTATE_TC_TIRE_MODEL_LIMIT = 0x00U,
+    PARAMSTATE_COUNT,
+} tc_paramState_E;
+
+typedef struct
+{
+    FLAG_create(params, PARAMSTATE_COUNT);
+    uint16_t spare[2];
+} LIB_NVM_STORAGE(nvm_tcParamState_S);
+extern nvm_tcParamState_S tcParamState_data;
+
+typedef struct
+{
+    uint8_t percentMaxTcLimit;
+    uint8_t percentILim;
+    uint16_t thousandthKp;
+    uint16_t thousandthKi;
+    uint16_t thousandthKd;
+} LIB_NVM_STORAGE(nvm_tcPid_S);
+extern nvm_tcPid_S tcPid_data;
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -86,3 +135,4 @@ CAN_launchControlState_E      torque_getLaunchControlStateCAN(void);
 bool                          torque_isLaunching(void);
 torque_tractionControlState_E torque_getTractionControlState(void);
 CAN_tractionControlState_E    torque_getTractionControlStateCAN(void);
+bool                          tc_isParamEnabled(tc_paramState_E param);
