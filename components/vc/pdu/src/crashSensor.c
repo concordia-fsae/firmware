@@ -196,7 +196,7 @@ void crashSensor_task(void)
                 }
             }
         }
-        else
+        else if (!imu_isCalibrating() && !imu_isYawCalibrating())
         {
             if (cs.missedCycles < CRASH_THRESH_MISSED_CYCLES)
             {
