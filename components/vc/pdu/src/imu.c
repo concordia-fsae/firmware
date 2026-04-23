@@ -36,6 +36,7 @@
 #define IMU_TIMEOUT_MS 1000U
 #define BASELINE_SAMPLES 500U
 #define MADGWICK_BETA 0.01f
+#define IMU_YAW_CAL_MIN_TILT_DEG 5.0f
 
 #define IMU_LPF_CUTOFF_HZ 100.0f
 #define IMU_LPF_DT_S      0.01f
@@ -122,6 +123,8 @@ typedef enum
     STABILIZING_VEHICLEANGLE,
     BASELINING,
     ZEROING,
+    STABILIZING_FORWARD_TILT,
+    ALIGNING_YAW,
     GET_VEHICLEANGLE,
     RUNNING,
 } operatingMode_E;
@@ -304,6 +307,29 @@ static bool calculateTransform(void)
     return valid;
 }
 
+static void rotateCalibrationByYaw(float32_t yawDeg)
+{
+    const float32_t yawRad = yawDeg * DEG_TO_RAD;
+    drv_imu_vectorTransform_S yawRotation = { 0 };
+    drv_imu_vectorTransform_S rotatedCalibration = { 0 };
+    drv_imu_vector_S rotatedOffset = { 0 };
+
+    LIB_LINALG_SETIDENTITY_RMAT(&yawRotation);
+    yawRotation.rows[0][0] = cosf(yawRad);
+    yawRotation.rows[0][1] = -sinf(yawRad);
+    yawRotation.rows[1][0] = sinf(yawRad);
+    yawRotation.rows[1][1] = cosf(yawRad);
+
+    LIB_LINALG_MUL_RMATRMAT_SET(&yawRotation, &imuCalibration_data.rotation, &rotatedCalibration);
+    imuCalibration_data.rotation = rotatedCalibration;
+
+    LIB_LINALG_MUL_RMATCVEC_SET(&yawRotation, &imuCalibration_data.zeroAccel, &rotatedOffset);
+    imuCalibration_data.zeroAccel = rotatedOffset;
+
+    LIB_LINALG_MUL_RMATCVEC_SET(&yawRotation, &imuCalibration_data.zeroGyro, &rotatedOffset);
+    imuCalibration_data.zeroGyro = rotatedOffset;
+}
+
 static bool calculateOffset(void)
 {
     static drv_imu_vector_S sumA = {0};
@@ -339,6 +365,17 @@ static bool calculateOffset(void)
     }
 
     return valid;
+}
+
+static bool isForwardTilted(void)
+{
+    const float32_t minHorizontal = GRAVITY * sinf(IMU_YAW_CAL_MIN_TILT_DEG * DEG_TO_RAD);
+    const float32_t horizontal = sqrtf((imu.accel.accelX * imu.accel.accelX) +
+                                       (imu.accel.accelY * imu.accel.accelY));
+
+    return (imu.accelNorm > (0.9f * GRAVITY)) &&
+           (imu.accelNorm < (1.1f * GRAVITY)) &&
+           (horizontal > minHorizontal);
 }
 
 static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgwick_euler_S* a)
@@ -377,6 +414,33 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
 static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out);
 static void lpfAccel(drv_imu_accel_S* accel);
 static void lpfGyro(drv_imu_gyro_S* gyro);
+
+static bool calculateYawAlignment(void)
+{
+    static drv_imu_vector_S sum = {0};
+    static uint16_t count = 0;
+    drv_imu_vector_S tmp = {0};
+    drv_imu_vector_S corrected = {0};
+
+    averageSamples(&tmp, &count, NULL, NULL);
+    LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
+
+    const bool valid = count > BASELINE_SAMPLES;
+
+    if (valid)
+    {
+        LIB_LINALG_MUL_CVECSCALAR(&sum, (1.0f / count), &sum);
+        correctThenSetVector(&sum, &imuCalibration_data.zeroAccel, &corrected);
+
+        rotateCalibrationByYaw(-atan2f(corrected.elemCol[1], corrected.elemCol[0]) * RAD_TO_DEG);
+
+        LIB_LINALG_CLEAR_CVEC(&sum);
+        count = 0;
+    }
+
+    return valid;
+}
+
 static bool calculateVehicleAngle(void)
 {
     static uint16_t countA = 0;
@@ -406,6 +470,7 @@ static bool calculateVehicleAngle(void)
     {
         LIB_LINALG_MUL_CVECSCALAR(&tmpA, (1.0f / countA), &tmpA);
         correctThenSetVector(&tmpA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
+        LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&imu.accel, &imu.accelNorm);
         madgwick_init_quaternion_from_accel(&imu.madgwick, (lib_madgwick_euler_S*)&imu.accel);
         imu.lastCycle_us = HW_TIM_getBaseTick();
         taskENTER_CRITICAL();
@@ -505,6 +570,22 @@ static void transitionImuState(void)
             break;
         case ZEROING:
             if (calculateOffset())
+            {
+                lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
+                imu.operatingMode = GET_VEHICLEANGLE;
+                imu.calibrating = false;
+            }
+            egressFifo();
+            break;
+        case STABILIZING_FORWARD_TILT:
+            if (disregardSamples())
+            {
+                imu.operatingMode = ALIGNING_YAW;
+            }
+            egressFifo();
+            break;
+        case ALIGNING_YAW:
+            if (calculateYawAlignment())
             {
                 lib_nvm_requestWrite(NVM_ENTRYID_IMU_CALIB);
                 imu.operatingMode = GET_VEHICLEANGLE;
@@ -726,6 +807,12 @@ bool imu_isCalibrating(void)
     return imu.calibrating;
 }
 
+bool imu_isYawCalibrating(void)
+{
+    return (imu.operatingMode == STABILIZING_FORWARD_TILT) ||
+           (imu.operatingMode == ALIGNING_YAW);
+}
+
 /**
  * @brief  imu Module Init function
  */
@@ -783,6 +870,8 @@ static void imu100Hz_PRD(void)
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUYAWCALIBRATING, imu_isYawCalibrating());
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUYAWCALIBRATIONFAILED, false);
 
     if (gotAlerts)
     {
@@ -798,12 +887,26 @@ static void imu100Hz_PRD(void)
         CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
         const bool calibrate = (CANRX_get_signal(VEH, SWS_requestCalibImu, &tmp) == CANRX_MESSAGE_VALID) &&
                                (tmp == CAN_DIGITALSTATUS_ON);
+        const bool yawCalibrate = (CANRX_get_signal(VEH, SWS_requestCalibImuYaw, &tmp) == CANRX_MESSAGE_VALID) &&
+                                  (tmp == CAN_DIGITALSTATUS_ON);
 
         if (calibrate)
         {
             lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
             imu.operatingMode = INIT;
             imu.calibrating = true;
+        }
+        else if (yawCalibrate && imuCalibrated)
+        {
+            if (isForwardTilted())
+            {
+                imu.operatingMode = STABILIZING_FORWARD_TILT;
+                imu.calibrating = true;
+            }
+            else
+            {
+                app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUYAWCALIBRATIONFAILED, true);
+            }
         }
         else if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
         {

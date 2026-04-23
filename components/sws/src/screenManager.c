@@ -43,6 +43,7 @@ typedef enum
     ALERT_GLV,
     ALERT_EM,
     ALERT_CRASH,
+    ALERT_IMU_YAW_CALIBRATING,
     ALERT_COUNT,
 } alerts_E;
 
@@ -57,6 +58,7 @@ typedef enum
     WARN_IMU_UNCALIBRATED,
     WARN_APPS_DISABLED,
     WARN_CONTACTOR_SOH_LOW,
+    WARN_IMU_YAW_CALIBRATION_FAILED,
     WARN_COUNT,
 } warnings_E;
 
@@ -113,6 +115,9 @@ static CAN_screenAlerts_E translateAlertToCAN(alerts_E alert)
         case ALERT_CRASH:
             ret = CAN_SCREENALERTS_CRASH;
             break;
+        case ALERT_IMU_YAW_CALIBRATING:
+            ret = CAN_SCREENALERTS_IMU_YAW_CALIBRATING;
+            break;
         case ALERT_NONE:
         case ALERT_COUNT:
             break;
@@ -151,6 +156,9 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_CONTACTOR_SOH_LOW:
             ret = CAN_SCREENWARNINGS_CONTACTOR_SOH_LOW;
             break;
+        case WARN_IMU_YAW_CALIBRATION_FAILED:
+            ret = CAN_SCREENWARNINGS_IMU_YAW_CALIBRATION_FAILED;
+            break;
         case WARN_NONE:
         case WARN_COUNT:
             break;
@@ -165,9 +173,12 @@ static void getAlerts(void)
     CANRX_get_signal(VEH, VCFRONT_gear, &gear);
     CAN_crashSensorState_E crash_state = CAN_CRASHSENSORSTATE_SNA;
     CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state);
+    const bool imuYawCalibrating =
+        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUYAWCALIBRATING);
 
     FLAG_assign(sm.setAlerts, ALERT_REVERSE, gear == CAN_GEAR_REVERSE);
     FLAG_assign(sm.setAlerts, ALERT_CRASH, crash_state != CAN_CRASHSENSORSTATE_OK);
+    FLAG_assign(sm.setAlerts, ALERT_IMU_YAW_CALIBRATING, imuYawCalibrating);
 }
 
 static void determineActiveAlert(void)
@@ -175,6 +186,10 @@ static void determineActiveAlert(void)
     if (FLAG_get(sm.setAlerts, ALERT_CRASH))
     {
         sm.alert = ALERT_CRASH;
+    }
+    else if (FLAG_get(sm.setAlerts, ALERT_IMU_YAW_CALIBRATING))
+    {
+        sm.alert = ALERT_IMU_YAW_CALIBRATING;
     }
     else if (FLAG_get(sm.setAlerts, ALERT_REVERSE))
     {
@@ -191,6 +206,8 @@ static void getWarnings(void)
     const bool lowGLV = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
     const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
     const bool imuUncalibrated = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUUNCALIBRATED);
+    const bool imuYawCalibrationFailed =
+        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUYAWCALIBRATIONFAILED);
     const bool appsBypassed = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_APPSDISABLED);
     const bool contactorSohLow = app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVP) ||
                               app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVN) ||
@@ -199,6 +216,7 @@ static void getWarnings(void)
     WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
     WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
     WARNING_INGRESS(WARN_IMU_UNCALIBRATED, imuUncalibrated);
+    WARNING_INGRESS(WARN_IMU_YAW_CALIBRATION_FAILED, imuYawCalibrationFailed);
     WARNING_INGRESS(WARN_APPS_DISABLED, appsBypassed);
     WARNING_INGRESS(WARN_CONTACTOR_SOH_LOW, contactorSohLow);
 }

@@ -82,6 +82,7 @@
 #define set_requestSlipInc(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_INC)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestSlipDec(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_DEC)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestCalibImu(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_IMU)         ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestCalibImuYaw(m,b,n,s)      set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_IMU_YAW)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestCalibSteerAngle(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestAppsBypass(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_APPS_BYPASS)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestTestPump(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TEST_PUMP)             ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
