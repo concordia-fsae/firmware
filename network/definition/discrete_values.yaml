@@ -102,6 +102,12 @@ gpsDrStage:
   "COARSE": 2
   "STABLE": 3
 
+gpsQualityIndicator:
+  "FIX_NONE": 0
+  "FIX_2D": 1
+  "FIX_3D": 2
+  "DEAD_RECKONING": 3
+
 gpsDynamicStatus:
   "UNKNOWN": 0
   "STATIC": 1

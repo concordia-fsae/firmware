@@ -31,6 +31,7 @@
 
 #define GPS_DEVICE_ERROR FM_FAULT_VCFRONT_GPSDEVICEERROR
 #define GPS_DEVICE_OVERRUN FM_FAULT_VCFRONT_GPSOVERRUN
+#define GPS_DEVICE_INVALID FM_FAULT_VCFRONT_GPSDATANOTVALID
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -38,6 +39,11 @@
 
 static struct
 {
+    bool gpsValidData;
+    bool gpsValidTime;
+    bool gpsValidDate;
+    uint8_t numSatellites;
+    app_gps_qualityIndicator_E gpsQuality;
     app_gps_pos_S pos;
     app_gps_heading_S heading;
     app_gps_time_S time;
@@ -105,6 +111,12 @@ static void updateGPS(void)
     gps.time.year = gps.currentGPS.year;
     gps.time.hours = gps.currentGPS.hours;
     gps.time.seconds = gps.currentGPS.seconds;
+
+    gps.gpsValidData = gps.currentGPS.is_valid;
+    gps.gpsValidTime = gps.currentGPS.time_valid;
+    gps.gpsValidDate = gps.currentGPS.date_valid;
+    gps.numSatellites = gps.currentGPS.sats_in_use;
+    gps.gpsQuality = gps.currentGPS.fix;
     taskEXIT_CRITICAL();
 }
 
@@ -474,9 +486,8 @@ app_gps_pairmsg_S* app_gps_getPairmsgRef(void)
 bool app_gps_isValid(void)
 {
     const bool ret = (drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING) &&
-                     (gps.pairmsg.drStage != 0x00U) &&
-                     (gps.pairmsg.drStage != 0x01U) &&
-                     (gps.pairmsg.dynamicStatus != 0x00U);
+                     gps.gpsValidData;
+
     return ret;
 }
 
@@ -560,6 +571,42 @@ void app_gps_recordUartError(uint32_t errorCode)
     }
 }
 
+bool app_gps_getValidTime(void)
+{
+    return gps.gpsValidTime;
+}
+
+bool app_gps_getValidDate(void)
+{
+    return gps.gpsValidDate;
+}
+
+uint8_t app_gps_getNumSatellites(void)
+{
+    return gps.numSatellites;
+}
+
+CAN_gpsQualityIndicator_E app_gps_getQualityCAN(void)
+{
+    CAN_gpsQualityIndicator_E ret = CAN_GPSQUALITYINDICATOR_FIX_NONE;
+    switch (gps.gpsQuality)
+    {
+        case GPS_FIX_2D:
+            ret = CAN_GPSQUALITYINDICATOR_FIX_2D;
+            break;
+        case GPS_FIX_3D:
+            ret = CAN_GPSQUALITYINDICATOR_FIX_3D;
+            break;
+        case GPS_DEAD_RECKONING:
+            ret = CAN_GPSQUALITYINDICATOR_DEAD_RECKONING;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
 static void app_gps_init(void)
 {
     memset(&gps, 0x00U, sizeof(gps));
@@ -604,6 +651,7 @@ static void app_gps_periodic_100Hz(void)
 
     app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid);
     app_faultManager_setFaultState(GPS_DEVICE_OVERRUN, overrun);
+    app_faultManager_setFaultState(GPS_DEVICE_INVALID, !gps.gpsValidData);
 #else // FEATURE_GPSTRANSCEIVER
     // TODO: Implement GPS listener
 #endif // !FEATURE_GPSTRANSCEIVER

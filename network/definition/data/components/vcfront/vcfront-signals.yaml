@@ -12,6 +12,9 @@ signals:
   gpsOverrun:
     description: GPS data overrun
     discreteValues: faultStatus
+  gpsDataNotValid:
+    description: GPS data overrun
+    discreteValues: faultStatus
   appsDisabled:
     description: APPS Safety Redundancy Disabled
     discreteValues: faultStatus
@@ -78,6 +81,27 @@ signals:
   gpsPairDynamicStatus:
     description: PAIRMSG 91 dynamic status
     discreteValues: gpsDynamicStatus
+
+  gpsSatellites:
+    description: Number of satellites in view
+    nativeRepresentation:
+      bitWidth: 6
+      range:
+        min: 0
+        max: 56
+      resolution: 1
+
+  gpsQualityIndicator:
+    description: GPS quality indicator
+    discreteValues: gpsQualityIndicator
+
+  gpsInvalidTime:
+    description: GPS time invalid
+    discreteValues: faultStatus
+
+  gpsInvalidDate:
+    description: GPS date invalid
+    discreteValues: faultStatus
 
   gpsPairAlarmHarshAcceleration:
     description: PAIRMSG 91 harsh acceleration
