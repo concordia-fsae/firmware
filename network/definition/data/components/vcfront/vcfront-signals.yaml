@@ -451,3 +451,13 @@ signals:
         max: 4
       resolution: 0.001
     continuous: true
+  paramTcTLeak:
+    description: Leak time constant of traction control PID
+    unit: "s"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 1
+      resolution: 0.001
+    continuous: true

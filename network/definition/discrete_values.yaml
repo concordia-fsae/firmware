@@ -272,6 +272,7 @@ configSelection:
   PARAM_TC_MAX_LIM: 9
   PARAM_TC_ILIM: 10
   CALIB_STEER_ANGLE: 11
+  PARAM_TC_TLEAK: 12
 configOption:
   SNA: 0
   NONE: 1
@@ -289,6 +290,7 @@ configUnit:
   NONE: 0
   N: 1
   PERCENT: 2
+  SECONDS: 3
 configScale:
   ONE: 0
   TIMES_10: 1

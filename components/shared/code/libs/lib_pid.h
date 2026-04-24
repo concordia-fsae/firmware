@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 #include "LIB_Types.h"
+#include "lib_simpleFilter.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -28,6 +29,9 @@ typedef struct
     float32_t i_term;
     float32_t d_term;
 
+    lib_simpleFilter_lpf_S filterDTerm;
+    float32_t cutoffFreqDTerm;
+
     float32_t y;
 } lib_pid_S;
 
@@ -37,8 +41,13 @@ typedef struct
 
 void lib_pid_init(lib_pid_S* pid, float32_t x_1, float32_t y_previous,
                   float32_t kp, float32_t ki, float32_t kd);
+void lib_pid_util_lpf_dTermSetCutoff(lib_pid_S* pid, float32_t cutoffFreq);
 void lib_pi_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, float32_t dt);
 void lib_pid_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, float32_t dt);
 void lib_pid_typeb_sum(lib_pid_S* pid, float32_t out_min, float32_t out_max);
 
 void lib_pid_util_ilim(lib_pid_S* pid, float i_min, float i_max);
+
+// kLeak = 1 / tLeak where tLeak is the time constant
+void lib_pid_util_ileak(lib_pid_S* pid, float32_t kLeak, float32_t dt);
+void lib_pid_util_lpf_dTerm(lib_pid_S* pid, float32_t dt);

@@ -130,6 +130,7 @@ typedef enum
     PARAMVALUE_TC_KD,
     PARAMVALUE_TC_MAX_LIM,
     PARAMVALUE_TC_ILIM,
+    PARAMVALUE_TC_TLEAK_MS,
     PARAMVALUE_COUNT
 } paramConfig_E;
 
@@ -159,6 +160,10 @@ static paramValueConfig_S paramValues[PARAMVALUE_COUNT] = {
     [PARAMVALUE_TC_ILIM] = {
         .requestInc = CANRX_get_signal_func(VEH, SWS_requestTcILimInc),
         .requestDec = CANRX_get_signal_func(VEH, SWS_requestTcILimDec),
+    },
+    [PARAMVALUE_TC_TLEAK_MS] = {
+        .requestInc = CANRX_get_signal_func(VEH, SWS_requestTcTLeakMsInc),
+        .requestDec = CANRX_get_signal_func(VEH, SWS_requestTcTLeakMsDec),
     },
 };
 
@@ -401,11 +406,14 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 
 static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
 {
+    const float32_t kLeak = 1.0f / TC_PID_CONV_THOU_F32(tcPid_data.tLeakMs);
+    lib_pid_util_ileak(&torque_data.tractionControlPID, kLeak, dt);
     torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp);
     torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi);
-    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp);
+    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(-tcPid_data.thousandthKd);
     lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
-    lib_pid_util_ilim(&torque_data.tractionControlPID, 0.0f, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
+    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
+    lib_pid_util_lpf_dTerm(&torque_data.tractionControlPID, dt);
     lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentMaxTcLimit));
 
     return torque_data.tractionControlPID.y;
@@ -456,7 +464,7 @@ static float32_t evaluate_traction_control(void)
         lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f,
             TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp),
             TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi),
-            TC_PID_CONV_THOU_F32(tcPid_data.thousandthKd));
+            TC_PID_CONV_THOU_F32(-tcPid_data.thousandthKd));
     }
 
     torque_data.slipRear = slip;
@@ -655,6 +663,14 @@ static void tcEvaluateParams(void)
                     ((tcPid_data.percentILim == 100U) && (requestSum < 0)))
                 {
                     tcPid_data.percentILim = (uint8_t)(tcPid_data.percentILim + requestSum);
+                }
+                break;
+            case PARAMVALUE_TC_TLEAK_MS:
+                if (((tcPid_data.tLeakMs > 1U) && (tcPid_data.tLeakMs < 65535U)) ||
+                    ((tcPid_data.tLeakMs == 1U) && (requestSum > 0)) ||
+                    ((tcPid_data.tLeakMs == 65535U) && (requestSum < 0)))
+                {
+                    tcPid_data.tLeakMs = (uint16_t)(tcPid_data.tLeakMs + requestSum);
                 }
                 break;
         }
@@ -974,7 +990,8 @@ static void torque_init(void)
 
     torque_data.torquePreload = LC_PRELOAD_TORQUE_INIT;
 
-    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, 0.0f);
+    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, -TC_KD);
+    lib_pid_util_lpf_dTermSetCutoff(&torque_data.tractionControlPID, TC_DTERM_LPF_CUTOFF_FREQ);
 }
 
 static void torque_periodic_100Hz(void)
@@ -1005,6 +1022,14 @@ static void torque_periodic_100Hz(void)
     }
 
     float32_t torque = (bppc_ok) ? accelerator_position * torque_request_max : 0.0f;
+    const float32_t maxVdTorque = ((vd_getMaxLonTireForce(WHEEL_RL) + vd_getMaxLonTireForce(WHEEL_RR)) * TIRE_RADIUS_M) / GEAR_RATIO;
+    torque_data.maxVdTorque = maxVdTorque;
+#if FEATURE_IS_ENABLED(FEATURE_LIMIT_LON_TIRE_ACCEL)
+    if (FLAG_get(tcParamState_data.params, PARAMSTATE_TC_TIRE_MODEL_LIMIT))
+    {
+        torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
+    }
+#endif
     const float32_t regenTorque = REGEN_MAX_TORQUE_N * brake_position;
     torque_data.torqueDriverInput = torque;
     torque_data.torqueCorrection = torque_data.torqueReduction * torque;
@@ -1032,15 +1057,6 @@ static void torque_periodic_100Hz(void)
         torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -regenTorque;
         torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     }
-
-    const float32_t maxVdTorque = ((vd_getMaxLonTireForce(WHEEL_RL) + vd_getMaxLonTireForce(WHEEL_RR)) * TIRE_RADIUS_M) / GEAR_RATIO;
-    torque_data.maxVdTorque = maxVdTorque;
-#if FEATURE_IS_ENABLED(FEATURE_LIMIT_LON_TIRE_ACCEL)
-    if (FLAG_get(tcParamState_data.params, PARAMSTATE_TC_TIRE_MODEL_LIMIT))
-    {
-        torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
-    }
-#endif
 
     const float32_t minTorque = torque_data.gear == GEAR_F ? -REGEN_MAX_TORQUE_N : ABSOLUTE_MIN_TORQUE;
     torque_data.torque = SATURATE(minTorque, torque, ABSOLUTE_MAX_TORQUE);
