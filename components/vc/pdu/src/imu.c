@@ -681,32 +681,29 @@ static bool getImuAlertStatus(void)
                 imu.fsmActivityActive = (statusA & (0x01U << (IMU_FSM_ACTIVITY_PROGRAM_NUMBER - 1U))) != 0U;
                 ret = true;
 
-                if (imu.fsmCrashInitOk && crashEvent)
+                if (crashEvent)
                 {
                     taskENTER_CRITICAL();
                     imu.fsmCrashEvent = true;
                     taskEXIT_CRITICAL();
                 }
 
-                if (imu.fsmImpactInitOk)
+                if (impactEvent || (imu_getAccelNormPeak() > IMU_IMPACT_THRESH_MPS))
                 {
-                    if (impactEvent || (imu_getAccelNormPeak() > IMU_IMPACT_THRESH_MPS))
+                    if (!imu.fsmImpactActive)
                     {
-                        if (!imu.fsmImpactActive)
-                        {
-                            imu.impactAccelMax = imu.accelNormPeak;
-                        }
-                        else if (imu.accelNormPeak > imu.impactAccelMax)
-                        {
-                            imu.impactAccelMax = imu.accelNormPeak;
-                        }
-                        imu.fsmImpactActive = true;
+                        imu.impactAccelMax = imu.accelNormPeak;
                     }
-                    else
+                    else if (imu.accelNormPeak > imu.impactAccelMax)
                     {
-                        imu.fsmImpactActive = false;
-                        imu.impactAccelMax = 0.0f;
+                        imu.impactAccelMax = imu.accelNormPeak;
                     }
+                    imu.fsmImpactActive = true;
+                }
+                else
+                {
+                    imu.fsmImpactActive = false;
+                    imu.impactAccelMax = 0.0f;
                 }
             }
         }
