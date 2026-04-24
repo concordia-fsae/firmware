@@ -86,6 +86,8 @@ typedef struct
  ******************************************************************************/
 
 bool drv_asm330_init(drv_asm330_S* dev);
+bool drv_asm330_startSelfTest(drv_asm330_S* dev);
+bool drv_asm330_stopSelfTest(drv_asm330_S* dev);
 bool drv_asm330_getInertialMeasurement(drv_asm330_S* dev, drv_imu_accel_S* accel);
 bool drv_asm330_getGyroMeasurement(drv_asm330_S* dev, drv_imu_gyro_S* gyro);
 void drv_asm330_getAccelFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_imu_accel_S* accel);

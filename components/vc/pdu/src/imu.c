@@ -34,9 +34,15 @@
 #define IMU_WAKE_DELAY_MS (15U * 60000U)
 
 #define IMU_TIMEOUT_MS 1000U
+#define IMU_SELFTEST_TIMEOUT_MS 500U
 #define BASELINE_SAMPLES 500U
 #define MADGWICK_BETA 0.01f
 #define IMU_YAW_CAL_MIN_TILT_DEG 5.0f
+
+#define IMU_SELFTEST_ACCEL_MIN_MPS2 (GRAVITY * 0.040f)
+#define IMU_SELFTEST_ACCEL_MAX_MPS2 (GRAVITY * 1.700f)
+#define IMU_SELFTEST_GYRO_MIN_DPS   20.0f
+#define IMU_SELFTEST_GYRO_MAX_DPS   80.0f
 
 #define IMU_LPF_CUTOFF_HZ 100.0f
 #define IMU_LPF_DT_S      0.01f
@@ -118,6 +124,7 @@
 typedef enum
 {
     INIT = 0x00U,
+    INIT_SELFTEST,
     INIT_VEHICLEANGLE,
     STABILIZING,
     STABILIZING_VEHICLEANGLE,
@@ -128,6 +135,12 @@ typedef enum
     GET_VEHICLEANGLE,
     RUNNING,
 } operatingMode_E;
+
+typedef enum
+{
+    SELFTEST_STAGE_BASELINE = 0x00U,
+    SELFTEST_STAGE_MEASURE,
+} selfTestStage_E;
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -160,7 +173,25 @@ struct imu_S {
     float32_t       impactAccelMax;
     uint8_t         fsmArmCyclesLeft;
     bool            calibrating;
+    bool            selfTesting;
+    bool            selfTestFailed;
+    drv_timer_S     selfTestTimeout;
 } imu;
+
+static struct
+{
+    selfTestStage_E stage;
+    drv_imu_accel_S cycleAccel;
+    drv_imu_gyro_S  cycleGyro;
+    uint16_t        cycleCountA;
+    uint16_t        cycleCountG;
+    drv_imu_accel_S accumAccel;
+    drv_imu_gyro_S  accumGyro;
+    uint16_t        accumCountA;
+    uint16_t        accumCountG;
+    drv_imu_accel_S baselineAccel;
+    drv_imu_gyro_S  baselineGyro;
+} selfTest = { 0 };
 
 static LIB_BUFFER_FIFO_CREATE(imuBuffer, drv_asm330_fifoElement_S, BUFFER_SAMPLE_SIZE) = { 0 };
 
@@ -233,7 +264,14 @@ const drv_imu_vectorTransform_S rotationToVehicleFrame = {
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vector_S* vecG, uint16_t* countG)
+static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out);
+static void lpfAccel(drv_imu_accel_S* accel);
+static void lpfGyro(drv_imu_gyro_S* gyro);
+static void averageSamples(drv_imu_vector_S* vecA,
+                           uint16_t* countA,
+                           drv_imu_vector_S* vecG,
+                           uint16_t* countG,
+                           float32_t* accelNormPeak)
 {
     // Wait until the next element is being filled so we know our current element is valid
     while (LIB_BUFFER_FIFO_PEEKN(&imuBuffer, 1).tag)
@@ -246,6 +284,18 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
         switch (tag)
         {
             case ASM330LHB_XL_NC_TAG:
+                if (accelNormPeak != NULL)
+                {
+                    drv_imu_accel_S accel = { 0 };
+                    float32_t peak = 0.0f;
+
+                    correctThenSetVector(&tmp, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&accel);
+                    LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &peak);
+                    if (peak > *accelNormPeak)
+                    {
+                        *accelNormPeak = peak;
+                    }
+                }
                 LIB_LINALG_SUM_CVEC(vecA, &tmp, vecA);
                 (*countA)++;
                 break;
@@ -262,13 +312,95 @@ static void averageSamples(drv_imu_vector_S* vecA, uint16_t* countA, drv_imu_vec
     }
 }
 
+static void resetSelfTestAccumulator(void)
+{
+    memset(&selfTest.accumAccel, 0, sizeof(selfTest.accumAccel));
+    memset(&selfTest.accumGyro, 0, sizeof(selfTest.accumGyro));
+    selfTest.accumCountA = 0U;
+    selfTest.accumCountG = 0U;
+    selfTest.cycleCountA = 0U;
+    selfTest.cycleCountG = 0U;
+}
+
+static void accumulateSelfTestSamples(void)
+{
+    if (selfTest.cycleCountA > 0U)
+    {
+        selfTest.accumAccel.accelX += selfTest.cycleAccel.accelX * selfTest.cycleCountA;
+        selfTest.accumAccel.accelY += selfTest.cycleAccel.accelY * selfTest.cycleCountA;
+        selfTest.accumAccel.accelZ += selfTest.cycleAccel.accelZ * selfTest.cycleCountA;
+        selfTest.accumCountA += selfTest.cycleCountA;
+        selfTest.cycleCountA = 0U;
+    }
+
+    if (selfTest.cycleCountG > 0U)
+    {
+        selfTest.accumGyro.rotX += selfTest.cycleGyro.rotX * selfTest.cycleCountG;
+        selfTest.accumGyro.rotY += selfTest.cycleGyro.rotY * selfTest.cycleCountG;
+        selfTest.accumGyro.rotZ += selfTest.cycleGyro.rotZ * selfTest.cycleCountG;
+        selfTest.accumCountG += selfTest.cycleCountG;
+        selfTest.cycleCountG = 0U;
+    }
+}
+
+static bool getSelfTestAverage(drv_imu_accel_S* accel, drv_imu_gyro_S* gyro)
+{
+    if ((selfTest.accumCountA <= BASELINE_SAMPLES) || (selfTest.accumCountG <= BASELINE_SAMPLES))
+    {
+        return false;
+    }
+
+    *accel = selfTest.accumAccel;
+    accel->accelX /= selfTest.accumCountA;
+    accel->accelY /= selfTest.accumCountA;
+    accel->accelZ /= selfTest.accumCountA;
+
+    *gyro = selfTest.accumGyro;
+    gyro->rotX /= selfTest.accumCountG;
+    gyro->rotY /= selfTest.accumCountG;
+    gyro->rotZ /= selfTest.accumCountG;
+
+    return true;
+}
+
+static bool selfTestDeltaIsValid(float32_t delta, float32_t min, float32_t max)
+{
+    const float32_t absDelta = fabsf(delta);
+    return (absDelta >= min) && (absDelta <= max);
+}
+
+static bool selfTestPassed(const drv_imu_accel_S* baselineAccel,
+                           const drv_imu_gyro_S* baselineGyro,
+                           const drv_imu_accel_S* selfTestAccel,
+                           const drv_imu_gyro_S* selfTestGyro)
+{
+    return selfTestDeltaIsValid(selfTestAccel->accelX - baselineAccel->accelX,
+                                IMU_SELFTEST_ACCEL_MIN_MPS2,
+                                IMU_SELFTEST_ACCEL_MAX_MPS2) &&
+           selfTestDeltaIsValid(selfTestAccel->accelY - baselineAccel->accelY,
+                                IMU_SELFTEST_ACCEL_MIN_MPS2,
+                                IMU_SELFTEST_ACCEL_MAX_MPS2) &&
+           selfTestDeltaIsValid(selfTestAccel->accelZ - baselineAccel->accelZ,
+                                IMU_SELFTEST_ACCEL_MIN_MPS2,
+                                IMU_SELFTEST_ACCEL_MAX_MPS2) &&
+           selfTestDeltaIsValid(selfTestGyro->rotX - baselineGyro->rotX,
+                                IMU_SELFTEST_GYRO_MIN_DPS,
+                                IMU_SELFTEST_GYRO_MAX_DPS) &&
+           selfTestDeltaIsValid(selfTestGyro->rotY - baselineGyro->rotY,
+                                IMU_SELFTEST_GYRO_MIN_DPS,
+                                IMU_SELFTEST_GYRO_MAX_DPS) &&
+           selfTestDeltaIsValid(selfTestGyro->rotZ - baselineGyro->rotZ,
+                                IMU_SELFTEST_GYRO_MIN_DPS,
+                                IMU_SELFTEST_GYRO_MAX_DPS);
+}
+
 static bool disregardSamples(void)
 {
     static uint16_t countA = 0;
     static uint16_t countG = 0;
     drv_imu_vector_S tmp = {0};
 
-    averageSamples(&tmp, &countA, &tmp, &countG);
+    averageSamples(&tmp, &countA, &tmp, &countG, NULL);
 
     if (countA + countG > BASELINE_SAMPLES)
     {
@@ -290,7 +422,7 @@ static bool calculateTransform(void)
     drv_imu_vector_S tmp = {0};
     drv_imu_vectorTransform_S tmpTransform = {0};
 
-    averageSamples(&tmp, &count, NULL, NULL);
+    averageSamples(&tmp, &count, NULL, NULL, NULL);
     LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
 
     const bool valid = count > BASELINE_SAMPLES;
@@ -339,7 +471,7 @@ static bool calculateOffset(void)
     drv_imu_vector_S tmpA = {0};
     drv_imu_vector_S tmpG = {0};
 
-    averageSamples(&tmpA, &countA, &tmpG, &countG);
+    averageSamples(&tmpA, &countA, &tmpG, &countG, NULL);
     LIB_LINALG_SUM_CVEC(&sumA, &tmpA, &sumA);
     LIB_LINALG_SUM_CVEC(&sumG, &tmpG, &sumG);
 
@@ -411,10 +543,6 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
     imu.lastCycle_us = currentTime;
 }
 
-static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out);
-static void lpfAccel(drv_imu_accel_S* accel);
-static void lpfGyro(drv_imu_gyro_S* gyro);
-
 static bool calculateYawAlignment(void)
 {
     static drv_imu_vector_S sum = {0};
@@ -422,7 +550,7 @@ static bool calculateYawAlignment(void)
     drv_imu_vector_S tmp = {0};
     drv_imu_vector_S corrected = {0};
 
-    averageSamples(&tmp, &count, NULL, NULL);
+    averageSamples(&tmp, &count, NULL, NULL, NULL);
     LIB_LINALG_SUM_CVEC(&sum, &tmp, &sum);
 
     const bool valid = count > BASELINE_SAMPLES;
@@ -448,7 +576,7 @@ static bool calculateVehicleAngle(void)
     static drv_imu_vector_S tmpA = {0};
     static drv_imu_vector_S tmpG = {0};
 
-    averageSamples(&tmpA, &countA, &tmpG, &countG);
+    averageSamples(&tmpA, &countA, &tmpG, &countG, NULL);
 
     const bool validG = (countG > BASELINE_SAMPLES);
     const bool validA = (countA > BASELINE_SAMPLES);
@@ -499,7 +627,9 @@ static bool egressFifo(void)
     drv_asm330_fifoElement_S* reserveStart = &LIB_BUFFER_FIFO_PEEKEND(&imuBuffer);
     elements = elements > maxContinuous ? (uint16_t)maxContinuous : elements;
     LIB_BUFFER_FIFO_RESERVE(&imuBuffer, elements);
-    return drv_asm330_getFifoElementsDMA(&asm330, (uint8_t*)reserveStart, (uint16_t)(elements * sizeof(*reserveStart)));
+    return drv_asm330_getFifoElements(&asm330,
+                                      (uint8_t*)reserveStart,
+                                      (uint16_t)(elements * sizeof(*reserveStart))) > 0U;
 }
 
 static void correctThenSetVector(drv_imu_vector_S* in, drv_imu_vector_S* zero, drv_imu_vector_S* out)
@@ -542,10 +672,67 @@ static void lpfGyro(drv_imu_gyro_S* gyro)
     gyro->rotZ = lib_simpleFilter_lpf_step(&imuLpf.gyroZ, gyro->rotZ);
 }
 
+static bool handleImuSamples(void);
 static void transitionImuState(void)
 {
     switch (imu.operatingMode)
     {
+        case INIT_SELFTEST:
+        {
+            const bool imuRan = egressFifo();
+            const bool selfTestTimeout = drv_timer_getState(&imu.selfTestTimeout) == DRV_TIMER_EXPIRED;
+
+            if (selfTestTimeout)
+            {
+                drv_timer_stop(&imu.selfTestTimeout);
+                drv_asm330_stopSelfTest(&asm330);
+                imu.selfTestFailed = true;
+                imu.selfTesting = false;
+                imu.operatingMode = INIT_VEHICLEANGLE;
+            }
+            else if (!imu.selfTesting)
+            {
+                if (imuRan && disregardSamples())
+                {
+                    resetSelfTestAccumulator();
+                    selfTest.stage = SELFTEST_STAGE_BASELINE;
+                    imu.selfTestFailed = false;
+                    imu.selfTesting = true;
+                }
+            }
+            else if (imuRan && handleImuSamples())
+            {
+                drv_imu_accel_S avgAccel = { 0 };
+                drv_imu_gyro_S avgGyro = { 0 };
+
+                accumulateSelfTestSamples();
+
+                if (getSelfTestAverage(&avgAccel, &avgGyro))
+                {
+                    if (selfTest.stage == SELFTEST_STAGE_BASELINE)
+                    {
+                        selfTest.baselineAccel = avgAccel;
+                        selfTest.baselineGyro = avgGyro;
+                        resetSelfTestAccumulator();
+                        selfTest.stage = SELFTEST_STAGE_MEASURE;
+                        drv_asm330_startSelfTest(&asm330);
+                        drv_timer_start(&imu.selfTestTimeout, IMU_SELFTEST_TIMEOUT_MS);
+                    }
+                    else
+                    {
+                        drv_timer_stop(&imu.selfTestTimeout);
+                        drv_asm330_stopSelfTest(&asm330);
+                        imu.selfTestFailed = !selfTestPassed(&selfTest.baselineAccel,
+                                                             &selfTest.baselineGyro,
+                                                             &avgAccel,
+                                                             &avgGyro);
+                        imu.selfTesting = false;
+                        imu.operatingMode = INIT_VEHICLEANGLE;
+                    }
+                }
+            }
+            break;
+        }
         case INIT:
         case INIT_VEHICLEANGLE:
             if (egressFifo())
@@ -605,23 +792,29 @@ static void transitionImuState(void)
     }
 }
 
-static void handleImuSamples(void)
+static bool handleImuSamples(void)
 {
-    if ((imu.operatingMode == RUNNING) && (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
+    if (((imu.operatingMode == RUNNING) || (imu.operatingMode == INIT_SELFTEST)) &&
+        (drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
     {
         drv_imu_vector_S sumA = {0};
         drv_imu_vector_S sumG = {0};
         uint16_t countA = 0;
         uint16_t countG = 0;
+        float32_t accelNormPeak = 0.0f;
 
-        averageSamples(&sumA, &countA, &sumG, &countG);
+        averageSamples(&sumA, &countA, &sumG, &countG, &accelNormPeak);
+        selfTest.cycleCountA = 0U;
+        selfTest.cycleCountG = 0U;
 
         if (countA)
         {
             LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / countA), &sumA);
             drv_imu_accel_S accel = { 0 };
             correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&accel);
-            LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &imu.accelNormPeak);
+            selfTest.cycleAccel = accel;
+            selfTest.cycleCountA = countA;
+            imu.accelNormPeak = accelNormPeak;
             lpfAccel(&accel);
             LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &imu.accelNorm);
             taskENTER_CRITICAL();
@@ -633,38 +826,49 @@ static void handleImuSamples(void)
             LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / countG), &sumG);
             drv_imu_gyro_S gyro = { 0 };
             correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&gyro);
+            selfTest.cycleGyro = gyro;
+            selfTest.cycleCountG = countG;
             lpfGyro(&gyro);
             taskENTER_CRITICAL();
             memcpy(&imu.gyro, &gyro, sizeof(imu.gyro));
             taskEXIT_CRITICAL();
         }
 
-        updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&imu.gyro, (drv_imu_euler_S*)&imu.accel);
-
-        taskENTER_CRITICAL();
-        madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
-        taskEXIT_CRITICAL();
-
-        const float32_t rollRad = imu.vehicleAngle.rotX * DEG_TO_RAD;
-        const float32_t pitchRad = imu.vehicleAngle.rotY * DEG_TO_RAD;
-        float32_t cosTheta = cosf(rollRad) * cosf(pitchRad);
-        if (cosTheta > 1.0f)
+        if (imu.operatingMode == RUNNING)
         {
-            cosTheta = 1.0f;
+            updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&imu.gyro, (drv_imu_euler_S*)&imu.accel);
+
+            taskENTER_CRITICAL();
+            madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
+            taskEXIT_CRITICAL();
+
+            const float32_t rollRad = imu.vehicleAngle.rotX * DEG_TO_RAD;
+            const float32_t pitchRad = imu.vehicleAngle.rotY * DEG_TO_RAD;
+            float32_t cosTheta = cosf(rollRad) * cosf(pitchRad);
+            if (cosTheta > 1.0f)
+            {
+                cosTheta = 1.0f;
+            }
+            else if (cosTheta < -1.0f)
+            {
+                cosTheta = -1.0f;
+            }
+            imu.angleFromGravity = acosf(cosTheta) * RAD_TO_DEG;
         }
-        else if (cosTheta < -1.0f)
-        {
-            cosTheta = -1.0f;
-        }
-        imu.angleFromGravity = acosf(cosTheta) * RAD_TO_DEG;
+
+        return (countA > 0U) && (countG > 0U);
     }
+
+    selfTest.cycleCountA = 0U;
+    selfTest.cycleCountG = 0U;
+    return false;
 }
 
 static bool getImuAlertStatus(void)
 {
     bool ret = false;
 
-    if (imu.fsmCrashInitOk || imu.fsmImpactInitOk)
+    if (imu.fsmCrashInitOk && imu.fsmImpactInitOk)
     {
         if (imu.fsmArmCyclesLeft > 0U)
         {
@@ -817,6 +1021,7 @@ static void imu_init()
 {
     drv_asm330_init(&asm330);
     drv_timer_init(&imu.imuTimeout);
+    drv_timer_init(&imu.selfTestTimeout);
     madgwick_init(&imu.madgwick, MADGWICK_BETA);
     imu.lastCycle_us = HW_TIM_getBaseTick();
     lib_simpleFilter_lpf_calcSmoothingFactor(&imuLpf.accelX, IMU_LPF_CUTOFF_HZ, IMU_LPF_DT_S);
@@ -828,7 +1033,7 @@ static void imu_init()
     imuLpf.accelInit = true;
     imuLpf.gyroInit = true;
 
-    imu.operatingMode = INIT_VEHICLEANGLE;
+    imu.operatingMode = INIT_SELFTEST;
 
     imu.fsmCrashInitOk = drv_asm330_loadFsmProgram(&asm330,
                                                    IMU_FSM_CRASH_PROGRAM_NUMBER,
@@ -852,6 +1057,10 @@ static void imu_init()
     imu.fsmImpactActive = false;
     imu.impactAccelMax = 0.0f;
     imu.fsmArmCyclesLeft = IMU_FSM_ARM_CYCLES;
+    imu.selfTesting = false;
+    imu.selfTestFailed = false;
+    selfTest.stage = SELFTEST_STAGE_BASELINE;
+    resetSelfTestAccumulator();
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUFSMINITFAILURE,
                                    !(imu.fsmCrashInitOk && imu.fsmImpactInitOk));
 }
@@ -864,6 +1073,7 @@ static void imu100Hz_PRD(void)
     const bool imuCalibrated = memcmp(&imuCalibration_data, &imuCalibration_default, sizeof(imuCalibration_data));
     const bool wasOverrun = drv_asm330_getFifoOverrun(&asm330);
     const bool gotAlerts = getImuAlertStatus();
+    const bool imuDataAvailable = (imu.operatingMode == RUNNING) || imu.selfTesting;
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, wasOverrun);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUUNCALIBRATED, !imuCalibrated);
@@ -908,7 +1118,10 @@ static void imu100Hz_PRD(void)
         else if ((drv_asm330_getState(&asm330) == DRV_ASM330_STATE_RUNNING))
         {
             const bool imuRan = egressFifo();
-            handleImuSamples();
+            if (imuRan)
+            {
+                (void)handleImuSamples();
+            }
 
             if (imuRan)
             {
@@ -933,9 +1146,10 @@ static void imu100Hz_PRD(void)
         transitionImuState();
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUOVERRUN, false);
         app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUERROR, false);
-        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, true);
-        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, true);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSNA, !imuDataAvailable);
+        app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUINVALID, !imuDataAvailable);
     }
+    app_faultManager_setFaultState(FM_FAULT_VCPDU_IMUSELFTESTFAILED, imu.selfTestFailed);
 }
 
 /**

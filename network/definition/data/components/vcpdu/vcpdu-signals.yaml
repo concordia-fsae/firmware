@@ -38,6 +38,9 @@ signals:
   faulted5vExt:
     description: 5V external power rail faulted
     discreteValues: faultStatus
+  imuSelfTestFailed:
+    description: IMU self test failed
+    discreteValues: faultStatus
 
   crashSensorState:
     description: Crash sensor state

@@ -43,7 +43,7 @@ typedef enum
     ALERT_GLV,
     ALERT_EM,
     ALERT_CRASH,
-    ALERT_IMU_YAW_CALIBRATING,
+    ALERT_IMU_SELFTEST_FAILED,
     ALERT_COUNT,
 } alerts_E;
 
@@ -115,8 +115,8 @@ static CAN_screenAlerts_E translateAlertToCAN(alerts_E alert)
         case ALERT_CRASH:
             ret = CAN_SCREENALERTS_CRASH;
             break;
-        case ALERT_IMU_YAW_CALIBRATING:
-            ret = CAN_SCREENALERTS_IMU_YAW_CALIBRATING;
+        case ALERT_IMU_SELFTEST_FAILED:
+            ret = CAN_SCREENALERTS_IMU_SELFTEST_FAILED;
             break;
         case ALERT_NONE:
         case ALERT_COUNT:
@@ -173,12 +173,12 @@ static void getAlerts(void)
     CANRX_get_signal(VEH, VCFRONT_gear, &gear);
     CAN_crashSensorState_E crash_state = CAN_CRASHSENSORSTATE_SNA;
     CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state);
-    const bool imuYawCalibrating =
-        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUYAWCALIBRATING);
+    const bool imuSelfTestFailed =
+        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUSELFTESTFAILED);
 
     FLAG_assign(sm.setAlerts, ALERT_REVERSE, gear == CAN_GEAR_REVERSE);
     FLAG_assign(sm.setAlerts, ALERT_CRASH, crash_state != CAN_CRASHSENSORSTATE_OK);
-    FLAG_assign(sm.setAlerts, ALERT_IMU_YAW_CALIBRATING, imuYawCalibrating);
+    FLAG_assign(sm.setAlerts, ALERT_IMU_SELFTEST_FAILED, imuSelfTestFailed);
 }
 
 static void determineActiveAlert(void)
@@ -187,9 +187,9 @@ static void determineActiveAlert(void)
     {
         sm.alert = ALERT_CRASH;
     }
-    else if (FLAG_get(sm.setAlerts, ALERT_IMU_YAW_CALIBRATING))
+    else if (FLAG_get(sm.setAlerts, ALERT_IMU_SELFTEST_FAILED))
     {
-        sm.alert = ALERT_IMU_YAW_CALIBRATING;
+        sm.alert = ALERT_IMU_SELFTEST_FAILED;
     }
     else if (FLAG_get(sm.setAlerts, ALERT_REVERSE))
     {

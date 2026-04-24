@@ -251,7 +251,7 @@ screenAlerts:
   FAULT_EM: 7
   REVERSE: 8
   CRASH: 9
-  IMU_YAW_CALIBRATING: 10
+  IMU_SELFTEST_FAILED: 10
 
 screenWarnings:
   NONE: 0
