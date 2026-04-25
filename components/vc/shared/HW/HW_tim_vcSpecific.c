@@ -16,9 +16,11 @@
 
 #define TIMER_BASE_TICK 1000000U
 #define SEC_TO_BASETICK(s) ((s) * TIMER_BASE_TICK)
+#define MS_TO_BASETICK(ms) ((ms) * (TIMER_BASE_TICK / 1000U))
 
 #define TICK_PER_REV 16U
 #define UPDATE_PER_REV 8U
+#define WHEELSPEED_TIMEOUT_MS 300U
 
 #define NUM_TIM_SAMPLES 2U
 #define CURRENT_SAMPLE (NUM_TIM_SAMPLES - 1U)
@@ -138,7 +140,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 
 float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel)
 {
-    return (wheelSpeed.lastSample[channel][CURRENT_SAMPLE] > (HW_TIM_getBaseTick() - SEC_TO_BASETICK(1U))) ?
+    return (wheelSpeed.lastSample[channel][CURRENT_SAMPLE] > (HW_TIM_getBaseTick() - MS_TO_BASETICK(WHEELSPEED_TIMEOUT_MS))) ?
            (((float32_t)(SEC_TO_BASETICK(1U) / (UPDATE_PER_REV))) / (float32_t)(wheelSpeed.lastSample[channel][CURRENT_SAMPLE] - wheelSpeed.lastSample[channel][LAST_SAMPLE])) :
            0.0f;
 }
