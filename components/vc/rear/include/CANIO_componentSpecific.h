@@ -27,6 +27,7 @@
 #include "Module.h"
 #include "app_vehicleSpeed.h"
 #include "app_faultManager.h"
+#include "MCFAULT.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -61,4 +62,5 @@
 #define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RL))
 #define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RR))
 #define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
-
+#define set_mcFaulted(m,b,n,s) set(m,b,n,s, MCFAULT_getFaultedCAN())
+#define set_mcTimedOut(m,b,n,s) set(m,b,n,s, MCFAULT_getTimedOutCAN())
