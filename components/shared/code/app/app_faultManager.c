@@ -56,9 +56,9 @@ uint8_t* app_faultManager_transmit(void)
 {
     for (uint8_t i = 0U; i < WORDS_FROM_COUNT(MAX_FAULTS); i++)
     {
-        fm_data.buffer[i] = FLAG_GET_WORD(fm_data.waiting, i) | FLAG_GET_WORD(fm_data.faultBits, i);
-        FLAG_clearAll(fm_data.waiting, MAX_FAULTS);
+        fm_data.buffer[i] = fm_data.waiting[i] | fm_data.faultBits[i];
     }
+    FLAG_clearAll(fm_data.waiting, MAX_FAULTS);
 
     return (uint8_t*)&fm_data.buffer;
 }
