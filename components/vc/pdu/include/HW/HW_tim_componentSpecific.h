@@ -31,6 +31,14 @@ typedef enum
     HW_TIM_PORT_COUNT,
 } HW_TIM_port_E;
 
+typedef enum
+{
+    HW_TIM_CHANNEL_WS_DUMMY = 0x00U,
+} HW_TIM_channelFreq_E;
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
+
+float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel);
+uint64_t  HW_TIM_getLastCaptureBaseTick(HW_TIM_channelFreq_E channel);

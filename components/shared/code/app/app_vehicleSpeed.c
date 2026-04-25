@@ -48,12 +48,16 @@
 #define CANRX_MOTOR_SPEED(val) CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, val)
 #endif
 
-#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+#if APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT
 #define WHEELSPEED_FAULT_DEGRADED FM_FAULT_VCFRONT_WHEELSPEEDSENSORDEGRADED
 #define WHEELSPEED_FAULT_LOCKED   FM_FAULT_VCFRONT_WHEELSPEEDSENSORLOCKED
-#else
+#define WHEELSPEED_FAULTS_ENABLED 1
+#elif APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR
 #define WHEELSPEED_FAULT_DEGRADED FM_FAULT_VCREAR_WHEELSPEEDSENSORDEGRADED
 #define WHEELSPEED_FAULT_LOCKED   FM_FAULT_VCREAR_WHEELSPEEDSENSORLOCKED
+#define WHEELSPEED_FAULTS_ENABLED 1
+#else
+#define WHEELSPEED_FAULTS_ENABLED 0
 #endif
 
 /******************************************************************************
@@ -144,6 +148,7 @@ static uint16_t getWheelCalculationRpm(wheel_E wheel)
 
 static void calculateWheelFaults(void)
 {
+#if WHEELSPEED_FAULTS_ENABLED
     bool anyDegraded = false;
     bool anyLocked = false;
 
@@ -163,10 +168,7 @@ static void calculateWheelFaults(void)
 
             if (referenceRpm >= WHEEL_LOCK_DETECT_RPM)
             {
-                const uint64_t lastCaptureTick = HW_TIM_getLastCaptureBaseTick(app_wheelSpeed_config.config[i].channel_freq);
-                const uint32_t ageMs = (uint32_t)((HW_TIM_getBaseTick() - lastCaptureTick) / 1000U);
-
-                vehicle.wheelLocked[i] = ageMs >= WHEEL_LOCK_TIMEOUT_MS;
+                vehicle.wheelLocked[i] = vehicle.raw_rpm_wheel[i] == 0U;
             }
             else
             {
@@ -180,6 +182,7 @@ static void calculateWheelFaults(void)
 
     app_faultManager_setFaultState(WHEELSPEED_FAULT_DEGRADED, anyDegraded);
     app_faultManager_setFaultState(WHEELSPEED_FAULT_LOCKED, anyLocked);
+#endif
 }
 
 static void calculateAxleSpeed(void)
@@ -203,7 +206,7 @@ static void calculateAxleSpeed(void)
         }
 
         vehicle.axleValid[axle] = count > 0U;
-        vehicle.rpm_axle[axle] = (count > 0U) ? (sum / count) : 0U;
+        vehicle.rpm_axle[axle] = (uint16_t)((count > 0U) ? (sum / count) : 0U);
     }
 }
 

@@ -107,3 +107,17 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
 {
     UNUSED(tim);
 }
+
+float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel)
+{
+    UNUSED(channel);
+
+    return 0.0f;
+}
+
+uint64_t HW_TIM_getLastCaptureBaseTick(HW_TIM_channelFreq_E channel)
+{
+    UNUSED(channel);
+
+    return 0U;
+}
