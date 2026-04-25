@@ -44,6 +44,7 @@ typedef enum
     ALERT_EM,
     ALERT_CRASH,
     ALERT_IMU_SELFTEST_FAILED,
+    ALERT_RESOLVER_CALIBRATING,
     ALERT_COUNT,
 } alerts_E;
 
@@ -59,6 +60,7 @@ typedef enum
     WARN_APPS_DISABLED,
     WARN_CONTACTOR_SOH_LOW,
     WARN_IMU_YAW_CALIBRATION_FAILED,
+    WARN_RESOLVER_CALIBRATING_FAILED,
     WARN_COUNT,
 } warnings_E;
 
@@ -118,6 +120,9 @@ static CAN_screenAlerts_E translateAlertToCAN(alerts_E alert)
         case ALERT_IMU_SELFTEST_FAILED:
             ret = CAN_SCREENALERTS_IMU_SELFTEST_FAILED;
             break;
+        case ALERT_RESOLVER_CALIBRATING:
+            ret = CAN_SCREENALERTS_RESOLVER_CALIBRATING;
+            break;
         case ALERT_NONE:
         case ALERT_COUNT:
             break;
@@ -159,6 +164,9 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_IMU_YAW_CALIBRATION_FAILED:
             ret = CAN_SCREENWARNINGS_IMU_YAW_CALIBRATION_FAILED;
             break;
+        case WARN_RESOLVER_CALIBRATING_FAILED:
+            ret = CAN_SCREENWARNINGS_RESOLVER_CALIBRATING_FAILED;
+            break;
         case WARN_NONE:
         case WARN_COUNT:
             break;
@@ -175,15 +183,22 @@ static void getAlerts(void)
     CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state);
     const bool imuSelfTestFailed =
         app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUSELFTESTFAILED);
+    const bool resolverCalibrating = app_faultManager_getNetworkedFault_state(VEH, VCREAR_faults, FM_FAULT_VCREAR_MCCALIBRATINGRESOLVER);
 
     FLAG_assign(sm.setAlerts, ALERT_REVERSE, gear == CAN_GEAR_REVERSE);
     FLAG_assign(sm.setAlerts, ALERT_CRASH, crash_state != CAN_CRASHSENSORSTATE_OK);
     FLAG_assign(sm.setAlerts, ALERT_IMU_SELFTEST_FAILED, imuSelfTestFailed);
+    FLAG_assign(sm.setAlerts, ALERT_RESOLVER_CALIBRATING, resolverCalibrating);
 }
 
 static void determineActiveAlert(void)
 {
-    if (FLAG_get(sm.setAlerts, ALERT_CRASH))
+    // Calibrating the resolver requires the drive train running autonomously. High risk event
+    if (FLAG_get(sm.setAlerts, ALERT_RESOLVER_CALIBRATING))
+    {
+        sm.alert = ALERT_RESOLVER_CALIBRATING;
+    }
+    else if (FLAG_get(sm.setAlerts, ALERT_CRASH))
     {
         sm.alert = ALERT_CRASH;
     }
@@ -212,6 +227,7 @@ static void getWarnings(void)
     const bool contactorSohLow = app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVP) ||
                               app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVN) ||
                               app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE);
+    const bool resolverCalibrationFailed = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED);
 
     WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
     WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
@@ -219,6 +235,7 @@ static void getWarnings(void)
     WARNING_INGRESS(WARN_IMU_YAW_CALIBRATION_FAILED, imuYawCalibrationFailed);
     WARNING_INGRESS(WARN_APPS_DISABLED, appsBypassed);
     WARNING_INGRESS(WARN_CONTACTOR_SOH_LOW, contactorSohLow);
+    WARNING_INGRESS(WARN_RESOLVER_CALIBRATING_FAILED, resolverCalibrationFailed);
 }
 
 static void determineActiveWarning(void)

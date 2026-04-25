@@ -13,6 +13,16 @@ messages:
       miaBms:
       miaVcpdu:
       miaMc:
+      mcCalibratingResolver:
+      mcCalibratingResolverFailed:
+
+  request:
+    description: VCREAR request states
+    cycleTimeMs: 100
+    id: 0x200
+    sourceBuses: veh
+    signals:
+      requestContactorsOpen:
 
   udsResponse:
     description: UDS response message from the VCREAR
