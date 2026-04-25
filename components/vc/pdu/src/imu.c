@@ -286,11 +286,11 @@ static void averageSamples(drv_imu_vector_S* vecA,
             case ASM330LHB_XL_NC_TAG:
                 if (accelNormPeak != NULL)
                 {
-                    drv_imu_accel_S accel = { 0 };
+                    drv_imu_vector_S corrected = { 0 };
                     float32_t peak = 0.0f;
 
-                    correctThenSetVector(&tmp, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&accel);
-                    LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &peak);
+                    correctThenSetVector(&tmp, &imuCalibration_data.zeroAccel, &corrected);
+                    LIB_LINALG_GETNORM_CVEC(&corrected, &peak);
                     if (peak > *accelNormPeak)
                     {
                         *accelNormPeak = peak;
@@ -361,6 +361,27 @@ static bool getSelfTestAverage(drv_imu_accel_S* accel, drv_imu_gyro_S* gyro)
     gyro->rotZ /= selfTest.accumCountG;
 
     return true;
+}
+
+static void setAccelFromVector(const drv_imu_vector_S* in, drv_imu_accel_S* out)
+{
+    out->accelX = in->elemCol[0];
+    out->accelY = in->elemCol[1];
+    out->accelZ = in->elemCol[2];
+}
+
+static void setGyroFromVector(const drv_imu_vector_S* in, drv_imu_gyro_S* out)
+{
+    out->rotX = in->elemCol[0];
+    out->rotY = in->elemCol[1];
+    out->rotZ = in->elemCol[2];
+}
+
+static float32_t getAccelNorm(const drv_imu_accel_S* accel)
+{
+    return sqrtf((accel->accelX * accel->accelX) +
+                 (accel->accelY * accel->accelY) +
+                 (accel->accelZ * accel->accelZ));
 }
 
 static bool selfTestDeltaIsValid(float32_t delta, float32_t min, float32_t max)
@@ -597,9 +618,16 @@ static bool calculateVehicleAngle(void)
     if (countA)
     {
         LIB_LINALG_MUL_CVECSCALAR(&tmpA, (1.0f / countA), &tmpA);
-        correctThenSetVector(&tmpA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&imu.accel);
-        LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&imu.accel, &imu.accelNorm);
-        madgwick_init_quaternion_from_accel(&imu.madgwick, (lib_madgwick_euler_S*)&imu.accel);
+        drv_imu_vector_S accelVec = { 0 };
+        drv_imu_euler_S accelEuler = { 0 };
+
+        correctThenSetVector(&tmpA, &imuCalibration_data.zeroAccel, &accelVec);
+        setAccelFromVector(&accelVec, &imu.accel);
+        imu.accelNorm = getAccelNorm(&imu.accel);
+        accelEuler.x = imu.accel.accelX;
+        accelEuler.y = imu.accel.accelY;
+        accelEuler.z = imu.accel.accelZ;
+        madgwick_init_quaternion_from_accel(&imu.madgwick, (lib_madgwick_euler_S*)&accelEuler);
         imu.lastCycle_us = HW_TIM_getBaseTick();
         taskENTER_CRITICAL();
         madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
@@ -608,7 +636,10 @@ static bool calculateVehicleAngle(void)
     if (countG)
     {
         LIB_LINALG_MUL_CVECSCALAR(&tmpG, (1.0f / countG), &tmpG);
-        correctThenSetVector(&tmpG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&imu.gyro);
+        drv_imu_vector_S gyroVec = { 0 };
+
+        correctThenSetVector(&tmpG, &imuCalibration_data.zeroGyro, &gyroVec);
+        setGyroFromVector(&gyroVec, &imu.gyro);
     }
 
     memset(&tmpA, 0x00U, sizeof(tmpA));
@@ -810,13 +841,16 @@ static bool handleImuSamples(void)
         if (countA)
         {
             LIB_LINALG_MUL_CVECSCALAR(&sumA, (1.0f / countA), &sumA);
+            drv_imu_vector_S accelVec = { 0 };
             drv_imu_accel_S accel = { 0 };
-            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, (drv_imu_vector_S*)&accel);
+
+            correctThenSetVector(&sumA, &imuCalibration_data.zeroAccel, &accelVec);
+            setAccelFromVector(&accelVec, &accel);
             selfTest.cycleAccel = accel;
             selfTest.cycleCountA = countA;
             imu.accelNormPeak = accelNormPeak;
             lpfAccel(&accel);
-            LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)&accel, &imu.accelNorm);
+            imu.accelNorm = getAccelNorm(&accel);
             taskENTER_CRITICAL();
             memcpy(&imu.accel, &accel, sizeof(imu.accel));
             taskEXIT_CRITICAL();
@@ -824,8 +858,11 @@ static bool handleImuSamples(void)
         if (countG)
         {
             LIB_LINALG_MUL_CVECSCALAR(&sumG, (1.0f / countG), &sumG);
+            drv_imu_vector_S gyroVec = { 0 };
             drv_imu_gyro_S gyro = { 0 };
-            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, (drv_imu_vector_S*)&gyro);
+
+            correctThenSetVector(&sumG, &imuCalibration_data.zeroGyro, &gyroVec);
+            setGyroFromVector(&gyroVec, &gyro);
             selfTest.cycleGyro = gyro;
             selfTest.cycleCountG = countG;
             lpfGyro(&gyro);
@@ -836,7 +873,18 @@ static bool handleImuSamples(void)
 
         if (imu.operatingMode == RUNNING)
         {
-            updateMadgwick(&imu.madgwick, (drv_imu_euler_S*)&imu.gyro, (drv_imu_euler_S*)&imu.accel);
+            drv_imu_euler_S gyroEuler = {
+                .x = imu.gyro.rotX,
+                .y = imu.gyro.rotY,
+                .z = imu.gyro.rotZ,
+            };
+            drv_imu_euler_S accelEuler = {
+                .x = imu.accel.accelX,
+                .y = imu.accel.accelY,
+                .z = imu.accel.accelZ,
+            };
+
+            updateMadgwick(&imu.madgwick, &gyroEuler, &accelEuler);
 
             taskENTER_CRITICAL();
             madgwick_get_euler_deg(&imu.madgwick, (drv_imu_euler_S*)&imu.vehicleAngle);
