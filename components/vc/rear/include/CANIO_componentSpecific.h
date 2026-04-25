@@ -58,7 +58,6 @@
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_LEFT))
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_RIGHT))
 
-#define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RL))
-#define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_RR))
+#define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
+#define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))
 #define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
-

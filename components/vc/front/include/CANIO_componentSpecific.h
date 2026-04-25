@@ -104,8 +104,8 @@
 #define set_shockpotVoltFL(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_LEFT))
 #define set_shockpotVoltFR(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_RIGHT))
 
-#define set_wheelSpeedFL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_FL))
-#define set_wheelSpeedFR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRotational(WHEEL_FR))
+#define set_wheelSpeedFL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_FL))
+#define set_wheelSpeedFR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_FR))
 #define set_axleSpeedFront(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT))
 #define set_vehicleSpeed(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getVehicleSpeed())
 #define set_odometer(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getOdometer())
@@ -178,4 +178,3 @@
 #else
 # define transmit_VCFRONT_nvmInformation               false
 #endif
-

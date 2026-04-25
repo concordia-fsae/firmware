@@ -21,6 +21,12 @@ signals:
   miaMc:
     description: The Motor Controller is MIA
     discreteValues: faultStatus
+  wheelSpeedSensorDegraded:
+    description: One or more wheel speed sensors are degraded
+    discreteValues: faultStatus
+  wheelSpeedSensorLocked:
+    description: One or more wheel speed sensors are locked
+    discreteValues: faultStatus
 
   # Signals
   brakeLightState:

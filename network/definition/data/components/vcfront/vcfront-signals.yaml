@@ -21,6 +21,12 @@ signals:
   vehicleSpeedDegraded:
     description: Vehicle speed is degraded due to missing sensor data
     discreteValues: faultStatus
+  wheelSpeedSensorDegraded:
+    description: One or more wheel speed sensors are degraded
+    discreteValues: faultStatus
+  wheelSpeedSensorLocked:
+    description: One or more wheel speed sensors are locked
+    discreteValues: faultStatus
   faulted5vCritical:
     description: 5V critical external power rail faulted
     discreteValues: faultStatus
