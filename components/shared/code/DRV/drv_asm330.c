@@ -417,7 +417,7 @@ void drv_asm330_getGyroFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_
 asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifoElement_S* pack, drv_imu_vector_S* vec)
 {
     drv_asm330_fifoElementUnpack_S unpack = { 0U };
-    memcpy((uint8_t*)&unpack.tag, &pack->tag, sizeof(pack->elem));
+    memcpy((uint8_t*)&unpack.tag, &pack->tag, sizeof(pack->tag));
     memcpy((uint8_t*)&unpack.elem, pack->elem, sizeof(pack->elem));
 
     switch (unpack.tag.tag_sensor)
