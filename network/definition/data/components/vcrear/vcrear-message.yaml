@@ -44,6 +44,8 @@ messages:
       tssiState:
       5vCriticalHsdState:
       5vExtHsdState:
+      mcFaulted:
+      mcTimedOut:
 
   rearBrakePressure:
     description: Rear Brake Pressure

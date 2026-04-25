@@ -3,6 +3,9 @@ signals:
   mcFaulted:
     description: The motor controller is showing a fault
     discreteValues: faultStatus
+  mcTimedOut:
+    description: Timeout state of the Motor Controller
+    discreteValues: faultStatus
   faulted5vCritical:
     description: 5V critical external power rail faulted
     discreteValues: faultStatus
