@@ -175,6 +175,7 @@ struct imu_S {
     bool            calibrating;
     bool            selfTesting;
     bool            selfTestFailed;
+    bool            selfTestPassed;
     drv_timer_S     selfTestTimeout;
 } imu;
 
@@ -729,6 +730,7 @@ static void transitionImuState(void)
                     selfTest.stage = SELFTEST_STAGE_BASELINE;
                     imu.selfTestFailed = false;
                     imu.selfTesting = true;
+                    imu.selfTestPassed = false;
                 }
             }
             else if (imuRan && handleImuSamples())
@@ -758,6 +760,7 @@ static void transitionImuState(void)
                                                              &avgAccel,
                                                              &avgGyro);
                         imu.selfTesting = false;
+                        imu.selfTestPassed = true;
                         imu.operatingMode = INIT_VEHICLEANGLE;
                     }
                 }
@@ -1019,6 +1022,11 @@ drv_imu_gyro_S* imu_getVehicleAngleRef(void)
     return &imu.vehicleAngle;
 }
 
+bool imu_getSelfTestPassed(void)
+{
+    return imu.selfTestPassed;
+}
+
 bool imu_getCrashEvent(void)
 {
     bool event = false;
@@ -1144,12 +1152,19 @@ static void imu100Hz_PRD(void)
                                (tmp == CAN_DIGITALSTATUS_ON);
         const bool yawCalibrate = (CANRX_get_signal(VEH, SWS_requestCalibImuYaw, &tmp) == CANRX_MESSAGE_VALID) &&
                                   (tmp == CAN_DIGITALSTATUS_ON);
+        const bool imuSelfTestRequest = (CANRX_get_signal(VEH, SWS_requestImuSelfTest, &tmp) == CANRX_MESSAGE_VALID) &&
+                                        (tmp == CAN_DIGITALSTATUS_ON);
 
         if (calibrate)
         {
             lib_nvm_clearEntry(NVM_ENTRYID_IMU_CALIB);
             imu.operatingMode = INIT;
             imu.calibrating = true;
+        }
+        else if (imuSelfTestRequest)
+        {
+            imu.operatingMode = INIT_SELFTEST;
+            imu.selfTesting = false;
         }
         else if (yawCalibrate && imuCalibrated)
         {
