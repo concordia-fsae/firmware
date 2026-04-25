@@ -112,11 +112,11 @@ static void updateGPS(void)
     gps.time.hours = gps.currentGPS.hours;
     gps.time.seconds = gps.currentGPS.seconds;
 
-    gps.gpsValidData = gps.currentGPS.is_valid;
-    gps.gpsValidTime = gps.currentGPS.time_valid;
-    gps.gpsValidDate = gps.currentGPS.date_valid;
-    gps.numSatellites = gps.currentGPS.sats_in_use;
     gps.gpsQuality = gps.currentGPS.fix;
+    gps.numSatellites = gps.currentGPS.sats_in_use;
+    gps.gpsValidData = gps.currentGPS.is_valid && (gps.gpsQuality != GPS_POSITION_UNAVAILABLE);
+    gps.gpsValidTime = gps.currentGPS.time_valid && gps.gpsValidData;
+    gps.gpsValidDate = gps.currentGPS.date_valid && gps.gpsValidData;
     taskEXIT_CRITICAL();
 }
 
@@ -648,10 +648,11 @@ static void app_gps_periodic_100Hz(void)
     }
 
     const bool gpsValid = drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING;
+    const bool gpsDataValid = app_gps_isValid();
 
     app_faultManager_setFaultState(GPS_DEVICE_ERROR, !gpsValid);
     app_faultManager_setFaultState(GPS_DEVICE_OVERRUN, overrun);
-    app_faultManager_setFaultState(GPS_DEVICE_INVALID, !gps.gpsValidData);
+    app_faultManager_setFaultState(GPS_DEVICE_INVALID, !gpsDataValid);
 #else // FEATURE_GPSTRANSCEIVER
     // TODO: Implement GPS listener
 #endif // !FEATURE_GPSTRANSCEIVER
