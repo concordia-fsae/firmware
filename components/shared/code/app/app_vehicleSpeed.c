@@ -32,12 +32,17 @@
 #define RPM_TO_HZ(rpm) ((rpm) / 60.0f)
 #define RPM_TO_MPS(hz) (RPM_TO_HZ((float32_t)hz) * WHEEL_CIRCUMFERENCE_M)
 #define MOTOR_SPEED_ZERO_RPM 10
-#define WHEEL_LOCK_DETECT_RPM 30U
+#define DRIVETRAIN_MULTIPLIER 4.6f
+#define WHEEL_LOCK_DETECT_RPM 10U
 #define WHEEL_LOCK_TIMEOUT_MS 500U
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
+
+#if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) || (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR)
+#define CANRX_MOTOR_SPEED(val) CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, val)
+#endif
 
 #if FEATURE_IS_DISABLED(FEATURE_VEHICLESPEED_LEADER)
 #define CANRX_VEHICLESPEED(val) CANRX_get_signal(VEH, VCFRONT_vehicleSpeed, val)
@@ -45,7 +50,6 @@
 #else
 #define CANRX_IMU_LON(val) CANRX_get_signal(VEH, VCPDU_lon, val)
 #define CANRX_IMU_ANGLEPITCH(val) CANRX_get_signal(VEH, VCPDU_anglePitch, val)
-#define CANRX_MOTOR_SPEED(val) CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, val)
 #endif
 
 #if APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT
@@ -124,6 +128,32 @@ static bool isWheelUnavailable(wheel_E wheel)
     return vehicle.wheelDegraded[wheel] || vehicle.wheelLocked[wheel];
 }
 
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+static bool hasValidFrontWheelReference(void)
+{
+    return !isWheelUnavailable(WHEEL_FL) || !isWheelUnavailable(WHEEL_FR);
+}
+#endif
+
+#if WHEELSPEED_FAULTS_ENABLED
+static bool getMotorAxleRpm(uint16_t* rpm)
+{
+#if (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCFRONT) || (APP_COMPONENT_ID == FDEFS_COMPONENT_ID_VCREAR)
+    int16_t motor_rpm = 0;
+
+    if (CANRX_MOTOR_SPEED(&motor_rpm) == CANRX_MESSAGE_VALID)
+    {
+        motor_rpm = (int16_t)(motor_rpm < 0 ? -motor_rpm : motor_rpm);
+        *rpm = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
+        return true;
+    }
+#endif
+
+    *rpm = 0U;
+    return false;
+}
+#endif
+
 static uint16_t getFallbackWheelRpm(wheel_E wheel)
 {
     const axle_E axle = wheelToAxle(wheel);
@@ -157,6 +187,7 @@ static void calculateWheelFaults(void)
         if (app_wheelSpeed_config.sensorType[i] == WS_SENSORTYPE_TIM_CHANNEL)
         {
             uint16_t referenceRpm = 0U;
+            uint16_t motorAxleRpm = 0U;
 
             for (uint8_t j = 0U; j < WHEEL_CNT; j++)
             {
@@ -164,6 +195,11 @@ static void calculateWheelFaults(void)
                 {
                     referenceRpm = vehicle.raw_rpm_wheel[j];
                 }
+            }
+
+            if ((referenceRpm == 0U) && getMotorAxleRpm(&motorAxleRpm))
+            {
+                referenceRpm = motorAxleRpm;
             }
 
             if (referenceRpm >= WHEEL_LOCK_DETECT_RPM)
@@ -252,7 +288,7 @@ static void calculateVehicleSpeed(void)
             speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
         }
     }
-    if (vehicle.axleValid[AXLE_FRONT])
+    if (hasValidFrontWheelReference())
     {
         const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
         speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
@@ -281,7 +317,7 @@ static void calculateVehicleSpeed(void)
 
     vehicle.lastTimestampMS = currentTime;
     vehicle.wasValidGPS = validGPS;
-    app_faultManager_setFaultState(FM_FAULT_VCFRONT_VEHICLESPEEDDEGRADED, !validGPS);
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_VEHICLESPEEDDEGRADED, !validGPS || !hasValidFrontWheelReference());
 #else // FEATURE_VEHICLEPEED_LEADER
     float32_t tmp = 0.0f;
     const bool valid = CANRX_VEHICLESPEED(&tmp) == CANRX_MESSAGE_VALID;
