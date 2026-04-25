@@ -18,6 +18,7 @@ messages:
       appsDisabled:
       faulted5vCritical:
       faulted5vExt:
+      gpsDataNotValid:
 
   udsResponse:
     description: UDS response message from the VCFRONT
@@ -211,6 +212,16 @@ messages:
     id: 0x312
     sourceBuses: veh
     template: date
+
+  gpsDiagnostics:
+    id: 0x5b1
+    sourceBuses: veh
+    cycleTimeMs: 100
+    signals:
+      gpsInvalidDate:
+      gpsInvalidTime:
+      gpsSatellites:
+      gpsQualityIndicator:
 
   gpsSentenceCounts:
     description: GPS sentence counters by type

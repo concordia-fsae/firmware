@@ -209,7 +209,8 @@ void crashSensor_task(void)
         }
 
 #if FEATURE_IS_ENABLED(FEATURE_CRASHSENSOR_CONTROL)
-        const drv_io_activeState_E safetyState = cs.sensorState == CRASHSENSOR_OK ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+        const drv_io_activeState_E safetyState = ((cs.sensorState == CRASHSENSOR_OK) && imu_getSelfTestPassed()) ?
+                                                 DRV_IO_ACTIVE : DRV_IO_INACTIVE;
         drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, safetyState);
 #endif
         const app_vehicleState_state_E currentVehicleState = app_vehicleState_getState();

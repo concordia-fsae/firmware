@@ -51,6 +51,8 @@
 #define BIT_POS_FSM_EN         0U
 #define BIT_POS_FSM1_EN        0U
 #define BIT_POS_FSM_INIT       0U
+#define BIT_POS_ST_G           2U
+#define BIT_POS_ST_XL          0U
 
 #define PACK_IMU_FTYPE(dev)    (dev->config.accelLpfEnabled ? (uint8_t)(dev->config.accelFtype << BIT_POS_HPCF_XL) : 0U)
 #define PACK_GYRO_FTYPE(dev)   (dev->config.gyroLpfEnabled ? (uint8_t)(dev->config.gyroFtype << BIT_POS_GYRO_FTYPE) : 0U)
@@ -72,6 +74,8 @@
 #define PACK_BDU               (0b1 << BIT_POS_BDU)
 #define PACK_LPF2_XL_EN        (0b1 << BIT_POS_LPF2_XL_EN)
 #define PACK_LPF1_SEL_G        (0b1 << BIT_POS_LPF1_SEL_G)
+#define PACK_SELFTEST_POS_G    (0b1 << BIT_POS_ST_G)
+#define PACK_SELFTEST_POS_XL   (0b1 << BIT_POS_ST_XL)
 
 #define PACK_PAGE_READ         (0b1 << BIT_POS_PAGE_READ)
 #define PACK_PAGE_WRITE        (0b1 << BIT_POS_PAGE_WRITE)
@@ -321,6 +325,18 @@ bool drv_asm330_init(drv_asm330_S* dev)
     return true;
 }
 
+bool drv_asm330_startSelfTest(drv_asm330_S* dev)
+{
+    uint8_t config = PACK_SELFTEST_POS_G | PACK_SELFTEST_POS_XL;
+    return setParam(dev, genCommandHeader(false, ASM330LHB_CTRL5_C), config);
+}
+
+bool drv_asm330_stopSelfTest(drv_asm330_S* dev)
+{
+    uint8_t config = 0U;
+    return setParam(dev, genCommandHeader(false, ASM330LHB_CTRL5_C), config);
+}
+
 bool drv_asm330_getInertialMeasurement(drv_asm330_S* dev, drv_imu_accel_S* accel)
 {
     drv_asm330_vector_S vec = { 0U };
@@ -401,7 +417,7 @@ void drv_asm330_getGyroFromVec(drv_asm330_S* dev, drv_asm330_vector_S* vec, drv_
 asm330lhb_fifo_tag_t drv_asm330_unpackElement(drv_asm330_S* dev, drv_asm330_fifoElement_S* pack, drv_imu_vector_S* vec)
 {
     drv_asm330_fifoElementUnpack_S unpack = { 0U };
-    memcpy((uint8_t*)&unpack.tag, &pack->tag, sizeof(pack->elem));
+    memcpy((uint8_t*)&unpack.tag, &pack->tag, sizeof(pack->tag));
     memcpy((uint8_t*)&unpack.elem, pack->elem, sizeof(pack->elem));
 
     switch (unpack.tag.tag_sensor)

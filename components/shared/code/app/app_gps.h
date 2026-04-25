@@ -11,6 +11,7 @@
 
 #include "LIB_Types.h"
 #include "ModuleDesc.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -48,6 +49,14 @@ typedef struct
     uint8_t alarmStatus;
 } app_gps_pairmsg_S;
 
+typedef enum
+{
+    GPS_POSITION_UNAVAILABLE = 0x00U,
+    GPS_FIX_2D = 0x01U,
+    GPS_FIX_3D = 0x02U,
+    GPS_DEAD_RECKONING = 0x06U,
+} app_gps_qualityIndicator_E;
+
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -64,6 +73,10 @@ void app_gps_getPos(app_gps_pos_S* pos);
 void app_gps_getHeading(app_gps_heading_S* heading);
 void app_gps_getTime(app_gps_time_S* time);
 void app_gps_getPairmsg(app_gps_pairmsg_S* pairmsg);
+bool app_gps_getValidTime(void);
+bool app_gps_getValidDate(void);
+uint8_t app_gps_getNumSatellites(void);
+CAN_gpsQualityIndicator_E app_gps_getQualityCAN(void);
 
 // Not thread safe
 app_gps_pos_S*  app_gps_getPosRef(void);

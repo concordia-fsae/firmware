@@ -102,6 +102,12 @@ gpsDrStage:
   "COARSE": 2
   "STABLE": 3
 
+gpsQualityIndicator:
+  "FIX_NONE": 0
+  "FIX_2D": 1
+  "FIX_3D": 2
+  "DEAD_RECKONING": 3
+
 gpsDynamicStatus:
   "UNKNOWN": 0
   "STATIC": 1
@@ -245,7 +251,7 @@ screenAlerts:
   FAULT_EM: 7
   REVERSE: 8
   CRASH: 9
-  IMU_YAW_CALIBRATING: 10
+  IMU_SELFTEST_FAILED: 10
 
 screenWarnings:
   NONE: 0
@@ -271,7 +277,7 @@ configSelection:
   PARAM_TC_KD: 8
   PARAM_TC_MAX_LIM: 9
   PARAM_TC_ILIM: 10
-  CALIB_STEER_ANGLE: 11
+  CALIB_DYNAMICS2: 11
   PARAM_TC_TLEAK: 12
 configOption:
   SNA: 0
@@ -286,6 +292,7 @@ configOption:
   TEST_PUMP: 9
   TEST_FAN: 10
   CALIB_IMU_YAW: 11
+  IMU_SELFTEST: 12
 configUnit:
   NONE: 0
   N: 1
