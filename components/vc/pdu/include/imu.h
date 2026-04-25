@@ -32,4 +32,5 @@ float32_t imu_getImpactAccelCurrent(void);
 float32_t imu_getImpactAccelMax(void);
 bool imu_isFaulted(void);
 bool imu_isCalibrating(void);
+bool imu_isSelfTesting(void);
 bool imu_isYawCalibrating(void);

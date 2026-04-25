@@ -225,6 +225,8 @@ messages:
         template: imuLinearAcceleration16gPos
       accelNormPeak:
         template: imuLinearAcceleration16gPos
+      imuSelfTesting:
+        template: digitalStatus
 
   nvmInformation:
     description: Information relating to the NVM manager

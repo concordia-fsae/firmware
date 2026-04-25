@@ -760,7 +760,7 @@ static void transitionImuState(void)
                                                              &avgAccel,
                                                              &avgGyro);
                         imu.selfTesting = false;
-                        imu.selfTestPassed = true;
+                        imu.selfTestPassed = !imu.selfTestFailed;
                         imu.operatingMode = INIT_VEHICLEANGLE;
                     }
                 }
@@ -1064,6 +1064,11 @@ bool imu_isCalibrating(void)
     return imu.calibrating;
 }
 
+bool imu_isSelfTesting(void)
+{
+    return imu.operatingMode == INIT_SELFTEST;
+}
+
 bool imu_isYawCalibrating(void)
 {
     return (imu.operatingMode == STABILIZING_FORWARD_TILT) ||
@@ -1163,6 +1168,8 @@ static void imu100Hz_PRD(void)
         }
         else if (imuSelfTestRequest)
         {
+            drv_timer_stop(&imu.selfTestTimeout);
+            imu.selfTestPassed = false;
             imu.operatingMode = INIT_SELFTEST;
             imu.selfTesting = false;
         }

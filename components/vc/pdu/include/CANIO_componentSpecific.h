@@ -117,6 +117,7 @@
 #define set_vert(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelZ)
 #define set_accelNorm(m,b,n,s) set(m,b,n,s, imu_getAccelNorm())
 #define set_accelNormPeak(m,b,n,s) set(m,b,n,s, imu_getAccelNormPeak())
+#define set_imuSelfTesting(m,b,n,s) set(m,b,n,s, imu_isSelfTesting() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_yaw(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotZ)
 #define set_roll(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotY)
 #define set_pitch(m,b,n,s) set(m,b,n,s, imu_getGyroRef()->rotX)

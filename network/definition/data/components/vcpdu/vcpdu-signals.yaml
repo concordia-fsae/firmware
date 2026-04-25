@@ -41,6 +41,9 @@ signals:
   imuSelfTestFailed:
     description: IMU self test failed
     discreteValues: faultStatus
+  imuSelfTesting:
+    description: IMU self test is in progress
+    discreteValues: digitalStatus
 
   crashSensorState:
     description: Crash sensor state
