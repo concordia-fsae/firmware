@@ -71,6 +71,14 @@ signals:
     description: "Current state of Fan HSD"
     discreteValues: hsdState
 
+  pumpDutyCycle:
+    description: "Pump HSD duty cycle"
+    template: percentage
+
+  fanDutyCycle:
+    description: "Fan HSD duty cycle"
+    template: percentage
+
   bms1HsdState:
     description: "Current state of BMSW1 HSD"
     discreteValues: hsdState

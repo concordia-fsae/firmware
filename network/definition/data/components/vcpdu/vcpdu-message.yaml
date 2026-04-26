@@ -98,6 +98,14 @@ messages:
       vcu2HsdState:
       bms5HsdState:
       bms6HsdState:
+  hsdDuty:
+    description: Pump and fan duty cycle
+    id: 0x151
+    cycleTimeMs: 50
+    sourceBuses: veh
+    signals:
+      pumpDutyCycle:
+      fanDutyCycle:
   hsdCurrentBMSW:
     description: Current through each HSD
     id: 0x140

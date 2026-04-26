@@ -9,7 +9,8 @@ features:
   app_component_id: vcpdu
   app_uds: true
   feature_vehicleState_mode: leader
-  feature_pump_full_beans: true
+  feature_pump_full_beans: false
+  feature_fan_full_beans: false
   feature_crashsensor_control: true
   nvm_lib_enabled: true
   nvm_flash_backed: true
