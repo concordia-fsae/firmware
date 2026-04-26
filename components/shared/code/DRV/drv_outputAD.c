@@ -46,12 +46,21 @@ static outputAD_S outputs;
  */
 static void setDigitalOutputState(drv_outputAD_channelDigital_E channel)
 {
-    const drv_io_logicLevel_E desired_level = (outputs.digital[channel].active_state == DRV_IO_ACTIVE) ?
-                                               drv_outputAD_configDigital[channel].config.gpio.active_level :
-                                               drv_io_invertLogicLevel(drv_outputAD_configDigital[channel].config.gpio.active_level);
-    const bool state_to_set = desired_level == DRV_IO_LOGIC_HIGH;
+    switch (drv_outputAD_configDigital[channel].type)
+    {
+        case OUTPUT_DIGITAL:
+            {
+                const drv_io_logicLevel_E desired_level = (outputs.digital[channel].active_state == DRV_IO_ACTIVE) ?
+                                                        drv_outputAD_configDigital[channel].config.gpio.active_level :
+                                                        drv_io_invertLogicLevel(drv_outputAD_configDigital[channel].config.gpio.active_level);
+                const bool state_to_set = desired_level == DRV_IO_LOGIC_HIGH;
 
-    HW_GPIO_writePin(drv_outputAD_configDigital[channel].config.gpio.pin, state_to_set);
+                HW_GPIO_writePin(drv_outputAD_configDigital[channel].config.gpio.pin, state_to_set);
+            }
+            break;
+        case OUTPUT_VIRTUAL:
+            break;
+    }
 }
 
 /**
