@@ -199,6 +199,7 @@ static void powerManager_init(void)
     drv_tps2hb16ab_setEnabled(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1, true);
     drv_tps2hb16ab_setEnabled(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2, true);
     drv_tps2hb16ab_run();
+    pm_data.okSafety = true;
 }
 
 static void powerManager_periodic_100Hz(void)
@@ -235,6 +236,9 @@ static void powerManager_periodic_100Hz(void)
 
     for (uint8_t i = 0; i < DRV_TPS2HB16AB_IC_COUNT; i++)
     {
+        bool reenabledMC = false;
+        bool reenabledVCU = false;
+
         for (uint8_t n = 0; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
         {
             // Handle specific HSDs by sleep state
@@ -259,12 +263,18 @@ static void powerManager_periodic_100Hz(void)
             }
             else if ((state == DRV_HSD_STATE_OFF) || (state == DRV_HSD_STATE_ON))
             {
+                if (state == DRV_HSD_STATE_OFF)
+                {
+                    reenabledMC |= i == DRV_TPS2HB16AB_IC_MC_VCU3;
+                    reenabledVCU |= i == DRV_TPS2HB16AB_IC_VCU1_VCU2;
+                }
                 drv_tps2hb16ab_setEnabled(i, n, enableLoad);
             }
         }
+
+        drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_MC_VCU3, (app_vehicleState_getState() != VEHICLESTATE_INIT) && !reenabledMC);
+        drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_VCU1_VCU2, (app_vehicleState_getState() != VEHICLESTATE_INIT) && !reenabledVCU);
     }
-    drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_MC_VCU3, app_vehicleState_getState() != VEHICLESTATE_INIT);
-    drv_tps2hb16ab_setFaultLatch(DRV_TPS2HB16AB_IC_VCU1_VCU2, app_vehicleState_getState() != VEHICLESTATE_INIT);
 
     drv_tps2hb16ab_run();
     drv_vn9008_run();
