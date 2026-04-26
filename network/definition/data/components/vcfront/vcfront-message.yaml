@@ -19,6 +19,8 @@ messages:
       faulted5vCritical:
       faulted5vExt:
       gpsDataNotValid:
+      wheelSpeedSensorDegraded:
+      wheelSpeedSensorLocked:
 
   udsResponse:
     description: UDS response message from the VCFRONT

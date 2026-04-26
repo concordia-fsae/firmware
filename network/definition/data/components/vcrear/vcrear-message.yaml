@@ -13,6 +13,8 @@ messages:
       miaBms:
       miaVcpdu:
       miaMc:
+      wheelSpeedSensorDegraded:
+      wheelSpeedSensorLocked:
 
   udsResponse:
     description: UDS response message from the VCREAR

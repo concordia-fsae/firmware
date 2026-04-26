@@ -20,7 +20,7 @@
 
 #define TICK_PER_REV 16U
 #define UPDATE_PER_REV 8U
-#define WHEELSPEED_TIMEOUT_MS 300U
+#define WHEELSPEED_TIMEOUT_MS 500U
 
 #define NUM_TIM_SAMPLES 2U
 #define CURRENT_SAMPLE (NUM_TIM_SAMPLES - 1U)
@@ -143,4 +143,9 @@ float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel)
     return (wheelSpeed.lastSample[channel][CURRENT_SAMPLE] > (HW_TIM_getBaseTick() - MS_TO_BASETICK(WHEELSPEED_TIMEOUT_MS))) ?
            (((float32_t)(SEC_TO_BASETICK(1U) / (UPDATE_PER_REV))) / (float32_t)(wheelSpeed.lastSample[channel][CURRENT_SAMPLE] - wheelSpeed.lastSample[channel][LAST_SAMPLE])) :
            0.0f;
+}
+
+uint64_t HW_TIM_getLastCaptureBaseTick(HW_TIM_channelFreq_E channel)
+{
+    return wheelSpeed.lastSample[channel][CURRENT_SAMPLE];
 }

@@ -72,6 +72,7 @@ extern const ModuleDesc_S app_vehicleSpeed_desc;
  ******************************************************************************/
 
 uint16_t  app_vehicleSpeed_getAxleSpeedRotational(axle_E axle);
+uint16_t  app_vehicleSpeed_getWheelSpeedRawRotational(wheel_E wheel);
 uint16_t  app_vehicleSpeed_getWheelSpeedRotational(wheel_E wheel);
 float32_t app_vehicleSpeed_getWheelSpeedLinear(wheel_E wheel);
 float32_t app_vehicleSpeed_getTireSlip(wheel_E wheel);
