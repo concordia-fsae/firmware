@@ -22,9 +22,6 @@
  */
 static void cooling_init()
 {
-#if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_ACTIVE);
-#endif
 }
 
 /**
@@ -45,21 +42,8 @@ static void cooling10Hz_PRD(void)
     const bool faultFan = (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERCURRENT) ||
                           (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERTEMP);
 
-    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_PUMP, (isHV || isRun || testPump) && !faultPump);
-    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, (isRun || testFan) && !faultFan);
-
-    if (isHV || isRun || testPump)
-    {
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
-        HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.75f);
-#endif
-    }
-    else
-    {
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
-        HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.00f);
-#endif
-    }
+    drv_vn9008_setDuty(DRV_VN9008_CHANNEL_PUMP, ((isHV || isRun || testPump) && !faultPump) ? 1.0f : 0.0f);
+    drv_vn9008_setDuty(DRV_VN9008_CHANNEL_FAN, ((isRun || testFan) && !faultFan) ? 1.0f : 0.0f);
 }
 
 /**
