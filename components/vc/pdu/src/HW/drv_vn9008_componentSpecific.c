@@ -14,19 +14,21 @@
 
 const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] = {
     [DRV_VN9008_CHANNEL_PUMP] = {
+        .type = VN9008_DIGITAL,
+        .enable.digital = DRV_OUTPUTAD_PUMP_EN,
         .cs_amp_per_volt = 7.518f,
         .cs_channel = DRV_INPUTAD_ANALOG_DEMUX2_PUMP,
         .fault_reset = DRV_OUTPUTAD_PUMP_FAULT,
-        .enable = DRV_OUTPUTAD_PUMP_EN,
         .enable_cs = DRV_OUTPUTAD_HP_SNS_EN,
         .current_limit_amp = 10.0f,
         .oc_timeout_ms = 250,
     },
     [DRV_VN9008_CHANNEL_FAN] = {
+        .type = VN9008_DIGITAL,
+        .enable.digital = DRV_OUTPUTAD_FAN_EN,
         .cs_amp_per_volt = 7.518f,
         .cs_channel = DRV_INPUTAD_ANALOG_DEMUX2_FAN,
         .fault_reset = DRV_OUTPUTAD_FAN_FAULT,
-        .enable = DRV_OUTPUTAD_FAN_EN,
         .enable_cs = DRV_OUTPUTAD_HP_SNS_EN,
         .current_limit_amp = 15.0f,
         .oc_timeout_ms = 250,
