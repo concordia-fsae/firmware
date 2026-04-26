@@ -84,6 +84,7 @@ typedef struct
     lib_simpleFilter_lpf_S lpfSpeed;
     bool odoSaved;
     bool wasValidGPS;
+    uint64_t lastFrontWheelSampleBaseTick;
 #endif // FEATURE_VEHICLEPEED_LEADER
 } vehicle_S;
 
@@ -132,6 +133,40 @@ static bool isWheelUnavailable(wheel_E wheel)
 static bool hasValidFrontWheelReference(void)
 {
     return !isWheelUnavailable(WHEEL_FL) || !isWheelUnavailable(WHEEL_FR);
+}
+
+static uint64_t getWheelLastSampleBaseTick(wheel_E wheel)
+{
+    if (app_wheelSpeed_config.sensorType[wheel] != WS_SENSORTYPE_TIM_CHANNEL)
+    {
+        return 0U;
+    }
+
+    return HW_TIM_getLastCaptureBaseTick(app_wheelSpeed_config.config[wheel].channel_freq);
+}
+
+static bool getFreshFrontWheelReference(uint64_t* latestSampleBaseTick)
+{
+    uint64_t latestFrontWheelSample = 0U;
+
+    if (!isWheelUnavailable(WHEEL_FL))
+    {
+        const uint64_t flSample = getWheelLastSampleBaseTick(WHEEL_FL);
+        latestFrontWheelSample = flSample;
+    }
+
+    if (!isWheelUnavailable(WHEEL_FR))
+    {
+        const uint64_t frSample = getWheelLastSampleBaseTick(WHEEL_FR);
+        if (frSample > latestFrontWheelSample)
+        {
+            latestFrontWheelSample = frSample;
+        }
+    }
+
+    *latestSampleBaseTick = latestFrontWheelSample;
+
+    return (latestFrontWheelSample != 0U) && (latestFrontWheelSample > vehicle.lastFrontWheelSampleBaseTick);
 }
 #endif
 
@@ -268,6 +303,7 @@ static void calculateVehicleSpeed(void)
     const float32_t delta_t = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
     const bool validGPS = app_gps_isValid();
     const uint16_t frontAxleRpm = app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT);
+    uint64_t frontWheelSampleBaseTick = 0U;
 
     if (accelValid && angleValid && (delta_t > 0.0f))
     {
@@ -288,10 +324,11 @@ static void calculateVehicleSpeed(void)
             speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
         }
     }
-    if (hasValidFrontWheelReference())
+    if (hasValidFrontWheelReference() && getFreshFrontWheelReference(&frontWheelSampleBaseTick))
     {
         const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
         speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
+        vehicle.lastFrontWheelSampleBaseTick = frontWheelSampleBaseTick;
     }
 
     if (motorValid)
