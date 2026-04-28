@@ -304,6 +304,7 @@ static void calculateVehicleSpeed(void)
     const bool validGPS = app_gps_isValid();
     const uint16_t frontAxleRpm = app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT);
     uint64_t frontWheelSampleBaseTick = 0U;
+    const bool motorInReverse = (motor_rpm < 0) && motorValid;
 
     if (accelValid && angleValid && (delta_t > 0.0f))
     {
@@ -316,18 +317,18 @@ static void calculateVehicleSpeed(void)
         if (!vehicle.wasValidGPS)
         {
             speed = app_gps_getHeadingRef()->speedMps;
-            vehicle.lpfSpeed.y = speed;
+            vehicle.lpfSpeed.y = motorInReverse ? -speed : speed;
         }
         else
         {
             const float32_t tmp = app_gps_getHeadingRef()->speedMps;
-            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
+            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -tmp : tmp);
         }
     }
     if (hasValidFrontWheelReference() && getFreshFrontWheelReference(&frontWheelSampleBaseTick))
     {
         const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
-        speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, tmp);
+        speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -tmp : tmp);
         vehicle.lastFrontWheelSampleBaseTick = frontWheelSampleBaseTick;
     }
 

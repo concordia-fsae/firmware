@@ -37,6 +37,7 @@ typedef struct
 {
     const enum
     {
+        OUTPUT_VIRTUAL = 0x00U,
         OUTPUT_DIGITAL,
     } type;
     const union
