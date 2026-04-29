@@ -14,7 +14,6 @@
 
 const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] = {
     [DRV_VN9008_CHANNEL_PUMP] = {
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
         .type = VN9008_PWM_EN,
         .enable = {
             .pwm_en = {
@@ -25,10 +24,6 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
                 .en = DRV_OUTPUTAD_PWM1,
             },
         },
-#else
-        .type = VN9008_DIGITAL,
-        .enable.digital = DRV_OUTPUTAD_PUMP_EN,
-#endif
         .cs_amp_per_volt = 7.518f,
         .cs_channel = DRV_INPUTAD_ANALOG_DEMUX2_PUMP,
         .fault_reset = DRV_OUTPUTAD_PUMP_FAULT,
@@ -37,7 +32,6 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
         .oc_timeout_ms = 250,
     },
     [DRV_VN9008_CHANNEL_FAN] = {
-#if FEATURE_IS_DISABLED(FEATURE_FAN_FULL_BEANS)
         .type = VN9008_PWM_EN,
         .enable = {
             .pwm_en = {
@@ -48,10 +42,6 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
                 .en = DRV_OUTPUTAD_FAN_EN,
             },
         },
-#else
-        .type = VN9008_DIGITAL,
-        .enable.digital = DRV_OUTPUTAD_FAN_EN,
-#endif
         .cs_amp_per_volt = 7.518f,
         .cs_channel = DRV_INPUTAD_ANALOG_DEMUX2_FAN,
         .fault_reset = DRV_OUTPUTAD_FAN_FAULT,

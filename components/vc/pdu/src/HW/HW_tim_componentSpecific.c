@@ -33,9 +33,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
 {
     RCC_ClkInitTypeDef      clkconfig;
     TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS) || FEATURE_IS_DISABLED(FEATURE_FAN_FULL_BEANS)
     TIM_OC_InitTypeDef      sConfigOC          = { 0 };
-#endif
     uint32_t                uwTimclock         = 0;
     uint32_t                pFLatency;
     uint32_t                uwPrescalerValue   = 0;
@@ -70,7 +68,6 @@ HW_StatusTypeDef_E HW_TIM_init(void)
         Error_Handler();
     }
 
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
     sConfigOC.OCMode       = TIM_OCMODE_PWM1;
     sConfigOC.Pulse        = 0;
     sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
@@ -82,8 +79,6 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     {
         Error_Handler();
     }
-#endif
-#if FEATURE_IS_DISABLED(FEATURE_FAN_FULL_BEANS)
     sConfigOC.OCMode       = TIM_OCMODE_PWM1;
     sConfigOC.Pulse        = 0;
     sConfigOC.OCPolarity   = TIM_OCPOLARITY_HIGH;
@@ -95,16 +90,9 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     {
         Error_Handler();
     }
-#endif
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS) || FEATURE_IS_DISABLED(FEATURE_FAN_FULL_BEANS)
     HAL_TIM_Base_Start(&htim[HW_TIM_PORT_HP]);
-#endif
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_HP], TIM_CHANNEL_1);
-#endif
-#if FEATURE_IS_DISABLED(FEATURE_FAN_FULL_BEANS)
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_HP], TIM_CHANNEL_2);
-#endif
 
     return HW_OK;
 }
