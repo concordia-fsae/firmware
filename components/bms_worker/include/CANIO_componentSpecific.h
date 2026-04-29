@@ -80,6 +80,9 @@
 #define set_cellVoltage12(m, b, n, s)            set(m,b,n,s, BMS.cells[12].voltage)
 #define set_boardRelativeHumidity(m, b, n, s)    set(m,b,n,s, ENV.values.board.rh)
 #define set_boardAmbientTemp(m, b, n, s)         set(m,b,n,s, ENV.values.board.ambient_temp)
+#if APP_VARIANT_ID == 1U
+#define set_bus7v5Voltage(m, b, n, s)            set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_VSNS_7V5))
+#endif
 #define set_tempMcu(m, b, n, s)                  set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_MCU))
 #define set_tempBalancing0(m, b, n, s)           set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BALANCING1))
 #define set_tempBalancing1(m, b, n, s)           set(m,b,n,s, drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_BALANCING2))
@@ -107,4 +110,3 @@
 #define set_coolPct0(m, b, n, s)                 set(m,b,n,s, (drv_cooling_getPower(&cooling[COOLING_CHANNEL_FAN1]) * 100.0f))
 #define set_coolState0(m, b, n, s)               set(m,b,n,s, (drv_cooling_getState(&cooling[COOLING_CHANNEL_FAN1]) != COOLING_OFF) ? \
                                                                CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-

@@ -474,6 +474,10 @@ signals:
         max: 127
     continuous: true
 
+  bus7v5Voltage:
+    description: Segment worker 7V5 bus voltage
+    template: voltsPrecise
+
   tempMcu:
     description: Segment worker microcontroller temperature
     unit: degC
@@ -640,4 +644,3 @@ signals:
   dbgThermVoltage9:
     template: dbgThermVoltage
     description: Raw thermistor voltage 9
-
