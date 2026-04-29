@@ -160,6 +160,11 @@ float32_t drv_vn9008_getCurrent(drv_vn9008_E ic)
     return drv_vn9008_data.current[ic];
 }
 
+float32_t drv_vn9008_getDuty(drv_vn9008_E ic)
+{
+    return drv_vn9008_data.duty[ic];
+}
+
 void drv_vn9008_setDuty(drv_vn9008_E ic, float32_t duty)
 {
     drv_vn9008_data.duty[ic] = duty;

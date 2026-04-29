@@ -59,6 +59,7 @@ void            drv_vn9008_init(void);
 void            drv_vn9008_run(void);
 drv_hsd_state_E drv_vn9008_getState(drv_vn9008_E ic);
 float32_t       drv_vn9008_getCurrent(drv_vn9008_E ic);
+float32_t       drv_vn9008_getDuty(drv_vn9008_E ic);
 void            drv_vn9008_setDuty(drv_vn9008_E ic, float32_t duty);
 void            drv_vn9008_setEnabled(drv_vn9008_E ic, bool enabled);
 void            drv_vn9008_setCSEnabled(drv_vn9008_E ic, bool enabled);
