@@ -37,6 +37,7 @@
 
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+#define CANIO_getDutyPercent(duty) (((duty) <= 0.0f) ? 0.0f : (((duty) >= 1.0f) ? 100.0f : ((duty) * 100.0f)))
 
 #define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
 
@@ -62,6 +63,8 @@
 #define set_vcu2HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2)))
 #define set_bms5HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1)))
 #define set_bms6HsdState(m,b,n,s) set(m,b,n,s, drv_hsd_getCANState(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))
+#define set_pumpDutyCycle(m,b,n,s) set(m,b,n,s, CANIO_getDutyPercent(drv_vn9008_getDuty(DRV_VN9008_CHANNEL_PUMP)))
+#define set_fanDutyCycle(m,b,n,s) set(m,b,n,s, CANIO_getDutyPercent(drv_vn9008_getDuty(DRV_VN9008_CHANNEL_FAN)))
 #define set_pumpCurrent(m,b,n,s) set(m,b,n,s, drv_vn9008_getCurrent(DRV_VN9008_CHANNEL_PUMP))
 #define set_fanCurrent(m,b,n,s) set(m,b,n,s, drv_vn9008_getCurrent(DRV_VN9008_CHANNEL_FAN))
 #define set_bms1Current(m,b,n,s) set(m,b,n,s, drv_tps2hb16ab_getCurrent(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1))

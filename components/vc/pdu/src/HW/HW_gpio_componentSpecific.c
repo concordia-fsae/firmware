@@ -206,7 +206,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     [HW_GPIO_PUMP_EN] = {
         .port = GPIOE,
         .pin = GPIO_PIN_9, // Based on PE9
-        .mode = GPIO_MODE_OUTPUT_PP,
+        .mode = GPIO_MODE_AF_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
@@ -222,7 +222,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     [HW_GPIO_FAN_EN] = {
         .port = GPIOE,
         .pin = GPIO_PIN_11, // Based on PE11
-        .mode = GPIO_MODE_OUTPUT_PP,
+        .mode = GPIO_MODE_AF_PP,
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,
@@ -366,11 +366,7 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
     [HW_GPIO_PWM1] = {
         .port = GPIOC,
         .pin = GPIO_PIN_6, // Based on PC6
-#if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
         .mode = GPIO_MODE_OUTPUT_PP,
-#else
-        .mode = GPIO_MODE_AF_PP,
-#endif
         .speed = GPIO_SPEED_FREQ_HIGH,
         .pull = GPIO_NOPULL,
         .resetState = HW_GPIO_PINRESET,

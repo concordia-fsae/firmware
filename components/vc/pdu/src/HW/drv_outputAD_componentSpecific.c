@@ -197,18 +197,10 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
         },
     },
     [DRV_OUTPUTAD_PUMP_EN] = { 
-        .type = OUTPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_PUMP_EN, 
-            .active_level = DRV_IO_LOGIC_HIGH,
-        },
+        .type = OUTPUT_VIRTUAL,
     },
     [DRV_OUTPUTAD_FAN_EN] = { 
-        .type = OUTPUT_DIGITAL,
-        .config.gpio = {
-            .pin = HW_GPIO_FAN_EN, 
-            .active_level = DRV_IO_LOGIC_HIGH,
-        },
+        .type = OUTPUT_VIRTUAL,
     },
     [DRV_OUTPUTAD_SPARE_EN] = { 
         .type = OUTPUT_DIGITAL,
@@ -273,7 +265,6 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_HIGH,
         },
     },
-#if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
     [DRV_OUTPUTAD_PWM1] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
@@ -281,7 +272,6 @@ drv_outputAD_configDigital_S drv_outputAD_configDigital[DRV_OUTPUTAD_DIGITAL_COU
             .active_level = DRV_IO_LOGIC_LOW,
         },
     },
-#endif
     [DRV_OUTPUTAD_PWM2] = { 
         .type = OUTPUT_DIGITAL,
         .config.gpio = {
