@@ -104,6 +104,9 @@ messages:
     signals:
       maxDischarge:
       maxCharge:
+      maxCellTemp:
+      maxCellVoltage:
+      minCellVoltage:
 
   ioStatus:
     description: "Status of the BMSB inputs"
