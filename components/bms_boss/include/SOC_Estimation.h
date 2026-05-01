@@ -5,30 +5,42 @@
 
 #pragma once
 
-#include "FloatTypes.h"
-#include "stdint.h"
-#include "BMS.h"
+#include "LIB_Types.h"
+
+typedef enum
+{
+    INIT = 0x00,
+    VRC_ESTIMATE,
+    RUNNING,
+} batteryModelState_E;
+
+typedef struct
+{
+    batteryModelState_E state;
+    float32_t VRC2_estimate;
+    float32_t max_current;
+    float64_t last_step;
+} batteryModel_S;
 
 static struct
 {
-    float32_t voltage;
     float32_t OCV;
     float32_t SOC;
     float32_t Ri;
     float32_t R1;
+    float32_t R2;
     float32_t C1;
+    float32_t C2;
 } Cell_param;
 
 static struct 
 {
-    float32_t VRC1; // voltage drop over RC network 1
-    float32_t dVRC1; //change in voltage drop over RC network 1
-    float32_t VR1; //voltage drop over resistor 1
+    float32_t VRC1;
+    float32_t VRC2;
     float32_t current; // current draw as RX from boss note: current is negative for discharge
     float32_t voltage;
-    int64_t last_step_us;
 } Circuit_param;
 
-void SOCestimation();
+void SOC_Estimation(float32_t pack_voltage, float32_t pack_current, float64_t time_now);
 
-void socEstimation_init(void);
+void SOC_Estimation_init(void);

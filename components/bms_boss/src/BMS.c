@@ -14,6 +14,7 @@
 #include "HW.h"
 #include "IMD.h"
 #include "ENV.h"
+#include "SOC_Estimation.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "drv_userInput.h"
@@ -331,6 +332,7 @@ static void BMS_init(void)
     memset(&BMS, 0x00, sizeof(BMSB_S));
     IMD_init();
     drv_timer_init(&precharge_timer);
+    SOC_Estimation_init();
     BMS.counted_coulombs.last_step_us = HW_TIM_getBaseTick();
     BMS.counted_coulombs.reset = true;
 
@@ -420,21 +422,22 @@ static void BMS1kHz_PRD(void)
     BMS.pack_voltage_sense_fault = drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_VPACK_DIAG) == DRV_IO_ACTIVE;
     BMS.packPowerKW = (BMS.pack_voltage_measured * BMS.pack_current) / 1000.0f;
 
+    SOC_Estimation(BMS.pack_voltage_measured, BMS.packCurrentRaw, this_step);
+
     // TODO: Update coulomb count in cells
     if ((BMS.contacts == BMS_CONTACTORS_PRECHARGE) ||
         (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED) ||
         (BMS.contacts == BMS_CONTACTORS_CLOSED))
     {
+
         const float32_t delta_amp_hr = BMS.pack_current * (((float32_t)delta_t) / 1000000.0f) * (1.0f /  3600.0f);
         BMS.counted_coulombs.reset = false;
         BMS.counted_coulombs.amp_hr += delta_amp_hr;
-        current_data.pack_amp_hours = SATURATE(0.0f,
-                                               current_data.pack_amp_hours + delta_amp_hr,
-                                               BMS_CONFIGURED_PARALLEL_CELLS * BMS_CELL_RATED_AMPHOURS * 1.5f);
+        current_data.soc = SATURATE(0.0f, Cell_param.SOC, 1.0f);
     }
     else if (BMS.counted_coulombs.reset == false)
     {
-        lib_nvm_requestWrite(NVM_ENTRYID_COULOMB_COUNT);
+        lib_nvm_requestWrite(NVM_ENTRYID_SOC);
         BMS.counted_coulombs.amp_hr = 0.0f;
         BMS.counted_coulombs.reset = true;
     }

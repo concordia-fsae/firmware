@@ -33,8 +33,8 @@ static uint16_t version_handler_current(const uint16_t version, const storage_t*
     {
         // Example: NVM uprec
         nvm_bmsData_S flash;
-        memcpy(&flash, entry_Ptr, sizeof(flash.pack_amp_hours));
-        current_data.pack_amp_hours = flash.pack_amp_hours;
+        memcpy(&flash, entry_Ptr, sizeof(flash.soc));
+        current_data.soc = flash.soc;
         new_version = 1;
     }
 
@@ -48,8 +48,7 @@ static uint16_t version_handler_current(const uint16_t version, const storage_t*
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 static const nvm_bmsData_S current_data_default = {
-    .pack_amp_hours = 0U,
-    .cell_amp_hours = { 0 },
+    .soc = 0U,
     .spare = { 0U },
 };
 LIB_NVM_MEMORY_REGION(nvm_bmsData_S current_data) = { 0U };
@@ -83,7 +82,7 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .minTimeBetweenWritesMs = 60000U,
         .version = 0U,
     },
-    [NVM_ENTRYID_COULOMB_COUNT] = {
+    [NVM_ENTRYID_SOC] = {
         .entrySize = sizeof(nvm_bmsData_S),
         .entryDefault_Ptr = &current_data_default,
         .entryRam_Ptr = &current_data,
