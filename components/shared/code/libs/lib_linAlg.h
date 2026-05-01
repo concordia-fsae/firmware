@@ -107,7 +107,7 @@
     _Static_assert(ROWS(row) == COLS(col), "Vector size mismatch"); \
     do { \
         *(out) = 0; \
-        LIB_LINALG_MUL_RVECCVEC_SET(row, col, out); \
+        LIB_LINALG_MUL_RVECCVEC(row, col, out); \
     } while (0)
 
 #define LIB_LINALG_MUL_CVECRVEC(col, row, out) \
@@ -214,7 +214,7 @@
         } \
     } while (0)
 
-    #define LIB_LINALG_TRANSPOSE_MAT_GET(mat, out) \
+#define LIB_LINALG_TRANSPOSE_MAT_GET(mat, out) \
     _Static_assert(MROWS(out) == MCOLS(mat), "Output matrix row size mismatch"); \
     _Static_assert(MCOLS(out) == MROWS(mat), "Output matrix col size mismatch"); \
     do { \
