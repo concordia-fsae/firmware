@@ -20,11 +20,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#if FEATURE_IS_ENABLED(FEATURE_BRAKEPEDAL_FROM_PRESSURE)
 #define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_PR
-#else
-#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_POT
-#endif
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
