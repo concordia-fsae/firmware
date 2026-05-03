@@ -40,6 +40,8 @@
 #define CRASH_THRESH_MISSED_CYCLES (IMU_TIMEOUT_DURATION / TASK_WAIT_DURATION_MS)
 #define IMU_CALIBRATION_TIMEOUT_DURATION  (1000)
 
+#define BRAKE_ACTIVE_THRESH 10U
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -182,12 +184,15 @@ void crashSensor_task(void)
             }
             else
             {
+                float32_t brakePosition = 0.0f;
                 const bool driverResetting = drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DRIVER_CRASH_RESET) == DRV_IO_ACTIVE;
+                const bool driverBraking = (CANRX_get_signal(VEH, VCFRONT_brakePosition, &brakePosition) == CANRX_MESSAGE_VALID) &&
+                                           (brakePosition > BRAKE_ACTIVE_THRESH);
                 const bool vehicleOk = vehicleStateOk(vehicleAccel);
 
                 cs.accelMax = vehicleAccel > cs.accelMax ? vehicleAccel : cs.accelMax;
 
-                if ((driverResetting || cs.requestCrashReset) && vehicleOk && !imu_isFaulted())
+                if (((driverResetting  && driverBraking) || cs.requestCrashReset) && vehicleOk && !imu_isFaulted())
                 {
                     cs.sensorState = CRASHSENSOR_OK;
                     crashState_data.crashLatched = false;
