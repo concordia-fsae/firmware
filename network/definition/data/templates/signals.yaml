@@ -8,6 +8,14 @@ signals:
         max: 100
       resolution: 1
     continuous: true
+  count8Bit:
+    unit: ""
+    nativeRepresentation:
+      bitWidth: 8
+      range:
+        min: 0
+        max: 256
+      resolution: 1
   count9Bit:
     unit: ""
     nativeRepresentation:

@@ -27,6 +27,8 @@ drv_imu_gyro_S* imu_getVehicleAngleRef(void);
 
 bool imu_getCrashEvent(void);
 bool imu_getImpactActive(void);
+uint16_t imu_getCrashCount(void);
+uint16_t imu_getImpactCount(void);
 bool imu_getSelfTestPassed(void);
 float32_t imu_getImpactAccelCurrent(void);
 float32_t imu_getImpactAccelMax(void);

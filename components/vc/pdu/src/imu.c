@@ -169,6 +169,8 @@ struct imu_S {
     bool            fsmImpactInitOk;
     bool            fsmCrashEvent;
     bool            fsmImpactActive;
+    uint16_t        fsmCrashCount;
+    uint16_t        fsmImpactCount;
     bool            fsmActivityActive;
     float32_t       impactAccelMax;
     uint8_t         fsmArmCyclesLeft;
@@ -940,6 +942,7 @@ static bool getImuAlertStatus(void)
                 {
                     taskENTER_CRITICAL();
                     imu.fsmCrashEvent = true;
+                    imu.fsmCrashCount++;
                     taskEXIT_CRITICAL();
                 }
 
@@ -954,6 +957,7 @@ static bool getImuAlertStatus(void)
                         imu.impactAccelMax = imu.accelNormPeak;
                     }
                     imu.fsmImpactActive = true;
+                    imu.fsmImpactCount++;
                 }
                 else
                 {
@@ -1073,6 +1077,16 @@ bool imu_isYawCalibrating(void)
 {
     return (imu.operatingMode == STABILIZING_FORWARD_TILT) ||
            (imu.operatingMode == ALIGNING_YAW);
+}
+
+uint16_t imu_getCrashCount(void)
+{
+    return imu.fsmCrashCount;
+}
+
+uint16_t imu_getImpactCount(void)
+{
+    return imu.fsmImpactCount;
 }
 
 /**
