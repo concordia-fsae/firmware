@@ -32,7 +32,7 @@
 #define CRASH_THRESH_MPS                   (8 * GRAVITY)
 #define CRASH_THRESH_CONSECUTIVE_CYCLES    (3)
 
-#define EXIT_CRASH_THRESH_G                (GRAVITY * 1.25f)
+#define EXIT_CRASH_THRESH_G                (GRAVITY * 2.0f)
 #define EXIT_CRASH_THRESH_DEG_FROM_GRAVITY (25.0f)
 
 #define TASK_WAIT_DURATION_MS (15)
@@ -126,7 +126,10 @@ void crashSensor_task(void)
         cs.sensorState = CRASHSENSOR_INIT;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(INIT_BOOT_DELAY));
+    while (imu_isSelfTesting())
+    {
+        vTaskDelay(pdMS_TO_TICKS(INIT_BOOT_DELAY));
+    }
 
     if (cs.sensorState == CRASHSENSOR_INIT)
     {
