@@ -189,6 +189,10 @@ messages:
         template: imuLinearAcceleration
       vert:
         template: imuLinearAcceleration
+      countImpact:
+        template: count8Bit
+      countCrash:
+        template: count8Bit
 
   imuGyro:
     description: VCPDU IMU rotational accel

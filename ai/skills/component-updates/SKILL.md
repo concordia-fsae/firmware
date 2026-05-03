@@ -90,6 +90,11 @@ Typical examples:
 - `buckle run //components/vc/front:ota-cfr26`
 - `buckle run //components/sws:ota-cfr26`
 
+For a forced reflash through the component OTA target, pass the OTA client flag after `--`:
+
+- `buckle run //components/vc/front:ota-cfr26 -- -f`
+- `buckle run //components/vc/rear:ota-cfr26 -- -f`
+
 ### Direct CAN flashing: conUDS
 
 Use `download-*` / `conUDS` targets when:
@@ -158,6 +163,7 @@ sed -n '1,120p' drive-stack/conUDS/defs.bzl
 
 - Prefer asking the user to flash if there is any risk in choosing the wrong path.
 - Prefer `ota-*` over `download-*` unless direct CAN flashing is explicitly appropriate.
+- For a forced OTA reflash, prefer running the component `ota-*` target with `-- -f` instead of bypassing the target and invoking `//drive-stack/ota-agent:ota-agent` directly.
 - Prefer sideload/batch/whole-stack paths when updating many targets and network interfaces are unchanged.
 - For carputer and whole-vehicle flows, inspect root aliases and `drive-stack/carputer/BUCK` before improvising commands.
 - Do not assume that `build` performs the update. Many aliases require `buckle run`.

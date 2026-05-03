@@ -114,6 +114,8 @@
 #define set_crashSensorImpactActive(m,b,n,s) set(m,b,n,s, imu_getImpactActive() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_crashSensorImpactAccelMax(m,b,n,s) set(m,b,n,s, imu_getImpactAccelMax())
 #define set_crashSensorImpactAccelCurrent(m,b,n,s) set(m,b,n,s, imu_getImpactAccelCurrent())
+#define set_countImpact(m,b,n,s) set(m,b,n,s, (uint8_t)imu_getImpactCount())
+#define set_countCrash(m,b,n,s) set(m,b,n,s, (uint8_t)imu_getCrashCount())
 
 #define set_lon(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelX)
 #define set_lat(m,b,n,s) set(m,b,n,s, imu_getAccelRef()->accelY)

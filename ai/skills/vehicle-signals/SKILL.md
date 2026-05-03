@@ -125,12 +125,3 @@ Then use `jq` or a short Python script to:
 
 - If `vcfront` is offline in `/events`, stop tuning and wait for the controller to come back.
 - If `/signal-events` returns no useful samples, verify the exact signal IDs from the manifest again.
-- If laptop-side `conUDS` says `No CAN devices detected`, do not use it for flashing from the laptop.
-
-## Preferred flashing guidance
-
-For firmware changes discovered during signal review:
-
-- Prefer telling the user to flash.
-- If using automation, prefer the component `buckle` OTA path for `cfr26`.
-- Avoid ad hoc carputer-side `conUDS` flashing as the first choice.

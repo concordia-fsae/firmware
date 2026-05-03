@@ -37,20 +37,6 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#if FEATURE_IS_ENABLED(FEATURE_BRAKEPEDAL_FROM_PRESSURE)
-#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_PR
-#else
-#define BRAKE_CHANNEL DRV_PEDALMONITOR_BRAKE_POT
-#endif
-
-/******************************************************************************
- *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
- ******************************************************************************/
-
-/******************************************************************************
- *                              D E F I N E S
- ******************************************************************************/
-
 #define CANIO_UDS_BUFFER_LENGTH 8U
 #define CANIO_getTimeMs() (HW_TIM_getTimeMS())
 
@@ -62,10 +48,10 @@
 #define set_acceleratorPosition(m,b,n,s) set(m,b,n,s, apps_getPedalPosition() * 100)
 #define set_apps1State(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalStateCAN(DRV_PEDALMONITOR_APPS1))
 #define set_apps2State(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalStateCAN(DRV_PEDALMONITOR_APPS2))
-#define set_brakeState(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalStateCAN(BRAKE_CHANNEL))
+#define set_brakeState(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalStateCAN(DRV_PEDALMONITOR_BRAKE_PR))
 #define set_apps1Voltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_APPS1))
 #define set_apps2Voltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_APPS2))
-#define set_brakePotVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_POT))
+#define set_brakePotVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_PR))
 #define set_brakePrVoltage(m,b,n,s) set(m,b,n,s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_PR))
 #define set_acceleratorState(m,b,n,s) set(m,b,n,s, apps_getStateCAN())
 #define set_bppcState(m,b,n,s) set(m,b,n,s, bppc_getStateCAN())
