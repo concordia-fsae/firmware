@@ -10,6 +10,7 @@ Use this skill for APPS calibration in:
 - `components/vc/front/src/apps.c`
 
 Use the `vehicle-signals` skill for signal discovery, capture, and dashboard access. This skill focuses on calibration decisions and code changes.
+Use the `component-updates` skill flashing VCFRONT. This skill generalizes how to flash components.
 
 The accelerator path is:
 
@@ -52,17 +53,6 @@ The accelerator path is:
 - held full pedal: `100%`
 - mid-stroke average APPS delta: low single digits
 - `acceleratorState`: `OK` throughout the sweep
-
-## Flashing guidance
-
-Preferred order:
-
-1. Ask the user to flash the component.
-1. If automating, prefer the component `buckle` OTA path for `cfr26`.
-
-Do not default to laptop-side `conUDS` unless a local CAN device is present.
-
-Be cautious with carputer-side direct `conUDS` downloads. In this workflow, transfer reached the ECU but failed at completion, and the controller dropped offline afterward.
 
 ## File edit rules
 
