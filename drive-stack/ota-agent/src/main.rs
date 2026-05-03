@@ -178,6 +178,9 @@ pub struct SubActionBatch {
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "status")]
 pub struct SubActionStatus {
+    /// expected target platform, e.g. cfr25 or cfr26
+    #[argh(option, short = 'p')]
+    pub platform: Option<String>,
     /// optional node to report
     #[argh(option, short = 'n')]
     pub nodes: Vec<String>,
@@ -450,6 +453,8 @@ struct VerifyReply {
 
 #[derive(Debug, Deserialize)]
 struct StatusParams {
+    #[serde(default)]
+    platform: Option<String>,
     #[serde(default)]
     node: Vec<String>,
 }
@@ -1298,14 +1303,16 @@ async fn main() -> Result<()> {
                 }
                 SubAction::Status(status) => {
                     let url = build_url(result.addresses[0], result.port, "/ota/status");
-                    let query = status
+                    let mut query = status
                         .nodes
                         .iter()
                         .map(|node| ("node", node.clone()))
                         .collect::<Vec<_>>();
+                    if let Some(platform) = status.platform.clone() {
+                        query.push(("platform", platform));
+                    }
                     info!("Requesting status from ota-agent...");
-                    let response = Client::new().get(url).query(&query).send().await?;
-                    let body = response.text().await?;
+                    let body = Client::new().get(url).query(&query).send().await?.text().await?;
                     let report: StatusReport = serde_json::from_str(&body)
                         .with_context(|| format!("parsing status reply: {}", body))?;
                     let mut nodes: Vec<_> = report.nodes.iter().collect();
