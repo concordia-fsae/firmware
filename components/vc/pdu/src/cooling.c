@@ -19,7 +19,7 @@
  ******************************************************************************/
 
 #define START_TIMER_MS 50U
-#define START_DUTY     0.75f
+#define START_DUTY     1.0f
 #define FAN_ON_DUTY    0.4f
 #define PUMP_ON_DUTY   0.6f
 
