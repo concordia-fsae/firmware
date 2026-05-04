@@ -300,7 +300,8 @@ signals:
     unit: mm
     description: "Shock pot displacement front left"
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75
@@ -314,7 +315,8 @@ signals:
     unit: mm
     description: "Shock pot displacement front right"
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75

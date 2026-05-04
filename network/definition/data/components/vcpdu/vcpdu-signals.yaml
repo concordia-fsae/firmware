@@ -155,7 +155,8 @@ signals:
     unit: 'V'
     description: GLV Battery Voltage
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 9
+      resolution: 0.05
       range:
         min: 0
         max: 16
@@ -166,6 +167,7 @@ signals:
     description: GLV Battery Current
     nativeRepresentation:
       bitWidth: 10
+      resolution: 0.05
       range:
         min: 0
         max: 50
