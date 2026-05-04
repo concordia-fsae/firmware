@@ -14,12 +14,16 @@
 #include "drv_outputAD.h"
 #include "app_vehicleState.h"
 #include "drv_timer.h"
+#include "mcManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #define HORN_ON_TIME_MS 1500U
+
+#define CALIBRATION_ON_TIME_MS 100U
+#define CALIBRATION_OFF_TIME_MS 400U
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -69,8 +73,24 @@ static void horn_periodic_10Hz(void)
     }
     else
     {
-        drv_timer_stop(&horn_data.timer);
-        horn_data.state = HORN_OFF;
+        if (mcManager_isResolverCalibrating())
+        {
+            if (drv_timer_getState(&horn_data.timer) != DRV_TIMER_RUNNING)
+            {
+                const bool isOff = horn_data.state == HORN_OFF;
+                const uint32_t timer = isOff ?
+                                       CALIBRATION_ON_TIME_MS :
+                                       CALIBRATION_OFF_TIME_MS;
+
+                drv_timer_start(&horn_data.timer, timer);
+                horn_data.state = isOff ? HORN_ON : HORN_OFF;
+            }
+        }
+        else
+        {
+            drv_timer_stop(&horn_data.timer);
+            horn_data.state = HORN_OFF;
+        }
     }
 
     switch (horn_data.state)

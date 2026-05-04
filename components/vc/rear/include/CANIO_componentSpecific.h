@@ -52,6 +52,7 @@
 #define set_directionCommand(m,b,n,s) set(m,b,n,s, mcManager_getDirectionCommand())
 #define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
 #define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
+#define set_requestContactorsOpen(m,b,n,s) set(m,b,n,s, mcManager_requestContactorsOpen() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_shockpotdispRL(m,b,n,s) set(m,b,n,s, shockpot_getDisplacement(SHOCKPOT_LEFT))
 #define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getDisplacement(SHOCKPOT_RIGHT))

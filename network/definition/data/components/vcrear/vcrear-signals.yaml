@@ -27,6 +27,12 @@ signals:
   wheelSpeedSensorLocked:
     description: One or more wheel speed sensors are locked
     discreteValues: faultStatus
+  mcCalibratingResolver:
+    description: Motor controller manager is presently calibrating the resolver
+    discreteValues: faultStatus
+  mcCalibratingResolverFailed:
+    description: Motor controller manager resolver calibration failed
+    discreteValues: faultStatus
 
   # Signals
   brakeLightState:
@@ -137,3 +143,7 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  requestContactorsOpen:
+    description: Request open contactor state from the battery
+    discreteValues: digitalStatus
