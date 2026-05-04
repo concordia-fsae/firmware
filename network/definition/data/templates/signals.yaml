@@ -14,7 +14,7 @@ signals:
       bitWidth: 8
       range:
         min: 0
-        max: 256
+        max: 255
       resolution: 1
   count9Bit:
     unit: ""
@@ -22,7 +22,7 @@ signals:
       bitWidth: 9
       range:
         min: 0
-        max: 512
+        max: 511
       resolution: 1
   count10Bit:
     unit: ""
@@ -180,7 +180,7 @@ signals:
   linearVelocity:
     unit: 'm/s'
     nativeRepresentation:
-      bitWidth: 10
+      bitWidth: 13
       resolution: 0.01
       range:
         min: 0
@@ -204,7 +204,7 @@ signals:
       resolution: 1
       range:
         min: 0
-        max: 65535
+        max: 1023
   nvmRecordWrites:
     unit: ''
     description: Count of NVM lifetime record writes
@@ -222,7 +222,7 @@ signals:
       resolution: 1
       range:
         min: 0
-        max: 65535
+        max: 255
   nvmFailedCrc:
     unit: ''
     description: Count of NVM failed CRC's
