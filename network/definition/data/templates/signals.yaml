@@ -175,7 +175,7 @@ signals:
       bitWidth: 10
       range:
         min: 0.0
-        max: 15
+        max: 25
     continuous: true
   linearVelocity:
     unit: 'm/s'

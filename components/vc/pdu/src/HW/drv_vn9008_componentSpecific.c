@@ -28,8 +28,8 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
         .cs_channel = DRV_INPUTAD_ANALOG_DEMUX2_PUMP,
         .fault_reset = DRV_OUTPUTAD_PUMP_FAULT,
         .enable_cs = DRV_OUTPUTAD_HP_SNS_EN,
-        .current_limit_amp = 10.0f,
-        .oc_timeout_ms = 250,
+        .current_limit_amp = 20.0f,
+        .oc_timeout_ms = 500,
     },
     [DRV_VN9008_CHANNEL_FAN] = {
         .type = VN9008_PWM_EN,

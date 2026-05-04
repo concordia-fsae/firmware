@@ -165,10 +165,10 @@ signals:
     unit: 'A'
     description: GLV Battery Current
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 10
       range:
         min: 0
-        max: 30
+        max: 50
     continuous: true
 
   pdu5vVoltage:
