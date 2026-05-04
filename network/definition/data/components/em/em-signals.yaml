@@ -54,4 +54,4 @@ signals:
       resolution: 1
       range:
         min: 0
-        max: 32
+        max: 31

@@ -262,7 +262,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -273,7 +273,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -284,7 +284,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -295,7 +295,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -306,7 +306,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -317,7 +317,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -328,7 +328,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -339,7 +339,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -350,7 +350,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -361,7 +361,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -372,7 +372,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -383,7 +383,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -394,7 +394,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -405,7 +405,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -416,7 +416,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -427,7 +427,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -438,7 +438,7 @@ signals:
       bitWidth: 12
       range:
         min: 0
-        max: 81.92
+        max: 81.9
       resolution: 0.020
     continuous: true
 
@@ -449,7 +449,7 @@ signals:
       bitWidth: 12
       range:
         min: 0
-        max: 81.92
+        max: 81.9
       resolution: 0.020
     continuous: true
 
@@ -605,7 +605,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 

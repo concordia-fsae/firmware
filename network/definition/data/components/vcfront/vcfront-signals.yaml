@@ -266,7 +266,7 @@ signals:
     description: Driver raw torque request
     unit: Nm
     nativeRepresentation:
-      resolution: 1
+      resolution: 1.5
       bitWidth: 7
       range:
         min: 0

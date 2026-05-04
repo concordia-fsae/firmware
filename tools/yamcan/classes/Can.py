@@ -1,4 +1,5 @@
 import copy
+from decimal import Decimal
 from math import ceil, log
 from typing import List, Optional, Set, Tuple
 from schema import Schema, Or, Optional, And
@@ -111,6 +112,22 @@ class NativeRepresentation:
         if self.bit_width is not None and (self.bit_width < 1 or self.bit_width > 64):
             raise Exception(
                 f"Native representation bit width must be between 1 and 64 bits"
+            )
+        elif (
+            self.bit_width
+            and self.range
+            and self.resolution
+            and self.signedness == Signedness.unsigned
+            and (
+                Decimal(2**self.bit_width - 1)
+                < (
+                    (Decimal(str(self.range.max)) - Decimal(str(self.range.min)))
+                    / Decimal(str(self.resolution))
+                )
+            )
+        ):
+            raise Exception(
+                f"Native representation bit width cannot store the range in the provided resolution"
             )
 
 
@@ -248,10 +265,14 @@ class CanSignal(CanObject):
                 if self.unit is None:
                     print(f"Signal {name} is continuous but has no unit defined")
                     valid = False
-                if nat_rep.range is None:
-                    print(f"Signal {name} is continuous but has no range defined")
+                if nat_rep.range is None and not (
+                    nat_rep.bit_width and nat_rep.resolution
+                ):
+                    print(
+                        f"Signal {name} is continuous but has no range defined and cannot infer one from bitWidth and resolution"
+                    )
                     valid = False
-                elif not nat_rep.range.is_valid:
+                elif nat_rep.range is not None and not nat_rep.range.is_valid:
                     # error for this printed from Range class
                     valid = False
             elif dv:
@@ -344,9 +365,16 @@ class CanSignal(CanObject):
                         nat_rep.bit_width = ceil(log(sig_range / nat_rep.resolution, 2))
             elif nat_rep.bit_width:
                 nat_rep.resolution = nat_rep.resolution or 1.0
-                nat_rep.range = Range(
-                    {"min": 0, "max": 2**nat_rep.bit_width * nat_rep.resolution}
-                )
+                if nat_rep.signedness == Signedness.unsigned:
+                    nat_rep.range = Range(
+                        {
+                            "min": 0,
+                            "max": (2**nat_rep.bit_width) * nat_rep.resolution,
+                        }
+                    )
+                else:
+                    half_range = (2 ** (nat_rep.bit_width - 1)) * nat_rep.resolution
+                    nat_rep.range = Range({"min": -half_range, "max": half_range})
         else:
             nat_rep = NativeRepresentation()
             nat_rep.bit_width = 1
