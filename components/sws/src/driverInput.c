@@ -328,29 +328,29 @@ static void update_params(const bool tq_inc, const bool tq_dec,
     }
 
     // Torque axis
-    if (!axis_any_db && (tq_inc ^ tq_dec))
+    if (data.page != DRIVERINPUT_PAGE_CONFIG)
     {
-        if (tq_inc && !tq_dec)
+        if (!axis_any_db && (tq_inc ^ tq_dec))
         {
-            if (data.page != DRIVERINPUT_PAGE_CONFIG)
+            if (tq_inc && !tq_dec)
             {
                 status[DRIVERINPUT_REQUEST_TORQUE_INC] = true;
             }
-            else
-            {
-                status[configActions[data.config].requestButtonRight] = true;
-            }
-        }
-        else if (tq_dec && !tq_inc)
-        {
-            if (data.page != DRIVERINPUT_PAGE_CONFIG)
+            else if (tq_dec && !tq_inc)
             {
                 status[DRIVERINPUT_REQUEST_TORQUE_DEC] = true;
             }
-            else
-            {
-                status[configActions[data.config].requestButtonLeft] = true;
-            }
+        }
+    }
+    else
+    {
+        if (tq_inc)
+        {
+            status[configActions[data.config].requestButtonRight] = true;
+        }
+        if (tq_dec)
+        {
+            status[configActions[data.config].requestButtonLeft] = true;
         }
     }
 
@@ -378,7 +378,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             {
                 data.config = (driverInput_configSelection_E)(data.config - 1);
             }
-            else if (sl_inc && 
+            else if (sl_inc &&
                     (data.config < (driverInput_configSelection_E)(DRIVERINPUT_CONFIG_COUNT - 1)) &&
                     ((data.config < DRIVERINPUT_CONFIG_OPTION13) || data.option13))
             {
@@ -403,10 +403,10 @@ static void update_combos(const bool pg_next, const bool pg_prev,
                           const bool crash_reset_mode,
                           const bool crash_reset_lockout)
 {
-    const bool run_combo = pg_next && pg_prev;
-    const bool race_combo = sl_inc && sl_dec;
-    const bool launch_combo = tq_inc && tq_dec;
-    const bool rev_combo = race_combo && launch_combo; // highest priority
+    const bool run_combo = pg_next && pg_prev && (data.page != DRIVERINPUT_PAGE_CONFIG);
+    const bool race_combo = sl_inc && sl_dec && (data.page != DRIVERINPUT_PAGE_CONFIG);
+    const bool launch_combo = tq_inc && tq_dec && (data.page != DRIVERINPUT_PAGE_CONFIG);
+    const bool rev_combo = race_combo && launch_combo && (data.page != DRIVERINPUT_PAGE_CONFIG); // highest priority
 
     // require stability for the involved buttons to progress debounce timers
     const bool run_stable    = run_combo    && !(db_pg_next || db_pg_prev);
