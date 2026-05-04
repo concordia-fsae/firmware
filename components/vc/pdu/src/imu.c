@@ -1061,7 +1061,7 @@ float32_t imu_getImpactAccelMax(void)
 bool imu_isFaulted(void)
 {
     return !(imu.fsmCrashInitOk && imu.fsmImpactInitOk &&
-             (drv_timer_getState(&imu.imuTimeout) == DRV_TIMER_RUNNING));
+             (drv_timer_getState(&imu.imuTimeout) != DRV_TIMER_EXPIRED));
 }
 
 bool imu_isCalibrating(void)
