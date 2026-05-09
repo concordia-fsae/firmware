@@ -369,9 +369,12 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
+    CAN_digitalStatus_E contactorOpenRequestState = CAN_DIGITALSTATUS_SNA;
+    const bool openRequest = (CANRX_get_signal(VEH, VCREAR_requestContactorsOpen, &contactorOpenRequestState) == CANRX_MESSAGE_VALID) &&
+                             (contactorOpenRequestState == CAN_DIGITALSTATUS_ON);
     const bool openContactors = checkBmsFaulted();
 
-    if (openContactors)
+    if (openContactors || openRequest)
     {
         openAllContactors();
         drv_timer_stop(&precharge_timer);

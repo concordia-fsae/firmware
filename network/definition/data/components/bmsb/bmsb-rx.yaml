@@ -25,3 +25,5 @@ messages:
     sourceBuses: veh
     unrecorded: true
 signals:
+  VCREAR_requestContactorsOpen:
+    sourceBuses: veh

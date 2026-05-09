@@ -320,7 +320,7 @@ CAN_sleepFollowerState_E app_vehicleState_getSleepableStateCAN(void)
 bool app_vehicleState_getFaultReset(void)
 {
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
-    return ((drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RESET_REMOTE) == DRV_IO_ACTIVE) && 
+    return ((drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RESET_REMOTE) == DRV_IO_ACTIVE) ||
             (drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RESET_LOCAL) == DRV_IO_ACTIVE));
 #else
     return vehicleState_data.faultReset;
