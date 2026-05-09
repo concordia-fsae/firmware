@@ -15,7 +15,7 @@
 #include "CANIO_componentSpecific.h"
 #include "Yamcan.h"
 
-static uint32_t can_deadlineMissCount = 0U;
+static uint16_t can_deadlineMissCount = 0U;
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
@@ -168,7 +168,7 @@ const ModuleDesc_S CANIO_tx = {
     .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
 };
 
-uint32_t CANIO_getDeadlineMissCount(void)
+uint16_t CANIO_getDeadlineMissCount(void)
 {
     return can_deadlineMissCount;
 }
