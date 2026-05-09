@@ -9,6 +9,7 @@
 
 #include "app_faultManager.h"
 #include "app_vehicleState.h"
+#include "drv_currentSense.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "drv_timer.h"
@@ -29,7 +30,6 @@
 #define UNDERVOLTAGE_TIMEOUT_MS      1000U
 #define SAFETY_CUTOFF_TIMEOUT_MS     5000U
 
-#define PDU_CS_AMPS_PER_VOLT         0.20f
 #define PDU_VS_VOLTAGE_MULTIPLIER    3.61f
 
 // System design minimums
@@ -97,7 +97,7 @@ static void getInputs(void)
     app_faultManager_setFaultState(FM_FAULT_VCPDU_CONTACTSOPENINRUN, inRunMode && (!contactorsValid || contactorsOpen));
 
     pm_data.glv_voltage         = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
-    pm_data.pdu.current         = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
+    pm_data.pdu.current         = drv_currentSense_getCurrent(DRV_CURRENTSENSE_CHANNEL_PDU_5V);
     pm_data.pdu.rail_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
     pm_data.sleeping            = app_vehicleState_sleeping();
 }

@@ -165,6 +165,7 @@ add_platform_sil_bundle_targets(
         "//sim/bindings/firmware/spi:headers",
     ],
     app_srcs = [
+        "//components/shared/code:DRV/drv_currentSense.c",
         "//components/shared/code:DRV/drv_asm330.c",
         "//components/shared/code:DRV/drv_hsd.c",
         "//components/shared/code:DRV/drv_inputAD.c",
@@ -199,6 +200,7 @@ add_platform_sil_bundle_targets(
         "src/powerManager.c",
         "src/uds_componentSpecific.c",
         "src/wheelSpeed_componentSpecific.c",
+        "src/HW/drv_currentSense_componentSpecific.c",
         "src/HW/drv_inputAD_componentSpecific.c",
         "src/HW/drv_outputAD_componentSpecific.c",
         "src/HW/drv_tps20xx_componentSpecific.c",
@@ -353,6 +355,7 @@ cxx_binary(
             "//components/shared/code:DRV/drv_outputAD.c",
             "//components/shared/code:DRV/drv_timer.c",
             "//components/shared/code:DRV/drv_tps2hb16ab.c",
+            "//components/shared/code:DRV/drv_currentSense.c",
             "//components/shared/code:DRV/drv_vn9008.c",
             "//components/shared/code:DRV/drv_tps20xx.c",
             "//components/shared/code:HW/HW.c",

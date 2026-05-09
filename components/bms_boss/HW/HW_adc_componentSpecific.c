@@ -1,5 +1,5 @@
 /**
- * @file HW_adc.c
+ * @file HW_adc_componentSpecific.c
  * @brief  Source code for ADC firmware
  */
 

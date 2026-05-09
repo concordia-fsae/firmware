@@ -26,6 +26,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_currentSense.h"
 #include "drv_hsd.h"
 #include "drv_io.h"
 #include "drv_timer.h"
@@ -79,8 +80,7 @@ void drv_tps2hb16ab_run(void)
 {
     for (uint8_t i = 0U; i < DRV_TPS2HB16AB_IC_COUNT; i++)
     {
-        const float32_t cs_voltage = drv_inputAD_getAnalogVoltage(drv_tps2hb16ab_ics[i].cs_channel);
-        const bool      diag       = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].diag_en) == DRV_IO_ACTIVE;
+        const bool diag = drv_outputAD_getDigitalActiveState(drv_tps2hb16ab_ics[i].diag_en) == DRV_IO_ACTIVE;
 
         if (diag)
         {
@@ -96,7 +96,7 @@ void drv_tps2hb16ab_run(void)
             else
             {
                 const float32_t current = (drv_tps2hb16ab_data.state[i][selected_channel] == DRV_HSD_STATE_ON) ?
-                                          cs_voltage * drv_tps2hb16ab_ics[i].cs_amp_per_volt :
+                                          drv_currentSense_getCurrent(drv_tps2hb16ab_ics[i].current_sense_channel):
                                           0.0f;
                 drv_tps2hb16ab_data.current[i][selected_channel] = current;
             }
