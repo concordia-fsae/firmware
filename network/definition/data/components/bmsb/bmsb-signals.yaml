@@ -403,3 +403,14 @@ signals:
         max: 100
       resolution: 0.1
     continuous: true
+
+  taskDeadlineMiss:
+    description: CAN message deadline miss count
+    unit: 'misses'
+    nativeRepresentation:
+      bitWidth: 16
+      range:
+        min: 0
+        max: 65535
+      resolution: 1
+    continuous: true
