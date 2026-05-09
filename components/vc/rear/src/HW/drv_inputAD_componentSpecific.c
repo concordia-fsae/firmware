@@ -82,6 +82,7 @@ void drv_inputAD_init_componentSpecific(void)
 {
     drv_inputAD_private_init();
     drv_inputAD_private_runDigital();
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
 }
 
 void drv_inputAD_1kHz_componentSpecific(void)

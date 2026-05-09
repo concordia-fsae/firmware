@@ -137,3 +137,18 @@ signals:
         min: 0
         max: 75
     continuous: true
+
+  tsCapThermistorVoltage:
+    description: TS cap thermistor voltage
+    template: voltsPrecise
+
+  tsCapTemperature:
+    description: TS cap thermistor temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 200
+    continuous: true

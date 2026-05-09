@@ -277,6 +277,7 @@ cxx_binary(
             "//components/shared/code:DRV/drv_io.c",
             "//components/shared/code:DRV/drv_mux.c",
             "//components/shared/code:DRV/drv_outputAD.c",
+            "//components/shared/code:DRV/drv_tempSensors.c",
             "//components/shared/code:DRV/drv_timer.c",
             "//components/shared/code:DRV/drv_tps20xx.c",
             "//components/shared/code:HW/HW.c",
@@ -295,7 +296,9 @@ cxx_binary(
             "//components/shared/code:libs/LIB_app.c",
             "//components/shared/code:libs/lib_simpleFilter.c",
             "//components/shared/code:libs/lib_interpolation.c",
+            "//components/shared/code:libs/lib_thermistors.c",
             "//components/shared/code:libs/lib_rateLimit.c",
+            "//components/shared/code:libs/lib_utility.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
             "//components/vc/shared:app/shockpot.c",
             select({
