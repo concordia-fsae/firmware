@@ -11,6 +11,10 @@ messages:
     sourceBuses: veh
   BMSW5_criticalData:
     sourceBuses: veh
+  BMSW6_criticalData:
+    sourceBuses: veh
+  BMSW7_criticalData:
+    sourceBuses: veh
   BRUSA513_criticalData:
     sourceBuses: veh
   ELCON_criticalData:

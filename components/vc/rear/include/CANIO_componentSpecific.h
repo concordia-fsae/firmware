@@ -27,6 +27,7 @@
 #include "Module.h"
 #include "app_vehicleSpeed.h"
 #include "app_faultManager.h"
+#include "drv_inputAD.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -57,6 +58,8 @@
 #define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getDisplacement(SHOCKPOT_RIGHT))
 #define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_LEFT))
 #define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_RIGHT))
+#define set_tsCapThermistorVoltage(m,b,n,s) set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_PU1))
+#define set_tsCapTemperature(m,b,n,s) set(m,b,n,s, mcManager_getTsCapTemperatureDegC())
 
 #define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
 #define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))

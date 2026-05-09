@@ -88,6 +88,14 @@ messages:
       shockpotVoltRR:
       shockpotdispRR:
 
+  tsCapThermistor:
+    description: TS cap thermistor data
+    id: 0x456
+    cycleTimeMs: 100
+    signals:
+      tsCapThermistorVoltage:
+      tsCapTemperature:
+
   wheelSpeed:
     description: Rear wheel speeds
     id: 0x460
