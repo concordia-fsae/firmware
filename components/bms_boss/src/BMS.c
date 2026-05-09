@@ -18,6 +18,7 @@
 #include "drv_outputAD.h"
 #include "drv_userInput.h"
 #include "drv_timer.h"
+#include "drv_currentSense.h"
 #include "Module.h"
 #include "SystemConfig.h"
 #include "app_faultManager.h"
@@ -412,7 +413,9 @@ static void BMS1kHz_PRD(void)
     const uint64_t this_step = HW_TIM_getBaseTick();
     const uint32_t delta_t = (uint32_t)(this_step - BMS.counted_coulombs.last_step_us);
 
-    float32_t tmpCurrent =  (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
+    float32_t tmpCurrent =  drv_currentSense_voltageToCurrent(
+    drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET,
+    1.0f / CURRENT_SENSE_V_per_A);
     BMS.packCurrentRaw = tmpCurrent;
     tmpCurrent = lib_simpleFilter_lpf_step(&BMS.lpfCurrent, tmpCurrent);
     BMS.pack_current = tmpCurrent;

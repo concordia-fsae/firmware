@@ -20,6 +20,7 @@
 #include "app_faultManager.h"
 #include "app_vehicleState.h"
 #include "drv_timer.h"
+#include "drv_currentSense.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -90,7 +91,7 @@ static void getInputs(void)
     app_faultManager_setFaultState(FM_FAULT_VCPDU_CONTACTSOPENINRUN, inRunMode && (!contactorsValid || contactorsOpen));
 
     pm_data.glv_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_UVL_BATT) * 6.62f;
-    pm_data.pdu.current = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS) * PDU_CS_AMPS_PER_VOLT;
+    pm_data.pdu.current = drv_currentSense_voltageToCurrent(drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_DEMUX2_5V_SNS), PDU_CS_AMPS_PER_VOLT);
     pm_data.pdu.rail_5v_voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_5V_VOLTAGE) * PDU_VS_VOLTAGE_MULTIPLIER;
     pm_data.sleeping = app_vehicleState_sleeping();
 }
