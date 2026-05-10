@@ -94,6 +94,60 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_HP], TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_HP], TIM_CHANNEL_2);
 
+    __HAL_AFIO_REMAP_TIM3_ENABLE();
+    __HAL_RCC_TIM3_CLK_ENABLE();
+    uwTimclock                                   = HAL_RCC_GetPCLK2Freq();
+    uwPrescalerValue                             = (uint32_t)((uwTimclock / 1000000U) - 1U);
+    htim[HW_TIM_PORT_PWM].Instance               = TIM3;
+    htim[HW_TIM_PORT_PWM].Init.Prescaler         = uwPrescalerValue;
+    htim[HW_TIM_PORT_PWM].Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim[HW_TIM_PORT_PWM].Init.Period            = 1000000 / 10000;
+    htim[HW_TIM_PORT_PWM].Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim[HW_TIM_PORT_PWM].Init.RepetitionCounter = 0;
+    htim[HW_TIM_PORT_PWM].Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    if (HAL_TIM_Base_Init(&htim[HW_TIM_PORT_PWM]) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+
+    if (HAL_TIM_ConfigClockSource(&htim[HW_TIM_PORT_PWM], &sClockSourceConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    if (HAL_TIM_OC_Init(&htim[HW_TIM_PORT_PWM]) != HAL_OK)
+    {
+        Error_Handler();
+    }
+
+    sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+    sConfigOC.Pulse        = 0;
+    sConfigOC.OCPolarity   = TIM_OCPOLARITY_LOW;
+    sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
+    sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
+    sConfigOC.OCIdleState  = TIM_OCIDLESTATE_SET;
+    sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_SET;
+    if (HAL_TIM_OC_ConfigChannel(&htim[HW_TIM_PORT_PWM], &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sConfigOC.OCMode       = TIM_OCMODE_PWM1;
+    sConfigOC.Pulse        = 0;
+    sConfigOC.OCPolarity   = TIM_OCPOLARITY_LOW;
+    sConfigOC.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
+    sConfigOC.OCFastMode   = TIM_OCFAST_ENABLE;
+    sConfigOC.OCIdleState  = TIM_OCIDLESTATE_SET;
+    sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_SET;
+    if (HAL_TIM_OC_ConfigChannel(&htim[HW_TIM_PORT_PWM], &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    HAL_TIM_Base_Start(&htim[HW_TIM_PORT_PWM]);
+    HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim[HW_TIM_PORT_PWM], TIM_CHANNEL_2);
+
     return HW_OK;
 }
 

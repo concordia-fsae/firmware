@@ -28,6 +28,7 @@
 typedef enum
 {
     HW_TIM_PORT_HP = 0x00U,
+    HW_TIM_PORT_PWM,
     HW_TIM_PORT_COUNT,
 } HW_TIM_port_E;
 
