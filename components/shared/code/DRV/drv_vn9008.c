@@ -35,7 +35,7 @@ struct
 static void setDuty(drv_vn9008_E channel, float32_t duty)
 {
     drv_vn9008_data.duty[channel] = duty;
-    const drv_io_activeState_E state = duty > 0.0f ? DRV_IO_INACTIVE : DRV_IO_ACTIVE;
+    const drv_io_activeState_E state = duty > 0.0f ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
     switch (drv_vn9008_channels[channel].type)
     {
         case VN9008_DIGITAL:
