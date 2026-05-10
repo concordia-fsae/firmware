@@ -166,11 +166,13 @@ const drv_tps2hb16ab_ic_S drv_tps2hb16ab_ics[DRV_TPS2HB16AB_IC_COUNT] = {
                 .enable = DRV_OUTPUTAD_VCU1_EN,
                 .current_limit_amp = 2.5f,
                 .oc_timeout_ms = 250,
+                .default_enabled = true,
             },
             [DRV_TPS2HB16AB_OUT_2] = {
                 .enable = DRV_OUTPUTAD_VCU2_EN,
                 .current_limit_amp = 2.5f,
                 .oc_timeout_ms = 250,
+                .default_enabled = true,
             },
         },
     },
