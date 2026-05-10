@@ -18,10 +18,10 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
         .enable = {
             .pwm_en = {
                 .pwm = {
-                    .tim_port = HW_TIM_PORT_HP,
+                    .tim_port = HW_TIM_PORT_PWM,
                     .tim_channel = HW_TIM_CHANNEL_1,
                 },
-                .en = DRV_OUTPUTAD_PWM1,
+                .en = DRV_OUTPUTAD_PUMP_EN,
             },
         },
         .cs_amp_per_volt = 7.518f,
