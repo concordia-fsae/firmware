@@ -334,6 +334,12 @@ enum UdsWorkerCommand {
     FileDownload {
         binary_path: PathBuf,
         address: u32,
+        reset_bootloader_updater: bool,
+        resp: oneshot::Sender<Result<(), String>>,
+    },
+    BootloaderDownload {
+        binary_path: PathBuf,
+        address: u32,
         resp: oneshot::Sender<Result<(), String>>,
     },
 }
@@ -633,10 +639,12 @@ impl UdsWorkerHandle {
                     UdsWorkerCommand::FileDownload {
                         binary_path,
                         address,
+                        reset_bootloader_updater,
                         resp,
                     } => {
-                        if get_node_execution_state(uds).await.ok()
-                            == Some(NodeExecutionState::BootloaderUpdater)
+                        if reset_bootloader_updater
+                            && get_node_execution_state(uds).await.ok()
+                                == Some(NodeExecutionState::BootloaderUpdater)
                         {
                             if let Err(error) = uds
                                 .client
@@ -649,6 +657,34 @@ impl UdsWorkerHandle {
                         }
                         let _ = resp.send(
                             uds.file_download(&binary_path, address)
+                                .await
+                                .map_err(|e| e.to_string()),
+                        );
+                    }
+                    UdsWorkerCommand::BootloaderDownload {
+                        binary_path,
+                        address,
+                        resp,
+                    } => {
+                        match get_node_execution_state(uds).await {
+                            Ok(NodeExecutionState::BootloaderUpdater) => {}
+                            Ok(state) => {
+                                let _ = resp.send(Err(format!(
+                                    "ECU is in {:?}, expected bootloader updater. Run the updater download first.",
+                                    state
+                                )));
+                                continue;
+                            }
+                            Err(error) => {
+                                let _ = resp.send(Err(format!(
+                                    "Unable to confirm ECU is in bootloader updater: {error}"
+                                )));
+                                continue;
+                            }
+                        }
+
+                        let _ = resp.send(
+                            uds.app_file_download(&binary_path, address)
                                 .await
                                 .map_err(|e| e.to_string()),
                         );
@@ -793,6 +829,42 @@ impl UdsWorkerHandle {
         let (tx, rx) = oneshot::channel();
         self.tx
             .send(UdsWorkerCommand::FileDownload {
+                binary_path,
+                address,
+                reset_bootloader_updater: true,
+                resp: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn file_download_current_state(
+        &self,
+        binary_path: PathBuf,
+        address: u32,
+    ) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::FileDownload {
+                binary_path,
+                address,
+                reset_bootloader_updater: false,
+                resp: tx,
+            })
+            .await
+            .map_err(|_| anyhow!("UDS worker is unavailable"))?;
+        rx.await
+            .map_err(|_| anyhow!("UDS worker response channel closed"))?
+            .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn bootloader_download(&self, binary_path: PathBuf, address: u32) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.tx
+            .send(UdsWorkerCommand::BootloaderDownload {
                 binary_path,
                 address,
                 resp: tx,

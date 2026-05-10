@@ -187,7 +187,10 @@ async fn main() {
                 true,
             );
             info!("Downloading bootloader {:?} to node '{}'", dl.binary, node);
-            if let Err(e) = uds.file_download(dl.binary.clone(), 0x08000000).await {
+            if let Err(e) = uds
+                .bootloader_download(dl.binary.clone(), 0x08000000)
+                .await
+            {
                 error!("While downloading bootloader: {}", e);
             }
         }
