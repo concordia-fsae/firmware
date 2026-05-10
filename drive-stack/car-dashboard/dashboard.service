@@ -1,6 +1,7 @@
 [Unit]
 Description=Carputer Live Dashboard
-After=ota-agent-drive-stack.service network.target
+After=network.target ota-agent-drive-stack.service ota-agent.service
+Wants=ota-agent.service
 PartOf=drive-stack.target
 
 [Service]

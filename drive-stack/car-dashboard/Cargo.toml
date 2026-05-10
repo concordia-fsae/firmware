@@ -16,8 +16,10 @@ futures = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
 minijinja = { workspace = true }
+net_detec = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 tokio = { workspace = true }
+reqwest = { workspace = true }
 warp = { version = "0.3", features = ["multipart"] }

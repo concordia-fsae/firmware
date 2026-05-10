@@ -43,6 +43,7 @@ typedef struct
         drv_outputAD_channelDigital_E enable;
         float32_t                     current_limit_amp;
         uint16_t                      oc_timeout_ms;
+        bool                          default_enabled;
     } channel[DRV_TPS2HB16AB_OUT_COUNT];
 } drv_tps2hb16ab_ic_S;
 

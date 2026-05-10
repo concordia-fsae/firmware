@@ -58,14 +58,20 @@ void drv_tps2hb16ab_init(void)
     {
         for (uint8_t n = 0U; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
         {
-            drv_tps2hb16ab_data.state[i][n] = DRV_HSD_STATE_OFF;
-            drv_tps2hb16ab_data.request_enabled[i][n] = false;
-            drv_outputAD_setDigitalActiveState(drv_tps2hb16ab_ics[i].channel[n].enable, DRV_IO_INACTIVE);
+            const bool default_enabled = drv_tps2hb16ab_ics[i].channel[n].default_enabled;
+            drv_tps2hb16ab_data.state[i][n] = default_enabled ? DRV_HSD_STATE_ON : DRV_HSD_STATE_OFF;
+            drv_tps2hb16ab_data.request_enabled[i][n] = default_enabled;
             drv_timer_init(&drv_tps2hb16ab_data.oc_timer[i][n]);
         }
         drv_tps2hb16ab_setCSChannel(i, DRV_TPS2HB16AB_OUT_1);
         drv_tps2hb16ab_setDiagEnabled(i, false);
         drv_tps2hb16ab_setFaultLatch(i, true);
+        for (uint8_t n = 0U; n < DRV_TPS2HB16AB_OUT_COUNT; n++)
+        {
+            drv_outputAD_setDigitalActiveState(
+                drv_tps2hb16ab_ics[i].channel[n].enable,
+                drv_tps2hb16ab_data.request_enabled[i][n] ? DRV_IO_ACTIVE : DRV_IO_INACTIVE);
+        }
     }
 }
 

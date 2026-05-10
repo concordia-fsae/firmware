@@ -139,9 +139,9 @@ static bool checkAppCrc(lib_app_appDesc_S *appDesc)
 void SYS_init(void)
 {
     SYS_resetSoft();
+    GPIO_init(pinmux, COUNTOF(pinmux));
     CLK_init();
     TIM_init();
-    GPIO_init(pinmux, COUNTOF(pinmux));
     FLASH_init();
     CRC_init();
     CAN_init();
