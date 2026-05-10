@@ -13,27 +13,27 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use conUDS::config::Config as UdsConfig;
-use conUDS::modules::uds::{
-    CurrentDiagnosticSession, DiagnosticSessionKind, DiagnosticSessionResponse,
-    RoutineStartResponse, UdsWorkerHandle,
-};
 use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
+use conUDS::config::Config as UdsConfig;
+use conUDS::modules::uds::{
+    DiagnosticSessionKind, DiagnosticSessionResponse, RoutineStartResponse, UdsWorkerHandle,
+};
 use futures::StreamExt;
 use libc::{
-    bind, c_void, can_frame, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t, sockaddr,
-    sockaddr_can, socket, socklen_t, AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW,
-    CAN_RTR_FLAG, CAN_SFF_MASK, EINTR, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE,
-    SOF_TIMESTAMPING_RX_HARDWARE, SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
-    SOL_SOCKET, SO_TIMESTAMPING,
+    AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK, EINTR,
+    SO_TIMESTAMPING, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE, SOF_TIMESTAMPING_RX_HARDWARE,
+    SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE, SOL_SOCKET, bind, c_void, can_frame,
+    if_nametoindex, iovec, msghdr, recvmsg, sa_family_t, sockaddr, sockaddr_can, socket, socklen_t,
 };
 use log::{debug, info, warn};
+use net_detec::{Client as MdnsClient, DiscoveryFilter};
+use reqwest::StatusCode as HttpStatusCode;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{broadcast, mpsc, oneshot, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, broadcast, mpsc, oneshot};
+use warp::Buf;
 use warp::multipart::{FormData, Part};
 use warp::sse::Event;
-use warp::Buf;
 use warp::{Filter, Reply};
 
 mod views;
@@ -44,6 +44,8 @@ use yamcan_dashboard::NetworkBus;
 const DEFAULT_PORT: u16 = 8091;
 const DEFAULT_OFFLINE_TIMEOUT_SECS: u64 = 3;
 const DEFAULT_SWEEP_INTERVAL_MS: u64 = 250;
+const OTA_AGENT_DISCOVERY_TIMEOUT_SECS: u64 = 2;
+const OTA_AGENT_SERVICE_NAME: &str = "_ota-agent._tcp.local.";
 const SUPPORTED_CONTROLLERS: &[&str] = &[
     "bmsb", "bmsw0", "bmsw1", "bmsw2", "bmsw3", "bmsw4", "bmsw5", "bmsw6", "bmsw7", "sws",
     "vcfront", "vcrear", "vcpdu", "pm100dx",
@@ -66,6 +68,12 @@ pub struct Opts {
         default_value = "/application/config/ota-agent/uds-routines.yaml"
     )]
     pub routine_manifest: String,
+
+    #[arg(
+        long,
+        default_value = "/application/config/ota-agent/deploy-targets.yaml"
+    )]
+    pub deploy_targets_manifest: String,
 
     #[arg(long, default_value = "can0")]
     pub veh_iface: String,
@@ -91,12 +99,26 @@ struct UdsNode {
     response_id: u32,
 }
 
+#[derive(Debug, Deserialize)]
+struct DeployTargetsManifest {
+    targets: BTreeMap<String, DeployTargetConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DeployTargetConfig {
+    kind: String,
+    #[serde(default)]
+    requires_manual_recovery: bool,
+}
+
 #[derive(Debug, Clone)]
 struct ControllerCapability {
     name: String,
     request_id: u32,
     response_id: u32,
     uds_iface: String,
+    supports_manual_recovery: bool,
+    requires_manual_recovery: bool,
     sessions: Vec<DiagnosticSessionOption>,
     resets: Vec<ResetOption>,
     routines: Vec<RoutineCapability>,
@@ -160,6 +182,17 @@ struct ActionAcceptedResponse {
     ok: bool,
     job_id: String,
     job: DashboardJob,
+}
+
+#[derive(Debug, Deserialize)]
+struct OtaAgentRecoverReply {
+    status: String,
+    node: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct OtaAgentErrorReply {
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -564,9 +597,11 @@ pub async fn run(opts: Opts) -> Result<()> {
     }
 
     info!(
-        "initializing dashboard with uds_manifest='{}', routine_manifest='{}', veh_iface='{}', body_iface='{}', port={}",
+        "initializing dashboard with uds_manifest='{}', routine_manifest='{}', deploy_targets_manifest='{}', ota_agent_service_name='{}', veh_iface='{}', body_iface='{}', port={}",
         opts.uds_manifest,
         opts.routine_manifest,
+        opts.deploy_targets_manifest,
+        OTA_AGENT_SERVICE_NAME,
         opts.veh_iface,
         opts.body_iface.as_deref().unwrap_or("disabled"),
         opts.port
@@ -574,6 +609,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     let capabilities = Arc::new(load_controller_capabilities(
         &opts.uds_manifest,
         &opts.routine_manifest,
+        &opts.deploy_targets_manifest,
         &opts.veh_iface,
     )?);
     let signal_manifest = Arc::new(build_signal_manifest());
@@ -724,6 +760,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::multipart::form().max_length(64 * 1024 * 1024))
         .and(state_filter.clone())
         .and_then(handle_flash_controller);
+
+    let recover_controller = warp::path!("api" / "controllers" / String / "recover")
+        .and(warp::post())
+        .and(state_filter.clone())
+        .and_then(handle_recover_controller);
 
     let start_tester_present = warp::path!("api" / "controllers" / String / "tester-present")
         .and(warp::post())
@@ -896,6 +937,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(run_routine)
         .or(reset_controller)
         .or(flash_controller)
+        .or(recover_controller)
         .or(send_tester_present)
         .or(start_tester_present)
         .or(stop_tester_present)
@@ -906,7 +948,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1307,6 +1349,53 @@ async fn handle_flash_controller(
     }))
 }
 
+async fn handle_recover_controller(
+    controller_name: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let controller_name = controller_name.to_ascii_lowercase();
+    let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::NOT_FOUND,
+            "unknown controller",
+        ));
+    };
+
+    if !capability.supports_manual_recovery {
+        return Ok(json_error_response(
+            warp::http::StatusCode::BAD_REQUEST,
+            "manual recovery is not configured for this controller",
+        ));
+    }
+
+    let detail = if capability.requires_manual_recovery {
+        "Queued required manual recovery".to_string()
+    } else {
+        "Queued baseline recovery".to_string()
+    };
+    let job = match create_job(&state, &controller_name, "manual-recovery", detail).await {
+        Ok(job) => job,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::CONFLICT,
+                &error.to_string(),
+            ));
+        }
+    };
+
+    let state_for_job = state.clone();
+    let job_id = job.id.clone();
+    tokio::spawn(async move {
+        run_manual_recovery_job(state_for_job, capability, job_id).await;
+    });
+
+    Ok(json_success_response(ActionAcceptedResponse {
+        ok: true,
+        job_id: job.id.clone(),
+        job,
+    }))
+}
+
 async fn handle_controller_jobs(
     controller_name: String,
     state: AppState,
@@ -1503,13 +1592,15 @@ async fn handle_tester_present_state(
 fn load_controller_capabilities(
     uds_manifest: &str,
     routine_manifest: &str,
+    deploy_targets_manifest: &str,
     veh_iface: &str,
 ) -> Result<BTreeMap<String, ControllerCapability>> {
     debug!(
-        "loading controller capabilities from uds_manifest='{}' routine_manifest='{}'",
-        uds_manifest, routine_manifest
+        "loading controller capabilities from uds_manifest='{}' routine_manifest='{}' deploy_targets_manifest='{}'",
+        uds_manifest, routine_manifest, deploy_targets_manifest
     );
     let config = UdsConfig::new(uds_manifest, routine_manifest)?;
+    let manual_recovery = load_manual_recovery_config(deploy_targets_manifest)?;
     let mut capabilities = BTreeMap::new();
     for (name, node) in config.nodes {
         let controller_name = name.to_ascii_lowercase();
@@ -1534,10 +1625,15 @@ fn load_controller_capabilities(
         capabilities.insert(
             controller_name.clone(),
             ControllerCapability {
-                name: controller_name,
+                name: controller_name.clone(),
                 request_id: node.request_id,
                 response_id: node.response_id,
                 uds_iface: veh_iface.to_string(),
+                supports_manual_recovery: manual_recovery.contains_key(&controller_name),
+                requires_manual_recovery: manual_recovery
+                    .get(&controller_name)
+                    .copied()
+                    .unwrap_or(false),
                 sessions: default_session_options(),
                 resets: default_reset_options(),
                 routines,
@@ -1545,6 +1641,38 @@ fn load_controller_capabilities(
         );
     }
     Ok(capabilities)
+}
+
+fn load_manual_recovery_config(manifest_path: &str) -> Result<BTreeMap<String, bool>> {
+    let raw = match fs::read_to_string(manifest_path) {
+        Ok(raw) => raw,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            warn!(
+                "deploy targets manifest '{}' not found; manual recovery controls disabled",
+                manifest_path
+            );
+            return Ok(BTreeMap::new());
+        }
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("reading deploy targets manifest '{}'", manifest_path));
+        }
+    };
+
+    let manifest: DeployTargetsManifest = serde_yaml::from_str(&raw)
+        .with_context(|| format!("parsing deploy targets manifest '{}'", manifest_path))?;
+
+    Ok(manifest
+        .targets
+        .into_iter()
+        .filter_map(|(node, target)| {
+            if target.kind == "uds" {
+                Some((node.to_ascii_lowercase(), target.requires_manual_recovery))
+            } else {
+                None
+            }
+        })
+        .collect())
 }
 
 fn is_supported_controller(controller_name: &str) -> bool {
@@ -1972,6 +2100,158 @@ async fn run_flash_job(
     let _ = fs::remove_file(&firmware_path);
 }
 
+async fn run_manual_recovery_job(
+    state: AppState,
+    capability: ControllerCapability,
+    job_id: String,
+) {
+    let detail = if capability.requires_manual_recovery {
+        "Recovering controller from baseline after manual-recovery gate".to_string()
+    } else {
+        "Recovering controller from baseline".to_string()
+    };
+    info!(
+        "starting manual recovery job '{}' for controller='{}' via ota-agent discovered from mDNS service '{}'",
+        job_id, capability.name, OTA_AGENT_SERVICE_NAME
+    );
+    {
+        let mut jobs = state.jobs.write().await;
+        jobs.mark_started(&job_id, detail);
+    }
+    let _ = state.publish_jobs_if_changed().await;
+
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(1))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+    let resolved_base_url = match resolve_ota_agent_base_url().await {
+        Ok(url) => url,
+        Err(error) => {
+            let mut jobs = state.jobs.write().await;
+            jobs.mark_failed(
+                &job_id,
+                format!("Failed to discover ota-agent over mDNS: {error}"),
+                None,
+                None,
+            );
+            drop(jobs);
+            let _ = state.publish_jobs_if_changed().await;
+            return;
+        }
+    };
+    let url = format!("{}/ota/revert", resolved_base_url);
+    info!(
+        "sending manual recovery request for controller='{}' to {}",
+        capability.name, url
+    );
+
+    match client
+        .post(&url)
+        .query(&[("node", capability.name.as_str())])
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            info!(
+                "manual recovery response for controller='{}' returned HTTP {}",
+                capability.name, status
+            );
+            if status.is_success() {
+                match response.text().await {
+                    Ok(body) => match serde_json::from_str::<OtaAgentRecoverReply>(&body) {
+                        Ok(payload) => {
+                            {
+                                let mut jobs = state.jobs.write().await;
+                                jobs.mark_succeeded(
+                                    &job_id,
+                                    format!(
+                                        "Recovery completed for {} with status {}",
+                                        payload.node, payload.status
+                                    ),
+                                    None,
+                                    None,
+                                );
+                            }
+                            let _ = state.publish_jobs_if_changed().await;
+                            return;
+                        }
+                        Err(error) => {
+                            let mut jobs = state.jobs.write().await;
+                            jobs.mark_failed(
+                                &job_id,
+                                format!(
+                                    "Recovery succeeded from {} but response parsing failed: {}",
+                                    resolved_base_url, error
+                                ),
+                                None,
+                                None,
+                            );
+                        }
+                    },
+                    Err(error) => {
+                        let mut jobs = state.jobs.write().await;
+                        jobs.mark_failed(
+                            &job_id,
+                            format!(
+                                "Recovery succeeded from {} but response read failed: {}",
+                                resolved_base_url, error
+                            ),
+                            None,
+                            None,
+                        );
+                    }
+                }
+            } else {
+                let error = ota_agent_error_message(status, response).await;
+                let mut jobs = state.jobs.write().await;
+                jobs.mark_failed(&job_id, error, None, None);
+            }
+        }
+        Err(error) => {
+            let mut jobs = state.jobs.write().await;
+            jobs.mark_failed(
+                &job_id,
+                format!("error sending request for url ({}): {}", url, error),
+                None,
+                None,
+            );
+        }
+    }
+
+    let _ = state.publish_jobs_if_changed().await;
+}
+
+async fn resolve_ota_agent_base_url() -> Result<String> {
+    let discovered = tokio::task::spawn_blocking(|| {
+        let client = MdnsClient::new(
+            None,
+            Some(Duration::from_secs(OTA_AGENT_DISCOVERY_TIMEOUT_SECS)),
+        )?;
+        client.discover(DiscoveryFilter {
+            service_type: Some(OTA_AGENT_SERVICE_NAME.to_string()),
+            host_name: None,
+        })
+    })
+    .await
+    .context("joining mDNS discovery task")?
+    .context("discovering ota-agent service")?;
+
+    let address = discovered
+        .addresses
+        .iter()
+        .find(|addr| addr.is_ipv4())
+        .or_else(|| discovered.addresses.first())
+        .copied()
+        .context("ota-agent mDNS record had no addresses")?;
+
+    info!(
+        "resolved ota-agent mDNS service '{}' to {}:{} (host='{}')",
+        OTA_AGENT_SERVICE_NAME, address, discovered.port, discovered.host_name
+    );
+    Ok(format!("http://{}:{}", address, discovered.port))
+}
+
 async fn run_tester_present_job(
     state: AppState,
     capability: ControllerCapability,
@@ -2269,6 +2549,20 @@ fn json_tester_present_state_response(
 
 fn json_current_session_response(body: CurrentSessionResponse) -> warp::reply::Response {
     warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+async fn ota_agent_error_message(status: HttpStatusCode, response: reqwest::Response) -> String {
+    match response.text().await {
+        Ok(body) => match serde_json::from_str::<OtaAgentErrorReply>(&body) {
+            Ok(payload) => payload
+                .error
+                .filter(|value| !value.is_empty())
+                .map(|error| format!("Manual recovery failed ({status}): {error}"))
+                .unwrap_or_else(|| format!("Manual recovery failed with status {status}")),
+            Err(_) => format!("Manual recovery failed with status {status}"),
+        },
+        Err(_) => format!("Manual recovery failed with status {status}"),
+    }
 }
 
 fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl Reply {

@@ -247,6 +247,8 @@ enum DeployTarget {
         response_id: u32,
         artifact: DeclaredArtifact,
         #[serde(default)]
+        requires_manual_recovery: bool,
+        #[serde(default)]
         stop_services: Vec<String>,
         #[serde(default)]
         start_services: Vec<String>,
@@ -595,7 +597,7 @@ async fn main() -> Result<()> {
                 Some(s) => s.parse().with_context(|| format!("parsing ip {}", s))?,
                 None => IpAddr::V4(find_interface_ipv4(server.interface.as_deref().unwrap())?),
             };
-            let addr = SocketAddr::new(ip, server.port);
+            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), server.port);
 
             start_mdns_advertisement(
                 server.interface.clone().unwrap_or_else(default_iface_name),
@@ -2138,6 +2140,13 @@ async fn flash_node(
     lock: &Arc<tokio::sync::Mutex<()>>,
     force: bool,
 ) -> UpdateResult {
+    info!(
+        "flash_node: node='{}' bus='{}' binary='{}' force={}",
+        node,
+        bus,
+        binary.display(),
+        force
+    );
     if let Err(e) = lock_manifest_node(&manifest_path, &node, &lock).await {
         return UpdateResult {
             bin: binary.into(),
@@ -2695,6 +2704,7 @@ async fn reconcile_flashing_nodes_on_startup(
             request_id,
             response_id,
             artifact,
+            requires_manual_recovery,
             ..
         } = state
             .cfg
@@ -2723,6 +2733,20 @@ async fn reconcile_flashing_nodes_on_startup(
                 action: "failed".to_string(),
                 status: "missing_baseline".to_string(),
                 error: Some("missing baseline firmware".to_string()),
+            });
+            continue;
+        }
+        if *requires_manual_recovery {
+            info!(
+                "Reconcile: skipping '{}' because requires_manual_recovery=true",
+                node
+            );
+            results.push(BootstrapNodeResult {
+                node: node.clone(),
+                kind: "uds".to_string(),
+                action: "skipped".to_string(),
+                status: "manual_recovery_required".to_string(),
+                error: None,
             });
             continue;
         }
@@ -3019,10 +3043,7 @@ async fn install_global_bundle(
     let mut enable_units = Vec::new();
     for target in state.cfg.targets.values() {
         match target {
-            DeployTarget::LocalPackage {
-                enable_services,
-                ..
-            } => {
+            DeployTarget::LocalPackage { enable_services, .. } => {
                 enable_units.extend(enable_services.iter().cloned());
             }
             DeployTarget::Uds { .. } => {}
@@ -3447,6 +3468,7 @@ async fn flash_handler(
             artifact,
             stop_services,
             start_services,
+            ..
         }) => {
             let (request_id, response_id) =
                 uds_ids_for_node(&state, &p.node, *request_id, *response_id)?;
@@ -3928,6 +3950,7 @@ async fn apply_bootstrap(
             artifact,
             stop_services: target_stop,
             start_services: target_start,
+            ..
         } = target
         {
             uds_targets.push((node.clone(), *request_id, *response_id, artifact.clone()));
@@ -4109,6 +4132,7 @@ async fn revert_handler(
     p: RevertParams,
     state: Arc<AppState>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
+    info!("HTTP revert request: node='{}'", p.node);
     validate_target(&state, &p.node)?;
 
     let target = get_target(&state, &p.node)
@@ -4163,6 +4187,7 @@ async fn revert_handler(
             artifact,
             stop_services,
             start_services,
+            ..
         } => {
             let (request_id, response_id) =
                 uds_ids_for_node(&state, &p.node, *request_id, *response_id)?;
@@ -4183,6 +4208,11 @@ async fn revert_handler(
                     format!("no baseline artifact available for '{}'", p.node),
                 )));
             }
+            info!(
+                "HTTP revert request: node='{}' using baseline='{}'",
+                p.node,
+                baseline_path.display()
+            );
             let _ = acquire_service_lease(&state, None, stop_services).await;
             let result = flash_node(
                 &state.can_device,
@@ -4192,9 +4222,14 @@ async fn revert_handler(
                 response_id,
                 &state.manifest_path,
                 &state.manifest_lock,
-                false,
+                true,
             )
             .await;
+            info!(
+                "HTTP revert result: node='{}' status={}",
+                p.node,
+                flash_status_label(&result.result)
+            );
             let _ = release_service_lease(&state, None, start_services).await;
             if matches!(result.result, FlashStatus::Failed(_)) {
                 return Err(warp::reject::custom(HttpError(
