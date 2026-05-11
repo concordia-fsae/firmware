@@ -5,6 +5,7 @@ load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
+load("//tools/c_unit:defs.bzl", "c_unit_test")
 load("//tools/yamcan/defs.bzl", "generate_code")
 load("//tools/hextools/defs.bzl", "inject_crc")
 load(
@@ -166,6 +167,71 @@ generate_code(
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
         "//components/vc/shared:headers",
+    ],
+)
+
+c_unit_test(
+    name = "app_gps_test",
+    run_name = "test-app-gps",
+    srcs = [
+        "tests/app_gps_test.c",
+        "//components/shared/code:app/app_gps.c",
+        "//components/shared/code:app/app_faultManager.c",
+        "//components/shared/code:DRV/drv_io.c",
+        "//components/shared/code:DRV/drv_outputAD.c",
+        "//components/shared/code:DRV/drv_timer.c",
+        "src/HW/drv_outputAD_componentSpecific.c",
+        ("//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]", ["-Wno-conversion"]),
+    ],
+    headers = {
+        "app_gps_stubs.h": "tests/app_gps_stubs.h",
+        "FeatureDefines_generated.h": "tests/app_gps_stubs.h",
+        "FreeRTOS.h": "tests/app_gps_stubs.h",
+        "HW_gpio.h": "tests/app_gps_stubs.h",
+        "HW_tim.h": "tests/app_gps_stubs.h",
+        "HW_uart.h": "tests/app_gps_stubs.h",
+        "task.h": "tests/app_gps_stubs.h",
+        "app_faultManager.h": "//components/shared/code:app/app_faultManager.h",
+        "app_gps.h": "//components/shared/code:app/app_gps.h",
+        "drv_io.h": "//components/shared/code:DRV/drv_io.h",
+        "drv_outputAD.h": "//components/shared/code:DRV/drv_outputAD.h",
+        "drv_timer.h": "//components/shared/code:DRV/drv_timer.h",
+        "lib_buffer.h": "//components/shared/code:libs/lib_buffer.h",
+        "lib_utility.h": "//components/shared/code:libs/lib_utility.h",
+        "LIB_FloatTypes.h": "//components/shared/code:libs/LIB_FloatTypes.h",
+        "LIB_Types.h": "//components/shared/code:libs/LIB_Types.h",
+        "Utility.h": "//components/shared/code:libs/Utility.h",
+        "CANTypes_generated.h": ":network-codegen[CANTypes_generated.h]",
+        "MessagePack_generated.h": ":network-codegen[MessagePack_generated.h]",
+        "MessageUnpack_generated.h": ":network-codegen[MessageUnpack_generated.h]",
+        "NetworkDefines_generated.h": ":network-codegen[NetworkDefines_generated.h]",
+        "SigRx.h": ":network-codegen[SigRx.h]",
+        "SigTx.h": ":network-codegen[SigTx.h]",
+        "TemporaryStubbing.h": ":network-codegen[TemporaryStubbing.h]",
+        "Yamcan.h": "//tools/yamcan:Yamcan.h",
+        "YamcanShared.h": ":network-codegen[YamcanShared.h]",
+        "YamcanTypes.h": "//tools/yamcan:YamcanTypes.h",
+        "HW_gpio_componentSpecific.h": "include/HW/HW_gpio_componentSpecific.h",
+        "drv_outputAD_componentSpecific.h": "include/HW/drv_outputAD_componentSpecific.h",
+        "lib_atomic.h": "//embedded/libs:lib_atomic.h",
+        "lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+        "lwgps/lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+        "lwgps/lwgps_opt.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps_opt.h]",
+        "lwgps_opts.h": "include/lwgps_opts.h",
+    },
+    compiler_flags = [
+        "-Wno-macro-redefined",
+        "-Wno-missing-field-initializers",
+        "-Wno-sync-fetch-and-nand-semantics-changed",
+        "-DAPP_GPS_TEST",
+        "-include",
+        "app_gps_stubs.h",
+    ],
+    linker_flags = [
+        "-lm",
+    ],
+    deps = [
+        "//components/shared/code/RTOS:headers",
     ],
 )
 

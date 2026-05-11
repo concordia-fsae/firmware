@@ -16,7 +16,7 @@ def c_unit_test(
     compiler_flags = compiler_flags if compiler_flags != None else []
     linker_flags = linker_flags if linker_flags != None else []
 
-    __rules__["cxx_binary"](
+    __rules__["cxx_test"](
         name = name,
         srcs = srcs,
         header_namespace = "",

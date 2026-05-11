@@ -98,3 +98,8 @@ uint16_t app_gps_getUartErrorFeCount(void);
 uint16_t app_gps_getUartErrorNeCount(void);
 uint16_t app_gps_getUartErrorPeCount(void);
 void app_gps_recordUartError(uint32_t errorCode);
+
+#if defined(APP_GPS_TEST)
+void app_gps_testInit(void);
+void app_gps_testParseSentence(const char* sentence);
+#endif

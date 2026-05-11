@@ -1,6 +1,6 @@
 load("//components/shared/code/defs.bzl", "remap_headers")
 
-srcs = glob(["**/*.c", "**/*_FeatureDefs.yaml"])
+srcs = glob(["**/*.c", "**/*.h", "**/*_FeatureDefs.yaml"], exclude = ["tests/**"])
 [
     export_file(
         name = file,

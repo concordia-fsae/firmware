@@ -621,6 +621,18 @@ static void app_gps_init(void)
 #endif // FEATURE_GPSTRANSCEIVER
 }
 
+#if defined(APP_GPS_TEST) && FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
+void app_gps_testInit(void)
+{
+    app_gps_init();
+}
+
+void app_gps_testParseSentence(const char* sentence)
+{
+    parse((uint8_t*)sentence, strlen(sentence));
+}
+#endif
+
 static void app_gps_periodic_100Hz(void)
 {
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
