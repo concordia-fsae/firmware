@@ -158,3 +158,11 @@ messages:
     sourceBuses: veh
     signals:
       packPower:
+  
+  missedDeadline:
+    description: BMS Boss missed deadline count
+    cycleTimeMs: 10
+    id: 0x5b1
+    sourceBuses: veh
+    signals:
+      taskDeadlineMiss:
