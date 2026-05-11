@@ -1,4 +1,4 @@
-load("//components/shared/code/defs.bzl", "remap_headers")
+load("//components/shared/code/defs.bzl", "remap_headers", "shared_lib_test")
 
 srcs = glob(["**/*.c", "**/*.h", "**/*_FeatureDefs.yaml"], exclude = ["tests/**"])
 [
@@ -24,4 +24,144 @@ prebuilt_cxx_library(
     header_namespace = "",
     exported_headers = exported_headers,
     visibility = ["PUBLIC"],
+)
+
+shared_lib_test(
+    name = "LIB_app_test",
+    srcs = [
+        "tests/libs/LIB_app_test.c",
+        "libs/LIB_app.c",
+    ],
+)
+
+shared_lib_test(
+    name = "LIB_FloatTypes_test",
+    srcs = [
+        "tests/libs/LIB_FloatTypes_test.c",
+    ],
+)
+
+shared_lib_test(
+    name = "LIB_Types_test",
+    srcs = [
+        "tests/libs/LIB_Types_test.c",
+    ],
+)
+
+shared_lib_test(
+    name = "Types_test",
+    srcs = [
+        "tests/libs/Types_test.c",
+    ],
+)
+
+shared_lib_test(
+    name = "Utility_test",
+    srcs = [
+        "tests/libs/Utility_test.c",
+        "libs/Utility.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_buffer_test",
+    srcs = [
+        "tests/libs/lib_buffer_test.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_interpolation_test",
+    srcs = [
+        "tests/libs/lib_interpolation_test.c",
+        "libs/lib_interpolation.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_linAlg_test",
+    srcs = [
+        "tests/libs/lib_linAlg_test.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_madgwick_test",
+    srcs = [
+        "tests/libs/lib_madgwick_test.c",
+        "libs/lib_madgwick.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_nvm_test",
+    srcs = [
+        "tests/libs/lib_nvm_test.c",
+        "libs/lib_nvm.c",
+        "//embedded/libs:libcrc.c",
+    ],
+    compiler_flags = [
+        "-DLIB_NVM_TEST",
+        "-D_GNU_SOURCE",
+        "-Wno-int-to-pointer-cast",
+        "-Wno-pointer-to-int-cast",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_pid_test",
+    srcs = [
+        "tests/libs/lib_pid_test.c",
+        "libs/lib_pid.c",
+        "libs/lib_simpleFilter.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_rateLimit_test",
+    srcs = [
+        "tests/libs/lib_rateLimit_test.c",
+        "libs/lib_rateLimit.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_simpleFilter_test",
+    srcs = [
+        "tests/libs/lib_simpleFilter_test.c",
+        "libs/lib_simpleFilter.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_swFuse_test",
+    srcs = [
+        "tests/libs/lib_swFuse_test.c",
+        "libs/lib_swFuse.c",
+        "DRV/drv_timer.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_thermistors_test",
+    srcs = [
+        "tests/libs/lib_thermistors_test.c",
+        "libs/lib_thermistors.c",
+        "libs/lib_utility.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_utility_test",
+    srcs = [
+        "tests/libs/lib_utility_test.c",
+        "libs/lib_utility.c",
+    ],
+)
+
+shared_lib_test(
+    name = "lib_voltageDivider_test",
+    srcs = [
+        "tests/libs/lib_voltageDivider_test.c",
+    ],
 )

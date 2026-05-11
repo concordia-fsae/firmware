@@ -1,0 +1,5 @@
+#pragma once
+
+#define LIB_APP_FLASH_START 0x08002000U
+#define LIB_APP_FLASH_END 0x08020000U
+

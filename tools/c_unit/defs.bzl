@@ -7,6 +7,7 @@ def c_unit_test(
         deps: list | None = None,
         compiler_flags: list | None = None,
         linker_flags: list | None = None,
+        coverage: bool = False,
         run_name: str | None = None,
         visibility: list = ["PUBLIC"],
         target_compatible_with: list = ["prelude//os/constraints:linux"],
@@ -15,6 +16,8 @@ def c_unit_test(
     deps = deps if deps != None else []
     compiler_flags = compiler_flags if compiler_flags != None else []
     linker_flags = linker_flags if linker_flags != None else []
+    coverage_compiler_flags = ["--coverage", "-O0", "-g"] if coverage else []
+    coverage_linker_flags = ["--coverage"] if coverage else []
 
     __rules__["cxx_test"](
         name = name,
@@ -26,8 +29,8 @@ def c_unit_test(
             "-Wall",
             "-Wextra",
             "-Werror",
-        ] + compiler_flags,
-        linker_flags = linker_flags,
+        ] + coverage_compiler_flags + compiler_flags,
+        linker_flags = coverage_linker_flags + linker_flags,
         deps = ["//embedded/libs:unity"] + deps,
         target_compatible_with = target_compatible_with,
         visibility = visibility,

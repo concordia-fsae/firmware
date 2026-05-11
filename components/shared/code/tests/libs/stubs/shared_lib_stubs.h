@@ -1,0 +1,18 @@
+#pragma once
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#define FEATURE_DISABLED 0U
+#define FEATURE_ENABLED 1U
+
+#define FEATURE_IS_ENABLED(feature) ((feature) == FEATURE_ENABLED)
+#define FEATURE_IS_DISABLED(feature) ((feature) == FEATURE_DISABLED)
+
+#define MCU_STM32_USE_HAL FEATURE_DISABLED
+
+#define APP_LIB_ENABLED FEATURE_ENABLED
+#define APP_VALIDATION_ENABLED FEATURE_ENABLED
+#define APP_VALIDATE_CRC_ENABLED FEATURE_DISABLED
+#define APP_NODE_ID FEATURE_ENABLED
+
