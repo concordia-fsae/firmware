@@ -80,10 +80,15 @@
 extern const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT];
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
+#if defined(LIB_NVM_TEST)
+storage_t *NVM_ORIGIN = NULL;
+storage_t *NVM_END = NULL;
+#else
 extern storage_t __FLASH_NVM_ORIGIN;
 extern storage_t __FLASH_NVM_END;
 storage_t * const NVM_ORIGIN = &__FLASH_NVM_ORIGIN;
 storage_t * const NVM_END = &__FLASH_NVM_END;
+#endif
 #endif
 
 /******************************************************************************
@@ -144,6 +149,24 @@ LIB_NVM_MEMORY_REGION_ARRAY(lib_nvm_recordHeader_S recordHeaders, NVM_ENTRYID_CO
 LIB_NVM_MEMORY_REGION(lib_nvm_blockHeader_S blockHeader) = { 0U };
 LIB_NVM_MEMORY_REGION(lib_nvm_nvmRecordLog_S recordLog) = { 0U };
 LIB_NVM_MEMORY_REGION(lib_nvm_nvmCycleLog_S cycleLog) = { 0U };
+
+#if defined(LIB_NVM_TEST)
+void lib_nvm_test_setFlashRange(storage_t* origin, storage_t* end)
+{
+    NVM_ORIGIN = origin;
+    NVM_END = end;
+}
+
+void lib_nvm_test_reset(void)
+{
+    memset(records, 0, sizeof(records));
+    memset(&data, 0, sizeof(data));
+    memset(recordHeaders, 0, sizeof(recordHeaders));
+    memset(&blockHeader, 0, sizeof(blockHeader));
+    memset(&recordLog, 0, sizeof(recordLog));
+    memset(&cycleLog, 0, sizeof(cycleLog));
+}
+#endif
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S

@@ -127,13 +127,14 @@ static inline void FLAG_setAll(uint16_t* name, uint16_t count)
     uint16_t numWords  = WORDS_FROM_COUNT(count);
     uint16_t extraBits = count % FLAG_bits_each;
 
-    if (numWords > 1U)
+    for (uint16_t word = 0U; word < numWords; word++)
     {
-        memset(name, 0xFF, (uint16_t)(numWords * FLAG_bits_each));
+        name[word] = 0xFFFFU;
     }
+
     if (extraBits > 0U)
     {
-        name[numWords] |= (0xFF >> (FLAG_bits_each - extraBits));
+        name[numWords - 1U] = (uint16_t)((1U << extraBits) - 1U);
     }
 }
 
@@ -160,7 +161,7 @@ static inline bool FLAG_any(uint16_t* name, uint16_t count)
 {
     for (uint16_t word = 0U; word < WORDS_FROM_COUNT(count); word++)
     {
-        if ((FLAG_GET_WORD(name, word) & 0xFF) != 0U)
+        if (name[word] != 0U)
         {
             return true;
         }
@@ -177,9 +178,14 @@ static inline bool FLAG_any(uint16_t* name, uint16_t count)
  */
 static inline bool FLAG_all(uint16_t* name, uint16_t count)
 {
-    for (uint16_t word = 0U; word < WORDS_FROM_COUNT(count); word++)
+    const uint16_t numWords = WORDS_FROM_COUNT(count);
+
+    for (uint16_t word = 0U; word < numWords; word++)
     {
-        if ((FLAG_GET_WORD(name, word) & 0xFF) != 0xFF)
+        const uint16_t extraBits = count % FLAG_bits_each;
+        const bool finalPartialWord = ((word + 1U) == numWords) && (extraBits != 0U);
+        const uint16_t mask = finalPartialWord ? (uint16_t)((1U << extraBits) - 1U) : 0xFFFFU;
+        if ((name[word] & mask) != mask)
         {
             return false;
         }
@@ -198,7 +204,7 @@ static inline bool FLAG_none(uint16_t* name, uint16_t count)
 {
     for (uint16_t word = 0U; word < WORDS_FROM_COUNT(count); word++)
     {
-        if ((FLAG_GET_WORD(name, word) & 0xFF) != 0U)
+        if (name[word] != 0U)
         {
             return false;
         }

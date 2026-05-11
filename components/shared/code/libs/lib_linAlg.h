@@ -107,7 +107,7 @@
     _Static_assert(ROWS(row) == COLS(col), "Vector size mismatch"); \
     do { \
         *(out) = 0; \
-        LIB_LINALG_MUL_RVECCVEC_SET(row, col, out); \
+        LIB_LINALG_MUL_RVECCVEC(row, col, out); \
     } while (0)
 
 /******************************************************************************

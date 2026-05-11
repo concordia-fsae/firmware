@@ -131,4 +131,9 @@ uint32_t lib_nvm_getTotalFailedRecordInit(void);
 uint32_t lib_nvm_getTotalEmptyRecordInit(void);
 uint32_t lib_nvm_getTotalRecordsVersionFailed(void);
 
+#if defined(LIB_NVM_TEST)
+void lib_nvm_test_setFlashRange(storage_t* origin, storage_t* end);
+void lib_nvm_test_reset(void);
+#endif
+
 #endif // NVM_LIB_ENABLED
