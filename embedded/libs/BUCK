@@ -93,6 +93,37 @@ git_fetch(
     visibility = ["PUBLIC"],
 )
 
+git_fetch(
+    name = "Unity",
+    repo = "https://github.com/ThrowTheSwitch/Unity.git",
+    rev = "cbcd08fa7de711053a3deec6339ee89cad5d2697",
+    sub_targets = [
+        "src/unity.c",
+        "src/unity.h",
+        "src/unity_internals.h",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+cxx_library(
+    name = "unity",
+    srcs = [
+        "//embedded/libs:Unity[src/unity.c]",
+    ],
+    header_namespace = "",
+    exported_headers = {
+        "unity.h": "//embedded/libs:Unity[src/unity.h]",
+        "unity_internals.h": "//embedded/libs:Unity[src/unity_internals.h]",
+    },
+    compiler_flags = [
+        "-std=c11",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
 export_file(
     name = "lib_atomic.h",
     src = "atomic/lib_atomic.h",
