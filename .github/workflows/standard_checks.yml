@@ -176,6 +176,27 @@ jobs:
         with:
           name: drive-tools-${{ matrix.runner }}
           path: builds/
+  c-unit-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Read Buck2 Version
+        id: buck2_version
+        shell: bash
+        run: |
+          buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
+          echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
+      - name: Install Buck2
+        uses: concordia-fsae/install-buck2@latest
+        with:
+          release: ${{ steps.buck2_version.outputs.buck2_version }}
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+      - name: Run C unit tests
+        run: buck2 test //components/...
   compare-cfr-embedded:
     strategy:
       fail-fast: false
