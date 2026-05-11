@@ -85,6 +85,7 @@ typedef struct
     bool odoSaved;
     bool wasValidGPS;
     uint64_t lastFrontWheelSampleBaseTick;
+    uint16_t countGgaPoses;
 #endif // FEATURE_VEHICLEPEED_LEADER
 } vehicle_S;
 
@@ -296,6 +297,7 @@ static void calculateVehicleSpeed(void)
     float32_t accelLon = 0.0f;
     float32_t anglePitch = 0.0f;
     int16_t motor_rpm = 0;
+    const uint16_t ggaPoses = app_gps_getSentenceCountGga();
     const bool accelValid = (CANRX_IMU_LON(&accelLon) == CANRX_MESSAGE_VALID);
     const bool angleValid = (CANRX_IMU_ANGLEPITCH(&anglePitch) == CANRX_MESSAGE_VALID);
     const bool motorValid = (CANRX_MOTOR_SPEED(&motor_rpm) == CANRX_MESSAGE_VALID);
@@ -319,10 +321,11 @@ static void calculateVehicleSpeed(void)
             speed = app_gps_getHeadingRef()->speedMps;
             vehicle.lpfSpeed.y = motorInReverse ? -speed : speed;
         }
-        else
+        else if (ggaPoses != vehicle.countGgaPoses)
         {
             const float32_t tmp = app_gps_getHeadingRef()->speedMps;
             speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -tmp : tmp);
+            vehicle.countGgaPoses = ggaPoses;
         }
     }
     if (hasValidFrontWheelReference() && getFreshFrontWheelReference(&frontWheelSampleBaseTick))
