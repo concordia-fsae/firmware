@@ -26,7 +26,7 @@
  ******************************************************************************/
 
 #define BUFFER_SIZE 2048U
-#define MAX_NMEA_SENTENCE 82U
+#define MAX_NMEA_SENTENCE 83U
 #define GPS_TIMEOUT_MS 2000U
 
 #define GPS_DEVICE_ERROR FM_FAULT_VCFRONT_GPSDEVICEERROR
@@ -110,6 +110,7 @@ static void updateGPS(void)
     gps.time.month = gps.currentGPS.month;
     gps.time.year = gps.currentGPS.year;
     gps.time.hours = gps.currentGPS.hours;
+    gps.time.minutes = gps.currentGPS.minutes;
     gps.time.seconds = gps.currentGPS.seconds;
 
     gps.gpsQuality = gps.currentGPS.fix;

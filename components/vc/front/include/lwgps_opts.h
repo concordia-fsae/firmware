@@ -135,7 +135,7 @@
  *
  * \note            When not enabled, CRC check is ignored
  */
-#define LWGPS_CFG_CRC 1
+#define LWGPS_CFG_CRC 0
 
 /**
  * \brief           Enables `1` or disables `0` distance and bearing calculation

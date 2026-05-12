@@ -83,8 +83,9 @@ typedef struct
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
     lib_simpleFilter_lpf_S lpfSpeed;
     bool odoSaved;
-    bool wasValidGPS;
+    float32_t gpsMps;
     uint64_t lastFrontWheelSampleBaseTick;
+    uint16_t countGgaPoses;
 #endif // FEATURE_VEHICLEPEED_LEADER
 } vehicle_S;
 
@@ -296,6 +297,7 @@ static void calculateVehicleSpeed(void)
     float32_t accelLon = 0.0f;
     float32_t anglePitch = 0.0f;
     int16_t motor_rpm = 0;
+    const uint16_t ggaPoses = app_gps_getSentenceCountGga();
     const bool accelValid = (CANRX_IMU_LON(&accelLon) == CANRX_MESSAGE_VALID);
     const bool angleValid = (CANRX_IMU_ANGLEPITCH(&anglePitch) == CANRX_MESSAGE_VALID);
     const bool motorValid = (CANRX_MOTOR_SPEED(&motor_rpm) == CANRX_MESSAGE_VALID);
@@ -312,19 +314,16 @@ static void calculateVehicleSpeed(void)
         speed += accelAlongAxis * delta_t;
     }
 
-    if (validGPS)
+    const float32_t gpsMps = app_gps_getHeadingRef()->speedMps;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+    if ((validGPS) && (ggaPoses != vehicle.countGgaPoses) && (gpsMps != vehicle.gpsMps) && (gpsMps > 1.0f))
     {
-        if (!vehicle.wasValidGPS)
-        {
-            speed = app_gps_getHeadingRef()->speedMps;
-            vehicle.lpfSpeed.y = motorInReverse ? -speed : speed;
-        }
-        else
-        {
-            const float32_t tmp = app_gps_getHeadingRef()->speedMps;
-            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -tmp : tmp);
-        }
+        vehicle.gpsMps = gpsMps;
+        vehicle.countGgaPoses = ggaPoses;
+        speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -gpsMps : gpsMps);
     }
+#pragma GCC diagnostic pop
     if (hasValidFrontWheelReference() && getFreshFrontWheelReference(&frontWheelSampleBaseTick))
     {
         const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
@@ -354,7 +353,6 @@ static void calculateVehicleSpeed(void)
     }
 
     vehicle.lastTimestampMS = currentTime;
-    vehicle.wasValidGPS = validGPS;
     app_faultManager_setFaultState(FM_FAULT_VCFRONT_VEHICLESPEEDDEGRADED, !validGPS || !hasValidFrontWheelReference());
 #else // FEATURE_VEHICLEPEED_LEADER
     float32_t tmp = 0.0f;
