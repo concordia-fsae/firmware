@@ -83,7 +83,7 @@ typedef struct
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
     lib_simpleFilter_lpf_S lpfSpeed;
     bool odoSaved;
-    bool wasValidGPS;
+    float32_t gpsMps;
     uint64_t lastFrontWheelSampleBaseTick;
     uint16_t countGgaPoses;
 #endif // FEATURE_VEHICLEPEED_LEADER
@@ -314,20 +314,16 @@ static void calculateVehicleSpeed(void)
         speed += accelAlongAxis * delta_t;
     }
 
-    if (validGPS)
+    const float32_t gpsMps = app_gps_getHeadingRef()->speedMps;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfloat-equal"
+    if ((validGPS) && (ggaPoses != vehicle.countGgaPoses) && (gpsMps != vehicle.gpsMps) && (gpsMps > 1.0f))
     {
-        if (!vehicle.wasValidGPS)
-        {
-            speed = app_gps_getHeadingRef()->speedMps;
-            vehicle.lpfSpeed.y = motorInReverse ? -speed : speed;
-        }
-        else if (ggaPoses != vehicle.countGgaPoses)
-        {
-            const float32_t tmp = app_gps_getHeadingRef()->speedMps;
-            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -tmp : tmp);
-            vehicle.countGgaPoses = ggaPoses;
-        }
+        vehicle.gpsMps = gpsMps;
+        vehicle.countGgaPoses = ggaPoses;
+        speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -gpsMps : gpsMps);
     }
+#pragma GCC diagnostic pop
     if (hasValidFrontWheelReference() && getFreshFrontWheelReference(&frontWheelSampleBaseTick))
     {
         const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
@@ -357,7 +353,6 @@ static void calculateVehicleSpeed(void)
     }
 
     vehicle.lastTimestampMS = currentTime;
-    vehicle.wasValidGPS = validGPS;
     app_faultManager_setFaultState(FM_FAULT_VCFRONT_VEHICLESPEEDDEGRADED, !validGPS || !hasValidFrontWheelReference());
 #else // FEATURE_VEHICLEPEED_LEADER
     float32_t tmp = 0.0f;
