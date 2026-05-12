@@ -29,9 +29,10 @@
 #include "drv_tps2hb16ab.h"
 #include "drv_hsd.h"
 #include "drv_io.h"
+#include "drv_timer.h"
+#include "drv_currentSense.h"
 #include "string.h"
 #include "HW_adc.h"
-#include "drv_timer.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -96,7 +97,7 @@ void drv_tps2hb16ab_run(void)
             else
             {
                 const float32_t current = drv_tps2hb16ab_data.state[i][selected_channel] == DRV_HSD_STATE_ON ?
-                                          cs_voltage * drv_tps2hb16ab_ics[i].cs_amp_per_volt :
+                                          drv_currentSense_voltageToCurrent(cs_voltage, drv_tps2hb16ab_ics[i].cs_amp_per_volt) :
                                           0.0f;
                 drv_tps2hb16ab_data.current[i][selected_channel] = current;
             }
