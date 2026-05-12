@@ -36,7 +36,7 @@
 #define IMU_TIMEOUT_MS 1000U
 #define IMU_SELFTEST_TIMEOUT_MS 500U
 #define BASELINE_SAMPLES 500U
-#define MADGWICK_BETA 0.01f
+#define MADGWICK_BETA 0.4f
 #define IMU_YAW_CAL_MIN_TILT_DEG 5.0f
 
 #define IMU_SELFTEST_ACCEL_MIN_MPS2 (GRAVITY * 0.040f)
@@ -543,8 +543,8 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
     // Dynamically reduce beta when accel magnitude deviates from 1g.
     LIB_LINALG_GETNORM_CVEC((drv_imu_vector_S*)a, &norm);
     const float32_t delta = fabsf(norm - GRAVITY) / GRAVITY;
-    const float32_t bandStart = 0.05f; // full correction within +/-5%
-    const float32_t bandEnd = 0.25f;   // min correction beyond +/-10%
+    const float32_t bandStart = 0.01f; // full correction within +/-1%
+    const float32_t bandEnd = 0.10f;   // min correction beyond +/-10%
     const float32_t minScale = 0.001f;  // keep some correction
     float32_t scale = 1.0f;
     if (delta > bandStart)
@@ -561,7 +561,7 @@ static void updateMadgwick(lib_madgwick_S* f, lib_madgwick_euler_S* g, lib_madgw
     }
 
     const float32_t baseBeta = f->beta;
-    f->beta = baseBeta * scale;
+    f->beta = baseBeta * scale * scale;
     madgwick_update_imu(f, g, a, dt);
     f->beta = baseBeta;
     imu.lastCycle_us = currentTime;
