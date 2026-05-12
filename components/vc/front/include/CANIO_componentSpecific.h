@@ -32,6 +32,7 @@
 #include "app_vehicleState.h"
 #include "app_faultManager.h"
 #include "vd.h"
+#include "brakeTemp.h"
 
 /******************************************************************************
  *                              D E F I N E S
@@ -164,3 +165,8 @@
 #else
 # define transmit_VCFRONT_nvmInformation               false
 #endif
+#define set_brakeTempFL(m,b,n,s)        set(m,b,n,s, brakeTemp_getTemperature(BRAKETEMP_LEFT))
+#define set_brakeTempFLVoltage(m,b,n,s) set(m,b,n,s, brakeTemp_getVoltage(BRAKETEMP_LEFT))
+#define set_brakeTempFR(m,b,n,s)        set(m,b,n,s, brakeTemp_getTemperature(BRAKETEMP_RIGHT))
+#define set_brakeTempFRVoltage(m,b,n,s) set(m,b,n,s, brakeTemp_getVoltage(BRAKETEMP_RIGHT))
+

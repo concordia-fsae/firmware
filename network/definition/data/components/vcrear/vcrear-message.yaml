@@ -120,3 +120,14 @@ messages:
         template: wheelSpeedRotational
       axleSpeedRear:
         template: wheelSpeedRotational
+  brTempRear:
+    description: Rear Rotor Temperatures
+    id: 0x462
+    cycleTimeMs: 500
+    sourceBuses: veh
+    signals:
+      brakeTempRL:
+      brakeTempRR:
+      brakeTempRLVoltage:
+      brakeTempRRVoltage:
+

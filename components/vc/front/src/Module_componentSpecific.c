@@ -37,8 +37,9 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &steeringAngle_desc,
     &shockpot_desc,
     &sys_desc,
+    &brakeTemp_desc,
     &CANIO_tx,
-};
+    };
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S

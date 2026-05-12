@@ -192,3 +192,30 @@ signals:
       endianness: little
       signedness: signed
     continuous: true
+  brakeTempRL:
+    description: Rotor Temp of Rear Left Rotor
+    unit: 'deg'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+      resolution: 1
+    continuous: true
+  brakeTempRLVoltage:
+    description: Voltage of RL brake temp sensors
+    template: voltsPrecise
+  brakeTempRR:
+    description: Rotor Temp of Rear Right Rotor
+    unit: 'deg'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+      resolution: 1
+    continuous: true
+  brakeTempRRVoltage:
+    description: Voltage of RR brake temp sensors
+    template: voltsPrecise
+

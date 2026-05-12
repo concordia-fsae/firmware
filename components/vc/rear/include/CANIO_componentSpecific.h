@@ -28,6 +28,7 @@
 #include "app_vehicleSpeed.h"
 #include "app_faultManager.h"
 #include "drv_inputAD.h"
+#include "brakeTemp.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -68,3 +69,7 @@
 #define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
 #define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))
 #define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
+#define set_brakeTempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getTemperature(BRAKETEMP_LEFT))
+#define set_brakeTempRLVoltage(m,b,n,s) set(m,b,n,s, brakeTemp_getVoltage(BRAKETEMP_LEFT))
+#define set_brakeTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getTemperature(BRAKETEMP_RIGHT))
+#define set_brakeTempRRVoltage(m,b,n,s) set(m,b,n,s, brakeTemp_getVoltage(BRAKETEMP_RIGHT))
