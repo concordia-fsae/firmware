@@ -959,7 +959,7 @@ signals:
     description: Measured Motor Speed
     nativeRepresentation:
       bitWidth: 16
-      resolution: 1
+      resolution: -1 # Motor is backward
       range:
         min: -32768
         max: 32767
@@ -971,7 +971,7 @@ signals:
     description: Measured Motor Speed
     nativeRepresentation:
       bitWidth: 16
-      resolution: 1
+      resolution: -1 # Motor is backward
       range:
         min: -32768
         max: 32767
