@@ -1,5 +1,5 @@
 /**
- RX_config* CAN.h
+ * RX_config* CAN.h
  * Header file for CANRX configuration
  */
 
@@ -35,7 +35,7 @@ void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
             return;
         }
     }
-#endif
+#endif // if APP_VARIANT_ID == 0U
 
     switch (bus)
     {
@@ -47,6 +47,7 @@ void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
         case CAN_BUS_VEH:
             CANRX_VEH_unpackMessage(id, data);
             break;
+
         default:
             break;
     }
@@ -55,6 +56,7 @@ void CANRX_unpackMessage(CAN_bus_E bus, uint32_t id, CAN_data_T *data)
 uint8_t CANIO_tx_getNLG513ControlByte(void)
 {
     uint8_t ret = 0x00;
+
     switch (BMS.contacts)
     {
         case BMS_CONTACTORS_PRECHARGE:
@@ -102,6 +104,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void)
 uint8_t CANIO_tx_getElconControlByte(void)
 {
     uint8_t ret = 0x01;
+
     if (BMS.contacts == BMS_CONTACTORS_HVP_CLOSED)
     {
         ret = 0x00;

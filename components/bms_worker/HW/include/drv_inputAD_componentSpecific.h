@@ -6,7 +6,7 @@
 #pragma once
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef enum
@@ -43,7 +43,7 @@ typedef enum
     DRV_INPUTAD_ANALOG_MUX3_CH6,
     DRV_INPUTAD_ANALOG_MUX3_CH7,
     DRV_INPUTAD_ANALOG_MUX3_CH8,
-#endif
+#endif // if APP_VARIANT_ID == 0U
     // All cell voltages must be sequential and ordered
     DRV_INPUTAD_ANALOG_CELL1,
     DRV_INPUTAD_ANALOG_CELL2,

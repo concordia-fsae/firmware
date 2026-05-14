@@ -21,8 +21,8 @@ typedef I2C_HandleTypeDef HW_I2C_Handle_T;
 
 typedef struct
 {
-    HW_I2C_Handle_T* handle;
-    uint16_t         addr;
+    HW_I2C_Handle_T * handle;
+    uint16_t        addr;
 } HW_I2C_Device_S;
 
 /******************************************************************************

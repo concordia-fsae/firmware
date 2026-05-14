@@ -10,43 +10,43 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
-#include "Yamcan.h"
-#include "Utility.h"
 #include "lib_nvm.h"
+#include "LIB_Types.h"
+#include "Utility.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TC_MAX 0.7f // Handle heavy slip conditions
-#define TC_ILIM 0.55f // Allow heavy integral limits in sustained slip with leak
+#define TC_MAX                        0.7f  // Handle heavy slip conditions
+#define TC_ILIM                       0.55f // Allow heavy integral limits in sustained slip with leak
 // Cutoff: TC_MAX. Point of full cutoff: 50% slip error
 // 70% aggressivity (vibes)
-#define TC_KP ((TC_MAX / 0.5f) * 0.7f)
+#define TC_KP                         ((TC_MAX / 0.5f) * 0.7f)
 // Ki = Kp / tIntegrator
 // Ki = TC_KP / 0.250
-#define TC_KI (4 * TC_KP)
+#define TC_KI                         (4 * TC_KP)
 // Kd = Kp * tDerivative
 // Kd = TC_KP * 0.100
-#define TC_KD (0.1f * TC_KP)
-#define TC_DTERM_LPF_CUTOFF_FREQ 100
-#define TC_ILEAK_MS 500U
+#define TC_KD                         (0.1f * TC_KP)
+#define TC_DTERM_LPF_CUTOFF_FREQ      100
+#define TC_ILEAK_MS                   500U
 
-#define TC_PID_CONV_PERCENT_F32(x) (((float32_t)x) / 100.0f)
-#define TC_PID_CONV_THOU_F32(x) (((float32_t)x) / 1000.0f)
-#define TC_PID_CONV_PERCENT_U8(x) (x * 100U)
-#define TC_PID_CONV_THOU_U16(x) (x * 1000U)
-#define TC_SET_DEFAULT_PID(decl) \
-    decl = { \
-        .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_MAX), \
-        .percentILim = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_ILIM), \
-        .thousandthKp = (uint16_t)TC_PID_CONV_THOU_U16(TC_KP), \
-        .thousandthKi = (uint16_t)TC_PID_CONV_THOU_U16(TC_KI), \
-        .thousandthKd = (uint16_t)TC_PID_CONV_THOU_U16(TC_KD), \
-        .tLeakMs = TC_ILEAK_MS, \
-        .spare = { 0U }, \
-    };
+#define TC_PID_CONV_PERCENT_F32(x)    (((float32_t)x) / 100.0f)
+#define TC_PID_CONV_THOU_F32(x)       (((float32_t)x) / 1000.0f)
+#define TC_PID_CONV_PERCENT_U8(x)     (x * 100U)
+#define TC_PID_CONV_THOU_U16(x)       (x * 1000U)
+#define TC_SET_DEFAULT_PID(decl)                                           \
+        decl                   = {                                         \
+            .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_MAX),  \
+            .percentILim       = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_ILIM), \
+            .thousandthKp      = (uint16_t)TC_PID_CONV_THOU_U16(TC_KP),    \
+            .thousandthKi      = (uint16_t)TC_PID_CONV_THOU_U16(TC_KI),    \
+            .thousandthKd      = (uint16_t)TC_PID_CONV_THOU_U16(TC_KD),    \
+            .tLeakMs           = TC_ILEAK_MS,                              \
+            .spare             = { 0U },                                   \
+        };
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -110,8 +110,8 @@ extern nvm_tcParamState_S tcParamState_data;
 
 typedef struct
 {
-    uint8_t percentMaxTcLimit;
-    uint8_t percentILim;
+    uint8_t  percentMaxTcLimit;
+    uint8_t  percentILim;
     uint16_t thousandthKp;
     uint16_t thousandthKi;
     uint16_t thousandthKd;

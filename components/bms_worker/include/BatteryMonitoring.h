@@ -70,7 +70,7 @@ typedef struct
         float32_t max;
         float32_t min;
         float32_t avg;
-    } voltage;         // [V], precision 1V
+    } voltage;    // [V], precision 1V
 } BMS_S;
 
 /******************************************************************************
@@ -83,8 +83,8 @@ extern BMS_S BMS;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void BMS_setOutputCell(MAX_selectedCell_E cell);
-void BMS_toSleep(void);
-void BMS_wakeUp(void);
+void               BMS_setOutputCell(MAX_selectedCell_E cell);
+void               BMS_toSleep(void);
+void               BMS_wakeUp(void);
 MAX_selectedCell_E BMS_getCurrentOutputCell(void);
-void BMS_measurementComplete(void);
+void               BMS_measurementComplete(void);

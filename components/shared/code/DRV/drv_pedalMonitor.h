@@ -1,7 +1,7 @@
 /**
  * @file drv_pedalMonitor.h
  * @brief Header file for pedal monitor
- * @note Pedal positon is a float percentage between 0.0f and 1.0f where 
+ * @note Pedal positon is a float percentage between 0.0f and 1.0f where
  *       0.0f is 0% and 1.0f is 100%
  *
  * Setup
@@ -25,10 +25,10 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_pedalMonitor_componentSpecific.h"
-#include "LIB_Types.h"
 #include "drv_inputAD.h"
+#include "drv_pedalMonitor_componentSpecific.h"
 #include "lib_interpolation.h"
+#include "LIB_Types.h"
 #include "Yamcan.h"
 
 /******************************************************************************
@@ -57,7 +57,7 @@ typedef struct
         {
             drv_inputAD_channelAnalog_E channel;
             float32_t                   fault_high; // When the measured voltage is above this, fault
-            float32_t                   fault_low; // When the voltage is below this, fault
+            float32_t                   fault_low;  // When the voltage is below this, fault
             lib_interpolation_mapping_S pedal_map;
         } analog;
         CANRX_MESSAGE_health_E (*canrx_getPedalPosition)(float32_t* percentage);

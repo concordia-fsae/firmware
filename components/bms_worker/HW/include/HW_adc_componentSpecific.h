@@ -9,19 +9,19 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "HW.h"
 #include "BuildDefines.h"
+#include "HW.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_REF_VOLTAGE 3.0f
+#define ADC_REF_VOLTAGE    3.0f
 
 #if APP_VARIANT_ID == 0U
-#define HW_ADC_BUF_LEN  48U
+# define HW_ADC_BUF_LEN    48U
 #elif APP_VARIANT_ID == 1U
-#define HW_ADC_BUF_LEN  56U
+# define HW_ADC_BUF_LEN    56U
 #endif
 
 /******************************************************************************

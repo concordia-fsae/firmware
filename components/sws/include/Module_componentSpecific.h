@@ -37,5 +37,5 @@ typedef enum
     MODULE_SCREENMANAGER,
     MODULE_SYS,
     MODULE_CANIO_tx,
-    MODULE_CNT
+    MODULE_CNT,
 } Module_tasks_E;

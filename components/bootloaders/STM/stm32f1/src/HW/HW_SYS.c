@@ -28,13 +28,13 @@ extern const uint32_t __app_crc_addr;
 
 __attribute__((section(".appDescriptor")))
 const lib_app_appDesc_S hwDesc = {
-    .appStart = (const uint32_t)&__app_start_addr,
-    .appEnd = (const uint32_t)&__app_end_addr,
+    .appStart       = (const uint32_t)&__app_start_addr,
+    .appEnd         = (const uint32_t)&__app_end_addr,
     .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appComponentId = APP_COMPONENT_ID,
-    .appVariantId = APP_VARIANT_ID,
+    .appVariantId   = APP_VARIANT_ID,
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
-    .appNodeId = NODE_ID,
+    .appNodeId      = NODE_ID,
 #endif // APP_NODE_ID
 };
 

@@ -7,17 +7,17 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "YamcanShared.h"
 #include "YamcanConfig.h"
+#include "YamcanShared.h"
 
 #include <string.h>
 
 #if defined(YAMCAN_USE_SHM)
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
+# include <errno.h>
+# include <fcntl.h>
+# include <sys/mman.h>
+# include <sys/stat.h>
+# include <unistd.h>
 #endif
 
 /******************************************************************************
@@ -25,7 +25,7 @@
  ******************************************************************************/
 
 YamcanShared YAMCAN_SHARED_SECTION g_yamcan_static;
-YamcanShared *g_yamcan = &g_yamcan_static;
+YamcanShared                       *g_yamcan = &g_yamcan_static;
 
 void YAMCAN_shared_init_static(void)
 {
@@ -37,7 +37,7 @@ int YAMCAN_shared_init_shm(const char *name)
 {
 #if defined(YAMCAN_USE_SHM)
     const size_t size = sizeof(YamcanShared);
-    int fd = shm_open(name, O_RDWR | O_CREAT, 0666);
+    int          fd   = shm_open(name, O_RDWR | O_CREAT, 0666);
     if (fd < 0)
     {
         return -1;
@@ -55,10 +55,9 @@ int YAMCAN_shared_init_shm(const char *name)
     }
     g_yamcan = (YamcanShared *)ptr;
     return 0;
-#else
+#else // if defined(YAMCAN_USE_SHM)
     (void)name;
     return -1;
-#endif
+#endif // if defined(YAMCAN_USE_SHM)
 }
-
 

@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
 #include "lib_simpleFilter.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -18,21 +18,21 @@
 
 typedef struct
 {
-    float32_t kp;
-    float32_t ki;
-    float32_t kd;
+    float32_t              kp;
+    float32_t              ki;
+    float32_t              kd;
 
-    float32_t x;
-    float32_t x_1;
+    float32_t              x;
+    float32_t              x_1;
 
-    float32_t p_term;
-    float32_t i_term;
-    float32_t d_term;
+    float32_t              p_term;
+    float32_t              i_term;
+    float32_t              d_term;
 
     lib_simpleFilter_lpf_S filterDTerm;
-    float32_t cutoffFreqDTerm;
+    float32_t              cutoffFreqDTerm;
 
-    float32_t y;
+    float32_t              y;
 } lib_pid_S;
 
 /******************************************************************************

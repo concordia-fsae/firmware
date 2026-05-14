@@ -14,17 +14,17 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TIMER_BASE_TICK 1000000U
-#define SEC_TO_BASETICK(s) ((s) * TIMER_BASE_TICK)
-#define MS_TO_BASETICK(ms) ((ms) * (TIMER_BASE_TICK / 1000U))
+#define TIMER_BASE_TICK          1000000U
+#define SEC_TO_BASETICK(s)       ((s) * TIMER_BASE_TICK)
+#define MS_TO_BASETICK(ms)       ((ms) * (TIMER_BASE_TICK / 1000U))
 
-#define TICK_PER_REV 16U
-#define UPDATE_PER_REV 8U
-#define WHEELSPEED_TIMEOUT_MS 500U
+#define TICK_PER_REV             16U
+#define UPDATE_PER_REV           8U
+#define WHEELSPEED_TIMEOUT_MS    500U
 
-#define NUM_TIM_SAMPLES 2U
-#define CURRENT_SAMPLE (NUM_TIM_SAMPLES - 1U)
-#define LAST_SAMPLE (NUM_TIM_SAMPLES - 2U)
+#define NUM_TIM_SAMPLES          2U
+#define CURRENT_SAMPLE           (NUM_TIM_SAMPLES - 1U)
+#define LAST_SAMPLE              (NUM_TIM_SAMPLES - 2U)
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -49,13 +49,13 @@ static wheelSpeed_data_S wheelSpeed;
  */
 HW_StatusTypeDef_E HW_TIM_init(void)
 {
-    TIM_ClockConfigTypeDef  sClockSourceConfig = { 0 };
-    TIM_IC_InitTypeDef      sConfigIC          = { 0 };
-    uint32_t                uwTimclock         = 0;
+    TIM_ClockConfigTypeDef sClockSourceConfig = { 0 };
+    TIM_IC_InitTypeDef     sConfigIC          = { 0 };
+    uint32_t               uwTimclock         = 0;
 
     __HAL_RCC_TIM4_CLK_ENABLE();
 
-    uwTimclock                   = HAL_RCC_GetPCLK2Freq();
+    uwTimclock                                          = HAL_RCC_GetPCLK2Freq();
     htim[HW_TIM_PORT_WHEELSPEED].Instance               = TIM4;
     htim[HW_TIM_PORT_WHEELSPEED].Init.Prescaler         = (uwTimclock / TIMER_BASE_TICK) - 1;
     htim[HW_TIM_PORT_WHEELSPEED].Init.CounterMode       = TIM_COUNTERMODE_UP;
@@ -78,7 +78,7 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     }
     sConfigIC.ICPolarity  = TIM_INPUTCHANNELPOLARITY_RISING;
     sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-    sConfigIC.ICPrescaler = TIM_ICPSC_DIV2; // Driven by WHEELSPEED_TICK_PER_REV / UPDATE_PER_REV
+    sConfigIC.ICPrescaler = TIM_ICPSC_DIV2;    // Driven by WHEELSPEED_TICK_PER_REV / UPDATE_PER_REV
     sConfigIC.ICFilter    = 0;
     if (HAL_TIM_IC_ConfigChannel(&htim[HW_TIM_PORT_WHEELSPEED], &sConfigIC, TIM_CHANNEL_3) != HAL_OK)
     {
@@ -126,6 +126,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
             }
             wheelSpeed.lastSample[HW_TIM_CHANNEL_WS_R][CURRENT_SAMPLE] = HW_TIM_getBaseTick();
             break;
+
         case HAL_TIM_ACTIVE_CHANNEL_4:
             for (uint8_t i = 1; i < NUM_TIM_SAMPLES; i++)
             {
@@ -133,6 +134,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
             }
             wheelSpeed.lastSample[HW_TIM_CHANNEL_WS_L][CURRENT_SAMPLE] = HW_TIM_getBaseTick();
             break;
+
         default:
             break;
     }

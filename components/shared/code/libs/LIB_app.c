@@ -12,14 +12,14 @@
 #if FEATURE_IS_ENABLED(APP_LIB_ENABLED)
 __attribute__((weak)) void _init(void){}
 
-#if FEATURE_IS_ENABLED(APP_VALIDATION_ENABLED)
-#include "LIB_app_config.h"
+# if FEATURE_IS_ENABLED(APP_VALIDATION_ENABLED)
+#  include "LIB_app_config.h"
 
 bool lib_app_validateAppDesc(const lib_app_appDesc_S * const appDesc, const lib_app_appDescValid_E validation)
 {
     bool ret = false;
 
-    switch(validation)
+    switch (validation)
     {
         case APPDESC_VALID_START:
             ret = appDesc->appStart >= LIB_APP_FLASH_START;
@@ -45,13 +45,13 @@ bool lib_app_validateApp(const lib_app_appDesc_S * const hwDesc, const lib_app_a
 {
     bool ret = false;
 
-    switch(validation)
+    switch (validation)
     {
-#if FEATURE_IS_ENABLED(APP_VALIDATE_CRC_ENABLED)
-#error "CRC support has not been built out for LIB_app.c/h"
+#  if FEATURE_IS_ENABLED(APP_VALIDATE_CRC_ENABLED)
+#   error "CRC support has not been built out for LIB_app.c/h"
         case APP_VALID_CRC:
             break;
-#endif
+#  endif
         case APP_VALID_VARIANT_ID:
             ret = hwDesc->appVariantId == appDesc->appVariantId;
             break;
@@ -60,11 +60,11 @@ bool lib_app_validateApp(const lib_app_appDesc_S * const hwDesc, const lib_app_a
             ret = hwDesc->appComponentId == appDesc->appComponentId;
             break;
 
-#if FEATURE_IS_ENABLED(APP_NODE_ID)
+#  if FEATURE_IS_ENABLED(APP_NODE_ID)
         case APP_VALID_NODE_ID:
             ret = hwDesc->appNodeId == appDesc->appNodeId;
             break;
-#endif // APP_NODE_ID
+#  endif // APP_NODE_ID
 
         case APP_VALID_COUNT:
         default:
@@ -73,5 +73,5 @@ bool lib_app_validateApp(const lib_app_appDesc_S * const hwDesc, const lib_app_a
 
     return ret;
 }
-#endif // APP_VALIDATION_ENABLED
+# endif // APP_VALIDATION_ENABLED
 #endif // APP_LIB_ENABLED

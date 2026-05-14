@@ -15,8 +15,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_REF_VOLTAGE 3.0F
-#define HW_ADC_BUF_LEN  96U
+#define ADC_REF_VOLTAGE    3.0F
+#define HW_ADC_BUF_LEN     96U
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -29,7 +29,7 @@ typedef enum
     ADC_BANK1_CHANNEL_PU1,
     ADC_BANK1_CHANNEL_BR_POT,
     ADC_BANK1_CHANNEL_SPARE1,
-    ADC_BANK1_CHANNEL_SPARE2, 
+    ADC_BANK1_CHANNEL_SPARE2,
     ADC_BANK1_CHANNEL_APPS_P1,
     ADC_BANK1_CHANNEL_MCU_TEMP,
     ADC_BANK1_CHANNEL_COUNT,
@@ -41,8 +41,8 @@ typedef enum
     ADC_BANK2_CHANNEL_R_SHK_DISP,
     ADC_BANK2_CHANNEL_PU2,
     ADC_BANK2_CHANNEL_BR_PR,
-    ADC_BANK2_CHANNEL_SPARE3, 
-    ADC_BANK2_CHANNEL_SPARE4, 
+    ADC_BANK2_CHANNEL_SPARE3,
+    ADC_BANK2_CHANNEL_SPARE4,
     ADC_BANK2_CHANNEL_APPS_P2,
     ADC_BANK2_CHANNEL_BOARD_TEMP,
     ADC_BANK2_CHANNEL_COUNT,

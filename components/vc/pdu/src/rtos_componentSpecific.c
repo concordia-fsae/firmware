@@ -7,16 +7,16 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "crashSensor.h"
 #include "FreeRTOS_types.h"
 #include "Utility.h"
-#include "crashSensor.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static StaticTask_t crashSensorTask;
-static StackType_t  crashSensorStack[configMINIMAL_STACK_SIZE];
+static StaticTask_t    crashSensorTask;
+static StackType_t     crashSensorStack[configMINIMAL_STACK_SIZE];
 
 static RTOS_taskDesc_t componentFreerunTasks[] = {
     {

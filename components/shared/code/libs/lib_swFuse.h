@@ -18,8 +18,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
 #include "drv_timer.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -39,7 +39,7 @@ typedef struct
         float32_t overcurrent_threshold;
         float32_t max_i2t;
         uint16_t  over_energy_cooldown_ms;
-    } config;
+    }                  config;
     lib_swFuse_state_E state;
     float32_t          current_i2t;
     drv_timer_S        cooldown_timer;

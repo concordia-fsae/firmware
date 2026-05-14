@@ -15,12 +15,12 @@
 
 drv_tempSensors_channelConfig_S drv_tempSensors_channels[] = {
     [DRV_TEMPSENSORS_CHANNEL_TS_CAP] = {
-        .sensor_type = DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE,
-        .config.thermistor_ls = {
-            .b_param = &NTC103JT_bParam,
-            .fixed_resistance = 1000,
-            .adc_channel = DRV_INPUTAD_ANALOG_PU1,
-            .ref_voltage = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
+        .sensor_type          = DRV_TEMPSENSORS_SENSOR_THERMISTOR_LOWSIDE,
+        .config.thermistor_ls =        {
+            .b_param          = &NTC103JT_bParam,
+            .fixed_resistance =                                      1000,
+            .adc_channel      = DRV_INPUTAD_ANALOG_PU1,
+            .ref_voltage      = DRV_INPUTAD_ANALOG_REF_VOLTAGE,
         },
     },
 };
