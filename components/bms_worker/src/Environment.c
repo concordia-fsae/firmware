@@ -135,7 +135,9 @@ static void Environment_Init()
     ENV.fault = false;
     drv_timer_initWithRuntime(&env.timerDisconnected, ENV_ERROR_TIMEOUT_MS);
     drv_timer_initWithRuntime(&env.timerInsufficient, ENV_ERROR_TIMEOUT_MS);
-
+#if APP_VARIANT_ID == 0U
+    HW_GPIO_writePin(HW_GPIO_NX3_NEN, false);
+#endif
     drv_sht40_init(&sht_chip);
 }
 
