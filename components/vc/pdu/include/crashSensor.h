@@ -35,7 +35,8 @@ typedef struct
 } LIB_NVM_STORAGE(nvm_crashState_S);
 extern nvm_crashState_S crashState_data;
 
-_Static_assert(sizeof(nvm_crashState_S) == 18U, "NVM deterministic size");
+NVM_SIZE_ASSERT(nvm_crashState_S, 18U);
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/

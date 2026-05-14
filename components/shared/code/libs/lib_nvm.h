@@ -30,6 +30,7 @@
                                  x
 #define LIB_NVM_MEMORY_REGION_ARRAY(x, size) __attribute__((section(".nvm"))) x##_nvm[size] = { 0U }; \
                                              x[size]
+#define NVM_SIZE_ASSERT(entry, size) _Static_assert(sizeof(entry) == (size), "NVM deterministic size")
 
 /******************************************************************************
  *                              E X T E R N S
@@ -89,6 +90,9 @@ typedef struct
 {
     uint32_t totalCycles;
 } LIB_NVM_STORAGE(lib_nvm_nvmCycleLog_S);
+
+NVM_SIZE_ASSERT(lib_nvm_nvmRecordLog_S, 28U);
+NVM_SIZE_ASSERT(lib_nvm_nvmCycleLog_S, 4U);
 
 /******************************************************************************
  *                           P U B L I C  V A R S

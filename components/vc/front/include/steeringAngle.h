@@ -20,6 +20,8 @@ typedef struct
 } LIB_NVM_STORAGE(nvm_steeringCalibration_S);
 extern nvm_steeringCalibration_S steeringCalibration_data;
 
+NVM_SIZE_ASSERT(nvm_steeringCalibration_S, 24U);
+
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/

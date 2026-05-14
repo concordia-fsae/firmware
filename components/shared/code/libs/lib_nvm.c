@@ -132,6 +132,13 @@ typedef struct
     storage_t discarded;
 } LIB_NVM_STORAGE(lib_nvm_blockHeader_S);
 
+#if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
+NVM_SIZE_ASSERT(lib_nvm_recordHeader_S, 12U);
+#else
+NVM_SIZE_ASSERT(lib_nvm_recordHeader_S, 10U);
+#endif
+NVM_SIZE_ASSERT(lib_nvm_blockHeader_S, 6U);
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
