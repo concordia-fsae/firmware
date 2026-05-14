@@ -1,9 +1,9 @@
 /**
  * @file apps.h
  * @brief Module header for the Accelerator Pedal Position Sensor
- * @note Pedal positon is a float percentage between 0.0f and 1.0f where 
+ * @note Pedal positon is a float percentage between 0.0f and 1.0f where
  *       0.0f is 0% and 1.0f is 100%
-*/
+ */
 
 #pragma once
 
@@ -23,7 +23,7 @@ typedef enum
     APPS_INIT = 0x00U,
     APPS_OK,
     APPS_DISAGREEMENT,
-    APPS_ERROR, // Sensor failure
+    APPS_ERROR,    // Sensor failure
 } apps_state_E;
 
 /******************************************************************************

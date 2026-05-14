@@ -8,11 +8,11 @@
  ******************************************************************************/
 
 #include "CAN/CAN.h"
-#include "HW_can.h"
-#include "FreeRTOS_SWI.h"
-#include "ModuleDesc.h"
-#include "FeatureDefines_generated.h"
 #include "CANIO_componentSpecific.h"
+#include "FeatureDefines_generated.h"
+#include "FreeRTOS_SWI.h"
+#include "HW_can.h"
+#include "ModuleDesc.h"
 #include "Yamcan.h"
 
 /******************************************************************************
@@ -20,10 +20,10 @@
  ******************************************************************************/
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
-                                          const uint8_t      packTableLength,
-                                          uint8_t*           index,
-                                          CAN_data_T*        message,
-                                          uint8_t*           nextCounter);
+                                          const uint8_t    packTableLength,
+                                          uint8_t          * index,
+                                          CAN_data_T       * message,
+                                          uint8_t          * nextCounter);
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -41,13 +41,13 @@ void CANTX_SWI(void)
         {
             for (uint8_t pack = CAN_table[bus].busTable[table].index; pack < CAN_table[bus].busTable[table].packTableLength; pack++)
             {
-                CAN_data_T     message = {0};
+                CAN_data_T       message = { 0 };
 
                 const packTable_S* entry = packNextMessage((const packTable_S*)CAN_table[bus].busTable[table].packTable,
-                                                                CAN_table[bus].busTable[table].packTableLength,
-                                                                &pack,
-                                                                &message,
-                                                                &CAN_table[bus].busTable[table].counter);
+                                                           CAN_table[bus].busTable[table].packTableLength,
+                                                           &pack,
+                                                           &message,
+                                                           &CAN_table[bus].busTable[table].counter);
                 if (entry != NULL)
                 {
                     if (HW_CAN_sendMsg(bus, message, entry->id, entry->len))
@@ -70,15 +70,15 @@ void CANTX_SWI(void)
  ******************************************************************************/
 
 static const packTable_S* packNextMessage(const packTable_S* packTable,
-                                          const uint8_t      packTableLength,
-                                          uint8_t*           index,
-                                          CAN_data_T*        message,
-                                          uint8_t*           nextCounter)
+                                          const uint8_t    packTableLength,
+                                          uint8_t          * index,
+                                          CAN_data_T       * message,
+                                          uint8_t          * nextCounter)
 {
     while (*index < packTableLength)
     {
-        const packTable_S* entry   = &packTable[*index];
-        uint8_t            counter = *nextCounter;
+        const packTable_S* entry = &packTable[*index];
+        uint8_t          counter = *nextCounter;
 
         message->u64 = 0ULL;
         if ((*entry->pack)(message, counter))
@@ -103,12 +103,14 @@ static void CANIO_tx_1kHz_PRD(void)
         for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
         {
             if ((CAN_table[bus].busTable[table].packTableLength == 0U) ||
-                (CANIO_getTimeMs() - CAN_table[bus].busTable[table].lastTimestamp < CAN_table[bus].busTable[table].period))
+                (CANIO_getTimeMs() - CAN_table[bus].busTable[table].lastTimestamp < CAN_table[bus].busTable[table].period)
+                )
             {
                 continue;
             }
 
-            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
+            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength)
+            {
                 // all the message weren't sent. TO-DO: error handling
             }
 
@@ -128,7 +130,8 @@ static void CANIO_tx_1kHz_PRD(void)
     {
         for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
         {
-            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength) {
+            if (CAN_table[bus].busTable[table].index < CAN_table[bus].busTable[table].packTableLength)
+            {
                 // all the message haven't been sent yet
                 txRequest = true;
             }
@@ -158,7 +161,7 @@ static void CANIO_tx_init(void)
 }
 
 const ModuleDesc_S CANIO_tx = {
-    .moduleInit        = &CANIO_tx_init,
-    .periodic1kHz_CLK  = &CANIO_tx_1kHz_PRD,
+    .moduleInit       = &CANIO_tx_init,
+    .periodic1kHz_CLK = &CANIO_tx_1kHz_PRD,
 };
 

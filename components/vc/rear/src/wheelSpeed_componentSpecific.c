@@ -5,7 +5,7 @@
 
 /******************************************************************************
  *                             I N C L U D E S
-******************************************************************************/
+ ******************************************************************************/
 
 #include "app_vehicleSpeed.h"
 #include "Yamcan.h"
@@ -15,15 +15,15 @@
  ******************************************************************************/
 
 const app_wheelSpeed_config_S app_wheelSpeed_config = {
-    .sensorType = {
+    .sensorType                 = {
         [WHEEL_FL] = WS_SENSORTYPE_CAN_RPM,
         [WHEEL_FR] = WS_SENSORTYPE_CAN_RPM,
         [WHEEL_RL] = WS_SENSORTYPE_TIM_CHANNEL,
         [WHEEL_RR] = WS_SENSORTYPE_TIM_CHANNEL,
     },
-    .config = {
-        [WHEEL_FL].rpm = CANRX_get_signal_func(VEH, VCFRONT_wheelSpeedFL),
-        [WHEEL_FR].rpm = CANRX_get_signal_func(VEH, VCFRONT_wheelSpeedFR),
+    .config                     = {
+        [WHEEL_FL].rpm          = CANRX_get_signal_func(VEH, VCFRONT_wheelSpeedFL),
+        [WHEEL_FR].rpm          = CANRX_get_signal_func(VEH, VCFRONT_wheelSpeedFR),
         [WHEEL_RL].channel_freq = HW_TIM_CHANNEL_WS_L,
         [WHEEL_RR].channel_freq = HW_TIM_CHANNEL_WS_R,
     },

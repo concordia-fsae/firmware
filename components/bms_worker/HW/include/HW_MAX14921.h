@@ -97,9 +97,9 @@ typedef struct
 
 typedef struct
 {
-    HW_spi_device_E  dev;
-    MAX_config_S     config;
-    MAX_response_S   state;
+    HW_spi_device_E dev;
+    MAX_config_S    config;
+    MAX_response_S  state;
 } MAX_S;
 
 

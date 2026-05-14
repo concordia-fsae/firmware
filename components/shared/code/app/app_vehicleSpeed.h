@@ -55,7 +55,7 @@ typedef struct
 typedef struct
 {
     float32_t km;
-    uint32_t spare[5];
+    uint32_t  spare[5];
 } LIB_NVM_STORAGE(nvm_odometer_S);
 extern nvm_odometer_S odometer_data;
 #endif
@@ -69,7 +69,7 @@ NVM_SIZE_ASSERT(nvm_odometer_S, 24U);
  ******************************************************************************/
 
 extern const app_wheelSpeed_config_S app_wheelSpeed_config;
-extern const ModuleDesc_S app_vehicleSpeed_desc;
+extern const ModuleDesc_S            app_vehicleSpeed_desc;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

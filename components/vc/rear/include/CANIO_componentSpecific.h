@@ -1,5 +1,5 @@
 /**
- RX_config* CAN.h
+ * RX_config* CAN.h
  * Header file for CANRX configuration
  */
 
@@ -16,18 +16,18 @@
 // imports for CAN generated types
 
 // imports for data access
-#include "Module.h"
+#include "app_faultManager.h"
+#include "app_vehicleSpeed.h"
 #include "brakeLight.h"
 #include "brakePressure.h"
-#include "horn.h"
-#include "tssi.h"
-#include "drv_tps20xx.h"
-#include "mcManager.h"
-#include "shockpot.h"
-#include "Module.h"
-#include "app_vehicleSpeed.h"
-#include "app_faultManager.h"
 #include "drv_inputAD.h"
+#include "drv_tps20xx.h"
+#include "horn.h"
+#include "mcManager.h"
+#include "Module.h"
+#include "Module.h"
+#include "shockpot.h"
+#include "tssi.h"
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -37,34 +37,34 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define CANIO_UDS_BUFFER_LENGTH 8U
-#define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+#define CANIO_UDS_BUFFER_LENGTH                               8U
+#define CANIO_getTimeMs()                                     (HW_TIM_getTimeMS())
 
-#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+#define set_fault_message                                     (*(CAN_data_T*)app_faultManager_transmit())
 
-#define set_brakeLightState(m,b,n,s) set(m,b,n,s, brakeLight_getStateCAN())
-#define set_hornState(m,b,n,s) set(m,b,n,s, horn_getStateCAN())
-#define set_tssiState(m,b,n,s) set(m,b,n,s, tssi_getStateCAN())
-#define set_brakePressure(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressure())
-#define set_brakePrVoltage(m,b,n,s) set(m,b,n,s, brakePressure_getBrakePressureVoltage())
-#define set_5vCriticalHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
-#define set_5vExtHsdState(m,b,n,s) set(m,b,n,s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
-#define set_torqueCommand(m,b,n,s) set(m,b,n,s, mcManager_getTorqueCommand())
-#define set_directionCommand(m,b,n,s) set(m,b,n,s, mcManager_getDirectionCommand())
-#define set_inverterEnable(m,b,n,s) set(m,b,n,s, mcManager_getEnableCommand())
-#define set_torqueLimit(m,b,n,s) set(m,b,n,s, mcManager_getTorqueLimit())
-#define set_requestContactorsOpen(m,b,n,s) set(m,b,n,s, mcManager_requestContactorsOpen() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_mcCalibrationAttempts(m,b,n,s) set(m,b,n,s, mcManager_getResolverCalibrationAttempts())
-#define set_mcCalibrationConfiguredAngle(m,b,n,s) set(m,b,n,s, mcManager_getResolverCalibrationConfiguredAngleDeg())
-#define set_mcCalibrationDeltaFilteredMeasured(m,b,n,s) set(m,b,n,s, mcManager_getResolverCalibrationDeltaFilteredMeasuredDeg())
+#define set_brakeLightState(m, b, n, s)                       set(m, b, n, s, brakeLight_getStateCAN())
+#define set_hornState(m, b, n, s)                             set(m, b, n, s, horn_getStateCAN())
+#define set_tssiState(m, b, n, s)                             set(m, b, n, s, tssi_getStateCAN())
+#define set_brakePressure(m, b, n, s)                         set(m, b, n, s, brakePressure_getBrakePressure())
+#define set_brakePrVoltage(m, b, n, s)                        set(m, b, n, s, brakePressure_getBrakePressureVoltage())
+#define set_5vCriticalHsdState(m, b, n, s)                    set(m, b, n, s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
+#define set_5vExtHsdState(m, b, n, s)                         set(m, b, n, s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
+#define set_torqueCommand(m, b, n, s)                         set(m, b, n, s, mcManager_getTorqueCommand())
+#define set_directionCommand(m, b, n, s)                      set(m, b, n, s, mcManager_getDirectionCommand())
+#define set_inverterEnable(m, b, n, s)                        set(m, b, n, s, mcManager_getEnableCommand())
+#define set_torqueLimit(m, b, n, s)                           set(m, b, n, s, mcManager_getTorqueLimit())
+#define set_requestContactorsOpen(m, b, n, s)                 set(m, b, n, s, mcManager_requestContactorsOpen() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_mcCalibrationAttempts(m, b, n, s)                 set(m, b, n, s, mcManager_getResolverCalibrationAttempts())
+#define set_mcCalibrationConfiguredAngle(m, b, n, s)          set(m, b, n, s, mcManager_getResolverCalibrationConfiguredAngleDeg())
+#define set_mcCalibrationDeltaFilteredMeasured(m, b, n, s)    set(m, b, n, s, mcManager_getResolverCalibrationDeltaFilteredMeasuredDeg())
 
-#define set_shockpotdispRL(m,b,n,s) set(m,b,n,s, shockpot_getDisplacement(SHOCKPOT_LEFT))
-#define set_shockpotdispRR(m,b,n,s) set(m,b,n,s, shockpot_getDisplacement(SHOCKPOT_RIGHT))
-#define set_shockpotVoltRL(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_LEFT))
-#define set_shockpotVoltRR(m,b,n,s) set(m,b,n,s, shockpot_getVoltage(SHOCKPOT_RIGHT))
-#define set_tsCapThermistorVoltage(m,b,n,s) set(m,b,n,s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_PU1))
-#define set_tsCapTemperature(m,b,n,s) set(m,b,n,s, mcManager_getTsCapTemperatureDegC())
+#define set_shockpotdispRL(m, b, n, s)                        set(m, b, n, s, shockpot_getDisplacement(SHOCKPOT_LEFT))
+#define set_shockpotdispRR(m, b, n, s)                        set(m, b, n, s, shockpot_getDisplacement(SHOCKPOT_RIGHT))
+#define set_shockpotVoltRL(m, b, n, s)                        set(m, b, n, s, shockpot_getVoltage(SHOCKPOT_LEFT))
+#define set_shockpotVoltRR(m, b, n, s)                        set(m, b, n, s, shockpot_getVoltage(SHOCKPOT_RIGHT))
+#define set_tsCapThermistorVoltage(m, b, n, s)                set(m, b, n, s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_PU1))
+#define set_tsCapTemperature(m, b, n, s)                      set(m, b, n, s, mcManager_getTsCapTemperatureDegC())
 
-#define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
-#define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))
-#define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
+#define set_wheelSpeedRL(m, b, n, s)                          set(m, b, n, s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
+#define set_wheelSpeedRR(m, b, n, s)                          set(m, b, n, s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))
+#define set_axleSpeedRear(m, b, n, s)                         set(m, b, n, s, mcManager_getAxleRPM())

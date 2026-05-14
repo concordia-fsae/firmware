@@ -16,9 +16,9 @@
 #include "drv_hsd.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
-#include "LIB_Types.h"
-#include "lib_swFuse.h"
 #include "drv_tps2hb16ab_componentSpecific.h"
+#include "lib_swFuse.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -39,7 +39,8 @@ typedef struct
     drv_outputAD_channelDigital_E sel1;
     drv_outputAD_channelDigital_E sel2;
     drv_outputAD_channelDigital_E latch;
-    struct {
+    struct
+    {
         drv_outputAD_channelDigital_E enable;
         float32_t                     current_limit_amp;
         uint16_t                      oc_timeout_ms;

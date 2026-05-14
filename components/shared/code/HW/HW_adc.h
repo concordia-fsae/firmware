@@ -10,14 +10,14 @@
  ******************************************************************************/
 
 #include "HW.h"
-#include "LIB_Types.h"
 #include "HW_adc_componentSpecific.h"
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_MAX_COUNT 4095 // Max integer value of ADC reading (2^12 for this chip)
+#define ADC_MAX_COUNT    4095 // Max integer value of ADC reading (2^12 for this chip)
 
 /******************************************************************************
  *                             T Y P E D E F S

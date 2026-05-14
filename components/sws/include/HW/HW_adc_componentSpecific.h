@@ -15,8 +15,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define ADC_REF_VOLTAGE 3.0F
-#define HW_ADC_BUF_LEN  96U
+#define ADC_REF_VOLTAGE    3.0F
+#define HW_ADC_BUF_LEN     96U
 
 /******************************************************************************
  *                             T Y P E D E F S

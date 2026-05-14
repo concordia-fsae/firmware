@@ -32,24 +32,27 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
-typedef enum {
+typedef enum
+{
     DRV_HIH_INIT = 0x00,
     DRV_HIH_MEASURING,
     DRV_HIH_WAITING,
     DRV_HIH_ERROR,
 } drv_hih_state_E;
 
-typedef struct {
-    uint16_t temp;
-    uint16_t rh;
+typedef struct
+{
+    uint16_t        temp;
+    uint16_t        rh;
     drv_hih_state_E state;
 } drv_hih_data_S;
 
-typedef struct {
-    HW_I2C_Device_S* dev;
-    drv_hih_data_S data;
-    float32_t rh;
-    float32_t temperature;
+typedef struct
+{
+    HW_I2C_Device_S * dev;
+    drv_hih_data_S  data;
+    float32_t       rh;
+    float32_t       temperature;
 } drv_hih_S;
 
 /******************************************************************************

@@ -25,7 +25,7 @@ typedef struct
     const uint16_t     pageSize;
     const uint16_t     appPageCount;
 #if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
-    bool updaterHasErased;
+    bool               updaterHasErased;
 #endif
 } flash_S;
 
@@ -53,7 +53,7 @@ static uint16_t getPageSize(void)
     {
         return 1024U;
     }
-#endif
+#endif // if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105)
 }
 
 
@@ -65,9 +65,9 @@ void FLASH_init(void)
 {
     const uint16_t pageSize = getPageSize();
     flash_S        fl       = {
-        .eraseState   = { 0U },
-        .pageSize     = pageSize,
-        .appPageCount = (APP_FLASH_END - APP_FLASH_START) / pageSize,
+        .eraseState       = { 0U },
+        .pageSize         = pageSize,
+        .appPageCount     = (APP_FLASH_END - APP_FLASH_START) / pageSize,
 #if APP_FUNCTION_ID == FDEFS_FUNCTION_ID_BLU
         .updaterHasErased = false,
 #endif
@@ -95,7 +95,10 @@ void FLASH_lock(void)
  */
 void FLASH_unlock(void)
 {
-    if (READ_BIT(FLASH_CR, FLASH_CR_LOCK)) return;
+    if (READ_BIT(FLASH_CR, FLASH_CR_LOCK))
+    {
+        return;
+    }
     SET_REG(FLASH_KEYR, FLASH_KEY1);
     SET_REG(FLASH_KEYR, FLASH_KEY2);
 }

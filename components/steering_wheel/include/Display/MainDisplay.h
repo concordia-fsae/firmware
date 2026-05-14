@@ -14,8 +14,8 @@
 #include "Pills.h"
 
 // other includes
-#include "Utility.h"
 #include "printf.h"
+#include "Utility.h"
 
 // includes for data acccess
 #include "IO.h"
@@ -85,7 +85,7 @@ DECL_valuePillUpdate(VALUE_PILL_CPU_TEMP)
 
 static ValuePill_S valuePills[VALUE_PILL_COUNT] =
 {
-    DECL_valuePill(VALUE_PILL_FUEL_PRESSURE, "FuelP", 60U,  90U, 80U, 30U, 0U, 1U, "kPa"),
+    DECL_valuePill(VALUE_PILL_FUEL_PRESSURE, "FuelP", 60U, 90U,  80U, 30U, 0U, 1U, "kPa"),
     DECL_valuePill(VALUE_PILL_OIL_PRESSURE,  "OilP",  60U, 140U, 80U, 30U, 0U, 1U, "kPa"),
     DECL_valuePill(VALUE_PILL_BATT_V,        "BattV", 60U, 190U, 80U, 30U, 0U, 2U, "V"),
     DECL_valuePill(VALUE_PILL_CPU_TEMP,      "CPUT",  60U, 240U, 80U, 30U, 0U, 2U, "C"),
@@ -110,7 +110,7 @@ static void main_display(void)
 
     if (!fontsLoaded)
     {
-        EVE_cmd_romfont_burst(10U, 33U);  // load a bigger font
+        EVE_cmd_romfont_burst(10U, 33U);    // load a bigger font
         fontsLoaded = true;
     }
 
@@ -124,9 +124,9 @@ static void main_display(void)
     currRPM  = (currRPM > 12000U) ? 0U : currRPM + 100U;
 
     update_valuePill(VALUE_PILL_FUEL_PRESSURE, 101.3f);
-    update_valuePill(VALUE_PILL_OIL_PRESSURE, 10.01f);
-    update_valuePill(VALUE_PILL_BATT_V, 13.42f);
-    update_valuePill(VALUE_PILL_CPU_TEMP, IO.temp.mcu);
+    update_valuePill(VALUE_PILL_OIL_PRESSURE,  10.01f);
+    update_valuePill(VALUE_PILL_BATT_V,        13.42f);
+    update_valuePill(VALUE_PILL_CPU_TEMP,      IO.temp.mcu);
 
     render_ValuePills(valuePills, VALUE_PILL_COUNT);
 }
