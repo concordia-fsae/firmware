@@ -53,6 +53,7 @@ download_gcc_distribution(
     target_arch = "aarch64",
     target_os = "linux",
     target_abi = "gnu",
+    visibility = ["PUBLIC"],
 )
 
 gcc_toolchain(
