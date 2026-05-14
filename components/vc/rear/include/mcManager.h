@@ -10,7 +10,7 @@
  ******************************************************************************/
 
 #include "LIB_Types.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -37,4 +37,11 @@ float32_t                     mcManager_getAxleRPM(void);
 CAN_pm100dxDirectionCommand_E mcManager_getDirectionCommand(void);
 CAN_pm100dxEnableState_E      mcManager_getEnableCommand(void);
 float32_t                     mcManager_getTorqueLimit(void);
+float32_t                     mcManager_getTsCapTemperatureDegC(void);
+uint8_t                       mcManager_getResolverCalibrationAttempts(void);
+float32_t                     mcManager_getResolverCalibrationConfiguredAngleDeg(void);
+float32_t                     mcManager_getResolverCalibrationDeltaFilteredMeasuredDeg(void);
 bool                          mcManager_clearEepromCommand(void);
+bool                          mcManager_startResolverCalibration(void);
+bool                          mcManager_isResolverCalibrating(void);
+bool                          mcManager_requestContactorsOpen(void);

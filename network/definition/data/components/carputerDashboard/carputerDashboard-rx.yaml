@@ -1,0 +1,4 @@
+receiveAllMessagesOnBuses:
+  - "veh"
+messages:
+signals:

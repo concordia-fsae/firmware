@@ -1,0 +1,121 @@
+/**
+ * @file drv_cooling.h
+ * @brief Header file for cooling driver
+ *
+ * Setup
+ * 1. Declare a drv_cooling_channel_S and configure the parameters. See 'lib_interpolate.h'
+ *    for a description of the interpolation mapping
+ * 2. Initialize the channel with drv_cooling_init
+ * 3. If required, add an override value to the channel with drv_cooling_setOverride.
+ *    If the override percentage is higher than the calculated cooling power required,
+ *    the override value will be used
+ * 4. Run a cycle on the channel with drv_cooling_run, updating the required power
+ *    output to the cooler, and setting any states required by each type of cooler
+ * 5. Set the enable state of the cooler with drv_cooling_setEnabled
+ *
+ * Usage
+ * - Get the current output power to a cooling channel (measured in % where 0.0f is 0%
+ *   and 1.0f is 100%
+ * - Get the current state of the cooler with drv_cooling_getState
+ * - Get the cooling rate (flow, volume/time, etc) of the cooler. This will return
+ *   a value in the units of the specified channel. This could be RPM, LPM, CFM...
+ */
+
+#pragma once
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
+
+#include "drv_tempSensors.h"
+#include "HW_tim.h"
+#include "lib_interpolation.h"
+#include "LIB_Types.h"
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef enum
+{
+    COOLING_INIT = 0x00,
+    COOLING_OFF,
+    COOLING_ON,
+    COOLING_ERROR,
+} drv_cooling_state_E;
+
+typedef struct
+{
+    enum
+    {
+        INPUT_TYPE_TEMPSENSOR = 0x00U,
+    } type;
+    union
+    {
+        drv_tempSensors_channel_E tempSensor;
+    } input;
+} drv_cooling_input_S;
+
+typedef struct
+{
+    enum
+    {
+        OUTPUT_TYPE_PWM = 0x00U,
+        OUTPUT_TYPE_PWM_EN,
+        OUTPUT_TYPE_VIRTUAL,
+    } type;
+    union
+    {
+        HW_TIM_pwmChannel_S pwm;
+        struct
+        {
+            HW_TIM_pwmChannel_S pwm;
+            HW_GPIO_pinmux_E    pin;
+            bool                inverted_enable;
+        } pwm_en;
+    } output;
+} drv_cooling_output_S;
+
+typedef struct
+{
+    enum
+    {
+        FEEDBACK_FUNC,
+        FEEDBACK_VIRTUAL,
+    } type;
+    union
+    {
+        float32_t (*func)(void);
+    }         feedback;
+    float32_t scale;
+} drv_cooling_feedback_S;
+
+typedef struct
+{
+    const drv_cooling_input_S    input;
+    const drv_cooling_output_S   output;
+    const drv_cooling_feedback_S feedback;
+    lib_interpolation_mapping_S  cooling_map;
+} drv_cooling_channelConfig_S;
+
+typedef struct
+{
+    drv_cooling_channelConfig_S config;
+    drv_cooling_state_E         state;
+    bool                        enabled;
+    float32_t                   override_percentage;
+    float32_t                   power;
+} drv_cooling_channel_S;
+
+/******************************************************************************
+ *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
+ ******************************************************************************/
+
+void                drv_cooling_init(drv_cooling_channel_S* channel);
+void                drv_cooling_runChannel(drv_cooling_channel_S* channel, bool enabled);
+void                drv_cooling_setOverride(drv_cooling_channel_S* channel, float32_t percentage);
+float32_t           drv_cooling_getPower(drv_cooling_channel_S* channel);
+drv_cooling_state_E drv_cooling_getState(drv_cooling_channel_S* channel);
+// Returns the units measured depending
+// type of cooling (ie: Fan=RPM...)
+float32_t           drv_cooling_getRate(drv_cooling_channel_S* channel);

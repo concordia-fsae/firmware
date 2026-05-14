@@ -9,9 +9,11 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
+// System Includes, ModuleDesc include must come first
+// *FORMAT-OFF*
 #include "ModuleDesc.h"
 #include "app_vehicleState.h"
+// *FORMAT-ON*
 
 /******************************************************************************
  *                              E X T E R N S
@@ -20,9 +22,11 @@
 /**< Modules */
 extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S UDS_desc;
+extern const ModuleDesc_S app_vehicleSpeed_desc;
 extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S imu_desc;
 extern const ModuleDesc_S cooling_desc;
+extern const ModuleDesc_S sys_desc;
 extern const ModuleDesc_S CANIO_tx;
 
 /******************************************************************************
@@ -34,9 +38,11 @@ typedef enum
     MODULE_CANIO_rx = 0x00U,
     MODULE_UDS,
     MODULE_VEHICLESTATE,
+    MODULE_WHEELSPEED,
     MODULE_POWERMANAGER,
     MODULE_IMU,
     MODULE_COOLING,
+    MODULE_SYS,
     MODULE_CANIO_tx,
-    MODULE_CNT
+    MODULE_CNT,
 } Module_tasks_E;

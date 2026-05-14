@@ -13,11 +13,14 @@ messages:
       bmsFault:
       imdNOK:
       timeout:
+      contactorLowSohHvp:
+      contactorLowSohHvn:
+      contactorLowSohPrecharge:
 
   criticalData:
     description: BMS Boss Critical Data
     cycleTimeMs: 10
-    id: 0x99
+    id: 0x97
     lengthBytes: 8
     sourceBuses: veh
     signals:
@@ -29,10 +32,18 @@ messages:
       packAmpHours:
       packCurrent:
 
+  energyData:
+    description: BMS Boss Energy Data
+    cycleTimeMs: 100
+    id: 0x98
+    sourceBuses: veh
+    signals:
+      soc:
+
   information:
     description: BMS Boss Information
     cycleTimeMs: 100
-    id: 0x98
+    id: 0x99
     sourceBuses: veh
     signals:
       packContactorState:
@@ -93,6 +104,9 @@ messages:
     signals:
       maxDischarge:
       maxCharge:
+      maxCellTemp:
+      maxCellVoltage:
+      minCellVoltage:
 
   ioStatus:
     description: "Status of the BMSB inputs"

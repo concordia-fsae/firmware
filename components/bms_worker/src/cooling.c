@@ -9,23 +9,22 @@
 
 /**< Module header */
 #include "cooling.h"
-#include "Module.h"
 #include "drv_timer.h"
+#include "Module.h"
+#include "Yamcan.h"
 
-#include "MessageUnpack_generated.h"
+#define STARTUP_TIMER    10000
 
-#define STARTUP_TIMER 10000
-
-static drv_timer_S start_up;
+static drv_timer_S               start_up;
 
 static lib_interpolation_point_S fan_curve[] = {
     {
-        .x = 35, // degC
-        .y = 0.0f, // duty cycle
+        .x = 35,    // degC
+        .y = 0.0f,  // duty cycle
     },
     {
-        .x = 50, // degC
-        .y = 1.0f, // duty cycle
+        .x = 50,    // degC
+        .y = 1.0f,  // duty cycle
     },
 };
 
@@ -33,55 +32,71 @@ static lib_interpolation_point_S fan_curve[] = {
  *                           P U B L I C  V A R S
  ******************************************************************************/
 
-app_cooling_channel_S cooling[COOLING_CHANNEL_COUNT] = {
+drv_cooling_channel_S cooling[COOLING_CHANNEL_COUNT] = {
     [COOLING_CHANNEL_FAN1] = {
-        .config = {
-            .input = {
-                .type = INPUT_TYPE_TEMPSENSOR,
+        .config                   =            {
+            .input                =            {
+                .type             = INPUT_TYPE_TEMPSENSOR,
                 .input.tempSensor = DRV_TEMPSENSORS_CHANNEL_SEGMENT_MAX,
             },
-            .output = {
-                .type = OUTPUT_TYPE_PWM,
-                .output.pwm = {
-                    .tim_port = HW_TIM_PORT_PWM,
+            .output               =            {
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type       = OUTPUT_TYPE_VIRTUAL,
+#else
+                .type       = OUTPUT_TYPE_PWM,
+                .output.pwm =            {
+                    .tim_port    = HW_TIM_PORT_PWM,
                     .tim_channel = HW_TIM_CHANNEL_1,
                 },
+#endif
             },
-            .feedback = { // Feedback in units of RPM
-                .type = FEEDBACK_FUNC,
+            .feedback             =            { // Feedback in units of RPM
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type          = FEEDBACK_VIRTUAL,
+#else
+                .type          = FEEDBACK_FUNC,
                 .feedback.func = &HW_TIM1_getFreqCH1,
-                .scale = 60,
+                .scale         =                  60,
+#endif
             },
-            .cooling_map = {
-                .points = (lib_interpolation_point_S*)&fan_curve,
-                .number_points = COUNTOF(fan_curve),
-                .saturate_left = true,
+            .cooling_map          =            {
+                .points         = (lib_interpolation_point_S*)&fan_curve,
+                .number_points  = COUNTOF(fan_curve),
+                .saturate_left  = true,
                 .saturate_right = true,
             }
         },
     },
     [COOLING_CHANNEL_FAN2] = {
-        .config = {
-            .input = {
-                .type = INPUT_TYPE_TEMPSENSOR,
+        .config                   =            {
+            .input                =            {
+                .type             = INPUT_TYPE_TEMPSENSOR,
                 .input.tempSensor = DRV_TEMPSENSORS_CHANNEL_SEGMENT_MAX,
             },
-            .output = {
-                .type = OUTPUT_TYPE_PWM,
-                .output.pwm = {
-                    .tim_port = HW_TIM_PORT_PWM,
+            .output               =            {
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type       = OUTPUT_TYPE_VIRTUAL,
+#else
+                .type       = OUTPUT_TYPE_PWM,
+                .output.pwm =            {
+                    .tim_port    = HW_TIM_PORT_PWM,
                     .tim_channel = HW_TIM_CHANNEL_2,
                 },
+#endif
             },
-            .feedback = { // Feedback in units of RPM
-                .type = FEEDBACK_FUNC,
+            .feedback             =            { // Feedback in units of RPM
+#if (APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U)
+                .type          = FEEDBACK_VIRTUAL,
+#else
+                .type          = FEEDBACK_FUNC,
                 .feedback.func = &HW_TIM1_getFreqCH2,
-                .scale = 60,
+                .scale         =                  60,
+#endif
             },
-            .cooling_map = {
-                .points = (lib_interpolation_point_S*)&fan_curve,
-                .number_points = COUNTOF(fan_curve),
-                .saturate_left = true,
+            .cooling_map          =            {
+                .points         = (lib_interpolation_point_S*)&fan_curve,
+                .number_points  = COUNTOF(fan_curve),
+                .saturate_left  = true,
                 .saturate_right = true,
             }
         },
@@ -99,7 +114,7 @@ static void cooling_init()
 {
     for (uint8_t i = 0; i < COOLING_CHANNEL_COUNT; i++)
     {
-        app_cooling_init(&cooling[i]);
+        drv_cooling_init(&cooling[i]);
     }
 
     drv_timer_init(&start_up);
@@ -112,15 +127,15 @@ static void cooling_init()
 static void cooling10Hz_PRD(void)
 {
     drv_timer_state_E boot_timer_state = drv_timer_getState(&start_up);
-    uint8_t percent_beans = 0;
-    float32_t override = 0.0f;
+    uint8_t           percent_beans    = 0;
+    float32_t         override         = 0.0f;
 
     if (boot_timer_state == DRV_TIMER_RUNNING)
     {
         // Ramp the fans up and back down on boot
         const uint32_t time = HW_TIM_getTimeMS();
         override = (time < (STARTUP_TIMER / 2.0f)) ? ((float32_t)time) / (STARTUP_TIMER / 2.0f) :
-                                                     (STARTUP_TIMER - (float32_t)time) / (STARTUP_TIMER / 2.0f);
+                   (STARTUP_TIMER - (float32_t)time) / (STARTUP_TIMER / 2.0f);
     }
     else if (CANRX_get_signal(VEH, TOOLING_commandedFansDutyCycle, &percent_beans) == CANRX_MESSAGE_VALID)
     {
@@ -131,9 +146,9 @@ static void cooling10Hz_PRD(void)
     for (uint8_t i = 0; i < COOLING_CHANNEL_COUNT; i++)
     {
         // Update the states of the cooler, disabling if not required
-        app_cooling_setOverride(&cooling[i], override);
-        app_cooling_runChannel(&cooling[i], (boot_timer_state == DRV_TIMER_EXPIRED) &&
-                                             app_cooling_getPower(&cooling[i]) > 0.01f);
+        drv_cooling_setOverride(&cooling[i], override);
+        drv_cooling_runChannel(&cooling[i], (boot_timer_state == DRV_TIMER_EXPIRED) &&
+                               drv_cooling_getPower(&cooling[i]) > 0.01f);
     }
 }
 

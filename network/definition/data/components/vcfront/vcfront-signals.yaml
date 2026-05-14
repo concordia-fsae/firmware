@@ -3,25 +3,35 @@ signals:
   launchRejected:
     description: Driver launch request rejected
     discreteValues: faultStatus
-
   gearChangeRejected:
     description: Driver reverse request rejected
     discreteValues: faultStatus
-
   gpsDeviceError:
     description: Device is in an error state
     discreteValues: faultStatus
-
   gpsOverrun:
     description: GPS data overrun
     discreteValues: faultStatus
-
+  gpsDataNotValid:
+    description: GPS data overrun
+    discreteValues: faultStatus
   appsDisabled:
     description: APPS Safety Redundancy Disabled
     discreteValues: faultStatus
-
   vehicleSpeedDegraded:
     description: Vehicle speed is degraded due to missing sensor data
+    discreteValues: faultStatus
+  wheelSpeedSensorDegraded:
+    description: One or more wheel speed sensors are degraded
+    discreteValues: faultStatus
+  wheelSpeedSensorLocked:
+    description: One or more wheel speed sensors are locked
+    discreteValues: faultStatus
+  faulted5vCritical:
+    description: 5V critical external power rail faulted
+    discreteValues: faultStatus
+  faulted5vExt:
+    description: 5V external power rail faulted
     discreteValues: faultStatus
 
   gpsUartOreCount:
@@ -60,7 +70,6 @@ signals:
     description: GPS PAIRMSG sentence count
     template: count10Bit
 
-
   gpsPairUtcMs:
     description: PAIRMSG UTC time (ms since midnight)
     unit: ms
@@ -78,6 +87,27 @@ signals:
   gpsPairDynamicStatus:
     description: PAIRMSG 91 dynamic status
     discreteValues: gpsDynamicStatus
+
+  gpsSatellites:
+    description: Number of satellites in view
+    nativeRepresentation:
+      bitWidth: 6
+      range:
+        min: 0
+        max: 56
+      resolution: 1
+
+  gpsQualityIndicator:
+    description: GPS quality indicator
+    discreteValues: gpsQualityIndicator
+
+  gpsInvalidTime:
+    description: GPS time invalid
+    discreteValues: faultStatus
+
+  gpsInvalidDate:
+    description: GPS date invalid
+    discreteValues: faultStatus
 
   gpsPairAlarmHarshAcceleration:
     description: PAIRMSG 91 harsh acceleration
@@ -177,15 +207,15 @@ signals:
     discreteValues: digitalStatus
 
   steeringAngle:
-        description: Steering Angle Sensor
-        unit: 'deg'
-        nativeRepresentation:
-          resolution: 1
-          bitWidth: 9
-          range:
-            min: -173
-            max: 173
-        continuous: true
+    description: Steering Angle Sensor
+    unit: 'deg'
+    nativeRepresentation:
+      resolution: 1
+      bitWidth: 9
+      range:
+        min: -173
+        max: 173
+    continuous: true
 
   steeringAngleVoltage:
     description: Steering Angle Voltage
@@ -203,10 +233,10 @@ signals:
     description: Torque request from the torque manager
     unit: Nm
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 9
       range:
-        min: -100
-        max: 150
+        min: -200
+        max: 200
       resolution: 1
     continuous: true
 
@@ -236,7 +266,7 @@ signals:
     description: Driver raw torque request
     unit: Nm
     nativeRepresentation:
-      resolution: 1
+      resolution: 1.5
       bitWidth: 7
       range:
         min: 0
@@ -268,9 +298,10 @@ signals:
 
   shockpotdispFL:
     unit: mm
-    description: "Shock pot displacment front left"
+    description: "Shock pot displacement front left"
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75
@@ -282,9 +313,10 @@ signals:
 
   shockpotdispFR:
     unit: mm
-    description: "Shock pot displacment front right"
+    description: "Shock pot displacement front right"
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75
@@ -338,4 +370,126 @@ signals:
         min: -50
         max: 50
       signedness: signed
+    continuous: true
+
+  vdMaxTireForceFL:
+    description: Max longitudanal force appliable fy the front left tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdMaxTireForceFR:
+    description: Max longitudanal force appliable fy the front right tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdMaxTireForceRL:
+    description: Max longitudanal force appliable fy the rear left tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdMaxTireForceRR:
+    description: Max longitudanal force appliable fy the rear right tire
+    unit: N
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4000
+      resolution: 1
+    continuous: true
+  vdIntendedRadius:
+    description: Intended turn radius of vehicle from driver input
+    unit: m
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+      resolution: 0.1
+    continuous: true
+  vdMaxTorqueRequest:
+    description: Torque request from the torque manager
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 9
+      range:
+        min: -200
+        max: 200
+      resolution: 1
+    continuous: true
+
+  paramTcTireModelLimit:
+    description: Active status of the traction control tire model algorithm
+    discreteValues: digitalStatus
+  paramTcPidMax:
+    description: Max percentage limit of the driver input torque
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 1
+      resolution: 0.01
+    continuous: true
+  paramTcILim:
+    description: Max percentage limit of the driver input torque
+    unit: "%"
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 1
+      resolution: 0.01
+    continuous: true
+  paramTcKp:
+    description: Proportional coefficient of traction control PID
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4
+      resolution: 0.001
+    continuous: true
+  paramTcKi:
+    description: Integral coefficient of traction control PID
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4
+      resolution: 0.001
+    continuous: true
+  paramTcKd:
+    description: Derivative coefficient of traction control PID
+    nativeRepresentation:
+      bitWidth: 12
+      range:
+        min: 0
+        max: 4
+      resolution: 0.001
+    continuous: true
+  paramTcTLeak:
+    description: Leak time constant of traction control PID
+    unit: "s"
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 1
+      resolution: 0.001
     continuous: true

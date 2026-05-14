@@ -22,11 +22,34 @@
 
 struct
 {
-    bool            request_enabled[DRV_VN9008_CHANNEL_COUNT];
+    float32_t       duty[DRV_VN9008_CHANNEL_COUNT];
     drv_hsd_state_E state[DRV_VN9008_CHANNEL_COUNT];
     float32_t       current[DRV_VN9008_CHANNEL_COUNT];
     drv_timer_S     oc_timer[DRV_VN9008_CHANNEL_COUNT];
 } drv_vn9008_data;
+
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
+static void setDuty(drv_vn9008_E channel, float32_t duty)
+{
+    drv_vn9008_data.duty[channel] = duty;
+    const drv_io_activeState_E state = (duty > 0.0f) ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+    switch (drv_vn9008_channels[channel].type)
+    {
+        case VN9008_DIGITAL:
+            drv_outputAD_setDigitalActiveState(drv_vn9008_channels[channel].enable.digital, state);
+            break;
+
+        case VN9008_PWM_EN:
+            drv_outputAD_setDigitalActiveState(drv_vn9008_channels[channel].enable.pwm_en.en, state);
+            HW_TIM_setDuty(drv_vn9008_channels[channel].enable.pwm_en.pwm.tim_port,
+                           drv_vn9008_channels[channel].enable.pwm_en.pwm.tim_channel,
+                           duty);
+            break;
+    }
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -38,9 +61,8 @@ void drv_vn9008_init(void)
 
     for (uint8_t i = 0U; i < DRV_VN9008_CHANNEL_COUNT; i++)
     {
-        drv_vn9008_data.state[i]           = DRV_HSD_STATE_OFF;
-        drv_vn9008_data.request_enabled[i] = false;
-        drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable,      DRV_IO_INACTIVE);
+        drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
+        setDuty(i, 0.0f);
         drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable_cs,   DRV_IO_INACTIVE);
         drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_INACTIVE);
     }
@@ -54,7 +76,7 @@ void drv_vn9008_run(void)
         const float32_t current        = cs_voltage * drv_vn9008_channels[i].cs_amp_per_volt;
         const bool      diagnostic     = drv_outputAD_getDigitalActiveState(drv_vn9008_channels[i].enable_cs) == DRV_IO_ACTIVE;
         const float32_t currentCurrent = diagnostic ? current : drv_vn9008_data.current[i];
-        drv_vn9008_data.current[i]     = drv_vn9008_data.state[i] == DRV_HSD_STATE_ON ? currentCurrent : 0.0f;
+        drv_vn9008_data.current[i] = (drv_vn9008_data.state[i] == DRV_HSD_STATE_ON) ? currentCurrent : 0.0f;
         const bool      is_overcurrent = drv_vn9008_data.current[i] > drv_vn9008_channels[i].current_limit_amp;
 
         if (is_overcurrent)
@@ -73,7 +95,7 @@ void drv_vn9008_run(void)
         switch (drv_vn9008_data.state[i])
         {
             case DRV_HSD_STATE_OFF:
-                if (drv_vn9008_data.request_enabled[i])
+                if (drv_vn9008_data.duty[i] > 0.0f)
                 {
                     drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_INACTIVE);
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_ON;
@@ -82,7 +104,7 @@ void drv_vn9008_run(void)
 
             case DRV_HSD_STATE_ON:
                 const drv_timer_state_E state = drv_timer_getState(&drv_vn9008_data.oc_timer[i]);
-                if (drv_vn9008_data.request_enabled[i] == false)
+                if (drv_vn9008_data.duty[i] <= 0.0f)
                 {
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_OFF;
                 }
@@ -95,7 +117,7 @@ void drv_vn9008_run(void)
                 break;
 
             case DRV_HSD_STATE_OVERCURRENT:
-                if (drv_vn9008_data.request_enabled[i] == false)
+                if (drv_vn9008_data.duty[i] <= 0.0f)
                 {
                     if (is_overcurrent)
                     {
@@ -110,7 +132,7 @@ void drv_vn9008_run(void)
                 break;
 
             case DRV_HSD_STATE_OVERTEMP:
-                if (drv_vn9008_data.request_enabled[i] == false)
+                if (drv_vn9008_data.duty[i] <= 0.0f)
                 {
                     if (is_overcurrent == false)
                     {
@@ -125,14 +147,7 @@ void drv_vn9008_run(void)
                 break;
         }
 
-        if (drv_vn9008_data.state[i] == DRV_HSD_STATE_ON)
-        {
-            drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable, DRV_IO_ACTIVE);
-        }
-        else
-        {
-            drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].enable, DRV_IO_INACTIVE);
-        }
+        setDuty(i, drv_vn9008_data.state[i] == DRV_HSD_STATE_ON ? drv_vn9008_data.duty[i] : 0.0f);
     }
 }
 
@@ -146,9 +161,19 @@ float32_t drv_vn9008_getCurrent(drv_vn9008_E ic)
     return drv_vn9008_data.current[ic];
 }
 
+float32_t drv_vn9008_getDuty(drv_vn9008_E ic)
+{
+    return drv_vn9008_data.duty[ic];
+}
+
+void drv_vn9008_setDuty(drv_vn9008_E ic, float32_t duty)
+{
+    drv_vn9008_data.duty[ic] = duty;
+}
+
 void drv_vn9008_setEnabled(drv_vn9008_E ic, bool enabled)
 {
-    drv_vn9008_data.request_enabled[ic] = enabled;
+    drv_vn9008_data.duty[ic] = enabled ? 1.0f : 0.0f;
 }
 
 void drv_vn9008_setCSEnabled(drv_vn9008_E ic, bool enabled)

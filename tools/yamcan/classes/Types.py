@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Dict, Literal, Union
+from collections import defaultdict
 
 
 class Continuous(Enum):
@@ -20,6 +21,17 @@ class DiscreteValue:
             or any(not isinstance(v, int) for v in values.values())
         ):
             raise ValueError(f"Values for discrete value {name} must all be ints")
+        # Detect duplicate integer values
+        reverse = defaultdict(list)
+        for k, v in values.items():
+            reverse[v].append(k)
+
+        duplicates = {v: ks for v, ks in reverse.items() if len(ks) > 1}
+        if duplicates:
+            raise ValueError(
+                f"Duplicate integer values in {name}: "
+                + ", ".join(f"{val} -> {keys}" for val, keys in duplicates.items())
+            )
 
         self.name = name
         self.values = values
@@ -135,7 +147,9 @@ class CType(Enum):
             return CType._bool
 
         req_width_bytes = (bit_width + 7) // 8
-        req_width_bytes = 4 if req_width_bytes == 3 else 8 if req_width_bytes > 4 else req_width_bytes
+        req_width_bytes = (
+            4 if req_width_bytes == 3 else 8 if req_width_bytes > 4 else req_width_bytes
+        )
 
         if req_width_bytes not in _DATA_SIZE_MAPPING[flt][signed]:
             raise KeyError("Error in calculation of required C type")

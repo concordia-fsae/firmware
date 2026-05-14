@@ -1,8 +1,8 @@
+use ::std::time::Duration;
 use std::path::PathBuf;
 use std::str::FromStr;
-use::std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use crc::Crc;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -50,7 +50,7 @@ impl CanioCmd {
                         }
                     }
                 };
-            },
+            }
             Err(e) => Err(e.into()),
         }
     }
@@ -69,10 +69,6 @@ pub enum FlashStatus {
     CrcMatch,
     DownloadSuccess,
     Skipped,
-}
-
-pub enum PrdCmd {
-    PersistentTesterPresent(bool),
 }
 
 pub struct UdsDownloadStart {
@@ -147,6 +143,41 @@ impl From<SupportedResetTypes> for automotive_diag::uds::ResetType {
         match value {
             SupportedResetTypes::Hard => Self::HardReset,
             SupportedResetTypes::Soft => Self::SoftReset,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SupportedDiagnosticSessions {
+    Default = 0x01,
+    Programming = 0x02,
+    Extended = 0x03,
+    SafetySystem = 0x04,
+}
+
+impl SupportedDiagnosticSessions {
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Programming => "programming",
+            Self::Extended => "extended",
+            Self::SafetySystem => "safety-system",
+        }
+    }
+}
+
+impl FromStr for SupportedDiagnosticSessions {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "default" | "01" | "0x01" => Ok(Self::Default),
+            "programming" | "02" | "0x02" => Ok(Self::Programming),
+            "extended" | "03" | "0x03" => Ok(Self::Extended),
+            "safety-system" | "safetysystem" | "safety_system" | "04" | "0x04" => {
+                Ok(Self::SafetySystem)
+            }
+            _ => Err(ParseError {}),
         }
     }
 }

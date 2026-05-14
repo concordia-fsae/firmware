@@ -26,3 +26,21 @@ def host_os() -> str:
         return "windows"
     else:
         fail("Unsupported host os '{}'.".format(os))
+
+def _sh_run_impl(ctx: AnalysisContext) -> list[Provider]:
+    script = ctx.attrs.script
+    args = cmd_args(script)
+    if ctx.attrs.args:
+        args.add(ctx.attrs.args)
+    return [
+        DefaultInfo(default_outputs = [script]),
+        RunInfo(args = args),
+    ]
+
+sh_run = rule(
+    impl = _sh_run_impl,
+    attrs = {
+        "script": attrs.source(),
+        "args": attrs.list(attrs.string(), default = []),
+    },
+)

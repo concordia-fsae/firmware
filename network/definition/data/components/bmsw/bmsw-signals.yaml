@@ -1,4 +1,29 @@
 signals:
+  analogRef5vHwError:
+    description: Error on 5V analog reference
+    discreteValues: faultStatus
+  packVoltageHwError:
+    description: Segment voltage into BMS error
+    discreteValues: faultStatus
+  insufficientThermistors:
+    description: Not enough thermistors are connected to be rules compliant
+    discreteValues: faultStatus
+  thermistorDisconnected:
+    description: One or more of the thermistors is disconnected
+    discreteValues: faultStatus
+  cellDisconnected:
+    description: One or more of the battery voltage taps is disconnected
+    discreteValues: faultStatus
+  cellUndervoltage:
+    description: One or more battery cells is undervoltage
+    discreteValues: faultStatus
+  cellOvervoltage:
+    description: One or more battery cells is overvoltage
+    discreteValues: faultStatus
+  cellOvertemp:
+    description: One or more battery cells is overtemperature
+    discreteValues: faultStatus
+
   voltageMin:
     description: Segment Minimum Cell Voltage
     unit: V
@@ -43,40 +68,11 @@ signals:
         max: 127
     continuous: true
 
-  chargeLimit:
-    description: Charge current limit
-    unit: A
-    nativeRepresentation:
-      bitWidth: 5
-      range:
-        min: 0
-        max: 32
-    continuous: true
-
-  dischargeLimit:
-    description: Discharge current limit
-    unit: A
-    nativeRepresentation:
-      bitWidth: 8
-      range:
-        min: 0
-        max: 255
-    continuous: true
-
-  errorFlag:
-    description: Error flag
+  faultBMS:
+    description: Battery fault flag
     discreteValues: flag
-
-  faultFlag:
-    description: Fault flag
-    discreteValues: flag
-
-  envErrorFlag:
-    description: Environment error flag
-    discreteValues: flag
-
-  envFaultFlag:
-    description: Environment fault flag
+  faultTemp:
+    description: Temperature fault flag
     discreteValues: flag
 
   cellTemp10:
@@ -266,7 +262,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -277,7 +273,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -288,7 +284,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -299,7 +295,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -310,7 +306,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -321,7 +317,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -332,7 +328,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -343,7 +339,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -354,7 +350,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -365,7 +361,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -376,7 +372,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -387,7 +383,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -398,7 +394,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -409,7 +405,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -420,7 +416,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -431,7 +427,7 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
 
@@ -442,10 +438,10 @@ signals:
       bitWidth: 12
       range:
         min: 0
-        max: 81.92
+        max: 81.9
       resolution: 0.020
     continuous: true
-  
+
   segmentVoltageHighResCalculated:
     description: Total Segment Voltage, higher resolution
     unit: V
@@ -453,7 +449,7 @@ signals:
       bitWidth: 12
       range:
         min: 0
-        max: 81.92
+        max: 81.9
       resolution: 0.020
     continuous: true
 
@@ -478,7 +474,11 @@ signals:
         max: 127
     continuous: true
 
-  mcuTemp:
+  bus7v5Voltage:
+    description: Segment worker 7V5 bus voltage
+    template: voltsPrecise
+
+  tempMcu:
     description: Segment worker microcontroller temperature
     unit: degC
     nativeRepresentation:
@@ -488,7 +488,7 @@ signals:
         max: 127
     continuous: true
 
-  boardTemp0:
+  tempBalancing0:
     description: Segment worker board temperature 0
     unit: degC
     nativeRepresentation:
@@ -498,7 +498,17 @@ signals:
         max: 127
     continuous: true
 
-  boardTemp1:
+  tempBalancing1:
+    description: Segment worker board temperature 1
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 7
+      range:
+        min: 0
+        max: 127
+    continuous: true
+
+  tempBoard:
     description: Segment worker board temperature 1
     unit: degC
     nativeRepresentation:
@@ -568,7 +578,7 @@ signals:
         max: 127
     continuous: true
 
-  cellTemp0:
+  cellTemp20:
     description: Temperature of cell 0
     unit: degC
     nativeRepresentation:
@@ -576,39 +586,6 @@ signals:
       range:
         min: 0
         max: 127
-    continuous: true
-
-  socMax:
-    description: Max cell SOC
-    unit: "%"
-    nativeRepresentation:
-      bitWidth: 10
-      range:
-        min: 0
-        max: 100
-      resolution: 0.1
-    continuous: true
-
-  socAvg:
-    description: Avg cell SOC
-    unit: "%"
-    nativeRepresentation:
-      bitWidth: 10
-      range:
-        min: 0
-        max: 100
-      resolution: 0.1
-    continuous: true
-
-  socMin:
-    description: Avg cell SOC
-    unit: "%"
-    nativeRepresentation:
-      bitWidth: 10
-      range:
-        min: 0
-        max: 100
-      resolution: 0.1
     continuous: true
 
   tempAvg:
@@ -628,6 +605,42 @@ signals:
       bitWidth: 10
       range:
         min: 0
-        max: 5.12
+        max: 5.115
       resolution: 0.005
     continuous: true
+
+  dbgThermVoltage1:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 1
+
+  dbgThermVoltage2:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 2
+
+  dbgThermVoltage3:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 3
+
+  dbgThermVoltage4:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 4
+
+  dbgThermVoltage5:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 5
+
+  dbgThermVoltage6:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 6
+
+  dbgThermVoltage7:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 7
+
+  dbgThermVoltage8:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 8
+
+  dbgThermVoltage9:
+    template: dbgThermVoltage
+    description: Raw thermistor voltage 9

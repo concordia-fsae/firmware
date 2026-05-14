@@ -16,10 +16,10 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define HW_TIM_TICK TIM2
-#define HW_TIM_TICK_IRQN TIM2_IRQn
-#define HW_TIM_TICK_ENABLECLK __HAL_RCC_TIM2_CLK_ENABLE
-#define HW_TIM_TICK_GETCLKFREQ 2*HAL_RCC_GetPCLK1Freq
+#define HW_TIM_TICK               TIM2
+#define HW_TIM_TICK_IRQN          TIM2_IRQn
+#define HW_TIM_TICK_ENABLECLK     __HAL_RCC_TIM2_CLK_ENABLE
+#define HW_TIM_TICK_GETCLKFREQ    2 * HAL_RCC_GetPCLK1Freq
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -27,8 +27,10 @@
 
 typedef enum
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HW_TIM_PORT_TACH,
     HW_TIM_PORT_PWM,
+#endif
     HW_TIM_PORT_COUNT,
 } HW_TIM_port_E;
 

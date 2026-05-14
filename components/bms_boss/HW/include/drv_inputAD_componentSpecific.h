@@ -6,7 +6,7 @@
 #pragma once
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef enum
@@ -24,7 +24,7 @@ typedef enum
 {
     DRV_INPUTAD_ANALOG_CS,
     DRV_INPUTAD_ANALOG_MCU_TEMP,
-#if BMSB_CONFIG_ID == 1U
+#if APP_VARIANT_ID == 1U
     DRV_INPUTAD_ANALOG_VPACK,
 #endif
     DRV_INPUTAD_ANALOG_COUNT,

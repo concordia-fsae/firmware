@@ -16,7 +16,7 @@
       if message.fault_message and not message.from_bridge:
         has_faults = True
         for signal, data in message.signal_objs.items():
-          faults_sent.append((signal, data.start_bit))
+          faults_sent.append((data.message_ref.node_ref.name + "_" + data.get_name_nodeless(), data.start_bit))
     for message, mdata in node.received_msgs.items():
       if mdata.fault_message:
         for signal, sdata in mdata.signal_objs.items():

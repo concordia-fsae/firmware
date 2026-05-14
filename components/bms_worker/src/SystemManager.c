@@ -11,6 +11,7 @@
 #include "stdbool.h"
 
 /**< Firmware Includes */
+#include "drv_outputAD.h"
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_can.h"
@@ -20,11 +21,6 @@
 #include "HW_i2c.h"
 #include "HW_spi.h"
 #include "HW_tim.h"
-
-#include "HW_HS4011.h"
-#include "HW_LTC2983.h"
-#include "HW_MAX14921.h"
-#include "HW_SHT40.h"
 
 /**< FreeRTOS Includes */
 #include "FreeRTOS.h"
@@ -59,9 +55,9 @@ const lib_app_appDesc_S appDesc = {
     // .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appCrcLocation = (const uint32_t)&__app_end_addr,
     .appComponentId = APP_COMPONENT_ID,
-    .appPcbaId = APP_PCBA_ID,
+    .appVariantId   = APP_VARIANT_ID,
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
-    .appNodeId = BMSW_NODE_ID,
+    .appNodeId      = BMSW_NODE_ID,
 #endif // APP_NODE_ID
 };
 /******************************************************************************
@@ -115,10 +111,18 @@ void Error_Handler(void)
     while (1)
     {
         uint32_t cnt = 6400000;
-        HW_GPIO_togglePin(HW_GPIO_LED);
+        drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
         while (cnt--)
         {
             ;
         }
     }
 }
+
+static void SYS1Hz_PRD()
+{
+    drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
+}
+const ModuleDesc_S SYS_desc = {
+    .periodic1Hz_CLK = &SYS1Hz_PRD,
+};

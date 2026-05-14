@@ -28,13 +28,13 @@ extern const uint32_t __app_crc_addr;
 
 __attribute__((section(".appDescriptor")))
 const lib_app_appDesc_S hwDesc = {
-    .appStart = (const uint32_t)&__app_start_addr,
-    .appEnd = (const uint32_t)&__app_end_addr,
+    .appStart       = (const uint32_t)&__app_start_addr,
+    .appEnd         = (const uint32_t)&__app_end_addr,
     .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appComponentId = APP_COMPONENT_ID,
-    .appPcbaId = APP_PCBA_ID,
+    .appVariantId   = APP_VARIANT_ID,
 #if FEATURE_IS_ENABLED(APP_NODE_ID)
-    .appNodeId = NODE_ID,
+    .appNodeId      = NODE_ID,
 #endif // APP_NODE_ID
 };
 
@@ -139,9 +139,9 @@ static bool checkAppCrc(lib_app_appDesc_S *appDesc)
 void SYS_init(void)
 {
     SYS_resetSoft();
+    GPIO_init(pinmux, COUNTOF(pinmux));
     CLK_init();
     TIM_init();
-    GPIO_init(pinmux, COUNTOF(pinmux));
     FLASH_init();
     CRC_init();
     CAN_init();

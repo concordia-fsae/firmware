@@ -9,7 +9,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "CAN/CanTypes.h"
+#include "YamcanTypes.h"
 
 #include "FloatTypes.h"
 #include "Utility.h"
@@ -19,5 +19,5 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUS_A_packTable_10ms_length 1U
+#define BUS_A_packTable_10ms_length    1U
 

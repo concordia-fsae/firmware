@@ -21,6 +21,7 @@
 
 #define UDS_SUB_FUNCTION_NONE                 0x00
 #define UDS_RESPONSE_NOT_REQUIRED             0x80
+#define UDS_DID_CURRENT_SESSION               0x0102
 
 #define uds_sendPositiveResponseEmpty(sid)    uds_sendPositiveResponse(sid, 0x00, NULL, 0U)
 
@@ -221,6 +222,7 @@ uint32_t         udsSrv_timeSinceLastTp(void);
 udsResult_E uds_sendNegativeResponse(udsServiceId_E sid, udsNegativeResponse_E nrc);
 udsResult_E uds_sendPositiveResponse(udsServiceId_E sid, uint8_t subFunction, uint8_t *payload, uint8_t payloadLengthBytes);
 bool        uds_checkResponseRequired(udsRequestDesc_S *req);
+bool        uds_handleCommonDIDRead(uint16_t did);
 
 
 /******************************************************************************
@@ -241,7 +243,7 @@ udsNegativeResponse_E uds_cb_sessionChangeAllowed(udsSessionType_E currentSessio
  * @brief performs a reset of the component
  * @param resetType udsResetType_E the type of reset to perform
  */
-void uds_cb_ecuReset(udsResetType_E resetType);
+void                  uds_cb_ecuReset(udsResetType_E resetType);
 
 
 /*

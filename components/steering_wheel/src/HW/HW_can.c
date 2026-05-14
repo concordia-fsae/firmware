@@ -8,8 +8,8 @@
 
 #include "HW_can.h"
 
-#include "CAN/CanTypes.h"
 #include "CAN/CAN.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S

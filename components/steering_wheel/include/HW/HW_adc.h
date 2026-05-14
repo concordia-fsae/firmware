@@ -24,7 +24,7 @@ extern DMA_HandleTypeDef hdma_adc1;
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void MX_ADC1_Init(void);
+void              MX_ADC1_Init(void);
 HAL_StatusTypeDef HAL_ADC_Calibrate(ADC_HandleTypeDef *hadc);
 
 #ifdef __cplusplus

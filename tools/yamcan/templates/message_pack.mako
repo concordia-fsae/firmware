@@ -4,20 +4,32 @@
 static bool pack_${bus.upper()}_${msg.name}(CAN_data_T *message, const uint8_t counter)
 {
   %if msg.from_bridge:
+<%
+    storage_name = msg.node_ref.name.upper() + '_' + msg.name.split('_')[1] if msg.node_ref.duplicateNode else msg.name
+    storage_index = f'[{msg.node_ref.offset}U]' if msg.node_ref.duplicateNode else ''
+%>\
     (void)counter;
-    extern CANRX_${msg.origin_bus.upper()}_messages_S CANRX_${msg.origin_bus.upper()}_messages;
-
-    if (CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message == false)
+    if (CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.new_message == false)
     {
         return false;
     }
 
-    *message = CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.raw;
-    CANRX_${msg.origin_bus.upper()}_messages.${msg.name}.new_message = false;
+    *message = CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.raw;
+    CANRX_${msg.origin_bus.upper()}_messages.${storage_name}${storage_index}.new_message = false;
   %elif msg.fault_message:
   (void)counter;
   *message = set_fault_message;
   %else:
+    %if msg.injected_tx:
+    (void)counter;
+    if (!CANTX_inject_${bus.upper()}_${msg.name}_state.pending)
+    {
+        return false;
+    }
+    *message = CANTX_inject_${bus.upper()}_${msg.name}_state.raw;
+    CANTX_inject_${bus.upper()}_${msg.name}_state.pending = false;
+    return true;
+    %endif
     if (transmit_${msg.name} == false)
     {
         return false;
@@ -114,7 +126,7 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
         idx_s = int(idx_s/2)
 %>\
 %if signal.native_representation.bit_width == 1:
-    atomicXorU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)((val ? 1U : 0U) << ${signal.start_bit % 8}U));
+    atomicOrU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)((val ? 1U : 0U) << ${signal.start_bit % 8}U));
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
     uint${dtype}_t tmp_${signal.name};
@@ -127,16 +139,19 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
     tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((val - ${int(signal.offset)}) / ${int(signal.scale)});
     %endif
     %if signal.native_representation.signedness == Signedness.signed:
-    tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((tmp_${signal.name} & ${2**(signal.native_representation.bit_width - 1) - 1}U) | ((tmp_${signal.name} < 0) ? 1 << ${(signal.native_representation.bit_width - 1)}U : 0U));
+    uint${dtype}_t tmp_${signal.name}_u = (uint${dtype}_t)tmp_${signal.name};
+    tmp_${signal.name}_u = (uint${dtype}_t)((tmp_${signal.name}_u & ${2**(signal.native_representation.bit_width - 1) - 1}U) |
+        ((tmp_${signal.name} < 0) ? (1U << ${(signal.native_representation.bit_width - 1)}U) : 0U));
+    tmp_${signal.name} = (int${dtype}_t)tmp_${signal.name}_u;
     %endif
     %if signal.native_representation.endianness.value == 0 and signal.native_representation.bit_width > 8:
     reverse_bytes((uint8_t*)&tmp_${signal.name}, ${int(signal.native_representation.bit_width / 8)}U);
     tmp_${signal.name} = ((tmp_${signal.name} & (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)(~(255U))) >> ${(8 - signal.native_representation.bit_width % 8) % 8}U) | (int${dtype}_t)((tmp_${signal.name} & ${(2**(8 - (signal.native_representation.bit_width % 8))) - 1}U));
     %endif
     %if dtype == 64:
-    atomicXorU64(&m->u64, (uint64_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit}U);
+    atomicOrU64(&m->u64, (uint64_t)(tmp_${signal.name} & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit}U);
     %else: 
-    atomicXorU${dtype}(&m->u${dtype}[${idx_s}], (uint${dtype}_t)((uint${dtype}_t)(tmp_${signal.name}) & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
+    atomicOrU${dtype}(&m->u${dtype}[${idx_s}], (uint${dtype}_t)((uint${dtype}_t)(tmp_${signal.name}) & ${(2**signal.native_representation.bit_width) - 1}U) << ${signal.start_bit % dtype}U);
     %endif 
 %else:
     (void)m;

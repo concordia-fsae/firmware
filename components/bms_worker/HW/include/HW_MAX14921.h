@@ -93,14 +93,13 @@ typedef struct
     bool            vp_undervoltage;
     bool            ready;
     bool            thermal_shutdown;
-    uint8_t         connected_cells;
 } MAX_response_S;
 
 typedef struct
 {
-    HW_spi_device_E  dev;
-    MAX_config_S     config;
-    MAX_response_S   state;
+    HW_spi_device_E dev;
+    MAX_config_S    config;
+    MAX_response_S  state;
 } MAX_S;
 
 
@@ -110,3 +109,4 @@ typedef struct
 
 bool MAX_init(void);
 bool MAX_readWriteToChip(void);
+void MAX_setOutputCell(MAX_selectedCell_E cell);

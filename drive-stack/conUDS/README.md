@@ -1,20 +1,51 @@
-conUDS
-============================
+# conUDS
+
 A UDS client written for use by the Concordia FSAE team.
 
 # About
+
 This UDS client (written in Rust) uses the attached CAN dongle (only socketcan supported for now)
 to interact with a given ECU using the UDS protocl on the attached CAN bus.
 
 ## Supported Functionality
+
 So far, this UDS client supports:
-  - ECU Resets
-  - Persistent Tester Present at 10ms
-  - App Downloading
+
+- ECU Resets
+- Reading the current diagnostic session
+- Changing the active diagnostic session
+- Persistent tester present at 10ms
+- App Downloading
 
 # Usage
 
-TODO
+All examples assume a node name from the UDS manifest and a SocketCAN device such as `can0`.
+
+Read the current diagnostic session:
+
+```bash
+conUDS -n mcu -t can0 read-session
+```
+
+Change the ECU into a different diagnostic session:
+
+```bash
+conUDS -n mcu -t can0 set-session extended
+conUDS -n mcu -t can0 set-session programming
+```
+
+Supported session names are:
+
+- `default`
+- `programming`
+- `extended`
+- `safety-system`
+
+Start persistent tester present and keep it running until `Ctrl+C`:
+
+```bash
+conUDS -n mcu -t can0 persistent-tester-present
+```
 
 ## Functionality
 

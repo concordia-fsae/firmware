@@ -1,4 +1,4 @@
-configs:
+variants:
   0:
     description: Power Distribution Unit
     options:
@@ -8,4 +8,3 @@ configs:
         - "#/components/shared/FeatureSels/APP_V1_FeatureSels.yaml"
         - "FeatureSels.yaml"
       overrides:
-        app_pcba_id: 0

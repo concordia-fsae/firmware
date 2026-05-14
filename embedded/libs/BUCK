@@ -39,6 +39,13 @@ git_fetch(
     visibility = ["PUBLIC"],
 )
 
+configured_alias(
+    name = "FreeRTOS-src",
+    actual = ":FreeRTOS.git",
+    platform = "prelude//platforms:default",
+    visibility = ["PUBLIC"],
+)
+
 git_fetch(
     name = "lib_FTDI_FT81x",
     repo = "https://github.com/concordia-fsae/lib_FTDI_FT81x.git",
@@ -65,6 +72,13 @@ git_fetch(
         "CMSIS/Core/Include/cmsis_gcc.h",
         "CMSIS/Core/Include/m-profile/cmsis_gcc_m.h",
     ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "CMSIS-src",
+    actual = ":CMSIS.git",
+    platform = "prelude//platforms:default",
     visibility = ["PUBLIC"],
 )
 
@@ -107,6 +121,13 @@ git_fetch(
         "include/isotp_defines.h",
         "include/isotp_user.h",
     ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "isotp-src",
+    actual = ":isotp",
+    platform = "prelude//platforms:default",
     visibility = ["PUBLIC"],
 )
 

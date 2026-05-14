@@ -131,6 +131,16 @@ def download_gcc_distribution(
             target_os = target_os,
             target_abi = target_abi,
         )
+    else:
+        incompatible_rule(
+            name = name,
+            arch = arch,
+            os = os,
+            target_abi = target_abi,
+            target_arch = target_arch,
+            target_os = target_os,
+            version = version,
+        )
 
 def _gcc_distribution_impl(ctx: AnalysisContext) -> list[Provider]:
     dest = ctx.actions.declare_output("gcc-{}-{}-{}".format(
@@ -185,7 +195,14 @@ def _incompatible_impl(ctx: AnalysisContext) -> list[Provider]:
     return [
         DefaultInfo(),
         RunInfo(),
-        GccDistributionInfo(),
+        GccDistributionInfo(
+            version = ctx.attrs.version,
+            arch = ctx.attrs.arch,
+            os = ctx.attrs.os,
+            target_arch = ctx.attrs.target_arch,
+            target_os = ctx.attrs.target_os,
+            target_abi = ctx.attrs.target_abi,
+        ),
         ConfigurationInfo(
             constraints = {label: value},
             values = {},
@@ -193,7 +210,14 @@ def _incompatible_impl(ctx: AnalysisContext) -> list[Provider]:
     ]
 
 incompatible_rule = rule(
-    attrs = {},
+    attrs = {
+        "arch": attrs.option(attrs.string(), default = None),
+        "os": attrs.option(attrs.string(), default = None),
+        "target_abi": attrs.option(attrs.string(), default = None),
+        "target_arch": attrs.option(attrs.string(), default = None),
+        "target_os": attrs.option(attrs.string(), default = None),
+        "version": attrs.option(attrs.string(), default = None),
+    },
     impl = _incompatible_impl,
     doc = "A rule that produces nothing. Used for no-op dep in a select.",
     is_configuration_rule = True,
@@ -325,7 +349,7 @@ def _gcc_toolchain_impl(ctx: AnalysisContext) -> list[Provider]:
         "objcopy": toolchain_info.binary_utilities_info.objcopy,
         "objdump": toolchain_info.binary_utilities_info.objdump,
         "strip": _shell_quote(toolchain_info.binary_utilities_info.strip),
-        "platform-name": platform_name,
+        "platform-name": cmd_args(platform_name),
         "as": toolchain_info.as_compiler_info.compiler,
         "asflags": _shell_quote(toolchain_info.as_compiler_info.compiler_flags),
         "asppflags": _shell_quote(toolchain_info.as_compiler_info.preprocessor_flags),

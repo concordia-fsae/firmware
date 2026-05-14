@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use std::path::Path;
 use std::fs;
 use std::fs::remove_file;
-use std::time::Duration;
+use std::path::Path;
+use std::path::PathBuf;
 use std::thread;
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser};
@@ -63,8 +63,8 @@ pub fn expand_inputs(patterns: &[String]) -> Result<Vec<PathBuf>> {
         }
 
         let (dir, file_pat) = split_dir_and_basename_pattern(pat)?;
-        let entries = fs::read_dir(&dir)
-            .with_context(|| format!("reading directory {}", dir.display()))?;
+        let entries =
+            fs::read_dir(&dir).with_context(|| format!("reading directory {}", dir.display()))?;
 
         for ent in entries {
             let ent = ent?;
@@ -87,7 +87,10 @@ pub fn expand_inputs(patterns: &[String]) -> Result<Vec<PathBuf>> {
 /// If there's no parent, uses "." as the directory.
 fn split_dir_and_basename_pattern(pat: &str) -> Result<(PathBuf, String)> {
     let path = Path::new(pat);
-    let dir = path.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
+    let dir = path
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| PathBuf::from("."));
     let basename = path
         .file_name()
         .and_then(|s| s.to_str())

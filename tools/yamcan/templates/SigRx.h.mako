@@ -11,13 +11,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "MessageUnpack_generated.h"
 #include "CANTypes_generated.h"
+#include "YamcanTypes.h"
 #include "LIB_FloatTypes.h"
 #include "LIB_Types.h"
 #include "Utility.h"
 
-#include "CANIO_componentSpecific.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -33,10 +32,10 @@ typedef struct
           %if node.received_msgs[msg].node_ref.offset != 0:
 <%continue%>\
           %else:
-<%make_structdef_messageDuplicates(node, msg, node.received_msgs[msg].node_ref.total_duplicates)%>\
+<%make_structdef_messageDuplicates(bus, node, msg, node.received_msgs[msg].node_ref.total_duplicates)%>\
           %endif
         %else:
-<%make_structdef_message(node, msg)%>\
+<%make_structdef_message(bus, node, msg)%>\
         %endif
       %endif
     %endfor
@@ -49,7 +48,13 @@ typedef struct
 typedef struct
 {
     %for sig in node.received_sigs:
-      %if bus in node.received_sigs[sig].message_ref.source_buses:
+<%
+  signal_on_bus = any(
+    bus in node.received_msgs[msg].source_buses and sig in node.received_msgs[msg].signal_objs
+    for msg in node.received_msgs
+  )
+%>\
+      %if signal_on_bus:
         %if node.received_sigs[sig].message_ref.node_ref.duplicateNode:
           %if node.received_sigs[sig].message_ref.node_ref.offset != 0:
 <%continue%>\

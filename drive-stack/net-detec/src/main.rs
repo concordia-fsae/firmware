@@ -8,7 +8,10 @@ use if_addrs;
 use net_detec::{Client, DiscoveredService, DiscoveryFilter, Server};
 
 #[derive(Parser, Debug)]
-#[command(name = "net-detec", about = "mDNS-SD client/server utility and library")]
+#[command(
+    name = "net-detec",
+    about = "mDNS-SD client/server utility and library"
+)]
 struct Cli {
     /// Network interface to use (e.g., eth0, en0)
     #[arg(short, long)]
@@ -71,7 +74,11 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.cmd {
-        Mode::Server { instance, port, txt } => {
+        Mode::Server {
+            instance,
+            port,
+            txt,
+        } => {
             let host = cli.host_name;
             let service = cli.service_name;
             let instance_name =
@@ -89,8 +96,10 @@ fn main() -> anyhow::Result<()> {
                 txt: txt_map,
             };
 
-            println!("Starting service advertisement for {} => {} {:?} port:{} txt:{:?} on interface '{}'",
-                     service, host, cli.ip, port, txt, interface);
+            println!(
+                "Starting service advertisement for {} => {} {:?} port:{} txt:{:?} on interface '{}'",
+                service, host, cli.ip, port, txt, interface
+            );
             let dns = server.start();
 
             match dns {
@@ -124,7 +133,11 @@ fn main() -> anyhow::Result<()> {
                 Some(result) => {
                     println!(
                         "{} => {} {:?} port:{} txt:{:?}",
-                        result.fullname, result.host_name, result.addresses, result.port, result.txt
+                        result.fullname,
+                        result.host_name,
+                        result.addresses,
+                        result.port,
+                        result.txt
                     );
                 }
             }

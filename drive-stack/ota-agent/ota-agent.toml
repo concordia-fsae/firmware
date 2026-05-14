@@ -1,0 +1,3 @@
+# Carputer-local OTA agent configuration.
+save_dir = "/application/firmware"
+deploy_targets = "/application/config/ota-agent/deploy-targets.yaml"

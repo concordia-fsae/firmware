@@ -5,7 +5,7 @@ srcs = glob(["**/*.c", "**/*_FeatureDefs.yaml"])
     export_file(
         name = file,
         src = file,
-        visibility = ["//components/..."],
+        visibility = ["//components/...", "//drive-stack/..."],
     )
     for file in srcs
 ]

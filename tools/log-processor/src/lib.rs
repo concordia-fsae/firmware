@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use flate2::read::GzDecoder;
 use reqwest;
 use reqwest::Url;
@@ -73,7 +73,9 @@ fn escape_measurement(s: &str) -> String {
 }
 
 fn escape_tag_key_val(s: &str) -> String {
-    s.replace(',', r"\,").replace(' ', r"\ ").replace('=', r"\=")
+    s.replace(',', r"\,")
+        .replace(' ', r"\ ")
+        .replace('=', r"\=")
 }
 
 fn escape_field_key(s: &str) -> String {
@@ -109,7 +111,9 @@ fn to_line_protocol(
     line.push(' ');
     let mut first = true;
     for (k, v) in fields {
-        if !first { line.push(','); }
+        if !first {
+            line.push(',');
+        }
         first = false;
 
         let key = escape_field_key(k);
@@ -124,7 +128,10 @@ fn to_line_protocol(
                     line.push_str(&format!("{key}={}", f));
                 } else {
                     // fallback as string
-                    line.push_str(&format!("{key}=\"{}\"", escape_field_string(&n.to_string())));
+                    line.push_str(&format!(
+                        "{key}=\"{}\"",
+                        escape_field_string(&n.to_string())
+                    ));
                 }
             }
             Value::Bool(b) => {
@@ -142,7 +149,10 @@ fn to_line_protocol(
                 }
             }
             other => {
-                line.push_str(&format!("{key}=\"{}\"", escape_field_string(&other.to_string())));
+                line.push_str(&format!(
+                    "{key}=\"{}\"",
+                    escape_field_string(&other.to_string())
+                ));
             }
         }
     }
@@ -162,14 +172,26 @@ fn record_to_line(rec: &Record) -> Option<String> {
 
     let mut tags = BTreeMap::<String, String>::new();
     if let Some(bus) = &rec.bus {
-        if let Some(iface) = &bus.iface { tags.insert("iface".into(), iface.clone()); }
-        if let Some(name)  = &bus.name  { tags.insert("bus_name".into(), name.clone()); }
+        if let Some(iface) = &bus.iface {
+            tags.insert("iface".into(), iface.clone());
+        }
+        if let Some(name) = &bus.name {
+            tags.insert("bus_name".into(), name.clone());
+        }
     }
     if let Some(id) = &rec.id {
-        if let Some(v) = id.val { tags.insert("can_id".into(), v.to_string()); }
-        if let Some(b) = id.err { tags.insert("id_err".into(), if b { "1" } else { "0" }.into()); }
-        if let Some(b) = id.ext { tags.insert("id_ext".into(), if b { "1" } else { "0" }.into()); }
-        if let Some(b) = id.rtr { tags.insert("id_rtr".into(), if b { "1" } else { "0" }.into()); }
+        if let Some(v) = id.val {
+            tags.insert("can_id".into(), v.to_string());
+        }
+        if let Some(b) = id.err {
+            tags.insert("id_err".into(), if b { "1" } else { "0" }.into());
+        }
+        if let Some(b) = id.ext {
+            tags.insert("id_ext".into(), if b { "1" } else { "0" }.into());
+        }
+        if let Some(b) = id.rtr {
+            tags.insert("id_rtr".into(), if b { "1" } else { "0" }.into());
+        }
     }
 
     let mut fields = BTreeMap::<String, Value>::new();
@@ -179,7 +201,10 @@ fn record_to_line(rec: &Record) -> Option<String> {
     if let Some(meas) = &rec.meas {
         for (k, v) in meas {
             if let Some(f) = as_f64(v) {
-                fields.insert(k.clone(), Value::Number(serde_json::Number::from_f64(f).unwrap()));
+                fields.insert(
+                    k.clone(),
+                    Value::Number(serde_json::Number::from_f64(f).unwrap()),
+                );
             } else if let Some(s) = v.as_str() {
                 fields.insert(k.clone(), Value::String(s.to_string()));
             } else {
@@ -252,7 +277,7 @@ pub async fn ingest_tar_gz(
     batch_size: usize,
 ) -> Result<(usize, usize)> {
     let file = File::open(path).with_context(|| format!("open {}", path.display()))?;
-    let gz   = GzDecoder::new(file);
+    let gz = GzDecoder::new(file);
     let stream = BufReader::new(gz);
     let mut archive = Archive::new(stream);
 
@@ -305,7 +330,8 @@ pub async fn ingest_tar_gz(
                     let bucket = bucket.clone();
                     let token = token.clone();
                     tasks.push(tokio::spawn(async move {
-                        let res = write_batch_http(&http, &base_url, &org, &bucket, &token, &body).await;
+                        let res =
+                            write_batch_http(&http, &base_url, &org, &bucket, &token, &body).await;
                         drop(permit);
                         (res, body.len())
                     }));
@@ -322,7 +348,8 @@ pub async fn ingest_tar_gz(
                 let bucket2 = bucket.clone();
                 let token2 = token.clone();
                 tasks.push(tokio::spawn(async move {
-                    let res = write_batch_http(&http2, &base_url2, &org2, &bucket2, &token2, &body).await;
+                    let res =
+                        write_batch_http(&http2, &base_url2, &org2, &bucket2, &token2, &body).await;
                     drop(permit);
                     (res, body.len())
                 }));
@@ -354,13 +381,19 @@ pub async fn ingest_tar_gz(
     // IO stage: read entries and push lines quickly
     for entry in archive.entries()? {
         let mut entry = entry?;
-        if !entry.header().entry_type().is_file() { continue; }
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
 
         let mut buf = Vec::with_capacity(256 * 1024);
         entry.read_to_end(&mut buf)?;
         for slice in buf.split(|&b| b == b'\n') {
-            if slice.is_empty() { continue; }
-            if tx_lines.send(slice.to_vec()).await.is_err() { break; }
+            if slice.is_empty() {
+                continue;
+            }
+            if tx_lines.send(slice.to_vec()).await.is_err() {
+                break;
+            }
         }
     }
     drop(tx_lines); // close, signal parsers to finish
@@ -406,15 +439,20 @@ pub async fn ingest_files(
         println!("Start ingesting '{}'", p.display());
         let start_time = Instant::now();
         let (o, b) = match ingest_tar_gz(&http, url, org, bucket, token, p, batch_size)
-                .await
-                .with_context(|| format!("ingesting {}", p.display())) {
+            .await
+            .with_context(|| format!("ingesting {}", p.display()))
+        {
             Ok((o, b)) => (o, b),
             Err(e) => {
-                eprintln!("Error ingesting tar file {}: {:?}", p.display(), e); 
+                eprintln!("Error ingesting tar file {}: {:?}", p.display(), e);
                 continue;
             }
         };
-        println!("Finished ingesting '{}', duration: {:?}", p.display(), start_time.elapsed());
+        println!(
+            "Finished ingesting '{}', duration: {:?}",
+            p.display(),
+            start_time.elapsed()
+        );
         ok += o;
         bad += b;
 

@@ -1,4 +1,20 @@
 messages:
+  faults:
+    description: BMSW Faults
+    cycleTimeMs: 1000
+    id: 0x3b0
+    sourceBuses: veh
+    messageType: faults
+    signals:
+      analogRef5vHwError:
+      packVoltageHwError:
+      insufficientThermistors:
+      thermistorDisconnected:
+      cellDisconnected:
+      cellUndervoltage:
+      cellOvervoltage:
+      cellOvertemp:
+
   criticalData:
     description: Critical data from segment
     cycleTimeMs: 10
@@ -7,13 +23,8 @@ messages:
     signals:
       validator:
         template: criticalDataChecksum
-      envFaultFlag:
-      envErrorFlag:
-      faultFlag:
-      errorFlag:
-      dischargeLimit:
-        startBit: 16
-      chargeLimit:
+      faultTemp:
+      faultBMS:
       tempMax:
       segmentVoltage:
       voltageMax:
@@ -26,12 +37,11 @@ messages:
     lengthBytes: 8
     signals:
       cellTemp1:
-      cellTemp0:
-      socMax:
-      socAvg:
-      socMin:
+      cellTemp20:
       tempAvg:
       cellVoltageAvg:
+      segmentVoltageHighRes:
+      segmentVoltageHighResCalculated:
 
   cellTemps0:
     description: First set of cell temperatures
@@ -65,6 +75,22 @@ messages:
       cellTemp12:
       cellTemp11:
 
+  dbgThermistorVoltages:
+    description: Raw thermistor ADC voltages for debug
+    cycleTimeMs: 500
+    id: 0x780
+    lengthBytes: 8
+    signals:
+      dbgThermVoltage9:
+      dbgThermVoltage8:
+      dbgThermVoltage7:
+      dbgThermVoltage6:
+      dbgThermVoltage5:
+      dbgThermVoltage4:
+      dbgThermVoltage3:
+      dbgThermVoltage2:
+      dbgThermVoltage1:
+
   cellVoltages0:
     description: First set of cell voltages
     cycleTimeMs: 1000
@@ -97,8 +123,6 @@ messages:
     id: 0x750
     lengthBytes: 8
     signals:
-      segmentVoltageHighRes:
-      segmentVoltageHighResCalculated:
       cellVoltage15:
       cellVoltage14:
       cellVoltage13:
@@ -108,13 +132,14 @@ messages:
     description: Segment temperature and humidity data
     cycleTimeMs: 1000
     id: 0x760
-    lengthBytes: 5
     signals:
       boardRelativeHumidity:
       boardAmbientTemp:
-      mcuTemp:
-      boardTemp0:
-      boardTemp1:
+      bus7v5Voltage:
+      tempMcu:
+      tempBalancing0:
+      tempBalancing1:
+      tempBoard:
 
   fans:
     description: Segment fan data

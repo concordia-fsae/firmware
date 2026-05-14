@@ -4,7 +4,7 @@ messages:
     cycleTimeMs: 100
     description: PM100DXR Temperatures 1
     idOffset: 0x00
-    lengthBytes: 8 
+    lengthBytes: 8
     signals:
       tempModuleA:
       tempModuleB:
@@ -15,7 +15,7 @@ messages:
     cycleTimeMs: 100
     description: PM100DXR Temperatures 2
     idOffset: 0x01
-    lengthBytes: 8 
+    lengthBytes: 8
     signals:
       controlBoardTemp:
       rtdTemp1:
@@ -24,9 +24,9 @@ messages:
 
   temps3AndTorqueShudder:
     cycleTimeMs: 100
-    description: PM100DXR Temperatures 3 & Torque Shudder 
+    description: PM100DXR Temperatures 3 & Torque Shudder
     idOffset: 0x02
-    lengthBytes: 8 
+    lengthBytes: 8
     signals:
       rtdTemp4:
       rtdTemp5:
@@ -35,7 +35,7 @@ messages:
 
   analogInputVoltages:
     cycleTimeMs: 10
-    description: PM100DXR Analog Input Voltages 
+    description: PM100DXR Analog Input Voltages
     idOffset: 0x03
     lengthBytes: 8
     signals:
@@ -43,7 +43,7 @@ messages:
       analogInputVoltage2:
       analogInputVoltage3:
       analogInputVoltage4:
-           startBit: 32
+        startBit: 32
       analogInputVoltage5:
       analogInputVoltage6:
 
@@ -98,7 +98,7 @@ messages:
     idOffset: 0x07
     lengthBytes: 8
     signals:
-      dcBusVoltage: 
+      dcBusVoltage:
       outputVoltage:
       voltageVAB:
       voltageVBC:
@@ -130,7 +130,7 @@ messages:
     description: PM100DXR Internal States
     idOffset: 0x0A
     lengthBytes: 8
-    signals: 
+    signals:
       vsmState:
         startBit: 0
       pwmFrequency:
@@ -181,65 +181,65 @@ messages:
     lengthBytes: 8
     messageType: faults
     signals:
-        postHWGateFault:
-        postHWOverCurrentFault:
-        postAcceleratorShorted:
-        postAcceleratorOpen:
-        postCurrentSensorLo:
-        postCurrentSensorHi:
-        postModuleTempLo:
-        postModuleTempHi:
-        postControlPCBTempLo:
-        postControlPCBTempHi:
-        postGateDrivePCBTempLo:
-        postGateDrivePCBTempHi:
-        post5VSenseVoltageLo:
-        post5VSenseVoltageHi:
-        post12VSenseVoltageLo:
-        post12VSenseVoltageHi:
-        post2V5SenseVoltageLo:
-        post2V5SenseVoltageHi:
-        post1V5SenseVoltageLo:
-        post1V5SenseVoltageHi:
-        postDCBusVoltageHi:
-        postDCBusVoltageLo:
-        postPreChargeTimeOut:
-        postPreChargeVoltageFailure:
-        postEepromChecksumInvalid:
-        postEepromDataOutOfRange:
-        postEepromUpdateRequired:
-        postHWDCBusOverVoltageDuringInit: 
-        postBrakeShorted:
-          startBit: 30
-        postBrakeOpen:
-        runMotorOverSpeedFault:
-        runOverCurrentFault:
-        runOverVoltageFault:
-        runInverterOverTempFault:
-        runAcceleratorInputShortedFault:
-        runAcceleratorInputOpenFault:
-        runDirectionCommandFault:
-        runInverterResponseTimeOutFault:
-        runHWGateFault:
-        runHWOverCurrentFault:
-        runUnderVoltageFault:
-        runCanCommandMessageLostFault:
-        runMotorOverTempFault:
-        runBrakeInputShortedFault:
-          startBit: 48
-        runBrakeInputOpenFault:
-        runModuleAOverTempFault:
-        runModuleBOverTempFault:
-        runModuleCOverTempFault:
-        runPcbOverTempFault:
-        runGateDriveBoard1OverTempFault:
-        runGateDriveBoard2OverTempFault:
-        runGateDriveBoard3OverTempFault:
-        runCurrentSensorFault: 
-        runHwDCBusOverVoltageFault:
-          startBit: 59
-        runResolverNotConnected:
-          startBit: 62
+      postHWGateFault:
+      postHWOverCurrentFault:
+      postAcceleratorShorted:
+      postAcceleratorOpen:
+      postCurrentSensorLo:
+      postCurrentSensorHi:
+      postModuleTempLo:
+      postModuleTempHi:
+      postControlPCBTempLo:
+      postControlPCBTempHi:
+      postGateDrivePCBTempLo:
+      postGateDrivePCBTempHi:
+      post5VSenseVoltageLo:
+      post5VSenseVoltageHi:
+      post12VSenseVoltageLo:
+      post12VSenseVoltageHi:
+      post2V5SenseVoltageLo:
+      post2V5SenseVoltageHi:
+      post1V5SenseVoltageLo:
+      post1V5SenseVoltageHi:
+      postDCBusVoltageHi:
+      postDCBusVoltageLo:
+      postPreChargeTimeOut:
+      postPreChargeVoltageFailure:
+      postEepromChecksumInvalid:
+      postEepromDataOutOfRange:
+      postEepromUpdateRequired:
+      postHWDCBusOverVoltageDuringInit:
+      postBrakeShorted:
+        startBit: 30
+      postBrakeOpen:
+      runMotorOverSpeedFault:
+      runOverCurrentFault:
+      runOverVoltageFault:
+      runInverterOverTempFault:
+      runAcceleratorInputShortedFault:
+      runAcceleratorInputOpenFault:
+      runDirectionCommandFault:
+      runInverterResponseTimeOutFault:
+      runHWGateFault:
+      runHWOverCurrentFault:
+      runUnderVoltageFault:
+      runCanCommandMessageLostFault:
+      runMotorOverTempFault:
+      runBrakeInputShortedFault:
+        startBit: 48
+      runBrakeInputOpenFault:
+      runModuleAOverTempFault:
+      runModuleBOverTempFault:
+      runModuleCOverTempFault:
+      runPcbOverTempFault:
+      runGateDriveBoard1OverTempFault:
+      runGateDriveBoard2OverTempFault:
+      runGateDriveBoard3OverTempFault:
+      runCurrentSensorFault:
+      runHwDCBusOverVoltageFault:
+        startBit: 59
+      runResolverNotConnected:
+        startBit: 62
 
   torqueAndTimerInfo:
     cycleTimeMs: 10

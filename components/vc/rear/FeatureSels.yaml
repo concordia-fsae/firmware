@@ -1,4 +1,4 @@
-featureDefs: 
+featureDefs:
   - "#/components/vc/rear/FeatureDefs.yaml"
   - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
   - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"

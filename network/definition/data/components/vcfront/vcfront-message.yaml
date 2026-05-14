@@ -16,6 +16,11 @@ messages:
       gpsOverrun:
       vehicleSpeedDegraded:
       appsDisabled:
+      faulted5vCritical:
+      faulted5vExt:
+      gpsDataNotValid:
+      wheelSpeedSensorDegraded:
+      wheelSpeedSensorLocked:
 
   udsResponse:
     description: UDS response message from the VCFRONT
@@ -94,7 +99,7 @@ messages:
   shockpot:
     description: Data from front shock pots
     id: 0x455
-    cycleTimeMs: 100
+    cycleTimeMs: 10
     signals:
       shockpotVoltFL:
       shockpotdispFL:
@@ -170,7 +175,19 @@ messages:
     cycleTimeMs: 100
     signals:
       slipTarget:
-          template: percentageAccurate
+        template: percentageAccurate
+
+  paramTcPid:
+    description: Traction Control PID parameters
+    id: 0x4e3
+    cycleTimeMs: 100
+    signals:
+      paramTcPidMax:
+      paramTcILim:
+      paramTcKp:
+      paramTcKi:
+      paramTcKd:
+      paramTcTLeak:
 
   sleep:
     description: VCFRONT sleep information
@@ -197,6 +214,16 @@ messages:
     id: 0x312
     sourceBuses: veh
     template: date
+
+  gpsDiagnostics:
+    id: 0x5b1
+    sourceBuses: veh
+    cycleTimeMs: 100
+    signals:
+      gpsInvalidDate:
+      gpsInvalidTime:
+      gpsSatellites:
+      gpsQualityIndicator:
 
   gpsSentenceCounts:
     description: GPS sentence counters by type
@@ -238,3 +265,30 @@ messages:
       gpsPairAlarmRollover:
       gpsPairAlarmStabilityWarning:
       gpsPairAlarmEulerAnomaly:
+
+  vdMaxTireForce:
+    description: Max applicable force by each tire from model
+    id: 0x2f0
+    cycleTimeMs: 20
+    sourceBuses: veh
+    signals:
+      vdMaxTireForceFL:
+      vdMaxTireForceFR:
+      vdMaxTireForceRL:
+      vdMaxTireForceRR:
+  vdDiagnostics:
+    description: VD metrics
+    id: 0x2f1
+    cycleTimeMs: 20
+    sourceBuses: veh
+    signals:
+      vdIntendedRadius:
+      vdMaxTorqueRequest:
+
+  params:
+    description: Current states of the VCFRONT parameter states
+    id: 0x4f0
+    cycleTimeMs: 100
+    sourceBuses: veh
+    signals:
+      paramTcTireModelLimit:

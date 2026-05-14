@@ -1,8 +1,8 @@
 # Cargo.toml
 [package]
-name = { workspace = true }
-version = { workspace = true }
-edition = { workspace = true }
+name = "ota-agent"
+version = "0.1.0"
+edition = "2024"
 
 [dependencies]
 argh = { workspace = true }
@@ -15,7 +15,6 @@ serde_json = { workspace = true }
 futures = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-get_if_addrs = { workspace = true }
 net_detec = { workspace = true }
 if_addrs = { workspace = true }
 hostname = { workspace = true }
@@ -24,3 +23,4 @@ sha2 = { workspace = true }
 hex = { workspace = true }
 chrono = { workspace = true }
 thiserror = { workspace = true }
+indicatif = { workspace = true }

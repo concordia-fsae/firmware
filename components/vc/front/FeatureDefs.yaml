@@ -3,7 +3,8 @@ config:
   description: Feature definitions for the BMS Boss
 defs:
   canrx_swi:
-  cantx_swi: 
+  cantx_swi:
   brakepedal_from_pressure:
   wiggly_pedal:
   bypassable_apps:
+  limit_lon_tire_accel:

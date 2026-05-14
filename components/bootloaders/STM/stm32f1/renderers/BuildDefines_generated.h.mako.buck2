@@ -5,8 +5,8 @@
 
 #pragma once
 
-%if "nodeId" in configs:
-#define NODE_ID          ${configs["nodeId"]}U
+%if "nodeId" in variants:
+#define NODE_ID          ${variants["nodeId"]}U
 %endif
-#define UDS_REQUEST_ID   ${configs["udsRequestId"]}U
-#define UDS_RESPONSE_ID  ${configs["udsResponseId"]}U
+#define UDS_REQUEST_ID   ${variants["udsRequestId"]}U
+#define UDS_RESPONSE_ID  ${variants["udsResponseId"]}U

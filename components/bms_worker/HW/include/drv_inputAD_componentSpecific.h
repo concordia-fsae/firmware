@@ -6,11 +6,12 @@
 #pragma once
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef enum
 {
+    DRV_INPUTAD_DIGITAL_NSHUTDOWN,
     DRV_INPUTAD_DIGITAL_COUNT,
 } drv_inputAD_channelDigital_E;
 
@@ -25,6 +26,7 @@ typedef enum
     DRV_INPUTAD_ANALOG_MUX1_CH6,
     DRV_INPUTAD_ANALOG_MUX1_CH7,
     DRV_INPUTAD_ANALOG_MUX1_CH8,
+#if APP_VARIANT_ID == 0U
     DRV_INPUTAD_ANALOG_MUX2_CH1,
     DRV_INPUTAD_ANALOG_MUX2_CH2,
     DRV_INPUTAD_ANALOG_MUX2_CH3,
@@ -41,6 +43,7 @@ typedef enum
     DRV_INPUTAD_ANALOG_MUX3_CH6,
     DRV_INPUTAD_ANALOG_MUX3_CH7,
     DRV_INPUTAD_ANALOG_MUX3_CH8,
+#endif // if APP_VARIANT_ID == 0U
     // All cell voltages must be sequential and ordered
     DRV_INPUTAD_ANALOG_CELL1,
     DRV_INPUTAD_ANALOG_CELL2,
@@ -59,9 +62,14 @@ typedef enum
     DRV_INPUTAD_ANALOG_CELL15,
     DRV_INPUTAD_ANALOG_CELL16,
     DRV_INPUTAD_ANALOG_SEGMENT,
-    DRV_INPUTAD_ANALOG_BOARD_TEMP1,
-    DRV_INPUTAD_ANALOG_BOARD_TEMP2,
-    DRV_INPUTAD_ANALOG_MCU_TEMP,
+#if APP_VARIANT_ID == 1U
+    DRV_INPUTAD_ANALOG_TEMP_BOARD,
+    DRV_INPUTAD_ANALOG_TEMP_THERM9,
+    DRV_INPUTAD_ANALOG_VSNS_7V5,
+#endif
+    DRV_INPUTAD_ANALOG_TEMP_BALANCING1,
+    DRV_INPUTAD_ANALOG_TEMP_BALANCING2,
+    DRV_INPUTAD_ANALOG_TEMP_MCU,
     DRV_INPUTAD_ANALOG_REF_VOLTAGE,
     DRV_INPUTAD_ANALOG_COUNT,
 } drv_inputAD_channelAnalog_E;

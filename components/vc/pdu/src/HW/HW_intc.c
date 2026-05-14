@@ -9,7 +9,7 @@
 
 // Firmware Includes
 #include "HW_intc.h"
-#include "NetworkDefines_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -24,7 +24,6 @@ extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim_tick;
 extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 
-
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -35,8 +34,7 @@ extern CAN_HandleTypeDef hcan[CAN_BUS_COUNT];
 void NMI_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -47,8 +45,7 @@ void HardFault_Handler(void)
     volatile uint8_t c = 0;
 
     while (c == 0)
-    {
-    }
+    {}
 }
 
 /**
@@ -57,8 +54,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -67,8 +63,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -77,8 +72,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -109,7 +103,7 @@ void DMA2_Channel2_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
     HAL_ADC_IRQHandler(&hadc1);
-    //    HAL_ADC_IRQHandler(&hadc2);
+    // HAL_ADC_IRQHandler(&hadc2);
 }
 
 void TIM2_IRQHandler(void)
@@ -148,24 +142,4 @@ void CAN1_RX0_IRQHandler(void)
 void CAN1_RX1_IRQHandler(void)
 {
     HAL_CAN_IRQHandler(&hcan[CAN_BUS_VEH]);
-}
-
-void CAN2_SCE_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_BODY]);
-}
-
-void CAN2_TX_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_BODY]);
-}
-
-void CAN2_RX0_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_BODY]);
-}
-
-void CAN2_RX1_IRQHandler(void)
-{
-    HAL_CAN_IRQHandler(&hcan[CAN_BUS_BODY]);
 }

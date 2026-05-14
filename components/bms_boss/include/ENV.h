@@ -10,15 +10,9 @@
  ******************************************************************************/
 
 // System Includes
-#include "FloatTypes.h"
+#include "LIB_Types.h"
 #include "stdbool.h"
 #include "stdint.h"
-
-// Firmware Includes
-
-// Other Includes
-#include "Module.h"
-
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -41,7 +35,6 @@ typedef struct
         float32_t rh;           /**< Stored in 0.01% RH */
     } board;
 } ENV_S;
-
 
 /******************************************************************************
  *                              E X T E R N S

@@ -3,11 +3,45 @@ signals:
   mcFaulted:
     description: The motor controller is showing a fault
     discreteValues: faultStatus
+  faulted5vCritical:
+    description: 5V critical external power rail faulted
+    discreteValues: faultStatus
+  faulted5vExt:
+    description: 5V external power rail faulted
+    discreteValues: faultStatus
+  miaVcfront:
+    description: The VCFRONT is MIA
+    discreteValues: faultStatus
+  miaBms:
+    description: The BMS is MIA
+    discreteValues: faultStatus
+  miaVcpdu:
+    description: The VCPDU is MIA
+    discreteValues: faultStatus
+  miaMc:
+    description: The Motor Controller is MIA
+    discreteValues: faultStatus
+  wheelSpeedSensorDegraded:
+    description: One or more wheel speed sensors are degraded
+    discreteValues: faultStatus
+  wheelSpeedSensorLocked:
+    description: One or more wheel speed sensors are locked
+    discreteValues: faultStatus
+  mcCalibratingResolver:
+    description: Motor controller manager is presently calibrating the resolver
+    discreteValues: faultStatus
+  mcCalibratingResolverFailed:
+    description: Motor controller manager resolver calibration failed
+    discreteValues: faultStatus
 
   # Signals
   brakeLightState:
     description: 'State of the break light'
     discreteValues: brakeLightState
+
+  brakePrVoltage:
+    description: "Voltage of the brake pedal pressure"
+    template: voltsPrecise
 
   hornState:
     description: State of the horn
@@ -85,10 +119,11 @@ signals:
     template: voltsPrecise
 
   shockpotdispRL:
-    description: "Shock pot displacment rear left"
+    description: "Shock pot displacement rear left"
     unit: mm
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75
@@ -99,11 +134,61 @@ signals:
     template: voltsPrecise
 
   shockpotdispRR:
-    description: "Shockpot displacment rear right"
+    description: "Shockpot displacement rear right"
     unit: mm
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75
+    continuous: true
+
+  tsCapThermistorVoltage:
+    description: TS cap thermistor voltage
+    template: voltsPrecise
+
+  tsCapTemperature:
+    description: TS cap thermistor temperature
+    unit: degC
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 200
+    continuous: true
+
+  requestContactorsOpen:
+    description: Request open contactor state from the battery
+    discreteValues: digitalStatus
+
+  mcCalibrationAttempts:
+    description: Resolver calibration write attempts made by the motor controller manager
+    template: count8Bit
+
+  mcCalibrationConfiguredAngle:
+    description: Resolver calibration configured gamma adjust angle
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
+    continuous: true
+
+  mcCalibrationDeltaFilteredMeasured:
+    description: Resolver calibration filtered measured delta
+    unit: deg
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: -3276.8
+        max: 3276.7
+      endianness: little
+      signedness: signed
     continuous: true

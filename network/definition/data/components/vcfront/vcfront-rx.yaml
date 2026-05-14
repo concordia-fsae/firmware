@@ -4,8 +4,18 @@ messages:
     unrecorded: true
   SWS_driverRequest:
     sourceBuses: veh
+  VCPDU_imuAccel:
+    sourceBuses: veh
+  SWS_driverParamRequest:
+    sourceBuses: veh
+  VCREAR_faults:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
+    sourceBuses: veh
+  VCPDU_lon:
+    sourceBuses: veh
+  VCPDU_anglePitch:
     sourceBuses: veh
   BMSB_bmsStatusMem:
     sourceBuses: veh
@@ -19,5 +29,5 @@ signals:
     sourceBuses: veh
   VCPDU_safetyReset:
     sourceBuses: veh
-  SWS_requestCalibSteerAngle:
+  PM100DX_motorSpeedCritical:
     sourceBuses: veh

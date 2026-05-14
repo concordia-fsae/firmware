@@ -18,7 +18,8 @@ float32_t lib_rateLimit_linear_update(lib_rateLimit_linear_S* linear, float32_t 
     const bool increment = x_n > linear->y_n;
 
     if ((x_n > (linear->y_n + linear->maxStepDelta)) ||
-        (x_n < (linear->y_n - linear->maxStepDelta)))
+        (x_n < (linear->y_n - linear->maxStepDelta))
+        )
     {
         linear->y_n += increment ? linear->maxStepDelta : -linear->maxStepDelta;
     }

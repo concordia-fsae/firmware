@@ -7,7 +7,6 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-// System Includes
 #include "stdint.h"
 #include "string.h"
 #include "SystemConfig.h"
@@ -24,7 +23,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define SPI_MAX HW_SPI_DEV_BMS
+#define SPI_MAX    HW_SPI_DEV_BMS
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -52,14 +51,14 @@ bool MAX_init(void)
 {
     memset(&max_chip, 0x00, sizeof(max_chip));
 
-    max_chip.dev                         = SPI_MAX;
-    max_chip.config.low_power_mode       = false;
-    max_chip.config.diagnostic_enabled   = false;
-    max_chip.config.sampling             = false;
-    max_chip.config.sampling_start       = UINT32_MAX;
-    max_chip.config.balancing            = 0x00;
-    max_chip.config.output.state         = MAX_AMPLIFIER_SELF_CALIBRATION;
-    max_chip.config.output.output.cell   = MAX_CELL1;
+    max_chip.dev                       = SPI_MAX;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.sampling           = false;
+    max_chip.config.sampling_start     = UINT32_MAX;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_AMPLIFIER_SELF_CALIBRATION;
+    max_chip.config.output.output.cell = MAX_CELL1;
 
     MAX_readWriteToChip();
 
@@ -92,6 +91,22 @@ bool MAX_readWriteToChip(void)
     HW_SPI_release(max_chip.dev);
 
     return true;
+}
+
+/**
+ * @brief  Set output cell of the cell multiplexer
+ *
+ * @param cell Voltage of cell to output
+ */
+void MAX_setOutputCell(MAX_selectedCell_E cell)
+{
+    max_chip.config.sampling           = false;
+    max_chip.config.diagnostic_enabled = false;
+    max_chip.config.low_power_mode     = false;
+    max_chip.config.balancing          = 0x00;
+    max_chip.config.output.state       = MAX_CELL_VOLTAGE;
+    max_chip.config.output.output.cell = cell;
+    MAX_readWriteToChip();
 }
 
 /******************************************************************************
@@ -153,8 +168,13 @@ void MAX_translateConfig(MAX_config_S* config, uint8_t* data)
         }
     }
 
-    /**< Device always SAMPL IO controlled */    // data[2] |= (config->sampling) ? 0 : 1 << 5;
+// Variant 0: controls sampling via physical GPIO pin (PA10)
+// Variant 1: sampling is controlled via SPI
+#if (APP_VARIANT_ID == 0U)
     HW_GPIO_writePin(HW_GPIO_MAX_SAMPLE, config->sampling);
+#elif (APP_VARIANT_ID == 1U)
+    data[2] |= (config->sampling) ? 0 : 1 << 5;
+#endif
     if (config->sampling)
     {
         data[2] |= (config->diagnostic_enabled) ? 1 << 6 : 0;

@@ -1,9 +1,9 @@
-/// CANIO module
+// CANIO module
 use std::marker::PhantomData;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use ecu_diagnostics::channel::{ChannelResult, IsoTPChannel, IsoTPSettings};
-use ecu_diagnostics::hardware::{socketcan::SocketCanScanner, Hardware, HardwareScanner};
+use ecu_diagnostics::hardware::{Hardware, HardwareScanner, socketcan::SocketCanScanner};
 use log::{debug, error};
 use tokio::sync::mpsc::Receiver;
 
@@ -125,9 +125,9 @@ impl<'a> CANIO<'a> {
                 } => {
                     let resp = self.uds_send_recv(&buf, 5, timeout_ms);
                     match resp {
-                        Err(e) => {
-                            resp_channel.send(None);
-                        },
+                        Err(_e) => {
+                            let _ = resp_channel.send(None);
+                        }
                         Ok(b) => {
                             let _ = resp_channel.send(Some(b));
                         }
@@ -144,6 +144,10 @@ impl<'a> CANIO<'a> {
 
 impl std::fmt::Display for CANIO<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Request ID: {:02x?}\nResponse ID: {:02x?}", self.ids.tx, self.ids.rx)
+        write!(
+            f,
+            "Request ID: {:02x?}\nResponse ID: {:02x?}",
+            self.ids.tx, self.ids.rx
+        )
     }
 }

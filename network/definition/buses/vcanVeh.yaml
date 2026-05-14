@@ -1,0 +1,4 @@
+name: "vcanVeh"
+description: "Virtual vehicle bus for local forwarding"
+defaultEndianness: "little"
+interfaceType: "virtual"

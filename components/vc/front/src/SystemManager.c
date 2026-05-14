@@ -8,14 +8,15 @@
  ******************************************************************************/
 
 /**< Firmware Includes */
+#include "drv_outputAD.h"
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_can.h"
 #include "HW_clock.h"
 #include "HW_dma.h"
+#include "HW_flash.h"
 #include "HW_gpio.h"
 #include "HW_tim.h"
-#include "HW_flash.h"
 #include "HW_uart.h"
 
 /**< FreeRTOS Includes */
@@ -26,8 +27,8 @@
 /**< Other Includes */
 #include "Module.h"
 
-#include "LIB_app.h"
 #include "lib_nvm.h"
+#include "LIB_app.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -51,7 +52,7 @@ const lib_app_appDesc_S appDesc = {
     // .appCrcLocation = (const uint32_t)&__app_crc_addr,
     .appCrcLocation = (const uint32_t)&__app_end_addr,
     .appComponentId = APP_COMPONENT_ID,
-    .appPcbaId = APP_PCBA_ID,
+    .appVariantId   = APP_VARIANT_ID,
 };
 
 /******************************************************************************
@@ -80,7 +81,7 @@ int main(void)
     HW_UART_init();
     FLASH_init();
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-    lib_nvm_init(); // Must be done early in the boot stage following flash bringup
+    lib_nvm_init();    // Must be done early in the boot stage following flash bringup
 #endif
     HW_GPIO_init();
 
@@ -108,8 +109,18 @@ void Error_Handler(void)
     while (1)
     {
         uint32_t cnt = 6400000;
-        HW_GPIO_togglePin(HW_GPIO_LED);
+        drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
         while (cnt--)
+        {
             ;
+        }
     }
 }
+
+static void SYS1Hz_PRD()
+{
+    drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED);
+}
+const ModuleDesc_S sys_desc = {
+    .periodic1Hz_CLK = &SYS1Hz_PRD,
+};

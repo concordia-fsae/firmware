@@ -44,4 +44,3 @@ static void launch_display(void)
     // TODO
 }
 
-

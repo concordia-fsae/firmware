@@ -13,13 +13,8 @@
 #include "stdbool.h"
 #include "stdint.h"
 
-// Firmware Includes
-#include "HW_LTC2983.h"
-
 // Other Includes
-#include "Module.h"
-#include "FloatTypes.h"
-
+#include "LIB_Types.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -36,6 +31,7 @@ typedef enum
     CH7,
     CH8,
     CH9,
+#if APP_VARIANT_ID == 0U
     CH10,
     CH11,
     CH12,
@@ -47,38 +43,32 @@ typedef enum
     CH18,
     CH19,
     CH20,
+#endif // if APP_VARIANT_ID == 0U
     CHANNEL_COUNT,
 } ENV_thermistorID_E;
 
-typedef enum
-{
-    ENV_INIT = 0x00,
-    ENV_RUNNING,
-    ENV_FAULT,
-    ENV_ERROR,
-} Environment_State_E;
-
 typedef struct
 {
-    bool    therm_error;
+    bool      therm_error;
     float32_t temp;
 } ENV_temperature_S;
 
 typedef struct
 {
-    Environment_State_E state;
+    bool fault;
     struct
     {
         struct
         {
             float32_t ambient_temp;
             float32_t rh;
-        } board;
+        }                 board;
         ENV_temperature_S temps[CHANNEL_COUNT];
-        float32_t       max_temp;
-        float32_t       min_temp;
-        float32_t       avg_temp;
-    } values;
+        float32_t         max_temp;
+        float32_t         min_temp;
+        float32_t         avg_temp;
+    }    values;
+    bool startRhHeater;
 } ENV_S;
 
 

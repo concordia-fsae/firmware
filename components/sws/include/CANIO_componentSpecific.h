@@ -1,10 +1,9 @@
 /**
- RX_config* CAN.h
+ * RX_config* CAN.h
  * Header file for CANRX configuration
  */
 
 #pragma once
-
 
 /******************************************************************************
  *                             I N C L U D E S
@@ -12,82 +11,105 @@
 
 // imports for timebase
 #include "HW_tim.h"
+#include "Yamcan.h"
 
 // imports for CAN generated types
-#include "CANTypes_generated.h"
 
 // imports for data access
-#include "Module.h"
+#include "app_faultManager.h"
+#include "app_vehicleState.h"
+#include "driverInput.h"
 #include "drv_inputAD.h"
 #include "drv_userInput.h"
-#include "driverInput.h"
-#include "app_vehicleState.h"
-#include "app_faultManager.h"
+#include "Module.h"
 #include "screenManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BTN_LEFT_TOP       USERINPUT_BUTTON_LEFT_TOP
-#define BTN_LEFT_MID       USERINPUT_BUTTON_LEFT_MID
-#define BTN_LEFT_BOT       USERINPUT_BUTTON_LEFT_BOT
-#define BTN_RIGHT_TOP      USERINPUT_BUTTON_RIGHT_TOP
-#define BTN_RIGHT_MID      USERINPUT_BUTTON_RIGHT_MID
-#define BTN_RIGHT_BOT      USERINPUT_BUTTON_RIGHT_BOT
-#define BTN_LEFT_TOGGLE    USERINPUT_BUTTON_LEFT_TOGGLE
-#define BTN_RIGHT_TOGGLE   USERINPUT_BUTTON_RIGHT_TOGGLE
+#define BTN_LEFT_TOP                               USERINPUT_BUTTON_LEFT_TOP
+#define BTN_LEFT_MID                               USERINPUT_BUTTON_LEFT_MID
+#define BTN_LEFT_BOT                               USERINPUT_BUTTON_LEFT_BOT
+#define BTN_RIGHT_TOP                              USERINPUT_BUTTON_RIGHT_TOP
+#define BTN_RIGHT_MID                              USERINPUT_BUTTON_RIGHT_MID
+#define BTN_RIGHT_BOT                              USERINPUT_BUTTON_RIGHT_BOT
+#define BTN_LEFT_TOGGLE                            USERINPUT_BUTTON_LEFT_TOGGLE
+#define BTN_RIGHT_TOGGLE                           USERINPUT_BUTTON_RIGHT_TOGGLE
 
-#define CANIO_UDS_BUFFER_LENGTH 8U
-#define CANIO_getTimeMs() (HW_TIM_getTimeMS())
+#define CANIO_UDS_BUFFER_LENGTH                    8U
+#define CANIO_getTimeMs()                          (HW_TIM_getTimeMS())
 
-#define set_fault_message (*(CAN_data_T*)app_faultManager_transmit())
+#define set_fault_message                          (*(CAN_data_T*)app_faultManager_transmit())
 
-#define set_screenAlert(m,b,n,s) set(m,b,n,s, screenManager_getAlertCAN())
-#define set_screenWarning(m,b,n,s) set(m,b,n,s, screenManager_getWarningCAN())
+#define set_screenAlert(m, b, n, s)                set(m, b, n, s, screenManager_getAlertCAN())
+#define set_screenWarning(m, b, n, s)              set(m, b, n, s, screenManager_getWarningCAN())
 
-#define set_taskUsage1kHz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
-#define set_taskUsage100Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
-#define set_taskUsage10Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
-#define set_taskUsage1Hz(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
-#define set_taskUsageIdle(m,b,n,s) set(m,b,n,s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
+#define set_taskUsage1kHz(m, b, n, s)              set(m, b, n, s, Module_getTotalRuntimePercentage(MODULE_1kHz_TASK));
+#define set_taskUsage100Hz(m, b, n, s)             set(m, b, n, s, Module_getTotalRuntimePercentage(MODULE_100Hz_TASK));
+#define set_taskUsage10Hz(m, b, n, s)              set(m, b, n, s, Module_getTotalRuntimePercentage(MODULE_10Hz_TASK));
+#define set_taskUsage1Hz(m, b, n, s)               set(m, b, n, s, Module_getTotalRuntimePercentage(MODULE_1Hz_TASK));
+#define set_taskUsageIdle(m, b, n, s)              set(m, b, n, s, Module_getTotalRuntimePercentage(MODULE_IDLE_TASK));
 
-#define set_leftTop(m,b,n,s)             set(m,b,n,s, drv_userInput_buttonPressed(BTN_LEFT_TOP)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftMid(m,b,n,s)             set(m,b,n,s, drv_userInput_buttonPressed(BTN_LEFT_MID)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftBot(m,b,n,s)             set(m,b,n,s, drv_userInput_buttonPressed(BTN_LEFT_BOT)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightTop(m,b,n,s)            set(m,b,n,s, drv_userInput_buttonPressed(BTN_RIGHT_TOP)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightMid(m,b,n,s)            set(m,b,n,s, drv_userInput_buttonPressed(BTN_RIGHT_MID)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightBot(m,b,n,s)            set(m,b,n,s, drv_userInput_buttonPressed(BTN_RIGHT_BOT)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftToggle(m,b,n,s)          set(m,b,n,s, drv_userInput_buttonPressed(BTN_LEFT_TOGGLE)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightToggle(m,b,n,s)         set(m,b,n,s, drv_userInput_buttonPressed(BTN_RIGHT_TOGGLE)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftTopDebounce(m,b,n,s)     set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_LEFT_TOP)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftMidDebounce(m,b,n,s)     set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_LEFT_MID)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftBotDebounce(m,b,n,s)     set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_LEFT_BOT)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightTopDebounce(m,b,n,s)    set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_RIGHT_TOP)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightMidDebounce(m,b,n,s)    set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_RIGHT_MID)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightBotDebounce(m,b,n,s)    set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_RIGHT_BOT)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_leftToggleDebounce(m,b,n,s)  set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_LEFT_TOGGLE)  ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_rightToggleDebounce(m,b,n,s) set(m,b,n,s, drv_userInput_buttonInDebounce(BTN_RIGHT_TOGGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftTop(m, b, n, s)                    set(m, b, n, s, drv_userInput_buttonPressed(BTN_LEFT_TOP)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftMid(m, b, n, s)                    set(m, b, n, s, drv_userInput_buttonPressed(BTN_LEFT_MID)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftBot(m, b, n, s)                    set(m, b, n, s, drv_userInput_buttonPressed(BTN_LEFT_BOT)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightTop(m, b, n, s)                   set(m, b, n, s, drv_userInput_buttonPressed(BTN_RIGHT_TOP)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightMid(m, b, n, s)                   set(m, b, n, s, drv_userInput_buttonPressed(BTN_RIGHT_MID)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightBot(m, b, n, s)                   set(m, b, n, s, drv_userInput_buttonPressed(BTN_RIGHT_BOT)       ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftToggle(m, b, n, s)                 set(m, b, n, s, drv_userInput_buttonPressed(BTN_LEFT_TOGGLE)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightToggle(m, b, n, s)                set(m, b, n, s, drv_userInput_buttonPressed(BTN_RIGHT_TOGGLE)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftTopDebounce(m, b, n, s)            set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_LEFT_TOP)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftMidDebounce(m, b, n, s)            set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_LEFT_MID)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftBotDebounce(m, b, n, s)            set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_LEFT_BOT)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightTopDebounce(m, b, n, s)           set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_RIGHT_TOP)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightMidDebounce(m, b, n, s)           set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_RIGHT_MID)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightBotDebounce(m, b, n, s)           set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_RIGHT_BOT)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_leftToggleDebounce(m, b, n, s)         set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_LEFT_TOGGLE)  ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_rightToggleDebounce(m, b, n, s)        set(m, b, n, s, drv_userInput_buttonInDebounce(BTN_RIGHT_TOGGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
-#define set_requestRun(m,b,n,s)              set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RUN)                   ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestReverse(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_REVERSE)               ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestCrashReset(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CRASH_RESET)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestRaceMode(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_RACE)                  ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestTorqueInc(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC)            ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestTorqueDec(m,b,n,s)        set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC)            ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestLaunchControl(m,b,n,s)    set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_LAUNCH_CONTROL)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestTractionControl(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC)                    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestPreloadTorqueInc(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_PRELOAD_TORQUE_INC)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestPreloadTorqueDec(m,b,n,s) set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_PRELOAD_TORQUE_DEC)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestSlipInc(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_INC)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestSlipDec(m,b,n,s)          set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_DEC)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestCalibImu(m,b,n,s)         set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_IMU)         ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestCalibSteerAngle(m,b,n,s)  set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
-#define set_requestAppsBypass(m,b,n,s)       set(m,b,n,s, driverInput_getDigital(DRIVERINPUT_REQUEST_APPS_BYPASS)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestRun(m, b, n, s)                 set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_RUN)                   ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestReverse(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_REVERSE)               ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestCrashReset(m, b, n, s)          set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_CRASH_RESET)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestRaceMode(m, b, n, s)            set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_RACE)                  ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTorqueInc(m, b, n, s)           set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_INC)            ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTorqueDec(m, b, n, s)           set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TORQUE_DEC)            ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestLaunchControl(m, b, n, s)       set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_LAUNCH_CONTROL)        ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestRegenEnabled(m, b, n, s)        set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_REGEN)                 ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTractionControl(m, b, n, s)     set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC)                    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestPreloadTorqueInc(m, b, n, s)    set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_PRELOAD_TORQUE_INC)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestPreloadTorqueDec(m, b, n, s)    set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_PRELOAD_TORQUE_DEC)    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestSlipInc(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_INC)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestSlipDec(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_SLIP_DEC)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestCalibImu(m, b, n, s)            set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_IMU)         ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestCalibImuYaw(m, b, n, s)         set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_IMU_YAW)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestImuSelfTest(m, b, n, s)         set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_IMU_SELFTEST)          ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestCalibSteerAngle(m, b, n, s)     set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_CALIBRATE_STEER_ANGLE) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestAppsBypass(m, b, n, s)          set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_APPS_BYPASS)           ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTestPump(m, b, n, s)            set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TEST_PUMP)             ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTestFan(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TEST_FAN)              ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcTireModelLimit(m, b, n, s)    set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM)     ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcKpDec(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_KP_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcKpInc(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_KP_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcKiDec(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_KI_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcKiInc(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_KI_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcKdDec(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_KD_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcKdInc(m, b, n, s)             set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_KD_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcMaxLimDec(m, b, n, s)         set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_MAX_LIM_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcMaxLimInc(m, b, n, s)         set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_MAX_LIM_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcILimDec(m, b, n, s)           set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_ILIM_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcILimInc(m, b, n, s)           set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_ILIM_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcTLeakMsDec(m, b, n, s)        set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_TLEAK_MS_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcTLeakMsInc(m, b, n, s)        set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_TLEAK_MS_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
-#define set_requestScreen(m,b,n,s)         set(m,b,n,s, driverInput_getScreenCAN())
-#define set_driverConfigSelection(m,b,n,s) set(m,b,n,s, driverInput_getConfigSelectedCAN())
+#define set_requestScreen(m, b, n, s)              set(m, b, n, s, driverInput_getScreenCAN())
+#define set_driverConfigSelection(m, b, n, s)      set(m, b, n, s, driverInput_getConfigSelectedCAN())
+#define set_driverConfigOptionLeft(m, b, n, s)     set(m, b, n, s, driverInput_getConfigOptionLeftCAN())
+#define set_driverConfigOptionRight(m, b, n, s)    set(m, b, n, s, driverInput_getConfigOptionRightCAN())
+#define set_option13(m, b, n, s)                   set(m, b, n, s, driverInput_getOption13() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_configHasValue(m, b, n, s)             set(m, b, n, s, driverInput_getConfigHasValueU16() ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_displayValue(m, b, n, s)               set(m, b, n, s, driverInput_getConfigValueU16())
+#define set_configValueScale(m, b, n, s)           set(m, b, n, s, driverInput_getConfigScaleCAN())
+#define set_configValueunit(m, b, n, s)            set(m, b, n, s, driverInput_getConfigUnitCAN())
 
-#define set_sleepable(m,b,n,s) set(m,b,n,s, app_vehicleState_getSleepableStateCAN())
-
-#include "TemporaryStubbing.h"
+#define set_sleepable(m, b, n, s)                  set(m, b, n, s, app_vehicleState_getSleepableStateCAN())

@@ -7,15 +7,16 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "tssi.h"
 #include "LIB_Types.h"
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "string.h"
-#include "MessageUnpack_generated.h"
-#include "drv_outputAD.h"
+#include "tssi.h"
+
 #include "app_vehicleState.h"
+#include "drv_outputAD.h"
 #include "drv_timer.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -31,12 +32,14 @@ static struct
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static void setGreen(void){
+static void setGreen(void)
+{
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_TSSI_G_EN, DRV_IO_ACTIVE);
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_TSSI_R_EN, DRV_IO_INACTIVE);
 }
 
-static void setRed(void){
+static void setRed(void)
+{
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_TSSI_G_EN, DRV_IO_INACTIVE);
 
     if (drv_timer_getState(&tssi_data.timer) == DRV_TIMER_EXPIRED)
@@ -61,8 +64,10 @@ CAN_tssiState_E tssi_getStateCAN(void)
     {
         case TSSI_ON_RED:
             return CAN_TSSISTATE_ON_RED;
+
         case TSSI_ON_GREEN:
             return CAN_TSSISTATE_ON_GREEN;
+
         default:
             return CAN_TSSISTATE_SNA;
     }
@@ -78,16 +83,16 @@ static void tssi_init(void)
 
 static void tssi_periodic_10Hz(void)
 {
-    CAN_digitalStatus_E bmsStatus = CAN_DIGITALSTATUS_SNA;
-    CAN_digitalStatus_E imdStatus = CAN_DIGITALSTATUS_SNA;
-    CAN_digitalStatus_E reset_sig = CAN_DIGITALSTATUS_SNA;
+    CAN_digitalStatus_E bmsStatus     = CAN_DIGITALSTATUS_SNA;
+    CAN_digitalStatus_E imdStatus     = CAN_DIGITALSTATUS_SNA;
+    CAN_digitalStatus_E reset_sig     = CAN_DIGITALSTATUS_SNA;
 
-    const bool reset_valid = (CANRX_get_signal(VEH, BMSB_bmsIMDReset, &reset_sig) == CANRX_MESSAGE_VALID);
-    const bool imd_valid = (CANRX_get_signal(VEH, BMSB_imdStatusMem, &imdStatus) == CANRX_MESSAGE_VALID);
-    const bool bms_valid = (CANRX_get_signal(VEH, BMSB_bmsStatusMem, &bmsStatus) == CANRX_MESSAGE_VALID);
-    const bool bms_uds_valid = CANRX_validate(VEH, UDSCLIENT_bmsbUdsRequest) == CANRX_MESSAGE_VALID;
+    const bool          reset_valid   = (CANRX_get_signal(VEH, BMSB_bmsIMDReset, &reset_sig) == CANRX_MESSAGE_VALID);
+    const bool          imd_valid     = (CANRX_get_signal(VEH, BMSB_imdStatusMem, &imdStatus) == CANRX_MESSAGE_VALID);
+    const bool          bms_valid     = (CANRX_get_signal(VEH, BMSB_bmsStatusMem, &bmsStatus) == CANRX_MESSAGE_VALID);
+    const bool          bms_uds_valid = CANRX_validate(VEH, UDSCLIENT_bmsbUdsRequest) == CANRX_MESSAGE_VALID;
 
-    if (bms_uds_valid || tssi_data.state == TSSI_INIT)
+    if (bms_uds_valid || (tssi_data.state == TSSI_INIT))
     {
         setGreen();
         tssi_data.state = TSSI_INIT;
@@ -100,8 +105,9 @@ static void tssi_periodic_10Hz(void)
         return;
     }
 
-    if ((imd_valid == true ) && (bms_valid == true) &&
-        (bmsStatus == CAN_DIGITALSTATUS_ON) && (imdStatus == CAN_DIGITALSTATUS_ON))
+    if ((imd_valid == true) && (bms_valid == true) &&
+        (bmsStatus == CAN_DIGITALSTATUS_ON) && (imdStatus == CAN_DIGITALSTATUS_ON)
+        )
     {
         drv_timer_stop(&tssi_data.timer);
         tssi_data.state = TSSI_ON_GREEN;
@@ -117,6 +123,7 @@ static void tssi_periodic_10Hz(void)
         case TSSI_ON_GREEN:
             setGreen();
             break;
+
         default:
             setRed();
     }
@@ -127,6 +134,6 @@ static void tssi_periodic_10Hz(void)
  ******************************************************************************/
 
 const ModuleDesc_S tssi_desc = {
-    .moduleInit = &tssi_init,
+    .moduleInit       = &tssi_init,
     .periodic10Hz_CLK = &tssi_periodic_10Hz,
 };

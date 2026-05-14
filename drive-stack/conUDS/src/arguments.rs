@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use argh::FromArgs;
 
-use crate::SupportedResetTypes;
+use crate::{SupportedDiagnosticSessions, SupportedResetTypes};
 
 /// canUDS - a UDS client deigned for use by Concordia FSAE to interact with ECUs on their vehicles
 /// using the UDS protocol
@@ -20,8 +20,20 @@ pub struct Arguments {
     pub device: String,
 
     /// the manifest of UDS can nodes on the bus
-    #[argh(option, short = 'm', default = "String::from(\"drive-stack/conUDS/nodes.yml\")")]
+    #[argh(
+        option,
+        short = 'm',
+        default = "String::from(\"/application/config/ota-agent/uds-manifest.yaml\")"
+    )]
     pub node_manifest: String,
+
+    /// the manifest of per-node UDS routines
+    #[argh(
+        option,
+        short = 'r',
+        default = "String::from(\"/application/config/ota-agent/uds-routines.yaml\")"
+    )]
+    pub routine_manifest: String,
 
     #[argh(subcommand)]
     pub subcmd: ArgSubCommands,
@@ -34,8 +46,12 @@ pub enum ArgSubCommands {
     BootloaderDownload(SubArgBootloaderDownload),
     Batch(SubArgBatch),
     Reset(SubArgReset),
-    NVMHardReset(SubArgNVMHardReset),
     ReadDID(SubArgReadDID),
+    ReadSession(SubArgReadSession),
+    SetSession(SubArgSetSession),
+    PersistentTesterPresent(SubArgPersistentTesterPresent),
+    RoutineStart(SubArgRoutineStart),
+    RoutineList(SubArgRoutineList),
 }
 
 /// Download an application to an ECU
@@ -86,8 +102,35 @@ pub struct SubArgReadDID {
     pub id: String,
 }
 
-/// Hard reset entire NVM including internal values
+/// Read the current diagnostic session from an ECU
 #[derive(Debug, FromArgs)]
-#[argh(subcommand, name = "nvmHardReset")]
-pub struct SubArgNVMHardReset {
+#[argh(subcommand, name = "read-session")]
+pub struct SubArgReadSession {}
+
+/// Change the active diagnostic session on an ECU
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "set-session")]
+pub struct SubArgSetSession {
+    /// diagnostic session: default, programming, extended, or safety-system
+    #[argh(positional)]
+    pub session: SupportedDiagnosticSessions,
 }
+
+/// Start persistent tester present until interrupted
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "tp")]
+pub struct SubArgPersistentTesterPresent {}
+
+/// Start a named routine
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "routineStart")]
+pub struct SubArgRoutineStart {
+    /// routine name (as defined in the node manifest)
+    #[argh(positional)]
+    pub routine: String,
+}
+
+/// List routines available for a node
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "routineList")]
+pub struct SubArgRoutineList {}

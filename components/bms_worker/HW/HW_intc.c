@@ -8,10 +8,10 @@
  ******************************************************************************/
 
 // Firmware Includes
-#include "HW_intc.h"
-#include "stm32f1xx.h"
 #include "FeatureDefines_generated.h"
+#include "HW_intc.h"
 #include "HW_tim.h"
+#include "stm32f1xx.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -100,7 +100,9 @@ void ADC1_2_IRQHandler(void)
  */
 void TIM4_IRQHandler(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_PWM]);
+#endif
 }
 
 void TIM3_IRQHandler(void)
@@ -114,43 +116,47 @@ void TIM2_IRQHandler(void)
 
 void TIM1_TRG_COM_IRQHandler(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_TACH]);
+#endif
 }
 
 void TIM1_CC_IRQHandler(void)
 {
+#if !((APP_VARIANT_ID == 1U) && ((BMSW_NODE_ID % 2) == 0U))
     HAL_TIM_IRQHandler(&htim[HW_TIM_PORT_TACH]);
+#endif
 }
 
 // CAN interrupts
- void CAN1_SCE_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_SCE_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
 
 /**
  * CAN1_TX_IRQHandler
  *
  */
- void CAN1_TX_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_TX_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
 
 /**
  * CAN1_RX0_IRQHandler
  *
  */
- void CAN1_RX0_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}
 
 /**
  * CAN1_RX1_IRQHandler
  *
  */
- void CAN1_RX1_IRQHandler(void)
- {
- HAL_CAN_IRQHandler(&hcan);
- }
+void CAN1_RX1_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&hcan);
+}

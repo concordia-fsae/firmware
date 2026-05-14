@@ -61,6 +61,21 @@ messages:
         template: nvmRecordFailedInit
       nvmRecordsVersionFailed:
         template: nvmRecordsVersionFailed
+  contactorInfo:
+    cycleTimeMs: 1000
+    signals:
+      contactorLifetimeHvp:
+        template: contactorLifetimeHvp
+      contactorLifetimeHvn:
+        template: contactorLifetimeHvn
+      contactorLifetimePrecharge:
+        template: contactorLifetimePrecharge
+      contactorSohHvp:
+        template: contactorSohHvp
+      contactorSohHvn:
+        template: contactorSohHvn
+      contactorSohPrecharge:
+        template: contactorSohPrecharge
   sleepableNode:
     cycleTimeMs: 1000
     signals:

@@ -9,9 +9,10 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "app_vehicleState.h"
 #include "lib_nvm.h"
 #include "LIB_Types.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -23,23 +24,28 @@ typedef enum
     CRASHSENSOR_OK,
     CRASHSENSOR_CRASHED,
     CRASHSENSOR_ERROR,
+    CRASHSENSOR_IMPLAUSIBILITY,
 } crashSensor_state_E;
 
 typedef struct
 {
-    bool crashLatched;
-    uint8_t reserved[16U];
+    bool                     crashLatched;
+    app_vehicleState_state_E vehicleState;
+    uint8_t                  reserved[15U];
 } LIB_NVM_STORAGE(nvm_crashState_S);
 extern nvm_crashState_S crashState_data;
+
+NVM_SIZE_ASSERT(nvm_crashState_S, 18U);
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
-void crashSensor_task(void);
-crashSensor_state_E crashSensor_getState(void);
+void                   crashSensor_task(void);
+crashSensor_state_E    crashSensor_getState(void);
 CAN_crashSensorState_E crashSensor_getStateCAN(void);
-float32_t crashSensor_getTrippedAcceleration(void);
-float32_t crashSensor_getMaxAcceleration(void);
+float32_t              crashSensor_getTrippedAcceleration(void);
+float32_t              crashSensor_getMaxAcceleration(void);
 
-void crashSensor_notifyFromImu(void);
+void                   crashSensor_notifyFromImu(void);
+void                   crashSensor_requestCrashReset(void);

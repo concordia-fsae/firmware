@@ -1,0 +1,15 @@
+nodes:
+  vcfront:
+    routines:
+      resetOdometer:
+        id: 0x1000
+      resetTcPid:
+        id: 0x1001
+  vcpdu:
+    routines:
+      resetCrash:
+        id: 0x1000
+  vcrear:
+    routines:
+      calibrateResolver:
+        id: 0x2000

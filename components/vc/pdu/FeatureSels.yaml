@@ -1,4 +1,4 @@
-featureDefs: 
+featureDefs:
   - "#/components/vc/pdu/FeatureDefs.yaml"
   - "#/components/shared/code/SharedApp_FeatureDefs.yaml"
   - "#/components/shared/FeatureDefs/NVM_FeatureDefs.yaml"
@@ -9,7 +9,6 @@ features:
   app_component_id: vcpdu
   app_uds: true
   feature_vehicleState_mode: leader
-  feature_pump_full_beans: true
   feature_crashsensor_control: true
   nvm_lib_enabled: true
   nvm_flash_backed: true

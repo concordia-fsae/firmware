@@ -1,20 +1,20 @@
 /**
-* @file cockpitLights.c
-* @brief Module source that manages IMD and BMS lights
-*/
+ * @file cockpitLights.c
+ * @brief Module source that manages IMD and BMS lights
+ */
 
 /******************************************************************************
-*                             I N C L U D E S
-******************************************************************************/
+ *                             I N C L U D E S
+ ******************************************************************************/
 
+#include "app_vehicleState.h"
 #include "cockpitLights.h"
 #include "CANIO_componentSpecific.h"
+#include "drv_outputAD.h"
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "string.h"
-#include "drv_outputAD.h"
-#include "app_vehicleState.h"
-#include "MessageUnpack_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -27,8 +27,8 @@ static struct
 } cockpitLights_data;
 
 /******************************************************************************
-*                       P U B L I C  F U N C T I O N S
-******************************************************************************/
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
 CAN_digitalStatus_E cockpitLights_imd_getStateCAN(void)
 {
@@ -49,14 +49,13 @@ static void cockpitLights_init(void)
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_BMS_LIGHT_EN, DRV_IO_ACTIVE);
 }
 
-
 static void cockpitLights_periodic_10Hz(void)
 {
     CAN_digitalStatus_E can_imd_status;
     CAN_digitalStatus_E can_bms_status;
-    const bool imd_light_valid = (CANRX_get_signal(VEH, BMSB_imdStatusMem, &can_imd_status) == CANRX_MESSAGE_VALID);
-    const bool bms_light_valid = (CANRX_get_signal(VEH, BMSB_bmsStatusMem, &can_bms_status) == CANRX_MESSAGE_VALID);
-    const bool sleeping = app_vehicleState_sleeping();
+    const bool          imd_light_valid = (CANRX_get_signal(VEH, BMSB_imdStatusMem, &can_imd_status) == CANRX_MESSAGE_VALID);
+    const bool          bms_light_valid = (CANRX_get_signal(VEH, BMSB_bmsStatusMem, &can_bms_status) == CANRX_MESSAGE_VALID);
+    const bool          sleeping        = app_vehicleState_sleeping();
 
     if (sleeping || (imd_light_valid && (can_imd_status == CAN_DIGITALSTATUS_ON)))
     {
@@ -81,11 +80,11 @@ static void cockpitLights_periodic_10Hz(void)
 }
 
 /******************************************************************************
-*                           P U B L I C  V A R S
-******************************************************************************/
+ *                           P U B L I C  V A R S
+ ******************************************************************************/
 
 const ModuleDesc_S cockpitLights_desc =
 {
-    .moduleInit = &cockpitLights_init,
+    .moduleInit       = &cockpitLights_init,
     .periodic10Hz_CLK = &cockpitLights_periodic_10Hz,
 };

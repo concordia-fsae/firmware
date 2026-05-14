@@ -1,4 +1,0 @@
-name: "ass"
-description: "CANBus for the rear of the vehicle"
-defaultEndianness: "little"
-baudrate: 1000000 # kbps

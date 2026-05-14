@@ -1,0 +1,8 @@
+receiveAllMessagesOnBuses:
+  - "veh"
+forwarding:
+  - sourceBus: "veh"
+    destBus: "vcanVeh"
+    policy: "all"
+messages:
+signals:

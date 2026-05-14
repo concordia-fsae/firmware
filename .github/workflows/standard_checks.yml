@@ -2,7 +2,9 @@ name: 'Build All Firmware'
 
 on:
   pull_request:
-    branches: [ master, comp* ]
+    branches: [master, comp*]
+  push:
+    branches: [master, comp*]
 
 jobs:
   generate-dbc:
@@ -10,8 +12,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Read Buck2 Version
+        id: buck2_version
+        shell: bash
+        run: |
+          buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
+          echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
       - name: Install Buck2
         uses: dtolnay/install-buck2@latest
+        with:
+          version: ${{ steps.buck2_version.outputs.buck2_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -29,8 +39,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Read Buck2 Version
+        id: buck2_version
+        shell: bash
+        run: |
+          buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
+          echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
       - name: Install Buck2
-        uses: dtolnay/install-buck2@latest
+        uses: concordia-fsae/install-buck2@latest
+        with:
+          release: ${{ steps.buck2_version.outputs.buck2_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -47,43 +65,66 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ ubuntu-24.04, ubuntu-24.04-arm,
-                  macos-26, macos-15 ]
-                  # TODO: Bringup support
-                  # windows-2022, windows-11-arm, ]
+        runner:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-26
+          - macos-15
+          # TODO: Bringup support
+          # - windows-2022
+          # - windows-11-arm
+        target:
+          - cfr25
+          - cfr26
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Read Buck2 Version
+        id: buck2_version
+        shell: bash
+        run: |
+          buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
+          echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
       - name: Install Buck2
-        uses: dtolnay/install-buck2@latest
+        uses: concordia-fsae/install-buck2@latest
+        with:
+          release: ${{ steps.buck2_version.outputs.buck2_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
       - name: Build Stack
-        run: buck2 build :cfr25-embedded -j32 --out builds/
+        run: buck2 build :${{ matrix.target }}-embedded -j32 --out builds/
       - name: Archive Artifacts
         if: ${{ matrix.runner == 'ubuntu-24.04' }}
         id: archive
         uses: actions/upload-artifact@v4
         with:
-          name: embedded
+          name: embedded-${{ matrix.target }}
           path: builds/
   cfr-drive-stack:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ ubuntu-24.04, ubuntu-24.04-arm,]
-                  # TODO: Bringup support
-                  # macos-15, macos-14
-                  # windows-2022, windows-11-arm, ]
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        # TODO: Bringup support
+        # macos-15, macos-14
+        # windows-2022, windows-11-arm, ]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Read Buck2 Version
+        id: buck2_version
+        shell: bash
+        run: |
+          buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
+          echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
       - name: Install Buck2
-        uses: dtolnay/install-buck2@latest
+        uses: concordia-fsae/install-buck2@latest
+        with:
+          release: ${{ steps.buck2_version.outputs.buck2_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -91,7 +132,7 @@ jobs:
       - name: Add ARM64 Toolchain
         run: rustup target add aarch64-unknown-linux-gnu
       - name: Build Stack
-        run: buck2 build //drive-stack:cfr26-stack -j32 --out builds/
+        run: buck2 build //drive-stack/carputer:cfr-stack -j32 --out builds/
       - name: Archive Artifacts
         if: ${{ matrix.runner == 'ubuntu-24.04' }}
         id: archive
@@ -103,24 +144,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ ubuntu-24.04, ubuntu-24.04-arm,]
-                  # TODO: Bringup support
-                  # macos-15, macos-14
-                  # windows-2022, windows-11-arm, ]
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        # TODO: Bringup support
+        # macos-15, macos-14
+        # windows-2022, windows-11-arm, ]
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Read Buck2 Version
+        id: buck2_version
+        shell: bash
+        run: |
+          buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
+          echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
       - name: Install Buck2
-        uses: dtolnay/install-buck2@latest
+        uses: concordia-fsae/install-buck2@latest
+        with:
+          release: ${{ steps.buck2_version.outputs.buck2_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
       - name: Build Tools
-        run: buck2 build //drive-stack/conUDS -j32 --out builds/conUDS &&
-             buck2 build //drive-stack/net-detec -j32 --out builds/net-detec &&
-             buck2 build //drive-stack/ota-agent -j32 --out builds/ota-agent
+        run: buck2 build //drive-stack/conUDS -j32 --out builds/conUDS && buck2 build //drive-stack/net-detec -j32 --out builds/net-detec && buck2 build //drive-stack/ota-agent -j32 --out builds/ota-agent
       - name: Build Manifests
         run: buck2 build //network:manifest-uds -j32 --out builds/manifest-uds.yaml
       - name: Archive Artifacts
@@ -129,3 +176,31 @@ jobs:
         with:
           name: drive-tools-${{ matrix.runner }}
           path: builds/
+  compare-cfr-embedded:
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact:
+          - embedded-cfr25
+          - embedded-cfr26
+          - drive-stack-arm64
+    runs-on: ubuntu-latest
+    needs:
+      - cfr-firmware
+      - cfr-drive-stack
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - name: Compare artifacts and comment on PR
+        uses: ./.github/actions/compare-artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          artifact-name: ${{ matrix.artifact }}

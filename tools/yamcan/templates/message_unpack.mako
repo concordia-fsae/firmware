@@ -1,20 +1,26 @@
 <%! import math %>
 <%! from classes.Types import Signedness %>
-<%def name="make_structdef_message(node, message)">\
+<%def name="make_structdef_message(bus, node, message)">\
     struct {
         uint32_t timestamp;
-%if node.received_msgs[message].bridged or node.received_msgs[message].fault_message:
+%if (bus, message) in node.bridged_rx_messages or node.received_msgs[message].fault_message:
         CAN_data_T raw;
 %endif
-%if node.received_msgs[message].bridged:
+%if (bus, message) in node.bridged_rx_messages:
         bool new_message;
 %endif
     } ${node.received_msgs[message].name};
 </%def>\
 
-<%def name="make_structdef_messageDuplicates(node, message, total)">\
+<%def name="make_structdef_messageDuplicates(bus, node, message, total)">\
     struct {
         uint32_t timestamp;
+%if (bus, message) in node.bridged_rx_messages or node.received_msgs[message].fault_message:
+        CAN_data_T raw;
+%endif
+%if (bus, message) in node.bridged_rx_messages:
+        bool new_message;
+%endif
     } ${node.received_msgs[message].node_ref.name.upper()}_${node.received_msgs[message].name.split('_')[1]}[${total}U];
 </%def>\
 

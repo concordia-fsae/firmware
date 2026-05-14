@@ -8,10 +8,10 @@
  ******************************************************************************/
 
 /**< Module Header */
-#include "Module.h"
-#include "drv_tps20xx.h"
-#include "drv_inputAD.h"
 #include "app_vehicleSpeed.h"
+#include "drv_inputAD.h"
+#include "drv_tps20xx.h"
+#include "Module.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -32,6 +32,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &app_vehicleSpeed_desc,
     &brakePressure_desc,
     &shockpot_desc,
+    &sys_desc,
     &CANIO_tx,
 };
 
@@ -43,7 +44,6 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
-
 }
 
 /**

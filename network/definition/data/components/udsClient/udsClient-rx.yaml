@@ -20,7 +20,5 @@ messages:
   VCPDU_udsResponse:
     sourceBuses: veh
   VCREAR_udsResponse:
-    sourceBuses:
-      - veh
-      - ass
+    sourceBuses: veh
 signals:

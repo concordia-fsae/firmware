@@ -14,23 +14,51 @@
 #include <string.h>
 
 /**< Firmware Includes */
+#include "BatteryMonitoring.h"
+#include "drv_mux.h"
 #include "HW.h"
 #include "HW_adc.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_tim.h"
-#include "HW_NX3L4051PW.h"
-#include "BatteryMonitoring.h"
 
 /**< Other Includes */
-#include "ModuleDesc.h"
 #include "lib_simpleFilter.h"
+#include "ModuleDesc.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
 #define ADC_VOLTAGE_DIVISION    2.0f /**< Voltage division for cell voltage output */
+#define SCALAR_VSNS_7V5         6.0f
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static drv_mux_channel_S    signal_mux = {
+    .type   = DRV_MUX_TYPE_GPIO,
+    .config = {
+        .max_output_channel =                            8U,
+        .outputs.gpio       = {
+            .pin_first = DRV_OUTPUTAD_DIGITAL_MUX_SEL1,
+            .pin_last  = DRV_OUTPUTAD_DIGITAL_MUX_SEL3,
+        },
+    }
+};
+
+drv_inputAD_configDigital_S drv_inputAD_configDigital[DRV_INPUTAD_DIGITAL_COUNT] = {
+#if APP_VARIANT_ID == 1
+    [DRV_INPUTAD_DIGITAL_NSHUTDOWN] = {
+        .type        = INPUT_DIGITAL,
+        .config.gpio =                {
+            .pin          = HW_GPIO_NSHUTDOWN,
+            .active_level = DRV_IO_LOGIC_LOW,
+        },
+    },
+#endif
+};
 
 /******************************************************************************
  *          P R I V A T E  F U N C T I O N  P R O T O T Y P E S
@@ -49,33 +77,35 @@ void drv_inputAD_private_unpackADCBufferTemps(void);
 static void drv_inputAD_init_componentSpecific(void)
 {
     drv_inputAD_private_init();
+    drv_inputAD_private_runDigital();
 
-    NX3L_init();
-    NX3L_enableMux();
-    NX3L_setMux(NX3L_MUX1);
+    drv_mux_init(&signal_mux);
+    drv_mux_setMuxOutput(&signal_mux, 0U);
 
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_REF_VOLTAGE, ADC_REF_VOLTAGE);
 }
 
 static void drv_inputAD_1kHz_PRD(void)
 {
-    static NX3L_MUXChannel_E current_sel = NX3L_MUX1;
+    uint8_t current_sel = drv_mux_getMuxOutput(&signal_mux);
 
     HW_ADC_unpackADCBuffer();
 
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MCU_TEMP, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MCU_TEMP));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP1, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD1));
-    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_BOARD_TEMP2, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_BOARD2));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_MCU,               HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_MCU));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BALANCING1,        HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BALANCING1));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BALANCING2,        HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BALANCING2));
+#if APP_VARIANT_ID == 1U
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_BOARD,             HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_BOARD));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_TEMP_THERM9,            HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_TEMP_THERM9));
+    drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_VSNS_7V5,               HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_VSNS_7V5) * SCALAR_VSNS_7V5);
+#endif
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX1_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX1));
+#if APP_VARIANT_ID == 0U
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX2_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX2));
     drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_MUX3_CH1 + current_sel, HW_ADC_getVFromBank1Channel(ADC_BANK1_CHANNEL_MUX3));
+#endif
 
-    if (++current_sel == NX3L_MUX_COUNT)
-    {
-        current_sel = NX3L_MUX1;
-    }
-
-    NX3L_setMux(current_sel);
+    drv_mux_setMuxOutput(&signal_mux, ++current_sel);
 
     if ((BMS.state == BMS_HOLDING) || (BMS.state == BMS_PARASITIC_MEASUREMENT))
     {
@@ -97,7 +127,7 @@ static void drv_inputAD_1kHz_PRD(void)
             {
                 BMS_setOutputCell(current_cell - 1);
                 drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + current_cell,
-                                                    HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
+                                                     HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
             }
         }
     }
@@ -106,6 +136,7 @@ static void drv_inputAD_1kHz_PRD(void)
         drv_inputAD_private_setAnalogVoltage(DRV_INPUTAD_ANALOG_SEGMENT,
                                              HW_ADC_getVFromBank2Channel(ADC_BANK2_CHANNEL_BMS_CHIP) * ADC_VOLTAGE_DIVISION);
     }
+    drv_inputAD_private_runDigital();
 }
 
 /**

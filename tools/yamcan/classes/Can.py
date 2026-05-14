@@ -1,21 +1,25 @@
 import copy
+from decimal import Decimal
 from math import ceil, log
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 from schema import Schema, Or, Optional, And
 from zlib import crc32
 
 from .Types import *
 
-NATREP_SCHEMA = Schema({
-    Optional("endianness"): str,
-    Optional("bitWidth"): int,
-    Optional("resolution"): Or(int, float),
-    Optional("range"): {
-        "min": Or(int, float),
-        "max": Or(int, float),
-    },
-    Optional("signedness"): str,
-})
+NATREP_SCHEMA = Schema(
+    {
+        Optional("endianness"): str,
+        Optional("bitWidth"): int,
+        Optional("resolution"): Or(int, float),
+        Optional("range"): {
+            "min": Or(int, float),
+            "max": Or(int, float),
+        },
+        Optional("signedness"): str,
+    }
+)
+
 
 def get_if_exists(src: dict, key: str, conversion_type: type, default, **kwargs):
     """
@@ -82,12 +86,16 @@ class NativeRepresentation:
             try:
                 Endianess[signal_def["endianness"]]
             except:
-                raise Exception(f"Invalid endianness '{signal_def['endianness']}. Endianness can be any of { [ e.name for e in Endianess ] }.'")
+                raise Exception(
+                    f"Invalid endianness '{signal_def['endianness']}. Endianness can be any of { [ e.name for e in Endianess ] }.'"
+                )
         if "signedness" in signal_def:
             try:
                 Signedness[signal_def["signedness"]]
             except:
-                raise Exception(f"Invalid signedness '{signal_def['signedness']}. Signedness can be any of { [ e.name for e in Signedness ] }.")
+                raise Exception(
+                    f"Invalid signedness '{signal_def['signedness']}. Signedness can be any of { [ e.name for e in Signedness ] }."
+                )
 
         self.bit_width = get_if_exists(signal_def, "bitWidth", int, None)
         self.range = get_if_exists(signal_def, "range", Range, None)
@@ -102,7 +110,25 @@ class NativeRepresentation:
         self.resolution = get_if_exists(signal_def, "resolution", float, None)
 
         if self.bit_width is not None and (self.bit_width < 1 or self.bit_width > 64):
-            raise Exception(f"Native representation bit width must be between 1 and 64 bits")
+            raise Exception(
+                f"Native representation bit width must be between 1 and 64 bits"
+            )
+        elif (
+            self.bit_width
+            and self.range
+            and self.resolution
+            and self.signedness == Signedness.unsigned
+            and (
+                Decimal(2**self.bit_width - 1)
+                < (
+                    (Decimal(str(self.range.max)) - Decimal(str(self.range.min)))
+                    / Decimal(str(self.resolution))
+                )
+            )
+        ):
+            raise Exception(
+                f"Native representation bit width cannot store the range in the provided resolution"
+            )
 
 
 class SnaParams:
@@ -148,11 +174,9 @@ class CanSignal(CanObject):
         )
         self.description = get_if_exists(signal_def, "description", str, None)
         self.dv = get_if_exists(signal_def, "discreteValues", str, "")
-        if self.dv != "" and not any([ self.dv in key for key, _ in self.DISC ]):
+        if self.dv != "" and not any([self.dv in key for key, _ in self.DISC]):
             raise Exception(f"Invalid discrete value '{self.dv}' in signal '{name}'")
-        self.discrete_values = getattr(
-            self.DISC, self.dv, None
-        )
+        self.discrete_values = getattr(self.DISC, self.dv, None)
         try:
             self.native_representation = get_if_exists(
                 signal_def,
@@ -198,11 +222,13 @@ class CanSignal(CanObject):
 
     def crc32(self):
         crc = crc32(self.name.encode())
-        crc = crc32(self.start_bit.to_bytes(4, 'little'), crc)
-        crc = crc32(self.native_representation.bit_width.to_bytes(4, 'little'), crc)
+        crc = crc32(self.start_bit.to_bytes(4, "little"), crc)
+        crc = crc32(self.native_representation.bit_width.to_bytes(4, "little"), crc)
         crc = crc32(self.native_representation.signedness.value.encode(), crc)
         crc = crc32(self.native_representation.signedness.value.encode(), crc)
-        crc = crc32(self.native_representation.endianness.value.to_bytes(4, 'little'), crc)
+        crc = crc32(
+            self.native_representation.endianness.value.to_bytes(4, "little"), crc
+        )
         crc = crc32(self.unit.value.encode(), crc)
         crc = crc32(str(self.scale).encode(), crc)
         crc = crc32(str(self.offset).encode(), crc)
@@ -239,10 +265,14 @@ class CanSignal(CanObject):
                 if self.unit is None:
                     print(f"Signal {name} is continuous but has no unit defined")
                     valid = False
-                if nat_rep.range is None:
-                    print(f"Signal {name} is continuous but has no range defined")
+                if nat_rep.range is None and not (
+                    nat_rep.bit_width and nat_rep.resolution
+                ):
+                    print(
+                        f"Signal {name} is continuous but has no range defined and cannot infer one from bitWidth and resolution"
+                    )
                     valid = False
-                elif not nat_rep.range.is_valid:
+                elif nat_rep.range is not None and not nat_rep.range.is_valid:
                     # error for this printed from Range class
                     valid = False
             elif dv:
@@ -277,12 +307,8 @@ class CanSignal(CanObject):
 
     def _check_val_roles(self):
         if self.validation_role == ValidationRole.counter:
-            assert (
-                self.native_representation
-            ), "Expected signal to have a nativeRepresentation by now, but it is still None"
-            assert (
-                self.native_representation.bit_width
-            ), "Expected bit width to have been calculated by this point, but it is still None"
+            assert self.native_representation, "Expected signal to have a nativeRepresentation by now, but it is still None"
+            assert self.native_representation.bit_width, "Expected bit width to have been calculated by this point, but it is still None"
             if self.native_representation.bit_width > 8:
                 print(
                     f"Signal '{self.name}' is marked as a counter signal, but its bit width exceeds 8. We currently only support 8 bit wide counter signals."
@@ -326,7 +352,7 @@ class CanSignal(CanObject):
                     sig_range = nat_rep.range.max - nat_rep.range.min
                 elif nat_rep.signedness == Signedness.signed:
                     self.offset = 0
-                    sig_range = 2* max(nat_rep.range.max, nat_rep.range.min)
+                    sig_range = 2 * max(nat_rep.range.max, nat_rep.range.min)
 
                 if nat_rep.resolution:
                     self.scale = nat_rep.resolution
@@ -339,9 +365,16 @@ class CanSignal(CanObject):
                         nat_rep.bit_width = ceil(log(sig_range / nat_rep.resolution, 2))
             elif nat_rep.bit_width:
                 nat_rep.resolution = nat_rep.resolution or 1.0
-                nat_rep.range = Range(
-                    {"min": 0, "max": 2**nat_rep.bit_width * nat_rep.resolution}
-                )
+                if nat_rep.signedness == Signedness.unsigned:
+                    nat_rep.range = Range(
+                        {
+                            "min": 0,
+                            "max": (2**nat_rep.bit_width) * nat_rep.resolution,
+                        }
+                    )
+                else:
+                    half_range = (2 ** (nat_rep.bit_width - 1)) * nat_rep.resolution
+                    nat_rep.range = Range({"min": -half_range, "max": half_range})
         else:
             nat_rep = NativeRepresentation()
             nat_rep.bit_width = 1
@@ -376,20 +409,28 @@ class CanMessage(CanObject):
         self.id = get_if_exists(msg_def, "id", int, None)
         self.length_bytes = get_if_exists(msg_def, "lengthBytes", int, None)
         self.unscheduled = get_if_exists(msg_def, "unscheduled", bool, False)
-        self.signals = {
-            f"{self.node_name}_{sig_name}": sig
-            for sig_name, sig in msg_def["signals"].items()
-        } if msg_def["signals"] else {}
+        self.signals = (
+            {
+                f"{self.node_name}_{sig_name}": sig
+                for sig_name, sig in msg_def["signals"].items()
+            }
+            if msg_def["signals"]
+            else {}
+        )
         self.signal_objs = {}
         self.counter_sig: Optional[CanSignal] = None
         self.checksum_sig: Optional[CanSignal] = None
         self.receivers = []
         self.bridged = False
         self.from_bridge = False
+        self.injected_tx = False
         self.origin_bus = None
+        self.bridge_dest_buses: List[str] = []
         self.source_buses: List[str]
         self.crc = -1
-        self.fault_message = get_if_exists(msg_def, "messageType", str, None) == "faults"
+        self.fault_message = (
+            get_if_exists(msg_def, "messageType", str, None) == "faults"
+        )
 
         if source_buses := msg_def.get("sourceBuses"):
             if isinstance(source_buses, list):
@@ -405,14 +446,12 @@ class CanMessage(CanObject):
 
         if not self.unscheduled:
             if self.cycle_time_ms is None:
-                raise Exception(
-                        f"Message '{self.name}' has no specified cycle time"
-                )
+                raise Exception(f"Message '{self.name}' has no specified cycle time")
             elif not self.timeout_period_ms:
                 self.timeout_period_ms = self.cycle_time_ms * 10
             elif self.cycle_time_ms > self.timeout_period_ms:
                 raise Exception(
-                        f"Message '{self.name}' has a timeout less than its transmit period"
+                    f"Message '{self.name}' has a timeout less than its transmit period"
                 )
         elif not self.timeout_period_ms:
             self.timeout_period_ms = 1000
@@ -422,14 +461,14 @@ class CanMessage(CanObject):
         self.is_valid = False
 
     def crc32(self):
-        crc = crc32(self.id.to_bytes(4, 'little'))
+        crc = crc32(self.id.to_bytes(4, "little"))
         if self.counter_sig:
-            crc = crc32(self.counter_sig.crc32().to_bytes(4, 'little'), crc)
+            crc = crc32(self.counter_sig.crc32().to_bytes(4, "little"), crc)
         if self.checksum_sig:
-            crc = crc32(self.checksum_sig.crc32().to_bytes(4, 'little'), crc)
+            crc = crc32(self.checksum_sig.crc32().to_bytes(4, "little"), crc)
 
         for signal in sorted(self.signal_objs.values(), key=lambda x: x.start_bit):
-            crc = crc32(signal.crc32().to_bytes(4, 'little'), crc)
+            crc = crc32(signal.crc32().to_bytes(4, "little"), crc)
         return crc
 
     def __repr__(self):
@@ -440,7 +479,7 @@ class CanMessage(CanObject):
         try:
             signal_obj.start_bit = msg_signal["startBit"]
         except Exception:
-            signal_obj.start_bit =  0
+            signal_obj.start_bit = 0
         if signal_obj.validation_role == ValidationRole.checksum:
             self.checksum_sig = signal_obj
         elif signal_obj.validation_role == ValidationRole.counter:
@@ -456,14 +495,20 @@ class CanMessage(CanObject):
             valid = False
 
         # this works because dictionaries are ordered now
-        first_signal_loc = list(self.signal_objs.values())[0].start_bit if len(self.signal_objs.values()) else 0
+        first_signal_loc = (
+            list(self.signal_objs.values())[0].start_bit
+            if len(self.signal_objs.values())
+            else 0
+        )
         bit_count = first_signal_loc
 
         sig_objs = self.signal_objs.values()
         first = True
         for signal in sig_objs:
             if self.fault_message and signal.dv != "faultStatus":
-                raise Exception(f"Signal '{signal.name}' in fault message '{self.name}' is a '{signal.dv}' not a 'faultStatus' discrete value.")
+                raise Exception(
+                    f"Signal '{signal.name}' in fault message '{self.name}' is a '{signal.dv}' not a 'faultStatus' discrete value."
+                )
             if first:
                 signal.start_bit = bit_count
                 bit_count += signal.native_representation.bit_width
@@ -496,7 +541,9 @@ class CanMessage(CanObject):
                 valid = False
 
         if bit_count > 64:
-            print(f"Message {self.name} has length {bit_count} which is greater than 64 bits!")
+            print(
+                f"Message {self.name} has length {bit_count} which is greater than 64 bits!"
+            )
             valid = False
             return
 
@@ -547,9 +594,9 @@ class CanNode(CanObject):
         self.duplicateNode: bool = False
         self.alias = name
 
-        if '_' in name:
-            self.name = name.split('_')[0]
-            self.offset = int(name.split('_')[1])
+        if "_" in name:
+            self.name = name.split("_")[0]
+            self.offset = int(name.split("_")[1])
             self.duplicateNode = True
             self.alias = self.name + str(self.offset)
             self.total_duplicates = get_if_exists(node_def, "duplicateNode", int, 1)
@@ -562,6 +609,9 @@ class CanNode(CanObject):
         self.on_buses: List[str] = []
         self.received_msgs: Dict[str, CanMessage] = {}
         self.received_sigs: Dict[str, CanSignal] = {}
+        self.forwarding_routes: List[dict] = []
+        self.bridged_rx_messages: Set[Tuple[str, str]] = set()
+        self.injected_tx_messages: Set[Tuple[str, str]] = set()
 
         self.is_valid = True
 
@@ -603,7 +653,8 @@ class CanBus(CanObject):
 
     def __init__(self, bus_def):
         self.name = get_if_exists(bus_def, "name", str, "")
-        self.baudrate = get_if_exists(bus_def, "baudrate", int, 500000)
+        self.interface_type = get_if_exists(bus_def, "interfaceType", str, "physical")
+        self.baudrate = get_if_exists(bus_def, "baudrate", int, None)
         self.description = get_if_exists(bus_def, "description", str, "")
         self.default_endianess = Endianess[bus_def["defaultEndianness"]]
         self.nodes = {}
@@ -624,6 +675,19 @@ class CanBus(CanObject):
         valid = True
         if self.name == "":
             print("A bus is missing a name! Check bus definition files")
+            valid = False
+
+        if self.interface_type not in ["physical", "virtual"]:
+            print(
+                f"Bus '{self.name}' has unsupported interface type '{self.interface_type}'"
+            )
+            valid = False
+
+        if self.interface_type == "physical" and self.baudrate is None:
+            print(f"Bus '{self.name}' is physical but has no baudrate")
+            valid = False
+        if self.interface_type == "virtual" and self.baudrate is not None:
+            print(f"Bus '{self.name}' is virtual and must not define a baudrate")
             valid = False
 
         if self.description == "":

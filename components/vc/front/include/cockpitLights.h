@@ -1,6 +1,6 @@
 /**
  * @file cockpit_lights.h
- * @brief Module that manages IMD and BMS lights 
+ * @brief Module that manages IMD and BMS lights
  */
 
 #pragma once
@@ -10,7 +10,7 @@
  ******************************************************************************/
 
 #include "LIB_Types.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

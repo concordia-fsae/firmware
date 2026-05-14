@@ -9,11 +9,11 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "LIB_Types.h"
 #include "lib_linAlg.h"
 #include "lib_nvm.h"
+#include "LIB_Types.h"
 
-#define GRAVITY 9.81f
+#define GRAVITY    9.81f
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -54,8 +54,10 @@ typedef struct
     drv_imu_vector_S          zeroGyro;
     drv_imu_vectorTransform_S rotation;
 } LIB_NVM_STORAGE(nvm_imuCalibration_S);
-extern nvm_imuCalibration_S imuCalibration_data;
+extern nvm_imuCalibration_S       imuCalibration_data;
 extern const nvm_imuCalibration_S imuCalibration_default;
+
+NVM_SIZE_ASSERT(nvm_imuCalibration_S, 60U);
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

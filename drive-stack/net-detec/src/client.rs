@@ -36,20 +36,23 @@ pub struct Client {
 const DEFAULT_RX_TIMEOUT: Duration = Duration::from_millis(1000);
 
 impl Client {
-    pub fn new(interface: Option<String>, max_duration: Option<Duration>) -> Result<Self, ClientError> {
+    pub fn new(
+        interface: Option<String>,
+        max_duration: Option<Duration>,
+    ) -> Result<Self, ClientError> {
         let mut discovery_duration = DEFAULT_RX_TIMEOUT;
 
         if let Some(duration) = max_duration {
             discovery_duration = duration;
         }
 
-        Ok(Self { interface, discovery_duration})
+        Ok(Self {
+            interface,
+            discovery_duration,
+        })
     }
 
-    pub fn discover(
-        &self,
-        filter: DiscoveryFilter,
-    ) -> Result<DiscoveredService, ClientError> {
+    pub fn discover(&self, filter: DiscoveryFilter) -> Result<DiscoveredService, ClientError> {
         let daemon = ServiceDaemon::new()?;
         if let Some(iface) = &self.interface {
             daemon.enable_interface(iface)?;

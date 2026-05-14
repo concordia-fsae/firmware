@@ -8,42 +8,37 @@ messages:
   BMSB_ioStatus:
     sourceBuses: veh
   PM100DX_criticalData:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   BMSB_currentLimit:
-    destBuses: ass
     sourceBuses: veh
   PM100DX_temps1:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   PM100DX_temps3AndTorqueShudder:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   PM100DX_motorPositionInfo:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   PM100DX_torqueAndTimerInfo:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   PM100DX_currentInfo:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   PM100DX_internalStates:
-    sourceBuses: ass
+    sourceBuses: veh
   UDSCLIENT_bmsbUdsRequest:
     sourceBuses: veh
     unrecorded: true
   PM100DX_faults:
-    destBuses: veh
-    sourceBuses: ass
+    sourceBuses: veh
   PM100DX_eepromResponse:
-    destBuses: veh
-    sourceBuses: ass
-    unrecorded: true
+    sourceBuses: veh
   TOOLING_mcEepromCommand:
     sourceBuses: veh
-    destBuses: ass
     unrecorded: true
+
+forwarding:
+  - destBus: veh
+    policy: injected
+    injectedMessages:
+      - TOOLING_mcEepromCommand
 
 signals:
   VCFRONT_gear:

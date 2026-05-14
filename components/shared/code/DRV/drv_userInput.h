@@ -13,7 +13,7 @@
 #include "drv_userInput_componentSpecific.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -29,8 +29,8 @@ typedef struct
         struct
         {
             drv_inputAD_channelDigital_E pin;
-            uint16_t debounce_on_ms;
-            uint16_t debounce_off_ms;
+            uint16_t                     debounce_on_ms;
+            uint16_t                     debounce_off_ms;
         } gpio;
         struct
         {

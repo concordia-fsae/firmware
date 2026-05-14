@@ -11,8 +11,8 @@
 
 #include "HW.h"
 // System Includes
-#include "SystemConfig.h"
 #include "stdbool.h"
+#include "SystemConfig.h"
 
 #include "HW_gpio_componentSpecific.h"
 
@@ -35,7 +35,7 @@ typedef enum
 
 typedef struct
 {
-    HW_GPIO_typeDef*     port;
+    HW_GPIO_typeDef      *     port;
     HW_GPIO_pin          pin;
     HW_GPIO_mode         mode;
     HW_GPIO_speed        speed;
@@ -55,6 +55,6 @@ extern const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT];
 
 HW_StatusTypeDef_E HW_GPIO_init(void);
 HW_StatusTypeDef_E HW_GPIO_deInit(void);
-bool HW_GPIO_readPin(HW_GPIO_pinmux_E pin);
-void HW_GPIO_writePin(HW_GPIO_pinmux_E pin, bool state);
-void HW_GPIO_togglePin(HW_GPIO_pinmux_E pin);
+bool               HW_GPIO_readPin(HW_GPIO_pinmux_E pin);
+void               HW_GPIO_writePin(HW_GPIO_pinmux_E pin, bool state);
+void               HW_GPIO_togglePin(HW_GPIO_pinmux_E pin);

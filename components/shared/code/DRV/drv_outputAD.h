@@ -27,21 +27,22 @@
 #include "drv_outputAD_componentSpecific.h"
 #include "HW_gpio.h"
 #include "LIB_Types.h"
-#include "CANTypes_generated.h"
+#include "Yamcan.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
 {
     const enum
     {
+        OUTPUT_VIRTUAL = 0x00U,
         OUTPUT_DIGITAL,
     } type;
     const union
     {
-        drv_io_pinConfig_S     gpio;
+        drv_io_pinConfig_S gpio;
     } config;
 } drv_outputAD_configDigital_S;
 

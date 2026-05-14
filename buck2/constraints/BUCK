@@ -1,3 +1,5 @@
+load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS", "platform_constraint_name")
+
 [
     config_setting(
         name = name,
@@ -12,4 +14,17 @@
         ("arm32-none", ["prelude//os/constraints:none", "prelude//cpu/constraints:arm32"]),
         ("arm32-linux", ["prelude//os/constraints:linux", "prelude//cpu/constraints:arm32"]),
     ]
+]
+
+constraint_setting(
+    name = "vehicle_platform",
+    visibility = ["PUBLIC"],
+)
+[
+    constraint_value(
+        name = platform_constraint_name(platform),
+        constraint_setting = ":vehicle_platform",
+        visibility = ["PUBLIC"],
+    )
+    for platform in ALL_PLATFORMS
 ]
