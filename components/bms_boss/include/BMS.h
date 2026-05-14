@@ -116,6 +116,9 @@ NVM_SIZE_ASSERT(nvm_bmsbContactorData_S, 28U);
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+extern BMSB_S BMS;
+float32_t bms_getCellMinVoltage(void);
+float32_t bms_getCellMaxVoltage(void);
 bool      BMS_SFT_checkMCTimeout(void);
 bool      BMS_SFT_checkBrusaChargerTimeout(void);
 bool      BMS_SFT_checkElconChargerTimeout(void);

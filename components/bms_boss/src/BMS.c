@@ -465,3 +465,31 @@ const ModuleDesc_S BMS_desc = {
     .periodic100Hz_CLK = &BMS100Hz_PRD,
     .periodic1kHz_CLK  = &BMS1kHz_PRD,
 };
+
+void BMS_workerWatchdog(void)
+{
+    BMS.connected_segments = 0;
+    for (uint8_t i = 0; i < CAN_DUPLICATENODE_BMSW_COUNT; i++)
+    {
+        if (CANRX_validateDuplicate(VEH, BMSW_criticalData, i) == CANRX_MESSAGE_VALID)
+        {
+            BMS.connected_segments++;
+#if BMS_FAULTS
+            if (CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].max_temp > 60.0f || BMS.workers[i].voltages.max >= 4.2f ||
+                CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].voltages.min <= 2.5f)
+            {
+                CANRX_get_signal_duplicateNode(VEH, BMSW, i, [i].fault = true;
+            }
+#endif // BMS_FAULTS
+        }
+    }
+}
+
+float32_t bms_getCellMaxVoltage(void)
+{
+    return BMS.voltages.max;
+}
+float32_t bms_getCellMinVoltage(void)
+{
+    return BMS.voltages.min;
+}
