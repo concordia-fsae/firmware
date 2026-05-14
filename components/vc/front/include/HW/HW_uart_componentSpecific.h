@@ -11,6 +11,6 @@
 
 typedef enum
 {
-    HW_UART_PORT_GPS = 0x00U, // UART3
+    HW_UART_PORT_GPS = 0x00U,    // UART3
     HW_UART_PORT_COUNT,
 } HW_UART_port_E;

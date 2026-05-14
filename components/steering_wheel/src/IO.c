@@ -65,7 +65,7 @@ typedef enum
     ADC_CHANNEL_COUNT,
 } AdcChannels_E;
 // _Static_assert(ADC_CHANNEL_COUNT == hadc1.Init.NbrOfConversion);
-_Static_assert(ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length should be a multiple of the number of ADC channels");
+_Static_assert(ADC_BUF_LEN % ADC_CHANNEL_COUNT == 0,       "ADC Buffer Length should be a multiple of the number of ADC channels");
 _Static_assert((ADC_BUF_LEN / 2) % ADC_CHANNEL_COUNT == 0, "ADC Buffer Length divided by two should be a multiple of the number of ADC channels");
 
 typedef enum
@@ -170,11 +170,11 @@ static void IO1kHz_PRD(void)
         }
 
         // this doesn't work on board rev 1 because I designed it wrong
-        IO.instCurrent = io.adcData[ADC_CHANNEL_CURRENT_SENSE].value / SENSE_RESISTOR_OHMS;
+        IO.instCurrent      = io.adcData[ADC_CHANNEL_CURRENT_SENSE].value / SENSE_RESISTOR_OHMS;
 
-        IO.temp.board = io.adcData[ADC_CHANNEL_TEMP_BOARD].value;
-        IO.temp.gpu   = io.adcData[ADC_CHANNEL_TEMP_GPU].value;
-        IO.temp.mcu   = TEMP_CHIP_FROM_V(io.adcData[ADC_CHANNEL_TEMP_MCU].value);
+        IO.temp.board       = io.adcData[ADC_CHANNEL_TEMP_BOARD].value;
+        IO.temp.gpu         = io.adcData[ADC_CHANNEL_TEMP_GPU].value;
+        IO.temp.mcu         = TEMP_CHIP_FROM_V(io.adcData[ADC_CHANNEL_TEMP_MCU].value);
 
 #if FTR_HALL_EFFECT_PADDLES
         io.paddlesRaw.left  = io.adcData[ADC_CHANNEL_PADDLE_LEFT].value;
@@ -185,7 +185,7 @@ static void IO1kHz_PRD(void)
         if (++tim == 100U)
         {
             IO.heartbeat = !IO.heartbeat;
-            tim = 0;
+            tim          = 0;
         }
     }
     else

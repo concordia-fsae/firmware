@@ -16,12 +16,12 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_inputAD.h"
 #include "drv_tempSensors_componentSpecific.h"
 #include "lib_thermistors.h"
-#include "drv_inputAD.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 /**
@@ -58,7 +58,7 @@ typedef union
 {
     drv_tempSensors_configThermistorLowSide_S thermistor_ls;
     drv_tempSensors_configLinear_S            linear;
-    float32_t                                 (*func)(void);
+    float32_t (*func)(void);
 } drv_tempSensors_config_S;
 
 typedef struct

@@ -12,7 +12,7 @@
 #include "FeatureDefines_generated.h"
 
 #if FEATURE_IS_ENABLED(MCU_STM32_USE_HAL)
-#include "stm32f1xx.h"
+# include "stm32f1xx.h"
 #endif
 
 void NMI_Handler(void);

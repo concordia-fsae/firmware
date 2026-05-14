@@ -9,20 +9,20 @@
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
-#include "task.h"
 #include "FreeRTOS_SWI.h"
+#include "task.h"
 
 // System includes
 #include <stdbool.h>
 
 // Other Includes
-#include "HW_can.h"
-#include "Module.h"
 #include "HW_adc.h"
+#include "HW_can.h"
 #include "HW_clock.h"
 #include "HW_dma.h"
 #include "HW_gpio.h"
 #include "HW_spi.h"
+#include "Module.h"
 
 /******************************************************************************
  *                              E X T E R N S
@@ -30,7 +30,7 @@
 
 // this needs to be defined for __libc_init_array() from newlib_nano to be happy
 extern void _init(void);
-void _init(void){}
+void        _init(void){}
 
 extern void RTOS_createResources(void);
 
@@ -110,6 +110,5 @@ void Error_Handler(void)
 {
     __disable_irq();
     while (1)
-    {
-    }
+    {}
 }

@@ -16,8 +16,8 @@
 #include "drv_hsd.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
-#include "HW_tim.h"
 #include "drv_vn9008_componentSpecific.h"
+#include "HW_tim.h"
 #include "lib_swFuse.h"
 #include "LIB_Types.h"
 
@@ -37,10 +37,10 @@ typedef struct
         drv_outputAD_channelDigital_E digital;
         struct
         {
-            HW_TIM_pwmChannel_S pwm;
+            HW_TIM_pwmChannel_S           pwm;
             drv_outputAD_channelDigital_E en;
         } pwm_en;
-    } enable;
+    }                             enable;
     float32_t                     cs_amp_per_volt;
     drv_inputAD_channelAnalog_E   cs_channel;
     drv_outputAD_channelDigital_E fault_reset;

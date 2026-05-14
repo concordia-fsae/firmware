@@ -37,10 +37,10 @@ typedef struct
 typedef struct
 {
     lib_interpolation_point_S * points;
-    const uint8_t               number_points;
-    const bool                  saturate_left;
-    const bool                  saturate_right;
-    float32_t                   result;
+    const uint8_t             number_points;
+    const bool                saturate_left;
+    const bool                saturate_right;
+    float32_t                 result;
 } lib_interpolation_mapping_S;
 
 /******************************************************************************

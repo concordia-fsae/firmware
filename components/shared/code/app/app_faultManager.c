@@ -18,7 +18,7 @@ _Static_assert(MAX_FAULTS > FM_FAULT_COUNT, "Number of faults must be less than 
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUFFERSIZE (MAX_FAULTS / 32U)
+#define BUFFERSIZE    (MAX_FAULTS / 32U)
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -27,8 +27,8 @@ _Static_assert(MAX_FAULTS > FM_FAULT_COUNT, "Number of faults must be less than 
 typedef struct
 {
     FLAG_create(faultBits, MAX_FAULTS);
-    FLAG_create(waiting, MAX_FAULTS);
-    FLAG_create(buffer, MAX_FAULTS);
+    FLAG_create(waiting,   MAX_FAULTS);
+    FLAG_create(buffer,    MAX_FAULTS);
 } fm_data_S;
 
 /******************************************************************************

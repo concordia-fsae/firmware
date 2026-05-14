@@ -11,27 +11,27 @@
 #include "FeatureDefines_generated.h"
 #if APP_UDS
 
-#ifndef ISO_TP_USER_DEBUG_ENABLED
-#define ISO_TP_USER_DEBUG_ENABLED 0U
-#endif
+# ifndef ISO_TP_USER_DEBUG_ENABLED
+#  define ISO_TP_USER_DEBUG_ENABLED    0U
+# endif
 
 // module include
-#include "uds_componentSpecific.h"
+# include "uds_componentSpecific.h"
 
 // other includes
-#include "Yamcan.h"
-#include "FreeRTOS.h"
-#include "HW.h"
-#include "HW_can.h"
-#include "ModuleDesc.h"
-#include "task.h"
-#include "lib_uds.h"
-#include "LIB_app.h"
-#include "Utility.h"
-#include "lib_nvm.h"
+# include "FreeRTOS.h"
+# include "HW.h"
+# include "HW_can.h"
+# include "lib_nvm.h"
+# include "lib_uds.h"
+# include "LIB_app.h"
+# include "ModuleDesc.h"
+# include "task.h"
+# include "Utility.h"
+# include "Yamcan.h"
 
 // system includes
-#include <string.h>
+# include <string.h>
 
 /******************************************************************************
  *                              E X T E R N S
@@ -39,9 +39,9 @@
 
 extern uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len);
 extern uint32_t isotp_user_get_ms(void);
-#if ISO_TP_USER_DEBUG_ENABLED
+# if ISO_TP_USER_DEBUG_ENABLED
 extern void     isotp_user_debug(const char* message, ...);
-#endif
+# endif
 
 
 /******************************************************************************
@@ -78,11 +78,11 @@ static void routine_0xf0f0(udsRoutineControlType_E routineControlType, uint8_t *
         {
             bool success = lib_nvm_nvmInitializeNewBlock();
             uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL,
-                                        UDS_ROUTINE_CONTROL_START,
-                                        (uint8_t*)&success,
-                                        sizeof(success));
+                                     UDS_ROUTINE_CONTROL_START,
+                                     (uint8_t*)&success,
+                                     sizeof(success));
         }
-            break;
+        break;
 
         case UDS_ROUTINE_CONTROL_GET_RESULT:
         case UDS_ROUTINE_CONTROL_STOP:
@@ -91,7 +91,6 @@ static void routine_0xf0f0(udsRoutineControlType_E routineControlType, uint8_t *
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
             break;
     }
-
 }
 
 /******************************************************************************
@@ -205,6 +204,7 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
         case 0xf0f0:
             routine_0xf0f0(routineControlType, payload, payloadLengthBytes);;
             break;
+
         default:
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SERVICE_NOT_SUPPORTED);
             break;
@@ -240,36 +240,42 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appStart, sizeof(appDesc.appStart));
             break;
         }
+
         case 0x01:
         {
             extern const lib_app_appDesc_S appDesc;
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appEnd, sizeof(appDesc.appEnd));
             break;
         }
+
         case 0x02:
         {
             extern const lib_app_appDesc_S appDesc;
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appCrcLocation, sizeof(appDesc.appCrcLocation));
             break;
         }
+
         case 0x03:
         {
             extern const lib_app_appDesc_S appDesc;
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&(*((uint32_t*)appDesc.appCrcLocation)), sizeof(*((uint32_t*)appDesc.appCrcLocation)));
             break;
         }
+
         case 0x04:
         {
             extern const lib_app_appDesc_S appDesc;
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appComponentId, sizeof(appDesc.appComponentId));
             break;
         }
+
         case 0x05:
         {
             extern const lib_app_appDesc_S appDesc;
             uds_sendPositiveResponse(UDS_SID_READ_DID, UDS_NRC_NONE, (uint8_t*)&appDesc.appVariantId, sizeof(appDesc.appVariantId));
             break;
         }
+
         case 0x101:
         {
             // always respond with 0x01 since we're in the app
@@ -293,7 +299,7 @@ void uds_cb_DIDRead(uint8_t *payload, uint8_t payloadLengthBytes)
 uint16_t isotp_user_send_can(const uint32_t id, const uint8_t data[], const uint8_t len)
 {
     CAN_data_T d;
-    bool sent = false;
+    bool       sent = false;
 
     memcpy(&d, data, len);
 
@@ -311,11 +317,11 @@ uint32_t isotp_user_get_ms(void)
 }
 
 
-#if ISO_TP_USER_DEBUG_ENABLED
+# if ISO_TP_USER_DEBUG_ENABLED
 extern void isotp_user_debug(const char* message, ...);
 void        isotp_user_debug(const char* message, ...)
 {
     UNUSED(message);
 }
-#endif // ISO_TP_USER_DEBUG_ENABLED
+# endif // ISO_TP_USER_DEBUG_ENABLED
 #endif // FEATURE_UDS

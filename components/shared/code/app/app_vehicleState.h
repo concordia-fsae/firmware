@@ -36,23 +36,23 @@
  ******************************************************************************/
 
 #if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
- #ifndef VEHICLESTATE_INPUTAD_TSMS
- #error "User must define 'VEHICLESTATE_INPUTAD_TSMS' in app_vehicleState_componentSpecific.h"
- #endif
- #ifndef VEHICLESTATE_INPUTAD_RUN_BUTTON
- #error "User must define 'VEHICLESTATE_INPUTAD_RUN_BUTTON' in app_vehicleState_componentSpecific.h"
- #endif
- #ifndef VEHICLESTATE_CANRX_CONTACTORSTATE
- #error "User must define 'VEHICLESTATE_CANRX_CONTACTORSTATE' in app_vehicleState_componentSpecific.h"
- #endif
- #ifndef VEHICLESTATE_CANRX_BRAKEPOSITION
- #error "User must define 'VEHICLESTATE_CANRX_BRAKEPOSITION' in app_vehicleState_componentSpecific.h"
- #endif
-#else
- #ifndef VEHICLESTATE_CANRX_SIGNAL
- #error "User must define 'VEHICLESTATE_CANRX_SIGNAL' in app_vehicleState_componentSpecific.h"
- #endif
-#endif
+# ifndef VEHICLESTATE_INPUTAD_TSMS
+#  error "User must define 'VEHICLESTATE_INPUTAD_TSMS' in app_vehicleState_componentSpecific.h"
+# endif
+# ifndef VEHICLESTATE_INPUTAD_RUN_BUTTON
+#  error "User must define 'VEHICLESTATE_INPUTAD_RUN_BUTTON' in app_vehicleState_componentSpecific.h"
+# endif
+# ifndef VEHICLESTATE_CANRX_CONTACTORSTATE
+#  error "User must define 'VEHICLESTATE_CANRX_CONTACTORSTATE' in app_vehicleState_componentSpecific.h"
+# endif
+# ifndef VEHICLESTATE_CANRX_BRAKEPOSITION
+#  error "User must define 'VEHICLESTATE_CANRX_BRAKEPOSITION' in app_vehicleState_componentSpecific.h"
+# endif
+#else // if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
+# ifndef VEHICLESTATE_CANRX_SIGNAL
+#  error "User must define 'VEHICLESTATE_CANRX_SIGNAL' in app_vehicleState_componentSpecific.h"
+# endif
+#endif // if FEATURE_VEHICLESTATE_MODE == FDEFS_MODE_LEADER
 
 /******************************************************************************
  *                              E X T E R N S
@@ -96,9 +96,9 @@ typedef enum
  ******************************************************************************/
 
 // Functionality
-void app_vehicleState_init(void);
-void app_vehicleState_run100Hz(void);
-void app_vehicleState_delaySleep(uint32_t ms);
+void                     app_vehicleState_init(void);
+void                     app_vehicleState_run100Hz(void);
+void                     app_vehicleState_delaySleep(uint32_t ms);
 // Accessors
 bool                     app_vehicleState_sleeping(void);
 bool                     app_vehicleState_getFaultReset(void);

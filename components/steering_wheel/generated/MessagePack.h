@@ -19,5 +19,5 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUS_A_packTable_10ms_length 1U
+#define BUS_A_packTable_10ms_length    1U
 

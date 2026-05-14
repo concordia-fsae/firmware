@@ -11,7 +11,7 @@
 #include "stdint.h"
 
 #ifdef __GNUC__
-#ifdef STM32F1
+# ifdef STM32F1
 __attribute__((always_inline)) inline void atomicAddU64(volatile uint64_t *ptr, uint64_t val)  { (void)(*ptr += val); }
 __attribute__((always_inline)) inline void atomicSubU64(volatile uint64_t *ptr, uint64_t val)  { (void)(*ptr -= val); }
 __attribute__((always_inline)) inline void atomicOrU64(volatile uint64_t *ptr, uint64_t val)   { (void)(*ptr |= val); }
@@ -39,7 +39,7 @@ __attribute__((always_inline)) inline void atomicOrU8(volatile uint8_t *ptr, uin
 __attribute__((always_inline)) inline void atomicXorU8(volatile uint8_t *ptr, uint8_t val)     { (void)(*ptr ^= val); }
 __attribute__((always_inline)) inline void atomicAndU8(volatile uint8_t *ptr, uint8_t val)     { (void)(*ptr &= val); }
 __attribute__((always_inline)) inline void atomicNandU8(volatile uint8_t *ptr, uint8_t val)    { (void)(~(*ptr &= val)); }
-#else // ifdef STM32F1
+# else // ifdef STM32F1
 __attribute__((always_inline)) inline void atomicAddU64(volatile uint64_t *ptr, uint64_t val)  { (void)__sync_add_and_fetch(ptr, val); }
 __attribute__((always_inline)) inline void atomicSubU64(volatile uint64_t *ptr, uint64_t val)  { (void)__sync_sub_and_fetch(ptr, val); }
 __attribute__((always_inline)) inline void atomicOrU64(volatile uint64_t *ptr, uint64_t val)   { (void)__sync_or_and_fetch(ptr, val); }
@@ -67,7 +67,7 @@ __attribute__((always_inline)) inline void atomicOrU8(volatile uint8_t *ptr, uin
 __attribute__((always_inline)) inline void atomicXorU8(volatile uint8_t *ptr, uint8_t val)     { (void)__sync_fetch_and_xor(ptr, val); }
 __attribute__((always_inline)) inline void atomicAndU8(volatile uint8_t *ptr, uint8_t val)     { (void)__sync_and_and_fetch(ptr, val); }
 __attribute__((always_inline)) inline void atomicNandU8(volatile uint8_t *ptr, uint8_t val)    { (void)__sync_nand_and_fetch(ptr, val); }
-#endif
+# endif // ifdef STM32F1
 #else // ifdef __GNUC__
 __attribute__((always_inline)) inline void atomicAddU64(volatile uint64_t *ptr, uint64_t val)  { (void)(*ptr += val); }
 __attribute__((always_inline)) inline void atomicSubU64(volatile uint64_t *ptr, uint64_t val)  { (void)(*ptr -= val); }
@@ -96,4 +96,4 @@ __attribute__((always_inline)) inline void atomicOrU8(volatile uint8_t *ptr, uin
 __attribute__((always_inline)) inline void atomicXorU8(volatile uint8_t *ptr, uint8_t val)     { (void)(*ptr ^= val); }
 __attribute__((always_inline)) inline void atomicAndU8(volatile uint8_t *ptr, uint8_t val)     { (void)(*ptr &= val); }
 __attribute__((always_inline)) inline void atomicNandU8(volatile uint8_t *ptr, uint8_t val)    { (void)(~(*ptr &= val)); }
-#endif
+#endif // ifdef __GNUC__

@@ -29,9 +29,9 @@ typedef enum
  *                               M A C R O S
  ******************************************************************************/
 
-#define DECL_infoDotUpdater(d)                   static void SNAKE(update, d)(struct s_InfoDot *dot, bool state)
-#define DECL_infoDotUpdaterGeneric(d)            DECL_infoDotUpdater(d){ update_infoDotGeneric(dot, state); }
-#define DECL_infoTextUpdater(d)                  static void SNAKE(update, d)(struct s_InfoText *dot, bool state)
+#define DECL_infoDotUpdater(d)           static void SNAKE(update, d)(struct s_InfoDot *dot, bool state)
+#define DECL_infoDotUpdaterGeneric(d)    DECL_infoDotUpdater(d){ update_infoDotGeneric(dot, state); }
+#define DECL_infoTextUpdater(d)          static void SNAKE(update, d)(struct s_InfoText *dot, bool state)
 
 // *FORMAT-OFF*
 #define DECL_infoDot(d, l, px, py, s, rp)    \

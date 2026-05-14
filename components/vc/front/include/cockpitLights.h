@@ -1,6 +1,6 @@
 /**
  * @file cockpit_lights.h
- * @brief Module that manages IMD and BMS lights 
+ * @brief Module that manages IMD and BMS lights
  */
 
 #pragma once

@@ -1,16 +1,16 @@
 /**
-* @file vd.c
-* @brief Module source for the vehicle dynamics models
-*/
+ * @file vd.c
+ * @brief Module source for the vehicle dynamics models
+ */
 
 /******************************************************************************
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "vd.h"
-#include "steeringAngle.h"
 #include "lib_interpolation.h"
 #include "lib_utility.h"
+#include "steeringAngle.h"
+#include "vd.h"
 
 #include <math.h>
 
@@ -19,42 +19,42 @@
  ******************************************************************************/
 
 // Tire model evaluated static under 900N loading
-#define MAX_TIRE_TRACTION_N 1875.0f
-#define WHEELBASE_M 1.545f
+#define MAX_TIRE_TRACTION_N             1875.0f
+#define WHEELBASE_M                     1.545f
 
-#define CONVERT_PERTIRE_N_TO_G(n) (n / (VEHICLE_MASS_KG / (2.0f * 9.81f)))
+#define CONVERT_PERTIRE_N_TO_G(n)       (n / (VEHICLE_MASS_KG / (2.0f * 9.81f)))
 
-#define TURNING_THRESHOLD_DEG 4.5f
+#define TURNING_THRESHOLD_DEG           4.5f
 
 // Assumes small angle approx
-#define STW_TO_WHEEL_ROTATION_SCALAR 0.2147f
+#define STW_TO_WHEEL_ROTATION_SCALAR    0.2147f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
 
-static lib_interpolation_point_S perTireMaxTraction[] = {
+static lib_interpolation_point_S   perTireMaxTraction[] = {
     {
-        .x = 0.25, // lon g
+        .x = 0.25,                // lon g
         .y = MAX_TIRE_TRACTION_N, // max lat force
     },
     {
         .x = CONVERT_PERTIRE_N_TO_G(1250.0f), // lon g
-        .y = 1750.0f, // max lat force
+        .y = 1750.0f,                         // max lat force
     },
     {
         .x = CONVERT_PERTIRE_N_TO_G(1500.0f), // lon g
-        .y = 1625.0f, // max lat force
+        .y = 1625.0f,                         // max lat force
     },
     {
         .x = CONVERT_PERTIRE_N_TO_G(2100.0f), // lon g
-        .y = 250.0f, // max lat force
+        .y = 250.0f,                          // max lat force
     },
 };
 static lib_interpolation_mapping_S mapTraction = {
-    .points = (lib_interpolation_point_S*)&perTireMaxTraction,
-    .number_points = COUNTOF(perTireMaxTraction),
-    .saturate_left = true,
+    .points         = (lib_interpolation_point_S*)&perTireMaxTraction,
+    .number_points  = COUNTOF(perTireMaxTraction),
+    .saturate_left  = true,
     .saturate_right = true,
 };
 
@@ -65,7 +65,7 @@ static struct
     float32_t maxLonTireForce;
     float32_t driverIntendedRadius;
 
-    bool driverTurning;
+    bool      driverTurning;
 } vdData;
 
 /******************************************************************************
@@ -74,9 +74,10 @@ static struct
 
 static void setIntendedRadius(float32_t steeringAngle)
 {
-    const float32_t steeringRad = steeringAngle * DEG_TO_RAD;
-    const float32_t wheelRad = steeringRad * STW_TO_WHEEL_ROTATION_SCALAR;
-    const bool driverTurning = fabsf(steeringAngle) > TURNING_THRESHOLD_DEG;
+    const float32_t steeringRad   = steeringAngle * DEG_TO_RAD;
+    const float32_t wheelRad      = steeringRad * STW_TO_WHEEL_ROTATION_SCALAR;
+    const bool      driverTurning = fabsf(steeringAngle) > TURNING_THRESHOLD_DEG;
+
     vdData.driverTurning = driverTurning;
 
     if (driverTurning)
@@ -129,8 +130,9 @@ static void init(void)
 
 static void periodic_100Hz(void)
 {
-    float32_t latAccel, lonAccel;
-    const bool accelValid = (CANRX_get_signal(VEH, VCPDU_lat, &latAccel) == CANRX_MESSAGE_VALID);
+    float32_t       latAccel, lonAccel;
+    const bool      accelValid    = (CANRX_get_signal(VEH, VCPDU_lat, &latAccel) == CANRX_MESSAGE_VALID);
+
     (void)CANRX_get_signal(VEH, VCPDU_lon, &lonAccel);
     const float32_t steeringAngle = steeringAngle_getSteeringAngle();
 
@@ -143,6 +145,6 @@ static void periodic_100Hz(void)
  ******************************************************************************/
 
 const ModuleDesc_S vd_desc = {
-    .moduleInit = &init,
+    .moduleInit        = &init,
     .periodic100Hz_CLK = &periodic_100Hz,
 };

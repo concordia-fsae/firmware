@@ -41,8 +41,8 @@ typedef enum
     HW_DMA_CHANNEL_7,
     HW_DMA_CHANNEL_8,
 } HW_dma_channel_E;
-#define HW_DMA1_CHANNEL_COUNT HW_DMA_CHANNEL_8
-#define HW_DMA2_CHANNEL_COUNT HW_DMA_CHANNEL_5
+#define HW_DMA1_CHANNEL_COUNT    HW_DMA_CHANNEL_8
+#define HW_DMA2_CHANNEL_COUNT    HW_DMA_CHANNEL_5
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
