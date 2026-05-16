@@ -336,15 +336,15 @@ signals:
         max: 25
     continuous: true
 
-  packAmpHours:
-    unit: 'Ah'
-    description: Current Amp hours stored in Tractive System Battery
+  packSOC:
+    unit: '%'
+    description: Average SOC of Tractive System Battery
     nativeRepresentation:
-      resolution: 0.025
+      resolution: 0.1
       bitWidth: 10
       range:
         min: 0
-        max: 25
+        max: 100
     continuous: true
 
   packPower:
@@ -358,15 +358,4 @@ signals:
         min: -100
         max: 40
       signedness: unsigned
-    continuous: true
-
-  soc:
-    description: Avg cell SOC
-    unit: "%"
-    nativeRepresentation:
-      bitWidth: 10
-      range:
-        min: 0
-        max: 100
-      resolution: 0.1
     continuous: true
