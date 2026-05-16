@@ -49,6 +49,7 @@ rust_library(
     },
     deps = [
         "//drive-stack/conUDS:lib",
+        "//drive-stack/net-detec:lib",
         ":yamcan-rust",
         "//third_party:anyhow",
         "//third_party:clap",
@@ -57,6 +58,7 @@ rust_library(
         "//third_party:libc",
         "//third_party:log",
         "//third_party:minijinja",
+        "//third_party:reqwest",
         "//third_party:serde",
         "//third_party:serde_json",
         "//third_party:serde_yaml",
@@ -101,6 +103,7 @@ carputer_application_target(
     service_src = "dashboard.service",
     service_install_name = "dashboard.service",
     resource_deps = {
+        "application/config/ota-agent/deploy-targets.yaml": "//drive-stack/carputer:deploy-targets-manifest",
         "application/config/ota-agent/uds-manifest.yaml": "//network:manifest-uds",
         "application/config/ota-agent/uds-routines.yaml": "//drive-stack/conUDS:routines-manifest",
     },
@@ -111,6 +114,8 @@ native.command_alias(
     name = "run",
     exe = ":dashboard",
     args = [
+        "--deploy-targets-manifest",
+        "$(location //drive-stack/carputer:deploy-targets-manifest)",
         "--uds-manifest",
         "$(location //network:manifest-uds)",
         "--routine-manifest",

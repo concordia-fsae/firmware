@@ -104,6 +104,9 @@ carputer_platform_targets(
     include_artifact_hashes = False,
     uds_manifest = "//network:manifest-uds",
     uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
+    uds_requires_manual_recovery = [
+        "vcpdu",
+    ],
     uds_start_services = [
         "can-bridge-veh.service",
         "log-processor.service",
@@ -122,6 +125,9 @@ carputer_platform_targets(
     include_artifact_hashes = False,
     uds_manifest = "//network:manifest-uds",
     uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
+    uds_requires_manual_recovery = [
+        "vcpdu",
+    ],
     uds_start_services = [
         "can-bridge-veh.service",
         "log-processor.service",
@@ -142,6 +148,9 @@ carputer_deploy_targets_manifest(
     out = "deploy-targets.yaml",
     platform = "cfr26",
     uds_manifest = "//network:manifest-uds",
+    uds_requires_manual_recovery = [
+        "vcpdu",
+    ],
     uds_start_services = [
         "can-bridge-veh.service",
         "log-processor.service",

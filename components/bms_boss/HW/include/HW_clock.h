@@ -35,7 +35,7 @@ void HW_systemClockConfig(void)
     // Initializes the RCC Oscillators according to the specified parameters
     // in the RCC_OscInitTypeDef structure.
 
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE; /**< HSE is 8MHz */
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;    /**< HSE is 8MHz */
     RCC_OscInitStruct.HSEState       = RCC_HSE_ON;
     RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
     RCC_OscInitStruct.HSIState       = RCC_HSI_ON;
@@ -48,8 +48,8 @@ void HW_systemClockConfig(void)
     }
     // Initializes the CPU, AHB and APB buses clocks
 
-    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
-                                  RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                                       RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK; /**< SYSCLK is 64MHz */
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;         /**< SYSCLK output is 64MHz */
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;           /**< APB1 is 32MHz */

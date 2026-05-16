@@ -30,7 +30,6 @@ messages:
     sourceBuses: veh
   PM100DX_eepromResponse:
     sourceBuses: veh
-    unrecorded: true
   TOOLING_mcEepromCommand:
     sourceBuses: veh
     unrecorded: true

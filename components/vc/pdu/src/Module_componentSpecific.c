@@ -8,8 +8,10 @@
  ******************************************************************************/
 
 /**< Module Header */
-#include "Module.h"
+#include "app_vehicleSpeed.h"
 #include "drv_inputAD.h"
+#include "HW_tim_componentSpecific.h"
+#include "Module.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -22,6 +24,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &CANIO_rx,
     &UDS_desc,
     &app_vehicleState_desc,
+    &app_vehicleSpeed_desc,
     &powerManager_desc,
     &imu_desc,
     &cooling_desc,
@@ -37,7 +40,6 @@ void Module_componentSpecific_Init(void)
 {
     // Initialize drivers prior to application runtime
     drv_inputAD_init_componentSpecific();
-
 }
 
 /**

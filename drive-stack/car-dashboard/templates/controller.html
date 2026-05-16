@@ -86,6 +86,17 @@
             <button type="submit">Upload And Flash</button>
           </div>
         </form>
+        {% if controller.supports_manual_recovery %}
+          <form id="recover-form" class="stack-form">
+            <label class="field-label" for="recover-button">Baseline Recovery</label>
+            <div class="inline-field">
+              <button id="recover-button" type="submit">Recover Node</button>
+            </div>
+            {% if controller.requires_manual_recovery %}
+              <p class="meta">Startup auto-recovery is disabled for this node. Use this action to recover it intentionally.</p>
+            {% endif %}
+          </form>
+        {% endif %}
       </div>
     </article>
     <article class="card table-card">
@@ -188,6 +199,8 @@
     const testerPresentRequestButton = document.getElementById("tester-present-request-button");
     const testerPresentEnabled = document.getElementById("tester-present-enabled");
     const flashForm = document.getElementById("flash-form");
+    const recoverForm = document.getElementById("recover-form");
+    const recoverButton = document.getElementById("recover-button");
     const routineForm = document.getElementById("routine-form");
     let latestController = initialController;
     let latestJobs = initialJobsSnapshot.jobs || [];
@@ -546,6 +559,29 @@
         setFeedback(error.message, true);
       }
     });
+
+    if (recoverForm && recoverButton) {
+      recoverForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        recoverButton.disabled = true;
+        try {
+          const response = await fetch(
+            `/api/controllers/${encodeURIComponent(controllerName)}/recover`,
+            { method: "POST" },
+          );
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error || "Request failed");
+          }
+          mergeJob(payload.job);
+          setFeedback(`Recovery job queued: ${payload.job_id}`, false);
+        } catch (error) {
+          setFeedback(error.message, true);
+        } finally {
+          recoverButton.disabled = false;
+        }
+      });
+    }
 
     routineForm.addEventListener("submit", async (event) => {
       event.preventDefault();

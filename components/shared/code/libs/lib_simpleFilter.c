@@ -19,7 +19,7 @@
  */
 void lib_simpleFilter_cumAvg_clear(lib_simpleFilter_cumAvg_S* filter)
 {
-    filter->raw = 0U;
+    filter->raw   = 0U;
     filter->count = 0U;
 }
 
@@ -50,7 +50,7 @@ float32_t lib_simpleFilter_cumAvg_average(lib_simpleFilter_cumAvg_S* filter)
  */
 void lib_simpleFilter_cumAvgF_clear(lib_simpleFilter_cumAvgF_S* filter)
 {
-    filter->raw = 0;
+    filter->raw   = 0;
     filter->count = 0;
 }
 
@@ -78,6 +78,7 @@ float32_t lib_simpleFilter_cumAvgF_average(lib_simpleFilter_cumAvgF_S* filter)
 void lib_simpleFilter_lpf_calcSmoothingFactor(lib_simpleFilter_lpf_S* filter, float32_t cutoffFreq, float32_t dt)
 {
     const float32_t fdt = cutoffFreq * dt;
+
     filter->smoothing_factor = fdt / (1 + fdt);
 }
 

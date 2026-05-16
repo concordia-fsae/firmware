@@ -7,25 +7,25 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "screenManager.h"
 #include "app_faultManager.h"
-#include "Utility.h"
+#include "drv_timer.h"
 #include "Module.h"
 #include "ModuleDesc.h"
-#include "drv_timer.h"
+#include "screenManager.h"
+#include "Utility.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define WARN_TIMER_CYCLE_MS 2000U
+#define WARN_TIMER_CYCLE_MS    2000U
 
-#define WARNING_INGRESS(warning, state) \
-    if (state && !FLAG_get(sm.setWarnings, warning)) \
-    { \
-        FLAG_assign(sm.unseenWarnings, warning, state); \
-    } \
-    FLAG_assign(sm.setWarnings, warning, state);
+#define WARNING_INGRESS(warning, state)                     \
+        if (state && !FLAG_get(sm.setWarnings, warning))    \
+        {                                                   \
+            FLAG_assign(sm.unseenWarnings, warning, state); \
+        }                                                   \
+        FLAG_assign(sm.setWarnings, warning, state);
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -43,7 +43,8 @@ typedef enum
     ALERT_GLV,
     ALERT_EM,
     ALERT_CRASH,
-    ALERT_IMU_YAW_CALIBRATING,
+    ALERT_IMU_SELFTEST_FAILED,
+    ALERT_RESOLVER_CALIBRATING,
     ALERT_COUNT,
 } alerts_E;
 
@@ -59,6 +60,7 @@ typedef enum
     WARN_APPS_DISABLED,
     WARN_CONTACTOR_SOH_LOW,
     WARN_IMU_YAW_CALIBRATION_FAILED,
+    WARN_RESOLVER_CALIBRATING_FAILED,
     WARN_COUNT,
 } warnings_E;
 
@@ -68,13 +70,13 @@ typedef enum
 
 static struct
 {
-    alerts_E alert;
-    warnings_E warning;
+    alerts_E    alert;
+    warnings_E  warning;
 
     drv_timer_S warningTimer;
 
-    FLAG_create(setAlerts, ALERT_COUNT);
-    FLAG_create(setWarnings, WARN_COUNT);
+    FLAG_create(setAlerts,      ALERT_COUNT);
+    FLAG_create(setWarnings,    WARN_COUNT);
     FLAG_create(unseenWarnings, WARN_COUNT);
 } sm;
 
@@ -91,33 +93,47 @@ static CAN_screenAlerts_E translateAlertToCAN(alerts_E alert)
         case ALERT_REVERSE:
             ret = CAN_SCREENALERTS_REVERSE;
             break;
+
         case ALERT_MC:
             ret = CAN_SCREENALERTS_FAULT_MC;
             break;
+
         case ALERT_VCFRONT:
             ret = CAN_SCREENALERTS_FAULT_VCFRONT;
             break;
+
         case ALERT_VCPDU:
             ret = CAN_SCREENALERTS_FAULT_VCPDU;
             break;
+
         case ALERT_VCREAR:
             ret = CAN_SCREENALERTS_FAULT_VCREAR;
             break;
+
         case ALERT_BMSB:
             ret = CAN_SCREENALERTS_FAULT_BMSB;
             break;
+
         case ALERT_GLV:
             ret = CAN_SCREENALERTS_FAULT_GLV;
             break;
+
         case ALERT_EM:
             ret = CAN_SCREENALERTS_FAULT_EM;
             break;
+
         case ALERT_CRASH:
             ret = CAN_SCREENALERTS_CRASH;
             break;
-        case ALERT_IMU_YAW_CALIBRATING:
-            ret = CAN_SCREENALERTS_IMU_YAW_CALIBRATING;
+
+        case ALERT_IMU_SELFTEST_FAILED:
+            ret = CAN_SCREENALERTS_IMU_SELFTEST_FAILED;
             break;
+
+        case ALERT_RESOLVER_CALIBRATING:
+            ret = CAN_SCREENALERTS_RESOLVER_CALIBRATING;
+            break;
+
         case ALERT_NONE:
         case ALERT_COUNT:
             break;
@@ -135,30 +151,43 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
         case WARN_LOW_GLV:
             ret = CAN_SCREENWARNINGS_LOW_GLV;
             break;
+
         case WARN_HOT_CELL:
             ret = CAN_SCREENWARNINGS_HOT_CELL;
             break;
+
         case WARN_HOT_POWERTRAIN:
             ret = CAN_SCREENWARNINGS_HOT_POWERTRAIN;
             break;
+
         case WARN_LOW_CELL:
             ret = CAN_SCREENWARNINGS_LOW_CELL;
             break;
+
         case WARN_CONTACTS_OPEN_IN_RUN:
             ret = CAN_SCREENWARNINGS_CONTACTS_OPEN_IN_RUN;
             break;
+
         case WARN_IMU_UNCALIBRATED:
             ret = CAN_SCREENWARNINGS_IMU_UNCALIBRATED;
             break;
+
         case WARN_APPS_DISABLED:
             ret = CAN_SCREENWARNINGS_APPS_DISABLED;
             break;
+
         case WARN_CONTACTOR_SOH_LOW:
             ret = CAN_SCREENWARNINGS_CONTACTOR_SOH_LOW;
             break;
+
         case WARN_IMU_YAW_CALIBRATION_FAILED:
             ret = CAN_SCREENWARNINGS_IMU_YAW_CALIBRATION_FAILED;
             break;
+
+        case WARN_RESOLVER_CALIBRATING_FAILED:
+            ret = CAN_SCREENWARNINGS_RESOLVER_CALIBRATING_FAILED;
+            break;
+
         case WARN_NONE:
         case WARN_COUNT:
             break;
@@ -169,27 +198,35 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
 
 static void getAlerts(void)
 {
-    CAN_gear_E gear = CAN_GEAR_SNA;
-    CANRX_get_signal(VEH, VCFRONT_gear, &gear);
-    CAN_crashSensorState_E crash_state = CAN_CRASHSENSORSTATE_SNA;
-    CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state);
-    const bool imuYawCalibrating =
-        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUYAWCALIBRATING);
+    CAN_gear_E             gear                = CAN_GEAR_SNA;
 
-    FLAG_assign(sm.setAlerts, ALERT_REVERSE, gear == CAN_GEAR_REVERSE);
-    FLAG_assign(sm.setAlerts, ALERT_CRASH, crash_state != CAN_CRASHSENSORSTATE_OK);
-    FLAG_assign(sm.setAlerts, ALERT_IMU_YAW_CALIBRATING, imuYawCalibrating);
+    CANRX_get_signal(VEH, VCFRONT_gear,           &gear);
+    CAN_crashSensorState_E crash_state         = CAN_CRASHSENSORSTATE_SNA;
+    CANRX_get_signal(VEH, VCPDU_crashSensorState, &crash_state);
+    const bool             imuSelfTestFailed   =
+        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUSELFTESTFAILED);
+    const bool             resolverCalibrating = app_faultManager_getNetworkedFault_state(VEH, VCREAR_faults, FM_FAULT_VCREAR_MCCALIBRATINGRESOLVER);
+
+    FLAG_assign(sm.setAlerts, ALERT_REVERSE,              gear == CAN_GEAR_REVERSE);
+    FLAG_assign(sm.setAlerts, ALERT_CRASH,                crash_state != CAN_CRASHSENSORSTATE_OK);
+    FLAG_assign(sm.setAlerts, ALERT_IMU_SELFTEST_FAILED,  imuSelfTestFailed);
+    FLAG_assign(sm.setAlerts, ALERT_RESOLVER_CALIBRATING, resolverCalibrating);
 }
 
 static void determineActiveAlert(void)
 {
-    if (FLAG_get(sm.setAlerts, ALERT_CRASH))
+    // Calibrating the resolver requires the drive train running autonomously. High risk event
+    if (FLAG_get(sm.setAlerts, ALERT_RESOLVER_CALIBRATING))
+    {
+        sm.alert = ALERT_RESOLVER_CALIBRATING;
+    }
+    else if (FLAG_get(sm.setAlerts, ALERT_CRASH))
     {
         sm.alert = ALERT_CRASH;
     }
-    else if (FLAG_get(sm.setAlerts, ALERT_IMU_YAW_CALIBRATING))
+    else if (FLAG_get(sm.setAlerts, ALERT_IMU_SELFTEST_FAILED))
     {
-        sm.alert = ALERT_IMU_YAW_CALIBRATING;
+        sm.alert = ALERT_IMU_SELFTEST_FAILED;
     }
     else if (FLAG_get(sm.setAlerts, ALERT_REVERSE))
     {
@@ -203,31 +240,33 @@ static void determineActiveAlert(void)
 
 static void getWarnings(void)
 {
-    const bool lowGLV = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
-    const bool contactsOpeninRun = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
-    const bool imuUncalibrated = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUUNCALIBRATED);
-    const bool imuYawCalibrationFailed =
-        app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUYAWCALIBRATIONFAILED);
-    const bool appsBypassed = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_APPSDISABLED);
-    const bool contactorSohLow = app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVP) ||
-                              app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVN) ||
-                              app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE);
+    const bool lowGLV                    = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_LOWVOLTAGE);
+    const bool contactsOpeninRun         = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_CONTACTSOPENINRUN);
+    const bool imuUncalibrated           = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUUNCALIBRATED);
+    const bool imuYawCalibrationFailed   =
+                                           app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCPDU_IMUYAWCALIBRATIONFAILED);
+    const bool appsBypassed              = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_APPSDISABLED);
+    const bool contactorSohLow           = app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVP) ||
+                                           app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVN) ||
+                                           app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE);
+    const bool resolverCalibrationFailed = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED);
 
-    WARNING_INGRESS(WARN_LOW_GLV, lowGLV);
-    WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN, contactsOpeninRun);
-    WARNING_INGRESS(WARN_IMU_UNCALIBRATED, imuUncalibrated);
-    WARNING_INGRESS(WARN_IMU_YAW_CALIBRATION_FAILED, imuYawCalibrationFailed);
-    WARNING_INGRESS(WARN_APPS_DISABLED, appsBypassed);
-    WARNING_INGRESS(WARN_CONTACTOR_SOH_LOW, contactorSohLow);
+    WARNING_INGRESS(WARN_LOW_GLV,                     lowGLV);
+    WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN,        contactsOpeninRun);
+    WARNING_INGRESS(WARN_IMU_UNCALIBRATED,            imuUncalibrated);
+    WARNING_INGRESS(WARN_IMU_YAW_CALIBRATION_FAILED,  imuYawCalibrationFailed);
+    WARNING_INGRESS(WARN_APPS_DISABLED,               appsBypassed);
+    WARNING_INGRESS(WARN_CONTACTOR_SOH_LOW,           contactorSohLow);
+    WARNING_INGRESS(WARN_RESOLVER_CALIBRATING_FAILED, resolverCalibrationFailed);
 }
 
 static void determineActiveWarning(void)
 {
     if (FLAG_any(sm.setWarnings, WARN_COUNT) || FLAG_any(sm.unseenWarnings, WARN_COUNT))
     {
-        const drv_timer_state_E cycleState = drv_timer_getState(&sm.warningTimer);
-        const uint16_t unseenWarning = FLAG_getFirst(sm.unseenWarnings, WARN_COUNT);
-        uint16_t new_warning;
+        const drv_timer_state_E cycleState    = drv_timer_getState(&sm.warningTimer);
+        const uint16_t          unseenWarning = FLAG_getFirst(sm.unseenWarnings, WARN_COUNT);
+        uint16_t                new_warning;
 
         if (cycleState == DRV_TIMER_EXPIRED)
         {
@@ -237,7 +276,9 @@ static void determineActiveWarning(void)
             {
                 new_warning = FLAG_getNext(sm.setWarnings, WARN_COUNT, sm.warning + 1U);
                 if (new_warning == WARN_COUNT)
+                {
                     new_warning = FLAG_getFirst(sm.setWarnings, WARN_COUNT);
+                }
             }
             else
             {
@@ -277,7 +318,7 @@ static void screenManager_10Hz(void)
 }
 
 const ModuleDesc_S screenManager_desc = {
-    .moduleInit = &screenManager_init,
+    .moduleInit       = &screenManager_init,
     .periodic10Hz_CLK = &screenManager_10Hz,
 };
 

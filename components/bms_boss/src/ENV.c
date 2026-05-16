@@ -26,9 +26,9 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TEMP_CHIP_V_PER_DEG_C 0.0043F    // [V/degC] slope of built-in temp sensor
-#define TEMP_CHIP_V_AT_25_C   1.43F      // [V] voltage at 25 degC
-#define TEMP_CHIP_FROM_V(v)   (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
+#define TEMP_CHIP_V_PER_DEG_C    0.0043F // [V/degC] slope of built-in temp sensor
+#define TEMP_CHIP_V_AT_25_C      1.43F   // [V] voltage at 25 degC
+#define TEMP_CHIP_FROM_V(v)      (((v - TEMP_CHIP_V_AT_25_C) / TEMP_CHIP_V_PER_DEG_C) + 25.0F)
 
 
 /******************************************************************************
@@ -42,11 +42,11 @@ ENV_S ENV;
  ******************************************************************************/
 
 static HW_I2C_Device_S i2c_hih = {
-    .addr   =  0x27,
+    .addr   = 0x27,
     .handle = &i2c,
 };
 
-static drv_hih_S hih_chip = {
+static drv_hih_S       hih_chip = {
     .dev = &i2c_hih,
 };
 
@@ -68,7 +68,9 @@ static void ENV_init()
     }
 
     if (ENV.state != ENV_ERROR)
+    {
         ENV.state = ENV_RUNNING;
+    }
 }
 
 /**
@@ -97,11 +99,14 @@ static void ENV1Hz_PRD()
     {
         case ENV_INIT:
             break;
+
         case ENV_RUNNING:
             drv_hih_startConversion(&hih_chip);
             break;
+
         case ENV_ERROR:
             break;
+
         default:
             break;
     }

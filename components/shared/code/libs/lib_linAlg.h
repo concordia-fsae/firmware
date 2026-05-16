@@ -9,46 +9,46 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "lib_utility.h"
 #include "lib_simpleFilter.h"
+#include "lib_utility.h"
 #include <math.h>
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define EPS 1.0e-2f
+#define EPS                           1.0e-2f
 
-#define LIB_LINALG_INST_CVEC(name) linAlg_##name##_cvec_S
-#define LIB_LINALG_INST_ROW(name)  linAlg_##name##_rvec_S
-#define LIB_LINALG_INST_RMAT(name) linAlg_##name##_rmat_S
+#define LIB_LINALG_INST_CVEC(name)    linAlg_ ## name ## _cvec_S
+#define LIB_LINALG_INST_ROW(name)     linAlg_ ## name ## _rvec_S
+#define LIB_LINALG_INST_RMAT(name)    linAlg_ ## name ## _rmat_S
 
-/* Vector helpers (structs with elemCol / elemRow) */
-#define COLS(vec)  COUNTOF((vec)->elemCol)
-#define ROWS(vec)  COUNTOF((vec)->elemRow)
+// Vector helpers (structs with elemCol / elemRow)
+#define COLS(vec)                     COUNTOF((vec)->elemCol)
+#define ROWS(vec)                     COUNTOF((vec)->elemRow)
 
-/* Matrix helpers (structs with rows[n][m]) */
-#define MROWS(mat) COUNTOF((mat)->rows)
-#define MCOLS(mat) COUNTOF((mat)->rows[0])
+// Matrix helpers (structs with rows[n][m])
+#define MROWS(mat)                    COUNTOF((mat)->rows)
+#define MCOLS(mat)                    COUNTOF((mat)->rows[0])
 
 /******************************************************************************
  *                           T Y P E  D E F S
  ******************************************************************************/
 
-/* Define an N x M row-matrix and matching vectors */
+// Define an N x M row-matrix and matching vectors
 #define LIB_LINALG_DEFINE_NM(name, type, n, m) \
-    typedef struct { \
-        type elemCol[n]; \
-    } LIB_LINALG_INST_CVEC(name); \
-    typedef struct { \
-        type elemRow[m]; \
-    } LIB_LINALG_INST_ROW(name); \
-    typedef struct { \
-        type rows[n][m]; \
-    } LIB_LINALG_INST_RMAT(name)
+        typedef struct {                       \
+            type elemCol[n];                   \
+        } LIB_LINALG_INST_CVEC(name);          \
+        typedef struct {                       \
+            type elemRow[m];                   \
+        } LIB_LINALG_INST_ROW(name);           \
+        typedef struct {                       \
+            type rows[n][m];                   \
+        } LIB_LINALG_INST_RMAT(name)
 
 #define LIB_LINALG_DEFINE_N(name, type, n) \
-    LIB_LINALG_DEFINE_NM(name, type, n, n)
+        LIB_LINALG_DEFINE_NM(name, type, n, n)
 
 /******************************************************************************
  *                          V E C T O R  O P S
@@ -142,27 +142,27 @@
  *                          N O R M / M A G
  ******************************************************************************/
 
-#define LIB_LINALG_VEC_GETNORM(vec, field, len, out) \
-    do { \
-        *(out) = 0; \
-        for (uint8_t _i = 0U; _i < (len); _i++) { \
-            *(out) += (vec)->field[_i] * (vec)->field[_i]; \
-        } \
-        *(out) = sqrtf(*(out)); \
-    } while (0)
+#define LIB_LINALG_VEC_GETNORM(vec, field, len, out)           \
+        do {                                                   \
+            *(out) = 0;                                        \
+            for (uint8_t _i = 0U; _i < (len); _i++) {          \
+                *(out) += (vec)->field[_i] * (vec)->field[_i]; \
+            }                                                  \
+            *(out) = sqrtf(*(out));                            \
+        } while (0)
 
 #define LIB_LINALG_GETNORM_CVEC(vec, out) \
-    LIB_LINALG_VEC_GETNORM(vec, elemCol, COLS(vec), out)
+        LIB_LINALG_VEC_GETNORM(vec, elemCol, COLS(vec), out)
 
 #define LIB_LINALG_GETNORM_RVEC(vec, out) \
-    LIB_LINALG_VEC_GETNORM(vec, elemRow, ROWS(vec), out)
+        LIB_LINALG_VEC_GETNORM(vec, elemRow, ROWS(vec), out)
 
 /******************************************************************************
  *                          M A T R I X  O P S
  ******************************************************************************/
 
 #define LIB_LINALG_CHECK_SQUARE_RMAT(mat) \
-    (MROWS(mat) == MCOLS(mat))
+        (MROWS(mat) == MCOLS(mat))
 
 #define LIB_LINALG_CHECK_SIZE_RMAT(mat, n) \
     (MROWS(mat) == (n) && MCOLS(mat) == (n))

@@ -55,9 +55,13 @@ typedef struct
 typedef struct
 {
     float32_t km;
-    uint32_t spare[5];
+    uint32_t  spare[5];
 } LIB_NVM_STORAGE(nvm_odometer_S);
 extern nvm_odometer_S odometer_data;
+#endif
+
+#if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
+NVM_SIZE_ASSERT(nvm_odometer_S, 24U);
 #endif
 
 /******************************************************************************
@@ -65,13 +69,14 @@ extern nvm_odometer_S odometer_data;
  ******************************************************************************/
 
 extern const app_wheelSpeed_config_S app_wheelSpeed_config;
-extern const ModuleDesc_S app_vehicleSpeed_desc;
+extern const ModuleDesc_S            app_vehicleSpeed_desc;
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
  ******************************************************************************/
 
 uint16_t  app_vehicleSpeed_getAxleSpeedRotational(axle_E axle);
+uint16_t  app_vehicleSpeed_getWheelSpeedRawRotational(wheel_E wheel);
 uint16_t  app_vehicleSpeed_getWheelSpeedRotational(wheel_E wheel);
 float32_t app_vehicleSpeed_getWheelSpeedLinear(wheel_E wheel);
 float32_t app_vehicleSpeed_getTireSlip(wheel_E wheel);

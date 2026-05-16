@@ -38,6 +38,12 @@ signals:
   faulted5vExt:
     description: 5V external power rail faulted
     discreteValues: faultStatus
+  imuSelfTestFailed:
+    description: IMU self test failed
+    discreteValues: faultStatus
+  imuSelfTesting:
+    description: IMU self test is in progress
+    discreteValues: digitalStatus
 
   crashSensorState:
     description: Crash sensor state
@@ -64,6 +70,14 @@ signals:
   fanHsdState:
     description: "Current state of Fan HSD"
     discreteValues: hsdState
+
+  pumpDutyCycle:
+    description: "Pump HSD duty cycle"
+    template: percentage
+
+  fanDutyCycle:
+    description: "Fan HSD duty cycle"
+    template: percentage
 
   bms1HsdState:
     description: "Current state of BMSW1 HSD"
@@ -141,7 +155,8 @@ signals:
     unit: 'V'
     description: GLV Battery Voltage
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 9
+      resolution: 0.05
       range:
         min: 0
         max: 16
@@ -151,10 +166,11 @@ signals:
     unit: 'A'
     description: GLV Battery Current
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 10
+      resolution: 0.05
       range:
         min: 0
-        max: 30
+        max: 50
     continuous: true
 
   pdu5vVoltage:

@@ -22,6 +22,7 @@ messages:
       faulted5vExt:
       imuYawCalibrating:
       imuYawCalibrationFailed:
+      imuSelfTestFailed:
 
   udsResponse:
     description: UDS response message from the VCPDU
@@ -97,6 +98,14 @@ messages:
       vcu2HsdState:
       bms5HsdState:
       bms6HsdState:
+  hsdDuty:
+    description: Pump and fan duty cycle
+    id: 0x151
+    cycleTimeMs: 50
+    sourceBuses: veh
+    signals:
+      pumpDutyCycle:
+      fanDutyCycle:
   hsdCurrentBMSW:
     description: Current through each HSD
     id: 0x140
@@ -180,6 +189,10 @@ messages:
         template: imuLinearAcceleration
       vert:
         template: imuLinearAcceleration
+      countImpact:
+        template: count8Bit
+      countCrash:
+        template: count8Bit
 
   imuGyro:
     description: VCPDU IMU rotational accel
@@ -224,6 +237,8 @@ messages:
         template: imuLinearAcceleration16gPos
       accelNormPeak:
         template: imuLinearAcceleration16gPos
+      imuSelfTesting:
+        template: digitalStatus
 
   nvmInformation:
     description: Information relating to the NVM manager

@@ -8,11 +8,11 @@
  ******************************************************************************/
 
 /**< Module Header */
-#include "Module.h"
-#include "drv_tps20xx.h"
+#include "app_vehicleSpeed.h"
 #include "drv_inputAD.h"
 #include "drv_pedalMonitor.h"
-#include "app_vehicleSpeed.h"
+#include "drv_tps20xx.h"
+#include "Module.h"
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -27,6 +27,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &apps_desc,
     &bppc_desc,
     &app_vehicleState_desc,
+    &vd_desc,
     &torque_desc,
     &powerManager_desc,
     &cockpitLights_desc,
@@ -36,7 +37,6 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &steeringAngle_desc,
     &shockpot_desc,
     &sys_desc,
-    &vd_desc,
     &CANIO_tx,
 };
 

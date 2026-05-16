@@ -12,15 +12,15 @@
 // The fault index and fault messages are generated from yamcan
 // TODO: Improve the generator
 
-#include "LIB_Types.h"
 #include "FeatureDefines_generated.h"
+#include "LIB_Types.h"
 #include "Yamcan.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define MAX_FAULTS 64U
+#define MAX_FAULTS    64U
 
 /******************************************************************************
  *                               M A C R O S
@@ -28,9 +28,9 @@
 
 // Note: The following function must have a fault_index < 64U
 #define app_faultManager_getNetworkedFault_state(bus, msg, fault_index) \
-    (FLAG_get(CANRX_get_rawMessage(bus, msg)->u16, fault_index))
+        (FLAG_get(CANRX_get_rawMessage(bus, msg)->u16, fault_index))
 #define app_faultManager_getNetworkedFault_anySet(bus, msg) \
-    (FLAG_any(CANRX_get_rawMessage(bus, msg)->u16, MAX_FAULTS))
+        (FLAG_any(CANRX_get_rawMessage(bus, msg)->u16, MAX_FAULTS))
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S

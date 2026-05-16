@@ -8,7 +8,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "Display/Dots.h"  // module header include
+#include "Display/Dots.h"    // module header include
 
 #include "Display/DisplayImports.h"
 
@@ -74,7 +74,7 @@ void render_InfoDot(InfoDot_S dot)
  */
 void render_InfoDots(InfoDot_S dots[], uint8_t count)
 {
-    for(uint8_t ui = 0U; ui < count; ui++)
+    for (uint8_t ui = 0U; ui < count; ui++)
     {
         render_InfoDot(dots[ui]);
     }
@@ -139,7 +139,7 @@ void render_InfoText(InfoText_S dot)
  */
 void render_InfoTexts(InfoText_S dots[], uint8_t count)
 {
-    for(uint8_t ui = 0U; ui < count; ui++)
+    for (uint8_t ui = 0U; ui < count; ui++)
     {
         render_InfoText(dots[ui]);
     }

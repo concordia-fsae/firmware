@@ -11,19 +11,19 @@
 #include "Module.h"
 
 /**< System Includes*/
-#include "SystemConfig.h"
 #include "stddef.h"
 #include "stdint.h"
+#include "SystemConfig.h"
 
 // FreeRTOS Includes
 #include "FreeRTOS.h"
 #include "task.h"
 
 /**< Other Includes */
-#include "Utility.h"
-#include "lib_utility.h"
 #include "FeatureDefines_generated.h"
 #include "lib_nvm.h"
+#include "lib_utility.h"
+#include "Utility.h"
 
 #include "drv_userInput.h"
 

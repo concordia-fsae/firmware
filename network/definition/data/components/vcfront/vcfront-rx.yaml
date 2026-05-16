@@ -8,8 +8,14 @@ messages:
     sourceBuses: veh
   SWS_driverParamRequest:
     sourceBuses: veh
+  VCREAR_faults:
+    sourceBuses: veh
 signals:
   VCPDU_vehicleState:
+    sourceBuses: veh
+  VCPDU_lon:
+    sourceBuses: veh
+  VCPDU_anglePitch:
     sourceBuses: veh
   BMSB_bmsStatusMem:
     sourceBuses: veh
@@ -22,4 +28,6 @@ signals:
   VCREAR_wheelSpeedRR:
     sourceBuses: veh
   VCPDU_safetyReset:
+    sourceBuses: veh
+  PM100DX_motorSpeedCritical:
     sourceBuses: veh

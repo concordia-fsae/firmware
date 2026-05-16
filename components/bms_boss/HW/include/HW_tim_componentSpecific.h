@@ -16,10 +16,10 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define HW_TIM_TICK TIM2
-#define HW_TIM_TICK_IRQN TIM2_IRQn
-#define HW_TIM_TICK_ENABLECLK __HAL_RCC_TIM2_CLK_ENABLE
-#define HW_TIM_TICK_GETCLKFREQ 2*HAL_RCC_GetPCLK1Freq
+#define HW_TIM_TICK               TIM2
+#define HW_TIM_TICK_IRQN          TIM2_IRQn
+#define HW_TIM_TICK_ENABLECLK     __HAL_RCC_TIM2_CLK_ENABLE
+#define HW_TIM_TICK_GETCLKFREQ    2 * HAL_RCC_GetPCLK1Freq
 
 /******************************************************************************
  *                             T Y P E D E F S

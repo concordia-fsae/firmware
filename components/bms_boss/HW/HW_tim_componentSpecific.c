@@ -8,8 +8,8 @@
  ******************************************************************************/
 
 // System Includes
-#include "SystemConfig.h"
 #include "LIB_Types.h"
+#include "SystemConfig.h"
 
 // Firmware Includes
 #include "HW_tim.h"
@@ -38,17 +38,17 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     TIM_IC_InitTypeDef      sConfigIC          = { 0 };
     TIM_MasterConfigTypeDef sMasterConfig      = { 0 };
 
-    RCC_ClkInitTypeDef clkconfig;
-    uint32_t uwTimclock       = 0;
-    uint32_t uwPrescalerValue = 0;
-    uint32_t pFLatency;
+    RCC_ClkInitTypeDef      clkconfig;
+    uint32_t                uwTimclock         = 0;
+    uint32_t                uwPrescalerValue   = 0;
+    uint32_t                pFLatency;
 
     // Get clock configuration
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
     // Compute TIM4 clock
-    uwTimclock       = 2 * HAL_RCC_GetPCLK2Freq();
+    uwTimclock                   = 2 * HAL_RCC_GetPCLK2Freq();
     // Compute the prescaler value to have TIM4 counter clock equal to 1MHz
-    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
+    uwPrescalerValue             = (uint32_t)((uwTimclock / 1000000U) - 1U);
 
     htim1.Instance               = TIM1;
     htim1.Init.Prescaler         = uwPrescalerValue;
@@ -100,9 +100,9 @@ HW_StatusTypeDef_E HW_TIM_init(void)
         Error_Handler();
     }
     // Configure the TIM4 IRQ priority
-    HAL_NVIC_SetPriority(TIM1_CC_IRQn, TICK_INT_PRIORITY, 0);
-    HAL_NVIC_SetPriority(TIM1_BRK_IRQn, TICK_INT_PRIORITY, 0);
-    HAL_NVIC_SetPriority(TIM1_UP_IRQn, TICK_INT_PRIORITY, 0);
+    HAL_NVIC_SetPriority(TIM1_CC_IRQn,      TICK_INT_PRIORITY, 0);
+    HAL_NVIC_SetPriority(TIM1_BRK_IRQn,     TICK_INT_PRIORITY, 0);
+    HAL_NVIC_SetPriority(TIM1_UP_IRQn,      TICK_INT_PRIORITY, 0);
     HAL_NVIC_SetPriority(TIM1_TRG_COM_IRQn, TICK_INT_PRIORITY, 0);
 
     // Enable the TIM4 global Interrupt
@@ -111,8 +111,8 @@ HW_StatusTypeDef_E HW_TIM_init(void)
     HAL_NVIC_EnableIRQ(TIM1_UP_IRQn);
     HAL_NVIC_EnableIRQ(TIM1_TRG_COM_IRQn);
 
-    HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_2);    // main channel
-    HAL_TIM_IC_Start(&htim1, TIM_CHANNEL_1);       // indirect channel
+    HAL_TIM_IC_Start_IT(&htim1, TIM_CHANNEL_2); // main channel
+    HAL_TIM_IC_Start(&htim1, TIM_CHANNEL_1);    // indirect channel
 
     return HW_OK;
 }
@@ -146,9 +146,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* tim)
         if (ICValue != 0)
         {
             // calculate the Duty Cycle
-            Duty = (HAL_TIM_ReadCapturedValue(tim, TIM_CHANNEL_1) * 100) / ICValue;
+            Duty      = (HAL_TIM_ReadCapturedValue(tim, TIM_CHANNEL_1) * 100) / ICValue;
 
-            //Weird black magic? Has todo with counter and etc
+            // Weird black magic? Has todo with counter and etc
             Frequency = 500000 / ICValue;
 
             IMD_setMlsMeasurement(Frequency, Duty);

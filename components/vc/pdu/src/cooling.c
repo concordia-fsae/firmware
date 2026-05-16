@@ -7,11 +7,63 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "Module.h"
-#include "drv_vn9008.h"
-#include "drv_outputAD.h"
 #include "app_vehicleState.h"
+#include "drv_outputAD.h"
+#include "drv_timer.h"
+#include "drv_vn9008.h"
 #include "HW_tim.h"
+#include "Module.h"
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define START_TIMER_MS    500U
+#define START_DUTY        1.0f
+#define FAN_ON_DUTY       0.4f
+#define PUMP_ON_DUTY      0.8f
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
+
+static struct
+{
+    drv_timer_S enableTimerFan;
+    drv_timer_S enableTimerPump;
+} cooling;
+
+/******************************************************************************
+ *                     P R I V A T E  F U N C T I O N S
+ ******************************************************************************/
+
+static void setDuty(drv_vn9008_E channel, float32_t duty, drv_timer_S* enableTimer, bool recover)
+{
+    const drv_timer_state_E timerState        = drv_timer_getState(enableTimer);
+    const bool              startTimerExpired = timerState == DRV_TIMER_EXPIRED;
+    const bool              startTimerRunning = timerState == DRV_TIMER_RUNNING;
+
+    if (recover)
+    {
+        drv_timer_stop(enableTimer);
+        duty = 0.0f;
+    }
+    if ((duty > 0.0f) && !startTimerExpired)
+    {
+        if (!startTimerRunning)
+        {
+            drv_timer_start(enableTimer, START_TIMER_MS);
+        }
+
+        duty = (duty > START_DUTY) ? duty : START_DUTY;
+    }
+    else if (duty <= 0.0f)
+    {
+        drv_timer_stop(enableTimer);
+    }
+
+    drv_vn9008_setDuty(channel, duty);
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -22,9 +74,7 @@
  */
 static void cooling_init()
 {
-#if FEATURE_IS_ENABLED(FEATURE_PUMP_FULL_BEANS)
-        drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_PWM1, DRV_IO_ACTIVE);
-#endif
+    drv_timer_init(&cooling.enableTimerFan);
 }
 
 /**
@@ -32,34 +82,25 @@ static void cooling_init()
  */
 static void cooling10Hz_PRD(void)
 {
-    CAN_digitalStatus_E tmp = CAN_DIGITALSTATUS_SNA;
-    const bool testPump = (CANRX_get_signal(VEH, SWS_requestTestPump, &tmp) == CANRX_MESSAGE_VALID) &&
-                          (tmp == CAN_DIGITALSTATUS_ON);
-    const bool testFan = (CANRX_get_signal(VEH, SWS_requestTestFan, &tmp) == CANRX_MESSAGE_VALID) &&
-                         (tmp == CAN_DIGITALSTATUS_ON);
-    const bool isHV  = app_vehicleState_getState() == VEHICLESTATE_ON_HV;
-    const bool isRun = app_vehicleState_getState() == VEHICLESTATE_TS_RUN;
+    CAN_digitalStatus_E tmp        = CAN_DIGITALSTATUS_SNA;
+    const bool          testPump   = (CANRX_get_signal(VEH, SWS_requestTestPump, &tmp) == CANRX_MESSAGE_VALID) &&
+                                     (tmp == CAN_DIGITALSTATUS_ON);
+    const bool          testFan    = (CANRX_get_signal(VEH, SWS_requestTestFan, &tmp) == CANRX_MESSAGE_VALID) &&
+                                     (tmp == CAN_DIGITALSTATUS_ON);
+    const bool          isHV       = app_vehicleState_getState() == VEHICLESTATE_ON_HV;
+    const bool          isRun      = app_vehicleState_getState() == VEHICLESTATE_TS_RUN;
 
-    const bool faultPump = (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERCURRENT) ||
-                           (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERTEMP);
-    const bool faultFan = (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERCURRENT) ||
-                          (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERTEMP);
+    const bool          faultPump  = (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERCURRENT) ||
+                                     (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERTEMP);
+    const bool          faultFan   = (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERCURRENT) ||
+                                     (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERTEMP);
+    const float32_t     dutyFan    = testFan ? 1.0f : FAN_ON_DUTY;
+    const float32_t     dutyPump   = testPump ? 1.0f : PUMP_ON_DUTY;
+    const bool          enablePump = (isHV || isRun || testPump) && !faultPump;
+    const bool          enableFan  = (isRun || testFan) && !faultFan;
 
-    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_PUMP, (isHV || isRun || testPump) && !faultPump);
-    drv_vn9008_setEnabled(DRV_VN9008_CHANNEL_FAN, (isRun || testFan) && !faultFan);
-
-    if (isHV || isRun || testPump)
-    {
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
-        HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.75f);
-#endif
-    }
-    else
-    {
-#if FEATURE_IS_DISABLED(FEATURE_PUMP_FULL_BEANS)
-        HW_TIM_setDuty(HW_TIM_PORT_PUMP, HW_TIM_CHANNEL_1, 0.00f);
-#endif
-    }
+    setDuty(DRV_VN9008_CHANNEL_PUMP, enablePump ? dutyPump : 0.0f, &cooling.enableTimerPump, faultPump);
+    setDuty(DRV_VN9008_CHANNEL_FAN,  enableFan ? dutyFan : 0.0f,   &cooling.enableTimerFan,  faultFan);
 }
 
 /**

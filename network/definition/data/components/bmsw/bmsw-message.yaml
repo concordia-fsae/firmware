@@ -135,6 +135,7 @@ messages:
     signals:
       boardRelativeHumidity:
       boardAmbientTemp:
+      bus7v5Voltage:
       tempMcu:
       tempBalancing0:
       tempBalancing1:

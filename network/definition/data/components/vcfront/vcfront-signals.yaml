@@ -12,11 +12,20 @@ signals:
   gpsOverrun:
     description: GPS data overrun
     discreteValues: faultStatus
+  gpsDataNotValid:
+    description: GPS data overrun
+    discreteValues: faultStatus
   appsDisabled:
     description: APPS Safety Redundancy Disabled
     discreteValues: faultStatus
   vehicleSpeedDegraded:
     description: Vehicle speed is degraded due to missing sensor data
+    discreteValues: faultStatus
+  wheelSpeedSensorDegraded:
+    description: One or more wheel speed sensors are degraded
+    discreteValues: faultStatus
+  wheelSpeedSensorLocked:
+    description: One or more wheel speed sensors are locked
     discreteValues: faultStatus
   faulted5vCritical:
     description: 5V critical external power rail faulted
@@ -78,6 +87,27 @@ signals:
   gpsPairDynamicStatus:
     description: PAIRMSG 91 dynamic status
     discreteValues: gpsDynamicStatus
+
+  gpsSatellites:
+    description: Number of satellites in view
+    nativeRepresentation:
+      bitWidth: 6
+      range:
+        min: 0
+        max: 56
+      resolution: 1
+
+  gpsQualityIndicator:
+    description: GPS quality indicator
+    discreteValues: gpsQualityIndicator
+
+  gpsInvalidTime:
+    description: GPS time invalid
+    discreteValues: faultStatus
+
+  gpsInvalidDate:
+    description: GPS date invalid
+    discreteValues: faultStatus
 
   gpsPairAlarmHarshAcceleration:
     description: PAIRMSG 91 harsh acceleration
@@ -236,7 +266,7 @@ signals:
     description: Driver raw torque request
     unit: Nm
     nativeRepresentation:
-      resolution: 1
+      resolution: 1.5
       bitWidth: 7
       range:
         min: 0
@@ -270,7 +300,8 @@ signals:
     unit: mm
     description: "Shock pot displacement front left"
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75
@@ -284,7 +315,8 @@ signals:
     unit: mm
     description: "Shock pot displacement front right"
     nativeRepresentation:
-      bitWidth: 12
+      bitWidth: 13
+      resolution: 0.01
       range:
         min: 0
         max: 75

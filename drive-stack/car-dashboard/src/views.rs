@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
-use minijinja::{context, Environment};
+use minijinja::{Environment, context};
 use serde::Serialize;
 
 use crate::{
@@ -46,6 +46,8 @@ struct ControllerView {
     reset_options: Vec<ResetOptionView>,
     routine_options: Vec<RoutineOptionView>,
     supports_operations: bool,
+    supports_manual_recovery: bool,
+    requires_manual_recovery: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -177,6 +179,8 @@ impl ControllerView {
             reset_options: Vec::new(),
             routine_options: Vec::new(),
             supports_operations,
+            supports_manual_recovery: false,
+            requires_manual_recovery: false,
         }
     }
 
@@ -212,6 +216,8 @@ impl ControllerView {
                 .map(RoutineOptionView::from_routine)
                 .collect(),
             supports_operations: true,
+            supports_manual_recovery: capability.supports_manual_recovery,
+            requires_manual_recovery: capability.requires_manual_recovery,
         }
     }
 }

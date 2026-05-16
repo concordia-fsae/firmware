@@ -872,9 +872,6 @@ signals:
     nativeRepresentation:
       bitWidth: 32
       resolution: 0.003
-      range:
-        min: 0
-        max: 4294967295
       endianness: little
       signedness: unsigned
     continuous: true
@@ -962,7 +959,7 @@ signals:
     description: Measured Motor Speed
     nativeRepresentation:
       bitWidth: 16
-      resolution: 1
+      resolution: -1 # Motor is backward
       range:
         min: -32768
         max: 32767
@@ -974,7 +971,7 @@ signals:
     description: Measured Motor Speed
     nativeRepresentation:
       bitWidth: 16
-      resolution: 1
+      resolution: -1 # Motor is backward
       range:
         min: -32768
         max: 32767

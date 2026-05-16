@@ -16,23 +16,23 @@
 void lib_pid_init(lib_pid_S* pid, float32_t x_1, float32_t y_previous,
                   float32_t kp, float32_t ki, float32_t kd)
 {
-    pid->kp = kp;
-    pid->ki = ki;
-    pid->kd = kd;
+    pid->kp                           = kp;
+    pid->ki                           = ki;
+    pid->kd                           = kd;
 
-    pid->x = x_1;
-    pid->x_1 = x_1;
+    pid->x                            = x_1;
+    pid->x_1                          = x_1;
 
-    pid->p_term = 0.0f;
-    pid->i_term = 0.0f;
-    pid->d_term = 0.0f;
+    pid->p_term                       = 0.0f;
+    pid->i_term                       = 0.0f;
+    pid->d_term                       = 0.0f;
 
-    pid->cutoffFreqDTerm = 0.0f;
+    pid->cutoffFreqDTerm              = 0.0f;
     pid->filterDTerm.smoothing_factor = 1.0f;
-    pid->filterDTerm.y = 0.0f;
-    pid->filterDTerm.y_1 = 0.0f;
+    pid->filterDTerm.y                = 0.0f;
+    pid->filterDTerm.y_1              = 0.0f;
 
-    pid->y = y_previous;
+    pid->y                            = y_previous;
 }
 
 void lib_pid_util_lpf_dTermSetCutoff(lib_pid_S* pid, float32_t cutoffFreq)
@@ -42,10 +42,10 @@ void lib_pid_util_lpf_dTermSetCutoff(lib_pid_S* pid, float32_t cutoffFreq)
 
 void lib_pi_typeb_calc(lib_pid_S* pid, float32_t setpoint, float32_t measure, float32_t dt)
 {
-    pid->x_1 = pid->x;
-    pid->x = measure - setpoint;
+    pid->x_1     = pid->x;
+    pid->x       = measure - setpoint;
 
-    pid->p_term = pid->kp * pid->x;
+    pid->p_term  = pid->kp * pid->x;
     pid->i_term += pid->ki * pid->x * dt;
 }
 

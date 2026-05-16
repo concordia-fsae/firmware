@@ -43,13 +43,13 @@ typedef enum
     CH18,
     CH19,
     CH20,
-#endif
+#endif // if APP_VARIANT_ID == 0U
     CHANNEL_COUNT,
 } ENV_thermistorID_E;
 
 typedef struct
 {
-    bool    therm_error;
+    bool      therm_error;
     float32_t temp;
 } ENV_temperature_S;
 
@@ -62,12 +62,12 @@ typedef struct
         {
             float32_t ambient_temp;
             float32_t rh;
-        } board;
+        }                 board;
         ENV_temperature_S temps[CHANNEL_COUNT];
-        float32_t       max_temp;
-        float32_t       min_temp;
-        float32_t       avg_temp;
-    } values;
+        float32_t         max_temp;
+        float32_t         min_temp;
+        float32_t         avg_temp;
+    }    values;
     bool startRhHeater;
 } ENV_S;
 

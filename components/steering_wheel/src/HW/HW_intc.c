@@ -9,8 +9,8 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "stm32f1xx.h"
 #include "HW_intc.h"
+#include "stm32f1xx.h"
 
 
 /******************************************************************************
@@ -32,8 +32,7 @@ extern CAN_HandleTypeDef hcan;
 void NMI_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -44,8 +43,7 @@ void HardFault_Handler(void)
     volatile uint8_t c = 0;
 
     while (c == 0)
-    {
-    }
+    {}
 }
 
 /**
@@ -54,8 +52,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -64,8 +61,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
@@ -74,8 +70,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
     while (1)
-    {
-    }
+    {}
 }
 
 /**
