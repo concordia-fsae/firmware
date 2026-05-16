@@ -54,61 +54,89 @@
  *                          V E C T O R  O P S
  ******************************************************************************/
 
-#define LIB_LINALG_WEIGHTAVG_CVEC(a, b, weightA, out)                                                           \
-        _Static_assert(COLS(a) == COLS(b),   "Vector size mismatch");                                           \
-        _Static_assert(COLS(a) == COLS(out), "Vector size mismatch");                                           \
-        do {                                                                                                    \
-            SATURATE(0.0f, weightA, 1.0f);                                                                      \
-            for (uint8_t _i = 0U; _i < COLS(a); _i++) {                                                         \
-                LIB_SIMPLEFILTER_WEIGHTAVG(&(a)->elemCol[_i], &(b)->elemCol[_i], weightA, &(out)->elemCol[_i]); \
-            }                                                                                                   \
-        } while (0)
+#define LIB_LINALG_WEIGHTAVG_CVEC(a, b, weightA, out) \
+    _Static_assert(COLS(a) == COLS(b), "Vector size mismatch"); \
+    _Static_assert(COLS(a) == COLS(out), "Vector size mismatch"); \
+    do { \
+        SATURATE(0.0f, weightA, 1.0f); \
+        for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
+            LIB_SIMPLEFILTER_WEIGHTAVG(&(a)->elemCol[_i], &(b)->elemCol[_i], weightA, &(out)->elemCol[_i]); \
+        } \
+    } while (0)
 
-#define LIB_LINALG_CVEC_EQ_CVEC(in, out)                               \
-        _Static_assert(COLS(in) == COLS(out), "Vector size mismatch"); \
-        do {                                                           \
-            for (uint8_t _i = 0U; _i < COLS(out); _i++) {              \
-                (out)->elemCol[_i] = (in)->elemCol[_i];                \
-            }                                                          \
-        } while (0)
+#define LIB_LINALG_CVEC_EQ_CVEC(in, out) \
+    _Static_assert(COLS(in) == COLS(out), "Vector size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(out); _i++) { \
+            (out)->elemCol[_i] = (in)->elemCol[_i]; \
+        } \
+    } while (0)
 
-#define LIB_LINALG_CLEAR_CVEC(a)                        \
-        do {                                            \
-            for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
-                (a)->elemCol[_i] = 0;                   \
-            }                                           \
-        } while (0)
+#define LIB_LINALG_CLEAR_CVEC(a) \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
+            (a)->elemCol[_i] = 0; \
+        } \
+    } while (0)
 
-#define LIB_LINALG_SUM_CVEC(a, b, out)                                    \
-        _Static_assert(COLS(a) == COLS(b),   "Vector size mismatch");     \
-        _Static_assert(COLS(a) == COLS(out), "Vector size mismatch");     \
-        do {                                                              \
-            for (uint8_t _i = 0U; _i < COLS(a); _i++) {                   \
-                (out)->elemCol[_i] = (a)->elemCol[_i] + (b)->elemCol[_i]; \
-            }                                                             \
-        } while (0)
+#define LIB_LINALG_SUM_CVEC(a, b, out) \
+    _Static_assert(COLS(a) == COLS(b), "Vector size mismatch"); \
+    _Static_assert(COLS(a) == COLS(out), "Vector size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
+            (out)->elemCol[_i] = (a)->elemCol[_i] + (b)->elemCol[_i]; \
+        } \
+    } while (0)
 
-#define LIB_LINALG_MUL_CVECSCALAR(a, c, out)                 \
-        do {                                                 \
-            for (uint8_t _i = 0U; _i < COLS(a); _i++) {      \
-                (out)->elemCol[_i] = (a)->elemCol[_i] * (c); \
-            }                                                \
-        } while (0)
+#define LIB_LINALG_MUL_CVECSCALAR(a, c, out) \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(a); _i++) { \
+            (out)->elemCol[_i] = (a)->elemCol[_i] * (c); \
+        } \
+    } while (0)
 
-#define LIB_LINALG_MUL_RVECCVEC(row, col, out)                          \
-        _Static_assert(ROWS(row) == COLS(col), "Vector size mismatch"); \
-        do {                                                            \
-            for (uint8_t _i = 0U; _i < ROWS(row); _i++) {               \
-                *(out) += (row)->elemRow[_i] * (col)->elemCol[_i];      \
-            }                                                           \
-        } while (0)
+#define LIB_LINALG_MUL_RVECCVEC(row, col, out) \
+    _Static_assert(ROWS(row) == COLS(col), "Vector size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < ROWS(row); _i++) { \
+            *(out) += (row)->elemRow[_i] * (col)->elemCol[_i]; \
+        } \
+    } while (0)
 
-#define LIB_LINALG_MUL_RVECCVEC_SET(row, col, out)                      \
-        _Static_assert(ROWS(row) == COLS(col), "Vector size mismatch"); \
-        do {                                                            \
-            *(out) = 0;                                                 \
-            LIB_LINALG_MUL_RVECCVEC_SET(row, col, out);                 \
-        } while (0)
+#define LIB_LINALG_MUL_RVECCVEC_SET(row, col, out) \
+    _Static_assert(ROWS(row) == COLS(col), "Vector size mismatch"); \
+    do { \
+        *(out) = 0; \
+        LIB_LINALG_MUL_RVECCVEC(row, col, out); \
+    } while (0)
+
+#define LIB_LINALG_MUL_CVECRVEC(col, row, out) \
+    _Static_assert(COLS(col) == ROWS(row), "Vector size mismatch"); \
+    _Static_assert(MCOLS(out) == COLS(col), "Output matrix row size mismatch"); \
+    _Static_assert(MROWS(out) == ROWS(row), "Output matrix row size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(col); _i++) { \
+            for (uint8_t _j = 0U; _j < ROWS(row); _j++){ \
+                (out)->rows[_i][_j] = (col)->elemCol[_i] * (row)->elemRow[_j]; \
+            } \
+        } \
+    } while (0)
+
+#define LIB_LINALG_TRANSPOSE_CVEC_GET(col, out) \
+    _Static_assert(ROWS(out) == COLS(col), "Vector size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < COLS(col); _i++) { \
+        (out)->elemRow[_i] = (col)->elemCol[_i]; \
+        }   \
+    } while (0)
+
+#define LIB_LINALG_TRANSPOSE_RVEC_GET(row, out) \
+    _Static_assert(COLS(out) == ROWS(row), "Vector size mismatch"); \
+    do { \
+        for (uint8_t _i = 0U; _i < ROWS(row); _i++) { \
+        (out)->elemCol[_i] = (row)->elemRow[_i]; \
+        }   \
+    } while (0)
 
 /******************************************************************************
  *                          N O R M / M A G
@@ -137,51 +165,82 @@
         (MROWS(mat) == MCOLS(mat))
 
 #define LIB_LINALG_CHECK_SIZE_RMAT(mat, n) \
-        (MROWS(mat) == (n) && MCOLS(mat) == (n))
+    (MROWS(mat) == (n) && MCOLS(mat) == (n))
 
-#define LIB_LINALG_SETIDENTITY_RMAT(mat)                                            \
-        _Static_assert(LIB_LINALG_CHECK_SQUARE_RMAT(mat), "Matrix must be square"); \
-        do {                                                                        \
-            for (uint8_t _r = 0U; _r < MROWS(mat); _r++) {                          \
-                for (uint8_t _c = 0U; _c < MCOLS(mat); _c++) {                      \
-                    (mat)->rows[_r][_c] = (_r == _c) ? 1.0f : 0.0f;                 \
-                }                                                                   \
-            }                                                                       \
-        } while (0)
+#define LIB_LINALG_SETIDENTITY_RMAT(mat) \
+    _Static_assert(LIB_LINALG_CHECK_SQUARE_RMAT(mat), "Matrix must be square"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(mat); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(mat); _c++) { \
+                (mat)->rows[_r][_c] = (_r == _c) ? 1.0f : 0.0f; \
+            } \
+        } \
+    } while (0)
 
-#define LIB_LINALG_MUL_RMATCVEC(rmat, col, out)                                      \
-        _Static_assert(MCOLS(rmat) == COLS(col), "Matrix/vector size mismatch");     \
-        _Static_assert(COLS(out) == MROWS(rmat), "Output vector size mismatch");     \
-        do {                                                                         \
-            for (uint8_t _r = 0U; _r < MROWS(rmat); _r++) {                          \
-                for (uint8_t _c = 0U; _c < MCOLS(rmat); _c++) {                      \
-                    (out)->elemCol[_r] += (rmat)->rows[_r][_c] * (col)->elemCol[_c]; \
-                }                                                                    \
-            }                                                                        \
-        } while (0)
+#define LIB_LINALG_MUL_RMATCVEC(rmat, col, out) \
+    _Static_assert(MCOLS(rmat) == COLS(col), "Matrix/vector size mismatch"); \
+    _Static_assert(COLS(out) == MROWS(rmat), "Output vector size mismatch"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(rmat); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(rmat); _c++) { \
+                (out)->elemCol[_r] += (rmat)->rows[_r][_c] * (col)->elemCol[_c]; \
+            } \
+        } \
+    } while (0)
 
-#define LIB_LINALG_MUL_RMATCVEC_SET(rmat, col, out)  \
-        do {                                         \
-            LIB_LINALG_CLEAR_CVEC(out);              \
-            LIB_LINALG_MUL_RMATCVEC(rmat, col, out); \
-        } while (0)
+#define LIB_LINALG_MUL_RMATCVEC_SET(rmat, col, out) \
+    do { \
+        LIB_LINALG_CLEAR_CVEC(out); \
+        LIB_LINALG_MUL_RMATCVEC(rmat, col, out); \
+    } while (0)
 
-#define LIB_LINALG_MUL_RMATRMAT_SET(rmatA, rmatB, out)                                   \
-        _Static_assert(MCOLS(rmatA) == MROWS(rmatB), "Matrix/matrix size mismatch");     \
-        _Static_assert(MROWS(out) == MROWS(rmatA),   "Output matrix row size mismatch"); \
-        _Static_assert(MCOLS(out) == MCOLS(rmatB),   "Output matrix col size mismatch"); \
-        do {                                                                             \
-            for (uint8_t _r = 0U; _r < MROWS(out); _r++) {                               \
-                for (uint8_t _c = 0U; _c < MCOLS(out); _c++) {                           \
-                    (out)->rows[_r][_c] = 0;                                             \
-                }                                                                        \
-            }                                                                            \
-            for (uint8_t _r = 0U; _r < MROWS(rmatA); _r++) {                             \
-                for (uint8_t _c = 0U; _c < MCOLS(rmatB); _c++) {                         \
-                    for (uint8_t _k = 0U; _k < MCOLS(rmatA); _k++) {                     \
-                        (out)->rows[_r][_c] +=                                           \
-                            (rmatA)->rows[_r][_k] * (rmatB)->rows[_k][_c];               \
-                    }                                                                    \
-                }                                                                        \
-            }                                                                            \
-        } while (0)
+#define LIB_LINALG_MUL_RMATRMAT_SET(rmatA, rmatB, out) \
+    _Static_assert(MCOLS(rmatA) == MROWS(rmatB), "Matrix/matrix size mismatch"); \
+    _Static_assert(MROWS(out) == MROWS(rmatA), "Output matrix row size mismatch"); \
+    _Static_assert(MCOLS(out) == MCOLS(rmatB), "Output matrix col size mismatch"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(out); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(out); _c++) { \
+                (out)->rows[_r][_c] = 0; \
+            } \
+        } \
+        for (uint8_t _r = 0U; _r < MROWS(rmatA); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(rmatB); _c++) { \
+                for (uint8_t _k = 0U; _k < MCOLS(rmatA); _k++) { \
+                    (out)->rows[_r][_c] += \
+                        (rmatA)->rows[_r][_k] * (rmatB)->rows[_k][_c]; \
+                } \
+            } \
+        } \
+    } while (0)
+
+#define LIB_LINALG_TRANSPOSE_MAT_GET(mat, out) \
+    _Static_assert(MROWS(out) == MCOLS(mat), "Output matrix row size mismatch"); \
+    _Static_assert(MCOLS(out) == MROWS(mat), "Output matrix col size mismatch"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(mat); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(mat); _c++){ \
+                (out)->rows[_c][_r] = (mat)->rows[_r][_c]; \
+            }   \
+        }   \
+    } while(0)
+
+#define LIB_LINALG_SUM_MAT(matA, matB, out) \
+    _Static_assert(MCOLS(matA) == MROWS(matB), "Matrix/matrix size mismatch"); \
+    _Static_assert(MCOLS(matA) == MROWS(out), "Matrix/matrix size mismatch"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(matA); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(matA); _c++) \
+                (out)->rows[_r][_c] = (matA)->rows[_r][_c] + (matB)->rows[_r][_c]; \
+        } \
+    } while (0)
+
+#define LIB_LINALG_DIF_MAT(matA, matB, out) \
+    _Static_assert(MCOLS(matA) == MROWS(matB), "Matrix/matrix size mismatch"); \
+    _Static_assert(MCOLS(matA) == MROWS(out), "Matrix/matrix size mismatch"); \
+    do { \
+        for (uint8_t _r = 0U; _r < MROWS(matA); _r++) { \
+            for (uint8_t _c = 0U; _c < MCOLS(matA); _c++) \
+                (out)->rows[_r][_c] = (matA)->rows[_r][_c] - (matB)->rows[_r][_c]; \
+        } \
+    } while (0)

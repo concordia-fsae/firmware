@@ -11,7 +11,8 @@
 
 #include <string.h>
 
-#include "app_faultManager.h"
+#include "SOC_Estimation.h"
+#include "SOC_Interpolation_Maps.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "drv_timer.h"
@@ -54,12 +55,34 @@ BMSB_S BMS;
  ******************************************************************************/
 
 static drv_timer_S precharge_timer;
+battery_model_S bm = {
+    .config = {
+        .Rnoise = 0.05f,
+        .Qnoise = { {{7e-8f, 0.0f, 0.0f}, {0.0f, 6e-5f, 0.0f}, {0.0f, 0.0f, 6e-5f}} },
+        .Pinit = { {{1e-4f, 0.0f, 0.0f}, {0.0f, 1e-4f, 0.0f}, {0.0f, 0.0f, 1e-4f}} },
+        .cellAH = BMS_CELL_RATED_AMPHOURS,
+        .minCellVoltage = 2.5f,
+        .maxCellVoltage = 4.1f,
+        .socMap = &SOC_OCV_FUNC,
+        .docvMap = &SOC_dOCV_FUNC,
+        .RiMapDischarge = &SOC_Ri_DISCHARGE_FUNC,
+        .R1MapDischarge = &SOC_R1_DISCHARGE_FUNC,
+        .C1MapDischarge = &SOC_C1_DISCHARGE_FUNC,
+        .R2MapDischarge = &SOC_R2_DISCHARGE_FUNC,
+        .C2MapDischarge = &SOC_C2_DISCHARGE_FUNC,
+        .RiMapCharge = &SOC_Ri_CHARGE_FUNC,
+        .R1MapCharge = &SOC_R1_CHARGE_FUNC,
+        .C1MapCharge = &SOC_C1_CHARGE_FUNC,
+        .R2MapCharge = &SOC_R2_CHARGE_FUNC,
+        .C2MapCharge = &SOC_C2_CHARGE_FUNC,
+    }
+};
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static void chargeLimit(BMSB_S* bms)
+static void chargeLimit(BMSB_S* bms, battery_model_S* batteryModel)
 {
     if ((bms->max_temp > 60.0f) || bms->fault)
     {
@@ -67,14 +90,7 @@ static void chargeLimit(BMSB_S* bms)
         return;
     }
 
-    if (bms->soc <= 80)
-    {
-        bms->charge_limit = STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-    }
-    else
-    {
-        bms->charge_limit = ((100.0f - bms->soc) / 20.0f) * STANDARD_CHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of charge
-    }
+    bms->charge_limit = batteryModel->chargeLimit;
 
     if (bms->max_temp >= 48)
     {
@@ -91,9 +107,8 @@ static void chargeLimit(BMSB_S* bms)
     }
 }
 
-static void dischargeLimit(BMSB_S* bms)
+static void dischargeLimit(BMSB_S* bms, battery_model_S* batteryModel)
 {
-    static uint32_t start_derate = 0x00;
 
     if ((bms->max_temp > 60.0f) || bms->fault)
     {
@@ -101,27 +116,7 @@ static void dischargeLimit(BMSB_S* bms)
         return;
     }
 
-    if (bms->soc > 20.0f)
-    {
-        bms->discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
-        start_derate         = 0x00;
-    }
-    else
-    {
-        if (start_derate == 0x00)
-        {
-            start_derate = HW_TIM_getTimeMS();
-        }
-        else if ((start_derate + BMS_CONFIGURED_DERATING_DELAY) < HW_TIM_getTimeMS())
-        {
-            start_derate         = 0x00;
-            float32_t dis = bms->discharge_limit;
-
-            dis                 -= 1.0f;
-
-            bms->discharge_limit = (dis > ((bms->soc / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)) ? dis : (bms->soc / 20.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;    // linear function for the last 20% of discharge
-        }
-    }
+    bms->discharge_limit = batteryModel->dischargeLimit;
 
     if (bms->max_temp >= 48.0f)
     {
@@ -221,7 +216,7 @@ static void getSegmentStats(BMSB_S* bms)
             bms->connected_segments++;
         }
     }
-    bms->soc = CELL_getSoCfromV(bms->voltages.min);
+    bms->soc = battery_model_get_SOC(&bm);
 }
 
 static bool checkBmsFaulted(void)
@@ -343,6 +338,7 @@ static void BMS_init(void)
     memset(&BMS, 0x00, sizeof(BMSB_S));
     IMD_init();
     drv_timer_init(&precharge_timer);
+    battery_model_init(&bm, current_data.soc);
     BMS.counted_coulombs.last_step_us = HW_TIM_getBaseTick();
     BMS.counted_coulombs.reset        = true;
 
@@ -363,8 +359,8 @@ static void BMS10Hz_PRD(void)
     }
     else
     {
-        chargeLimit(&tmp);
-        dischargeLimit(&tmp);
+        chargeLimit(&tmp, &bm);
+        dischargeLimit(&tmp, &bm);
     }
 
     BMS.soc                     = tmp.soc;
@@ -380,6 +376,10 @@ static void BMS10Hz_PRD(void)
 
 static void BMS100Hz_PRD(void)
 {
+    const uint64_t this_step = HW_TIM_getBaseTick();
+    const uint32_t delta_t = (uint32_t)(this_step - BMS.counted_coulombs.last_step_us);
+    battery_model_run(&bm, BMS.pack_voltage_measured/BMS_CONFIGURED_SERIES_CELLS, 
+        BMS.packCurrentRaw/BMS_CONFIGURED_PARALLEL_CELLS, BMS.voltages.min, BMS.voltages.max, (float32_t)delta_t/1000000.0f);
     CAN_digitalStatus_E contactorOpenRequestState = CAN_DIGITALSTATUS_SNA;
     const bool          openRequest               = (CANRX_get_signal(VEH, VCREAR_requestContactorsOpen, &contactorOpenRequestState) == CANRX_MESSAGE_VALID) &&
                                                     (contactorOpenRequestState == CAN_DIGITALSTATUS_ON);
@@ -451,7 +451,7 @@ static void BMS1kHz_PRD(void)
     }
     else if (BMS.counted_coulombs.reset == false)
     {
-        lib_nvm_requestWrite(NVM_ENTRYID_COULOMB_COUNT);
+        lib_nvm_requestWrite(NVM_ENTRYID_SOC);
         BMS.counted_coulombs.amp_hr = 0.0f;
         BMS.counted_coulombs.reset  = true;
     }
