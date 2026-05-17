@@ -520,4 +520,3 @@ signals:
     description: Voltage of FR brake temp sensors
     template: voltsPrecise
 
-
