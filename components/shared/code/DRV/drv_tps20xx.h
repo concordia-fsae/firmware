@@ -28,7 +28,7 @@
  *   shall be called
  * - Once a fault is reported by the IC, the tps20xx channel will be disabled.
  *   A faulted channel enters the over current (OC) state initially. If the
- *   channel remains faulted, the channel tripped due to an overtemperature condition. 
+ *   channel remains faulted, the channel tripped due to an overtemperature condition.
  *   An overtemperature condition can only be cleared once the chip has determined
  *   it has cooled down enough.
  * - When a channel is configured with auto_reset enabled, it will automatically
@@ -45,9 +45,9 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_tps20xx_componentSpecific.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "drv_tps20xx_componentSpecific.h"
 #include "stdbool.h"
 
 /******************************************************************************

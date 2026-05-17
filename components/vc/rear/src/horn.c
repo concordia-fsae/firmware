@@ -7,23 +7,23 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "app_vehicleState.h"
+#include "drv_outputAD.h"
+#include "drv_timer.h"
 #include "horn.h"
+#include "mcManager.h"
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "string.h"
-#include "drv_outputAD.h"
-#include "app_vehicleState.h"
-#include "drv_timer.h"
-#include "mcManager.h"
 
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
 
-#define HORN_ON_TIME_MS 1500U
+#define HORN_ON_TIME_MS            1500U
 
-#define CALIBRATION_ON_TIME_MS 100U
-#define CALIBRATION_OFF_TIME_MS 900U
+#define CALIBRATION_ON_TIME_MS     100U
+#define CALIBRATION_OFF_TIME_MS    900U
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -77,7 +77,7 @@ static void horn_periodic_10Hz(void)
         {
             if (drv_timer_getState(&horn_data.timer) != DRV_TIMER_RUNNING)
             {
-                const bool isOff = horn_data.state == HORN_OFF;
+                const bool     isOff = horn_data.state == HORN_OFF;
                 const uint32_t timer = isOff ?
                                        CALIBRATION_ON_TIME_MS :
                                        CALIBRATION_OFF_TIME_MS;
@@ -98,6 +98,7 @@ static void horn_periodic_10Hz(void)
         case HORN_ON:
             drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_HORN_EN, DRV_IO_ACTIVE);
             break;
+
         case HORN_OFF:
         default:
             drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_HORN_EN, DRV_IO_INACTIVE);
@@ -110,6 +111,6 @@ static void horn_periodic_10Hz(void)
  ******************************************************************************/
 
 const ModuleDesc_S horn_desc = {
-    .moduleInit = &horn_init,
+    .moduleInit       = &horn_init,
     .periodic10Hz_CLK = &horn_periodic_10Hz,
 };

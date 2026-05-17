@@ -1,12 +1,14 @@
 exclude: ^buck-out/
 
 repos:
-  # - repo: https://github.com/pocc/pre-commit-hooks
-  #   rev: v1.3.5
-  #   hooks:
-  #     - id: uncrustify
-  #       args: [-c, uncrustify.cfg, --no-backup]
-  #       files: \.(c|h|cc|cpp|cxx|hh|hpp|hxx)$
+  - repo: local
+    hooks:
+      - id: uncrustify
+        name: uncrustify
+        language: system
+        entry: pixi run uncrustify
+        args: [-c, uncrustify.cfg, --no-backup]
+        files: \.(c|h|cc|cpp|cxx|hh|hpp|hxx)$
   - repo: https://github.com/google/yamlfmt
     rev: v0.13.0
     hooks:

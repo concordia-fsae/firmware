@@ -19,14 +19,14 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
-#include "drv_io.h"
 #include "drv_inputAD_componentSpecific.h"
+#include "drv_io.h"
 #include "HW_gpio.h"
 #include "LIB_Types.h"
 #include "Yamcan.h"
 
 /******************************************************************************
-*                             T Y P E D E F S
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -38,7 +38,7 @@ typedef struct
     } type;
     const union
     {
-        drv_io_pinConfig_S     gpio;
+        drv_io_pinConfig_S gpio;
         CANRX_MESSAGE_health_E (*canrx_digitalStatus)(CAN_digitalStatus_E*);
     } config;
 } drv_inputAD_configDigital_S;

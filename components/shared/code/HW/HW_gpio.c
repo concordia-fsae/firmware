@@ -33,7 +33,8 @@ HW_StatusTypeDef_E HW_GPIO_init(void)
     {
         if ((HW_GPIO_pinmux[pin].resetState != HW_GPIO_NOSET) &&
             (HW_GPIO_pinmux[pin].mode != GPIO_MODE_INPUT) &&
-            (HW_GPIO_pinmux[pin].mode != GPIO_MODE_ANALOG))
+            (HW_GPIO_pinmux[pin].mode != GPIO_MODE_ANALOG)
+            )
         {
             HW_GPIO_writePin(pin, HW_GPIO_pinmux[pin].resetState == HW_GPIO_PINSET);
         }

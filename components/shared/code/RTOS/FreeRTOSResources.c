@@ -31,17 +31,17 @@
  ******************************************************************************/
 
 // which bit in the event group corresponds to each task
-#define PERIODIC_TASK_1kHz  (1U) << (0U)
-#define PERIODIC_TASK_100Hz (1U) << (1U)
-#define PERIODIC_TASK_10Hz  (1U) << (2U)
-#define PERIODIC_TASK_1Hz   (1U) << (3U)
+#define PERIODIC_TASK_1kHz     (1U) << (0U)
+#define PERIODIC_TASK_100Hz    (1U) << (1U)
+#define PERIODIC_TASK_10Hz     (1U) << (2U)
+#define PERIODIC_TASK_1Hz      (1U) << (3U)
 
 
 /******************************************************************************
  *                               M A C R O S
  ******************************************************************************/
 
-#define NUM_TASKS (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t))    // number of tasks in this module
+#define NUM_TASKS    (sizeof(ModuleTasks) / sizeof(RTOS_taskDesc_t)) // number of tasks in this module
 
 
 /******************************************************************************
@@ -50,10 +50,10 @@
 
 // periodic event group. each bit in the group signifies that the
 // respective periodic task is ready to run
-EventGroupHandle_t PeriodicEvent;
+EventGroupHandle_t  PeriodicEvent;
 
 // timer which will run all of the periodic tasks
-TimerHandle_t rtos_tick_timer;
+TimerHandle_t       rtos_tick_timer;
 
 // task handle and stack definitions
 static StaticTask_t Task1kHz;
@@ -94,8 +94,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stackSize   = sizeof(task1kHzStack) / sizeof(StackType_t),
         .stateBuffer = &Task1kHz,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_1kHz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_1kHz,
         },
         .periodMs = pdMS_TO_TICKS(1U),
     },
@@ -108,8 +108,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stackSize   = sizeof(task100HzStack) / sizeof(StackType_t),
         .stateBuffer = &Task100Hz,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_100Hz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_100Hz,
         },
         .periodMs = pdMS_TO_TICKS(10U),
     },
@@ -122,8 +122,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stateBuffer = &Task10Hz,
         .parameters  = NULL,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_10Hz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_10Hz,
         },
         .periodMs = pdMS_TO_TICKS(100U),
     },
@@ -136,8 +136,8 @@ RTOS_taskDesc_t ModuleTasks[] = {
         .stateBuffer = &Task1Hz,
         .parameters  = NULL,
         .event       = {
-                  .group = &PeriodicEvent,
-                  .bit   = PERIODIC_TASK_1Hz,
+            .group = &PeriodicEvent,
+            .bit   = PERIODIC_TASK_1Hz,
         },
         .periodMs = pdMS_TO_TICKS(1000U),
     },
@@ -162,7 +162,7 @@ RTOS_taskDesc_t FreerunTasks[] = {
  * @param tasks pointer to list of tasks
  * @return count of tasks in list
  */
-#pragma weak RTOS_getComponentFreerunTasks
+# pragma weak RTOS_getComponentFreerunTasks
 uint16_t RTOS_getComponentFreerunTasks(RTOS_taskDesc_t** tasks)
 {
     *tasks = NULL;
@@ -217,11 +217,11 @@ static void rtosTickTimer(TimerHandle_t xTimer)
  */
 static void taskFxn(void* parameters)
 {
-    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;    // convert the parameter back into a task description
+    RTOS_taskDesc_t   * task        = (RTOS_taskDesc_t*)parameters; // convert the parameter back into a task description
 
-    void (*const function)(void)    = task->function;       // get the function that will be called for this task
-    EventGroupHandle_t* event_group = task->event.group;    // get the shared event group
-    EventBits_t         event_bit   = task->event.bit;      // get the event bit for this task
+    void(*const function)(void) = task->function;                   // get the function that will be called for this task
+    EventGroupHandle_t* event_group = task->event.group;            // get the shared event group
+    EventBits_t       event_bit     = task->event.bit;              // get the event bit for this task
 
     // if the processor has a floating point unit, uncomment the following line
     // portTASK_USES_FLOATING_POINT();
@@ -245,9 +245,9 @@ static void taskFxn(void* parameters)
  */
 static void freerunTaskFxn(void* parameters)
 {
-    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters;    // convert the parameter back into a task description
+    RTOS_taskDesc_t* task = (RTOS_taskDesc_t*)parameters; // convert the parameter back into a task description
 
-    void (*const function)(void)    = task->function;       // get the function that will be called for this task
+    void(*const function)(void) = task->function;         // get the function that will be called for this task
 
     // if the processor has a floating point unit, uncomment the following line
     // portTASK_USES_FLOATING_POINT();
@@ -318,15 +318,15 @@ void RTOS_createResources(void)
     {
         RTOS_taskDesc_t* const task = &FreerunTasks[i];
         task->handle = xTaskCreateStatic(&freerunTaskFxn,
-                                            task->name,
-                                            task->stackSize,
-                                            task,
-                                            task->priority,
-                                            task->stack,
-                                            task->stateBuffer);
+                                         task->name,
+                                         task->stackSize,
+                                         task,
+                                         task->priority,
+                                         task->stack,
+                                         task->stateBuffer);
     }
 #if FEATURE_IS_ENABLED(APP_COMPONENT_FREERUNTASKS)
-    RTOS_taskDesc_t* componentTasks = NULL;
+    RTOS_taskDesc_t* componentTasks   = NULL;
     const uint16_t componentTaskCount = RTOS_getComponentFreerunTasks(&componentTasks);
     for (uint16_t i = 0U; i < componentTaskCount; i++)
     {
@@ -339,7 +339,7 @@ void RTOS_createResources(void)
                                          task->stack,
                                          task->stateBuffer);
     }
-#endif
+#endif // if FEATURE_IS_ENABLED(APP_COMPONENT_FREERUNTASKS)
 
     /*
      * Create timers
@@ -371,8 +371,8 @@ void RTOS_createResources(void)
  *                              O S  H O O K S
  ******************************************************************************/
 extern void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
-                                          StackType_t**  ppxIdleTaskStackBuffer,
-                                          uint32_t*      pusIdleTaskStackSize);
+                                          StackType_t ** ppxIdleTaskStackBuffer,
+                                          uint32_t    * pusIdleTaskStackSize);
 
 /**
  * vApplicationGetIdleTaskMemory
@@ -382,8 +382,8 @@ extern void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
  * @param pusIdleTaskStackSize TODO
  */
 void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
-                                   StackType_t**  ppxIdleTaskStackBuffer,
-                                   uint32_t*      pusIdleTaskStackSize)
+                                   StackType_t ** ppxIdleTaskStackBuffer,
+                                   uint32_t    * pusIdleTaskStackSize)
 {
     static StaticTask_t idleTask;
     static StackType_t  idleTaskStack[configIDLE_TASK_STACK_DEPTH];
@@ -394,8 +394,8 @@ void vApplicationGetIdleTaskMemory(StaticTask_t** ppxIdleTaskTCBBuffer,
 }
 
 extern void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
-                                           StackType_t**  ppxTimerTaskStackBuffer,
-                                           uint32_t*      pusTimerTaskStackSize);
+                                           StackType_t ** ppxTimerTaskStackBuffer,
+                                           uint32_t    * pusTimerTaskStackSize);
 
 
 /**
@@ -406,8 +406,8 @@ extern void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
  * @param pusTimerTaskStackSize TODO
  */
 void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
-                                    StackType_t**  ppxTimerTaskStackBuffer,
-                                    uint32_t*      pusTimerTaskStackSize)
+                                    StackType_t ** ppxTimerTaskStackBuffer,
+                                    uint32_t    * pusTimerTaskStackSize)
 {
     static StaticTask_t timerTask;
     static StackType_t  timerTaskStack[configTIMER_TASK_STACK_DEPTH];
@@ -426,10 +426,10 @@ void vApplicationGetTimerTaskMemory(StaticTask_t** ppxTimerTaskTCBBuffer,
  * @param ppxSwiTaskStackBuffer pointer to the resultant stack for this SWI priority
  * @param pusSwiTaskStackSize pointer to the stack size var for this SWI priority
  */
-void RTOS_getSwiTaskMemory(RTOS_swiPri_E  swiPriority,
-                           StaticTask_t** ppxSwiTaskTCBBuffer,
-                           StackType_t**  ppxSwiTaskStackBuffer,
-                           uint32_t*      pusSwiTaskStackSize)
+void RTOS_getSwiTaskMemory(RTOS_swiPri_E swiPriority,
+                           StaticTask_t  ** ppxSwiTaskTCBBuffer,
+                           StackType_t   ** ppxSwiTaskStackBuffer,
+                           uint32_t      * pusSwiTaskStackSize)
 {
     switch (swiPriority)
     {

@@ -10,9 +10,9 @@
  ******************************************************************************/
 
 // System Includes
-#include "ModuleDesc.h"
-#include "app_vehicleState.h"
 #include "app_gps.h"
+#include "app_vehicleState.h"
+#include "ModuleDesc.h"
 
 /******************************************************************************
  *                              E X T E R N S

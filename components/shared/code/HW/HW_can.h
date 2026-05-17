@@ -16,9 +16,9 @@
 
 #if (MCU_STM32_PN == FDEFS_STM32_PN_STM32F103XB) || \
     (MCU_STM32_PN == FDEFS_STM32_PN_STM32F105)
-#define CAN_FILTERBANK_LENGTH 28U
+# define CAN_FILTERBANK_LENGTH    28U
 #else
-#error "No other MCU supported."
+# error "No other MCU supported."
 #endif
 
 /******************************************************************************

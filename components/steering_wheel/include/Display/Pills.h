@@ -9,8 +9,8 @@
  ******************************************************************************/
 
 #include "Colors.h"
-#include "FloatTypes.h"
 #include "DisplayTypes.h"
+#include "FloatTypes.h"
 
 
 /******************************************************************************
@@ -19,20 +19,20 @@
 
 #define DECL_valuePillUpdate(p)    static void SNAKE(update, p)(struct s_ValuePill *pill, float val)
 #define DECL_valuePill(pill, l, x_dim, y_dim, w, h, a, p, u) \
-    [pill] =                                                 \
-    {                                                        \
-        .coords    = { .x = x_dim, .y = y_dim },             \
-        .height    = h,                                      \
-        .width     = w,                                      \
-        .angle     = a,                                      \
-        .label     = l,                                      \
-        .bgColor   = 0U,                                     \
-        .fgColor   = 0U,                                     \
-        .value     = 0U,                                     \
-        .precision = p,                                      \
-        .unit      = u,                                      \
-        .update    = &SNAKE(update, pill),                   \
-    }                                                        \
+        [pill]         =                                     \
+        {                                                    \
+            .coords    = { .x = x_dim, .y = y_dim },         \
+            .height    = h,                                  \
+            .width     = w,                                  \
+            .angle     = a,                                  \
+            .label     = l,                                  \
+            .bgColor   = 0U,                                 \
+            .fgColor   = 0U,                                 \
+            .value     = 0U,                                 \
+            .precision = p,                                  \
+            .unit      = u,                                  \
+            .update    = &SNAKE(update, pill),               \
+        }                                                    \
 
 
 /******************************************************************************

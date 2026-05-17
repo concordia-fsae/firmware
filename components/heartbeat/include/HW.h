@@ -105,11 +105,11 @@ typedef struct
 
 
 // prototypes
-void systemHardReset(void);
-void setupCLK(void);
-void setupLEDAndButton(void);
+void         systemHardReset(void);
+void         setupCLK(void);
+void         setupLEDAndButton(void);
 
-void gpio_write_bit(u32 bank, u8 pin, u8 val);
-void strobePin(u32 bank, u8 pin, u8 count, u32 rate, u8 onState);
+void         gpio_write_bit(u32 bank, u8 pin, u8 val);
+void         strobePin(u32 bank, u8 pin, u8 count, u32 rate, u8 onState);
 
 unsigned int crMask(int pin);

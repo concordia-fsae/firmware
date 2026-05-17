@@ -15,8 +15,8 @@
 #include "stdbool.h"
 #include "string.h"
 #if FEATURE_IS_ENABLED(APP_RTOS)
-#include "FreeRTOS.h"
-#include "task.h"
+# include "FreeRTOS.h"
+# include "task.h"
 #endif
 
 #if FEATURE_IS_DISABLED(MCU_STM32_USE_HAL)
@@ -44,7 +44,7 @@
 
 #define FLASH_PAGE_LAST    (0x08007C00UL)          // address of the last flash page
 #define FLASH_SIZE_REG     (0x1FFFF7E0UL)          // register whose 4 least significant bits
-                                                 // contains the size of the flash for this chip
+                                                   // contains the size of the flash for this chip
 
 #define FLASH_BUSY()       ((bool)(GET_REG(FLASH_SR) &FLASH_SR_BSY))  // returns true if flash is busy
 
