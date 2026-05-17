@@ -51,7 +51,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packVoltageMeasured(m, b, n, s)            set(m, b, n, s, BMS.pack_voltage_measured)
 #define set_packVoltageMeasurementFault(m, b, n, s)    set(m, b, n, s, BMS.pack_voltage_sense_fault ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_packCycleCountedCoulombs(m, b, n, s)       set(m, b, n, s, BMS.counted_coulombs.amp_hr)
-#define set_packAmpHours(m, b, n, s)                   set(m, b, n, s, current_data.pack_amp_hours)
+#define set_packSOC(m, b, n, s)                        set(m, b, n, s, current_data.soc)
 #define set_packCurrent(m, b, n, s)                    set(m, b, n, s, BMS.pack_current)
 #define set_packPower(m, b, n, s)                      set(m, b, n, s, BMS.packPowerKW)
 #define set_soc(m, b, n, s)                            set(m, b, n, s, BMS.soc)
@@ -113,4 +113,3 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #else // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define transmit_BMSB_nvmInformation                  false
 #endif // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
-
