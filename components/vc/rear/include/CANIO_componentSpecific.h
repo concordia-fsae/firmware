@@ -17,16 +17,16 @@
 
 // imports for data access
 #include "app_faultManager.h"
+#include "app_faultManager.h"
 #include "app_vehicleSpeed.h"
 #include "brakeLight.h"
 #include "brakePressure.h"
+#include "brakeTemp.h"
 #include "drv_inputAD.h"
 #include "drv_tps20xx.h"
 #include "horn.h"
 #include "mcManager.h"
 #include "Module.h"
-#include "app_faultManager.h"
-#include "brakeTemp.h"
 #include "shockpot.h"
 #include "tssi.h"
 
@@ -66,10 +66,10 @@
 #define set_tsCapThermistorVoltage(m, b, n, s)                set(m, b, n, s, drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_PU1))
 #define set_tsCapTemperature(m, b, n, s)                      set(m, b, n, s, mcManager_getTsCapTemperatureDegC())
 
-#define set_wheelSpeedRL(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
-#define set_wheelSpeedRR(m,b,n,s) set(m,b,n,s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))
-#define set_axleSpeedRear(m,b,n,s) set(m,b,n,s, mcManager_getAxleRPM())
-#define set_brakeTempRL(m,b,n,s) set(m,b,n,s, brakeTemp_getTemperature(BRAKETEMP_LEFT))
-#define set_brakeTempRLVoltage(m,b,n,s) set(m,b,n,s, brakeTemp_getVoltage(BRAKETEMP_LEFT))
-#define set_brakeTempRR(m,b,n,s) set(m,b,n,s, brakeTemp_getTemperature(BRAKETEMP_RIGHT))
-#define set_brakeTempRRVoltage(m,b,n,s) set(m,b,n,s, brakeTemp_getVoltage(BRAKETEMP_RIGHT))
+#define set_wheelSpeedRL(m, b, n, s)                          set(m, b, n, s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RL))
+#define set_wheelSpeedRR(m, b, n, s)                          set(m, b, n, s, app_vehicleSpeed_getWheelSpeedRawRotational(WHEEL_RR))
+#define set_axleSpeedRear(m, b, n, s)                         set(m, b, n, s, mcManager_getAxleRPM())
+#define set_brakeTempRL(m, b, n, s)                           set(m, b, n, s, brakeTemp_getTemperature(BRAKETEMP_LEFT))
+#define set_brakeTempRLVoltage(m, b, n, s)                    set(m, b, n, s, brakeTemp_getVoltage(BRAKETEMP_LEFT))
+#define set_brakeTempRR(m, b, n, s)                           set(m, b, n, s, brakeTemp_getTemperature(BRAKETEMP_RIGHT))
+#define set_brakeTempRRVoltage(m, b, n, s)                    set(m, b, n, s, brakeTemp_getVoltage(BRAKETEMP_RIGHT))
