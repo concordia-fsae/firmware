@@ -147,6 +147,7 @@ prebuilt_cxx_library(
     exported_headers = {
         "BuildDefines.h": "include/HW/BuildDefines.h",
         "shockpot.h": "//components/vc/shared:app/shockpot.h",
+        "brakeTemp.h": "//components/vc/shared:app/brakeTemp.h",
     } | remap_headers(["include/HW/"]) | remap_headers(["include/"]),
     exported_deps = platform_selected_targets(platform_variants),
 )
@@ -308,6 +309,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_nvm.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
             "//components/vc/shared:app/shockpot.c",
+            "//components/vc/shared:app/brakeTemp.c",
             "//embedded/libs:libcrc.c",
             ("//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]", ["-Wno-conversion"]),
             select({
@@ -322,6 +324,7 @@ cxx_binary(
         "lwgps/lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
         "lwgps/lwgps_opt.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps_opt.h]",
         "shockpot.h": "//components/vc/shared:app/shockpot.h",
+        "brakeTemp.h": "//components/vc/shared:app/brakeTemp.h",
     } | component_headers,
     include_directories = [
         "include/",

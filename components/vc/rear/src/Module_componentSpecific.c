@@ -32,6 +32,7 @@ const ModuleDesc_S* modules[MODULE_CNT] = {
     &app_vehicleSpeed_desc,
     &brakePressure_desc,
     &shockpot_desc,
+    &brakeTemp_desc,
     &sys_desc,
     &CANIO_tx,
 };

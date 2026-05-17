@@ -493,3 +493,30 @@ signals:
         max: 1
       resolution: 0.001
     continuous: true
+  brakeTempFL:
+    description: Rotor Temp of Front Left Rotor
+    unit: 'deg'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+      resolution: 1
+    continuous: true
+  brakeTempFR:
+    description: Rotor Temp of Front Right Rotor
+    unit: 'deg'
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 800
+      resolution: 1
+    continuous: true
+  brakeTempFLVoltage:
+    description: Voltage of FL brake temp sensors
+    template: voltsPrecise
+  brakeTempFRVoltage:
+    description: Voltage of FR brake temp sensors
+    template: voltsPrecise
+

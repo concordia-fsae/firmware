@@ -144,6 +144,7 @@ prebuilt_cxx_library(
     exported_headers = {
         "BuildDefines.h": "include/HW/BuildDefines.h",
         "shockpot.h": "//components/vc/shared:app/shockpot.h",
+        "brakeTemp.h": "//components/vc/shared:app/brakeTemp.h",
     } | remap_headers(["include/HW/"]) | remap_headers(["include/"]),
     exported_deps = platform_selected_targets(platform_variants),
 )
@@ -301,6 +302,7 @@ cxx_binary(
             "//components/shared/code:libs/lib_utility.c",
             "//components/vc/shared:HW/HW_tim_vcSpecific.c",
             "//components/vc/shared:app/shockpot.c",
+            "//components/vc/shared:app/brakeTemp.c",
             select({
                 "DEFAULT": "//embedded/platforms/stm32/f1/f105:startup_stm32f105vc.S",
             }),
@@ -309,6 +311,7 @@ cxx_binary(
     headers = {
         "lib_atomic.h": "//embedded/libs:lib_atomic.h",
         "shockpot.h": "//components/vc/shared:app/shockpot.h",
+        "brakeTemp.h": "//components/vc/shared:app/brakeTemp.h",
     } | component_headers,
     include_directories = [
         "include/",

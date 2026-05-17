@@ -292,3 +292,14 @@ messages:
     sourceBuses: veh
     signals:
       paramTcTireModelLimit:
+
+  brTempFront:
+    description: Front Rotor Temperatures
+    id: 0x4f1
+    cycleTimeMs: 500
+    sourceBuses: veh
+    signals:
+      brakeTempFL:
+      brakeTempFR:
+      brakeTempFLVoltage:
+      brakeTempFRVoltage:
