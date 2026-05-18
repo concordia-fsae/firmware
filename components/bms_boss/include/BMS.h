@@ -126,3 +126,4 @@ float32_t BMSB_getContactorSohPrecharge(void);
 uint32_t  BMSB_getContactorLifetimeHvp(void);
 uint32_t  BMSB_getContactorLifetimeHvn(void);
 uint32_t  BMSB_getContactorLifetimePrecharge(void);
+bool      BMSB_set_SOC(void);

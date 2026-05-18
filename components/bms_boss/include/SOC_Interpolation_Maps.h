@@ -34,6 +34,27 @@ static lib_interpolation_mapping_S SOC_OCV_FUNC = {
     .saturate_right = true,
 };
 
+static lib_interpolation_point_S   OCV_SOCMap[] = {
+    { .x =   2.4f, .y = 0.0f },  // SOC to OCV
+    { .x = 3.178f, .y = 0.1f },
+    { .x =  3.37f, .y = 0.2f },
+    { .x =  3.52f, .y = 0.3f },
+    { .x =  3.62f, .y = 0.4f },
+    { .x =  3.75f, .y = 0.5f },
+    { .x =  3.82f, .y = 0.6f },
+    { .x =  3.94f, .y = 0.7f },
+    { .x =  4.05f, .y = 0.8f },
+    { .x =  4.09f, .y = 0.9f },
+    { .x =  4.20f, .y = 1.0f },
+};
+
+static lib_interpolation_mapping_S OCV_SOC_FUNC = {
+    .points         = (lib_interpolation_point_S*)&OCV_SOCMap,
+    .number_points  = COUNTOF(OCV_SOCMap),
+    .saturate_left  = true,
+    .saturate_right = true,
+};
+
 static lib_interpolation_point_S   SOC_dOCVMap[] = {
     { .x =   0.0f, .y = 7.58f }, // SOC to dOCV
     { .x =  10.0f, .y = 4.75f },

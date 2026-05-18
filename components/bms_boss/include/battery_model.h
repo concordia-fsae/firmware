@@ -68,6 +68,7 @@ typedef struct
 float32_t battery_model_get_SOC(battery_model_S* batteryModel);
 float32_t battery_model_get_VRC1(battery_model_S* batteryModel);
 float32_t battery_model_get_VRC2(battery_model_S* batteryModel);
+void      battery_model_set_SOC(battery_model_S* batteryModel, float32_t soc);
 
 void      battery_model_run(battery_model_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t minCellVoltage,
                             float32_t maxCellVoltage, float32_t dt);

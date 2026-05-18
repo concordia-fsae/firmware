@@ -47,6 +47,11 @@ float32_t battery_model_get_VRC2(battery_model_S* batteryModel)
     return batteryModel->X.elemCol[2];
 }
 
+void battery_model_set_SOC(battery_model_S* batteryModel, float32_t soc)
+{
+    batteryModel->X.elemCol[0] = soc;
+}
+
 /******************************************************************************
  *                             Private Functions
  ******************************************************************************/
