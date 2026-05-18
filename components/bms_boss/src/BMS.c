@@ -309,6 +309,20 @@ uint32_t BMSB_getContactorLifetimePrecharge(void)
     return contactor_data.contactorLifetime.precharge;
 }
 
+bool BMSB_set_SOC(void)
+{
+    if (BMS.pack_voltage_measured <= 1e-6f)
+    {
+        return false;
+    }
+    float32_t soc = SATURATE(0.0f,
+                             lib_interpolation_interpolate(&OCV_SOC_FUNC, BMS.pack_voltage_measured /
+                                                           (BMS_CONFIGURED_SERIES_CELLS * BMS_CONFIGURED_SERIES_SEGMENTS)),
+                             1.0f);
+    battery_model_set_SOC(&bm, soc);
+    return true;
+}
+
 bool BMS_SFT_checkMCTimeout(void)
 {
     return(CANRX_validate(VEH, PM100DX_criticalData) != CANRX_MESSAGE_VALID);
