@@ -32,6 +32,7 @@ can_bus_defs = {}
 can_nodes = {}
 discrete_values = {}
 templates = {}
+valid_units = {}
 
 BUS_SCHEMA = Schema(
     {
@@ -159,6 +160,14 @@ def generate_discrete_values(definition_dir: Path) -> None:
     if error:
         ERROR = True
         raise Exception("Error generating discrete values, review previous errors...")
+
+
+def generate_units(definition_dir: Path) -> None:
+    """Load valid units from units.yaml"""
+    global valid_units
+    with definition_dir.joinpath("units.yaml").open() as fd:
+        data = safe_load(fd)
+    valid_units = set(data["units"].values())
 
 
 def generate_templates(definition_dir: Path) -> None:
@@ -386,10 +395,14 @@ def process_node(node: CanNode):
                     )
                 if "unit" in definition:
                     try:
-                        Units(definition["unit"])
+                        if definition["unit"] not in valid_units:
+                            raise Exception(
+                                f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                            )
                     except:
                         raise Exception(
-                            f"Unit '{definition['unit']}' is not an accepted unit."
+                            f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                            f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
                         )
                 if "validationRole" in definition:
                     try:
@@ -562,10 +575,14 @@ def process_node(node: CanNode):
                         )
                     if "unit" in definition:
                         try:
-                            Units(definition["unit"])
+                            if definition["unit"] not in valid_units:
+                                raise Exception(
+                                    f"Unit '{definition['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                                )
                         except:
                             raise Exception(
-                                f"Unit '{new_sig['unit']}' is not an accepted unit."
+                                f"Unit '{new_sig['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
+                                f"Unit '{new_sig['unit']}' is not an accepted unit. See `network/definition/units.yaml` for supported units."
                             )
                     if "validationRole" in new_sig:
                         try:
@@ -1225,6 +1242,7 @@ def parse_args() -> Namespace:
 
 def parseNetwork(args, lookup):
     generate_discrete_values(args.definition_dir)
+    generate_units(args.definition_dir)
     generate_templates(args.definition_dir.joinpath("data/templates"))
     generate_can_buses(args.definition_dir)
     generate_can_nodes(args.definition_dir)

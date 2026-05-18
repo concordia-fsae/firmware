@@ -26,7 +26,7 @@ signals:
     description: Violation detected by energy meter
     discreteValues: simpleStatus
   energy:
-    unit: 'Whr'
+    unit: 'Wh'
     description: Measured energy transfer
     nativeRepresentation:
       endianness: big
