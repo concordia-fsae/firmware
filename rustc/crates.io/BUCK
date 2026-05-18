@@ -1,0 +1,6 @@
+load("//constraints:defs.bzl", "configuration_transition")
+
+configuration_transition(
+    name = "download",
+    visibility = ["PUBLIC"],
+)

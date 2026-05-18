@@ -1,0 +1,2 @@
+[env]
+RUSTC_INSTALL_BINDIR = "bin"

@@ -12,13 +12,9 @@
   fbcode_macros = none
   buck2 = none
 
-# Vendor specific external cells
+# Use Buck's bundled prelude.
 [external_cells]
-  prelude = git
-
-[external_cell_prelude]
-  git_origin = https://github.com/facebook/buck2-prelude
-  commit_hash = 157f2e9794129cbd580aec72653309f797a9cc33
+  prelude = bundled
 
 [parser]
   target_platform_detector_spec = target:root//...->prelude//platforms:default

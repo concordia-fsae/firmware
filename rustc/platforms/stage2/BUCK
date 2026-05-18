@@ -1,0 +1,45 @@
+load("//platforms:defs.bzl", "execution_platform", "target_platform")
+
+target_platform(
+    name = "library",
+    base = "//platforms:host",
+    constraint_values = [
+        "//constraints:build-script=false",
+        "//constraints:library",
+        "//constraints:opt-level=3",
+        "//constraints:stage2",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+execution_platform(
+    name = "library-build-script",
+    base = ":library",
+    constraint_values = [
+        "//constraints:build-script=true",
+        "//constraints:opt-level=0",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+target_platform(
+    name = "compiler",
+    base = "//platforms:host",
+    constraint_values = [
+        "//constraints:build-script=false",
+        "//constraints:compiler",
+        "//constraints:opt-level=3",
+        "//constraints:stage2",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+execution_platform(
+    name = "compiler-build-script",
+    base = ":compiler",
+    constraint_values = [
+        "//constraints:build-script=true",
+        "//constraints:opt-level=0",
+    ],
+    visibility = ["PUBLIC"],
+)

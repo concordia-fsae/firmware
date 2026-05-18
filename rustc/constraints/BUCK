@@ -1,0 +1,45 @@
+load(":defs.bzl", "constraint")
+
+constraint(
+    setting = "workspace",
+    values = [
+        # Transitive dependencies of rust/library/.
+        "library",
+        # Transitive dependencies of rust/compiler/.
+        "compiler",
+    ],
+)
+
+constraint(
+    setting = "bootstrap-stage",
+    values = [
+        # Use stage0 (download) to build stage1 standard library and compiler.
+        "stage1",
+        # Use stage1 to build stage2 standard library and compiler.
+        "stage2",
+    ],
+)
+
+constraint(
+    setting = "build-script",
+    values = [
+        "build-script=false",
+        "build-script=true",
+    ],
+)
+
+constraint(
+    setting = "opt-level",
+    values = [
+        "opt-level=0",
+        "opt-level=3",
+    ],
+)
+
+config_setting(
+    name = "library-build-script",
+    constraint_values = [
+        ":library",
+        ":build-script=true",
+    ],
+)

@@ -1,0 +1,22 @@
+load("@prelude//platforms:defs.bzl", "host_configuration")
+load(":defs.bzl", "execution_platform", "execution_platforms")
+
+execution_platform(
+    name = "host",
+    constraint_values = [
+        host_configuration.cpu,
+        host_configuration.os,
+    ],
+    visibility = ["PUBLIC"],
+)
+
+execution_platforms(
+    name = "execution",
+    platforms = [
+        ":host",
+        "//platforms/stage1:compiler-build-script",
+        "//platforms/stage1:library-build-script",
+        "//platforms/stage2:compiler-build-script",
+        "//platforms/stage2:library-build-script",
+    ],
+)

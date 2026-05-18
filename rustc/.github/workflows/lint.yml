@@ -1,0 +1,71 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule: [cron: "40 1 * * *"]
+
+permissions:
+  contents: read
+
+jobs:
+  pre_ci:
+    uses: dtolnay/.github/.github/workflows/pre_ci.yml@master
+
+  reindeer:
+    name: Reindeer
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/install@reindeer
+      - name: git submodule init
+        uses: ./.github/actions/checkout
+      - run: reindeer buckify
+      - name: Check reindeer-generated BUCK file up to date
+        run: git diff --exit-code
+
+  starlark:
+    name: Starlark lint
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/install-buck2@latest
+      - run: git ls-files '*.bzl' '*.bxl' | xargs buck2 starlark lint
+
+  buildifier:
+    name: Buildifier
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: go install github.com/bazelbuild/buildtools/buildifier@latest
+      - run: echo $(go env GOPATH)/bin >> $GITHUB_PATH
+      - run: git ls-files '*.bzl' | xargs buildifier
+      - run: git ls-files '*/BUCK' BUCK_TREE | xargs -n1 buildifier -path BUILD.bazel -lint fix
+      - run: git ls-files '*.bxl' | xargs -n1 buildifier -path script.bzl -lint fix
+      - name: Check that buildifier wanted no changes
+        run: git diff --exit-code
+
+  query:
+    name: Query
+    needs: pre_ci
+    if: needs.pre_ci.outputs.continue
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/install-buck2@latest
+      - name: git submodule init
+        uses: ./.github/actions/checkout
+      - run: buck2 uquery ...
+      - run: buck2 cquery ...

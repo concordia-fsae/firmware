@@ -1,0 +1,30 @@
+# Download stage0 and crates.io dependencies.
+#   buck2 bxl scripts/download.bxl:main
+
+def main_impl(bxl_ctx: bxl.Context) -> None:
+    # crates.io downloads
+    utargets = bxl_ctx.uquery().kind("crate_download", "//:")
+    ctargets = bxl_ctx.configured_targets(utargets)
+    analysis = bxl_ctx.analysis(ctargets)
+    bxl_ctx.output.ensure_multiple([
+        crate.providers()[DefaultInfo].default_outputs[0]
+        for crate in analysis.values()
+    ])
+
+    # stage0 compiler component downloads
+    ctarget = bxl_ctx.configured_targets("//stage0:dist")
+    analysis = bxl_ctx.analysis(ctarget)
+    bxl_ctx.output.ensure_multiple([
+        component[DefaultInfo].default_outputs[0]
+        for component in analysis.providers()[DefaultInfo].sub_targets.values()
+    ])
+
+    # stage0 llvm download
+    ctarget = bxl_ctx.configured_targets("//stage0:rust_dev")
+    analysis = bxl_ctx.analysis(ctarget)
+    bxl_ctx.output.ensure(analysis.providers()[DefaultInfo].default_outputs[0])
+
+main = bxl.main(
+    impl = main_impl,
+    cli_args = {},
+)

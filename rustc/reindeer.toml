@@ -1,0 +1,96 @@
+unresolved_fixup_error = true
+
+[cargo]
+bindeps = true
+
+[buck]
+buckfile_imports = """
+load("//crates.io:crate_download.bzl", "crate_download")
+load(
+    ":defs.bzl",
+    "cxx_bootstrap_library",
+    "rust_bootstrap_alias",
+    "rust_bootstrap_binary",
+    "rust_bootstrap_buildscript_run",
+    "rust_bootstrap_library",
+)
+
+export_file(
+    name = "stage0_manifest",
+    src = "rust/src/stage0",
+    visibility = ["//stage0:"],
+)
+
+rust_bootstrap_library(
+    name = "rustc_driver-0.0.0",
+    srcs = ["rust/compiler/rustc_driver/src/lib.rs"],
+    crate = "rustc_driver",
+    crate_root = "rust/compiler/rustc_driver/src/lib.rs",
+    edition = "2021",
+    visibility = [],
+    deps = [":rustc_driver_impl-0.0.0"],
+)
+"""
+
+alias = "rust_bootstrap_alias"
+buildscript_genrule = "rust_bootstrap_buildscript_run"
+cxx_library = "cxx_bootstrap_library"
+http_archive = "crate_download"
+rust_binary = "rust_bootstrap_binary"
+rust_library = "rust_bootstrap_library"
+
+[platform.linux-x86_64-library]
+target = "x86_64-unknown-linux-gnu"
+workspace = ["library"]
+
+[platform.linux-x86_64-compiler]
+target = "x86_64-unknown-linux-gnu"
+workspace = ["compiler"]
+
+[platform.linux-arm64-library]
+target = "aarch64-unknown-linux-gnu"
+workspace = ["library"]
+
+[platform.linux-arm64-compiler]
+target = "aarch64-unknown-linux-gnu"
+workspace = ["compiler"]
+
+[platform.linux-riscv64-library]
+target = "riscv64gc-unknown-linux-gnu"
+workspace = ["library"]
+
+[platform.linux-riscv64-compiler]
+target = "riscv64gc-unknown-linux-gnu"
+workspace = ["compiler"]
+
+[platform.macos-x86_64-library]
+target = "x86_64-apple-darwin"
+workspace = ["library"]
+
+[platform.macos-x86_64-compiler]
+target = "x86_64-apple-darwin"
+workspace = ["compiler"]
+
+[platform.macos-arm64-library]
+target = "aarch64-apple-darwin"
+workspace = ["library"]
+
+[platform.macos-arm64-compiler]
+target = "aarch64-apple-darwin"
+workspace = ["compiler"]
+
+[platform.windows-msvc-library]
+target = "x86_64-pc-windows-msvc"
+workspace = ["library"]
+
+[platform.windows-msvc-compiler]
+target = "x86_64-pc-windows-msvc"
+workspace = ["compiler"]
+
+[platform.windows-gnu-library]
+target = "x86_64-pc-windows-gnu"
+workspace = ["library"]
+
+[platform.windows-gnu-compiler]
+target = "x86_64-pc-windows-gnu"
+workspace = ["compiler"]

@@ -1,0 +1,135 @@
+load("@prelude//tests:test_toolchain.bzl", "noop_test_toolchain")
+load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
+load("@rust//keep:defs.bzl", "keep")
+load(":cxx.bzl", "cxx_toolchain")
+load(":python.bzl", "python_bootstrap_toolchain")
+load(":rust.bzl", "rust_toolchain")
+
+python_bootstrap_toolchain(
+    name = "python_bootstrap",
+    visibility = ["PUBLIC"],
+)
+
+cxx_toolchain(
+    name = "cxx",
+    c_flags = select({
+        "DEFAULT": [],
+        "prelude//os:macos": [
+            "-isysroot",
+            "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        ],
+    }) + select({
+        "DEFAULT": [],
+        "rust//constraints:opt-level=0": ["-O0"],
+        "rust//constraints:opt-level=3": ["-O3"],
+    }),
+    cxx_flags = select({
+        "DEFAULT": [],
+        "prelude//os:linux": ["-stdlib=libstdc++"],
+        "prelude//os:macos": [
+            "-isysroot",
+            "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+        ],
+    }) + select({
+        "DEFAULT": [],
+        "rust//constraints:opt-level=0": ["-O0"],
+        "rust//constraints:opt-level=3": ["-O3"],
+    }),
+    visibility = ["PUBLIC"],
+)
+
+rust_toolchain(
+    name = "rust",
+    clippy_driver = select({
+        "rust//constraints:stage1": "rust//stage0:clippy-driver",
+        "rust//constraints:stage2": "rust//stage1:clippy-driver",
+    }),
+    compiler = select({
+        "rust//constraints:stage1": select({
+            "rust//constraints:compiler": "rust//stage0:rustc",
+            "rust//constraints:library-build-script": "rust//stage0:rustc",
+            "rust//constraints:library": keep("rust//stage1:rustc"),
+        }),
+        "rust//constraints:stage2": select({
+            "rust//constraints:compiler": keep("rust//stage1:rustc"),
+            "rust//constraints:library-build-script": keep("rust//stage1:rustc"),
+            "rust//constraints:library": keep("rust//stage2:rustc"),
+        }),
+    }),
+    exec_compatible_with = [
+        "rust//constraints:opt-level=0",
+        "rust//constraints:build-script=true",
+        select({
+            "rust//constraints:compiler": "rust//constraints:compiler",
+            "rust//constraints:library": "rust//constraints:library",
+        }),
+        select({
+            "rust//constraints:stage1": "rust//constraints:stage1",
+            "rust//constraints:stage2": "rust//constraints:stage2",
+        }),
+    ],
+    keep = {
+        "stage1": "rust//keep:stage1",
+        "stage2": "rust//keep:stage2",
+    },
+    rustc_flags = [
+        "-Zunstable-options",
+        select({
+            "rust//constraints:opt-level=0": "-Copt-level=0",
+            "rust//constraints:opt-level=3": "-Copt-level=3",
+        }),
+    ] + select({
+        "rust//constraints:stage1": select({
+            "rust//constraints:compiler": ["--cfg=bootstrap"],
+            "rust//constraints:library": [],
+        }),
+        "rust//constraints:stage2": [],
+    }) + select({
+        "DEFAULT": [],
+        "prelude//os:linux": ["-Clink-arg=-Wl,--undefined-version"],
+    }),
+    rustdoc = select({
+        "rust//constraints:stage1": "rust//stage0:rustdoc",
+        "rust//constraints:stage2": "rust//stage1:rustdoc",
+    }),
+    sysroot = select({
+        "rust//constraints:library": None,
+        "rust//constraints:library-build-script": select({
+            "rust//constraints:stage1": "rust//stage0:sysroot",
+            "rust//constraints:stage2": dict(
+                alloc = keep("rust//stage1:alloc"),
+                compiler_builtins = keep("rust//stage1:compiler_builtins"),
+                core = keep("rust//stage1:core"),
+                panic_abort = keep("rust//stage1:panic_abort"),
+                panic_unwind = keep("rust//stage1:panic_unwind"),
+                proc_macro = keep("rust//stage1:proc_macro"),
+                std = keep("rust//stage1:std"),
+                test = keep("rust//stage1:test"),
+            ),
+        }),
+        "rust//constraints:compiler": select({
+            "rust//constraints:stage1": "rust//stage0:sysroot",
+            "rust//constraints:stage2": dict(
+                alloc = keep("rust//stage1:alloc"),
+                compiler_builtins = keep("rust//stage1:compiler_builtins"),
+                core = keep("rust//stage1:core"),
+                panic_abort = keep("rust//stage1:panic_abort"),
+                panic_unwind = keep("rust//stage1:panic_unwind"),
+                proc_macro = keep("rust//stage1:proc_macro"),
+                std = keep("rust//stage1:std"),
+                test = keep("rust//stage1:test"),
+            ),
+        }),
+    }),
+    visibility = ["PUBLIC"],
+)
+
+noop_test_toolchain(
+    name = "test",
+    visibility = ["PUBLIC"],
+)
+
+remote_test_execution_toolchain(
+    name = "remote_test_execution",
+    visibility = ["PUBLIC"],
+)

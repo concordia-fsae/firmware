@@ -1,0 +1,6 @@
+load(":defs.bzl", "toolchain_sysroot")
+
+toolchain_sysroot(
+    name = "sysroot",
+    visibility = ["PUBLIC"],
+)

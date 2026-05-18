@@ -1,0 +1,44 @@
+buildscript.run = true
+cargo_env = ["CARGO_MANIFEST_DIR"]
+extra_deps = [
+    ":pulldown-cmark-0.11.3",
+    ":rustc_abi-0.0.0",
+    ":rustc_ast-0.0.0",
+    ":rustc_ast_pretty-0.0.0",
+    ":rustc_attr_parsing-0.0.0",
+    ":rustc_data_structures-0.0.0",
+    ":rustc_driver-0.0.0",
+    ":rustc_errors-0.0.0",
+    ":rustc_expand-0.0.0",
+    ":rustc_feature-0.0.0",
+    ":rustc_hir-0.0.0",
+    ":rustc_hir_analysis-0.0.0",
+    ":rustc_hir_pretty-0.0.0",
+    ":rustc_index-0.0.0",
+    ":rustc_infer-0.0.0",
+    ":rustc_interface-0.0.0",
+    ":rustc_lexer-0.0.0",
+    ":rustc_lint-0.0.0",
+    ":rustc_lint_defs-0.0.0",
+    ":rustc_log-0.0.0",
+    ":rustc_macros-0.0.0",
+    ":rustc_metadata-0.0.0",
+    ":rustc_middle-0.0.0",
+    ":rustc_parse-0.0.0",
+    ":rustc_passes-0.0.0",
+    ":rustc_resolve-0.0.0",
+    ":rustc_serialize-0.0.0",
+    ":rustc_session-0.0.0",
+    ":rustc_span-0.0.0",
+    ":rustc_target-0.0.0",
+    ":rustc_trait_selection-0.0.0",
+    ":thin-vec-0.2.14",
+]
+extra_srcs = [
+    "askama.toml",
+    "html/static/**",
+    "html/templates/**/*.html",
+]
+
+[env]
+DOC_RUST_LANG_ORG_CHANNEL = "https://doc.rust-lang.org/stable"

@@ -1,0 +1,5 @@
+/.buckconfig.d/
+/.buckconfig.local
+/buck-out/
+/prelude/
+/rustc-ice-*
