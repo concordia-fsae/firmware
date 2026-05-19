@@ -29,16 +29,16 @@ messages:
       packChargeLimit:
       packDischargeLimit:
       packVoltage:
-      packAmpHours:
+      packSOC:
       packCurrent:
 
-  energyData:
-    description: BMS Boss Energy Data
-    cycleTimeMs: 100
-    id: 0x98
-    sourceBuses: veh
-    signals:
-      soc:
+  #  energyData:
+  #    description: BMS Boss Energy Data
+  #    cycleTimeMs: 100
+  #    id: 0x98
+  #    sourceBuses: veh
+  #    signals:
+  #      soc:
 
   information:
     description: BMS Boss Information
