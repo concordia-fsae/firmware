@@ -1,6 +1,6 @@
 load(":defs.bzl", "carputer_deploy_targets_manifest", "carputer_platform_targets")
 load("//components/vehicle_platform:platforms.bzl", "PLATFORMS")
-load("//drive-stack/ota-agent/defs.bzl", "ota_agent_revert", "ota_agent_status", "ota_agent_uds_ping")
+load("//drive-stack/ota-agent/defs.bzl", "ota_agent_batch", "ota_agent_revert", "ota_agent_status", "ota_agent_uds_ping")
 load("//tools:defs.bzl", "sh_run")
 
 CARPUTER_APP_TARGETS = [
@@ -19,6 +19,15 @@ CARPUTER_APPS = [
     "//drive-stack/net-detec:carputer-app",
     "//drive-stack/ota-agent:carputer-app",
     "//tools/log-processor:carputer-app",
+]
+
+CARPUTER_APP_OTA_ASSETS = [
+    "//drive-stack/can-bridge:ota-asset-carputer-veh",
+    "//drive-stack/car-dashboard:ota-asset-carputer",
+    "//drive-stack/conUDS:ota-asset-carputer",
+    "//drive-stack/net-detec:ota-asset-carputer",
+    "//drive-stack/ota-agent:ota-asset-carputer",
+    "//tools/log-processor:ota-asset-carputer",
 ]
 
 CFR_STACK = [
@@ -177,6 +186,26 @@ alias(
 alias(
     name = "promote-carputer",
     actual = ":promote-carputer-cfr26",
+    visibility = ["PUBLIC"],
+)
+
+ota_agent_batch(
+    name = "ota-drive-stack-cfr25",
+    srcs = CARPUTER_APP_OTA_ASSETS,
+    platform = "cfr25",
+    visibility = ["PUBLIC"],
+)
+
+ota_agent_batch(
+    name = "ota-drive-stack-cfr26",
+    srcs = CARPUTER_APP_OTA_ASSETS,
+    platform = "cfr26",
+    visibility = ["PUBLIC"],
+)
+
+alias(
+    name = "ota-drive-stack",
+    actual = ":ota-drive-stack-cfr26",
     visibility = ["PUBLIC"],
 )
 
