@@ -4,7 +4,7 @@ After=ota-agent-drive-stack.service
 PartOf=drive-stack.target
 
 [Service]
-ExecStart=/bin/cfr/log-processor /application/logs/can/* --url http://localhost:8086 --token GvtrxIRjm2P_P8NWAQHTaRpOnX-oLqjqv_2BY2Kh1z2ts4oYBtbB2SSapIc5rv0o5hWnqkpwBKbaPX55dK7Lrw== --org CFR --bucket CarTelemetry --delete
+ExecStart=/bin/cfr/log-processor /application/logs/can/* --url http://localhost:8086 --token GvtrxIRjm2P_P8NWAQHTaRpOnX-oLqjqv_2BY2Kh1z2ts4oYBtbB2SSapIc5rv0o5hWnqkpwBKbaPX55dK7Lrw== --org CFR --bucket CarTelemetry --batch-size 5000 --batch-bytes 4194304 --file-concurrency 3 --delete
 Restart=always
 RestartSec=600s
 StartLimitBurst=0

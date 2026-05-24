@@ -41,6 +41,10 @@ struct Opts {
     #[arg(long, default_value_t = 4 * 1024 * 1024)]
     batch_bytes: usize,
 
+    /// Number of archives to ingest concurrently
+    #[arg(long, default_value_t = 2)]
+    file_concurrency: usize,
+
     /// Print matched files and exit
     #[arg(long, action = ArgAction::SetTrue)]
     dry_run: bool,
@@ -183,6 +187,7 @@ async fn main() -> Result<()> {
             &files,
             opts.batch_size,
             opts.batch_bytes,
+            opts.file_concurrency,
             opts.delete,
         )
         .await?;

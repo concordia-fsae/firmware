@@ -151,6 +151,12 @@ fn add_json_field(builder: DataPointBuilder, key: &str, value: &Value) -> (DataP
 }
 
 type WriteTask = JoinHandle<WriteBatchResult>;
+type FileTask = JoinHandle<Result<FileIngestResult>>;
+
+struct FileIngestResult {
+    ok: usize,
+    bad: usize,
+}
 
 #[derive(Debug, Default)]
 struct WriteStats {
@@ -433,6 +439,57 @@ pub async fn ingest_tar_gz(
     ))
 }
 
+async fn ingest_one_file(
+    influx: InfluxClient,
+    bucket: String,
+    path: PathBuf,
+    batch_size: usize,
+    batch_bytes: usize,
+    delete: bool,
+) -> Result<FileIngestResult> {
+    println!("Start ingesting '{}'", path.display());
+    let start_time = Instant::now();
+    let (ok, bad) = ingest_tar_gz(&influx, &bucket, &path, batch_size, batch_bytes)
+        .await
+        .with_context(|| format!("ingesting {}", path.display()))?;
+    println!(
+        "Finished ingesting '{}', duration: {:?}",
+        path.display(),
+        start_time.elapsed()
+    );
+
+    if delete && bad <= 1 {
+        match remove_file(&path) {
+            Ok(_) => {
+                println!("log: deleted log '{}'", path.display());
+            }
+            Err(e) => {
+                eprintln!("log: failed to delete '{}': {}", path.display(), e);
+            }
+        }
+    }
+
+    Ok(FileIngestResult { ok, bad })
+}
+
+fn spawn_file_ingest(
+    influx: InfluxClient,
+    bucket: String,
+    path: PathBuf,
+    batch_size: usize,
+    batch_bytes: usize,
+    delete: bool,
+) -> FileTask {
+    tokio::spawn(ingest_one_file(
+        influx,
+        bucket,
+        path,
+        batch_size,
+        batch_bytes,
+        delete,
+    ))
+}
+
 /// Ingest multiple files: only `.tar.gz`; others/missing are skipped with a message.
 pub async fn ingest_files(
     url: &str,
@@ -442,14 +499,18 @@ pub async fn ingest_files(
     files: &[PathBuf],
     batch_size: usize,
     batch_bytes: usize,
+    file_concurrency: usize,
     delete: bool,
 ) -> Result<(usize, usize, usize, usize)> {
     let influx = InfluxClientBuilder::new(url, org, token).build()?;
+    let bucket = bucket.to_owned();
+    let file_concurrency = file_concurrency.max(1);
 
     let mut ok = 0usize;
     let mut bad = 0usize;
     let mut skipped = 0usize;
     let mut missing = 0usize;
+    let mut ready = Vec::new();
 
     for p in files {
         if !p.exists() {
@@ -464,37 +525,40 @@ pub async fn ingest_files(
             continue;
         }
 
-        println!("Start ingesting '{}'", p.display());
-        let start_time = Instant::now();
-        let (file_ok, file_bad) = match ingest_tar_gz(&influx, bucket, p, batch_size, batch_bytes)
-            .await
-            .with_context(|| format!("ingesting {}", p.display()))
-        {
-            Ok((file_ok, file_bad)) => (file_ok, file_bad),
-            Err(e) => {
-                eprintln!("Error ingesting tar file {}: {:?}", p.display(), e);
-                continue;
-            }
-        };
-        println!(
-            "Finished ingesting '{}', duration: {:?}",
-            p.display(),
-            start_time.elapsed()
-        );
-        ok += file_ok;
-        bad += file_bad;
+        ready.push(p.clone());
+    }
 
-        println!("Complete. wrote_points={ok} bad_records={bad}");
+    let mut next_file = ready.into_iter();
+    let mut in_flight: FuturesUnordered<FileTask> = FuturesUnordered::new();
 
-        if delete && file_bad <= 1 {
-            match remove_file(p) {
-                Ok(_) => {
-                    println!("log: deleted log '{}'", p.display());
-                }
-                Err(e) => {
-                    eprintln!("log: failed to delete '{}': {}", p.display(), e);
-                }
+    loop {
+        while in_flight.len() < file_concurrency {
+            let Some(path) = next_file.next() else {
+                break;
+            };
+            in_flight.push(spawn_file_ingest(
+                influx.clone(),
+                bucket.clone(),
+                path,
+                batch_size,
+                batch_bytes,
+                delete,
+            ));
+        }
+
+        match in_flight.next().await {
+            Some(Ok(Ok(result))) => {
+                ok += result.ok;
+                bad += result.bad;
+                println!("Complete. wrote_points={ok} bad_records={bad}");
             }
+            Some(Ok(Err(e))) => {
+                eprintln!("Error ingesting tar file: {e:?}");
+            }
+            Some(Err(e)) => {
+                eprintln!("File ingest task error: {e}");
+            }
+            None => break,
         }
     }
 
