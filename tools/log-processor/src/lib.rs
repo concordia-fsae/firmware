@@ -8,19 +8,21 @@ use std::time::Instant;
 use anyhow::{Context, Result};
 use flate2::read::GzDecoder;
 use futures::StreamExt;
-use futures::stream;
 use futures::stream::FuturesUnordered;
 use influxdb2::Client as InfluxClient;
 use influxdb2::ClientBuilder as InfluxClientBuilder;
 use influxdb2::models::DataPoint;
+use influxdb2::models::WriteDataPoint;
 use influxdb2::models::data_point::DataPointBuilder;
 use serde::Deserialize;
 use serde_json::Value;
 use tar::Archive;
+use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 /// Ingest one `.tar.gz` (JSON-lines files inside), writing to InfluxDB.
 const INFLIGHT_WRITES: usize = 6;
+const PARSER_CHANNEL_CAPACITY: usize = 4_096;
 
 #[derive(Debug, Deserialize)]
 pub struct Bus {
@@ -153,31 +155,57 @@ struct BatchWriter {
     client: InfluxClient,
     bucket: String,
     batch_size: usize,
-    batch: Vec<DataPoint>,
+    batch_bytes: usize,
+    batch_body_capacity: usize,
+    batch_body: Vec<u8>,
+    line_buf: Vec<u8>,
+    batch_points: usize,
     in_flight: FuturesUnordered<WriteTask>,
     ok: usize,
     bad: usize,
 }
 
 impl BatchWriter {
-    fn new(client: InfluxClient, bucket: &str, batch_size: usize) -> Self {
+    fn new(client: InfluxClient, bucket: &str, batch_size: usize, batch_bytes: usize) -> Self {
         let batch_size = batch_size.max(1);
+        let batch_bytes = batch_bytes.max(1);
+        let batch_body_capacity = batch_bytes.min(batch_size.saturating_mul(160).max(1));
         Self {
             client,
             bucket: bucket.to_owned(),
             batch_size,
-            batch: Vec::with_capacity(batch_size),
+            batch_bytes,
+            batch_body_capacity,
+            batch_body: Vec::with_capacity(batch_body_capacity),
+            line_buf: Vec::with_capacity(160),
+            batch_points: 0,
             in_flight: FuturesUnordered::new(),
             ok: 0,
             bad: 0,
         }
     }
 
-    async fn push(&mut self, point: DataPoint) {
-        self.batch.push(point);
-        if self.batch.len() >= self.batch_size {
+    async fn push(&mut self, point: DataPoint) -> Result<()> {
+        self.line_buf.clear();
+        point
+            .write_data_point_to(&mut self.line_buf)
+            .context("serializing influx data point")?;
+
+        let line_len = self.line_buf.len();
+        if self.batch_points > 0
+            && self.batch_body.len().saturating_add(line_len) > self.batch_bytes
+        {
             self.flush_batch().await;
         }
+
+        self.batch_body.extend_from_slice(&self.line_buf);
+        self.batch_points += 1;
+
+        if self.batch_points >= self.batch_size || self.batch_body.len() >= self.batch_bytes {
+            self.flush_batch().await;
+        }
+
+        Ok(())
     }
 
     async fn finish(mut self) -> (usize, usize) {
@@ -189,7 +217,7 @@ impl BatchWriter {
     }
 
     async fn flush_batch(&mut self) {
-        if self.batch.is_empty() {
+        if self.batch_points == 0 {
             return;
         }
 
@@ -197,16 +225,17 @@ impl BatchWriter {
             self.collect_one().await;
         }
 
-        let points = std::mem::replace(&mut self.batch, Vec::with_capacity(self.batch_size));
+        let count = self.batch_points;
+        self.batch_points = 0;
+        let body = std::mem::replace(
+            &mut self.batch_body,
+            Vec::with_capacity(self.batch_body_capacity),
+        );
         let client = self.client.clone();
         let bucket = self.bucket.clone();
 
         self.in_flight.push(tokio::spawn(async move {
-            let count = points.len();
-            let result = client
-                .write(&bucket, stream::iter(points))
-                .await
-                .context("influx write failed");
+            let result = write_line_protocol_body(&client, &bucket, body).await;
             (count, result)
         }));
     }
@@ -229,17 +258,22 @@ impl BatchWriter {
     }
 }
 
-pub async fn ingest_tar_gz(
+async fn write_line_protocol_body(
     client: &InfluxClient,
     bucket: &str,
-    path: &Path,
-    batch_size: usize,
-) -> Result<(usize, usize)> {
-    let file = File::open(path).with_context(|| format!("open {}", path.display()))?;
+    body: Vec<u8>,
+) -> Result<()> {
+    client
+        .write_line_protocol(&client.org, bucket, body)
+        .await
+        .context("influx write failed")
+}
+
+fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<usize> {
+    let file = File::open(&path).with_context(|| format!("open {}", path.display()))?;
     let gz = GzDecoder::new(file);
     let stream = BufReader::new(gz);
     let mut archive = Archive::new(stream);
-    let mut writer = BatchWriter::new(client.clone(), bucket, batch_size);
     let mut bad = 0usize;
 
     for entry in archive
@@ -271,7 +305,9 @@ pub async fn ingest_tar_gz(
             match parse_line(&line) {
                 Ok(Some(rec)) => {
                     if let Some(point) = record_to_point(&rec) {
-                        writer.push(point).await;
+                        if tx.blocking_send(point).is_err() {
+                            anyhow::bail!("writer stopped while reading {}", path.display());
+                        }
                     }
                 }
                 Ok(None) => {}
@@ -282,8 +318,34 @@ pub async fn ingest_tar_gz(
         }
     }
 
+    Ok(bad)
+}
+
+pub async fn ingest_tar_gz(
+    client: &InfluxClient,
+    bucket: &str,
+    path: &Path,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<(usize, usize)> {
+    let (tx, mut rx) = mpsc::channel(PARSER_CHANNEL_CAPACITY);
+    let parser_path = path.to_path_buf();
+    let parser = tokio::task::spawn_blocking(move || parse_tar_gz_blocking(parser_path, tx));
+
+    let mut writer = BatchWriter::new(client.clone(), bucket, batch_size, batch_bytes);
+    let mut serialization_bad = 0usize;
+
+    while let Some(point) = rx.recv().await {
+        if let Err(e) = writer.push(point).await {
+            eprintln!("Influx point serialization error: {e:?}");
+            serialization_bad += 1;
+        }
+    }
+
+    let parser_result = parser.await;
     let (ok, write_bad) = writer.finish().await;
-    Ok((ok, bad + write_bad))
+    let parse_bad = parser_result.context("archive parser task failed")??;
+    Ok((ok, parse_bad + serialization_bad + write_bad))
 }
 
 /// Ingest multiple files: only `.tar.gz`; others/missing are skipped with a message.
@@ -294,6 +356,7 @@ pub async fn ingest_files(
     bucket: &str,
     files: &[PathBuf],
     batch_size: usize,
+    batch_bytes: usize,
     delete: bool,
 ) -> Result<(usize, usize, usize, usize)> {
     let influx = InfluxClientBuilder::new(url, org, token).build()?;
@@ -318,7 +381,7 @@ pub async fn ingest_files(
 
         println!("Start ingesting '{}'", p.display());
         let start_time = Instant::now();
-        let (file_ok, file_bad) = match ingest_tar_gz(&influx, bucket, p, batch_size)
+        let (file_ok, file_bad) = match ingest_tar_gz(&influx, bucket, p, batch_size, batch_bytes)
             .await
             .with_context(|| format!("ingesting {}", p.display()))
         {
