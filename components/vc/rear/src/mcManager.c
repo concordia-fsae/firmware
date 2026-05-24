@@ -227,7 +227,6 @@ static void mcManager_periodic_100Hz(void)
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVER, mcManager_data.calibrating);
     mcManager_data.tempTsCap = drv_tempSensors_getChannelTemperatureDegC(DRV_TEMPSENSORS_CHANNEL_TS_CAP);
 
-    const bool motorSpinningPhysicallyForward = motor_rpm > 0;
     motor_rpm                = (int16_t)((motor_rpm < 0) ? -motor_rpm : motor_rpm);
     mcManager_data.axle_rpm  = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
 
@@ -395,7 +394,7 @@ static void mcManager_periodic_100Hz(void)
 
                 if (motor_rpm < 1000)
                 {
-                    const float32_t targetDelta      = motorSpinningPhysicallyForward ? 90.0f : -90.0f;
+                    const float32_t targetDelta      = MOTOR_BACKWARDS ? -90.0f : 90.0f;
                     const float32_t measuredDelta    = lib_simpleFilter_cumAvgF_average(&calibrationData.deltaFilteredMeasuredAvg);
                     const float32_t calibrationDelta = measuredDelta - targetDelta;
 
