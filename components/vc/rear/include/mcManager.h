@@ -44,5 +44,6 @@ float32_t                     mcManager_getResolverCalibrationDeltaFilteredMeasu
 float32_t                     mcManager_getFluxWeakeningCurrent(void);
 bool                          mcManager_clearEepromCommand(void);
 bool                          mcManager_startResolverCalibration(void);
+bool                          mcManager_testResolverCalibration(void);
 bool                          mcManager_isResolverCalibrating(void);
 bool                          mcManager_requestContactorsOpen(void);

@@ -67,6 +67,42 @@ extern void     isotp_user_debug(const char* message, ...);
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+static void routine_testCalibration(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
+{
+    UNUSED(payloadLengthBytes);
+    UNUSED(payload);
+
+    if (udsSrv_getCurrentSession() != UDS_SESSION_TYPE_EXTENDED_DIAG)
+    {
+        uds_sendNegativeResponse(
+            UDS_SID_ROUTINE_CONTROL,
+            UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED_SESSION
+            );
+        return;
+    }
+
+    switch (routineControlType)
+    {
+        case UDS_ROUTINE_CONTROL_START:
+            if (mcManager_testResolverCalibration())
+            {
+                uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
+            }
+            else
+            {
+                uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_CONDITIONS_NOT_CORRECT);
+            }
+            break;
+
+        case UDS_ROUTINE_CONTROL_GET_RESULT:
+        case UDS_ROUTINE_CONTROL_STOP:
+        case UDS_ROUTINE_CONTROL_NONE:
+        default:
+            uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
+            break;
+    }
+}
+
 static void routine_resolverCalibration(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
 {
     UNUSED(payloadLengthBytes);
@@ -213,6 +249,10 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
     {
         case 0x2000:
             routine_resolverCalibration(routineControlType, payload + 2U, payloadLengthBytes);
+            break;
+
+        case 0x2001:
+            routine_testCalibration(routineControlType, payload + 2U, payloadLengthBytes);
             break;
 
         default:

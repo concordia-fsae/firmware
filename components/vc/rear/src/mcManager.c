@@ -64,16 +64,16 @@ typedef struct
 
 typedef struct
 {
-    int16_t                       savedRaw;
-    int16_t                       requestedRaw;
-    int16_t                       transmittedRaw;
+    int16_t                      savedRaw;
+    int16_t                      requestedRaw;
+    int16_t                      transmittedRaw;
     CAN_pm100dxEepromRWCommand_E transmittedCommand;
-    bool                          savedValid;
-    bool                          requestValid;
-    bool                          readRequested;
-    bool                          writeRequested;
-    bool                          transmitPending;
-    uint8_t                       updateCount;
+    bool                         savedValid;
+    bool                         requestValid;
+    bool                         readRequested;
+    bool                         writeRequested;
+    bool                         transmitPending;
+    uint8_t                      updateCount;
 } eepromParameterState_S;
 
 typedef struct
@@ -88,30 +88,30 @@ typedef struct
  *                              D E F I N E S
  ******************************************************************************/
 
-#define CALIBRATION_PAUSE_TIME_MS         2000U
-#define CALIBRATION_SPIN_TIMEOUT_MS       10000U
-#define CALIBRATION_TORQUE_REQUEST_NM     10
-#define MCMANAGER_TORQUE_LIMIT            180.0f
-#define MCMANAGER_TORQUE_LIMIT_REVERSE    25.0f
+#define CALIBRATION_PAUSE_TIME_MS          2000U
+#define CALIBRATION_SPIN_TIMEOUT_MS        10000U
+#define CALIBRATION_TORQUE_REQUEST_NM      10
+#define MCMANAGER_TORQUE_LIMIT             180.0f
+#define MCMANAGER_TORQUE_LIMIT_REVERSE     25.0f
 
-#define LASH_TORQUE                       2.0f
-#define LASH_TORQUE_RPM_DISABLE           180.0f
-#define LASH_TORQUE_RPM_ENABLE            2 * LASH_TORQUE_RPM_DISABLE
+#define LASH_TORQUE                        2.0f
+#define LASH_TORQUE_RPM_DISABLE            180.0f
+#define LASH_TORQUE_RPM_ENABLE             2 * LASH_TORQUE_RPM_DISABLE
 
-#define DRIVETRAIN_MULTIPLIER             4.6f
+#define DRIVETRAIN_MULTIPLIER              4.6f
 
-#define RAMPRATE_NM_PER_S                 1000
+#define RAMPRATE_NM_PER_S                  1000
 
-#define MOTOR_BACKWARDS                   true
-#define MC_COMMAND_REVERSE                (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_FORWARD : CAN_PM100DXDIRECTIONCOMMAND_REVERSE)
-#define MC_COMMAND_FORWARD                (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_REVERSE : CAN_PM100DXDIRECTIONCOMMAND_FORWARD)
+#define MOTOR_BACKWARDS                    true
+#define MC_COMMAND_REVERSE                 (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_FORWARD : CAN_PM100DXDIRECTIONCOMMAND_REVERSE)
+#define MC_COMMAND_FORWARD                 (MOTOR_BACKWARDS ? CAN_PM100DXDIRECTIONCOMMAND_REVERSE : CAN_PM100DXDIRECTIONCOMMAND_FORWARD)
 
-#define FLUX_WEAKENING_CURRENT_MIN_A      0.0f
-#define FLUX_WEAKENING_CURRENT_MAX_A      225.0f
-#define FLUX_WEAKENING_CURRENT_STEP_A     1.0f
-#define FLUX_WEAKENING_CURRENT_DELAY_MS   250U
+#define FLUX_WEAKENING_CURRENT_MIN_A       0.0f
+#define FLUX_WEAKENING_CURRENT_MAX_A       225.0f
+#define FLUX_WEAKENING_CURRENT_STEP_A      1.0f
+#define FLUX_WEAKENING_CURRENT_DELAY_MS    250U
 
-#define EEPROM_BOOT_READ_DELAY_MS         500U
+#define EEPROM_BOOT_READ_DELAY_MS          500U
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -127,6 +127,7 @@ static struct
     bool                          clear_faults;
     bool                          lash_enabled;
     bool                          calibrating;
+    bool                          testCalibration;
 
     uint16_t                      axle_rpm;
     float32_t                     tempTsCap;
@@ -146,14 +147,14 @@ static struct
 {
     bool        init;
     drv_timer_S timerChange;
-} currentFluxWeakening;
+}                                        currentFluxWeakening;
 
-static eepromParameterState_S        eepromParameters[EEPROM_PARAMETER_COUNT];
-static eepromCommandQueue_S          eepromCommandQueue;
-static drv_timer_S                   eepromBootReadDelay;
+static eepromParameterState_S            eepromParameters[EEPROM_PARAMETER_COUNT];
+static eepromCommandQueue_S              eepromCommandQueue;
+static drv_timer_S                       eepromBootReadDelay;
 
 static const eepromParameterUnitConfig_S eepromParameterUnitConfigs[EEPROM_PARAMETER_UNIT_COUNT] = {
-    [EEPROM_PARAMETER_UNIT_AMP] = {
+    [EEPROM_PARAMETER_UNIT_AMP]    = {
         .rawMultiplier = 10.0f,
     },
     [EEPROM_PARAMETER_UNIT_DEGREE] = {
@@ -161,7 +162,7 @@ static const eepromParameterUnitConfig_S eepromParameterUnitConfigs[EEPROM_PARAM
     },
 };
 
-static const eepromParameterConfig_S eepromParameterConfigs[EEPROM_PARAMETER_COUNT] = {
+static const eepromParameterConfig_S     eepromParameterConfigs[EEPROM_PARAMETER_COUNT] = {
     [EEPROM_PARAMETER_FLUX_WEAKENING_CURRENT] = {
         .address    = CAN_PM100DXEEPROMADDRESS_CURRENT_MAX_ID,
         .unit       = EEPROM_PARAMETER_UNIT_AMP,
@@ -169,12 +170,12 @@ static const eepromParameterConfig_S eepromParameterConfigs[EEPROM_PARAMETER_COU
         .minValue   = FLUX_WEAKENING_CURRENT_MIN_A,
         .maxValue   = FLUX_WEAKENING_CURRENT_MAX_A,
     },
-    [EEPROM_PARAMETER_GAMMA_ADJUST] = {
+    [EEPROM_PARAMETER_GAMMA_ADJUST] =           {
         .address    = CAN_PM100DXEEPROMADDRESS_GAMMA_ADJUST_EEPROM,
         .unit       = EEPROM_PARAMETER_UNIT_DEGREE,
         .clampValue = false,
-        .minValue   = 0.0f,
-        .maxValue   = 359.9f,
+        .minValue   =                                         0.0f,
+        .maxValue   =                                       359.9f,
     },
 };
 
@@ -199,7 +200,7 @@ static float32_t eepromRawToValue(const eepromParameter_E parameter, const int16
 {
     const eepromParameterConfig_S * const     config = &eepromParameterConfigs[parameter];
     const eepromParameterUnitConfig_S * const unit   = &eepromParameterUnitConfigs[config->unit];
-    float32_t                                  value  = ((float32_t)raw) / unit->rawMultiplier;
+    float32_t                                 value  = ((float32_t)raw) / unit->rawMultiplier;
 
     if (config->clampValue)
     {
@@ -209,9 +210,9 @@ static float32_t eepromRawToValue(const eepromParameter_E parameter, const int16
     return value;
 }
 
-static bool sendEepromCommand(const CAN_pm100dxEepromAddress_E address,
+static bool sendEepromCommand(const CAN_pm100dxEepromAddress_E   address,
                               const CAN_pm100dxEepromRWCommand_E command,
-                              const int16_t rawData)
+                              const int16_t                      rawData)
 {
     if (CANTX_inject_pending(VEH, TOOLING_mcEepromCommand))
     {
@@ -226,9 +227,9 @@ static bool sendEepromCommand(const CAN_pm100dxEepromAddress_E address,
     return CANTX_inject(VEH, TOOLING_mcEepromCommand, &message);
 }
 
-static bool getEepromResponse(CAN_pm100dxEepromAddress_E * const address,
+static bool getEepromResponse(CAN_pm100dxEepromAddress_E * const   address,
                               CAN_pm100dxEepromRWCommand_E * const command,
-                              int16_t * const rawData)
+                              int16_t * const                      rawData)
 {
     const bool eepromActive = CANRX_validate(VEH, PM100DX_eepromResponse) == CANRX_MESSAGE_VALID;
 
@@ -297,25 +298,26 @@ static void eepromApplyParameter(const eepromParameter_E parameter)
 
 static void eepromHandleResponses(void)
 {
-    CAN_pm100dxEepromAddress_E   address = (CAN_pm100dxEepromAddress_E)0U;
-    CAN_pm100dxEepromRWCommand_E command = CAN_PM100DXEEPROMRWCOMMAND_READ;
-    int16_t                      rawData = 0;
+    CAN_pm100dxEepromAddress_E   address   = (CAN_pm100dxEepromAddress_E)0U;
+    CAN_pm100dxEepromRWCommand_E command   = CAN_PM100DXEEPROMRWCOMMAND_READ;
+    int16_t                      rawData   = 0;
     eepromParameter_E            parameter = EEPROM_PARAMETER_COUNT;
 
     if (!getEepromResponse(&address, &command, &rawData) ||
-        !eepromFindParameter(address, &parameter))
+        !eepromFindParameter(address, &parameter)
+        )
     {
         return;
     }
 
-    eepromParameterState_S * const state = &eepromParameters[parameter];
-    const bool responseMatchesTransmit = state->transmitPending &&
-                                         (state->transmittedCommand == command) &&
-                                         ((command == CAN_PM100DXEEPROMRWCOMMAND_READ) ||
-                                          (rawData == state->transmittedRaw));
+    eepromParameterState_S * const state                   = &eepromParameters[parameter];
+    const bool                     responseMatchesTransmit = state->transmitPending &&
+                                                             (state->transmittedCommand == command) &&
+                                                             ((command == CAN_PM100DXEEPROMRWCOMMAND_READ) ||
+                                                              (rawData == state->transmittedRaw));
 
-    state->savedRaw    = rawData;
-    state->savedValid  = true;
+    state->savedRaw   = rawData;
+    state->savedValid = true;
     state->updateCount++;
     eepromApplyParameter(parameter);
 
@@ -352,7 +354,8 @@ static void eepromTransmitPending(void)
     {
         if (sendEepromCommand(eepromCommandQueue.address,
                               eepromCommandQueue.command,
-                              eepromCommandQueue.rawData))
+                              eepromCommandQueue.rawData)
+            )
         {
             eepromCommandQueue.queued = false;
         }
@@ -361,16 +364,17 @@ static void eepromTransmitPending(void)
 
     for (uint8_t i = 0U; i < (uint8_t)EEPROM_PARAMETER_COUNT; i++)
     {
-        const eepromParameter_E parameter = (eepromParameter_E)i;
-        eepromParameterState_S * const state = &eepromParameters[parameter];
+        const eepromParameter_E        parameter = (eepromParameter_E)i;
+        eepromParameterState_S * const state     = &eepromParameters[parameter];
 
         if (state->requestValid && state->writeRequested)
         {
             if (sendEepromCommand(eepromParameterConfigs[parameter].address,
                                   CAN_PM100DXEEPROMRWCOMMAND_WRITE,
-                                  state->requestedRaw))
+                                  state->requestedRaw)
+                )
             {
-                state->transmitPending   = true;
+                state->transmitPending    = true;
                 state->transmittedCommand = CAN_PM100DXEEPROMRWCOMMAND_WRITE;
                 state->transmittedRaw     = state->requestedRaw;
                 state->writeRequested     = false;
@@ -386,16 +390,17 @@ static void eepromTransmitPending(void)
 
     for (uint8_t i = 0U; i < (uint8_t)EEPROM_PARAMETER_COUNT; i++)
     {
-        const eepromParameter_E parameter = (eepromParameter_E)i;
-        eepromParameterState_S * const state = &eepromParameters[parameter];
+        const eepromParameter_E        parameter = (eepromParameter_E)i;
+        eepromParameterState_S * const state     = &eepromParameters[parameter];
 
         if (state->readRequested)
         {
             if (sendEepromCommand(eepromParameterConfigs[parameter].address,
                                   CAN_PM100DXEEPROMRWCOMMAND_READ,
-                                  0))
+                                  0)
+                )
             {
-                state->transmitPending   = true;
+                state->transmitPending    = true;
                 state->transmittedCommand = CAN_PM100DXEEPROMRWCOMMAND_READ;
                 state->transmittedRaw     = 0;
             }
@@ -573,6 +578,18 @@ bool mcManager_startResolverCalibration(void)
     return ret;
 }
 
+bool mcManager_testResolverCalibration(void)
+{
+    const bool success = mcManager_startResolverCalibration();
+
+    if (success)
+    {
+        mcManager_data.testCalibration = true;
+    }
+
+    return success;
+}
+
 bool mcManager_isResolverCalibrating(void)
 {
     return mcManager_data.calibrating;
@@ -585,22 +602,22 @@ bool mcManager_requestContactorsOpen(void)
 
 static void mcManager_init(void)
 {
-    memset(&mcManager_data, 0x00, sizeof(mcManager_data));
+    memset(&mcManager_data,       0x00, sizeof(mcManager_data));
     memset(&currentFluxWeakening, 0x00, sizeof(currentFluxWeakening));
-    memset(eepromParameters, 0x00, sizeof(eepromParameters));
-    memset(&eepromCommandQueue, 0x00, sizeof(eepromCommandQueue));
+    memset(eepromParameters,      0x00, sizeof(eepromParameters));
+    memset(&eepromCommandQueue,   0x00, sizeof(eepromCommandQueue));
 
     drv_timer_init(&calibrationData.timerPause);
     drv_timer_init(&currentFluxWeakening.timerChange);
     drv_timer_init(&eepromBootReadDelay);
     drv_timer_start(&eepromBootReadDelay, EEPROM_BOOT_READ_DELAY_MS);
-    mcManager_data.torque_command.y_n          = 0.0f;
-    mcManager_data.torque_command.maxStepDelta = RAMPRATE_NM_PER_S / 100;
-    mcManager_data.torque_limit                = 0.0f;
-    mcManager_data.direction                   = MCMANAGER_FORWARD;
-    mcManager_data.enable                      = MCMANAGER_DISABLE;
-    mcManager_data.last_contactor_state        = CAN_PRECHARGECONTACTORSTATE_SNA;
-    mcManager_data.clear_faults                = false;
+    mcManager_data.torque_command.y_n                                       = 0.0f;
+    mcManager_data.torque_command.maxStepDelta                              = RAMPRATE_NM_PER_S / 100;
+    mcManager_data.torque_limit                                             = 0.0f;
+    mcManager_data.direction                                                = MCMANAGER_FORWARD;
+    mcManager_data.enable                                                   = MCMANAGER_DISABLE;
+    mcManager_data.last_contactor_state                                     = CAN_PRECHARGECONTACTORSTATE_SNA;
+    mcManager_data.clear_faults                                             = false;
 
     eepromParameters[EEPROM_PARAMETER_FLUX_WEAKENING_CURRENT].readRequested = true;
 }
@@ -684,10 +701,10 @@ static void mcManager_periodic_100Hz(void)
             {
                 if (!eepromCommandQueue.queued)
                 {
-                    eepromCommandQueue.address = CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR;
-                    eepromCommandQueue.command = CAN_PM100DXEEPROMRWCOMMAND_WRITE;
-                    eepromCommandQueue.rawData = 0;
-                    eepromCommandQueue.queued  = true;
+                    eepromCommandQueue.address  = CAN_PM100DXEEPROMADDRESS_FAULT_CLEAR;
+                    eepromCommandQueue.command  = CAN_PM100DXEEPROMRWCOMMAND_WRITE;
+                    eepromCommandQueue.rawData  = 0;
+                    eepromCommandQueue.queued   = true;
                     mcManager_data.clear_faults = false;
                 }
             }
@@ -704,11 +721,12 @@ static void mcManager_periodic_100Hz(void)
     if (mcManager_data.calibrating)
     {
         if ((app_vehicleState_getState() != VEHICLESTATE_ON_HV) ||
-            (calibrationData.attempts > 3U)
+            (calibrationData.attempts > (3U + (mcManager_data.testCalibration ? 1U : 0U)))
             )
         {
-            calibrationData.state      = REQUEST_PARAMETER;
-            mcManager_data.calibrating = false;
+            calibrationData.state          = REQUEST_PARAMETER;
+            mcManager_data.calibrating     = false;
+            mcManager_data.testCalibration = false;
             app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED, true);
         }
     }
@@ -720,9 +738,9 @@ static void mcManager_periodic_100Hz(void)
             case REQUEST_PARAMETER:
             {
                 drv_timer_start(&calibrationData.timerPause, CALIBRATION_PAUSE_TIME_MS);
-                calibrationData.parameterUpdateCount = eepromParameters[EEPROM_PARAMETER_GAMMA_ADJUST].updateCount;
+                calibrationData.parameterUpdateCount                          = eepromParameters[EEPROM_PARAMETER_GAMMA_ADJUST].updateCount;
                 eepromParameters[EEPROM_PARAMETER_GAMMA_ADJUST].readRequested = true;
-                calibrationData.state = READ_PARAMETER;
+                calibrationData.state                                         = READ_PARAMETER;
             }
             break;
 
@@ -789,25 +807,43 @@ static void mcManager_periodic_100Hz(void)
 
                     if ((calibrationDelta < 0.5) && (calibrationDelta > -0.5))
                     {
-                        calibrationData.state      = REQUEST_PARAMETER;
-                        mcManager_data.calibrating = false;
-                        app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED, false);
+                        if (mcManager_data.testCalibration)
+                        {
+                            calibrationData.state          = REQUEST_PARAMETER;
+                            mcManager_data.calibrating     = false;
+                            mcManager_data.testCalibration = false;
+                            app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED, false);
+                        }
+                        else
+                        {
+                            mcManager_data.testCalibration = true;
+                            calibrationData.state          = SPIN_MOTOR;
+                            calibrationData.attempts++;
+                        }
+                        break;
+                    }
+                    else if (mcManager_data.testCalibration)
+                    {
+                        calibrationData.state          = REQUEST_PARAMETER;
+                        mcManager_data.calibrating     = false;
+                        mcManager_data.testCalibration = false;
+                        app_faultManager_setFaultState(FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED, true);
                         break;
                     }
                     else
                     {
-                        eepromParameterState_S * const state = &eepromParameters[EEPROM_PARAMETER_GAMMA_ADJUST];
-                        const bool writeOutstanding = state->writeRequested ||
-                                                      (state->transmitPending &&
-                                                       (state->transmittedCommand == CAN_PM100DXEEPROMRWCOMMAND_WRITE));
-                        const int16_t config = eepromValueToRaw(EEPROM_PARAMETER_GAMMA_ADJUST,
-                                                                calibrationDelta + calibrationData.angleConfigured);
+                        eepromParameterState_S * const state            = &eepromParameters[EEPROM_PARAMETER_GAMMA_ADJUST];
+                        const bool                     writeOutstanding = state->writeRequested ||
+                                                                          (state->transmitPending &&
+                                                                           (state->transmittedCommand == CAN_PM100DXEEPROMRWCOMMAND_WRITE));
+                        const int16_t                  config           = eepromValueToRaw(EEPROM_PARAMETER_GAMMA_ADJUST,
+                                                                                           calibrationDelta + calibrationData.angleConfigured);
 
                         if (!writeOutstanding && (contactor_state == CAN_PRECHARGECONTACTORSTATE_OPEN))
                         {
-                            state->requestedRaw   = config;
-                            state->requestValid   = true;
-                            state->writeRequested = !state->savedValid || (state->savedRaw != state->requestedRaw);
+                            state->requestedRaw              = config;
+                            state->requestValid              = true;
+                            state->writeRequested            = !state->savedValid || (state->savedRaw != state->requestedRaw);
                             calibrationData.state            = SPIN_MOTOR;
                             calibrationData.angleConfigured += calibrationDelta;
                             calibrationData.attempts++;
