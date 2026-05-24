@@ -3,6 +3,7 @@ use std::fs::File;
 use std::fs::remove_file;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::{Context, Result};
@@ -149,7 +150,26 @@ fn add_json_field(builder: DataPointBuilder, key: &str, value: &Value) -> (DataP
     }
 }
 
-type WriteTask = JoinHandle<(usize, Result<()>)>;
+type WriteTask = JoinHandle<WriteBatchResult>;
+
+#[derive(Debug, Default)]
+struct WriteStats {
+    ok: usize,
+    bad: usize,
+    batches: usize,
+    bytes: usize,
+    request_elapsed: Duration,
+    wall_elapsed: Duration,
+}
+
+struct WriteBatchResult {
+    count: usize,
+    bytes: usize,
+    started_at: Instant,
+    finished_at: Instant,
+    elapsed: Duration,
+    result: Result<()>,
+}
 
 struct BatchWriter {
     client: InfluxClient,
@@ -161,8 +181,9 @@ struct BatchWriter {
     line_buf: Vec<u8>,
     batch_points: usize,
     in_flight: FuturesUnordered<WriteTask>,
-    ok: usize,
-    bad: usize,
+    stats: WriteStats,
+    first_write_started_at: Option<Instant>,
+    last_write_finished_at: Option<Instant>,
 }
 
 impl BatchWriter {
@@ -180,8 +201,9 @@ impl BatchWriter {
             line_buf: Vec::with_capacity(160),
             batch_points: 0,
             in_flight: FuturesUnordered::new(),
-            ok: 0,
-            bad: 0,
+            stats: WriteStats::default(),
+            first_write_started_at: None,
+            last_write_finished_at: None,
         }
     }
 
@@ -208,12 +230,16 @@ impl BatchWriter {
         Ok(())
     }
 
-    async fn finish(mut self) -> (usize, usize) {
+    async fn finish(mut self) -> WriteStats {
         self.flush_batch().await;
         while !self.in_flight.is_empty() {
             self.collect_one().await;
         }
-        (self.ok, self.bad)
+        if let (Some(start), Some(end)) = (self.first_write_started_at, self.last_write_finished_at)
+        {
+            self.stats.wall_elapsed = end.duration_since(start);
+        }
+        self.stats
     }
 
     async fn flush_batch(&mut self) {
@@ -231,27 +257,53 @@ impl BatchWriter {
             &mut self.batch_body,
             Vec::with_capacity(self.batch_body_capacity),
         );
+        let bytes = body.len();
         let client = self.client.clone();
         let bucket = self.bucket.clone();
 
         self.in_flight.push(tokio::spawn(async move {
+            let start = Instant::now();
             let result = write_line_protocol_body(&client, &bucket, body).await;
-            (count, result)
+            let finished_at = Instant::now();
+            WriteBatchResult {
+                count,
+                bytes,
+                started_at: start,
+                finished_at,
+                elapsed: finished_at.duration_since(start),
+                result,
+            }
         }));
     }
 
     async fn collect_one(&mut self) {
         match self.in_flight.next().await {
-            Some(Ok((count, Ok(())))) => {
-                self.ok += count;
-            }
-            Some(Ok((count, Err(e)))) => {
-                eprintln!("Influx write error: {e:?}");
-                self.bad += count;
+            Some(Ok(result)) => {
+                self.stats.batches += 1;
+                self.stats.bytes += result.bytes;
+                self.stats.request_elapsed += result.elapsed;
+                self.first_write_started_at = Some(
+                    self.first_write_started_at
+                        .map_or(result.started_at, |prev| prev.min(result.started_at)),
+                );
+                self.last_write_finished_at = Some(
+                    self.last_write_finished_at
+                        .map_or(result.finished_at, |prev| prev.max(result.finished_at)),
+                );
+
+                match result.result {
+                    Ok(()) => {
+                        self.stats.ok += result.count;
+                    }
+                    Err(e) => {
+                        eprintln!("Influx write error: {e:?}");
+                        self.stats.bad += result.count;
+                    }
+                }
             }
             Some(Err(e)) => {
                 eprintln!("Influx write task error: {e}");
-                self.bad += 1;
+                self.stats.bad += 1;
             }
             None => {}
         }
@@ -269,12 +321,26 @@ async fn write_line_protocol_body(
         .context("influx write failed")
 }
 
-fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<usize> {
+#[derive(Debug, Default)]
+struct ParseStats {
+    bad: usize,
+    entry_files: usize,
+    lines: usize,
+    points: usize,
+    elapsed: Duration,
+}
+
+fn duration_ms(duration: Duration) -> f64 {
+    duration.as_secs_f64() * 1_000.0
+}
+
+fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<ParseStats> {
+    let start = Instant::now();
     let file = File::open(&path).with_context(|| format!("open {}", path.display()))?;
     let gz = GzDecoder::new(file);
     let stream = BufReader::new(gz);
     let mut archive = Archive::new(stream);
-    let mut bad = 0usize;
+    let mut stats = ParseStats::default();
 
     for entry in archive
         .entries()
@@ -284,6 +350,7 @@ fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<u
         if !entry.header().entry_type().is_file() {
             continue;
         }
+        stats.entry_files += 1;
 
         let mut reader = BufReader::new(entry);
         let mut line = Vec::with_capacity(1024);
@@ -295,6 +362,7 @@ fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<u
             if bytes_read == 0 {
                 break;
             }
+            stats.lines += 1;
             if line.last() == Some(&b'\n') {
                 line.pop();
             }
@@ -308,17 +376,19 @@ fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<u
                         if tx.blocking_send(point).is_err() {
                             anyhow::bail!("writer stopped while reading {}", path.display());
                         }
+                        stats.points += 1;
                     }
                 }
                 Ok(None) => {}
                 Err(_) => {
-                    bad += 1;
+                    stats.bad += 1;
                 }
             }
         }
     }
 
-    Ok(bad)
+    stats.elapsed = start.elapsed();
+    Ok(stats)
 }
 
 pub async fn ingest_tar_gz(
@@ -343,9 +413,24 @@ pub async fn ingest_tar_gz(
     }
 
     let parser_result = parser.await;
-    let (ok, write_bad) = writer.finish().await;
-    let parse_bad = parser_result.context("archive parser task failed")??;
-    Ok((ok, parse_bad + serialization_bad + write_bad))
+    let write_stats = writer.finish().await;
+    let parse_stats = parser_result.context("archive parser task failed")??;
+    println!(
+        "log: timings '{}' untar_ms={:.3} offload_wall_ms={:.3} offload_request_ms={:.3} untar_files={} lines={} parsed_points={} write_batches={} write_bytes={}",
+        path.display(),
+        duration_ms(parse_stats.elapsed),
+        duration_ms(write_stats.wall_elapsed),
+        duration_ms(write_stats.request_elapsed),
+        parse_stats.entry_files,
+        parse_stats.lines,
+        parse_stats.points,
+        write_stats.batches,
+        write_stats.bytes,
+    );
+    Ok((
+        write_stats.ok,
+        parse_stats.bad + serialization_bad + write_stats.bad,
+    ))
 }
 
 /// Ingest multiple files: only `.tar.gz`; others/missing are skipped with a message.
