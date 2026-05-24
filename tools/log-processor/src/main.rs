@@ -1,5 +1,4 @@
 use std::fs;
-use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
 use std::thread;
@@ -187,7 +186,6 @@ async fn main() -> Result<()> {
             thread::sleep(Duration::from_secs(60));
         }
     }
-    Ok(())
 }
 
 #[cfg(test)]
