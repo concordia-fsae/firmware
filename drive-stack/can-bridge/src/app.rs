@@ -17,9 +17,9 @@ use tar::Builder;
 
 use crate::{
     Bus, BusBinding, Event, Filters, ForwardRoute, NetworkBus, ProcessedEvent, bus_descriptor,
-    configure_yamcan_iface, format_processed_event, forward_route_for_pair,
-    forward_routes_from_bus, open_can_socket, process_event, recv_event, send_can_frame,
-    yamcan_init,
+    configure_yamcan_iface, format_processed_event, format_processed_event_line_protocol,
+    forward_route_for_pair, forward_routes_from_bus, open_can_socket, process_event, recv_event,
+    send_can_frame, yamcan_init,
 };
 
 #[derive(Parser, Debug)]
@@ -94,7 +94,6 @@ impl EventSink for StdoutSink {
 }
 
 struct LogSink {
-    json: bool,
     manager: LogManager,
 }
 
@@ -104,7 +103,7 @@ impl EventSink for LogSink {
     }
 
     fn handle(&mut self, event: &ProcessedEvent) {
-        let line = format_processed_event(event, self.json);
+        let line = format_processed_event_line_protocol(event);
         self.manager.write_line(&line);
     }
 }
@@ -124,7 +123,6 @@ impl EventProcessor {
         }
         if let Some(cfg) = log_cfg {
             sinks.push(Box::new(LogSink {
-                json,
                 manager: LogManager::new(Some(cfg)),
             }));
         }
@@ -579,7 +577,7 @@ fn print_filter_summary(filters: &Filters) {
 
 fn log_file_path(base: &Path, bus: &str) -> PathBuf {
     let stamp = Local::now().format("%Y-%m-%d_%H%M%S");
-    base.join(format!("{bus}-{stamp}.log"))
+    base.join(format!("{bus}-{stamp}.lp"))
 }
 
 fn open_bus_log(base: &Path, bus: &str) -> std::io::Result<BusLog> {
@@ -644,7 +642,11 @@ fn spawn_compression(path: PathBuf, cfg: LogConfig) {
 
 fn compress_and_remove(orig_path: &Path, dest_folder: &Path) -> std::io::Result<PathBuf> {
     let mut gz_path = orig_path.to_path_buf();
-    gz_path.set_extension("log.tar.gz");
+    let archive_extension = match orig_path.extension().and_then(|ext| ext.to_str()) {
+        Some("lp") => "lp.tar.gz",
+        _ => "log.tar.gz",
+    };
+    gz_path.set_extension(archive_extension);
 
     let tar_gz = File::create(&gz_path)?;
     let enc = GzEncoder::new(tar_gz, Compression::default());
@@ -668,7 +670,10 @@ fn find_uncompressed_logs(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
     for entry in read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        if path.extension().is_some_and(|ext| ext == "log") {
+        if path
+            .extension()
+            .is_some_and(|ext| ext == "log" || ext == "lp")
+        {
             ret.push(path);
         }
     }

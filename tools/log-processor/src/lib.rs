@@ -24,6 +24,7 @@ use tokio::task::JoinHandle;
 /// Ingest one `.tar.gz` (JSON-lines files inside), writing to InfluxDB.
 const INFLIGHT_WRITES: usize = 6;
 const PARSER_CHANNEL_CAPACITY: usize = 4_096;
+const LINE_BATCH_CHANNEL_CAPACITY: usize = 8;
 
 #[derive(Debug, Deserialize)]
 pub struct Bus {
@@ -177,35 +178,30 @@ struct WriteBatchResult {
     result: Result<()>,
 }
 
-struct BatchWriter {
+struct WriteScheduler {
     client: InfluxClient,
     bucket: String,
-    batch_size: usize,
-    batch_bytes: usize,
-    batch_body_capacity: usize,
-    batch_body: Vec<u8>,
-    line_buf: Vec<u8>,
-    batch_points: usize,
     in_flight: FuturesUnordered<WriteTask>,
     stats: WriteStats,
     first_write_started_at: Option<Instant>,
     last_write_finished_at: Option<Instant>,
 }
 
-impl BatchWriter {
-    fn new(client: InfluxClient, bucket: &str, batch_size: usize, batch_bytes: usize) -> Self {
-        let batch_size = batch_size.max(1);
-        let batch_bytes = batch_bytes.max(1);
-        let batch_body_capacity = batch_bytes.min(batch_size.saturating_mul(160).max(1));
+struct BatchWriter {
+    scheduler: WriteScheduler,
+    batch_size: usize,
+    batch_bytes: usize,
+    batch_body_capacity: usize,
+    batch_body: Vec<u8>,
+    line_buf: Vec<u8>,
+    batch_points: usize,
+}
+
+impl WriteScheduler {
+    fn new(client: InfluxClient, bucket: &str) -> Self {
         Self {
             client,
             bucket: bucket.to_owned(),
-            batch_size,
-            batch_bytes,
-            batch_body_capacity,
-            batch_body: Vec::with_capacity(batch_body_capacity),
-            line_buf: Vec::with_capacity(160),
-            batch_points: 0,
             in_flight: FuturesUnordered::new(),
             stats: WriteStats::default(),
             first_write_started_at: None,
@@ -213,31 +209,7 @@ impl BatchWriter {
         }
     }
 
-    async fn push(&mut self, point: DataPoint) -> Result<()> {
-        self.line_buf.clear();
-        point
-            .write_data_point_to(&mut self.line_buf)
-            .context("serializing influx data point")?;
-
-        let line_len = self.line_buf.len();
-        if self.batch_points > 0
-            && self.batch_body.len().saturating_add(line_len) > self.batch_bytes
-        {
-            self.flush_batch().await;
-        }
-
-        self.batch_body.extend_from_slice(&self.line_buf);
-        self.batch_points += 1;
-
-        if self.batch_points >= self.batch_size || self.batch_body.len() >= self.batch_bytes {
-            self.flush_batch().await;
-        }
-
-        Ok(())
-    }
-
     async fn finish(mut self) -> WriteStats {
-        self.flush_batch().await;
         while !self.in_flight.is_empty() {
             self.collect_one().await;
         }
@@ -248,8 +220,8 @@ impl BatchWriter {
         self.stats
     }
 
-    async fn flush_batch(&mut self) {
-        if self.batch_points == 0 {
+    async fn push_body(&mut self, count: usize, body: Vec<u8>) {
+        if count == 0 || body.is_empty() {
             return;
         }
 
@@ -257,12 +229,6 @@ impl BatchWriter {
             self.collect_one().await;
         }
 
-        let count = self.batch_points;
-        self.batch_points = 0;
-        let body = std::mem::replace(
-            &mut self.batch_body,
-            Vec::with_capacity(self.batch_body_capacity),
-        );
         let bytes = body.len();
         let client = self.client.clone();
         let bucket = self.bucket.clone();
@@ -316,6 +282,69 @@ impl BatchWriter {
     }
 }
 
+impl BatchWriter {
+    fn new(client: InfluxClient, bucket: &str, batch_size: usize, batch_bytes: usize) -> Self {
+        let batch_size = batch_size.max(1);
+        let batch_bytes = batch_bytes.max(1);
+        let batch_body_capacity = batch_body_capacity(batch_size, batch_bytes);
+        Self {
+            scheduler: WriteScheduler::new(client, bucket),
+            batch_size,
+            batch_bytes,
+            batch_body_capacity,
+            batch_body: Vec::with_capacity(batch_body_capacity),
+            line_buf: Vec::with_capacity(160),
+            batch_points: 0,
+        }
+    }
+
+    async fn push(&mut self, point: DataPoint) -> Result<()> {
+        self.line_buf.clear();
+        point
+            .write_data_point_to(&mut self.line_buf)
+            .context("serializing influx data point")?;
+
+        let line_len = self.line_buf.len();
+        if self.batch_points > 0
+            && self.batch_body.len().saturating_add(line_len) > self.batch_bytes
+        {
+            self.flush_batch().await;
+        }
+
+        self.batch_body.extend_from_slice(&self.line_buf);
+        self.batch_points += 1;
+
+        if self.batch_points >= self.batch_size || self.batch_body.len() >= self.batch_bytes {
+            self.flush_batch().await;
+        }
+
+        Ok(())
+    }
+
+    async fn finish(mut self) -> WriteStats {
+        self.flush_batch().await;
+        self.scheduler.finish().await
+    }
+
+    async fn flush_batch(&mut self) {
+        if self.batch_points == 0 {
+            return;
+        }
+
+        let count = self.batch_points;
+        self.batch_points = 0;
+        let body = std::mem::replace(
+            &mut self.batch_body,
+            Vec::with_capacity(self.batch_body_capacity),
+        );
+        self.scheduler.push_body(count, body).await;
+    }
+}
+
+fn batch_body_capacity(batch_size: usize, batch_bytes: usize) -> usize {
+    batch_bytes.min(batch_size.saturating_mul(160).max(1))
+}
+
 async fn write_line_protocol_body(
     client: &InfluxClient,
     bucket: &str,
@@ -336,8 +365,22 @@ struct ParseStats {
     elapsed: Duration,
 }
 
+struct LineProtocolBatch {
+    count: usize,
+    body: Vec<u8>,
+}
+
 fn duration_ms(duration: Duration) -> f64 {
     duration.as_secs_f64() * 1_000.0
+}
+
+fn trim_line_ending(line: &mut Vec<u8>) {
+    if line.last() == Some(&b'\n') {
+        line.pop();
+    }
+    if line.last() == Some(&b'\r') {
+        line.pop();
+    }
 }
 
 fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<ParseStats> {
@@ -369,12 +412,7 @@ fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<P
                 break;
             }
             stats.lines += 1;
-            if line.last() == Some(&b'\n') {
-                line.pop();
-            }
-            if line.last() == Some(&b'\r') {
-                line.pop();
-            }
+            trim_line_ending(&mut line);
 
             match parse_line(&line) {
                 Ok(Some(rec)) => {
@@ -393,6 +431,95 @@ fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<P
         }
     }
 
+    stats.elapsed = start.elapsed();
+    Ok(stats)
+}
+
+fn send_line_protocol_batch(
+    tx: &mpsc::Sender<LineProtocolBatch>,
+    path: &Path,
+    body: &mut Vec<u8>,
+    count: &mut usize,
+    capacity: usize,
+) -> Result<()> {
+    if *count == 0 {
+        return Ok(());
+    }
+
+    let batch = LineProtocolBatch {
+        count: *count,
+        body: std::mem::replace(body, Vec::with_capacity(capacity)),
+    };
+    *count = 0;
+    if tx.blocking_send(batch).is_err() {
+        anyhow::bail!("writer stopped while reading {}", path.display());
+    }
+    Ok(())
+}
+
+fn parse_line_protocol_tar_gz_blocking(
+    path: PathBuf,
+    tx: mpsc::Sender<LineProtocolBatch>,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<ParseStats> {
+    let start = Instant::now();
+    let file = File::open(&path).with_context(|| format!("open {}", path.display()))?;
+    let gz = GzDecoder::new(file);
+    let stream = BufReader::new(gz);
+    let mut archive = Archive::new(stream);
+    let mut stats = ParseStats::default();
+    let batch_size = batch_size.max(1);
+    let batch_bytes = batch_bytes.max(1);
+    let capacity = batch_body_capacity(batch_size, batch_bytes);
+    let mut body = Vec::with_capacity(capacity);
+    let mut count = 0usize;
+
+    for entry in archive
+        .entries()
+        .with_context(|| format!("reading archive {}", path.display()))?
+    {
+        let entry = entry.with_context(|| format!("reading entry in {}", path.display()))?;
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
+        stats.entry_files += 1;
+
+        let mut reader = BufReader::new(entry);
+        let mut line = Vec::with_capacity(256);
+        loop {
+            line.clear();
+            let bytes_read = reader
+                .read_until(b'\n', &mut line)
+                .with_context(|| format!("reading lines from {}", path.display()))?;
+            if bytes_read == 0 {
+                break;
+            }
+            stats.lines += 1;
+            trim_line_ending(&mut line);
+            if line.iter().all(|b| b.is_ascii_whitespace()) {
+                continue;
+            }
+
+            let next_len = line.len().saturating_add(1);
+            if count > 0
+                && (count >= batch_size || body.len().saturating_add(next_len) > batch_bytes)
+            {
+                send_line_protocol_batch(&tx, &path, &mut body, &mut count, capacity)?;
+            }
+
+            body.extend_from_slice(&line);
+            body.push(b'\n');
+            count += 1;
+            stats.points += 1;
+
+            if count >= batch_size || body.len() >= batch_bytes {
+                send_line_protocol_batch(&tx, &path, &mut body, &mut count, capacity)?;
+            }
+        }
+    }
+
+    send_line_protocol_batch(&tx, &path, &mut body, &mut count, capacity)?;
     stats.elapsed = start.elapsed();
     Ok(stats)
 }
@@ -439,6 +566,61 @@ pub async fn ingest_tar_gz(
     ))
 }
 
+pub async fn ingest_line_protocol_tar_gz(
+    client: &InfluxClient,
+    bucket: &str,
+    path: &Path,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<(usize, usize)> {
+    let (tx, mut rx) = mpsc::channel(LINE_BATCH_CHANNEL_CAPACITY);
+    let parser_path = path.to_path_buf();
+    let parser = tokio::task::spawn_blocking(move || {
+        parse_line_protocol_tar_gz_blocking(parser_path, tx, batch_size, batch_bytes)
+    });
+
+    let mut writer = WriteScheduler::new(client.clone(), bucket);
+
+    while let Some(batch) = rx.recv().await {
+        writer.push_body(batch.count, batch.body).await;
+    }
+
+    let parser_result = parser.await;
+    let write_stats = writer.finish().await;
+    let parse_stats = parser_result.context("line protocol archive parser task failed")??;
+    println!(
+        "log: timings '{}' format=line_protocol untar_ms={:.3} offload_wall_ms={:.3} offload_request_ms={:.3} untar_files={} lines={} parsed_points={} write_batches={} write_bytes={}",
+        path.display(),
+        duration_ms(parse_stats.elapsed),
+        duration_ms(write_stats.wall_elapsed),
+        duration_ms(write_stats.request_elapsed),
+        parse_stats.entry_files,
+        parse_stats.lines,
+        parse_stats.points,
+        write_stats.batches,
+        write_stats.bytes,
+    );
+    Ok((write_stats.ok, parse_stats.bad + write_stats.bad))
+}
+
+async fn ingest_archive(
+    client: &InfluxClient,
+    bucket: &str,
+    path: &Path,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<(usize, usize)> {
+    let fname = path
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or_default();
+    if fname.ends_with(".lp.tar.gz") {
+        ingest_line_protocol_tar_gz(client, bucket, path, batch_size, batch_bytes).await
+    } else {
+        ingest_tar_gz(client, bucket, path, batch_size, batch_bytes).await
+    }
+}
+
 async fn ingest_one_file(
     influx: InfluxClient,
     bucket: String,
@@ -449,7 +631,7 @@ async fn ingest_one_file(
 ) -> Result<FileIngestResult> {
     println!("Start ingesting '{}'", path.display());
     let start_time = Instant::now();
-    let (ok, bad) = ingest_tar_gz(&influx, &bucket, &path, batch_size, batch_bytes)
+    let (ok, bad) = ingest_archive(&influx, &bucket, &path, batch_size, batch_bytes)
         .await
         .with_context(|| format!("ingesting {}", path.display()))?;
     println!(

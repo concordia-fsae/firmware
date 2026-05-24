@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::ffi::CString;
+use std::fmt::Write as FmtWrite;
 use std::io;
 use std::mem::{size_of, zeroed};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
@@ -272,6 +273,68 @@ pub fn format_processed_event(event: &ProcessedEvent, json: bool) -> String {
         "meas": measurements,
     })
     .to_string()
+}
+
+pub fn format_processed_event_line_protocol(event: &ProcessedEvent) -> String {
+    let f = &event.frame;
+    let is_eff = (f.can_id & CAN_EFF_FLAG) != 0;
+    let is_rtr = (f.can_id & CAN_RTR_FLAG) != 0;
+    let is_err = (f.can_id & CAN_ERR_FLAG) != 0;
+    let measurement = event
+        .decoded
+        .as_ref()
+        .map(|decoded| decoded.message_name.as_str())
+        .unwrap_or("veh_msg");
+    let mut out = String::with_capacity(192);
+
+    append_line_key(&mut out, measurement);
+    out.push_str(",iface=");
+    append_line_key(&mut out, event.iface());
+    out.push_str(",bus_name=");
+    append_line_key(&mut out, event.bus_name());
+    out.push_str(",can_id=");
+    let _ = write!(out, "{}", event.id_masked);
+    out.push_str(",id_err=");
+    out.push(if is_err { '1' } else { '0' });
+    out.push_str(",id_ext=");
+    out.push(if is_eff { '1' } else { '0' });
+    out.push_str(",id_rtr=");
+    out.push(if is_rtr { '1' } else { '0' });
+
+    out.push(' ');
+    out.push_str("dlc=");
+    let _ = write!(out, "{}", f.can_dlc);
+
+    if let Some(decoded) = &event.decoded {
+        for measurement in &decoded.members {
+            if !measurement.value.is_finite() {
+                continue;
+            }
+            out.push(',');
+            append_line_key(&mut out, &measurement.name);
+            out.push('=');
+            let _ = write!(out, "{}", measurement.value);
+        }
+    }
+
+    let (sec, nsec) = event.ts_opt.unwrap_or_default();
+    let timestamp = sec
+        .saturating_mul(1_000_000_000)
+        .saturating_add(nsec as u64);
+    let _ = write!(out, " {timestamp}");
+    out
+}
+
+fn append_line_key(out: &mut String, value: &str) {
+    for ch in value.chars() {
+        match ch {
+            ' ' | ',' | '=' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
 }
 
 fn decoded_to_pretty(decoded: &DecodedMessage, allow_empty: bool) -> Option<String> {
