@@ -111,6 +111,8 @@ typedef struct
 #define FLUX_WEAKENING_CURRENT_STEP_A     1.0f
 #define FLUX_WEAKENING_CURRENT_DELAY_MS   250U
 
+#define EEPROM_BOOT_READ_DELAY_MS         500U
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -142,11 +144,13 @@ static struct
 
 static struct
 {
+    bool        init;
     drv_timer_S timerChange;
 } currentFluxWeakening;
 
 static eepromParameterState_S        eepromParameters[EEPROM_PARAMETER_COUNT];
 static eepromCommandQueue_S          eepromCommandQueue;
+static drv_timer_S                   eepromBootReadDelay;
 
 static const eepromParameterUnitConfig_S eepromParameterUnitConfigs[EEPROM_PARAMETER_UNIT_COUNT] = {
     [EEPROM_PARAMETER_UNIT_AMP] = {
@@ -375,6 +379,11 @@ static void eepromTransmitPending(void)
         }
     }
 
+    if (drv_timer_getState(&eepromBootReadDelay) == DRV_TIMER_RUNNING)
+    {
+        return;
+    }
+
     for (uint8_t i = 0U; i < (uint8_t)EEPROM_PARAMETER_COUNT; i++)
     {
         const eepromParameter_E parameter = (eepromParameter_E)i;
@@ -583,6 +592,8 @@ static void mcManager_init(void)
 
     drv_timer_init(&calibrationData.timerPause);
     drv_timer_init(&currentFluxWeakening.timerChange);
+    drv_timer_init(&eepromBootReadDelay);
+    drv_timer_start(&eepromBootReadDelay, EEPROM_BOOT_READ_DELAY_MS);
     mcManager_data.torque_command.y_n          = 0.0f;
     mcManager_data.torque_command.maxStepDelta = RAMPRATE_NM_PER_S / 100;
     mcManager_data.torque_limit                = 0.0f;
