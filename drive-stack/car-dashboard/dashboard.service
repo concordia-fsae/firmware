@@ -5,7 +5,14 @@ Wants=ota-agent.service
 PartOf=drive-stack.target
 
 [Service]
-ExecStart=/bin/cfr/dashboard
+ExecStartPre=-/usr/sbin/nft delete table inet cfr_dashboard_redirect
+ExecStartPre=/usr/sbin/nft add table inet cfr_dashboard_redirect
+ExecStartPre=/bin/sh -c '/usr/sbin/nft "add chain inet cfr_dashboard_redirect prerouting { type nat hook prerouting priority dstnat; policy accept; }"'
+ExecStartPre=/bin/sh -c '/usr/sbin/nft "add chain inet cfr_dashboard_redirect output { type nat hook output priority dstnat; policy accept; }"'
+ExecStartPre=/usr/sbin/nft add rule inet cfr_dashboard_redirect prerouting tcp dport 80 redirect to :8091
+ExecStartPre=/bin/sh -c '/usr/sbin/nft add rule inet cfr_dashboard_redirect output oifname "lo" tcp dport 80 redirect to :8091'
+ExecStart=/bin/cfr/dashboard --database-viewer-token zhaf4VJ5oj42481tTbVM4QKfQLJ87aNnAJUIBeZKi0VRGS1nMcj7OhF7-FLPxF2txYCqCMB_IywQHSfT-8tnAQ==
+ExecStopPost=-/usr/sbin/nft delete table inet cfr_dashboard_redirect
 Restart=always
 RestartSec=3s
 StartLimitBurst=0
