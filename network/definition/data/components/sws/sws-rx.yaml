@@ -8,6 +8,7 @@ messages:
   VCFRONT_params:
   VCFRONT_paramTcPid:
   VCREAR_faults:
+  VCREAR_request:
 signals:
   VCFRONT_launchControlState:
   VCPDU_vehicleState:
