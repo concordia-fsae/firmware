@@ -28,6 +28,7 @@ messages:
       mcCalibrationAttempts:
       mcCalibrationConfiguredAngle:
       mcCalibrationDeltaFilteredMeasured:
+      fluxWeakeningCurrent:
 
   udsResponse:
     description: UDS response message from the VCREAR
@@ -130,4 +131,3 @@ messages:
       brakeTempRR:
       brakeTempRLVoltage:
       brakeTempRRVoltage:
-

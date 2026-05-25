@@ -192,6 +192,20 @@ signals:
       endianness: little
       signedness: signed
     continuous: true
+
+  fluxWeakeningCurrent:
+    description: Motor controller flux weakening current limit
+    unit: A
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.1
+      range:
+        min: 0
+        max: 225.0
+      endianness: little
+      signedness: unsigned
+    continuous: true
+
   brakeTempRL:
     description: Rotor Temp of Rear Left Rotor
     unit: 'deg'
@@ -218,4 +232,3 @@ signals:
   brakeTempRRVoltage:
     description: Voltage of RR brake temp sensors
     template: voltsPrecise
-

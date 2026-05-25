@@ -30,6 +30,8 @@ messages:
     sourceBuses: veh
   PM100DX_eepromResponse:
     sourceBuses: veh
+  SWS_driverParamRequest:
+    sourceBuses: veh
   TOOLING_mcEepromCommand:
     sourceBuses: veh
     unrecorded: true
