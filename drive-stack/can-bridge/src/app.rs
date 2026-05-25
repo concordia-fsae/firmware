@@ -86,6 +86,9 @@ pub struct Args {
 
     #[arg(long = "influx-batch-bytes", default_value_t = 4 * 1024 * 1024)]
     influx_batch_bytes: usize,
+
+    #[arg(long = "influx-flush-ms", default_value_t = 1_000)]
+    influx_flush_ms: u64,
 }
 
 #[derive(Clone)]
@@ -112,6 +115,7 @@ struct InfluxLogConfig {
     bucket: String,
     batch_size: usize,
     batch_bytes: usize,
+    flush_interval: Duration,
     recovery: Option<LogConfig>,
 }
 
@@ -353,6 +357,8 @@ struct DirectInfluxLogWriter {
     disk_spool_tx: Option<Sender<DiskSpoolBatch>>,
     batch_size: usize,
     batch_bytes: usize,
+    flush_interval: Duration,
+    last_flush: Instant,
     body_capacity: usize,
     body: Vec<u8>,
     count: usize,
@@ -387,6 +393,7 @@ impl DirectInfluxLogWriter {
         let client = InfluxClientBuilder::new(&cfg.url, &cfg.org, &cfg.token).build()?;
         let batch_size = cfg.batch_size.max(1);
         let batch_bytes = cfg.batch_bytes.max(1);
+        let flush_interval = cfg.flush_interval.max(Duration::from_millis(1));
         let body_capacity = batch_bytes.min(batch_size.saturating_mul(160).max(1));
         Ok(Self {
             rt,
@@ -395,6 +402,8 @@ impl DirectInfluxLogWriter {
             disk_spool_tx,
             batch_size,
             batch_bytes,
+            flush_interval,
+            last_flush: Instant::now(),
             body_capacity,
             body: Vec::with_capacity(body_capacity),
             count: 0,
@@ -441,6 +450,7 @@ impl DirectInfluxLogWriter {
         if !self.write_batch(body.clone(), count) {
             self.buffer_failed_batch(body, count);
         }
+        self.last_flush = Instant::now();
         self.retry_failed_buffer();
 
         if self.last_report.elapsed() >= Duration::from_secs(60) {
@@ -461,6 +471,23 @@ impl DirectInfluxLogWriter {
         if self.failed_count > 0 && !self.retry_failed_buffer() {
             self.queue_failed_buffer_to_disk();
         }
+    }
+
+    fn recv_timeout(&self) -> Duration {
+        if self.count == 0 {
+            return Duration::from_secs(1);
+        }
+
+        let remaining = self.flush_interval.saturating_sub(self.last_flush.elapsed());
+        if remaining.is_zero() {
+            Duration::from_millis(1)
+        } else {
+            remaining
+        }
+    }
+
+    fn should_flush_for_age(&self) -> bool {
+        self.count > 0 && self.last_flush.elapsed() >= self.flush_interval
     }
 
     fn write_batch(&mut self, body: Bytes, count: usize) -> bool {
@@ -586,13 +613,15 @@ fn run_influx_log_worker(cfg: InfluxLogConfig, rx: Receiver<String>) {
     };
 
     loop {
-        match rx.recv_timeout(Duration::from_secs(1)) {
+        match rx.recv_timeout(writer.recv_timeout()) {
             Ok(line) => {
                 writer.push_line(line);
                 for queued_line in rx.try_iter() {
                     writer.push_line(queued_line);
                 }
-                writer.flush();
+                if writer.should_flush_for_age() {
+                    writer.flush();
+                }
             }
             Err(RecvTimeoutError::Timeout) => writer.flush(),
             Err(RecvTimeoutError::Disconnected) => break,
@@ -1010,6 +1039,7 @@ fn build_log_backend(
         bucket,
         batch_size: args.influx_batch_size,
         batch_bytes: args.influx_batch_bytes,
+        flush_interval: Duration::from_millis(args.influx_flush_ms.max(1)),
         recovery: build_file_log_config(args, bus_label),
     })))
 }
