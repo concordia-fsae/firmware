@@ -58,13 +58,16 @@ rust_library(
     edition = "2024",
     deps = [
         ":yamcan-carputer-veh-rust",
+        "//third_party:bytes",
         "//third_party:chrono",
         "//third_party:clap",
         "//third_party:flate2",
+        "//third_party:influxdb2",
         "//third_party:libc",
         "//third_party:socketcan",
         "//third_party:serde_json",
         "//third_party:tar",
+        "//third_party:tokio",
     ],
     target_compatible_with = [
         "prelude//os/constraints:linux",

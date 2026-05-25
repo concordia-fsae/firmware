@@ -1,5 +1,4 @@
 use std::fs;
-use std::fs::remove_file;
 use std::path::Path;
 use std::path::PathBuf;
 use std::thread;
@@ -38,6 +37,14 @@ struct Opts {
     #[arg(long, default_value_t = 5_000)]
     batch_size: usize,
 
+    /// Maximum serialized line-protocol bytes per Influx write
+    #[arg(long, default_value_t = 4 * 1024 * 1024)]
+    batch_bytes: usize,
+
+    /// Number of archives to ingest concurrently
+    #[arg(long, default_value_t = 2)]
+    file_concurrency: usize,
+
     /// Print matched files and exit
     #[arg(long, action = ArgAction::SetTrue)]
     dry_run: bool,
@@ -56,7 +63,7 @@ pub fn expand_inputs(patterns: &[String]) -> Result<Vec<PathBuf>> {
     for pat in patterns {
         if !pat.contains('*') {
             let p = Path::new(pat);
-            if p.exists() {
+            if p.is_file() {
                 files.push(p.to_path_buf());
             }
             continue;
@@ -68,6 +75,9 @@ pub fn expand_inputs(patterns: &[String]) -> Result<Vec<PathBuf>> {
 
         for ent in entries {
             let ent = ent?;
+            if !ent.file_type()?.is_file() {
+                continue;
+            }
             let name = match ent.file_name().into_string() {
                 Ok(s) => s,
                 Err(_) => continue, // skip invalid UTF-8 names
@@ -147,7 +157,11 @@ async fn main() -> Result<()> {
     loop {
         let files = expand_inputs(&opts.inputs)?;
         if files.is_empty() {
+            if opts.dry_run {
+                return Ok(());
+            }
             thread::sleep(Duration::from_secs(60));
+            continue;
         }
 
         if opts.dry_run {
@@ -172,6 +186,8 @@ async fn main() -> Result<()> {
             &opts.bucket,
             &files,
             opts.batch_size,
+            opts.batch_bytes,
+            opts.file_concurrency,
             opts.delete,
         )
         .await?;
@@ -187,7 +203,6 @@ async fn main() -> Result<()> {
             thread::sleep(Duration::from_secs(60));
         }
     }
-    Ok(())
 }
 
 #[cfg(test)]

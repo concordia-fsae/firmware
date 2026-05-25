@@ -1,25 +1,30 @@
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::fs::remove_file;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::time::Duration;
 use std::time::Instant;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 use flate2::read::GzDecoder;
-use reqwest;
-use reqwest::Url;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
+use influxdb2::Client as InfluxClient;
+use influxdb2::ClientBuilder as InfluxClientBuilder;
+use influxdb2::models::DataPoint;
+use influxdb2::models::WriteDataPoint;
+use influxdb2::models::data_point::DataPointBuilder;
 use serde::Deserialize;
-use serde_json;
 use serde_json::Value;
 use tar::Archive;
-use tokio::sync::Semaphore;
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
-/// Ingest one `.tar.gz` (JSON-lines files inside), writing to InfluxDB via HTTP
-const INFLIGHT_HTTP: usize = 6;
-const PARSE_WORKERS: usize = 2;
+/// Ingest one `.tar.gz` (JSON-lines files inside), writing to InfluxDB.
+const INFLIGHT_WRITES: usize = 6;
+const PARSER_CHANNEL_CAPACITY: usize = 4_096;
+const LINE_BATCH_CHANNEL_CAPACITY: usize = 8;
 
 #[derive(Debug, Deserialize)]
 pub struct Bus {
@@ -48,361 +53,626 @@ pub struct Record {
 }
 
 fn parse_line(line: &[u8]) -> Result<Option<Record>> {
-    // skip blank/whitespace-only lines without allocating
     if line.iter().all(|b| b.is_ascii_whitespace()) {
         return Ok(None);
     }
+
     let rec: Record = serde_json::from_slice(line)
         .with_context(|| format!("invalid JSON: {}", String::from_utf8_lossy(line)))?;
     Ok(Some(rec))
 }
 
-fn as_f64(v: &Value) -> Option<f64> {
-    match v {
-        Value::Number(n) => n.as_f64(),
-        Value::Object(m) => m.get("value").and_then(|x| x.as_f64()),
-        Value::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
-        _ => None,
+fn timestamp_ns(ts_seconds: f64) -> Option<i64> {
+    let ts_ns = (ts_seconds * 1_000_000_000.0).round();
+    if ts_ns.is_finite() && ts_ns >= i64::MIN as f64 && ts_ns <= i64::MAX as f64 {
+        Some(ts_ns as i64)
+    } else {
+        None
     }
 }
 
-// ----- Influx Line Protocol helpers -----
+fn record_to_point(rec: &Record) -> Option<DataPoint> {
+    let measurement = rec.msg.as_deref().unwrap_or("veh_msg");
+    let mut builder = DataPoint::builder(measurement);
 
-fn escape_measurement(s: &str) -> String {
-    s.replace(',', r"\,").replace(' ', r"\ ")
-}
+    if let Some(bus) = &rec.bus {
+        if let Some(iface) = &bus.iface {
+            builder = builder.tag("iface", iface.clone());
+        }
+        if let Some(name) = &bus.name {
+            builder = builder.tag("bus_name", name.clone());
+        }
+    }
 
-fn escape_tag_key_val(s: &str) -> String {
-    s.replace(',', r"\,")
-        .replace(' ', r"\ ")
-        .replace('=', r"\=")
-}
+    if let Some(id) = &rec.id {
+        if let Some(v) = id.val {
+            builder = builder.tag("can_id", v.to_string());
+        }
+        if let Some(b) = id.err {
+            builder = builder.tag("id_err", if b { "1" } else { "0" });
+        }
+        if let Some(b) = id.ext {
+            builder = builder.tag("id_ext", if b { "1" } else { "0" });
+        }
+        if let Some(b) = id.rtr {
+            builder = builder.tag("id_rtr", if b { "1" } else { "0" });
+        }
+    }
 
-fn escape_field_key(s: &str) -> String {
-    s.replace(',', r"\,").replace(' ', r"\ ")
-}
+    let mut has_fields = false;
+    if let Some(dlc) = rec.dlc {
+        builder = builder.field("dlc", f64::from(dlc));
+        has_fields = true;
+    }
 
-fn escape_field_string(s: &str) -> String {
-    s.replace('\\', r"\\").replace('"', r#"\""#)
-}
+    if let Some(meas) = &rec.meas {
+        for (key, value) in meas {
+            let (next_builder, added) = add_json_field(builder, key, value);
+            builder = next_builder;
+            has_fields |= added;
+        }
+    }
 
-fn to_line_protocol(
-    measurement: &str,
-    tags: &BTreeMap<String, String>,
-    fields: &BTreeMap<String, Value>,
-    ts_ns: Option<i64>,
-) -> Option<String> {
-    if fields.is_empty() {
+    if !has_fields {
         return None;
     }
 
-    // measurement and tags
-    let mut line = escape_measurement(measurement);
-    for (k, v) in tags {
-        let k = escape_tag_key_val(k);
-        let v = escape_tag_key_val(v);
-        line.push(',');
-        line.push_str(&k);
-        line.push('=');
-        line.push_str(&v);
+    if let Some(ts_ns) = rec.time.and_then(timestamp_ns) {
+        builder = builder.timestamp(ts_ns);
     }
 
-    // fields
-    line.push(' ');
-    let mut first = true;
-    for (k, v) in fields {
-        if !first {
-            line.push(',');
-        }
-        first = false;
-
-        let key = escape_field_key(k);
-        // numeric/bool -> numeric/bool; strings quoted
-        match v {
-            Value::Number(n) => {
-                // Prefer integer if possible, else float
-                if let Some(i) = n.as_i64() {
-                    line.push_str(&format!("{key}={}", i));
-                } else if let Some(f) = n.as_f64() {
-                    // Influx float requires decimal + trailing '0' is fine; appending 'i' is ONLY for integers
-                    line.push_str(&format!("{key}={}", f));
-                } else {
-                    // fallback as string
-                    line.push_str(&format!(
-                        "{key}=\"{}\"",
-                        escape_field_string(&n.to_string())
-                    ));
-                }
-            }
-            Value::Bool(b) => {
-                line.push_str(&format!("{key}={}", if *b { "true" } else { "false" }));
-            }
-            Value::String(s) => {
-                line.push_str(&format!("{key}=\"{}\"", escape_field_string(s)));
-            }
-            Value::Object(obj) => {
-                if let Some(v) = obj.get("value").and_then(|x| x.as_f64()) {
-                    line.push_str(&format!("{key}={}", v));
-                } else {
-                    let s = serde_json::to_string(obj).unwrap_or_else(|_| "{}".to_string());
-                    line.push_str(&format!("{key}=\"{}\"", escape_field_string(&s)));
-                }
-            }
-            other => {
-                line.push_str(&format!(
-                    "{key}=\"{}\"",
-                    escape_field_string(&other.to_string())
-                ));
-            }
-        }
-    }
-
-    // timestamp
-    if let Some(ns) = ts_ns {
-        line.push(' ');
-        line.push_str(&ns.to_string());
-    }
-
-    Some(line)
+    builder.build().ok()
 }
 
-// Build tags/fields from a Record
-fn record_to_line(rec: &Record) -> Option<String> {
-    let measurement = rec.msg.as_deref().unwrap_or("veh_msg");
-
-    let mut tags = BTreeMap::<String, String>::new();
-    if let Some(bus) = &rec.bus {
-        if let Some(iface) = &bus.iface {
-            tags.insert("iface".into(), iface.clone());
-        }
-        if let Some(name) = &bus.name {
-            tags.insert("bus_name".into(), name.clone());
-        }
-    }
-    if let Some(id) = &rec.id {
-        if let Some(v) = id.val {
-            tags.insert("can_id".into(), v.to_string());
-        }
-        if let Some(b) = id.err {
-            tags.insert("id_err".into(), if b { "1" } else { "0" }.into());
-        }
-        if let Some(b) = id.ext {
-            tags.insert("id_ext".into(), if b { "1" } else { "0" }.into());
-        }
-        if let Some(b) = id.rtr {
-            tags.insert("id_rtr".into(), if b { "1" } else { "0" }.into());
-        }
-    }
-
-    let mut fields = BTreeMap::<String, Value>::new();
-    if let Some(dlc) = rec.dlc {
-        fields.insert("dlc".into(), Value::Number((dlc as i64).into()));
-    }
-    if let Some(meas) = &rec.meas {
-        for (k, v) in meas {
-            if let Some(f) = as_f64(v) {
-                fields.insert(
-                    k.clone(),
-                    Value::Number(serde_json::Number::from_f64(f).unwrap()),
-                );
-            } else if let Some(s) = v.as_str() {
-                fields.insert(k.clone(), Value::String(s.to_string()));
+fn add_json_field(builder: DataPointBuilder, key: &str, value: &Value) -> (DataPointBuilder, bool) {
+    match value {
+        Value::Number(n) => match n.as_f64().filter(|f| f.is_finite()) {
+            Some(f) => (builder.field(key.to_owned(), f), true),
+            None => (builder.field(key.to_owned(), n.to_string()), true),
+        },
+        Value::Bool(b) => (
+            builder.field(key.to_owned(), if *b { 1.0 } else { 0.0 }),
+            true,
+        ),
+        Value::String(s) => (builder.field(key.to_owned(), s.clone()), true),
+        Value::Object(obj) => {
+            if let Some(v) = obj
+                .get("value")
+                .and_then(|x| x.as_f64())
+                .filter(|f| f.is_finite())
+            {
+                (builder.field(key.to_owned(), v), true)
             } else {
-                // keep as-is (object/bool/etc.) and let to_line_protocol handle
-                fields.insert(k.clone(), v.clone());
+                let s = serde_json::to_string(obj).unwrap_or_else(|_| "{}".to_string());
+                (builder.field(key.to_owned(), s), true)
             }
+        }
+        other => (builder.field(key.to_owned(), other.to_string()), true),
+    }
+}
+
+type WriteTask = JoinHandle<WriteBatchResult>;
+type FileTask = JoinHandle<Result<FileIngestResult>>;
+
+struct FileIngestResult {
+    ok: usize,
+    bad: usize,
+}
+
+#[derive(Debug, Default)]
+struct WriteStats {
+    ok: usize,
+    bad: usize,
+    batches: usize,
+    bytes: usize,
+    request_elapsed: Duration,
+    wall_elapsed: Duration,
+}
+
+struct WriteBatchResult {
+    count: usize,
+    bytes: usize,
+    started_at: Instant,
+    finished_at: Instant,
+    elapsed: Duration,
+    result: Result<()>,
+}
+
+struct WriteScheduler {
+    client: InfluxClient,
+    bucket: String,
+    in_flight: FuturesUnordered<WriteTask>,
+    stats: WriteStats,
+    first_write_started_at: Option<Instant>,
+    last_write_finished_at: Option<Instant>,
+}
+
+struct BatchWriter {
+    scheduler: WriteScheduler,
+    batch_size: usize,
+    batch_bytes: usize,
+    batch_body_capacity: usize,
+    batch_body: Vec<u8>,
+    line_buf: Vec<u8>,
+    batch_points: usize,
+}
+
+impl WriteScheduler {
+    fn new(client: InfluxClient, bucket: &str) -> Self {
+        Self {
+            client,
+            bucket: bucket.to_owned(),
+            in_flight: FuturesUnordered::new(),
+            stats: WriteStats::default(),
+            first_write_started_at: None,
+            last_write_finished_at: None,
         }
     }
 
-    let ts_ns = rec.time.map(|ts| (ts * 1_000_000_000.0).round() as i64);
-    to_line_protocol(measurement, &tags, &fields, ts_ns)
+    async fn finish(mut self) -> WriteStats {
+        while !self.in_flight.is_empty() {
+            self.collect_one().await;
+        }
+        if let (Some(start), Some(end)) = (self.first_write_started_at, self.last_write_finished_at)
+        {
+            self.stats.wall_elapsed = end.duration_since(start);
+        }
+        self.stats
+    }
+
+    async fn push_body(&mut self, count: usize, body: Vec<u8>) {
+        if count == 0 || body.is_empty() {
+            return;
+        }
+
+        while self.in_flight.len() >= INFLIGHT_WRITES {
+            self.collect_one().await;
+        }
+
+        let bytes = body.len();
+        let client = self.client.clone();
+        let bucket = self.bucket.clone();
+
+        self.in_flight.push(tokio::spawn(async move {
+            let start = Instant::now();
+            let result = write_line_protocol_body(&client, &bucket, body).await;
+            let finished_at = Instant::now();
+            WriteBatchResult {
+                count,
+                bytes,
+                started_at: start,
+                finished_at,
+                elapsed: finished_at.duration_since(start),
+                result,
+            }
+        }));
+    }
+
+    async fn collect_one(&mut self) {
+        match self.in_flight.next().await {
+            Some(Ok(result)) => {
+                self.stats.batches += 1;
+                self.stats.bytes += result.bytes;
+                self.stats.request_elapsed += result.elapsed;
+                self.first_write_started_at = Some(
+                    self.first_write_started_at
+                        .map_or(result.started_at, |prev| prev.min(result.started_at)),
+                );
+                self.last_write_finished_at = Some(
+                    self.last_write_finished_at
+                        .map_or(result.finished_at, |prev| prev.max(result.finished_at)),
+                );
+
+                match result.result {
+                    Ok(()) => {
+                        self.stats.ok += result.count;
+                    }
+                    Err(e) => {
+                        eprintln!("Influx write error: {e:?}");
+                        self.stats.bad += result.count;
+                    }
+                }
+            }
+            Some(Err(e)) => {
+                eprintln!("Influx write task error: {e}");
+                self.stats.bad += 1;
+            }
+            None => {}
+        }
+    }
 }
 
-// ----- HTTP write -----
-async fn write_batch_http(
-    client: &reqwest::Client,
-    base_url: &str,
-    org: &str,
+impl BatchWriter {
+    fn new(client: InfluxClient, bucket: &str, batch_size: usize, batch_bytes: usize) -> Self {
+        let batch_size = batch_size.max(1);
+        let batch_bytes = batch_bytes.max(1);
+        let batch_body_capacity = batch_body_capacity(batch_size, batch_bytes);
+        Self {
+            scheduler: WriteScheduler::new(client, bucket),
+            batch_size,
+            batch_bytes,
+            batch_body_capacity,
+            batch_body: Vec::with_capacity(batch_body_capacity),
+            line_buf: Vec::with_capacity(160),
+            batch_points: 0,
+        }
+    }
+
+    async fn push(&mut self, point: DataPoint) -> Result<()> {
+        self.line_buf.clear();
+        point
+            .write_data_point_to(&mut self.line_buf)
+            .context("serializing influx data point")?;
+
+        let line_len = self.line_buf.len();
+        if self.batch_points > 0
+            && self.batch_body.len().saturating_add(line_len) > self.batch_bytes
+        {
+            self.flush_batch().await;
+        }
+
+        self.batch_body.extend_from_slice(&self.line_buf);
+        self.batch_points += 1;
+
+        if self.batch_points >= self.batch_size || self.batch_body.len() >= self.batch_bytes {
+            self.flush_batch().await;
+        }
+
+        Ok(())
+    }
+
+    async fn finish(mut self) -> WriteStats {
+        self.flush_batch().await;
+        self.scheduler.finish().await
+    }
+
+    async fn flush_batch(&mut self) {
+        if self.batch_points == 0 {
+            return;
+        }
+
+        let count = self.batch_points;
+        self.batch_points = 0;
+        let body = std::mem::replace(
+            &mut self.batch_body,
+            Vec::with_capacity(self.batch_body_capacity),
+        );
+        self.scheduler.push_body(count, body).await;
+    }
+}
+
+fn batch_body_capacity(batch_size: usize, batch_bytes: usize) -> usize {
+    batch_bytes.min(batch_size.saturating_mul(160).max(1))
+}
+
+async fn write_line_protocol_body(
+    client: &InfluxClient,
     bucket: &str,
-    token: &str,
-    lines: &[String],
+    body: Vec<u8>,
 ) -> Result<()> {
-    if lines.is_empty() {
-        return Ok(());
-    }
-
-    // Ensure using http:// (no TLS)
-    if base_url.starts_with("https://") {
-        return Err(anyhow!(
-            "This build is HTTP-only; use an http:// URL or add a TLS backend."
-        ));
-    }
-
-    // Build the /api/v2/write URL safely with reqwest::Url
-    let mut url = Url::parse(base_url.trim_end_matches('/'))
-        .with_context(|| format!("invalid base URL: {base_url}"))?;
-    url.set_path("api/v2/write");
-
-    url.query_pairs_mut()
-        .append_pair("org", org)
-        .append_pair("bucket", bucket)
-        .append_pair("precision", "ns");
-
-    let body = lines.join("\n");
-    let resp = client
-        .post(url.clone())
-        .header("Authorization", format!("Token {}", token))
-        .header("Content-Type", "text/plain; charset=utf-8")
-        .body(body)
-        .send()
+    client
+        .write_line_protocol(&client.org, bucket, body)
         .await
-        .with_context(|| format!("POST {}", url))?;
-
-    let status = resp.status();
-    let text = resp.text().await.unwrap_or_default();
-    if !status.is_success() {
-        return Err(anyhow!("influx write failed: {} | {}", status, text));
-    }
-
-    Ok(())
+        .context("influx write failed")
 }
 
-pub async fn ingest_tar_gz(
-    client: &reqwest::Client,
-    base_url: &str,
-    org: &str,
-    bucket: &str,
-    token: &str,
-    path: &Path,
-    batch_size: usize,
-) -> Result<(usize, usize)> {
-    let file = File::open(path).with_context(|| format!("open {}", path.display()))?;
+#[derive(Debug, Default)]
+struct ParseStats {
+    bad: usize,
+    entry_files: usize,
+    lines: usize,
+    points: usize,
+    elapsed: Duration,
+}
+
+struct LineProtocolBatch {
+    count: usize,
+    body: Vec<u8>,
+}
+
+fn duration_ms(duration: Duration) -> f64 {
+    duration.as_secs_f64() * 1_000.0
+}
+
+fn trim_line_ending(line: &mut Vec<u8>) {
+    if line.last() == Some(&b'\n') {
+        line.pop();
+    }
+    if line.last() == Some(&b'\r') {
+        line.pop();
+    }
+}
+
+fn parse_tar_gz_blocking(path: PathBuf, tx: mpsc::Sender<DataPoint>) -> Result<ParseStats> {
+    let start = Instant::now();
+    let file = File::open(&path).with_context(|| format!("open {}", path.display()))?;
     let gz = GzDecoder::new(file);
     let stream = BufReader::new(gz);
     let mut archive = Archive::new(stream);
+    let mut stats = ParseStats::default();
 
-    // Raw line channel from IO → parsers
-    let (tx_lines, mut rx_lines) = mpsc::channel::<Vec<u8>>(16_384);
-
-    // Parsed LP channel from parsers → HTTP
-    let (tx_lp, mut rx_lp) = mpsc::channel::<String>(16_384);
-
-    // Spawn parser worker
-    tokio::spawn(async move {
-        while let Some(line) = rx_lines.recv().await {
-            if let Ok(Some(rec)) = parse_line(&line) {
-                if let Some(lp) = record_to_line(&rec) {
-                    // ignore send error if receiver closed
-                    let _ = tx_lp.send(lp).await;
-                }
-            }
-        }
-    });
-
-    // HTTP writer with limited concurrency
-    let sem = Arc::new(Semaphore::new(INFLIGHT_HTTP));
-    let mut ok = 0usize;
-    let mut bad = 0usize;
-
-    let http = client.clone();
-    let base_url = base_url.to_string();
-    let org = org.to_string();
-    let bucket = bucket.to_string();
-    let token = token.to_string();
-
-    // Batch aggregator task
-    let writer = tokio::spawn({
-        let sem = sem.clone();
-        async move {
-            let mut batch = Vec::with_capacity(batch_size);
-            let mut tasks = vec![];
-
-            while let Some(lp) = rx_lp.recv().await {
-                batch.push(lp);
-                if batch.len() >= batch_size {
-                    let permit = sem.clone().acquire_owned().await.unwrap();
-                    let body = std::mem::take(&mut batch);
-
-                    // fire off write concurrently
-                    let http = http.clone();
-                    let base_url = base_url.clone();
-                    let org = org.clone();
-                    let bucket = bucket.clone();
-                    let token = token.clone();
-                    tasks.push(tokio::spawn(async move {
-                        let res =
-                            write_batch_http(&http, &base_url, &org, &bucket, &token, &body).await;
-                        drop(permit);
-                        (res, body.len())
-                    }));
-                }
-            }
-
-            // flush final
-            if !batch.is_empty() {
-                let permit = sem.acquire_owned().await.unwrap();
-                let body = std::mem::take(&mut batch);
-                let http2 = http.clone();
-                let base_url2 = base_url.clone();
-                let org2 = org.clone();
-                let bucket2 = bucket.clone();
-                let token2 = token.clone();
-                tasks.push(tokio::spawn(async move {
-                    let res =
-                        write_batch_http(&http2, &base_url2, &org2, &bucket2, &token2, &body).await;
-                    drop(permit);
-                    (res, body.len())
-                }));
-            }
-
-            // collect results
-            let mut ok = 0usize;
-            let mut bad = 0usize;
-            for t in tasks {
-                match t.await {
-                    Ok((res, n)) => {
-                        if res.is_ok() {
-                            ok += n;
-                        } else {
-                            eprintln!("Result error: {:?} {n}", res);
-                            bad += n;
-                        }
-                    }
-                    Err(e) => {
-                        eprintln!("Task error: {e}");
-                        bad += 1;
-                    }
-                }
-            }
-            (ok, bad)
-        }
-    });
-
-    // IO stage: read entries and push lines quickly
-    for entry in archive.entries()? {
-        let mut entry = entry?;
+    for entry in archive
+        .entries()
+        .with_context(|| format!("reading archive {}", path.display()))?
+    {
+        let entry = entry.with_context(|| format!("reading entry in {}", path.display()))?;
         if !entry.header().entry_type().is_file() {
             continue;
         }
+        stats.entry_files += 1;
 
-        let mut buf = Vec::with_capacity(256 * 1024);
-        entry.read_to_end(&mut buf)?;
-        for slice in buf.split(|&b| b == b'\n') {
-            if slice.is_empty() {
-                continue;
-            }
-            if tx_lines.send(slice.to_vec()).await.is_err() {
+        let mut reader = BufReader::new(entry);
+        let mut line = Vec::with_capacity(1024);
+        loop {
+            line.clear();
+            let bytes_read = reader
+                .read_until(b'\n', &mut line)
+                .with_context(|| format!("reading lines from {}", path.display()))?;
+            if bytes_read == 0 {
                 break;
+            }
+            stats.lines += 1;
+            trim_line_ending(&mut line);
+
+            match parse_line(&line) {
+                Ok(Some(rec)) => {
+                    if let Some(point) = record_to_point(&rec) {
+                        if tx.blocking_send(point).is_err() {
+                            anyhow::bail!("writer stopped while reading {}", path.display());
+                        }
+                        stats.points += 1;
+                    }
+                }
+                Ok(None) => {}
+                Err(_) => {
+                    stats.bad += 1;
+                }
             }
         }
     }
-    drop(tx_lines); // close, signal parsers to finish
 
-    let (o, b) = writer.await.expect("writer task").clone();
-    Ok((o, b))
+    stats.elapsed = start.elapsed();
+    Ok(stats)
 }
 
-/// Ingest multiple files — only `.tar.gz`; others/missing are skipped with a message.
+fn send_line_protocol_batch(
+    tx: &mpsc::Sender<LineProtocolBatch>,
+    path: &Path,
+    body: &mut Vec<u8>,
+    count: &mut usize,
+    capacity: usize,
+) -> Result<()> {
+    if *count == 0 {
+        return Ok(());
+    }
+
+    let batch = LineProtocolBatch {
+        count: *count,
+        body: std::mem::replace(body, Vec::with_capacity(capacity)),
+    };
+    *count = 0;
+    if tx.blocking_send(batch).is_err() {
+        anyhow::bail!("writer stopped while reading {}", path.display());
+    }
+    Ok(())
+}
+
+fn parse_line_protocol_tar_gz_blocking(
+    path: PathBuf,
+    tx: mpsc::Sender<LineProtocolBatch>,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<ParseStats> {
+    let start = Instant::now();
+    let file = File::open(&path).with_context(|| format!("open {}", path.display()))?;
+    let gz = GzDecoder::new(file);
+    let stream = BufReader::new(gz);
+    let mut archive = Archive::new(stream);
+    let mut stats = ParseStats::default();
+    let batch_size = batch_size.max(1);
+    let batch_bytes = batch_bytes.max(1);
+    let capacity = batch_body_capacity(batch_size, batch_bytes);
+    let mut body = Vec::with_capacity(capacity);
+    let mut count = 0usize;
+
+    for entry in archive
+        .entries()
+        .with_context(|| format!("reading archive {}", path.display()))?
+    {
+        let entry = entry.with_context(|| format!("reading entry in {}", path.display()))?;
+        if !entry.header().entry_type().is_file() {
+            continue;
+        }
+        stats.entry_files += 1;
+
+        let mut reader = BufReader::new(entry);
+        let mut line = Vec::with_capacity(256);
+        loop {
+            line.clear();
+            let bytes_read = reader
+                .read_until(b'\n', &mut line)
+                .with_context(|| format!("reading lines from {}", path.display()))?;
+            if bytes_read == 0 {
+                break;
+            }
+            stats.lines += 1;
+            trim_line_ending(&mut line);
+            if line.iter().all(|b| b.is_ascii_whitespace()) {
+                continue;
+            }
+
+            let next_len = line.len().saturating_add(1);
+            if count > 0
+                && (count >= batch_size || body.len().saturating_add(next_len) > batch_bytes)
+            {
+                send_line_protocol_batch(&tx, &path, &mut body, &mut count, capacity)?;
+            }
+
+            body.extend_from_slice(&line);
+            body.push(b'\n');
+            count += 1;
+            stats.points += 1;
+
+            if count >= batch_size || body.len() >= batch_bytes {
+                send_line_protocol_batch(&tx, &path, &mut body, &mut count, capacity)?;
+            }
+        }
+    }
+
+    send_line_protocol_batch(&tx, &path, &mut body, &mut count, capacity)?;
+    stats.elapsed = start.elapsed();
+    Ok(stats)
+}
+
+pub async fn ingest_tar_gz(
+    client: &InfluxClient,
+    bucket: &str,
+    path: &Path,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<(usize, usize)> {
+    let (tx, mut rx) = mpsc::channel(PARSER_CHANNEL_CAPACITY);
+    let parser_path = path.to_path_buf();
+    let parser = tokio::task::spawn_blocking(move || parse_tar_gz_blocking(parser_path, tx));
+
+    let mut writer = BatchWriter::new(client.clone(), bucket, batch_size, batch_bytes);
+    let mut serialization_bad = 0usize;
+
+    while let Some(point) = rx.recv().await {
+        if let Err(e) = writer.push(point).await {
+            eprintln!("Influx point serialization error: {e:?}");
+            serialization_bad += 1;
+        }
+    }
+
+    let parser_result = parser.await;
+    let write_stats = writer.finish().await;
+    let parse_stats = parser_result.context("archive parser task failed")??;
+    println!(
+        "log: timings '{}' untar_ms={:.3} offload_wall_ms={:.3} offload_request_ms={:.3} untar_files={} lines={} parsed_points={} write_batches={} write_bytes={}",
+        path.display(),
+        duration_ms(parse_stats.elapsed),
+        duration_ms(write_stats.wall_elapsed),
+        duration_ms(write_stats.request_elapsed),
+        parse_stats.entry_files,
+        parse_stats.lines,
+        parse_stats.points,
+        write_stats.batches,
+        write_stats.bytes,
+    );
+    Ok((
+        write_stats.ok,
+        parse_stats.bad + serialization_bad + write_stats.bad,
+    ))
+}
+
+pub async fn ingest_line_protocol_tar_gz(
+    client: &InfluxClient,
+    bucket: &str,
+    path: &Path,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<(usize, usize)> {
+    let (tx, mut rx) = mpsc::channel(LINE_BATCH_CHANNEL_CAPACITY);
+    let parser_path = path.to_path_buf();
+    let parser = tokio::task::spawn_blocking(move || {
+        parse_line_protocol_tar_gz_blocking(parser_path, tx, batch_size, batch_bytes)
+    });
+
+    let mut writer = WriteScheduler::new(client.clone(), bucket);
+
+    while let Some(batch) = rx.recv().await {
+        writer.push_body(batch.count, batch.body).await;
+    }
+
+    let parser_result = parser.await;
+    let write_stats = writer.finish().await;
+    let parse_stats = parser_result.context("line protocol archive parser task failed")??;
+    println!(
+        "log: timings '{}' format=line_protocol untar_ms={:.3} offload_wall_ms={:.3} offload_request_ms={:.3} untar_files={} lines={} parsed_points={} write_batches={} write_bytes={}",
+        path.display(),
+        duration_ms(parse_stats.elapsed),
+        duration_ms(write_stats.wall_elapsed),
+        duration_ms(write_stats.request_elapsed),
+        parse_stats.entry_files,
+        parse_stats.lines,
+        parse_stats.points,
+        write_stats.batches,
+        write_stats.bytes,
+    );
+    Ok((write_stats.ok, parse_stats.bad + write_stats.bad))
+}
+
+async fn ingest_archive(
+    client: &InfluxClient,
+    bucket: &str,
+    path: &Path,
+    batch_size: usize,
+    batch_bytes: usize,
+) -> Result<(usize, usize)> {
+    let fname = path
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or_default();
+    if fname.ends_with(".lp.tar.gz") {
+        ingest_line_protocol_tar_gz(client, bucket, path, batch_size, batch_bytes).await
+    } else {
+        ingest_tar_gz(client, bucket, path, batch_size, batch_bytes).await
+    }
+}
+
+async fn ingest_one_file(
+    influx: InfluxClient,
+    bucket: String,
+    path: PathBuf,
+    batch_size: usize,
+    batch_bytes: usize,
+    delete: bool,
+) -> Result<FileIngestResult> {
+    println!("Start ingesting '{}'", path.display());
+    let start_time = Instant::now();
+    let (ok, bad) = ingest_archive(&influx, &bucket, &path, batch_size, batch_bytes)
+        .await
+        .with_context(|| format!("ingesting {}", path.display()))?;
+    println!(
+        "Finished ingesting '{}', duration: {:?}",
+        path.display(),
+        start_time.elapsed()
+    );
+
+    if delete && bad <= 1 {
+        match remove_file(&path) {
+            Ok(_) => {
+                println!("log: deleted log '{}'", path.display());
+            }
+            Err(e) => {
+                eprintln!("log: failed to delete '{}': {}", path.display(), e);
+            }
+        }
+    }
+
+    Ok(FileIngestResult { ok, bad })
+}
+
+fn spawn_file_ingest(
+    influx: InfluxClient,
+    bucket: String,
+    path: PathBuf,
+    batch_size: usize,
+    batch_bytes: usize,
+    delete: bool,
+) -> FileTask {
+    tokio::spawn(ingest_one_file(
+        influx,
+        bucket,
+        path,
+        batch_size,
+        batch_bytes,
+        delete,
+    ))
+}
+
+/// Ingest multiple files: only `.tar.gz`; others/missing are skipped with a message.
 pub async fn ingest_files(
     url: &str,
     token: &str,
@@ -410,18 +680,19 @@ pub async fn ingest_files(
     bucket: &str,
     files: &[PathBuf],
     batch_size: usize,
+    batch_bytes: usize,
+    file_concurrency: usize,
     delete: bool,
 ) -> Result<(usize, usize, usize, usize)> {
-    let http = reqwest::Client::builder()
-        .pool_max_idle_per_host(8)
-        .pool_idle_timeout(std::time::Duration::from_secs(30))
-        .tcp_nodelay(true)
-        .build()?;
+    let influx = InfluxClientBuilder::new(url, org, token).build()?;
+    let bucket = bucket.to_owned();
+    let file_concurrency = file_concurrency.max(1);
 
     let mut ok = 0usize;
     let mut bad = 0usize;
     let mut skipped = 0usize;
     let mut missing = 0usize;
+    let mut ready = Vec::new();
 
     for p in files {
         if !p.exists() {
@@ -436,38 +707,40 @@ pub async fn ingest_files(
             continue;
         }
 
-        println!("Start ingesting '{}'", p.display());
-        let start_time = Instant::now();
-        let (o, b) = match ingest_tar_gz(&http, url, org, bucket, token, p, batch_size)
-            .await
-            .with_context(|| format!("ingesting {}", p.display()))
-        {
-            Ok((o, b)) => (o, b),
-            Err(e) => {
-                eprintln!("Error ingesting tar file {}: {:?}", p.display(), e);
-                continue;
-            }
-        };
-        println!(
-            "Finished ingesting '{}', duration: {:?}",
-            p.display(),
-            start_time.elapsed()
-        );
-        ok += o;
-        bad += b;
+        ready.push(p.clone());
+    }
 
-        println!("Complete. wrote_points={ok} bad_records={bad}");
+    let mut next_file = ready.into_iter();
+    let mut in_flight: FuturesUnordered<FileTask> = FuturesUnordered::new();
 
-        if delete && bad <= 1 {
-            match remove_file(&p) {
-                Ok(_) => {
-                    println!("log: deleted log '{}'", p.display());
-                }
-                Err(e) => {
-                    eprintln!("log: failed to delete '{}': {}", p.display(), e);
-                    // keep trying next files
-                }
+    loop {
+        while in_flight.len() < file_concurrency {
+            let Some(path) = next_file.next() else {
+                break;
+            };
+            in_flight.push(spawn_file_ingest(
+                influx.clone(),
+                bucket.clone(),
+                path,
+                batch_size,
+                batch_bytes,
+                delete,
+            ));
+        }
+
+        match in_flight.next().await {
+            Some(Ok(Ok(result))) => {
+                ok += result.ok;
+                bad += result.bad;
+                println!("Complete. wrote_points={ok} bad_records={bad}");
             }
+            Some(Ok(Err(e))) => {
+                eprintln!("Error ingesting tar file: {e:?}");
+            }
+            Some(Err(e)) => {
+                eprintln!("File ingest task error: {e}");
+            }
+            None => break,
         }
     }
 
