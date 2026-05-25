@@ -156,6 +156,36 @@
       font-weight: 700;
     }
 
+    .chart-hover-detail {
+      display: grid;
+      gap: 0.35rem;
+      margin: 0.25rem 0 0.75rem;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid rgba(39, 76, 119, 0.12);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      font-size: 0.86rem;
+      box-shadow: 0 10px 24px rgba(31, 42, 47, 0.08);
+    }
+
+    .chart-hover-detail[hidden] {
+      display: none;
+    }
+
+    .chart-hover-time,
+    .chart-hover-row {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .chart-hover-row {
+      display: flex;
+      gap: 0.45rem;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+
     @media (max-width: 900px) {
       .signals-layout {
         grid-template-columns: 1fr;
@@ -266,6 +296,7 @@
     let sharedXWindow = null;
     let manualZoomActive = false;
     let chartValueNodes = new Map();
+    let chartHoverNodes = new Map();
     let signalCacheUnsubscribe = null;
 
     function escapeHtml(value) {
@@ -297,6 +328,12 @@
       return unit ? `${text} ${unit}` : text;
     }
 
+    function exactNumericLabel(value, entry) {
+      const unit = displayUnit(entry.unit);
+      const text = Number.isFinite(value) ? String(value) : "NaN";
+      return unit ? `${text} ${unit}` : text;
+    }
+
     function displayValue(entry, point) {
       if (!point) return "Waiting for data";
       if (!Number.isFinite(point.v)) {
@@ -307,6 +344,19 @@
       if (entry.kind === "enum") return point.label || numericLabel(point.v, entry);
       if (entry.kind === "boolean") return point.v >= 0.5 ? "TRUE" : "FALSE";
       return numericLabel(point.v, entry);
+    }
+
+    function exactPointValue(entry, point) {
+      if (!point) return "";
+      const raw = exactNumericLabel(point.v, entry);
+      if (entry.kind === "enum") {
+        return point.label ? `${point.label} (raw ${raw})` : raw;
+      }
+      if (entry.kind === "boolean") {
+        if (!Number.isFinite(point.v)) return "UNKNOWN";
+        return `${point.v >= 0.5 ? "TRUE" : "FALSE"} (raw ${raw})`;
+      }
+      return raw;
     }
 
     function colorFor(signalId) {
@@ -511,6 +561,18 @@
       return `${hours}:${minutes}:${seconds}.${millis}`;
     }
 
+    function formatLoggedTimeMs(ts) {
+      const date = new Date(ts);
+      const year = String(date.getFullYear()).padStart(4, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day} ${formatTimestampMs(ts)}`;
+    }
+
+    function formatTimestampMsValue(ts) {
+      return `${Math.trunc(Number(ts)).toLocaleString()} ms`;
+    }
+
     function formatTimestampForWindow(ts) {
       const date = new Date(ts);
       const hours = String(date.getHours()).padStart(2, "0");
@@ -568,6 +630,70 @@
         data.push(xs.map((x) => map.has(x) ? map.get(x) : null));
       });
       return data;
+    }
+
+    function pointAtTimestamp(signalId, timestampMs) {
+      const points = histories.get(signalId) || [];
+      for (let index = points.length - 1; index >= 0; index -= 1) {
+        const point = points[index];
+        if (point.t === timestampMs) {
+          return point;
+        }
+        if (point.t < timestampMs) {
+          break;
+        }
+      }
+      return null;
+    }
+
+    function clearChartHover(chartKey) {
+      const node = chartHoverNodes.get(chartKey);
+      if (!node) {
+        return;
+      }
+      node.hidden = true;
+      node.replaceChildren();
+    }
+
+    function updateChartHover(chartKey, u, entries) {
+      const node = chartHoverNodes.get(chartKey);
+      const index = u.cursor.idx;
+      if (!node || index === null || index === undefined || index < 0) {
+        clearChartHover(chartKey);
+        return;
+      }
+      const timestampMs = u.data[0][index];
+      if (!Number.isFinite(timestampMs)) {
+        clearChartHover(chartKey);
+        return;
+      }
+
+      const rows = [];
+      for (const entry of entries) {
+        const point = pointAtTimestamp(entry.id, timestampMs);
+        if (!point) {
+          continue;
+        }
+        rows.push(`
+          <div class="chart-hover-row">
+            <span class="swatch" style="background:${colorFor(entry.id)}"></span>
+            <strong>${escapeHtml(entry.signal_name)}</strong>
+            <span>${escapeHtml(exactPointValue(entry, point))}</span>
+          </div>
+        `);
+      }
+
+      if (!rows.length) {
+        clearChartHover(chartKey);
+        return;
+      }
+
+      node.innerHTML = `
+        <div class="chart-hover-time"><strong>Logged at (ms)</strong> ${escapeHtml(formatLoggedTimeMs(timestampMs))}</div>
+        <div class="chart-hover-time"><strong>timestamp_ms</strong> ${escapeHtml(formatTimestampMsValue(timestampMs))}</div>
+        ${rows.join("")}
+      `;
+      node.hidden = false;
     }
 
     function destroyCharts() {
@@ -777,6 +903,9 @@
           show: false,
         },
         hooks: {
+          setCursor: [
+            (u) => updateChartHover(chartKey, u, entries),
+          ],
           setScale: [
             (u, scaleKey) => {
               if (scaleKey === "x" && !suppressScaleHook) {
@@ -840,6 +969,8 @@
       renderLegend(entries);
       destroyCharts();
       chartWrap.replaceChildren();
+      chartValueNodes = new Map();
+      chartHoverNodes = new Map();
 
       if (!entries.length) {
         chartWrap.hidden = true;
@@ -867,6 +998,11 @@
           </div>
           ${renderChartValueStrip(config.entries)}
         `;
+        const hoverDetail = document.createElement("div");
+        hoverDetail.className = "chart-hover-detail";
+        hoverDetail.hidden = true;
+        panel.appendChild(hoverDetail);
+        chartHoverNodes.set(config.key, hoverDetail);
         const container = document.createElement("div");
         container.dataset.chartKey = config.key;
         panel.appendChild(container);
@@ -875,6 +1011,7 @@
           chartValueNodes.set(node.dataset.chartValueId, node);
         });
         const chart = new uPlot(chartOptions(config.entries, config.key, config.title), data, container);
+        container.addEventListener("mouseleave", () => clearChartHover(config.key));
         charts.push({
           key: config.key,
           chart,

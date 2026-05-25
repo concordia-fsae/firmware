@@ -104,6 +104,28 @@
     .map-overlay {
       z-index: 3;
     }
+    .map-hover-tooltip {
+      position: absolute;
+      z-index: 4;
+      display: grid;
+      gap: 0.35rem;
+      max-width: min(360px, calc(100% - 24px));
+      padding: 0.65rem 0.75rem;
+      border: 1px solid rgba(39, 76, 119, 0.16);
+      border-radius: 10px;
+      background: rgba(255, 253, 249, 0.96);
+      color: var(--ink);
+      font-size: 0.86rem;
+      box-shadow: 0 14px 32px rgba(31, 42, 47, 0.16);
+      pointer-events: none;
+    }
+    .map-hover-tooltip[hidden] {
+      display: none;
+    }
+    .map-hover-row {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
     .car-marker::after {
       content: "";
       position: absolute;
@@ -313,6 +335,7 @@
         <div class="car-marker-layer">
           <div class="car-marker" id="car-marker" hidden></div>
         </div>
+        <div class="map-hover-tooltip" id="map-hover-tooltip" hidden></div>
         <div class="map-overlay" id="map-overlay">Waiting for GPS</div>
       </div>
     </div>
@@ -410,6 +433,7 @@
       const MAX_TILE_LAT = 85.05112878;
       const MAX_TRAIL_POINTS = 5000;
       const MIN_TRAIL_DISTANCE_M = 0.75;
+      const TRAIL_HOVER_RADIUS_PX = 12;
       const CAR_CLOCK_REFRESH_MS = 1000;
       const FALLBACK_LAT_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lat";
       const FALLBACK_LON_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lon";
@@ -428,6 +452,7 @@
       const tileLayer = document.getElementById("tile-layer");
       const trailLayer = document.getElementById("trail-layer");
       const mapOverlay = document.getElementById("map-overlay");
+      const mapHoverTooltip = document.getElementById("map-hover-tooltip");
       const carMarker = document.getElementById("car-marker");
       const followCar = document.getElementById("follow-car");
       const clearTrailButton = document.getElementById("clear-trail");
@@ -536,6 +561,36 @@
         return validPosition(lat, lon) && !unsetPosition(lat, lon);
       }
 
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatTimeOfDayMs(timestampMs) {
+        const date = new Date(timestampMs);
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
+        const millis = String(date.getMilliseconds()).padStart(3, "0");
+        return `${hours}:${minutes}:${seconds}.${millis}`;
+      }
+
+      function formatLoggedTimeMs(timestampMs) {
+        const date = new Date(timestampMs);
+        const year = String(date.getFullYear()).padStart(4, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day} ${formatTimeOfDayMs(timestampMs)}`;
+      }
+
+      function formatTimestampMsValue(timestampMs) {
+        return `${Math.trunc(Number(timestampMs)).toLocaleString()} ms`;
+      }
+
       function distanceMeters(a, b) {
         const latMeters = (b.lat - a.lat) * 111320;
         const lonMeters = (b.lon - a.lon) * 111320 * Math.cos(((a.lat + b.lat) / 2) * Math.PI / 180);
@@ -553,6 +608,7 @@
       function clearTrail() {
         trailPoints = [];
         clearTrailLayer();
+        hideMapHover();
         updateTrailCount();
         scheduleRender();
       }
@@ -758,6 +814,87 @@
         };
       }
 
+      function mapGeometry() {
+        const rect = mapCanvas.getBoundingClientRect();
+        if (!mapCenter || !rect.width || !rect.height) {
+          return null;
+        }
+        return {
+          rect,
+          width: rect.width,
+          height: rect.height,
+          zoom: currentZoom(),
+          centerPixel: latLonToWorldPixel(mapCenter.lat, mapCenter.lon, currentZoom()),
+        };
+      }
+
+      function hideMapHover() {
+        mapHoverTooltip.hidden = true;
+        mapHoverTooltip.replaceChildren();
+      }
+
+      function showMapHover(point, screen, geometry) {
+        mapHoverTooltip.innerHTML = `
+          <div class="map-hover-row"><strong>Logged at (ms)</strong> ${escapeHtml(formatLoggedTimeMs(point.timestampMs))}</div>
+          <div class="map-hover-row"><strong>timestamp_ms</strong> ${escapeHtml(formatTimestampMsValue(point.timestampMs))}</div>
+          <div class="map-hover-row"><strong>Latitude</strong> ${escapeHtml(String(point.lat))} deg</div>
+          <div class="map-hover-row"><strong>Longitude</strong> ${escapeHtml(String(point.lon))} deg</div>
+        `;
+        mapHoverTooltip.hidden = false;
+
+        const offset = 14;
+        const maxLeft = Math.max(8, geometry.width - mapHoverTooltip.offsetWidth - 8);
+        let left = Math.min(screen.x + offset, maxLeft);
+        let top = screen.y - mapHoverTooltip.offsetHeight - offset;
+        if (top < 8) {
+          top = screen.y + offset;
+        }
+        top = Math.min(top, Math.max(8, geometry.height - mapHoverTooltip.offsetHeight - 8));
+        mapHoverTooltip.style.left = `${Math.max(8, left)}px`;
+        mapHoverTooltip.style.top = `${Math.max(8, top)}px`;
+      }
+
+      function updateMapHover(event) {
+        if (dragState) {
+          hideMapHover();
+          return;
+        }
+        const geometry = mapGeometry();
+        if (!geometry || !trailPoints.length) {
+          hideMapHover();
+          return;
+        }
+
+        const pointerX = event.clientX - geometry.rect.left;
+        const pointerY = event.clientY - geometry.rect.top;
+        let best = null;
+        let bestDistanceSquared = TRAIL_HOVER_RADIUS_PX * TRAIL_HOVER_RADIUS_PX;
+
+        for (const point of trailPoints) {
+          const screen = screenPoint(point, geometry.centerPixel, geometry.width, geometry.height, geometry.zoom);
+          if (screen.x < -TRAIL_HOVER_RADIUS_PX
+              || screen.x > geometry.width + TRAIL_HOVER_RADIUS_PX
+              || screen.y < -TRAIL_HOVER_RADIUS_PX
+              || screen.y > geometry.height + TRAIL_HOVER_RADIUS_PX) {
+            continue;
+          }
+          const dx = screen.x - pointerX;
+          const dy = screen.y - pointerY;
+          const distanceSquared = dx * dx + dy * dy;
+          if (distanceSquared <= bestDistanceSquared) {
+            bestDistanceSquared = distanceSquared;
+            best = { point, screen };
+          }
+        }
+
+        if (!best) {
+          hideMapHover();
+          return;
+        }
+
+        showMapHover(best.point, best.screen, geometry);
+      }
+
       function renderTrail(width, height, centerPixel, zoom) {
         trailLayer.setAttribute("viewBox", `0 0 ${Math.round(width)} ${Math.round(height)}`);
         trailLayer.setAttribute("width", Math.round(width));
@@ -769,7 +906,10 @@
 
         const visibleMargin = 80;
         const points = trailPoints
-          .map((point) => screenPoint(point, centerPixel, width, height, zoom))
+          .map((point) => ({
+            ...point,
+            ...screenPoint(point, centerPixel, width, height, zoom),
+          }))
           .filter((point) => point.x >= -visibleMargin
             && point.x <= width + visibleMargin
             && point.y >= -visibleMargin
@@ -789,13 +929,14 @@
           trailLayer.appendChild(path);
         }
 
-        const last = points[points.length - 1];
-        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        dot.setAttribute("class", "trail-point");
-        dot.setAttribute("cx", last.x.toFixed(1));
-        dot.setAttribute("cy", last.y.toFixed(1));
-        dot.setAttribute("r", "4");
-        trailLayer.appendChild(dot);
+        points.forEach((point, index) => {
+          const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          dot.setAttribute("class", "trail-point");
+          dot.setAttribute("cx", point.x.toFixed(1));
+          dot.setAttribute("cy", point.y.toFixed(1));
+          dot.setAttribute("r", index === points.length - 1 ? "4" : "2.5");
+          trailLayer.appendChild(dot);
+        });
       }
 
       function renderPositionOverlays(width, height, centerPixel, zoom) {
@@ -832,6 +973,7 @@
         if (!mapCenter) {
           clearTiles();
           clearTrailLayer();
+          hideMapHover();
           carMarker.hidden = true;
           activeViewLabel.textContent = "No Map";
           setOverlay("Waiting for GPS");
@@ -1516,6 +1658,7 @@
         if (!currentMapView()) {
           return;
         }
+        hideMapHover();
         followCar.checked = false;
         const zoom = currentZoom();
         const center = mapCenter || carPosition || selectedView();
@@ -1574,8 +1717,10 @@
       downloadForm.addEventListener("submit", downloadView);
       mapCanvas.addEventListener("pointerdown", beginDrag);
       mapCanvas.addEventListener("pointermove", moveDrag);
+      mapCanvas.addEventListener("pointermove", updateMapHover);
       mapCanvas.addEventListener("pointerup", endDrag);
       mapCanvas.addEventListener("pointercancel", endDrag);
+      mapCanvas.addEventListener("pointerleave", hideMapHover);
       window.addEventListener("resize", scheduleRender);
       window.addEventListener("pagehide", () => {
         if (signalSource) {
