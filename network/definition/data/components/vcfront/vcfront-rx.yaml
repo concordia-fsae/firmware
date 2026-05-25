@@ -31,3 +31,5 @@ signals:
     sourceBuses: veh
   PM100DX_motorSpeedCritical:
     sourceBuses: veh
+  VCREAR_brakePressure:
+    sourceBuses: veh
