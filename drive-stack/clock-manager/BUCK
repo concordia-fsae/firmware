@@ -1,0 +1,76 @@
+load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_resources", "generate_rust_library")
+load("//drive-stack/carputer:defs.bzl", "carputer_application_target")
+
+generate_resources(
+    name = "yamcan-codegen",
+    network_dep = "//network:network",
+    node = "carputerClock",
+    rust_wrapper = True,
+    visibility = ["PUBLIC"],
+)
+
+generate_c_library(
+    name = "yamcan",
+    codegen_target = ":yamcan-codegen",
+    extra_srcs = [
+        "//components/shared/code:libs/Utility.c",
+    ],
+    extra_exported_headers = {
+        "CANIO_componentSpecific.h": "//drive-stack/can-bridge:CANIO_componentSpecific.h",
+        "YamcanConfig.h": "//drive-stack/can-bridge:YamcanConfig.h",
+    },
+    library_deps = [
+        "//components/shared/code:headers",
+    ],
+    visibility = ["PUBLIC"],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+)
+
+generate_rust_library(
+    name = "yamcan-rust",
+    crate = "yamcan_clock",
+    codegen_target = ":yamcan-codegen",
+    c_dep = ":yamcan",
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rust_binary(
+    name = "clock-manager",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    deps = [
+        ":yamcan-rust",
+        "//third_party:anyhow",
+        "//third_party:chrono",
+        "//third_party:clap",
+        "//third_party:env_logger",
+        "//third_party:libc",
+        "//third_party:log",
+    ],
+    target_compatible_with = [
+        "prelude//os/constraints:linux",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+configured_alias(
+    name = "bin-arm64",
+    actual = ":clock-manager",
+    platform = "//buck2/platforms:arm64-linux",
+    visibility = ["PUBLIC"],
+)
+
+carputer_application_target(
+    name = "carputer",
+    target_node = "clock-manager",
+    binary = ":bin-arm64",
+    binary_install_name = "clock-manager",
+    service_src = "clock-manager.service",
+    service_install_name = "clock-manager.service",
+    include_artifact_hash = False,
+)
