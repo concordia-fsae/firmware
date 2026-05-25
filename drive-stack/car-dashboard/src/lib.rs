@@ -12,6 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
+use chrono::SecondsFormat;
 use clap::Parser;
 use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
@@ -500,6 +501,13 @@ struct MapDeleteResponse {
     deleted_view: MapView,
     removed_tiles: usize,
     remaining_views: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ClockResponse {
+    ok: bool,
+    unix_ms: u64,
+    local_time: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -1128,6 +1136,10 @@ pub async fn run(opts: Opts) -> Result<()> {
             signal_events_reply(state, selected_ids)
         });
 
+    let clock = warp::path!("api" / "clock")
+        .and(warp::get())
+        .map(handle_clock);
+
     let events = warp::path("events")
         .and(warp::get())
         .and(state_filter.clone())
@@ -1276,11 +1288,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(tester_present_state)
         .or(controller_jobs)
         .or(signal_events_with_query)
+        .or(clock)
         .or(events)
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/database', '/controllers/:name', '/api/signals/manifest', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/database', '/controllers/:name', '/api/signals/manifest', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1419,6 +1432,18 @@ async fn handle_signal_manifest(state: AppState) -> Result<warp::reply::Response
         warp::http::StatusCode::OK,
     )
     .into_response())
+}
+
+fn handle_clock() -> warp::reply::Response {
+    warp::reply::with_status(
+        warp::reply::json(&ClockResponse {
+            ok: true,
+            unix_ms: now_ms(),
+            local_time: chrono::Local::now().to_rfc3339_opts(SecondsFormat::Secs, false),
+        }),
+        warp::http::StatusCode::OK,
+    )
+    .into_response()
 }
 
 async fn handle_map_views(state: AppState) -> Result<warp::reply::Response, Infallible> {
