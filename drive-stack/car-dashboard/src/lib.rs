@@ -42,6 +42,7 @@ use yamcan_dashboard as yamcan;
 use yamcan_dashboard::NetworkBus;
 
 const DEFAULT_PORT: u16 = 8091;
+const DEFAULT_DATABASE_PORT: u16 = 8086;
 const DEFAULT_OFFLINE_TIMEOUT_SECS: u64 = 3;
 const DEFAULT_SWEEP_INTERVAL_MS: u64 = 250;
 const OTA_AGENT_DISCOVERY_TIMEOUT_SECS: u64 = 2;
@@ -56,6 +57,12 @@ const SUPPORTED_CONTROLLERS: &[&str] = &[
 pub struct Opts {
     #[arg(long, default_value_t = DEFAULT_PORT)]
     pub port: u16,
+
+    #[arg(long, default_value_t = DEFAULT_DATABASE_PORT)]
+    pub database_port: u16,
+
+    #[arg(long)]
+    pub database_viewer_token: Option<String>,
 
     #[arg(
         long,
@@ -715,6 +722,16 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_controller);
 
+    let database_port = opts.database_port;
+    let database_viewer_token = opts.database_viewer_token.clone();
+    let database = warp::path("database")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(warp::header::optional::<String>("host"))
+        .map(move |host_header: Option<String>| {
+            handle_database_redirect(host_header, database_port, database_viewer_token.as_deref())
+        });
+
     let signal_manifest = warp::path!("api" / "signals" / "manifest")
         .and(warp::get())
         .and(state_filter.clone())
@@ -928,6 +945,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     let routes = home
         .or(signals)
         .or(controller)
+        .or(database)
         .or(signal_manifest)
         .or(uplot_js)
         .or(uplot_css)
@@ -948,7 +966,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/database', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -996,6 +1014,76 @@ async fn handle_signals(state: AppState) -> Result<warp::reply::Response, Infall
         views::render_signals(&initial_manifest_json),
         warp::http::StatusCode::OK,
     ))
+}
+
+fn handle_database_redirect(
+    host_header: Option<String>,
+    database_port: u16,
+    viewer_token: Option<&str>,
+) -> warp::reply::Response {
+    let host = database_host_from_header(host_header.as_deref())
+        .unwrap_or_else(|| "localhost".to_string());
+    let mut location = format!("http://{}:{}/", host, database_port);
+    if let Some(token) = viewer_token {
+        location.push_str("?token=");
+        location.push_str(&percent_encode_query_value(token));
+    }
+
+    let location = match warp::http::HeaderValue::from_str(&location) {
+        Ok(value) => value,
+        Err(error) => {
+            warn!("rejecting database redirect for invalid host header: {error}");
+            return warp::reply::with_status(
+                "invalid database redirect host",
+                warp::http::StatusCode::BAD_REQUEST,
+            )
+            .into_response();
+        }
+    };
+
+    let mut response =
+        warp::reply::with_status("", warp::http::StatusCode::TEMPORARY_REDIRECT).into_response();
+    response
+        .headers_mut()
+        .insert(warp::http::header::LOCATION, location);
+    response
+}
+
+fn database_host_from_header(host_header: Option<&str>) -> Option<String> {
+    let host = host_header?.trim();
+    if host.is_empty() {
+        return None;
+    }
+
+    if host.starts_with('[') {
+        let end = host.find(']')?;
+        return Some(host[..=end].to_string());
+    }
+
+    let colon_count = host.bytes().filter(|byte| *byte == b':').count();
+    if colon_count == 1 {
+        let (hostname, _) = host.split_once(':')?;
+        let hostname = hostname.trim();
+        return (!hostname.is_empty()).then(|| hostname.to_string());
+    }
+    if colon_count > 1 {
+        return Some(format!("[{host}]"));
+    }
+
+    Some(host.to_string())
+}
+
+fn percent_encode_query_value(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(byte as char);
+            }
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    encoded
 }
 
 async fn handle_signal_manifest(state: AppState) -> Result<warp::reply::Response, Infallible> {
@@ -3399,5 +3487,35 @@ mod tests {
         assert!(sessions.iter().any(|session| {
             session.key == "safety-system" && session.label == "Safety Diagnostic"
         }));
+    }
+
+    #[test]
+    fn database_redirect_host_uses_dashboard_host_without_port() {
+        assert_eq!(
+            database_host_from_header(Some("carputer:8091")),
+            Some("carputer".to_string())
+        );
+        assert_eq!(
+            database_host_from_header(Some("192.168.1.42:8091")),
+            Some("192.168.1.42".to_string())
+        );
+        assert_eq!(
+            database_host_from_header(Some("[::1]:8091")),
+            Some("[::1]".to_string())
+        );
+        assert_eq!(
+            database_host_from_header(Some("2001:db8::1")),
+            Some("[2001:db8::1]".to_string())
+        );
+        assert_eq!(database_host_from_header(Some("")), None);
+        assert_eq!(database_host_from_header(None), None);
+    }
+
+    #[test]
+    fn database_redirect_token_is_query_encoded() {
+        assert_eq!(
+            percent_encode_query_value("abc-_.~=="),
+            "abc-_.~%3D%3D".to_string()
+        );
     }
 }
