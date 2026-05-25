@@ -1,20 +1,23 @@
 /**
- * @file battery_model.c
+ * @file batteryModel.c
  * @brief  Source code for SOC Estimation - RC battery model
  */
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 #include <string.h>
 
 /**< Module headers */
-#include "battery_model.h"
+#include "batteryModel.h"
 #include "BMS.h"
 
 /**< Other Includes */
 #include "lib_interpolation.h"
 
-
 /******************************************************************************
- *                             Private Structs
+ *                             T Y P E D E F S
  ******************************************************************************/
 
 typedef struct
@@ -29,34 +32,10 @@ typedef struct
 } cell_params_S;
 
 /******************************************************************************
- *                             Public Functions
+ *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-float32_t battery_model_get_SOC(battery_model_S* batteryModel)
-{
-    return batteryModel->X.elemCol[0];
-}
-
-float32_t battery_model_get_VRC1(battery_model_S* batteryModel)
-{
-    return batteryModel->X.elemCol[1];
-}
-
-float32_t battery_model_get_VRC2(battery_model_S* batteryModel)
-{
-    return batteryModel->X.elemCol[2];
-}
-
-void battery_model_set_SOC(battery_model_S* batteryModel, float32_t soc)
-{
-    batteryModel->X.elemCol[0] = soc;
-}
-
-/******************************************************************************
- *                             Private Functions
- ******************************************************************************/
-
-static void cell_params_update(battery_model_S* batteryModel, float32_t cellCurrent, float32_t cellVoltage, cell_params_S* cellParams, float32_t SOC)
+static void cell_params_update(batteryModel_S* batteryModel, float32_t cellCurrent, float32_t cellVoltage, cell_params_S* cellParams, float32_t SOC)
 {
     cellParams->SOC = SOC;
     cellParams->OCV = (lib_interpolation_interpolate(batteryModel->config.socMap, SOC * 100));
@@ -69,7 +48,7 @@ static void cell_params_update(battery_model_S* batteryModel, float32_t cellCurr
         cellParams->R2 = (lib_interpolation_interpolate(batteryModel->config.R2MapDischarge, SOC * 100));
         cellParams->C2 = (lib_interpolation_interpolate(batteryModel->config.C2MapDischarge, SOC * 100));
     }
-    if ((cellCurrent > 0) || (cellVoltage >= cellParams->OCV))
+    else if ((cellCurrent > 0) || (cellVoltage > cellParams->OCV))
     {
         cellParams->Ri = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, SOC * 100));
         cellParams->R1 = (lib_interpolation_interpolate(batteryModel->config.R1MapCharge, SOC * 100));
@@ -79,7 +58,7 @@ static void cell_params_update(battery_model_S* batteryModel, float32_t cellCurr
     }
 }
 
-static void model_state_run(battery_model_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t dt)
+static void model_state_run(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t dt)
 {
     cell_params_S cellParams;
 
@@ -140,10 +119,10 @@ static void model_state_run(battery_model_S* batteryModel, float32_t cellVoltage
     }
 }
 
-static void current_limit(battery_model_S* batteryModel, float32_t minCellVoltage, float32_t maxCellVoltage)
+static void current_limit(batteryModel_S* batteryModel, float32_t minCellVoltage, float32_t maxCellVoltage)
 {
-    float32_t RiDischarge = (lib_interpolation_interpolate(batteryModel->config.RiMapDischarge, battery_model_get_SOC(batteryModel) * 100));
-    float32_t RiCharge    = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, battery_model_get_SOC(batteryModel) * 100));
+    float32_t RiDischarge = (lib_interpolation_interpolate(batteryModel->config.RiMapDischarge, batteryModel_getSOC(batteryModel) * 100));
+    float32_t RiCharge    = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, batteryModel_getSOC(batteryModel) * 100));
 
     RiDischarge                  = RiDischarge * 1.2f; // safety factor find maximum deviation from average in cell testing
     RiCharge                     = RiCharge * 1.2f;    // safety factor find maximum deviation from average in cell testing
@@ -162,10 +141,31 @@ static void current_limit(battery_model_S* batteryModel, float32_t minCellVoltag
 }
 
 /******************************************************************************
- *                             Public Functions
+ *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
-void battery_model_init(battery_model_S* batteryModel, float32_t soc)
+float32_t batteryModel_getSOC(batteryModel_S* batteryModel)
+{
+    return batteryModel->X.elemCol[0];
+}
+
+float32_t batteryModel_getVRC1(batteryModel_S* batteryModel)
+{
+    return batteryModel->X.elemCol[1];
+}
+
+float32_t batteryModel_getVRC2(batteryModel_S* batteryModel)
+{
+    return batteryModel->X.elemCol[2];
+}
+
+void batteryModel_setSOC(batteryModel_S* batteryModel, float32_t soc)
+{
+    batteryModel->X.elemCol[0] = soc;
+}
+
+
+void batteryModel_init(batteryModel_S* batteryModel, float32_t soc)
 {
     batteryModel->state                        = INIT;
     batteryModel->init_vrc2.initialCellVoltage = 0;
@@ -183,8 +183,8 @@ void battery_model_init(battery_model_S* batteryModel, float32_t soc)
 }
 
 // check input parameters
-void battery_model_run(battery_model_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t minCellVoltage,
-                       float32_t maxCellVoltage, float32_t dt)
+void batteryModel_run(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t minCellVoltage,
+                      float32_t maxCellVoltage, float32_t dt)
 {
     if (batteryModel->state == INIT)
     {

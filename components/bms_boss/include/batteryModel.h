@@ -1,18 +1,30 @@
 /**
- * @file SOC_Estimation.h
- * @brief  Header file for SOC Estimation
+ * @file batteryModel.h
+ * @brief  Header file for battery model
  */
 
 #pragma once
+
+/******************************************************************************
+ *                             I N C L U D E S
+ ******************************************************************************/
 
 #include "lib_interpolation.h"
 #include "lib_linAlg.h"
 #include "LIB_Types.h"
 
-LIB_LINALG_DEFINE_N(socMatrix, float32_t, 3U);
-typedef LIB_LINALG_INST_RMAT(socMatrix) soc_matrix_S;
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
 
+LIB_LINALG_DEFINE_N(socMatrix, float32_t, 3U);
 LIB_LINALG_DEFINE_N(socVector, float32_t, 3U);
+
+/******************************************************************************
+ *                             T Y P E D E F S
+ ******************************************************************************/
+
+typedef LIB_LINALG_INST_RMAT(socMatrix) soc_matrix_S;
 typedef LIB_LINALG_INST_CVEC(socVector) soc_col_vector_S;
 typedef LIB_LINALG_INST_ROW(socVector) soc_row_vector_S;
 
@@ -21,11 +33,11 @@ typedef enum
     INIT = 0x00,
     INIT_VRC,
     RUNNING,
-} battery_model_state_E;
+} batteryModel_state_E;
 
 typedef struct
 {
-    battery_model_state_E state;
+    batteryModel_state_E state;
     struct
     {
         float32_t                   Rnoise; // Measurement noise
@@ -63,13 +75,17 @@ typedef struct
     soc_matrix_S     eye3;
     soc_matrix_S     tmpMatrix;
     soc_matrix_S     tmpMatrix2;
-} battery_model_S;    // keep structs lower case snake, variables camel
+} batteryModel_S;
 
-float32_t battery_model_get_SOC(battery_model_S* batteryModel);
-float32_t battery_model_get_VRC1(battery_model_S* batteryModel);
-float32_t battery_model_get_VRC2(battery_model_S* batteryModel);
-void      battery_model_set_SOC(battery_model_S* batteryModel, float32_t soc);
+/******************************************************************************
+ *                       P U B L I C  F U N C T I O N S
+ ******************************************************************************/
 
-void      battery_model_run(battery_model_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t minCellVoltage,
-                            float32_t maxCellVoltage, float32_t dt);
-void      battery_model_init(battery_model_S* batteryModel, float32_t soc);
+float32_t batteryModel_getSOC(batteryModel_S* batteryModel);
+float32_t batteryModel_getVRC1(batteryModel_S* batteryModel);
+float32_t batteryModel_getVRC2(batteryModel_S* batteryModel);
+void      batteryModel_setSOC(batteryModel_S* batteryModel, float32_t soc);
+
+void      batteryModel_run(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t minCellVoltage,
+                           float32_t maxCellVoltage, float32_t dt);
+void      batteryModel_init(batteryModel_S* batteryModel, float32_t soc);

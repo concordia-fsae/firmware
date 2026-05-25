@@ -65,6 +65,7 @@ typedef struct
     uint8_t          connected_segments;
     float32_t        charge_limit;    // [A] precision 1A
     float32_t        discharge_limit; // [A] precision 1A
+    uint32_t         last_step_ms;
     float32_t        pack_voltage_calculated;
     float32_t        pack_voltage_measured;
     float32_t        pack_current;
@@ -126,4 +127,4 @@ float32_t BMSB_getContactorSohPrecharge(void);
 uint32_t  BMSB_getContactorLifetimeHvp(void);
 uint32_t  BMSB_getContactorLifetimeHvn(void);
 uint32_t  BMSB_getContactorLifetimePrecharge(void);
-bool      BMSB_set_SOC(void);
+bool      BMSB_initSOC(void);

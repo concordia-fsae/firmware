@@ -12,7 +12,7 @@
 #include <string.h>
 
 #include "app_faultManager.h"
-#include "battery_model.h"
+#include "batteryModel.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "drv_timer.h"
@@ -51,7 +51,7 @@
 
 BMSB_S BMS;
 
-battery_model_S bm = {
+batteryModel_S bm = {
     .config             = {
         .Rnoise         =                   0.05f,
         .Qnoise         = { { { 7e-8f,                   0.0f, 0.0f }, { 0.0f, 6e-5f, 0.0f }, { 0.0f, 0.0f, 6e-5f } } },
@@ -84,7 +84,7 @@ static drv_timer_S precharge_timer;
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
-static void chargeLimit(BMSB_S* bms, battery_model_S* batteryModel)
+static void chargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 {
     if ((bms->max_temp > 60.0f) || bms->fault)
     {
@@ -109,7 +109,7 @@ static void chargeLimit(BMSB_S* bms, battery_model_S* batteryModel)
     }
 }
 
-static void dischargeLimit(BMSB_S* bms, battery_model_S* batteryModel)
+static void dischargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 {
     if ((bms->max_temp > 60.0f) || bms->fault)
     {
@@ -217,7 +217,7 @@ static void getSegmentStats(BMSB_S* bms)
             bms->connected_segments++;
         }
     }
-    bms->soc = battery_model_get_SOC(&bm);;
+    bms->soc = batteryModel_getSOC(&bm);;
 }
 
 static bool checkBmsFaulted(void)
@@ -309,7 +309,7 @@ uint32_t BMSB_getContactorLifetimePrecharge(void)
     return contactor_data.contactorLifetime.precharge;
 }
 
-bool BMSB_set_SOC(void)
+bool BMSB_initSOC(void)
 {
     if (BMS.pack_voltage_measured <= 1e-6f)
     {
@@ -319,7 +319,7 @@ bool BMSB_set_SOC(void)
                              lib_interpolation_interpolate(&OCV_SOC_FUNC, BMS.pack_voltage_measured /
                                                            (BMS_CONFIGURED_SERIES_CELLS * BMS_CONFIGURED_SERIES_SEGMENTS)),
                              1.0f);
-    battery_model_set_SOC(&bm, soc);
+    batteryModel_setSOC(&bm, soc);
     current_data.soc = soc;
     return true;
 }
@@ -354,7 +354,8 @@ static void BMS_init(void)
     memset(&BMS, 0x00, sizeof(BMSB_S));
     IMD_init();
     drv_timer_init(&precharge_timer);
-    battery_model_init(&bm, current_data.soc);
+    batteryModel_init(&bm, current_data.soc);
+    BMS.last_step_ms                  = HW_TIM_getTimeMS();
     BMS.counted_coulombs.last_step_us = HW_TIM_getBaseTick();
     BMS.counted_coulombs.reset        = true;
 
@@ -397,11 +398,11 @@ static void BMS100Hz_PRD(void)
                                                     (contactorOpenRequestState == CAN_DIGITALSTATUS_ON);
     const bool          openContactors            = checkBmsFaulted();
 
-    const uint64_t      this_step                 = HW_TIM_getBaseTick();
-    const uint32_t      delta_t                   = (uint32_t)(this_step - BMS.counted_coulombs.last_step_us);
+    const uint32_t      this_step                 = HW_TIM_getTimeMS();
+    const uint32_t      delta_t                   = this_step - BMS.last_step_ms;
 
-    battery_model_run(&bm, BMS.pack_voltage_measured / (BMS_CONFIGURED_SERIES_CELLS * BMS_CONFIGURED_SERIES_SEGMENTS), BMS.packCurrentRaw / BMS_CONFIGURED_PARALLEL_CELLS,
-                      BMS.voltages.min, BMS.voltages.max, (float32_t)delta_t / 1000000.0f);
+    batteryModel_run(&bm, BMS.pack_voltage_measured / (BMS_CONFIGURED_SERIES_CELLS * BMS_CONFIGURED_SERIES_SEGMENTS), BMS.pack_current / BMS_CONFIGURED_PARALLEL_CELLS,
+                     BMS.voltages.min, BMS.voltages.max, (float32_t)delta_t / 1000.0f);
 
     if (openContactors || openRequest)
     {
@@ -463,7 +464,7 @@ static void BMS1kHz_PRD(void)
         const float32_t delta_amp_hr = BMS.pack_current * (((float32_t)delta_t) / 1000000.0f) * (1.0f / 3600.0f);
         BMS.counted_coulombs.reset   = false;
         BMS.counted_coulombs.amp_hr += delta_amp_hr;
-        current_data.soc             = SATURATE(0.0f, battery_model_get_SOC(&bm), 1.0f);
+        current_data.soc             = SATURATE(0.0f, batteryModel_getSOC(&bm), 1.0f);
     }
     else if (BMS.counted_coulombs.reset == false)
     {

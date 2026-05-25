@@ -371,7 +371,7 @@ signals:
 
   packSOC:
     unit: '%'
-    description: Average SOC of Tractive System Battery
+    description: SOC of Tractive System Battery Pack
     nativeRepresentation:
       resolution: 0.1
       bitWidth: 10

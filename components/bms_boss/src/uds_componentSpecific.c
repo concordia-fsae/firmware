@@ -111,7 +111,7 @@ static void routine_socInit(udsRoutineControlType_E routineControlType, uint8_t 
     switch (routineControlType)
     {
         case UDS_ROUTINE_CONTROL_START:
-            if (BMSB_set_SOC())
+            if (BMSB_initSOC())
             {
                 uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
             }
