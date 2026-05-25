@@ -143,7 +143,7 @@ class CType(Enum):
 
     @classmethod
     def from_val(cls, bit_width: int, signed: bool, flt: bool):
-        if bit_width == 1:
+        if bit_width == 1 and not signed and not flt:
             return CType._bool
 
         req_width_bytes = (bit_width + 7) // 8

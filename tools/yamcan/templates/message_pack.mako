@@ -75,7 +75,9 @@ const packTable_S ${bus.upper()}_packTable_${cycle_time}ms[] = {
   bit_width = math.ceil(signal.native_representation.bit_width / 32) * 32
   native_type = ""
 
-  if "float" in signal.datatype.value:
+  if signal.is_boolean():
+    native_type = "bool"
+  elif "float" in signal.datatype.value:
     native_type = f"float{bit_width}_t"
   elif signal.native_representation.range.min < 0:
     native_type = f"int{bit_width}_t"
@@ -125,13 +127,41 @@ __attribute__((always_inline)) static inline void set_${bus.upper()}_${signal.me
       elif dtype == 16:
         idx_s = int(idx_s/2)
 %>\
-%if signal.native_representation.bit_width == 1:
+%if signal.is_boolean():
     atomicOrU8(&m->u8[${int(signal.start_bit / 8)}U], (uint${dtype}_t)((val ? 1U : 0U) << ${signal.start_bit % 8}U));
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
     uint${dtype}_t tmp_${signal.name};
     %else:
     int${dtype}_t tmp_${signal.name};
+    %endif
+    %if signal.should_clamp_pack_input():
+      %if "float" in signal.datatype.value:
+    if (val < ${float(signal.native_representation.range.min)}f)
+    {
+        val = ${float(signal.native_representation.range.min)}f;
+    }
+    else if (val > ${float(signal.native_representation.range.max)}f)
+    {
+        val = ${float(signal.native_representation.range.max)}f;
+    }
+      %elif "int" in signal.datatype.value:
+        %if int(signal.native_representation.range.min) != 0:
+    if (val < ${int(signal.native_representation.range.min)})
+    {
+        val = ${int(signal.native_representation.range.min)};
+    }
+    else if (val > ${int(signal.native_representation.range.max)})
+    {
+        val = ${int(signal.native_representation.range.max)};
+    }
+        %else:
+    if (val > ${int(signal.native_representation.range.max)})
+    {
+        val = ${int(signal.native_representation.range.max)};
+    }
+        %endif
+      %endif
     %endif
     %if "float" in signal.datatype.value:
     tmp_${signal.name} = (${'u' if signal.native_representation.signedness == Signedness.unsigned else ''}int${dtype}_t)((val - ${float(signal.offset)}f) / ${float(signal.scale)}f);

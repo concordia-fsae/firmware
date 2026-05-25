@@ -75,7 +75,7 @@ contains_message = True
 
 CANRX_MESSAGE_health_E CANRX_${bus.upper()}_get_${sig_name}(CAN_${node.received_sigs[signal].discrete_values.name}_E * const val${arg})
 {
-            %elif node.received_sigs[signal].native_representation.bit_width == 1:
+            %elif node.received_sigs[signal].is_boolean():
 
 CANRX_MESSAGE_health_E CANRX_${bus.upper()}_get_${sig_name}(bool * const val${arg}) 
 {
