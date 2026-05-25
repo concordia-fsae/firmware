@@ -58,6 +58,9 @@ const DEFAULT_MAP_TILE_SOURCE_ID: &str = OPENSTREETMAP_MAP_TILE_SOURCE_ID;
 const DEFAULT_MAP_TILE_TEMPLATE: &str = OPENSTREETMAP_MAP_TILE_TEMPLATE;
 const MAP_TILE_USER_AGENT: &str = "cfr-car-dashboard/0.1 offline-map-cache";
 const MAX_MAP_ZOOM: u8 = 19;
+const SIGNAL_SAMPLE_BATCH_INTERVAL_MS: u64 = 100;
+const SIGNAL_EVENT_QUEUE_CAPACITY: usize = 4096;
+const SIGNAL_BROADCAST_QUEUE_CAPACITY: usize = 8;
 const MAX_MAP_TILE_UPLOAD_BYTES: u64 = 1024 * 1024;
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const JPEG_SIGNATURE: &[u8; 3] = b"\xff\xd8\xff";
@@ -591,6 +594,7 @@ struct AppState {
     body_iface: Arc<Option<String>>,
     state_events: broadcast::Sender<String>,
     job_events: broadcast::Sender<String>,
+    signal_events: broadcast::Sender<Arc<SignalSampleBatch>>,
     last_state_payload: Arc<Mutex<String>>,
     last_jobs_payload: Arc<Mutex<String>>,
     jobs: Arc<RwLock<JobStore>>,
@@ -897,6 +901,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     });
     let (state_events, _) = broadcast::channel(64);
     let (job_events, _) = broadcast::channel(64);
+    let (signal_events, _) = broadcast::channel(SIGNAL_BROADCAST_QUEUE_CAPACITY);
     let state = AppState {
         store,
         capabilities,
@@ -906,6 +911,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         body_iface: Arc::new(opts.body_iface.clone()),
         state_events,
         job_events,
+        signal_events,
         last_state_payload: Arc::new(Mutex::new(String::new())),
         last_jobs_payload: Arc::new(Mutex::new(String::new())),
         jobs,
@@ -937,12 +943,16 @@ pub async fn run(opts: Opts) -> Result<()> {
         let mut interval = tokio::time::interval(Duration::from_millis(DEFAULT_SWEEP_INTERVAL_MS));
         loop {
             interval.tick().await;
+            if state_for_sweep.state_events.receiver_count() == 0 {
+                continue;
+            }
             if let Err(e) = state_for_sweep.publish_state_if_changed().await {
                 warn!("failed to publish sweep snapshot: {e}");
             }
         }
     });
 
+    let signal_events_for_worker = state.signal_events.clone();
     let state_filter = warp::any().map(move || state.clone());
 
     let home = warp::path::end()
@@ -1284,6 +1294,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         opts.veh_iface.clone(),
         Arc::clone(&tracked_controllers),
         updates_tx.clone(),
+    );
+    spawn_signal_broadcast_worker(
+        opts.veh_iface.clone(),
+        yamcan::Bus::Veh,
+        signal_events_for_worker,
     );
 
     server.await;
@@ -4131,62 +4146,94 @@ async fn ota_agent_error_message(status: HttpStatusCode, response: reqwest::Resp
 }
 
 fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl Reply {
-    let (tx, mut rx) = mpsc::unbounded_channel::<SignalSampleEvent>();
-    let (batched_tx, batched_rx) = mpsc::unbounded_channel::<String>();
+    info!(
+        "signal SSE client connected with {} requested signal(s); shared stream subscribers will become {}",
+        selected_ids.len(),
+        state.signal_events.receiver_count() + 1
+    );
+    let selected_ids = Arc::new(selected_ids);
+    let stream = futures::stream::unfold(
+        (state.signal_events.subscribe(), selected_ids),
+        |(mut rx, selected_ids)| async move {
+            loop {
+                let mut events = match rx.recv().await {
+                    Ok(batch) => filter_signal_sample_events(batch.as_ref(), &selected_ids),
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!("signal SSE client lagged behind by {skipped} batch(es)");
+                        continue;
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        return None;
+                    }
+                };
 
-    if !selected_ids.is_empty() {
-        spawn_signal_session_worker(
-            (*state.veh_iface).clone(),
-            yamcan::Bus::Veh,
-            selected_ids.clone(),
-            tx.clone(),
-        );
-    }
-
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_millis(250));
-        let mut pending: Vec<SignalSampleEvent> = Vec::new();
-        loop {
-            tokio::select! {
-                maybe_event = rx.recv() => {
-                    match maybe_event {
-                        Some(event) => pending.push(event),
-                        None => {
-                            if !pending.is_empty() {
-                                let payload = serde_json::to_string(&SignalSampleBatch { events: pending })
-                                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
-                                let _ = batched_tx.send(payload);
-                            }
+                loop {
+                    match rx.try_recv() {
+                        Ok(batch) => {
+                            events.extend(filter_signal_sample_events(
+                                batch.as_ref(),
+                                &selected_ids,
+                            ));
+                        }
+                        Err(broadcast::error::TryRecvError::Empty) => {
                             break;
+                        }
+                        Err(broadcast::error::TryRecvError::Lagged(skipped)) => {
+                            warn!("signal SSE client lagged behind by {skipped} batch(es)");
+                        }
+                        Err(broadcast::error::TryRecvError::Closed) => {
+                            return None;
                         }
                     }
                 }
-                _ = interval.tick() => {
-                    if pending.is_empty() {
-                        continue;
-                    }
-                    let payload = serde_json::to_string(&SignalSampleBatch {
-                        events: std::mem::take(&mut pending),
-                    })
-                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
-                    if batched_tx.send(payload).is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-    });
 
-    let stream = futures::stream::unfold(batched_rx, |mut rx| async move {
-        rx.recv().await.map(|payload| {
-            (
-                Ok::<Event, Infallible>(Event::default().event("signal-sample").data(payload)),
-                rx,
-            )
-        })
-    });
+                if events.is_empty() {
+                    continue;
+                }
+
+                let payload = serde_json::to_string(&SignalSampleBatch { events })
+                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
+                return Some((
+                    Ok::<Event, Infallible>(Event::default().event("signal-sample").data(payload)),
+                    (rx, selected_ids),
+                ));
+            }
+        },
+    );
 
     warp::sse::reply(warp::sse::keep_alive().stream(stream))
+}
+
+fn filter_signal_sample_events(
+    batch: &SignalSampleBatch,
+    selected_ids: &BTreeSet<String>,
+) -> Vec<SignalSampleEvent> {
+    if selected_ids.is_empty() {
+        return batch.events.clone();
+    }
+
+    batch
+        .events
+        .iter()
+        .filter_map(|event| {
+            let samples = event
+                .samples
+                .iter()
+                .filter(|sample| selected_ids.contains(&sample.signal_id))
+                .cloned()
+                .collect::<Vec<_>>();
+            if samples.is_empty() {
+                return None;
+            }
+            Some(SignalSampleEvent {
+                timestamp_ms: event.timestamp_ms,
+                bus: event.bus.clone(),
+                message_name: event.message_name.clone(),
+                message_id: event.message_id,
+                samples,
+            })
+        })
+        .collect()
 }
 
 fn spawn_veh_worker(
@@ -4498,29 +4545,15 @@ fn sample_event_from_members(
     })
 }
 
-fn filter_signal_event(
-    event: SignalSampleEvent,
-    selected_ids: &BTreeSet<String>,
-) -> Option<SignalSampleEvent> {
-    let samples = event
-        .samples
-        .into_iter()
-        .filter(|sample| selected_ids.contains(&sample.signal_id))
-        .collect::<Vec<_>>();
-    if samples.is_empty() {
-        return None;
-    }
-
-    Some(SignalSampleEvent { samples, ..event })
-}
-
-fn spawn_signal_session_worker(
+fn spawn_signal_broadcast_worker(
     iface: String,
     bus: yamcan::Bus,
-    selected_ids: BTreeSet<String>,
-    tx: mpsc::UnboundedSender<SignalSampleEvent>,
+    signal_events: broadcast::Sender<Arc<SignalSampleBatch>>,
 ) {
+    let (tx, mut rx) = mpsc::channel::<SignalSampleEvent>(SIGNAL_EVENT_QUEUE_CAPACITY);
+    let signal_events_for_decode = signal_events.clone();
     thread::spawn(move || {
+        info!("shared signal stream worker starting for iface='{iface}'");
         let iface_map = [(iface.as_str(), bus)];
         let binding = match yamcan::configure_iface(&iface, &iface_map) {
             Ok(binding) => binding,
@@ -4536,6 +4569,8 @@ fn spawn_signal_session_worker(
                 return;
             }
         };
+        let mut dropped_frames = 0_u64;
+        let mut last_drop_warning = Instant::now();
 
         loop {
             let (frame, id) = match recv_veh_frame(&socket) {
@@ -4545,11 +4580,66 @@ fn spawn_signal_session_worker(
                     return;
                 }
             };
-            let Some(event) = decode_signal_frame(&binding, frame, id, &selected_ids) else {
+            if signal_events_for_decode.receiver_count() == 0 {
+                continue;
+            }
+            let Some(event) = decode_signal_frame(&binding, frame, id) else {
                 continue;
             };
-            if tx.send(event).is_err() {
-                return;
+            match tx.try_send(event) {
+                Ok(()) => {}
+                Err(mpsc::error::TrySendError::Full(_)) => {
+                    dropped_frames = dropped_frames.saturating_add(1);
+                    if last_drop_warning.elapsed() >= Duration::from_secs(1) {
+                        warn!(
+                            "signal stream decode queue is full; dropped {dropped_frames} decoded frame(s)"
+                        );
+                        dropped_frames = 0;
+                        last_drop_warning = Instant::now();
+                    }
+                }
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    return;
+                }
+            }
+        }
+    });
+
+    tokio::spawn(async move {
+        let mut interval =
+            tokio::time::interval(Duration::from_millis(SIGNAL_SAMPLE_BATCH_INTERVAL_MS));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut pending: Vec<SignalSampleEvent> = Vec::new();
+        loop {
+            tokio::select! {
+                maybe_event = rx.recv() => {
+                    match maybe_event {
+                        Some(event) => pending.push(event),
+                        None => {
+                            if !pending.is_empty() && signal_events.receiver_count() > 0 {
+                                let _ = signal_events.send(Arc::new(SignalSampleBatch {
+                                    events: pending,
+                                }));
+                            }
+                            break;
+                        }
+                    }
+                }
+                _ = interval.tick() => {
+                    while let Ok(event) = rx.try_recv() {
+                        pending.push(event);
+                    }
+                    if pending.is_empty() {
+                        continue;
+                    }
+                    if signal_events.receiver_count() == 0 {
+                        pending.clear();
+                        continue;
+                    }
+                    let _ = signal_events.send(Arc::new(SignalSampleBatch {
+                        events: std::mem::take(&mut pending),
+                    }));
+                }
             }
         }
     });
@@ -4559,7 +4649,6 @@ fn decode_signal_frame(
     binding: &yamcan::BusBinding<yamcan::Bus>,
     frame: yamcan::CanFrame,
     id: u32,
-    selected_ids: &BTreeSet<String>,
 ) -> Option<SignalSampleEvent> {
     let decoded = yamcan::maybe_decode(Some(binding), &frame, id, true, true, &[], &[])?;
     let members = decoded
@@ -4579,7 +4668,7 @@ fn decode_signal_frame(
         &members,
         now_ms(),
     )?;
-    filter_signal_event(event, selected_ids)
+    Some(event)
 }
 
 fn open_raw_can_socket(iface: &str) -> io::Result<OwnedFd> {
