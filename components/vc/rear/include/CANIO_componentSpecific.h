@@ -58,6 +58,7 @@
 #define set_mcCalibrationAttempts(m, b, n, s)                 set(m, b, n, s, mcManager_getResolverCalibrationAttempts())
 #define set_mcCalibrationConfiguredAngle(m, b, n, s)          set(m, b, n, s, mcManager_getResolverCalibrationConfiguredAngleDeg())
 #define set_mcCalibrationDeltaFilteredMeasured(m, b, n, s)    set(m, b, n, s, mcManager_getResolverCalibrationDeltaFilteredMeasuredDeg())
+#define set_fluxWeakeningCurrent(m, b, n, s)                  set(m, b, n, s, mcManager_getFluxWeakeningCurrent())
 
 #define set_shockpotdispRL(m, b, n, s)                        set(m, b, n, s, shockpot_getDisplacement(SHOCKPOT_LEFT))
 #define set_shockpotdispRR(m, b, n, s)                        set(m, b, n, s, shockpot_getDisplacement(SHOCKPOT_RIGHT))

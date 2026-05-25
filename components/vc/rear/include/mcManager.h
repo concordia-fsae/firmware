@@ -41,6 +41,7 @@ float32_t                     mcManager_getTsCapTemperatureDegC(void);
 uint8_t                       mcManager_getResolverCalibrationAttempts(void);
 float32_t                     mcManager_getResolverCalibrationConfiguredAngleDeg(void);
 float32_t                     mcManager_getResolverCalibrationDeltaFilteredMeasuredDeg(void);
+float32_t                     mcManager_getFluxWeakeningCurrent(void);
 bool                          mcManager_clearEepromCommand(void);
 bool                          mcManager_startResolverCalibration(void);
 bool                          mcManager_isResolverCalibrating(void);
