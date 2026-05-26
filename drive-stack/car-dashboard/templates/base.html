@@ -202,15 +202,23 @@
         }
 
         let port = null;
+        let workerDisabled = false;
         let requestId = 1;
         const listeners = new Set();
         const pending = new Map();
 
         function ensureWorker() {
-          if (port || !("SharedWorker" in window)) {
+          if (port || workerDisabled || !("SharedWorker" in window)) {
             return;
           }
-          const worker = new SharedWorker("/assets/signal-cache-worker.js");
+          let worker = null;
+          try {
+            worker = new SharedWorker("/assets/signal-cache-worker.js");
+          } catch (error) {
+            workerDisabled = true;
+            console.error("failed to start signal cache worker", error);
+            return;
+          }
           port = worker.port;
           port.start();
           port.onmessage = (event) => {
@@ -219,9 +227,10 @@
               return;
             }
             if (data.type === "snapshot" && pending.has(data.requestId)) {
-              const resolve = pending.get(data.requestId);
+              const request = pending.get(data.requestId);
               pending.delete(data.requestId);
-              resolve(data.payload || { signals: [] });
+              window.clearTimeout(request.timeout);
+              request.resolve(data.payload || { signals: [] });
               return;
             }
             listeners.forEach((listener) => listener(data));
@@ -231,7 +240,7 @@
 
         window.dashboardSignalCache = {
           isAvailable() {
-            return "SharedWorker" in window;
+            return !workerDisabled && "SharedWorker" in window;
           },
           subscribe(listener) {
             ensureWorker();
@@ -257,7 +266,14 @@
             }
             const id = requestId++;
             return new Promise((resolve) => {
-              pending.set(id, resolve);
+              const timeout = window.setTimeout(() => {
+                if (!pending.has(id)) {
+                  return;
+                }
+                pending.delete(id);
+                resolve({ signals: [] });
+              }, 1000);
+              pending.set(id, { resolve, timeout });
               port.postMessage({
                 type: "get-snapshot",
                 clientId,

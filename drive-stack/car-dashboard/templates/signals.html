@@ -1094,11 +1094,16 @@
         return false;
       }
       if (!signalCacheUnsubscribe) {
-        signalCacheUnsubscribe = window.dashboardSignalCache.subscribe((message) => {
-          if (message.type === "signal-batch") {
-            applySampleBatch(message.payload || { events: [] });
-          }
-        });
+        try {
+          signalCacheUnsubscribe = window.dashboardSignalCache.subscribe((message) => {
+            if (message.type === "signal-batch") {
+              applySampleBatch(message.payload || { events: [] });
+            }
+          });
+        } catch (error) {
+          console.error("failed to connect signal cache worker", error);
+          return false;
+        }
       }
       return true;
     }
@@ -1133,9 +1138,12 @@
         signalSource.close();
         signalSource = null;
       }
-      if (ensureSignalCacheBridge()) {
-        window.dashboardSignalCache.setSubscription(Array.from(selectedIds), streamPaused);
-        return;
+      if (window.dashboardSignalCache && window.dashboardSignalCache.isAvailable()) {
+        try {
+          window.dashboardSignalCache.setSubscription([], true);
+        } catch (error) {
+          console.error("failed to pause signal cache worker stream", error);
+        }
       }
       if (!selectedIds.size || streamPaused) {
         return;
