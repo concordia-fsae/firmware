@@ -119,10 +119,12 @@ carputer_platform_targets(
     uds_start_services = [
         "can-bridge-veh.service",
         "log-processor.service",
+        "dashboard.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
         "log-processor.service",
+        "dashboard.service",
     ],
 )
 

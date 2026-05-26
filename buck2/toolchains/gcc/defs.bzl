@@ -105,7 +105,8 @@ def download_gcc_distribution(
         os: str | None = None,
         target_arch: str | None = None,
         target_os: str | None = None,
-        target_abi: str | None = None):
+        target_abi: str | None = None,
+        visibility: list[str] = []):
     arch = arch or host_arch()
     os = os or host_os()
     target_arch = target_arch or host_arch()
@@ -130,6 +131,7 @@ def download_gcc_distribution(
             target_arch = target_arch,
             target_os = target_os,
             target_abi = target_abi,
+            visibility = visibility,
         )
     else:
         incompatible_rule(

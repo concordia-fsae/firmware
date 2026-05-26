@@ -97,7 +97,7 @@ void CANRX_${bus.upper()}_unpackMessage(const uint32_t id, const CAN_data_T *con
   argNodeOnly = 'uint8_t nodeId' if duplicate else 'void'
   if node.received_sigs[signal].discrete_values:
     type = 'CAN_' + node.received_sigs[signal].discrete_values.name + '_E'
-  elif node.received_sigs[signal].native_representation.bit_width == 1:
+  elif node.received_sigs[signal].is_boolean():
     type = 'bool'
   else:
     type = node.received_sigs[signal].datatype.name

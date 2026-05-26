@@ -259,6 +259,14 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
         .value.cont.scale = CAN_CONFIGSCALE_DIV_1000,
         .value.cont.unit  = CAN_CONFIGUNIT_SECONDS,
     },
+    [DRIVERINPUT_CONFIG_PARAM_FLUX_WEAKENING_CURRENT] = {
+        PARAM_VALUE(VEH, VCREAR_fluxWeakeningCurrent,
+                    DRIVERINPUT_REQUEST_FLUX_WEAKENING_CURRENT_INC,
+                    DRIVERINPUT_REQUEST_FLUX_WEAKENING_CURRENT_DEC
+                    ),
+        .value.cont.scale = CAN_CONFIGSCALE_DIV_10,
+        .value.cont.unit  = CAN_CONFIGUNIT_AMP,
+    },
 };
 
 /******************************************************************************
@@ -712,6 +720,10 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
 
             case DRIVERINPUT_CONFIG_PARAM_TC_TLEAK:
                 config = CAN_CONFIGSELECTION_PARAM_TC_TLEAK;
+                break;
+
+            case DRIVERINPUT_CONFIG_PARAM_FLUX_WEAKENING_CURRENT:
+                config = CAN_CONFIGSELECTION_PARAM_FLUX_WEAKENING_CURRENT;
                 break;
 
             case DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN:

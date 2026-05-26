@@ -1,1 +1,20 @@
+#
+# ring's build script reads Cargo's split version fields and the `links` value
+# at runtime. Reindeer does not emit those variables by default.
+cargo_env = [
+  "CARGO_MANIFEST_LINKS",
+  "CARGO_PKG_NAME",
+  "CARGO_PKG_VERSION_MAJOR",
+  "CARGO_PKG_VERSION_MINOR",
+  "CARGO_PKG_VERSION_PATCH",
+  "CARGO_PKG_VERSION_PRE",
+]
 buildscript.run = true
+
+['cfg(all(target_os = "linux", target_arch = "x86_64"))'.buildscript.run.env]
+DEBUG = "false"
+OPT_LEVEL = "2"
+
+['cfg(all(target_os = "linux", target_arch = "aarch64"))'.buildscript.run.env]
+DEBUG = "false"
+OPT_LEVEL = "2"

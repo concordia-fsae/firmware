@@ -27,7 +27,7 @@
 <%def name="make_structdef_signal(node, sig)">\
   %if node.received_sigs[sig].discrete_values:
     CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
-%elif node.received_sigs[sig].native_representation.bit_width == 1:
+%elif node.received_sigs[sig].is_boolean():
     bool ${node.received_sigs[sig].name} :1; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description};
 %else:
     ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].name}; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
@@ -36,7 +36,7 @@
 <%def name="make_structdef_signalDuplicates(node, sig, total)">\
   %if node.received_sigs[sig].discrete_values:
     CAN_${node.received_sigs[sig].discrete_values.name}_E ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
-%elif node.received_sigs[sig].native_representation.bit_width == 1:
+%elif node.received_sigs[sig].is_boolean():
     bool ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
 %else:
     ${node.received_sigs[sig].datatype.name} ${node.received_sigs[sig].message_ref.node_ref.name.upper()}_${sig.split('_')[1]}[${total}U]; // [${node.received_sigs[sig].unit.name}] ${node.received_sigs[sig].description}
@@ -85,7 +85,7 @@
       elif dtype == 16:
         idx_s = int(idx_s/2)
 %>\
-%if signal.native_representation.bit_width == 1:
+%if signal.is_boolean():
     sigrx->${sig_name} = (m->u8[${int(signal.start_bit / 8)}U] & (1U << ${signal.start_bit % 8}U)) != 0U;
 %elif "float" in signal.datatype.value or "int" in signal.datatype.value: # Handles both int and uint
     %if signal.native_representation.signedness == Signedness.unsigned:
@@ -112,9 +112,9 @@
     sigrx->${sig_name} = (${signal.datatype.value})(tmp_${signal.name}) * ${float(signal.scale)}f + (${float(signal.offset)}f);
     %elif "int" in signal.datatype.value:
       %if signal.native_representation.signedness == Signedness.unsigned:
-    sigrx->${sig_name} = (uint${math.ceil(signal.native_representation.bit_width / 8) * 8}_t)((tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)}));
+    sigrx->${sig_name} = (${signal.datatype.value})((tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)}));
       %else:
-    sigrx->${sig_name} = (int${math.ceil(signal.native_representation.bit_width / 8) * 8}_t)((tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)}));
+    sigrx->${sig_name} = (${signal.datatype.value})((tmp_${signal.name} * ${int(signal.scale)}) + (${int(signal.offset)}));
       %endif
     %endif
 %else:

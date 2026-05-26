@@ -1,0 +1,1332 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <style>
+    .gps-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+    .gps-map-panel {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .gps-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .gps-toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .gps-zoom {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .gps-zoom select {
+      min-width: 88px;
+    }
+    .gps-map {
+      position: relative;
+      height: min(72vh, 760px);
+      min-height: 520px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background:
+        linear-gradient(rgba(31, 42, 47, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(31, 42, 47, 0.08) 1px, transparent 1px),
+        #e7ece8;
+      background-size: 32px 32px;
+      touch-action: none;
+      user-select: none;
+    }
+    .tile-layer,
+    .car-marker-layer {
+      position: absolute;
+      inset: 0;
+    }
+    .map-tile {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 256px;
+      height: 256px;
+      display: block;
+      user-select: none;
+      pointer-events: none;
+    }
+    .car-marker {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #fff;
+      border-radius: 999px;
+      background: var(--fault);
+      box-shadow: 0 0 0 2px rgba(31, 42, 47, 0.35), 0 8px 18px rgba(31, 42, 47, 0.24);
+      transform: translate(-50%, -50%);
+    }
+    .tile-layer {
+      z-index: 1;
+    }
+    .car-marker-layer {
+      z-index: 2;
+      pointer-events: none;
+    }
+    .map-overlay {
+      z-index: 3;
+    }
+    .car-marker::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 13px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 12px solid var(--fault);
+      transform: translateX(-50%);
+    }
+    .map-overlay {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 253, 249, 0.92);
+      color: var(--muted);
+      font-weight: 700;
+      box-shadow: 0 12px 28px rgba(31, 42, 47, 0.1);
+    }
+    .gps-sidebar {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+    .gps-card {
+      display: grid;
+      gap: 12px;
+    }
+    .gps-field {
+      display: grid;
+      gap: 6px;
+    }
+    .gps-field input,
+    .gps-field select {
+      width: 100%;
+      min-width: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    .gps-field input[type="number"] {
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+    .gps-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .gps-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .gps-actions button {
+      flex: 1 1 140px;
+    }
+    .secondary-button {
+      color: var(--accent);
+      background: #fff;
+    }
+    .saved-view-list {
+      display: grid;
+      gap: 10px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .saved-view-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .saved-view-row:last-child {
+      border-bottom: 0;
+    }
+    .saved-view-select {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+      padding: 8px 10px;
+      border-color: transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+    .saved-view-select:hover,
+    .saved-view-row.active .saved-view-select {
+      border-color: var(--border);
+      background: rgba(39, 76, 119, 0.06);
+    }
+    .saved-view-row.active .saved-view-name,
+    .saved-view-row.selected .saved-view-name {
+      color: var(--online);
+    }
+    .saved-view-delete {
+      align-self: stretch;
+      color: var(--fault);
+      background: #fff;
+      padding: 8px 10px;
+    }
+    .saved-view-name {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+    .saved-view-meta {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+    .mono {
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+    @media (max-width: 980px) {
+      .gps-layout {
+        grid-template-columns: 1fr;
+      }
+      .gps-map {
+        height: 62vh;
+        min-height: 420px;
+      }
+    }
+    @media (max-width: 640px) {
+      .gps-grid {
+        grid-template-columns: 1fr;
+      }
+      .gps-map {
+        min-height: 340px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <h2 class="page-title">GPS Map</h2>
+    <p class="page-copy" id="gps-status">GPS: waiting for samples</p>
+  </section>
+
+  <section class="gps-layout">
+    <div class="gps-map-panel">
+      <div class="gps-toolbar">
+        <div class="gps-toolbar-group">
+          <label class="checkbox-field">
+            <input type="checkbox" id="follow-car" checked />
+            <span>Follow Car</span>
+          </label>
+          <label class="gps-zoom" for="map-zoom">
+            <span>Zoom</span>
+            <select id="map-zoom">
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16" selected>16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="19">19</option>
+            </select>
+          </label>
+        </div>
+        <span class="pill" id="active-view-label">No Map</span>
+      </div>
+
+      <div class="gps-map" id="map-canvas" aria-label="GPS map">
+        <div class="tile-layer" id="tile-layer"></div>
+        <div class="car-marker-layer">
+          <div class="car-marker" id="car-marker" hidden></div>
+        </div>
+        <div class="map-overlay" id="map-overlay">Waiting for GPS</div>
+      </div>
+    </div>
+
+    <aside class="gps-sidebar">
+      <section class="card gps-card">
+        <h3 class="section-title">Save Track Map</h3>
+        <form class="stack-form" id="download-form">
+          <label class="gps-field">
+            <span class="field-label">Name</span>
+            <input id="view-name" name="name" type="text" maxlength="80" autocomplete="off" placeholder="Track map" />
+          </label>
+          <div class="gps-grid">
+            <label class="gps-field">
+              <span class="field-label">Latitude</span>
+              <input id="view-lat" name="lat" type="number" step="0.000001" required />
+            </label>
+            <label class="gps-field">
+              <span class="field-label">Longitude</span>
+              <input id="view-lon" name="lon" type="number" step="0.000001" required />
+            </label>
+          </div>
+          <div class="gps-grid">
+            <label class="gps-field">
+              <span class="field-label">Radius (km)</span>
+              <input id="view-radius" name="radius" type="number" min="0.1" max="100" step="0.1" value="2.0" required />
+            </label>
+            <label class="gps-field">
+              <span class="field-label">Max Zoom</span>
+              <input id="view-max-zoom" name="max_zoom" type="number" min="0" max="19" step="1" value="17" required />
+            </label>
+          </div>
+          <label class="gps-field">
+            <span class="field-label">Min Zoom</span>
+            <input id="view-min-zoom" name="min_zoom" type="number" min="0" max="19" step="1" value="14" required />
+          </label>
+          <label class="gps-field">
+            <span class="field-label">Downloader</span>
+            <select id="download-mode" name="download_mode">
+              <option value="browser" selected>Browser</option>
+              <option value="carcomputer">Carcomputer</option>
+            </select>
+          </label>
+          <div class="gps-actions">
+            <button type="button" class="secondary-button" id="use-car-position">Use Car Position</button>
+            <button type="submit" id="download-map">Download</button>
+          </div>
+          <div class="feedback" id="download-feedback" hidden></div>
+        </form>
+      </section>
+
+      <section class="card gps-card">
+        <div class="card-header">
+          <h3 class="section-title">Saved Views</h3>
+          <span class="pill" id="view-count">0 Saved</span>
+        </div>
+        <div class="saved-view-list" id="saved-view-list">
+          <p class="empty">No saved views.</p>
+        </div>
+      </section>
+    </aside>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const TILE_SIZE = 256;
+      const DOWNLOAD_CONCURRENCY = 4;
+      const DOWNLOAD_RETRIES = 2;
+      const DOWNLOAD_RETRY_DELAY_MS = 750;
+      const BROWSER_TILE_TIMEOUT_MS = 30000;
+      const MAP_TILE_RENDER_VERSION = "2";
+      const MAX_TILE_LAT = 85.05112878;
+      const FALLBACK_LAT_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lat";
+      const FALLBACK_LON_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lon";
+
+      const gpsStatus = document.getElementById("gps-status");
+      const activeViewLabel = document.getElementById("active-view-label");
+      const mapCanvas = document.getElementById("map-canvas");
+      const tileLayer = document.getElementById("tile-layer");
+      const mapOverlay = document.getElementById("map-overlay");
+      const carMarker = document.getElementById("car-marker");
+      const followCar = document.getElementById("follow-car");
+      const mapZoom = document.getElementById("map-zoom");
+      const viewList = document.getElementById("saved-view-list");
+      const viewCount = document.getElementById("view-count");
+      const downloadForm = document.getElementById("download-form");
+      const downloadButton = document.getElementById("download-map");
+      const downloadFeedback = document.getElementById("download-feedback");
+      const useCarPositionButton = document.getElementById("use-car-position");
+      const viewName = document.getElementById("view-name");
+      const viewLat = document.getElementById("view-lat");
+      const viewLon = document.getElementById("view-lon");
+      const viewRadius = document.getElementById("view-radius");
+      const viewMinZoom = document.getElementById("view-min-zoom");
+      const viewMaxZoom = document.getElementById("view-max-zoom");
+      const downloadMode = document.getElementById("download-mode");
+
+      let savedViews = [];
+      let latSignalId = FALLBACK_LAT_SIGNAL_ID;
+      let lonSignalId = FALLBACK_LON_SIGNAL_ID;
+      let latestLat = null;
+      let latestLon = null;
+      let carPosition = null;
+      let mapCenter = null;
+      let renderQueued = false;
+      let signalSource = null;
+      let signalCacheUnsubscribe = null;
+      let dragState = null;
+      let selectedViewId = null;
+      let renderedTileSignature = "";
+
+      function currentZoom() {
+        return Number.parseInt(mapZoom.value, 10);
+      }
+
+      function ensureZoomOption(zoom) {
+        const value = String(zoom);
+        if (Array.from(mapZoom.options).some((option) => option.value === value)) {
+          return;
+        }
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        mapZoom.appendChild(option);
+        Array.from(mapZoom.options)
+          .sort((a, b) => Number(a.value) - Number(b.value))
+          .forEach((sortedOption) => mapZoom.appendChild(sortedOption));
+      }
+
+      function clampLat(lat) {
+        return Math.max(-MAX_TILE_LAT, Math.min(MAX_TILE_LAT, lat));
+      }
+
+      function axisCount(zoom) {
+        return 2 ** zoom;
+      }
+
+      function latLonToWorldPixel(lat, lon, zoom) {
+        const axis = axisCount(zoom);
+        const x = ((lon + 180) / 360) * axis * TILE_SIZE;
+        const latRad = clampLat(lat) * Math.PI / 180;
+        const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * axis * TILE_SIZE;
+        return { x, y };
+      }
+
+      function worldPixelToLatLon(x, y, zoom) {
+        const axis = axisCount(zoom);
+        const tileX = x / TILE_SIZE;
+        const tileY = y / TILE_SIZE;
+        const lon = tileX / axis * 360 - 180;
+        const n = Math.PI - 2 * Math.PI * tileY / axis;
+        const lat = Math.atan(Math.sinh(n)) * 180 / Math.PI;
+        return {
+          lat: clampLat(lat),
+          lon: Math.max(-180, Math.min(180, lon)),
+        };
+      }
+
+      function validPosition(lat, lon) {
+        return Number.isFinite(lat)
+          && Number.isFinite(lon)
+          && lat >= -MAX_TILE_LAT
+          && lat <= MAX_TILE_LAT
+          && lon >= -180
+          && lon <= 180;
+      }
+
+      function unsetPosition(lat, lon) {
+        return Number.isFinite(lat)
+          && Number.isFinite(lon)
+          && Math.abs(lat) < 0.000001
+          && Math.abs(lon) < 0.000001;
+      }
+
+      function usablePosition(lat, lon) {
+        return validPosition(lat, lon) && !unsetPosition(lat, lon);
+      }
+
+      function pointInBounds(view, position) {
+        const bounds = view.bounds || {};
+        return position.lat >= bounds.min_lat
+          && position.lat <= bounds.max_lat
+          && position.lon >= bounds.min_lon
+          && position.lon <= bounds.max_lon;
+      }
+
+      function levelForZoom(view, zoom) {
+        return (view.levels || []).find((level) => level.zoom === zoom) || null;
+      }
+
+      function tileKey(z, x, y) {
+        return `${z}/${x}/${y}`;
+      }
+
+      function viewSourceId(_view) {
+        return "streets";
+      }
+
+      function viewSourceName(_view) {
+        return "Streets";
+      }
+
+      function cachedTileSet(view) {
+        if (!view._cachedTileSet) {
+          view._cachedTileSet = new Set((view.tiles || []).map((tile) => tileKey(tile.z, tile.x, tile.y)));
+        }
+        return view._cachedTileSet;
+      }
+
+      function cachedZooms(view) {
+        const exactTiles = view.tiles || [];
+        if (exactTiles.length) {
+          return Array.from(new Set(exactTiles.map((tile) => tile.z))).sort((a, b) => a - b);
+        }
+        return (view.levels || []).map((level) => level.zoom).sort((a, b) => a - b);
+      }
+
+      function hasCachedZoom(view, zoom) {
+        return cachedZooms(view).includes(zoom);
+      }
+
+      function tileInLevel(level, x, y) {
+        return level
+          && x >= level.min_x
+          && x <= level.max_x
+          && y >= level.min_y
+          && y <= level.max_y;
+      }
+
+      function tileCachedInView(view, zoom, x, y) {
+        if ((view.tiles || []).length) {
+          return cachedTileSet(view).has(tileKey(zoom, x, y));
+        }
+        return tileInLevel(levelForZoom(view, zoom), x, y);
+      }
+
+      function bestCachedZoom(view, preferredZoom) {
+        const zooms = cachedZooms(view);
+        if (!zooms.length) {
+          return null;
+        }
+        if (zooms.includes(preferredZoom)) {
+          return preferredZoom;
+        }
+        const lowerOrEqual = zooms.filter((zoom) => zoom <= preferredZoom);
+        return lowerOrEqual.length ? lowerOrEqual[lowerOrEqual.length - 1] : zooms[zooms.length - 1];
+      }
+
+      function tileCenterPixel(tile) {
+        return {
+          x: (tile.x + 0.5) * TILE_SIZE,
+          y: (tile.y + 0.5) * TILE_SIZE,
+        };
+      }
+
+      function tileCenterPosition(tile) {
+        const center = tileCenterPixel(tile);
+        return worldPixelToLatLon(center.x, center.y, tile.z);
+      }
+
+      function cachedTilesAtZoom(view, zoom) {
+        return (view.tiles || []).filter((tile) => tile.z === zoom);
+      }
+
+      function cachedCenterForView(view, zoom) {
+        const tiles = cachedTilesAtZoom(view, zoom);
+        if (!tiles.length) {
+          return {
+            lat: Number(view.center_lat),
+            lon: Number(view.center_lon),
+          };
+        }
+
+        const target = latLonToWorldPixel(Number(view.center_lat), Number(view.center_lon), zoom);
+        let bestTile = tiles[0];
+        let bestDistance = Number.POSITIVE_INFINITY;
+        for (const tile of tiles) {
+          const center = tileCenterPixel(tile);
+          const dx = center.x - target.x;
+          const dy = center.y - target.y;
+          const distance = dx * dx + dy * dy;
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestTile = tile;
+          }
+        }
+        return tileCenterPosition(bestTile);
+      }
+
+      function activeViewForCar() {
+        if (!carPosition) {
+          return null;
+        }
+        const zoom = currentZoom();
+        return savedViews.find((view) => pointInBounds(view, carPosition) && hasCachedZoom(view, zoom)) || null;
+      }
+
+      function selectedView() {
+        return savedViews.find((view) => view.id === selectedViewId) || null;
+      }
+
+      function currentMapView() {
+        const zoom = currentZoom();
+        const selected = selectedView();
+        if (selected) {
+          return hasCachedZoom(selected, zoom) ? selected : null;
+        }
+        return activeViewForCar();
+      }
+
+      function centerSelectedViewAtZoom(view, zoom) {
+        if (view && hasCachedZoom(view, zoom)) {
+          mapCenter = cachedCenterForView(view, zoom);
+          return true;
+        }
+        return false;
+      }
+
+      function centerSelectedView(view, preferredZoom) {
+        const zoom = bestCachedZoom(view, preferredZoom);
+        if (zoom !== null) {
+          ensureZoomOption(zoom);
+          mapZoom.value = String(zoom);
+          centerSelectedViewAtZoom(view, zoom);
+        } else {
+          mapCenter = {
+            lat: Number(view.center_lat),
+            lon: Number(view.center_lon),
+          };
+        }
+      }
+
+      function scheduleRender() {
+        if (renderQueued) {
+          return;
+        }
+        renderQueued = true;
+        requestAnimationFrame(() => {
+          renderQueued = false;
+          renderMap();
+          renderSavedViews();
+        });
+      }
+
+      function clearTiles() {
+        tileLayer.replaceChildren();
+        renderedTileSignature = "";
+      }
+
+      function setOverlay(text) {
+        mapOverlay.textContent = text;
+        mapOverlay.hidden = false;
+      }
+
+      function renderMap() {
+        const rect = mapCanvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+
+        if (!width || !height) {
+          return;
+        }
+        if (followCar.checked || !mapCenter) {
+          const selected = selectedView();
+          if (followCar.checked && carPosition) {
+            mapCenter = { lat: carPosition.lat, lon: carPosition.lon };
+          } else if (selected) {
+            centerSelectedView(selected, currentZoom());
+          } else if (carPosition) {
+            mapCenter = { lat: carPosition.lat, lon: carPosition.lon };
+          }
+        }
+
+        if (!mapCenter) {
+          clearTiles();
+          carMarker.hidden = true;
+          activeViewLabel.textContent = "No Map";
+          setOverlay("Waiting for GPS");
+          return;
+        }
+
+        const zoom = currentZoom();
+        const selected = selectedView();
+        const activeView = currentMapView();
+        if (!activeView) {
+          clearTiles();
+          carMarker.hidden = true;
+          if (selected) {
+            activeViewLabel.textContent = selected.name;
+            setOverlay("Selected map is not cached at current zoom");
+          } else {
+            activeViewLabel.textContent = "No Map";
+            setOverlay(carPosition ? "No saved map at current position and zoom" : "Waiting for GPS");
+          }
+          return;
+        }
+
+        activeViewLabel.textContent = activeView.name;
+        const centerPixel = latLonToWorldPixel(mapCenter.lat, mapCenter.lon, zoom);
+        const topLeftX = centerPixel.x - width / 2;
+        const topLeftY = centerPixel.y - height / 2;
+        const minTileX = Math.floor(topLeftX / TILE_SIZE);
+        const maxTileX = Math.floor((topLeftX + width) / TILE_SIZE);
+        const minTileY = Math.floor(topLeftY / TILE_SIZE);
+        const maxTileY = Math.floor((topLeftY + height) / TILE_SIZE);
+        const axis = axisCount(zoom);
+        const tileSpecs = [];
+
+        for (let x = minTileX; x <= maxTileX; x += 1) {
+          if (x < 0 || x >= axis) {
+            continue;
+          }
+          for (let y = minTileY; y <= maxTileY; y += 1) {
+            if (y < 0 || y >= axis || !tileCachedInView(activeView, zoom, x, y)) {
+              continue;
+            }
+            tileSpecs.push({
+              z: zoom,
+              x,
+              y,
+              tx: Math.round(x * TILE_SIZE - topLeftX),
+              ty: Math.round(y * TILE_SIZE - topLeftY),
+            });
+          }
+        }
+
+        if (!tileSpecs.length && selected && selected.id === activeView.id) {
+          const previousCenter = mapCenter;
+          centerSelectedViewAtZoom(activeView, zoom);
+          if (previousCenter
+              && (Math.abs(previousCenter.lat - mapCenter.lat) > 0.000001
+                || Math.abs(previousCenter.lon - mapCenter.lon) > 0.000001)) {
+            renderedTileSignature = "";
+            scheduleRender();
+            return;
+          }
+        }
+
+        const tileSignature = [
+          MAP_TILE_RENDER_VERSION,
+          activeView.id,
+          viewSourceId(activeView),
+          activeView.tile_count || 0,
+          tileSpecs.map((tile) => `${tile.z}/${tile.x}/${tile.y}@${tile.tx},${tile.ty}`).join("|"),
+        ].join(":");
+
+        if (tileSignature !== renderedTileSignature) {
+          tileLayer.replaceChildren();
+          renderedTileSignature = tileSignature;
+          let loadedTiles = 0;
+          let failedTiles = 0;
+          if (tileSpecs.length) {
+            setOverlay(`Loading ${tileSpecs.length} cached map tiles`);
+          }
+          for (const tile of tileSpecs) {
+            const img = document.createElement("img");
+            img.className = "map-tile";
+            img.alt = "";
+            img.draggable = false;
+            const source = encodeURIComponent(viewSourceId(activeView));
+            img.src = `/api/maps/tiles/${tile.z}/${tile.x}/${tile.y}?source=${source}&view=${encodeURIComponent(activeView.id)}&count=${activeView.tile_count || 0}&render=${MAP_TILE_RENDER_VERSION}`;
+            img.style.transform = `translate(${tile.tx}px, ${tile.ty}px)`;
+            img.addEventListener("load", () => {
+              loadedTiles += 1;
+              mapOverlay.hidden = true;
+            }, { once: true });
+            img.addEventListener("error", () => {
+              failedTiles += 1;
+              img.remove();
+              if (failedTiles === tileSpecs.length) {
+                renderedTileSignature = "";
+                setOverlay(`Cached map tiles failed to load (${tileSpecs.length} requested at zoom ${zoom})`);
+              } else if (!loadedTiles) {
+                setOverlay(`Loading cached map tiles (${failedTiles} failed, ${tileSpecs.length - failedTiles} pending)`);
+              }
+            }, { once: true });
+            tileLayer.appendChild(img);
+          }
+        } else if (tileSpecs.length && tileLayer.children.length) {
+          mapOverlay.hidden = true;
+        }
+
+        if (!tileSpecs.length) {
+          setOverlay(`No cached tiles for this map at zoom ${zoom} near ${mapCenter.lat.toFixed(5)}, ${mapCenter.lon.toFixed(5)}`);
+        }
+
+        if (carPosition) {
+          const carPixel = latLonToWorldPixel(carPosition.lat, carPosition.lon, zoom);
+          carMarker.style.left = `${Math.round(width / 2 + carPixel.x - centerPixel.x)}px`;
+          carMarker.style.top = `${Math.round(height / 2 + carPixel.y - centerPixel.y)}px`;
+          carMarker.hidden = false;
+        } else {
+          carMarker.hidden = true;
+        }
+      }
+
+      function updateGpsStatus() {
+        if (!carPosition) {
+          gpsStatus.textContent = unsetPosition(latestLat, latestLon)
+            ? "GPS: waiting for valid fix (0,0 ignored)"
+            : "GPS: waiting for samples";
+          return;
+        }
+        gpsStatus.textContent = `GPS: ${carPosition.lat.toFixed(6)}, ${carPosition.lon.toFixed(6)}`;
+      }
+
+      function updateCarPosition(timestampMs) {
+        if (!usablePosition(latestLat, latestLon)) {
+          carPosition = null;
+          updateGpsStatus();
+          if (followCar.checked) {
+            scheduleRender();
+          }
+          return;
+        }
+        carPosition = {
+          lat: latestLat,
+          lon: latestLon,
+          timestampMs,
+        };
+        if (followCar.checked) {
+          mapCenter = { lat: latestLat, lon: latestLon };
+        }
+        updateGpsStatus();
+        scheduleRender();
+      }
+
+      function applySignalBatch(payload) {
+        for (const event of payload.events || []) {
+          for (const sample of event.samples || []) {
+            if (sample.signal_id === latSignalId) {
+              latestLat = Number(sample.value);
+            } else if (sample.signal_id === lonSignalId) {
+              latestLon = Number(sample.value);
+            }
+          }
+          updateCarPosition(event.timestamp_ms || Date.now());
+        }
+      }
+
+      function applySignalSnapshot(snapshot) {
+        let timestampMs = Date.now();
+        for (const entry of snapshot.signals || []) {
+          const points = entry.points || [];
+          const last = points[points.length - 1];
+          if (!last) {
+            continue;
+          }
+          if (entry.signalId === latSignalId) {
+            latestLat = Number(last.v);
+          } else if (entry.signalId === lonSignalId) {
+            latestLon = Number(last.v);
+          }
+          timestampMs = Math.max(timestampMs, Number(last.t) || timestampMs);
+        }
+        updateCarPosition(timestampMs);
+      }
+
+      async function resolveGpsSignals() {
+        try {
+          const response = await fetch("/api/signals/manifest", { cache: "no-store" });
+          if (!response.ok) {
+            return;
+          }
+          const manifest = await response.json();
+          const signals = manifest.signals || [];
+          const isGpsPosition = (signal) => String(signal.message_name || "").toLowerCase().includes("gpsposition");
+          const latSignal = signals.find((signal) => {
+            const name = String(signal.signal_name || "").toLowerCase();
+            return isGpsPosition(signal) && (name === "lat" || name.endsWith("_lat"));
+          });
+          const lonSignal = signals.find((signal) => {
+            const name = String(signal.signal_name || "").toLowerCase();
+            return isGpsPosition(signal) && (name === "lon" || name.endsWith("_lon"));
+          });
+          if (latSignal && lonSignal) {
+            latSignalId = latSignal.id;
+            lonSignalId = lonSignal.id;
+          }
+        } catch (error) {
+          console.error("failed to resolve GPS signals", error);
+        }
+      }
+
+      async function connectGpsSignals() {
+        const signalIds = [latSignalId, lonSignalId];
+        if (window.dashboardSignalCache && window.dashboardSignalCache.isAvailable()) {
+          signalCacheUnsubscribe = window.dashboardSignalCache.subscribe((message) => {
+            if (message.type === "signal-batch") {
+              applySignalBatch(message.payload || { events: [] });
+            }
+          });
+          window.dashboardSignalCache.setSubscription(signalIds, false);
+          try {
+            const snapshot = await window.dashboardSignalCache.getSnapshot(signalIds);
+            applySignalSnapshot(snapshot);
+          } catch (error) {
+            console.error("failed to hydrate GPS signals", error);
+          }
+          return;
+        }
+
+        const signals = signalIds.sort().join(",");
+        signalSource = new EventSource(`/signal-events?signals=${encodeURIComponent(signals)}`);
+        signalSource.addEventListener("signal-sample", (event) => {
+          applySignalBatch(JSON.parse(event.data));
+        });
+        signalSource.onerror = (event) => {
+          console.error("GPS signal stream error", event);
+        };
+      }
+
+      async function loadViews() {
+        try {
+          const response = await fetch("/api/maps/views", { cache: "no-store" });
+          const body = await response.json();
+          if (!response.ok || body.ok === false) {
+            throw new Error(body.error || `map view request failed with HTTP ${response.status}`);
+          }
+          savedViews = body.views || [];
+          if (selectedViewId && !savedViews.some((view) => view.id === selectedViewId)) {
+            selectedViewId = null;
+          } else if (selectedViewId && !followCar.checked) {
+            const selected = selectedView();
+            if (selected) {
+              centerSelectedView(selected, currentZoom());
+            }
+          }
+          scheduleRender();
+        } catch (error) {
+          viewList.replaceChildren();
+          const item = document.createElement("p");
+          item.className = "empty";
+          item.textContent = error.message;
+          viewList.appendChild(item);
+        }
+      }
+
+      function renderSavedViews() {
+        viewCount.textContent = `${savedViews.length} Saved`;
+        viewList.replaceChildren();
+        if (!savedViews.length) {
+          const item = document.createElement("p");
+          item.className = "empty";
+          item.textContent = "No saved views.";
+          viewList.appendChild(item);
+          return;
+        }
+
+        const activeView = currentMapView();
+        for (const view of savedViews) {
+          const row = document.createElement("div");
+          row.className = "saved-view-row";
+          if (activeView && activeView.id === view.id) {
+            row.classList.add("active");
+          }
+          if (selectedViewId === view.id) {
+            row.classList.add("selected");
+          }
+
+          const select = document.createElement("button");
+          select.className = "saved-view-select";
+          select.type = "button";
+          select.addEventListener("click", () => centerOnView(view));
+
+          const name = document.createElement("h4");
+          name.className = "saved-view-name";
+          name.textContent = view.name;
+
+          const meta = document.createElement("div");
+          meta.className = "saved-view-meta";
+          meta.textContent = `${viewSourceName(view)}, ${view.tile_count} tiles, zoom ${view.min_zoom}-${view.max_zoom}, radius ${Number(view.radius_km).toFixed(1)}km`;
+
+          const coords = document.createElement("div");
+          coords.className = "saved-view-meta mono";
+          coords.textContent = `${Number(view.center_lat).toFixed(5)}, ${Number(view.center_lon).toFixed(5)}`;
+
+          const remove = document.createElement("button");
+          remove.className = "saved-view-delete";
+          remove.type = "button";
+          remove.textContent = "Delete";
+          remove.addEventListener("click", () => deleteMapView(view));
+
+          select.append(name, meta, coords);
+          row.append(select, remove);
+          viewList.appendChild(row);
+        }
+      }
+
+      function centerOnView(view) {
+        selectedViewId = view.id;
+        followCar.checked = false;
+        centerSelectedView(view, currentZoom());
+        activeViewLabel.textContent = view.name;
+        scheduleRender();
+      }
+
+      async function deleteMapView(view) {
+        if (!window.confirm(`Delete cached map "${view.name}"?`)) {
+          return;
+        }
+        try {
+          const response = await fetch(`/api/maps/views/${encodeURIComponent(view.id)}`, {
+            method: "DELETE",
+          });
+          const body = await readJsonResponse(response);
+          if (!response.ok || body.ok === false) {
+            throw new Error(body.error || `delete failed with HTTP ${response.status}`);
+          }
+          if (selectedViewId === view.id) {
+            selectedViewId = null;
+            mapCenter = carPosition ? { lat: carPosition.lat, lon: carPosition.lon } : null;
+          }
+          setFeedback(`Deleted ${view.name}: ${body.removed_tiles || 0} cached tiles removed.`);
+          await loadViews();
+        } catch (error) {
+          setFeedback(error.message, true);
+        }
+      }
+
+      function setFeedback(text, isError = false) {
+        downloadFeedback.hidden = !text;
+        downloadFeedback.textContent = text || "";
+        downloadFeedback.classList.toggle("error", isError);
+      }
+
+      function fillTargetFromCar() {
+        if (!carPosition) {
+          setFeedback("No GPS position available.", true);
+          return;
+        }
+        viewLat.value = carPosition.lat.toFixed(6);
+        viewLon.value = carPosition.lon.toFixed(6);
+        if (!viewName.value.trim()) {
+          viewName.value = "Track Map";
+        }
+        setFeedback("");
+      }
+
+      async function readJsonResponse(response) {
+        const text = await response.text();
+        if (!text) {
+          return {};
+        }
+        try {
+          return JSON.parse(text);
+        } catch (_error) {
+          return { error: text };
+        }
+      }
+
+      async function postJson(url, payload) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await readJsonResponse(response);
+        if (!response.ok || body.ok === false) {
+          throw new Error(body.error || `request failed with HTTP ${response.status}`);
+        }
+        return body;
+      }
+
+      function errorMessage(error) {
+        if (error && error.message) {
+          return error.message;
+        }
+        return String(error);
+      }
+
+      async function fetchWithTimeout(url, options = {}, timeoutMs = BROWSER_TILE_TIMEOUT_MS) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+          if (error && error.name === "AbortError") {
+            throw new Error(`timed out after ${Math.round(timeoutMs / 1000)}s`);
+          }
+          throw error;
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+      }
+
+      async function fetchTileBlob(tile) {
+        const tileId = `${tile.z}/${tile.x}/${tile.y}`;
+        try {
+          const tileResponse = await fetchWithTimeout(tile.url, { mode: "cors", cache: "force-cache" });
+          if (!tileResponse.ok) {
+            throw new Error(`provider returned HTTP ${tileResponse.status}`);
+          }
+          const blob = await tileResponse.blob();
+          if (!blob.size) {
+            throw new Error("provider returned an empty tile");
+          }
+          return blob;
+        } catch (fetchError) {
+          throw new Error(`browser could not download provider tile ${tileId} from ${tile.url}: ${errorMessage(fetchError)}`);
+        }
+      }
+
+      async function uploadTile(tile) {
+        const blob = await fetchTileBlob(tile);
+        const source = encodeURIComponent(tile.source || "streets");
+        const uploadResponse = await fetchWithTimeout(`/api/maps/tiles/${tile.z}/${tile.x}/${tile.y}?source=${source}`, {
+          method: "PUT",
+          headers: { "content-type": blob.type || "application/octet-stream" },
+          body: blob,
+        });
+        const body = await readJsonResponse(uploadResponse);
+        if (!uploadResponse.ok || body.ok === false) {
+          throw new Error(`carcomputer rejected tile ${tile.z}/${tile.x}/${tile.y} after browser download (${blob.size} bytes from ${tile.url}): ${body.error || `HTTP ${uploadResponse.status}`}`);
+        }
+      }
+
+      async function uploadTileWithRetries(tile) {
+        let lastError = null;
+        for (let attempt = 0; attempt <= DOWNLOAD_RETRIES; attempt += 1) {
+          try {
+            await uploadTile(tile);
+            return;
+          } catch (error) {
+            lastError = error;
+            if (attempt < DOWNLOAD_RETRIES) {
+              await sleep(DOWNLOAD_RETRY_DELAY_MS * (attempt + 1));
+            }
+          }
+        }
+        throw new Error(`tile ${tile.z}/${tile.x}/${tile.y} failed after ${DOWNLOAD_RETRIES + 1} attempts: ${errorMessage(lastError)}`);
+      }
+
+      function tileDownloadPriority(view, tile) {
+        const center = latLonToWorldPixel(Number(view.center_lat), Number(view.center_lon), tile.z);
+        const tileCenterX = (tile.x + 0.5) * TILE_SIZE;
+        const tileCenterY = (tile.y + 0.5) * TILE_SIZE;
+        const dx = tileCenterX - center.x;
+        const dy = tileCenterY - center.y;
+        return (dx * dx) + (dy * dy);
+      }
+
+      async function uploadTilesFromBrowser(plan) {
+        const pendingTiles = (plan.tiles || [])
+          .filter((tile) => !tile.cached)
+          .sort((a, b) => {
+            if (a.z !== b.z) {
+              return b.z - a.z;
+            }
+            return tileDownloadPriority(plan.view, a) - tileDownloadPriority(plan.view, b);
+          });
+        let uploaded = 0;
+        let failed = 0;
+        let nextIndex = 0;
+        let firstError = null;
+
+        async function worker() {
+          while (nextIndex < pendingTiles.length) {
+            const tile = pendingTiles[nextIndex];
+            nextIndex += 1;
+            try {
+              await uploadTileWithRetries(tile);
+              uploaded += 1;
+            } catch (error) {
+              failed += 1;
+              if (!firstError) {
+                firstError = error;
+              }
+              console.error("failed to download or upload map tile from browser", tile, error);
+            }
+            const totalDone = uploaded + failed;
+            let message = `Downloading tiles: ${totalDone}/${pendingTiles.length} (${uploaded} saved, ${failed} failed).`;
+            if (firstError) {
+              message += ` First error: ${firstError.message}`;
+            }
+            setFeedback(message, failed > 0);
+          }
+        }
+
+        const workers = Array.from(
+          { length: Math.min(DOWNLOAD_CONCURRENCY, pendingTiles.length) },
+          () => worker(),
+        );
+        await Promise.all(workers);
+        return { uploaded, failed, firstError };
+      }
+
+      async function downloadViewFromCarcomputer(payload) {
+        downloadButton.textContent = "Downloading";
+        setFeedback("Downloading tiles from the carcomputer.");
+        const body = await postJson("/api/maps/views", payload);
+        const failed = Number(body.failed_tiles || 0);
+        const parts = [
+          `${body.downloaded_tiles || 0} downloaded`,
+          `${body.existing_tiles || 0} already cached`,
+        ];
+        if (failed) {
+          parts.push(`${failed} failed`);
+        }
+        let message = `Saved ${body.view.name}: ${parts.join(", ")}.`;
+        if (body.first_error) {
+          message += ` First error: ${body.first_error}`;
+        }
+        setFeedback(message, failed > 0);
+      }
+
+      async function downloadViewFromBrowser(payload) {
+        downloadButton.textContent = "Planning";
+        const plan = await postJson("/api/maps/views/plan", payload);
+        downloadButton.textContent = "Downloading";
+        setFeedback(`Downloading ${plan.missing_tiles || 0} ${viewSourceName(plan.view).toLowerCase()} tiles from this browser.`);
+        const result = await uploadTilesFromBrowser(plan);
+        const failed = Number(result.failed || 0);
+        const cachedCount = Number(result.uploaded || 0) + Number(plan.existing_tiles || 0);
+        if (!cachedCount) {
+          let message = `No ${viewSourceName(plan.view).toLowerCase()} map tiles were cached.`;
+          if (result.firstError) {
+            message += ` First browser error: ${result.firstError.message}`;
+          }
+          throw new Error(message);
+        }
+
+        downloadButton.textContent = "Saving";
+        const commit = await postJson("/api/maps/views/commit", { view: plan.view });
+        const parts = [
+          `${result.uploaded || 0} downloaded`,
+          `${plan.existing_tiles || 0} already cached`,
+        ];
+        if (failed) {
+          parts.push(`${failed} failed`);
+        }
+        if (commit.missing_tiles) {
+          parts.push(`${commit.missing_tiles} missing`);
+        }
+        let message = `Saved ${commit.view.name}: ${parts.join(", ")}.`;
+        if (failed && result.firstError) {
+          message += ` First browser error: ${result.firstError.message}`;
+        }
+        setFeedback(message, failed > 0);
+      }
+
+      async function downloadView(event) {
+        event.preventDefault();
+        setFeedback("");
+
+        const minZoom = Number.parseInt(viewMinZoom.value, 10);
+        const maxZoom = Number.parseInt(viewMaxZoom.value, 10);
+        if (minZoom > maxZoom) {
+          setFeedback("Min zoom cannot exceed max zoom.", true);
+          return;
+        }
+
+        const payload = {
+          name: viewName.value.trim() || null,
+          source: "streets",
+          lat: Number.parseFloat(viewLat.value),
+          lon: Number.parseFloat(viewLon.value),
+          radius_km: Number.parseFloat(viewRadius.value),
+          min_zoom: minZoom,
+          max_zoom: maxZoom,
+        };
+
+        downloadButton.disabled = true;
+        downloadButton.textContent = "Downloading";
+        try {
+          if (downloadMode.value === "browser") {
+            await downloadViewFromBrowser(payload);
+          } else {
+            await downloadViewFromCarcomputer(payload);
+          }
+          await loadViews();
+        } catch (error) {
+          setFeedback(error.message, true);
+        } finally {
+          downloadButton.disabled = false;
+          downloadButton.textContent = "Download";
+        }
+      }
+
+      function beginDrag(event) {
+        if (!currentMapView()) {
+          return;
+        }
+        followCar.checked = false;
+        const zoom = currentZoom();
+        const center = mapCenter || carPosition || selectedView();
+        dragState = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          centerPixel: latLonToWorldPixel(
+            center.lat ?? center.center_lat,
+            center.lon ?? center.center_lon,
+            zoom,
+          ),
+          zoom,
+        };
+        mapCanvas.setPointerCapture(event.pointerId);
+      }
+
+      function moveDrag(event) {
+        if (!dragState || dragState.pointerId !== event.pointerId) {
+          return;
+        }
+        const dx = event.clientX - dragState.startX;
+        const dy = event.clientY - dragState.startY;
+        mapCenter = worldPixelToLatLon(
+          dragState.centerPixel.x - dx,
+          dragState.centerPixel.y - dy,
+          dragState.zoom,
+        );
+        scheduleRender();
+      }
+
+      function endDrag(event) {
+        if (dragState && dragState.pointerId === event.pointerId) {
+          dragState = null;
+        }
+      }
+
+      mapZoom.addEventListener("change", () => {
+        const selected = selectedView();
+        if (selected && !followCar.checked) {
+          centerSelectedViewAtZoom(selected, currentZoom());
+        }
+        scheduleRender();
+      });
+      followCar.addEventListener("change", () => {
+        if (followCar.checked) {
+          selectedViewId = null;
+        }
+        if (followCar.checked && carPosition) {
+          mapCenter = { lat: carPosition.lat, lon: carPosition.lon };
+        }
+        scheduleRender();
+      });
+      useCarPositionButton.addEventListener("click", fillTargetFromCar);
+      downloadForm.addEventListener("submit", downloadView);
+      mapCanvas.addEventListener("pointerdown", beginDrag);
+      mapCanvas.addEventListener("pointermove", moveDrag);
+      mapCanvas.addEventListener("pointerup", endDrag);
+      mapCanvas.addEventListener("pointercancel", endDrag);
+      window.addEventListener("resize", scheduleRender);
+      window.addEventListener("pagehide", () => {
+        if (signalSource) {
+          signalSource.close();
+        }
+        if (signalCacheUnsubscribe) {
+          signalCacheUnsubscribe();
+        }
+      });
+
+      loadViews();
+      resolveGpsSignals().finally(connectGpsSignals);
+    })();
+  </script>
+{% endblock %}

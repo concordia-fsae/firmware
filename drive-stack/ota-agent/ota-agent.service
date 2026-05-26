@@ -7,6 +7,8 @@ Wants=ota-agent-drive-stack.service
 Environment=OTA_AGENT_CONFIG_TOML=/application/config/ota-agent/ota-agent.toml
 Environment=OTA_AGENT_DISCOVERY_YAML=/application/config/ota-agent/discovery.yaml
 ExecStart=/bin/cfr/ota-agent server -i eth0 --save-dir /application/firmware/ -m /application/config/ota-agent/deploy-targets.yaml
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=1
 Restart=always
 RestartSec=5s
 

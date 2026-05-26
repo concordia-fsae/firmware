@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::mem::{size_of, zeroed};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::thread;
@@ -51,6 +51,35 @@ const SUPPORTED_CONTROLLERS: &[&str] = &[
     "bmsb", "bmsw0", "bmsw1", "bmsw2", "bmsw3", "bmsw4", "bmsw5", "bmsw6", "bmsw7", "sws",
     "vcfront", "vcrear", "vcpdu", "pm100dx",
 ];
+const DEFAULT_MAP_STORE_DIR: &str = "/var/lib/car-dashboard/maps";
+const OPENSTREETMAP_MAP_TILE_SOURCE_ID: &str = "streets";
+const OPENSTREETMAP_MAP_TILE_TEMPLATE: &str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const DEFAULT_MAP_TILE_SOURCE_ID: &str = OPENSTREETMAP_MAP_TILE_SOURCE_ID;
+const DEFAULT_MAP_TILE_TEMPLATE: &str = OPENSTREETMAP_MAP_TILE_TEMPLATE;
+const MAP_TILE_USER_AGENT: &str = "cfr-car-dashboard/0.1 offline-map-cache";
+const MAX_MAP_ZOOM: u8 = 19;
+const SIGNAL_SAMPLE_BATCH_INTERVAL_MS: u64 = 100;
+const SIGNAL_EVENT_QUEUE_CAPACITY: usize = 4096;
+const SIGNAL_BROADCAST_QUEUE_CAPACITY: usize = 8;
+const MAX_MAP_TILE_UPLOAD_BYTES: u64 = 1024 * 1024;
+const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
+const JPEG_SIGNATURE: &[u8; 3] = b"\xff\xd8\xff";
+const OSM_BLOCKED_HEADER: &str = "x-blocked";
+const WEB_MERCATOR_MAX_LAT: f64 = 85.05112878;
+const EARTH_KM_PER_DEG_LAT: f64 = 111.32;
+
+#[derive(Debug, Clone, Copy)]
+struct MapTileSource {
+    id: &'static str,
+    name: &'static str,
+    template: &'static str,
+}
+
+const MAP_TILE_SOURCES: &[MapTileSource] = &[MapTileSource {
+    id: OPENSTREETMAP_MAP_TILE_SOURCE_ID,
+    name: "Streets",
+    template: OPENSTREETMAP_MAP_TILE_TEMPLATE,
+}];
 
 #[derive(Debug, Parser, Clone)]
 #[command(name = "dashboard", about = "Live carputer dashboard over CAN")]
@@ -87,6 +116,9 @@ pub struct Opts {
 
     #[arg(long, default_value = "can1")]
     pub body_iface: Option<String>,
+
+    #[arg(long, default_value = DEFAULT_MAP_STORE_DIR)]
+    pub map_store_dir: String,
 
     #[arg(long, hide = true, default_value_t = false)]
     pub veh_worker: bool,
@@ -309,6 +341,175 @@ struct SignalEventQuery {
 }
 
 #[derive(Debug, Clone)]
+struct MapStoreConfig {
+    root: PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct MapBounds {
+    min_lat: f64,
+    max_lat: f64,
+    min_lon: f64,
+    max_lon: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct MapTileLevel {
+    zoom: u8,
+    min_x: u32,
+    max_x: u32,
+    min_y: u32,
+    max_y: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+struct MapView {
+    id: String,
+    name: String,
+    center_lat: f64,
+    center_lon: f64,
+    radius_km: f64,
+    min_zoom: u8,
+    max_zoom: u8,
+    created_at_ms: u64,
+    tile_count: usize,
+    #[serde(default)]
+    tile_source_id: String,
+    #[serde(default)]
+    tile_source_name: String,
+    tile_source: String,
+    bounds: MapBounds,
+    levels: Vec<MapTileLevel>,
+    #[serde(default)]
+    tiles: Vec<TileCoord>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapViewsResponse {
+    ok: bool,
+    store_dir: String,
+    views: Vec<MapView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapDebugResponse {
+    ok: bool,
+    store_dir: String,
+    views: Vec<MapDebugView>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapDebugView {
+    id: String,
+    name: String,
+    center_lat: f64,
+    center_lon: f64,
+    tile_count: usize,
+    zooms: Vec<u8>,
+    sample_tiles: Vec<MapDebugTile>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapDebugTile {
+    z: u8,
+    x: u32,
+    y: u32,
+    center_lat: f64,
+    center_lon: f64,
+    path: String,
+    exists: bool,
+    png: bool,
+    image_type: Option<String>,
+    valid: bool,
+    size_bytes: Option<u64>,
+    detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MapDownloadRequest {
+    name: Option<String>,
+    #[serde(default)]
+    source: Option<String>,
+    lat: f64,
+    lon: f64,
+    radius_km: Option<f64>,
+    min_zoom: Option<u8>,
+    max_zoom: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapDownloadResponse {
+    ok: bool,
+    view: MapView,
+    downloaded_tiles: usize,
+    existing_tiles: usize,
+    failed_tiles: usize,
+    first_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapTileDownloadPlan {
+    source: String,
+    z: u8,
+    x: u32,
+    y: u32,
+    url: String,
+    cached: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapDownloadPlanResponse {
+    ok: bool,
+    view: MapView,
+    tiles: Vec<MapTileDownloadPlan>,
+    existing_tiles: usize,
+    missing_tiles: usize,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct MapCommitRequest {
+    view: MapView,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapCommitResponse {
+    ok: bool,
+    view: MapView,
+    existing_tiles: usize,
+    missing_tiles: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapTileUploadResponse {
+    ok: bool,
+    z: u8,
+    x: u32,
+    y: u32,
+    size_bytes: usize,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+struct MapTileQuery {
+    #[serde(default)]
+    source: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct MapDeleteResponse {
+    ok: bool,
+    deleted_view: MapView,
+    removed_tiles: usize,
+    remaining_views: usize,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+struct TileCoord {
+    z: u8,
+    x: u32,
+    y: u32,
+}
+
+#[derive(Debug, Clone)]
 struct ControllerRuntime {
     name: String,
     last_seen_at: Option<Instant>,
@@ -332,6 +533,39 @@ struct JobStore {
 
 struct TesterPresentHandle {
     stop_tx: oneshot::Sender<String>,
+}
+
+impl MapStoreConfig {
+    fn views_path(&self) -> PathBuf {
+        self.root.join("views.json")
+    }
+
+    fn tiles_dir(&self) -> PathBuf {
+        self.root.join("tiles")
+    }
+
+    fn legacy_tile_path(&self, z: u8, x: u32, y: u32) -> PathBuf {
+        self.tiles_dir()
+            .join(z.to_string())
+            .join(x.to_string())
+            .join(format!("{y}.png"))
+    }
+
+    fn tile_path_for_source_id(&self, source_id: &str, z: u8, x: u32, y: u32) -> PathBuf {
+        self.tiles_dir()
+            .join(source_id)
+            .join(z.to_string())
+            .join(x.to_string())
+            .join(format!("{y}.tile"))
+    }
+
+    fn tile_paths_for_source_id(&self, source_id: &str, z: u8, x: u32, y: u32) -> Vec<PathBuf> {
+        let mut paths = vec![self.tile_path_for_source_id(source_id, z, x, y)];
+        if source_id == OPENSTREETMAP_MAP_TILE_SOURCE_ID {
+            paths.push(self.legacy_tile_path(z, x, y));
+        }
+        paths
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -360,10 +594,13 @@ struct AppState {
     body_iface: Arc<Option<String>>,
     state_events: broadcast::Sender<String>,
     job_events: broadcast::Sender<String>,
+    signal_events: broadcast::Sender<Arc<SignalSampleBatch>>,
     last_state_payload: Arc<Mutex<String>>,
     last_jobs_payload: Arc<Mutex<String>>,
     jobs: Arc<RwLock<JobStore>>,
     tester_present: Arc<Mutex<BTreeMap<String, TesterPresentHandle>>>,
+    map_store: Arc<MapStoreConfig>,
+    map_store_lock: Arc<Mutex<()>>,
 }
 
 impl DashboardStore {
@@ -604,13 +841,14 @@ pub async fn run(opts: Opts) -> Result<()> {
     }
 
     info!(
-        "initializing dashboard with uds_manifest='{}', routine_manifest='{}', deploy_targets_manifest='{}', ota_agent_service_name='{}', veh_iface='{}', body_iface='{}', port={}",
+        "initializing dashboard with uds_manifest='{}', routine_manifest='{}', deploy_targets_manifest='{}', ota_agent_service_name='{}', veh_iface='{}', body_iface='{}', map_store_dir='{}', port={}",
         opts.uds_manifest,
         opts.routine_manifest,
         opts.deploy_targets_manifest,
         OTA_AGENT_SERVICE_NAME,
         opts.veh_iface,
         opts.body_iface.as_deref().unwrap_or("disabled"),
+        opts.map_store_dir,
         opts.port
     );
     let capabilities = Arc::new(load_controller_capabilities(
@@ -658,8 +896,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         Duration::from_secs(DEFAULT_OFFLINE_TIMEOUT_SECS),
     )));
     let jobs = Arc::new(RwLock::new(JobStore::new()));
+    let map_store = Arc::new(MapStoreConfig {
+        root: PathBuf::from(&opts.map_store_dir),
+    });
     let (state_events, _) = broadcast::channel(64);
     let (job_events, _) = broadcast::channel(64);
+    let (signal_events, _) = broadcast::channel(SIGNAL_BROADCAST_QUEUE_CAPACITY);
     let state = AppState {
         store,
         capabilities,
@@ -669,10 +911,13 @@ pub async fn run(opts: Opts) -> Result<()> {
         body_iface: Arc::new(opts.body_iface.clone()),
         state_events,
         job_events,
+        signal_events,
         last_state_payload: Arc::new(Mutex::new(String::new())),
         last_jobs_payload: Arc::new(Mutex::new(String::new())),
         jobs,
         tester_present: Arc::new(Mutex::new(BTreeMap::new())),
+        map_store,
+        map_store_lock: Arc::new(Mutex::new(())),
     };
 
     info!("seeding initial dashboard snapshot");
@@ -698,12 +943,16 @@ pub async fn run(opts: Opts) -> Result<()> {
         let mut interval = tokio::time::interval(Duration::from_millis(DEFAULT_SWEEP_INTERVAL_MS));
         loop {
             interval.tick().await;
+            if state_for_sweep.state_events.receiver_count() == 0 {
+                continue;
+            }
             if let Err(e) = state_for_sweep.publish_state_if_changed().await {
                 warn!("failed to publish sweep snapshot: {e}");
             }
         }
     });
 
+    let signal_events_for_worker = state.signal_events.clone();
     let state_filter = warp::any().map(move || state.clone());
 
     let home = warp::path::end()
@@ -716,6 +965,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::get())
         .and(state_filter.clone())
         .and_then(handle_signals);
+
+    let gps = warp::path("gps")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_gps);
 
     let controller = warp::path!("controllers" / String)
         .and(warp::get())
@@ -736,6 +991,56 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::get())
         .and(state_filter.clone())
         .and_then(handle_signal_manifest);
+
+    let map_views = warp::path!("api" / "maps" / "views")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_map_views);
+
+    let map_debug = warp::path!("api" / "maps" / "debug")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_map_debug);
+
+    let create_map_view = warp::path!("api" / "maps" / "views")
+        .and(warp::post())
+        .and(warp::body::content_length_limit(32 * 1024))
+        .and(warp::body::json())
+        .and(state_filter.clone())
+        .and_then(handle_create_map_view);
+
+    let delete_map_view = warp::path!("api" / "maps" / "views" / String)
+        .and(warp::delete())
+        .and(state_filter.clone())
+        .and_then(handle_delete_map_view);
+
+    let plan_map_view = warp::path!("api" / "maps" / "views" / "plan")
+        .and(warp::post())
+        .and(warp::body::content_length_limit(32 * 1024))
+        .and(warp::body::json())
+        .and(state_filter.clone())
+        .and_then(handle_plan_map_view);
+
+    let commit_map_view = warp::path!("api" / "maps" / "views" / "commit")
+        .and(warp::post())
+        .and(warp::body::content_length_limit(256 * 1024))
+        .and(warp::body::json())
+        .and(state_filter.clone())
+        .and_then(handle_commit_map_view);
+
+    let map_tile = warp::path!("api" / "maps" / "tiles" / u8 / u32 / u32)
+        .and(warp::get())
+        .and(warp::query::<MapTileQuery>())
+        .and(state_filter.clone())
+        .and_then(handle_map_tile);
+
+    let upload_map_tile = warp::path!("api" / "maps" / "tiles" / u8 / u32 / u32)
+        .and(warp::put())
+        .and(warp::query::<MapTileQuery>())
+        .and(warp::body::content_length_limit(MAX_MAP_TILE_UPLOAD_BYTES))
+        .and(warp::body::bytes())
+        .and(state_filter.clone())
+        .and_then(handle_upload_map_tile);
 
     let uplot_js = warp::path!("assets" / "uPlot.iife.min.js")
         .and(warp::get())
@@ -944,9 +1249,18 @@ pub async fn run(opts: Opts) -> Result<()> {
 
     let routes = home
         .or(signals)
+        .or(gps)
         .or(controller)
         .or(database)
         .or(signal_manifest)
+        .or(map_views)
+        .or(map_debug)
+        .or(create_map_view)
+        .or(delete_map_view)
+        .or(plan_map_view)
+        .or(commit_map_view)
+        .or(map_tile)
+        .or(upload_map_tile)
         .or(uplot_js)
         .or(uplot_css)
         .or(signal_cache_worker_js)
@@ -966,7 +1280,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/database', '/controllers/:name', '/api/signals/manifest', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/database', '/controllers/:name', '/api/signals/manifest', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -980,6 +1294,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         opts.veh_iface.clone(),
         Arc::clone(&tracked_controllers),
         updates_tx.clone(),
+    );
+    spawn_signal_broadcast_worker(
+        opts.veh_iface.clone(),
+        yamcan::Bus::Veh,
+        signal_events_for_worker,
     );
 
     server.await;
@@ -1086,12 +1405,227 @@ fn percent_encode_query_value(value: &str) -> String {
     encoded
 }
 
+async fn handle_gps(_state: AppState) -> Result<warp::reply::Response, Infallible> {
+    debug!("serving GPS map page");
+    Ok(render_template_response(
+        views::render_gps(),
+        warp::http::StatusCode::OK,
+    ))
+}
+
 async fn handle_signal_manifest(state: AppState) -> Result<warp::reply::Response, Infallible> {
     Ok(warp::reply::with_status(
         warp::reply::json(&*state.signal_manifest),
         warp::http::StatusCode::OK,
     )
     .into_response())
+}
+
+async fn handle_map_views(state: AppState) -> Result<warp::reply::Response, Infallible> {
+    match load_map_views(&state.map_store).await {
+        Ok(views) => Ok(json_map_views_response(MapViewsResponse {
+            ok: true,
+            store_dir: state.map_store.root.display().to_string(),
+            views,
+        })),
+        Err(error) => Ok(json_error_response(
+            warp::http::StatusCode::BAD_REQUEST,
+            &error.to_string(),
+        )),
+    }
+}
+
+async fn handle_map_debug(state: AppState) -> Result<warp::reply::Response, Infallible> {
+    match debug_map_cache(&state.map_store).await {
+        Ok(response) => Ok(json_map_debug_response(response)),
+        Err(error) => Ok(json_error_response(
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+            &error.to_string(),
+        )),
+    }
+}
+
+async fn handle_create_map_view(
+    request: MapDownloadRequest,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let _guard = state.map_store_lock.lock().await;
+    match download_map_view(&state.map_store, request).await {
+        Ok(response) => Ok(json_map_download_response(response)),
+        Err(error) => {
+            let message = error.to_string();
+            let status = if message.contains("no map tiles could be downloaded") {
+                warp::http::StatusCode::BAD_GATEWAY
+            } else {
+                warp::http::StatusCode::BAD_REQUEST
+            };
+            Ok(json_error_response(status, &message))
+        }
+    }
+}
+
+async fn handle_delete_map_view(
+    view_id: String,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let _guard = state.map_store_lock.lock().await;
+    match delete_map_view(&state.map_store, &view_id).await {
+        Ok(response) => Ok(json_map_delete_response(response)),
+        Err(error) => {
+            let message = error.to_string();
+            let status = if message.contains("not found") {
+                warp::http::StatusCode::NOT_FOUND
+            } else {
+                warp::http::StatusCode::INTERNAL_SERVER_ERROR
+            };
+            Ok(json_error_response(status, &message))
+        }
+    }
+}
+
+async fn handle_plan_map_view(
+    request: MapDownloadRequest,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    match plan_map_view(&state.map_store, request).await {
+        Ok(response) => Ok(json_map_plan_response(response)),
+        Err(error) => Ok(json_error_response(
+            warp::http::StatusCode::BAD_REQUEST,
+            &error.to_string(),
+        )),
+    }
+}
+
+async fn handle_commit_map_view(
+    request: MapCommitRequest,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let _guard = state.map_store_lock.lock().await;
+    match commit_map_view(&state.map_store, request.view).await {
+        Ok(response) => Ok(json_map_commit_response(response)),
+        Err(error) => Ok(json_error_response(
+            warp::http::StatusCode::BAD_REQUEST,
+            &error.to_string(),
+        )),
+    }
+}
+
+async fn handle_map_tile(
+    z: u8,
+    x: u32,
+    y: u32,
+    query: MapTileQuery,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    if !valid_tile_coord(z, x, y) {
+        return Ok(
+            warp::reply::with_status("tile not found", warp::http::StatusCode::NOT_FOUND)
+                .into_response(),
+        );
+    }
+
+    let source = match selected_map_tile_source(query.source.as_deref()) {
+        Ok(source) => source,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
+    let tile = TileCoord { z, x, y };
+
+    match read_cached_map_tile(&state.map_store, source, tile).await {
+        Ok(Some(data)) => {
+            let content_type = map_tile_content_type(&data).unwrap_or("application/octet-stream");
+            Ok(warp::http::Response::builder()
+                .status(warp::http::StatusCode::OK)
+                .header("content-type", content_type)
+                .header("cache-control", "no-store")
+                .body(warp::hyper::Body::from(data))
+                .unwrap_or_else(|_| {
+                    warp::reply::with_status(
+                        "tile response error",
+                        warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+                    )
+                    .into_response()
+                }))
+        }
+        Ok(None) => Ok(warp::reply::with_status(
+            "tile not found",
+            warp::http::StatusCode::NOT_FOUND,
+        )
+        .into_response()),
+        Err(error) => Ok(json_error_response(
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+            &error.to_string(),
+        )),
+    }
+}
+
+async fn handle_upload_map_tile(
+    z: u8,
+    x: u32,
+    y: u32,
+    query: MapTileQuery,
+    data: warp::hyper::body::Bytes,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    if !valid_tile_coord(z, x, y) {
+        return Ok(
+            warp::reply::with_status("tile not found", warp::http::StatusCode::NOT_FOUND)
+                .into_response(),
+        );
+    }
+    if data.is_empty() {
+        return Ok(json_error_response(
+            warp::http::StatusCode::BAD_REQUEST,
+            "tile upload cannot be empty",
+        ));
+    }
+
+    let tile = TileCoord { z, x, y };
+    let source = match selected_map_tile_source(query.source.as_deref()) {
+        Ok(source) => source,
+        Err(error) => {
+            warn!("rejected uploaded map tile z={z} x={x} y={y}: {error}");
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
+    match write_map_tile_bytes(&state.map_store, source, tile, data.as_ref()).await {
+        Ok(()) => Ok(json_map_tile_upload_response(MapTileUploadResponse {
+            ok: true,
+            z,
+            x,
+            y,
+            size_bytes: data.len(),
+        })),
+        Err(error) => {
+            let message = error.to_string();
+            warn!(
+                "rejected uploaded map tile source={} z={} x={} y={} size={} bytes: {}",
+                source.id,
+                z,
+                x,
+                y,
+                data.len(),
+                message
+            );
+            let status = if message.starts_with("tile data ")
+                || message.starts_with("tile PNG ")
+                || message.starts_with("tile JPEG ")
+                || message.starts_with("tile image ")
+            {
+                warp::http::StatusCode::BAD_REQUEST
+            } else {
+                warp::http::StatusCode::INTERNAL_SERVER_ERROR
+            };
+            Ok(json_error_response(status, &message))
+        }
+    }
 }
 
 fn handle_uplot_js() -> warp::reply::Response {
@@ -1934,6 +2468,925 @@ fn sanitize_upload_name(name: &str) -> String {
         .collect()
 }
 
+async fn load_map_views(config: &MapStoreConfig) -> Result<Vec<MapView>> {
+    let mut views = load_stored_map_views(config).await?;
+    for view in &mut views {
+        hydrate_map_view_tiles(config, view).await?;
+    }
+    sort_map_views(&mut views);
+    Ok(views)
+}
+
+async fn load_stored_map_views(config: &MapStoreConfig) -> Result<Vec<MapView>> {
+    tokio::fs::create_dir_all(&config.root)
+        .await
+        .with_context(|| format!("creating map store '{}'", config.root.display()))?;
+
+    let path = config.views_path();
+    let raw = match tokio::fs::read_to_string(&path).await {
+        Ok(raw) => raw,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => {
+            return Err(error).with_context(|| format!("reading map views '{}'", path.display()));
+        }
+    };
+
+    if raw.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut views = serde_json::from_str::<Vec<MapView>>(&raw)
+        .with_context(|| format!("parsing map views '{}'", path.display()))?;
+    views.retain_mut(|view| match normalize_map_view_source(view) {
+        Ok(_) => true,
+        Err(error) => {
+            warn!(
+                "ignoring unsupported cached map view '{}': {error}",
+                view.name
+            );
+            false
+        }
+    });
+    Ok(views)
+}
+
+fn sort_map_views(views: &mut [MapView]) {
+    views.sort_by(|a, b| {
+        b.created_at_ms
+            .cmp(&a.created_at_ms)
+            .then_with(|| a.name.cmp(&b.name))
+    });
+}
+
+async fn write_map_views(config: &MapStoreConfig, views: &[MapView]) -> Result<()> {
+    tokio::fs::create_dir_all(&config.root)
+        .await
+        .with_context(|| format!("creating map store '{}'", config.root.display()))?;
+
+    let path = config.views_path();
+    let tmp_path = path.with_extension("json.tmp");
+    let data = serde_json::to_string_pretty(views).context("serializing map views")?;
+    tokio::fs::write(&tmp_path, data)
+        .await
+        .with_context(|| format!("writing temporary map views '{}'", tmp_path.display()))?;
+    tokio::fs::rename(&tmp_path, &path)
+        .await
+        .with_context(|| format!("committing map views '{}'", path.display()))?;
+    Ok(())
+}
+
+async fn debug_map_cache(config: &MapStoreConfig) -> Result<MapDebugResponse> {
+    let mut views = load_stored_map_views(config).await?;
+    sort_map_views(&mut views);
+    let mut debug_views = Vec::with_capacity(views.len());
+    for view in views {
+        let source = map_tile_source_for_view(&view)?;
+        let declared_tiles = map_view_tiles(&view)?;
+        let mut zooms = declared_tiles.iter().map(|tile| tile.z).collect::<Vec<_>>();
+        zooms.sort_unstable();
+        zooms.dedup();
+
+        let mut sample_tiles = Vec::new();
+        for tile in declared_tiles.iter().take(12) {
+            let (path, data) = read_cached_map_tile_with_path(config, source, *tile)
+                .await?
+                .unwrap_or_else(|| {
+                    (
+                        config.tile_path_for_source_id(source.id, tile.z, tile.x, tile.y),
+                        Vec::new(),
+                    )
+                });
+            let data = if data.is_empty() { None } else { Some(data) };
+            let exists = data.is_some();
+            let size_bytes = data.as_ref().map(|data| data.len() as u64);
+            let png = data
+                .as_ref()
+                .map(|data| data.starts_with(PNG_SIGNATURE))
+                .unwrap_or(false);
+            let image_type = data
+                .as_deref()
+                .and_then(|data| map_tile_image_type(data).ok())
+                .map(str::to_string);
+            let validation = data.as_deref().map(validate_map_tile_bytes).transpose();
+            let valid = matches!(validation, Ok(Some(())));
+            let detail = validation.err().map(|error| error.to_string());
+            let (center_lat, center_lon) = tile_center_lat_lon(*tile);
+            sample_tiles.push(MapDebugTile {
+                z: tile.z,
+                x: tile.x,
+                y: tile.y,
+                center_lat,
+                center_lon,
+                path: path.display().to_string(),
+                exists,
+                png,
+                image_type,
+                valid,
+                size_bytes,
+                detail,
+            });
+        }
+
+        debug_views.push(MapDebugView {
+            id: view.id,
+            name: view.name,
+            center_lat: view.center_lat,
+            center_lon: view.center_lon,
+            tile_count: view.tile_count,
+            zooms,
+            sample_tiles,
+        });
+    }
+
+    Ok(MapDebugResponse {
+        ok: true,
+        store_dir: config.root.display().to_string(),
+        views: debug_views,
+    })
+}
+
+async fn plan_map_view(
+    config: &MapStoreConfig,
+    request: MapDownloadRequest,
+) -> Result<MapDownloadPlanResponse> {
+    let source = selected_map_tile_source(request.source.as_deref())?;
+    let (view, tiles) = build_map_view(&request, source)?;
+
+    let mut existing_tiles = 0usize;
+    let mut planned_tiles = Vec::with_capacity(tiles.len());
+    for tile in tiles {
+        let cached = cached_map_tile_exists(config, source, tile).await;
+        if cached {
+            existing_tiles += 1;
+        }
+        planned_tiles.push(MapTileDownloadPlan {
+            source: source.id.to_string(),
+            z: tile.z,
+            x: tile.x,
+            y: tile.y,
+            url: map_tile_url(source.template, tile),
+            cached,
+        });
+    }
+    let mut planned_view = view;
+    planned_view.tiles = planned_tiles
+        .iter()
+        .map(|tile| TileCoord {
+            z: tile.z,
+            x: tile.x,
+            y: tile.y,
+        })
+        .collect();
+
+    let missing_tiles = planned_tiles.len().saturating_sub(existing_tiles);
+    Ok(MapDownloadPlanResponse {
+        ok: true,
+        view: planned_view,
+        tiles: planned_tiles,
+        existing_tiles,
+        missing_tiles,
+    })
+}
+
+async fn commit_map_view(config: &MapStoreConfig, view: MapView) -> Result<MapCommitResponse> {
+    let source = map_tile_source_for_view(&view)?;
+
+    let request = MapDownloadRequest {
+        name: Some(view.name.clone()),
+        source: Some(source.id.to_string()),
+        lat: view.center_lat,
+        lon: view.center_lon,
+        radius_km: Some(view.radius_km),
+        min_zoom: Some(view.min_zoom),
+        max_zoom: Some(view.max_zoom),
+    };
+    let (expected_view, tiles) = build_map_view(&request, source)?;
+
+    let mut existing_tiles = 0usize;
+    let mut cached_tiles = Vec::new();
+    for tile in &tiles {
+        if cached_map_tile_exists(config, source, *tile).await {
+            existing_tiles += 1;
+            cached_tiles.push(*tile);
+        }
+    }
+    if existing_tiles == 0 {
+        return Err(anyhow::anyhow!(
+            "no map tiles are cached for this view; download at least one tile before saving"
+        ));
+    }
+
+    let mut committed = view;
+    committed.name = expected_view.name;
+    committed.center_lat = expected_view.center_lat;
+    committed.center_lon = expected_view.center_lon;
+    committed.radius_km = expected_view.radius_km;
+    committed.min_zoom = expected_view.min_zoom;
+    committed.max_zoom = expected_view.max_zoom;
+    committed.tile_source_id = expected_view.tile_source_id;
+    committed.tile_source_name = expected_view.tile_source_name;
+    committed.tile_source = expected_view.tile_source;
+    committed.bounds = expected_view.bounds;
+    committed.levels = tile_levels_from_tiles(&cached_tiles);
+    committed.tiles = cached_tiles;
+    committed.tile_count = existing_tiles;
+    if committed.id.trim().is_empty() {
+        committed.id = format!(
+            "{}-{}",
+            slugify_map_view_name(&committed.name),
+            committed.created_at_ms
+        );
+    }
+
+    let mut views = load_map_views(config).await?;
+    views.retain(|existing| existing.id != committed.id);
+    views.push(committed.clone());
+    sort_map_views(&mut views);
+    write_map_views(config, &views).await?;
+
+    let missing_tiles = tiles.len().saturating_sub(existing_tiles);
+    Ok(MapCommitResponse {
+        ok: true,
+        view: committed,
+        existing_tiles,
+        missing_tiles,
+    })
+}
+
+async fn delete_map_view(config: &MapStoreConfig, view_id: &str) -> Result<MapDeleteResponse> {
+    let trimmed_id = view_id.trim();
+    if trimmed_id.is_empty() {
+        return Err(anyhow::anyhow!("map view id cannot be empty"));
+    }
+
+    let mut views = load_stored_map_views(config).await?;
+    let index = views
+        .iter()
+        .position(|view| view.id == trimmed_id)
+        .ok_or_else(|| anyhow::anyhow!("map view '{trimmed_id}' not found"))?;
+    let deleted_view = views.remove(index);
+    let deleted_source = map_tile_source_for_view(&deleted_view)?;
+
+    let mut remaining_tiles = BTreeSet::<(String, TileCoord)>::new();
+    for view in &views {
+        let source = map_tile_source_for_view(view)?;
+        remaining_tiles.extend(
+            map_view_tiles(view)?
+                .into_iter()
+                .map(|tile| (source.id.to_string(), tile)),
+        );
+    }
+
+    sort_map_views(&mut views);
+    write_map_views(config, &views).await?;
+
+    let deleted_tiles = map_view_tiles(&deleted_view)?;
+    let mut removed_tiles = 0usize;
+    for tile in deleted_tiles {
+        if remaining_tiles.contains(&(deleted_source.id.to_string(), tile)) {
+            continue;
+        }
+        if remove_cached_map_tile(config, deleted_source, tile).await? {
+            removed_tiles += 1;
+        }
+    }
+
+    Ok(MapDeleteResponse {
+        ok: true,
+        deleted_view,
+        removed_tiles,
+        remaining_views: views.len(),
+    })
+}
+
+async fn download_map_view(
+    config: &MapStoreConfig,
+    request: MapDownloadRequest,
+) -> Result<MapDownloadResponse> {
+    let source = selected_map_tile_source(request.source.as_deref())?;
+    let (mut view, tiles) = build_map_view(&request, source)?;
+
+    tokio::fs::create_dir_all(config.tiles_dir())
+        .await
+        .with_context(|| format!("creating map tile store '{}'", config.tiles_dir().display()))?;
+
+    let client = build_map_tile_client()?;
+
+    let mut downloaded_tiles = 0usize;
+    let mut existing_tiles = 0usize;
+    let mut failed_tiles = 0usize;
+    let mut first_error = None::<String>;
+    let mut cached_tiles = Vec::new();
+    for tile in tiles {
+        if cached_map_tile_exists(config, source, tile).await {
+            existing_tiles += 1;
+            cached_tiles.push(tile);
+            continue;
+        }
+
+        let path = config.tile_path_for_source_id(source.id, tile.z, tile.x, tile.y);
+        if let Err(error) = download_map_tile(&client, source.template, tile, &path).await {
+            failed_tiles += 1;
+            let error_text = format_anyhow_chain(&error);
+            if first_error.is_none() {
+                first_error = Some(error_text.clone());
+            }
+            warn!(
+                "failed to download map tile z={} x={} y={}: {}",
+                tile.z, tile.x, tile.y, error_text
+            );
+        } else {
+            downloaded_tiles += 1;
+            cached_tiles.push(tile);
+        }
+    }
+
+    if downloaded_tiles + existing_tiles == 0 && failed_tiles > 0 {
+        let detail = first_error
+            .as_deref()
+            .unwrap_or("provider returned no usable tile data");
+        return Err(anyhow::anyhow!(
+            "no map tiles could be downloaded from the configured tile source; first error: {detail}"
+        ));
+    }
+
+    view.tile_count = cached_tiles.len();
+    view.levels = tile_levels_from_tiles(&cached_tiles);
+    view.tiles = cached_tiles;
+    let mut views = load_map_views(config).await?;
+    views.retain(|existing| existing.id != view.id);
+    views.push(view.clone());
+    sort_map_views(&mut views);
+    write_map_views(config, &views).await?;
+
+    Ok(MapDownloadResponse {
+        ok: true,
+        view,
+        downloaded_tiles,
+        existing_tiles,
+        failed_tiles,
+        first_error,
+    })
+}
+
+async fn download_map_tile(
+    client: &reqwest::Client,
+    tile_template: &str,
+    tile: TileCoord,
+    path: &Path,
+) -> Result<usize> {
+    let Some(parent) = path.parent() else {
+        return Err(anyhow::anyhow!("tile path has no parent"));
+    };
+    tokio::fs::create_dir_all(parent)
+        .await
+        .with_context(|| format!("creating tile directory '{}'", parent.display()))?;
+
+    let url = map_tile_url(tile_template, tile);
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .with_context(|| format!("requesting map tile '{url}'"))?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(anyhow::anyhow!("map tile request returned HTTP {status}"));
+    }
+    if let Some(blocked) = response.headers().get(OSM_BLOCKED_HEADER) {
+        let detail = blocked.to_str().unwrap_or("present");
+        return Err(anyhow::anyhow!(
+            "map tile provider blocked the request ({OSM_BLOCKED_HEADER}: {detail})"
+        ));
+    }
+    let bytes = response
+        .bytes()
+        .await
+        .with_context(|| format!("reading map tile '{url}'"))?;
+
+    write_map_tile_bytes_to_path(path, bytes.as_ref()).await?;
+    Ok(bytes.len())
+}
+
+fn build_map_tile_client() -> Result<reqwest::Client> {
+    reqwest::Client::builder()
+        .user_agent(MAP_TILE_USER_AGENT)
+        .use_rustls_tls()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .context("building map tile HTTP client")
+}
+
+async fn write_map_tile_bytes(
+    config: &MapStoreConfig,
+    source: &MapTileSource,
+    tile: TileCoord,
+    data: &[u8],
+) -> Result<()> {
+    write_map_tile_bytes_to_path(
+        &config.tile_path_for_source_id(source.id, tile.z, tile.x, tile.y),
+        data,
+    )
+    .await
+}
+
+async fn write_map_tile_bytes_to_path(path: &Path, data: &[u8]) -> Result<()> {
+    validate_map_tile_bytes(data)?;
+    let Some(parent) = path.parent() else {
+        return Err(anyhow::anyhow!("tile path has no parent"));
+    };
+    tokio::fs::create_dir_all(parent)
+        .await
+        .with_context(|| format!("creating tile directory '{}'", parent.display()))?;
+
+    let tmp_path = path.with_extension("tmp");
+    tokio::fs::write(&tmp_path, data)
+        .await
+        .with_context(|| format!("writing temporary tile '{}'", tmp_path.display()))?;
+    if let Err(error) = tokio::fs::rename(&tmp_path, path).await {
+        let _ = tokio::fs::remove_file(&tmp_path).await;
+        return Err(error).with_context(|| format!("committing tile '{}'", path.display()));
+    }
+    Ok(())
+}
+
+async fn hydrate_map_view_tiles(config: &MapStoreConfig, view: &mut MapView) -> Result<()> {
+    let source = normalize_map_view_source(view)?;
+    let declared_tiles = map_view_tiles(view)?;
+    let mut cached_tiles = Vec::new();
+    for tile in declared_tiles {
+        if cached_map_tile_exists(config, source, tile).await {
+            cached_tiles.push(tile);
+        }
+    }
+
+    view.tile_count = cached_tiles.len();
+    view.levels = tile_levels_from_tiles(&cached_tiles);
+    view.tiles = cached_tiles;
+    Ok(())
+}
+
+async fn cached_map_tile_exists(
+    config: &MapStoreConfig,
+    source: &MapTileSource,
+    tile: TileCoord,
+) -> bool {
+    matches!(
+        read_cached_map_tile(config, source, tile).await,
+        Ok(Some(_data))
+    )
+}
+
+async fn read_cached_map_tile(
+    config: &MapStoreConfig,
+    source: &MapTileSource,
+    tile: TileCoord,
+) -> Result<Option<Vec<u8>>> {
+    Ok(read_cached_map_tile_with_path(config, source, tile)
+        .await?
+        .map(|(_path, data)| data))
+}
+
+async fn read_cached_map_tile_with_path(
+    config: &MapStoreConfig,
+    source: &MapTileSource,
+    tile: TileCoord,
+) -> Result<Option<(PathBuf, Vec<u8>)>> {
+    for path in config.tile_paths_for_source_id(source.id, tile.z, tile.x, tile.y) {
+        let data = match tokio::fs::read(&path).await {
+            Ok(data) => data,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => continue,
+            Err(error) => {
+                return Err(error).with_context(|| format!("reading tile '{}'", path.display()));
+            }
+        };
+        if let Err(error) = validate_map_tile_bytes(&data) {
+            debug!(
+                "ignoring invalid cached map tile source={} z={} x={} y={} at '{}': {error}",
+                source.id,
+                tile.z,
+                tile.x,
+                tile.y,
+                path.display()
+            );
+            continue;
+        }
+        return Ok(Some((path, data)));
+    }
+    Ok(None)
+}
+
+async fn remove_cached_map_tile(
+    config: &MapStoreConfig,
+    source: &MapTileSource,
+    tile: TileCoord,
+) -> Result<bool> {
+    let mut removed = false;
+    for path in config.tile_paths_for_source_id(source.id, tile.z, tile.x, tile.y) {
+        match tokio::fs::remove_file(&path).await {
+            Ok(()) => {
+                removed = true;
+                cleanup_empty_tile_path_dirs(&path).await;
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!(
+                        "removing cached map tile source={} z={} x={} y={}",
+                        source.id, tile.z, tile.x, tile.y
+                    )
+                });
+            }
+        }
+    }
+    Ok(removed)
+}
+
+async fn cleanup_empty_tile_path_dirs(path: &Path) {
+    let mut current = path.parent();
+    for _ in 0..3 {
+        let Some(dir) = current else {
+            return;
+        };
+        current = dir.parent();
+        match tokio::fs::remove_dir(dir).await {
+            Ok(()) => {}
+            Err(error)
+                if error.kind() == io::ErrorKind::NotFound
+                    || error.kind() == io::ErrorKind::DirectoryNotEmpty => {}
+            Err(error) => debug!(
+                "failed to remove empty map tile dir '{}': {error}",
+                dir.display()
+            ),
+        }
+    }
+}
+
+fn validate_map_tile_bytes(data: &[u8]) -> Result<()> {
+    if data.is_empty() {
+        return Err(anyhow::anyhow!("tile data cannot be empty"));
+    }
+    map_tile_image_type(data)?;
+    Ok(())
+}
+
+fn map_tile_image_type(data: &[u8]) -> Result<&'static str> {
+    if data.starts_with(PNG_SIGNATURE) {
+        return Ok("PNG");
+    }
+    if data.starts_with(JPEG_SIGNATURE) {
+        return Ok("JPEG");
+    }
+    Err(anyhow::anyhow!("tile data is not a PNG or JPEG image"))
+}
+
+fn map_tile_content_type(data: &[u8]) -> Option<&'static str> {
+    if data.starts_with(PNG_SIGNATURE) {
+        return Some("image/png");
+    }
+    if data.starts_with(JPEG_SIGNATURE) {
+        return Some("image/jpeg");
+    }
+    None
+}
+
+fn map_view_tiles(view: &MapView) -> Result<BTreeSet<TileCoord>> {
+    if !view.tiles.is_empty() {
+        let mut tiles = BTreeSet::new();
+        for tile in &view.tiles {
+            if !valid_tile_coord(tile.z, tile.x, tile.y) {
+                return Err(anyhow::anyhow!(
+                    "map view '{}' references invalid cached tile z={} x={} y={}",
+                    view.name,
+                    tile.z,
+                    tile.x,
+                    tile.y
+                ));
+            }
+            tiles.insert(*tile);
+        }
+        return Ok(tiles);
+    }
+
+    let mut tiles = BTreeSet::new();
+    for level in &view.levels {
+        if level.zoom > MAX_MAP_ZOOM {
+            return Err(anyhow::anyhow!(
+                "map view '{}' references unsupported zoom {}",
+                view.name,
+                level.zoom
+            ));
+        }
+
+        let axis = tile_axis_count(level.zoom);
+        if level.min_x >= axis
+            || level.max_x >= axis
+            || level.min_y >= axis
+            || level.max_y >= axis
+            || level.min_x > level.max_x
+            || level.min_y > level.max_y
+        {
+            return Err(anyhow::anyhow!(
+                "map view '{}' has invalid cached tile bounds at zoom {}",
+                view.name,
+                level.zoom
+            ));
+        }
+
+        for x in level.min_x..=level.max_x {
+            for y in level.min_y..=level.max_y {
+                tiles.insert(TileCoord {
+                    z: level.zoom,
+                    x,
+                    y,
+                });
+            }
+        }
+    }
+    Ok(tiles)
+}
+
+fn tile_levels_from_tiles(tiles: &[TileCoord]) -> Vec<MapTileLevel> {
+    let mut levels_by_zoom = BTreeMap::<u8, MapTileLevel>::new();
+    for tile in tiles {
+        levels_by_zoom
+            .entry(tile.z)
+            .and_modify(|level| {
+                level.min_x = level.min_x.min(tile.x);
+                level.max_x = level.max_x.max(tile.x);
+                level.min_y = level.min_y.min(tile.y);
+                level.max_y = level.max_y.max(tile.y);
+            })
+            .or_insert(MapTileLevel {
+                zoom: tile.z,
+                min_x: tile.x,
+                max_x: tile.x,
+                min_y: tile.y,
+                max_y: tile.y,
+            });
+    }
+    levels_by_zoom.into_values().collect()
+}
+
+fn build_map_view(
+    request: &MapDownloadRequest,
+    source: &MapTileSource,
+) -> Result<(MapView, Vec<TileCoord>)> {
+    validate_map_tile_template(source.template)?;
+
+    let lat = request.lat;
+    let lon = request.lon;
+    if !lat.is_finite() || !lon.is_finite() {
+        return Err(anyhow::anyhow!(
+            "map center latitude and longitude must be finite"
+        ));
+    }
+    if !(-WEB_MERCATOR_MAX_LAT..=WEB_MERCATOR_MAX_LAT).contains(&lat) {
+        return Err(anyhow::anyhow!(
+            "map center latitude must be between -{WEB_MERCATOR_MAX_LAT} and {WEB_MERCATOR_MAX_LAT}"
+        ));
+    }
+    if !(-180.0..=180.0).contains(&lon) {
+        return Err(anyhow::anyhow!(
+            "map center longitude must be between -180 and 180"
+        ));
+    }
+
+    let radius_km = request.radius_km.unwrap_or(2.0);
+    if !radius_km.is_finite() || radius_km <= 0.0 || radius_km > 100.0 {
+        return Err(anyhow::anyhow!(
+            "map radius must be greater than 0km and no more than 100km"
+        ));
+    }
+
+    let min_zoom = request.min_zoom.unwrap_or(14);
+    let max_zoom = request.max_zoom.unwrap_or(17);
+    if min_zoom > max_zoom {
+        return Err(anyhow::anyhow!("minimum zoom cannot exceed maximum zoom"));
+    }
+    if max_zoom > MAX_MAP_ZOOM {
+        return Err(anyhow::anyhow!("maximum zoom cannot exceed {MAX_MAP_ZOOM}"));
+    }
+
+    let lat_delta = radius_km / EARTH_KM_PER_DEG_LAT;
+    let lon_scale = lat.to_radians().cos().abs().max(0.1);
+    let lon_delta = radius_km / (EARTH_KM_PER_DEG_LAT * lon_scale);
+    let bounds = MapBounds {
+        min_lat: (lat - lat_delta).clamp(-WEB_MERCATOR_MAX_LAT, WEB_MERCATOR_MAX_LAT),
+        max_lat: (lat + lat_delta).clamp(-WEB_MERCATOR_MAX_LAT, WEB_MERCATOR_MAX_LAT),
+        min_lon: (lon - lon_delta).clamp(-180.0, 180.0),
+        max_lon: (lon + lon_delta).clamp(-180.0, 180.0),
+    };
+
+    let mut levels = Vec::new();
+    let mut tiles = Vec::new();
+    for zoom in min_zoom..=max_zoom {
+        let west_x = lon_to_tile_x(bounds.min_lon, zoom);
+        let east_x = lon_to_tile_x(bounds.max_lon, zoom);
+        let north_y = lat_to_tile_y(bounds.max_lat, zoom);
+        let south_y = lat_to_tile_y(bounds.min_lat, zoom);
+        let min_x = west_x.min(east_x);
+        let max_x = west_x.max(east_x);
+        let min_y = north_y.min(south_y);
+        let max_y = north_y.max(south_y);
+
+        levels.push(MapTileLevel {
+            zoom,
+            min_x,
+            max_x,
+            min_y,
+            max_y,
+        });
+
+        for x in min_x..=max_x {
+            for y in min_y..=max_y {
+                tiles.push(TileCoord { z: zoom, x, y });
+            }
+        }
+    }
+
+    let name = clean_map_view_name(request.name.as_deref(), lat, lon);
+    let created_at_ms = now_ms();
+    let view = MapView {
+        id: format!("{}-{created_at_ms}", slugify_map_view_name(&name)),
+        name,
+        center_lat: lat,
+        center_lon: lon,
+        radius_km,
+        min_zoom,
+        max_zoom,
+        created_at_ms,
+        tile_count: tiles.len(),
+        tile_source_id: source.id.to_string(),
+        tile_source_name: source.name.to_string(),
+        tile_source: source.template.to_string(),
+        bounds,
+        levels,
+        tiles: tiles.clone(),
+    };
+    Ok((view, tiles))
+}
+
+fn map_tile_source_for_id(source_id: &str) -> Option<&'static MapTileSource> {
+    MAP_TILE_SOURCES
+        .iter()
+        .find(|source| source.id.eq_ignore_ascii_case(source_id.trim()))
+}
+
+fn map_tile_source_for_template(tile_template: &str) -> Option<&'static MapTileSource> {
+    MAP_TILE_SOURCES
+        .iter()
+        .find(|source| source.template == tile_template.trim())
+}
+
+fn selected_map_tile_source(source_id: Option<&str>) -> Result<&'static MapTileSource> {
+    let selected = source_id
+        .map(str::trim)
+        .filter(|source_id| !source_id.is_empty())
+        .unwrap_or(DEFAULT_MAP_TILE_SOURCE_ID);
+
+    let Some(source) = map_tile_source_for_id(selected) else {
+        return Err(anyhow::anyhow!(
+            "unknown map tile source '{selected}'; expected one of: {}",
+            MAP_TILE_SOURCES
+                .iter()
+                .map(|source| source.id)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    };
+    if source.id == DEFAULT_MAP_TILE_SOURCE_ID && source.template != DEFAULT_MAP_TILE_TEMPLATE {
+        return Err(anyhow::anyhow!("default map tile source is misconfigured"));
+    }
+    validate_map_tile_template(source.template)?;
+    Ok(source)
+}
+
+fn map_tile_source_for_view(view: &MapView) -> Result<&'static MapTileSource> {
+    if !view.tile_source_id.trim().is_empty() {
+        if let Some(source) = map_tile_source_for_id(&view.tile_source_id) {
+            return Ok(source);
+        }
+    }
+
+    if let Some(source) = map_tile_source_for_template(&view.tile_source) {
+        return Ok(source);
+    }
+
+    Err(anyhow::anyhow!(
+        "map view '{}' uses unknown map tile source",
+        view.name
+    ))
+}
+
+fn normalize_map_view_source(view: &mut MapView) -> Result<&'static MapTileSource> {
+    let source = map_tile_source_for_view(view)?;
+    view.tile_source_id = source.id.to_string();
+    view.tile_source_name = source.name.to_string();
+    view.tile_source = source.template.to_string();
+    Ok(source)
+}
+
+fn validate_map_tile_template(tile_template: &str) -> Result<()> {
+    if tile_template.len() > 1024 {
+        return Err(anyhow::anyhow!("tile source URL template is too long"));
+    }
+    if !tile_template.starts_with("https://") && !tile_template.starts_with("http://") {
+        return Err(anyhow::anyhow!(
+            "tile source URL template must use http or https"
+        ));
+    }
+    if !tile_template.contains("{z}")
+        || !tile_template.contains("{x}")
+        || !tile_template.contains("{y}")
+    {
+        return Err(anyhow::anyhow!(
+            "tile source URL template must contain {{z}}, {{x}}, and {{y}}"
+        ));
+    }
+    Ok(())
+}
+
+fn map_tile_url(tile_template: &str, tile: TileCoord) -> String {
+    tile_template
+        .replace("{z}", &tile.z.to_string())
+        .replace("{x}", &tile.x.to_string())
+        .replace("{y}", &tile.y.to_string())
+}
+
+fn clean_map_view_name(input: Option<&str>, lat: f64, lon: f64) -> String {
+    let value = input
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            value
+                .chars()
+                .filter(|ch| !ch.is_control())
+                .take(80)
+                .collect::<String>()
+        })
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| format!("Map {lat:.5}, {lon:.5}"));
+    value.trim().to_string()
+}
+
+fn slugify_map_view_name(name: &str) -> String {
+    let mut slug = String::new();
+    let mut last_was_dash = false;
+    for ch in name.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_was_dash = false;
+        } else if !last_was_dash && !slug.is_empty() {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+    if slug.is_empty() {
+        "map".to_string()
+    } else {
+        slug
+    }
+}
+
+fn valid_tile_coord(z: u8, x: u32, y: u32) -> bool {
+    if z > MAX_MAP_ZOOM {
+        return false;
+    }
+    let axis = tile_axis_count(z);
+    x < axis && y < axis
+}
+
+fn lon_to_tile_x(lon: f64, z: u8) -> u32 {
+    let axis = f64::from(tile_axis_count(z));
+    let raw = ((lon.clamp(-180.0, 180.0) + 180.0) / 360.0) * axis;
+    raw.floor().clamp(0.0, axis - 1.0) as u32
+}
+
+fn lat_to_tile_y(lat: f64, z: u8) -> u32 {
+    let axis = f64::from(tile_axis_count(z));
+    let lat_rad = lat
+        .clamp(-WEB_MERCATOR_MAX_LAT, WEB_MERCATOR_MAX_LAT)
+        .to_radians();
+    let mercator = (lat_rad.tan() + (1.0 / lat_rad.cos())).ln() / std::f64::consts::PI;
+    let raw = ((1.0 - mercator) / 2.0) * axis;
+    raw.floor().clamp(0.0, axis - 1.0) as u32
+}
+
+fn tile_center_lat_lon(tile: TileCoord) -> (f64, f64) {
+    let axis = f64::from(tile_axis_count(tile.z));
+    let lon = ((f64::from(tile.x) + 0.5) / axis) * 360.0 - 180.0;
+    let n = std::f64::consts::PI - 2.0 * std::f64::consts::PI * (f64::from(tile.y) + 0.5) / axis;
+    let lat = n.sinh().atan().to_degrees();
+    (lat, lon)
+}
+
+fn tile_axis_count(z: u8) -> u32 {
+    1u32 << z
+}
+
 async fn create_job(
     state: &AppState,
     controller_name: &str,
@@ -2611,6 +4064,17 @@ fn hex_string(payload: &[u8]) -> String {
         .join(" ")
 }
 
+fn format_anyhow_chain(error: &anyhow::Error) -> String {
+    let mut parts = Vec::new();
+    for cause in error.chain() {
+        let text = cause.to_string();
+        if parts.last() != Some(&text) {
+            parts.push(text);
+        }
+    }
+    parts.join(": ")
+}
+
 fn json_error_response(status: warp::http::StatusCode, message: &str) -> warp::reply::Response {
     let body = serde_json::json!({
         "ok": false,
@@ -2622,6 +4086,34 @@ fn json_error_response(status: warp::http::StatusCode, message: &str) -> warp::r
 fn json_success_response(body: ActionAcceptedResponse) -> warp::reply::Response {
     warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::ACCEPTED)
         .into_response()
+}
+
+fn json_map_views_response(body: MapViewsResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_map_debug_response(body: MapDebugResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_map_download_response(body: MapDownloadResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_map_plan_response(body: MapDownloadPlanResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_map_commit_response(body: MapCommitResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_map_delete_response(body: MapDeleteResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_map_tile_upload_response(body: MapTileUploadResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
 }
 
 fn json_jobs_response(body: JobsSnapshot) -> warp::reply::Response {
@@ -2654,62 +4146,94 @@ async fn ota_agent_error_message(status: HttpStatusCode, response: reqwest::Resp
 }
 
 fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl Reply {
-    let (tx, mut rx) = mpsc::unbounded_channel::<SignalSampleEvent>();
-    let (batched_tx, batched_rx) = mpsc::unbounded_channel::<String>();
+    info!(
+        "signal SSE client connected with {} requested signal(s); shared stream subscribers will become {}",
+        selected_ids.len(),
+        state.signal_events.receiver_count() + 1
+    );
+    let selected_ids = Arc::new(selected_ids);
+    let stream = futures::stream::unfold(
+        (state.signal_events.subscribe(), selected_ids),
+        |(mut rx, selected_ids)| async move {
+            loop {
+                let mut events = match rx.recv().await {
+                    Ok(batch) => filter_signal_sample_events(batch.as_ref(), &selected_ids),
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        warn!("signal SSE client lagged behind by {skipped} batch(es)");
+                        continue;
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        return None;
+                    }
+                };
 
-    if !selected_ids.is_empty() {
-        spawn_signal_session_worker(
-            (*state.veh_iface).clone(),
-            yamcan::Bus::Veh,
-            selected_ids.clone(),
-            tx.clone(),
-        );
-    }
-
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_millis(250));
-        let mut pending: Vec<SignalSampleEvent> = Vec::new();
-        loop {
-            tokio::select! {
-                maybe_event = rx.recv() => {
-                    match maybe_event {
-                        Some(event) => pending.push(event),
-                        None => {
-                            if !pending.is_empty() {
-                                let payload = serde_json::to_string(&SignalSampleBatch { events: pending })
-                                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
-                                let _ = batched_tx.send(payload);
-                            }
+                loop {
+                    match rx.try_recv() {
+                        Ok(batch) => {
+                            events.extend(filter_signal_sample_events(
+                                batch.as_ref(),
+                                &selected_ids,
+                            ));
+                        }
+                        Err(broadcast::error::TryRecvError::Empty) => {
                             break;
+                        }
+                        Err(broadcast::error::TryRecvError::Lagged(skipped)) => {
+                            warn!("signal SSE client lagged behind by {skipped} batch(es)");
+                        }
+                        Err(broadcast::error::TryRecvError::Closed) => {
+                            return None;
                         }
                     }
                 }
-                _ = interval.tick() => {
-                    if pending.is_empty() {
-                        continue;
-                    }
-                    let payload = serde_json::to_string(&SignalSampleBatch {
-                        events: std::mem::take(&mut pending),
-                    })
-                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
-                    if batched_tx.send(payload).is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-    });
 
-    let stream = futures::stream::unfold(batched_rx, |mut rx| async move {
-        rx.recv().await.map(|payload| {
-            (
-                Ok::<Event, Infallible>(Event::default().event("signal-sample").data(payload)),
-                rx,
-            )
-        })
-    });
+                if events.is_empty() {
+                    continue;
+                }
+
+                let payload = serde_json::to_string(&SignalSampleBatch { events })
+                    .unwrap_or_else(|_| "{\"events\":[]}".to_string());
+                return Some((
+                    Ok::<Event, Infallible>(Event::default().event("signal-sample").data(payload)),
+                    (rx, selected_ids),
+                ));
+            }
+        },
+    );
 
     warp::sse::reply(warp::sse::keep_alive().stream(stream))
+}
+
+fn filter_signal_sample_events(
+    batch: &SignalSampleBatch,
+    selected_ids: &BTreeSet<String>,
+) -> Vec<SignalSampleEvent> {
+    if selected_ids.is_empty() {
+        return batch.events.clone();
+    }
+
+    batch
+        .events
+        .iter()
+        .filter_map(|event| {
+            let samples = event
+                .samples
+                .iter()
+                .filter(|sample| selected_ids.contains(&sample.signal_id))
+                .cloned()
+                .collect::<Vec<_>>();
+            if samples.is_empty() {
+                return None;
+            }
+            Some(SignalSampleEvent {
+                timestamp_ms: event.timestamp_ms,
+                bus: event.bus.clone(),
+                message_name: event.message_name.clone(),
+                message_id: event.message_id,
+                samples,
+            })
+        })
+        .collect()
 }
 
 fn spawn_veh_worker(
@@ -3021,29 +4545,15 @@ fn sample_event_from_members(
     })
 }
 
-fn filter_signal_event(
-    event: SignalSampleEvent,
-    selected_ids: &BTreeSet<String>,
-) -> Option<SignalSampleEvent> {
-    let samples = event
-        .samples
-        .into_iter()
-        .filter(|sample| selected_ids.contains(&sample.signal_id))
-        .collect::<Vec<_>>();
-    if samples.is_empty() {
-        return None;
-    }
-
-    Some(SignalSampleEvent { samples, ..event })
-}
-
-fn spawn_signal_session_worker(
+fn spawn_signal_broadcast_worker(
     iface: String,
     bus: yamcan::Bus,
-    selected_ids: BTreeSet<String>,
-    tx: mpsc::UnboundedSender<SignalSampleEvent>,
+    signal_events: broadcast::Sender<Arc<SignalSampleBatch>>,
 ) {
+    let (tx, mut rx) = mpsc::channel::<SignalSampleEvent>(SIGNAL_EVENT_QUEUE_CAPACITY);
+    let signal_events_for_decode = signal_events.clone();
     thread::spawn(move || {
+        info!("shared signal stream worker starting for iface='{iface}'");
         let iface_map = [(iface.as_str(), bus)];
         let binding = match yamcan::configure_iface(&iface, &iface_map) {
             Ok(binding) => binding,
@@ -3059,6 +4569,8 @@ fn spawn_signal_session_worker(
                 return;
             }
         };
+        let mut dropped_frames = 0_u64;
+        let mut last_drop_warning = Instant::now();
 
         loop {
             let (frame, id) = match recv_veh_frame(&socket) {
@@ -3068,11 +4580,66 @@ fn spawn_signal_session_worker(
                     return;
                 }
             };
-            let Some(event) = decode_signal_frame(&binding, frame, id, &selected_ids) else {
+            if signal_events_for_decode.receiver_count() == 0 {
+                continue;
+            }
+            let Some(event) = decode_signal_frame(&binding, frame, id) else {
                 continue;
             };
-            if tx.send(event).is_err() {
-                return;
+            match tx.try_send(event) {
+                Ok(()) => {}
+                Err(mpsc::error::TrySendError::Full(_)) => {
+                    dropped_frames = dropped_frames.saturating_add(1);
+                    if last_drop_warning.elapsed() >= Duration::from_secs(1) {
+                        warn!(
+                            "signal stream decode queue is full; dropped {dropped_frames} decoded frame(s)"
+                        );
+                        dropped_frames = 0;
+                        last_drop_warning = Instant::now();
+                    }
+                }
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    return;
+                }
+            }
+        }
+    });
+
+    tokio::spawn(async move {
+        let mut interval =
+            tokio::time::interval(Duration::from_millis(SIGNAL_SAMPLE_BATCH_INTERVAL_MS));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut pending: Vec<SignalSampleEvent> = Vec::new();
+        loop {
+            tokio::select! {
+                maybe_event = rx.recv() => {
+                    match maybe_event {
+                        Some(event) => pending.push(event),
+                        None => {
+                            if !pending.is_empty() && signal_events.receiver_count() > 0 {
+                                let _ = signal_events.send(Arc::new(SignalSampleBatch {
+                                    events: pending,
+                                }));
+                            }
+                            break;
+                        }
+                    }
+                }
+                _ = interval.tick() => {
+                    while let Ok(event) = rx.try_recv() {
+                        pending.push(event);
+                    }
+                    if pending.is_empty() {
+                        continue;
+                    }
+                    if signal_events.receiver_count() == 0 {
+                        pending.clear();
+                        continue;
+                    }
+                    let _ = signal_events.send(Arc::new(SignalSampleBatch {
+                        events: std::mem::take(&mut pending),
+                    }));
+                }
             }
         }
     });
@@ -3082,7 +4649,6 @@ fn decode_signal_frame(
     binding: &yamcan::BusBinding<yamcan::Bus>,
     frame: yamcan::CanFrame,
     id: u32,
-    selected_ids: &BTreeSet<String>,
 ) -> Option<SignalSampleEvent> {
     let decoded = yamcan::maybe_decode(Some(binding), &frame, id, true, true, &[], &[])?;
     let members = decoded
@@ -3102,7 +4668,7 @@ fn decode_signal_frame(
         &members,
         now_ms(),
     )?;
-    filter_signal_event(event, selected_ids)
+    Some(event)
 }
 
 fn open_raw_can_socket(iface: &str) -> io::Result<OwnedFd> {

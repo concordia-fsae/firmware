@@ -87,6 +87,8 @@ messages:
       requestTcILimInc:
       requestTcTLeakMsDec:
       requestTcTLeakMsInc:
+      requestFluxWeakeningCurrentDec:
+      requestFluxWeakeningCurrentInc:
 
   sleep:
     description: SWS sleep information

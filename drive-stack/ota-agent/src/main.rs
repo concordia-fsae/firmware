@@ -1314,7 +1314,13 @@ async fn main() -> Result<()> {
                         query.push(("platform", platform));
                     }
                     info!("Requesting status from ota-agent...");
-                    let body = Client::new().get(url).query(&query).send().await?.text().await?;
+                    let body = Client::new()
+                        .get(url)
+                        .query(&query)
+                        .send()
+                        .await?
+                        .text()
+                        .await?;
                     let report: StatusReport = serde_json::from_str(&body)
                         .with_context(|| format!("parsing status reply: {}", body))?;
                     let mut nodes: Vec<_> = report.nodes.iter().collect();
@@ -1792,11 +1798,7 @@ async fn stage_handler(
     form: warp::multipart::FormData,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     validate_platform_param(&state, p.platform.as_deref())?;
-    validate_target(&state, &p.node)?;
     info!("Stage request: node='{}' platform={:?}", p.node, p.platform);
-
-    let target = get_target(&state, &p.node)
-        .map_err(|e| warp::reject::custom(HttpError(StatusCode::BAD_REQUEST, e.to_string())))?;
 
     let mut saved_path: Option<PathBuf> = None;
     let mut total: u64 = 0;
@@ -1866,6 +1868,18 @@ async fn stage_handler(
         filename, p.node, total, sha256_hex
     );
 
+    let declared = state
+        .cfg
+        .targets
+        .get(&p.node)
+        .map(declared_artifact)
+        .cloned()
+        .unwrap_or_else(|| DeclaredArtifact {
+            filename: filename.clone(),
+            sha256: None,
+            bundle_path: None,
+        });
+
     {
         let _guard = state.manifest_lock.lock().await;
         if let Err(e) = update_manifest_stage(
@@ -1875,7 +1889,7 @@ async fn stage_handler(
             &bin_path,
             total,
             &p.node,
-            declared_artifact(target),
+            &declared,
         )
         .await
         {
@@ -1926,7 +1940,6 @@ async fn verify_handler(
     state: Arc<AppState>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     validate_platform_param(&state, p.platform.as_deref())?;
-    validate_target(&state, &p.node)?;
 
     let manifest = match read_manifest_compat(&state.manifest_path).await {
         Ok(m) => m,
@@ -2239,6 +2252,19 @@ async fn systemd_service(action: &str, unit: &str) -> anyhow::Result<()> {
             status
         ))
     }
+}
+
+#[cfg(target_os = "linux")]
+fn schedule_ota_agent_restart() {
+    info!("Scheduling ota-agent.service restart after successful self-update");
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        if let Err(e) =
+            run_command("systemctl", &["restart", "--no-block", "ota-agent.service"]).await
+        {
+            error!("Failed to restart ota-agent.service after self-update: {}", e);
+        }
+    });
 }
 
 #[cfg(target_os = "linux")]
@@ -2571,6 +2597,266 @@ async fn copy_tree_contents(src: &Path, dst: &Path) -> anyhow::Result<()> {
         ],
     )
     .await
+}
+
+#[cfg(target_os = "linux")]
+async fn is_file_or_symlink(path: &Path) -> anyhow::Result<bool> {
+    match fs::symlink_metadata(path).await {
+        Ok(metadata) => {
+            let file_type = metadata.file_type();
+            Ok(file_type.is_file() || file_type.is_symlink())
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| format!("reading {}", path.display())),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn payload_install_path(relative: &Path) -> anyhow::Result<String> {
+    let value = relative
+        .to_str()
+        .ok_or_else(|| anyhow!("invalid payload path {}", relative.display()))?;
+    Ok(format!("/{}", value))
+}
+
+#[cfg(target_os = "linux")]
+fn payload_relative_path(payload_root: &Path, path: &Path) -> anyhow::Result<PathBuf> {
+    path.strip_prefix(payload_root)
+        .with_context(|| {
+            format!(
+                "path {} is not under payload root {}",
+                path.display(),
+                payload_root.display()
+            )
+        })
+        .map(PathBuf::from)
+}
+
+#[cfg(target_os = "linux")]
+async fn infer_sideload_binary(payload_root: &Path, node: &str) -> anyhow::Result<PathBuf> {
+    let bin_dir = payload_root.join("bin/cfr");
+    if !fs::try_exists(&bin_dir).await? {
+        bail!(
+            "sideload local package is missing payload bin directory {}",
+            bin_dir.display()
+        );
+    }
+
+    let preferred = bin_dir.join(node);
+    if is_file_or_symlink(&preferred).await? {
+        return Ok(PathBuf::from("bin/cfr").join(node));
+    }
+
+    let mut candidates = Vec::new();
+    let mut entries = fs::read_dir(&bin_dir)
+        .await
+        .with_context(|| format!("reading {}", bin_dir.display()))?;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        if is_file_or_symlink(&path).await? {
+            candidates.push(path);
+        }
+    }
+    candidates.sort();
+
+    if candidates.len() != 1 {
+        bail!(
+            "sideload local package must contain payload/bin/cfr/{node} or exactly one payload/bin/cfr binary; found {}",
+            candidates.len()
+        );
+    }
+
+    let filename = candidates[0]
+        .file_name()
+        .ok_or_else(|| anyhow!("invalid binary path {}", candidates[0].display()))?;
+    Ok(PathBuf::from("bin/cfr").join(filename))
+}
+
+#[cfg(target_os = "linux")]
+async fn infer_sideload_service(
+    payload_root: &Path,
+    node: &str,
+    binary_relative: &Path,
+) -> anyhow::Result<Option<PathBuf>> {
+    let service_dir = payload_root.join("etc/systemd/system");
+    if !fs::try_exists(&service_dir).await? {
+        return Ok(None);
+    }
+
+    let mut candidates = Vec::new();
+    let mut entries = fs::read_dir(&service_dir)
+        .await
+        .with_context(|| format!("reading {}", service_dir.display()))?;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        if !is_file_or_symlink(&path).await? {
+            continue;
+        }
+        if path.extension().and_then(|value| value.to_str()) == Some("service") {
+            candidates.push(path);
+        }
+    }
+    candidates.sort();
+
+    if candidates.is_empty() {
+        return Ok(None);
+    }
+    if candidates.len() == 1 {
+        return payload_relative_path(payload_root, &candidates[0]).map(Some);
+    }
+
+    let binary_service = binary_relative
+        .file_name()
+        .and_then(|value| value.to_str())
+        .map(|name| format!("{name}.service"));
+    let preferred = [Some(format!("{node}.service")), binary_service];
+    for preferred_name in preferred.into_iter().flatten() {
+        if let Some(path) = candidates.iter().find(|path| {
+            path.file_name()
+                .and_then(|value| value.to_str())
+                .is_some_and(|name| name == preferred_name)
+        }) {
+            return payload_relative_path(payload_root, path).map(Some);
+        }
+    }
+
+    bail!("sideload local package has multiple service units and none match '{node}.service'")
+}
+
+#[cfg(target_os = "linux")]
+async fn collect_sideload_resources(
+    payload_root: &Path,
+    excludes: &[PathBuf],
+) -> anyhow::Result<Vec<LocalPackageResource>> {
+    let mut resources = Vec::new();
+    let mut stack = vec![payload_root.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        let mut entries = fs::read_dir(&dir)
+            .await
+            .with_context(|| format!("reading {}", dir.display()))?;
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            let file_type = entry.file_type().await?;
+            if file_type.is_dir() {
+                stack.push(path);
+                continue;
+            }
+
+            let relative = payload_relative_path(payload_root, &path)?;
+            if excludes.iter().any(|excluded| excluded == &relative) {
+                continue;
+            }
+
+            resources.push(LocalPackageResource {
+                install_path: payload_install_path(&relative)?,
+                tracked: true,
+            });
+        }
+    }
+
+    resources.sort_by(|a, b| a.install_path.cmp(&b.install_path));
+    Ok(resources)
+}
+
+#[cfg(target_os = "linux")]
+async fn infer_sideload_local_package(
+    state: &AppState,
+    node: &str,
+    staged: &BinaryEntry,
+) -> anyhow::Result<DeployTarget> {
+    let hash_prefix = staged.hash.chars().take(12).collect::<String>();
+    let inspect_root = state
+        .local_deploy_root
+        .join("sideload-inspect")
+        .join(format!("{}-{}", sanitize_filename(node), hash_prefix));
+
+    if fs::try_exists(&inspect_root).await? {
+        fs::remove_dir_all(&inspect_root)
+            .await
+            .with_context(|| format!("removing {}", inspect_root.display()))?;
+    }
+    fs::create_dir_all(&inspect_root)
+        .await
+        .with_context(|| format!("creating {}", inspect_root.display()))?;
+
+    let inferred = async {
+        let inspect_root_str = inspect_root
+            .to_str()
+            .ok_or_else(|| anyhow!("invalid inspect path {}", inspect_root.display()))?;
+        run_command("tar", &["-xzf", &staged.path, "-C", inspect_root_str]).await?;
+
+        let payload_root = inspect_root.join("payload");
+        if !fs::try_exists(&payload_root).await? {
+            bail!("sideload local package is missing payload directory");
+        }
+
+        let binary_relative = infer_sideload_binary(&payload_root, node).await?;
+        let service_relative =
+            infer_sideload_service(&payload_root, node, &binary_relative).await?;
+
+        let mut excludes = vec![binary_relative.clone()];
+        if let Some(service_relative) = &service_relative {
+            excludes.push(service_relative.clone());
+        }
+        let resources = collect_sideload_resources(&payload_root, &excludes).await?;
+
+        let binary = LocalPackageBinary {
+            install_path: payload_install_path(&binary_relative)?,
+        };
+        let service = if let Some(relative) = service_relative.as_ref() {
+            let unit = relative
+                .file_name()
+                .and_then(|value| value.to_str())
+                .ok_or_else(|| anyhow!("invalid service path {}", relative.display()))?
+                .to_string();
+            Some(LocalPackageService {
+                unit,
+                install_path: payload_install_path(relative)?,
+            })
+        } else {
+            None
+        };
+
+        let mut enable_services = vec!["ota-agent-drive-stack.service".to_string()];
+        let mut restart_services = Vec::new();
+        if let Some(service) = &service {
+            enable_services.push(service.unit.clone());
+            if service.unit != "ota-agent.service"
+                && service.unit != "ota-agent-drive-stack.service"
+            {
+                restart_services.push(service.unit.clone());
+            }
+        }
+
+        info!(
+            "Inferred sideload local package '{}': binary={} service={:?} resources={}",
+            node,
+            binary.install_path,
+            service.as_ref().map(|service| service.unit.as_str()),
+            resources.len()
+        );
+
+        Ok(DeployTarget::LocalPackage {
+            artifact: DeclaredArtifact {
+                filename: staged
+                    .declared_filename
+                    .clone()
+                    .unwrap_or_else(|| staged.filename.clone()),
+                sha256: staged.declared_sha256.clone(),
+                bundle_path: None,
+            },
+            binary,
+            service,
+            resources,
+            enable_services,
+            restart_services,
+        })
+    }
+    .await;
+
+    let _ = fs::remove_dir_all(&inspect_root).await;
+    inferred
 }
 
 #[cfg(target_os = "linux")]
@@ -3024,12 +3310,17 @@ async fn install_global_bundle(
         let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
         return Err(e);
     }
-    if let Err(restart_err) =
-        run_command("systemctl", &["restart", "--no-block", "ota-agent-drive-stack.service"]).await
+    if let Err(restart_err) = run_command(
+        "systemctl",
+        &["restart", "--no-block", "ota-agent-drive-stack.service"],
+    )
+    .await
     {
-        if let Err(start_err) =
-            run_command("systemctl", &["start", "--no-block", "ota-agent-drive-stack.service"])
-                .await
+        if let Err(start_err) = run_command(
+            "systemctl",
+            &["start", "--no-block", "ota-agent-drive-stack.service"],
+        )
+        .await
         {
             let _ =
                 unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
@@ -3043,7 +3334,9 @@ async fn install_global_bundle(
     let mut enable_units = Vec::new();
     for target in state.cfg.targets.values() {
         match target {
-            DeployTarget::LocalPackage { enable_services, .. } => {
+            DeployTarget::LocalPackage {
+                enable_services, ..
+            } => {
                 enable_units.extend(enable_services.iter().cloned());
             }
             DeployTarget::Uds { .. } => {}
@@ -3375,7 +3668,6 @@ async fn flash_handler(
     state: Arc<AppState>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     validate_platform_param(&state, p.platform.as_deref())?;
-    validate_target(&state, &p.node)?;
     info!("Flash request: node='{}' platform={:?}", p.node, p.platform);
 
     let entry = {
@@ -3395,8 +3687,29 @@ async fn flash_handler(
     let lease_id = p.lease_id.as_deref();
     let release_lease = p.release_lease.unwrap_or(true);
     let mut restart_drive_stack = false;
-    let result = match get_target(&state, &p.node) {
-        Ok(DeployTarget::LocalBundle { .. }) => {
+    let (target, inferred_local_package) = match state.cfg.targets.get(&p.node) {
+        Some(target) => (target.clone(), false),
+        None => {
+            let staged = entry.clone().ok_or_else(|| {
+                warp::reject::custom(HttpError(
+                    StatusCode::BAD_REQUEST,
+                    ManifestError::NoStaged(p.node.clone()).to_string(),
+                ))
+            })?;
+            infer_sideload_local_package(&state, &p.node, &staged)
+                .await
+                .map_err(|e| {
+                    warp::reject::custom(HttpError(
+                        StatusCode::BAD_REQUEST,
+                        format!("unknown node '{}': {}", p.node, e),
+                    ))
+                })
+                .map(|target| (target, true))?
+        }
+    };
+
+    let result = match target {
+        DeployTarget::LocalBundle { .. } => {
             let staged = entry.clone().ok_or_else(|| {
                 warp::reject::custom(HttpError(
                     StatusCode::BAD_REQUEST,
@@ -3411,14 +3724,14 @@ async fn flash_handler(
             restart_drive_stack = true;
             bundle_result.map(|result| (result, None::<String>, staged))
         }
-        Ok(DeployTarget::LocalPackage {
+        DeployTarget::LocalPackage {
             artifact,
             binary,
             service,
             resources,
             enable_services,
             restart_services,
-        }) => {
+        } => {
             let staged = entry.clone();
             let report_entry = match staged.clone() {
                 Some(entry) => entry,
@@ -3440,38 +3753,65 @@ async fn flash_handler(
             info!(
                 "Applying local target '{}' using {}",
                 &p.node,
-                if staged.is_some() {
+                if inferred_local_package {
+                    "sideload package"
+                } else if staged.is_some() {
                     "staged override"
                 } else {
                     "baseline bundle"
                 }
             );
-            apply_local_target(
-                &state,
-                &p.node,
-                staged.as_ref(),
-                artifact,
-                binary,
-                service.as_ref(),
-                resources,
-                enable_services,
-                restart_services,
-                lease_id,
-                release_lease,
-            )
-            .await
-            .map(|result| (result, None::<String>, report_entry))
+            if inferred_local_package {
+                let staged = staged.ok_or_else(|| {
+                    warp::reject::custom(HttpError(
+                        StatusCode::BAD_REQUEST,
+                        ManifestError::NoStaged(p.node.clone()).to_string(),
+                    ))
+                })?;
+                apply_local_package(
+                    &state,
+                    &p.node,
+                    &staged,
+                    force,
+                    &artifact,
+                    &binary,
+                    service.as_ref(),
+                    &resources,
+                    &enable_services,
+                    &restart_services,
+                    lease_id,
+                    release_lease,
+                )
+                .await
+                .map(|result| (result, None::<String>, report_entry))
+            } else {
+                apply_local_target(
+                    &state,
+                    &p.node,
+                    staged.as_ref(),
+                    &artifact,
+                    &binary,
+                    service.as_ref(),
+                    &resources,
+                    &enable_services,
+                    &restart_services,
+                    lease_id,
+                    release_lease,
+                )
+                .await
+                .map(|result| (result, None::<String>, report_entry))
+            }
         }
-        Ok(DeployTarget::Uds {
+        DeployTarget::Uds {
             request_id,
             response_id,
             artifact,
             stop_services,
             start_services,
             ..
-        }) => {
+        } => {
             let (request_id, response_id) =
-                uds_ids_for_node(&state, &p.node, *request_id, *response_id)?;
+                uds_ids_for_node(&state, &p.node, request_id, response_id)?;
             let flash_entry = match entry.clone() {
                 Some(entry) => entry,
                 None => {
@@ -3515,7 +3855,7 @@ async fn flash_handler(
                     }
                 }
             };
-            if let Err(e) = acquire_service_lease(&state, lease_id, stop_services).await {
+            if let Err(e) = acquire_service_lease(&state, lease_id, &stop_services).await {
                 error!("Failed to acquire service lease: {}", e);
             }
 
@@ -3532,14 +3872,13 @@ async fn flash_handler(
             .await;
 
             if release_lease {
-                if let Err(e) = release_service_lease(&state, lease_id, start_services).await {
+                if let Err(e) = release_service_lease(&state, lease_id, &start_services).await {
                     error!("Failed to release service lease: {}", e);
                 }
             }
 
             Ok((result, None::<String>, flash_entry))
         }
-        Err(e) => Err(e),
     };
 
     let (result, _deployed_sha256, report_entry) = match result {
@@ -3628,7 +3967,10 @@ async fn promote_handler(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     validate_platform_param(&state, p.platform.as_deref())?;
     validate_target(&state, &p.node)?;
-    info!("Promote request: node='{}' platform={:?}", p.node, p.platform);
+    info!(
+        "Promote request: node='{}' platform={:?}",
+        p.node, p.platform
+    );
 
     let promoted = {
         let _guard = state.manifest_lock.lock().await;

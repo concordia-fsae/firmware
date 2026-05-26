@@ -1,5 +1,5 @@
 import copy
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 from math import ceil, log
 from typing import List, Optional, Set, Tuple
 from schema import Schema, Or, Optional, And
@@ -32,6 +32,30 @@ def get_if_exists(src: dict, key: str, conversion_type: type, default, **kwargs)
     if "extra_params" in kwargs:
         return conversion_type(src[key], kwargs["extra_params"])
     return conversion_type(src[key])
+
+
+def _ceil_to_int(value) -> int:
+    return int(Decimal(str(value)).to_integral_value(rounding=ROUND_CEILING))
+
+
+def _floor_to_int(value) -> int:
+    return int(Decimal(str(value)).to_integral_value(rounding=ROUND_FLOOR))
+
+
+def _unsigned_bit_width_for_value(max_value) -> int:
+    max_int = max(0, _ceil_to_int(max_value))
+    return max(1, max_int.bit_length())
+
+
+def _signed_bit_width_for_range(min_value, max_value) -> int:
+    min_int = _floor_to_int(min_value)
+    max_int = _ceil_to_int(max_value)
+    bit_width = 2
+
+    while min_int < -(1 << (bit_width - 1)) or max_int > (1 << (bit_width - 1)) - 1:
+        bit_width += 1
+
+    return bit_width
 
 
 class CanObject:
@@ -98,6 +122,7 @@ class NativeRepresentation:
                 )
 
         self.bit_width = get_if_exists(signal_def, "bitWidth", int, None)
+        self.range_was_provided = "range" in signal_def
         self.range = get_if_exists(signal_def, "range", Range, None)
         if "signedness" in signal_def:
             self.signedness = Signedness[signal_def["signedness"]]
@@ -315,6 +340,68 @@ class CanSignal(CanObject):
                 )
                 self.is_valid = False
 
+    def _datatype_bit_width(self) -> int:
+        assert (
+            self.native_representation
+        ), "native_representation was not defined somehow"
+        assert self.native_representation.bit_width, "bit_width was not defined somehow"
+
+        nat_rep = self.native_representation
+        if self.continuous == Continuous.continuous:
+            return nat_rep.bit_width
+
+        if not nat_rep.range or not nat_rep.range_was_provided:
+            return nat_rep.bit_width
+
+        if nat_rep.signedness == Signedness.signed or nat_rep.range.min < 0:
+            physical_width = _signed_bit_width_for_range(
+                nat_rep.range.min, nat_rep.range.max
+            )
+        else:
+            physical_width = _unsigned_bit_width_for_value(nat_rep.range.max)
+
+        return max(nat_rep.bit_width, physical_width)
+
+    def _datatype_is_signed(self) -> bool:
+        assert (
+            self.native_representation
+        ), "native_representation was not defined somehow"
+
+        nat_rep = self.native_representation
+        return nat_rep.signedness == Signedness.signed or (
+            self.continuous == Continuous.discrete
+            and nat_rep.range is not None
+            and nat_rep.range_was_provided
+            and nat_rep.range.min < 0
+        )
+
+    def is_boolean(self) -> bool:
+        return self.datatype == CType._bool
+
+    def should_clamp_pack_input(self) -> bool:
+        assert (
+            self.native_representation
+        ), "native_representation was not defined somehow"
+
+        nat_rep = self.native_representation
+        if not nat_rep.range or not nat_rep.range_was_provided:
+            return False
+
+        if self.is_boolean() or self.discrete_values:
+            return False
+
+        if (
+            self.continuous == Continuous.discrete
+            and nat_rep.signedness == Signedness.unsigned
+            and nat_rep.range.min == 0
+            and Decimal(str(self.scale)) == Decimal(1)
+        ):
+            encoded_max = Decimal((1 << nat_rep.bit_width) - 1)
+            if Decimal(str(nat_rep.range.max)) >= encoded_max:
+                return False
+
+        return True
+
     def calc_signal_params(self):
         """
         calculate parameters of the signal (bit_width, scale, offset, etc.)
@@ -386,8 +473,8 @@ class CanSignal(CanObject):
         ), "native_representation was not defined somehow"
         assert self.native_representation.bit_width, "bit_width was not defined somehow"
         self.datatype = CType.from_val(
-            self.native_representation.bit_width,
-            self.native_representation.signedness == Signedness.signed,
+            self._datatype_bit_width(),
+            self._datatype_is_signed(),
             self.continuous == Continuous.continuous,
         )
 

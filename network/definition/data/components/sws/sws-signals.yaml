@@ -154,6 +154,12 @@ signals:
   requestTcTLeakMsInc:
     description: Request increment of traction control integral leak time constant
     discreteValues: digitalStatus
+  requestFluxWeakeningCurrentDec:
+    description: Request decrement of motor controller flux weakening current
+    discreteValues: digitalStatus
+  requestFluxWeakeningCurrentInc:
+    description: Request increment of motor controller flux weakening current
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested

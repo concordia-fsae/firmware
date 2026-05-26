@@ -59,8 +59,13 @@ function updateStream(clientId) {
     } catch (_error) {
       return;
     }
+    const filteredEvents = [];
     for (const signalEvent of payload.events || []) {
+      const filteredSamples = [];
       for (const sample of signalEvent.samples || []) {
+        if (!client.subscriptions.has(sample.signal_id)) {
+          continue;
+        }
         const points = client.history.get(sample.signal_id) || [];
         points.push({
           t: signalEvent.timestamp_ms,
@@ -69,9 +74,18 @@ function updateStream(clientId) {
         });
         trimPoints(points);
         client.history.set(sample.signal_id, points);
+        filteredSamples.push(sample);
+      }
+      if (filteredSamples.length) {
+        filteredEvents.push({
+          ...signalEvent,
+          samples: filteredSamples,
+        });
       }
     }
-    postToClient(clientId, { type: "signal-batch", payload });
+    if (filteredEvents.length) {
+      postToClient(clientId, { type: "signal-batch", payload: { events: filteredEvents } });
+    }
   });
   source.onerror = () => {
     try {

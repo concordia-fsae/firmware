@@ -24,7 +24,7 @@ TYPE_MAP = {
 def rust_type_and_convert(signal):
     if signal.discrete_values:
         return ("c_int", "val as f64")
-    if signal.native_representation.bit_width == 1:
+    if signal.is_boolean():
         return ("bool", "if val { 1.0 } else { 0.0 }")
 
     rust_type = TYPE_MAP.get(signal.datatype.name, "f64")

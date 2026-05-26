@@ -122,6 +122,16 @@ pub fn render_signals(initial_manifest_json: &str) -> Result<String> {
         .context("rendering signals.html template")
 }
 
+pub fn render_gps() -> Result<String> {
+    environment()?
+        .get_template("gps.html")
+        .context("loading gps.html template")?
+        .render(context! {
+            page_title => "GPS Map",
+        })
+        .context("rendering gps.html template")
+}
+
 pub fn render_controller(
     controller: &ControllerStatus,
     capability: &ControllerCapability,
@@ -312,6 +322,12 @@ fn environment() -> Result<&'static Environment<'static>> {
         if let Err(error) = env
             .add_template("signals.html", include_str!("../templates/signals.html"))
             .context("adding signals.html template")
+        {
+            return Err(error.to_string());
+        }
+        if let Err(error) = env
+            .add_template("gps.html", include_str!("../templates/gps.html"))
+            .context("adding gps.html template")
         {
             return Err(error.to_string());
         }

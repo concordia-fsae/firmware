@@ -13,3 +13,5 @@ nodes:
     routines:
       calibrateResolver:
         id: 0x2000
+      testResolverCalibration:
+        id: 0x2001
