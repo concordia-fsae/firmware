@@ -28,6 +28,7 @@
 #define BUFFER_SIZE           2048U
 #define MAX_NMEA_SENTENCE     83U
 #define GPS_TIMEOUT_MS        2000U
+#define GPS_YEAR_OFFSET       2000U
 
 #define GPS_DEVICE_ERROR      FM_FAULT_VCFRONT_GPSDEVICEERROR
 #define GPS_DEVICE_OVERRUN    FM_FAULT_VCFRONT_GPSOVERRUN
@@ -112,7 +113,7 @@ static void updateGPS(void)
 
     gps.time.date        = gps.currentGPS.date;
     gps.time.month       = gps.currentGPS.month;
-    gps.time.year        = gps.currentGPS.year;
+    gps.time.year        = gps.currentGPS.year + GPS_YEAR_OFFSET;
     gps.time.hours       = gps.currentGPS.hours;
     gps.time.minutes     = gps.currentGPS.minutes;
     gps.time.seconds     = gps.currentGPS.seconds;
