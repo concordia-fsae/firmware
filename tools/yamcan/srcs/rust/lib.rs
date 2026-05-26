@@ -3,7 +3,7 @@ use std::error::Error;
 use std::ffi::CString;
 
 mod rust_decode_generated;
-mod rust_model_generated;
+pub mod rust_model_generated;
 pub mod yamcan;
 
 pub use rust_decode_generated::GeneratedNetwork;

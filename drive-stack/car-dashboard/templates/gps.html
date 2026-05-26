@@ -52,6 +52,7 @@
       user-select: none;
     }
     .tile-layer,
+    .trail-layer,
     .car-marker-layer {
       position: absolute;
       inset: 0;
@@ -79,12 +80,51 @@
     .tile-layer {
       z-index: 1;
     }
-    .car-marker-layer {
+    .trail-layer {
       z-index: 2;
+      pointer-events: none;
+    }
+    .trail-path {
+      fill: none;
+      stroke: var(--accent);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 3;
+      opacity: 0.86;
+    }
+    .trail-point {
+      fill: var(--online);
+      stroke: #fff;
+      stroke-width: 2;
+    }
+    .car-marker-layer {
+      z-index: 3;
       pointer-events: none;
     }
     .map-overlay {
       z-index: 3;
+    }
+    .map-hover-tooltip {
+      position: absolute;
+      z-index: 4;
+      display: grid;
+      gap: 0.35rem;
+      max-width: min(360px, calc(100% - 24px));
+      padding: 0.65rem 0.75rem;
+      border: 1px solid rgba(39, 76, 119, 0.16);
+      border-radius: 10px;
+      background: rgba(255, 253, 249, 0.96);
+      color: var(--ink);
+      font-size: 0.86rem;
+      box-shadow: 0 14px 32px rgba(31, 42, 47, 0.16);
+      pointer-events: none;
+    }
+    .map-hover-tooltip[hidden] {
+      display: none;
+    }
+    .map-hover-row {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      overflow-wrap: anywhere;
     }
     .car-marker::after {
       content: "";
@@ -150,6 +190,32 @@
     }
     .gps-actions button {
       flex: 1 1 140px;
+    }
+    .gps-readouts {
+      display: grid;
+      gap: 10px;
+    }
+    .gps-readout {
+      display: grid;
+      gap: 4px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .gps-readout:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+    .gps-readout-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .gps-readout-value {
+      color: var(--ink);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
     }
     .secondary-button {
       color: var(--accent);
@@ -246,6 +312,7 @@
             <input type="checkbox" id="follow-car" checked />
             <span>Follow Car</span>
           </label>
+          <button type="button" class="secondary-button" id="clear-trail">Clear Trail</button>
           <label class="gps-zoom" for="map-zoom">
             <span>Zoom</span>
             <select id="map-zoom">
@@ -264,14 +331,37 @@
 
       <div class="gps-map" id="map-canvas" aria-label="GPS map">
         <div class="tile-layer" id="tile-layer"></div>
+        <svg class="trail-layer" id="trail-layer" aria-hidden="true"></svg>
         <div class="car-marker-layer">
           <div class="car-marker" id="car-marker" hidden></div>
         </div>
+        <div class="map-hover-tooltip" id="map-hover-tooltip" hidden></div>
         <div class="map-overlay" id="map-overlay">Waiting for GPS</div>
       </div>
     </div>
 
     <aside class="gps-sidebar">
+      <section class="card gps-card">
+        <div class="card-header">
+          <h3 class="section-title">Live GPS</h3>
+          <span class="pill" id="trail-count">0 Points</span>
+        </div>
+        <div class="gps-readouts">
+          <div class="gps-readout">
+            <span class="gps-readout-label">GPS Time</span>
+            <span class="gps-readout-value" id="gps-time">Waiting</span>
+          </div>
+          <div class="gps-readout">
+            <span class="gps-readout-label">Car Local Clock</span>
+            <span class="gps-readout-value" id="car-clock">Waiting</span>
+          </div>
+          <div class="gps-readout">
+            <span class="gps-readout-label">Position</span>
+            <span class="gps-readout-value" id="gps-position">Waiting</span>
+          </div>
+        </div>
+      </section>
+
       <section class="card gps-card">
         <h3 class="section-title">Save Track Map</h3>
         <form class="stack-form" id="download-form">
@@ -341,17 +431,36 @@
       const BROWSER_TILE_TIMEOUT_MS = 30000;
       const MAP_TILE_RENDER_VERSION = "2";
       const MAX_TILE_LAT = 85.05112878;
+      const MAX_TRAIL_POINTS = 5000;
+      const MIN_TRAIL_DISTANCE_M = 0.75;
+      const TRAIL_HOVER_RADIUS_PX = 12;
+      const CAR_CLOCK_REFRESH_MS = 1000;
       const FALLBACK_LAT_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lat";
       const FALLBACK_LON_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lon";
+      const FALLBACK_GPS_DATE_SIGNAL_IDS = {
+        day: "veh/VCFRONT_gpsDate/VCFRONT_day",
+        month: "veh/VCFRONT_gpsDate/VCFRONT_month",
+        year: "veh/VCFRONT_gpsDate/VCFRONT_year",
+        hour: "veh/VCFRONT_gpsDate/VCFRONT_hour",
+        minute: "veh/VCFRONT_gpsDate/VCFRONT_minute",
+        second: "veh/VCFRONT_gpsDate/VCFRONT_second",
+      };
 
       const gpsStatus = document.getElementById("gps-status");
       const activeViewLabel = document.getElementById("active-view-label");
       const mapCanvas = document.getElementById("map-canvas");
       const tileLayer = document.getElementById("tile-layer");
+      const trailLayer = document.getElementById("trail-layer");
       const mapOverlay = document.getElementById("map-overlay");
+      const mapHoverTooltip = document.getElementById("map-hover-tooltip");
       const carMarker = document.getElementById("car-marker");
       const followCar = document.getElementById("follow-car");
+      const clearTrailButton = document.getElementById("clear-trail");
       const mapZoom = document.getElementById("map-zoom");
+      const trailCount = document.getElementById("trail-count");
+      const gpsTime = document.getElementById("gps-time");
+      const carClock = document.getElementById("car-clock");
+      const gpsPosition = document.getElementById("gps-position");
       const viewList = document.getElementById("saved-view-list");
       const viewCount = document.getElementById("view-count");
       const downloadForm = document.getElementById("download-form");
@@ -369,13 +478,18 @@
       let savedViews = [];
       let latSignalId = FALLBACK_LAT_SIGNAL_ID;
       let lonSignalId = FALLBACK_LON_SIGNAL_ID;
+      let gpsDateSignalIds = { ...FALLBACK_GPS_DATE_SIGNAL_IDS };
+      let gpsDateSignalById = new Map(Object.entries(gpsDateSignalIds).map(([part, signalId]) => [signalId, part]));
+      let gpsTimeParts = {};
       let latestLat = null;
       let latestLon = null;
       let carPosition = null;
+      let trailPoints = [];
       let mapCenter = null;
       let renderQueued = false;
       let signalSource = null;
       let signalCacheUnsubscribe = null;
+      let carClockTimer = null;
       let dragState = null;
       let selectedViewId = null;
       let renderedTileSignature = "";
@@ -445,6 +559,75 @@
 
       function usablePosition(lat, lon) {
         return validPosition(lat, lon) && !unsetPosition(lat, lon);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatTimeOfDayMs(timestampMs) {
+        const date = new Date(timestampMs);
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
+        const millis = String(date.getMilliseconds()).padStart(3, "0");
+        return `${hours}:${minutes}:${seconds}.${millis}`;
+      }
+
+      function formatLoggedTimeMs(timestampMs) {
+        const date = new Date(timestampMs);
+        const year = String(date.getFullYear()).padStart(4, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day} ${formatTimeOfDayMs(timestampMs)}`;
+      }
+
+      function formatTimestampMsValue(timestampMs) {
+        return `${Math.trunc(Number(timestampMs)).toLocaleString()} ms`;
+      }
+
+      function distanceMeters(a, b) {
+        const latMeters = (b.lat - a.lat) * 111320;
+        const lonMeters = (b.lon - a.lon) * 111320 * Math.cos(((a.lat + b.lat) / 2) * Math.PI / 180);
+        return Math.hypot(latMeters, lonMeters);
+      }
+
+      function clearTrailLayer() {
+        trailLayer.replaceChildren();
+      }
+
+      function updateTrailCount() {
+        trailCount.textContent = `${trailPoints.length} ${trailPoints.length === 1 ? "Point" : "Points"}`;
+      }
+
+      function clearTrail() {
+        trailPoints = [];
+        clearTrailLayer();
+        hideMapHover();
+        updateTrailCount();
+        scheduleRender();
+      }
+
+      function appendTrailPoint(position) {
+        const point = {
+          lat: position.lat,
+          lon: position.lon,
+          timestampMs: position.timestampMs,
+        };
+        const previous = trailPoints[trailPoints.length - 1];
+        if (previous && distanceMeters(previous, point) < MIN_TRAIL_DISTANCE_M) {
+          return;
+        }
+        trailPoints.push(point);
+        if (trailPoints.length > MAX_TRAIL_POINTS) {
+          trailPoints.splice(0, trailPoints.length - MAX_TRAIL_POINTS);
+        }
+        updateTrailCount();
       }
 
       function pointInBounds(view, position) {
@@ -623,6 +806,151 @@
         mapOverlay.hidden = false;
       }
 
+      function screenPoint(position, centerPixel, width, height, zoom) {
+        const pixel = latLonToWorldPixel(position.lat, position.lon, zoom);
+        return {
+          x: width / 2 + pixel.x - centerPixel.x,
+          y: height / 2 + pixel.y - centerPixel.y,
+        };
+      }
+
+      function mapGeometry() {
+        const rect = mapCanvas.getBoundingClientRect();
+        if (!mapCenter || !rect.width || !rect.height) {
+          return null;
+        }
+        return {
+          rect,
+          width: rect.width,
+          height: rect.height,
+          zoom: currentZoom(),
+          centerPixel: latLonToWorldPixel(mapCenter.lat, mapCenter.lon, currentZoom()),
+        };
+      }
+
+      function hideMapHover() {
+        mapHoverTooltip.hidden = true;
+        mapHoverTooltip.replaceChildren();
+      }
+
+      function showMapHover(point, screen, geometry) {
+        mapHoverTooltip.innerHTML = `
+          <div class="map-hover-row"><strong>Logged at (ms)</strong> ${escapeHtml(formatLoggedTimeMs(point.timestampMs))}</div>
+          <div class="map-hover-row"><strong>timestamp_ms</strong> ${escapeHtml(formatTimestampMsValue(point.timestampMs))}</div>
+          <div class="map-hover-row"><strong>Latitude</strong> ${escapeHtml(String(point.lat))} deg</div>
+          <div class="map-hover-row"><strong>Longitude</strong> ${escapeHtml(String(point.lon))} deg</div>
+        `;
+        mapHoverTooltip.hidden = false;
+
+        const offset = 14;
+        const maxLeft = Math.max(8, geometry.width - mapHoverTooltip.offsetWidth - 8);
+        let left = Math.min(screen.x + offset, maxLeft);
+        let top = screen.y - mapHoverTooltip.offsetHeight - offset;
+        if (top < 8) {
+          top = screen.y + offset;
+        }
+        top = Math.min(top, Math.max(8, geometry.height - mapHoverTooltip.offsetHeight - 8));
+        mapHoverTooltip.style.left = `${Math.max(8, left)}px`;
+        mapHoverTooltip.style.top = `${Math.max(8, top)}px`;
+      }
+
+      function updateMapHover(event) {
+        if (dragState) {
+          hideMapHover();
+          return;
+        }
+        const geometry = mapGeometry();
+        if (!geometry || !trailPoints.length) {
+          hideMapHover();
+          return;
+        }
+
+        const pointerX = event.clientX - geometry.rect.left;
+        const pointerY = event.clientY - geometry.rect.top;
+        let best = null;
+        let bestDistanceSquared = TRAIL_HOVER_RADIUS_PX * TRAIL_HOVER_RADIUS_PX;
+
+        for (const point of trailPoints) {
+          const screen = screenPoint(point, geometry.centerPixel, geometry.width, geometry.height, geometry.zoom);
+          if (screen.x < -TRAIL_HOVER_RADIUS_PX
+              || screen.x > geometry.width + TRAIL_HOVER_RADIUS_PX
+              || screen.y < -TRAIL_HOVER_RADIUS_PX
+              || screen.y > geometry.height + TRAIL_HOVER_RADIUS_PX) {
+            continue;
+          }
+          const dx = screen.x - pointerX;
+          const dy = screen.y - pointerY;
+          const distanceSquared = dx * dx + dy * dy;
+          if (distanceSquared <= bestDistanceSquared) {
+            bestDistanceSquared = distanceSquared;
+            best = { point, screen };
+          }
+        }
+
+        if (!best) {
+          hideMapHover();
+          return;
+        }
+
+        showMapHover(best.point, best.screen, geometry);
+      }
+
+      function renderTrail(width, height, centerPixel, zoom) {
+        trailLayer.setAttribute("viewBox", `0 0 ${Math.round(width)} ${Math.round(height)}`);
+        trailLayer.setAttribute("width", Math.round(width));
+        trailLayer.setAttribute("height", Math.round(height));
+        trailLayer.replaceChildren();
+        if (!trailPoints.length) {
+          return;
+        }
+
+        const visibleMargin = 80;
+        const points = trailPoints
+          .map((point) => ({
+            ...point,
+            ...screenPoint(point, centerPixel, width, height, zoom),
+          }))
+          .filter((point) => point.x >= -visibleMargin
+            && point.x <= width + visibleMargin
+            && point.y >= -visibleMargin
+            && point.y <= height + visibleMargin);
+
+        if (!points.length) {
+          return;
+        }
+
+        if (points.length > 1) {
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("class", "trail-path");
+          path.setAttribute(
+            "d",
+            points.map((point, index) => `${index ? "L" : "M"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" "),
+          );
+          trailLayer.appendChild(path);
+        }
+
+        points.forEach((point, index) => {
+          const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          dot.setAttribute("class", "trail-point");
+          dot.setAttribute("cx", point.x.toFixed(1));
+          dot.setAttribute("cy", point.y.toFixed(1));
+          dot.setAttribute("r", index === points.length - 1 ? "4" : "2.5");
+          trailLayer.appendChild(dot);
+        });
+      }
+
+      function renderPositionOverlays(width, height, centerPixel, zoom) {
+        renderTrail(width, height, centerPixel, zoom);
+        if (carPosition) {
+          const carPoint = screenPoint(carPosition, centerPixel, width, height, zoom);
+          carMarker.style.left = `${Math.round(carPoint.x)}px`;
+          carMarker.style.top = `${Math.round(carPoint.y)}px`;
+          carMarker.hidden = false;
+        } else {
+          carMarker.hidden = true;
+        }
+      }
+
       function renderMap() {
         const rect = mapCanvas.getBoundingClientRect();
         const width = rect.width;
@@ -644,6 +972,8 @@
 
         if (!mapCenter) {
           clearTiles();
+          clearTrailLayer();
+          hideMapHover();
           carMarker.hidden = true;
           activeViewLabel.textContent = "No Map";
           setOverlay("Waiting for GPS");
@@ -653,9 +983,9 @@
         const zoom = currentZoom();
         const selected = selectedView();
         const activeView = currentMapView();
+        const centerPixel = latLonToWorldPixel(mapCenter.lat, mapCenter.lon, zoom);
         if (!activeView) {
           clearTiles();
-          carMarker.hidden = true;
           if (selected) {
             activeViewLabel.textContent = selected.name;
             setOverlay("Selected map is not cached at current zoom");
@@ -663,11 +993,11 @@
             activeViewLabel.textContent = "No Map";
             setOverlay(carPosition ? "No saved map at current position and zoom" : "Waiting for GPS");
           }
+          renderPositionOverlays(width, height, centerPixel, zoom);
           return;
         }
 
         activeViewLabel.textContent = activeView.name;
-        const centerPixel = latLonToWorldPixel(mapCenter.lat, mapCenter.lon, zoom);
         const topLeftX = centerPixel.x - width / 2;
         const topLeftY = centerPixel.y - height / 2;
         const minTileX = Math.floor(topLeftX / TILE_SIZE);
@@ -755,14 +1085,7 @@
           setOverlay(`No cached tiles for this map at zoom ${zoom} near ${mapCenter.lat.toFixed(5)}, ${mapCenter.lon.toFixed(5)}`);
         }
 
-        if (carPosition) {
-          const carPixel = latLonToWorldPixel(carPosition.lat, carPosition.lon, zoom);
-          carMarker.style.left = `${Math.round(width / 2 + carPixel.x - centerPixel.x)}px`;
-          carMarker.style.top = `${Math.round(height / 2 + carPixel.y - centerPixel.y)}px`;
-          carMarker.hidden = false;
-        } else {
-          carMarker.hidden = true;
-        }
+        renderPositionOverlays(width, height, centerPixel, zoom);
       }
 
       function updateGpsStatus() {
@@ -770,9 +1093,34 @@
           gpsStatus.textContent = unsetPosition(latestLat, latestLon)
             ? "GPS: waiting for valid fix (0,0 ignored)"
             : "GPS: waiting for samples";
+          gpsPosition.textContent = "Waiting";
           return;
         }
-        gpsStatus.textContent = `GPS: ${carPosition.lat.toFixed(6)}, ${carPosition.lon.toFixed(6)}`;
+        const positionText = `${carPosition.lat.toFixed(6)}, ${carPosition.lon.toFixed(6)}`;
+        gpsStatus.textContent = `GPS: ${positionText}`;
+        gpsPosition.textContent = positionText;
+      }
+
+      function formatGpsTimePart(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.trunc(number) : null;
+      }
+
+      function updateGpsTimeDisplay() {
+        const day = formatGpsTimePart(gpsTimeParts.day);
+        const month = formatGpsTimePart(gpsTimeParts.month);
+        const year = formatGpsTimePart(gpsTimeParts.year);
+        const hour = formatGpsTimePart(gpsTimeParts.hour);
+        const minute = formatGpsTimePart(gpsTimeParts.minute);
+        const second = formatGpsTimePart(gpsTimeParts.second);
+
+        if ([day, month, year, hour, minute, second].some((value) => value === null)) {
+          gpsTime.textContent = "Waiting";
+          return;
+        }
+
+        const pad = (value) => String(value).padStart(2, "0");
+        gpsTime.textContent = `${String(year).padStart(4, "0")}-${pad(month)}-${pad(day)} ${pad(hour)}:${pad(minute)}:${pad(second)}`;
       }
 
       function updateCarPosition(timestampMs) {
@@ -789,6 +1137,7 @@
           lon: latestLon,
           timestampMs,
         };
+        appendTrailPoint(carPosition);
         if (followCar.checked) {
           mapCenter = { lat: latestLat, lon: latestLon };
         }
@@ -798,19 +1147,33 @@
 
       function applySignalBatch(payload) {
         for (const event of payload.events || []) {
+          let positionUpdated = false;
+          let gpsTimeUpdated = false;
           for (const sample of event.samples || []) {
             if (sample.signal_id === latSignalId) {
               latestLat = Number(sample.value);
+              positionUpdated = true;
             } else if (sample.signal_id === lonSignalId) {
               latestLon = Number(sample.value);
+              positionUpdated = true;
+            } else if (gpsDateSignalById.has(sample.signal_id)) {
+              gpsTimeParts[gpsDateSignalById.get(sample.signal_id)] = Number(sample.value);
+              gpsTimeUpdated = true;
             }
           }
-          updateCarPosition(event.timestamp_ms || Date.now());
+          if (positionUpdated) {
+            updateCarPosition(event.timestamp_ms || Date.now());
+          }
+          if (gpsTimeUpdated) {
+            updateGpsTimeDisplay();
+          }
         }
       }
 
       function applySignalSnapshot(snapshot) {
         let timestampMs = Date.now();
+        let positionUpdated = false;
+        let gpsTimeUpdated = false;
         for (const entry of snapshot.signals || []) {
           const points = entry.points || [];
           const last = points[points.length - 1];
@@ -819,12 +1182,22 @@
           }
           if (entry.signalId === latSignalId) {
             latestLat = Number(last.v);
+            positionUpdated = true;
           } else if (entry.signalId === lonSignalId) {
             latestLon = Number(last.v);
+            positionUpdated = true;
+          } else if (gpsDateSignalById.has(entry.signalId)) {
+            gpsTimeParts[gpsDateSignalById.get(entry.signalId)] = Number(last.v);
+            gpsTimeUpdated = true;
           }
           timestampMs = Math.max(timestampMs, Number(last.t) || timestampMs);
         }
-        updateCarPosition(timestampMs);
+        if (positionUpdated) {
+          updateCarPosition(timestampMs);
+        }
+        if (gpsTimeUpdated) {
+          updateGpsTimeDisplay();
+        }
       }
 
       async function resolveGpsSignals() {
@@ -848,27 +1221,38 @@
             latSignalId = latSignal.id;
             lonSignalId = lonSignal.id;
           }
+          const gpsDateSignals = {};
+          for (const part of Object.keys(FALLBACK_GPS_DATE_SIGNAL_IDS)) {
+            const signal = signals.find((candidate) => {
+              const message = String(candidate.message_name || "").toLowerCase();
+              const name = String(candidate.signal_name || "").toLowerCase();
+              const suffix = name.split("_").pop();
+              const aliases = part === "day" ? ["day", "date"] : [part];
+              return message.includes("gpsdate") && aliases.includes(suffix);
+            });
+            gpsDateSignals[part] = signal ? signal.id : FALLBACK_GPS_DATE_SIGNAL_IDS[part];
+          }
+          gpsDateSignalIds = gpsDateSignals;
+          gpsDateSignalById = new Map(Object.entries(gpsDateSignalIds).map(([part, signalId]) => [signalId, part]));
         } catch (error) {
           console.error("failed to resolve GPS signals", error);
         }
       }
 
+      function gpsSignalIds() {
+        return [latSignalId, lonSignalId, ...Object.values(gpsDateSignalIds)]
+          .filter((signalId, index, signalIds) => signalId && signalIds.indexOf(signalId) === index);
+      }
+
       async function connectGpsSignals() {
-        const signalIds = [latSignalId, lonSignalId];
+        const signalIds = gpsSignalIds();
         if (window.dashboardSignalCache && window.dashboardSignalCache.isAvailable()) {
-          signalCacheUnsubscribe = window.dashboardSignalCache.subscribe((message) => {
-            if (message.type === "signal-batch") {
-              applySignalBatch(message.payload || { events: [] });
-            }
-          });
-          window.dashboardSignalCache.setSubscription(signalIds, false);
           try {
             const snapshot = await window.dashboardSignalCache.getSnapshot(signalIds);
             applySignalSnapshot(snapshot);
           } catch (error) {
             console.error("failed to hydrate GPS signals", error);
           }
-          return;
         }
 
         const signals = signalIds.sort().join(",");
@@ -879,6 +1263,24 @@
         signalSource.onerror = (event) => {
           console.error("GPS signal stream error", event);
         };
+      }
+
+      function formatCarClock(value) {
+        return String(value || "Waiting").replace("T", " ");
+      }
+
+      async function refreshCarClock() {
+        try {
+          const response = await fetch("/api/clock", { cache: "no-store" });
+          const body = await response.json();
+          if (!response.ok || body.ok === false) {
+            throw new Error(body.error || `clock request failed with HTTP ${response.status}`);
+          }
+          carClock.textContent = formatCarClock(body.local_time);
+        } catch (error) {
+          carClock.textContent = "Unavailable";
+          console.error("failed to refresh car clock", error);
+        }
       }
 
       async function loadViews() {
@@ -1256,6 +1658,7 @@
         if (!currentMapView()) {
           return;
         }
+        hideMapHover();
         followCar.checked = false;
         const zoom = currentZoom();
         const center = mapCenter || carPosition || selectedView();
@@ -1310,11 +1713,14 @@
         scheduleRender();
       });
       useCarPositionButton.addEventListener("click", fillTargetFromCar);
+      clearTrailButton.addEventListener("click", clearTrail);
       downloadForm.addEventListener("submit", downloadView);
       mapCanvas.addEventListener("pointerdown", beginDrag);
       mapCanvas.addEventListener("pointermove", moveDrag);
+      mapCanvas.addEventListener("pointermove", updateMapHover);
       mapCanvas.addEventListener("pointerup", endDrag);
       mapCanvas.addEventListener("pointercancel", endDrag);
+      mapCanvas.addEventListener("pointerleave", hideMapHover);
       window.addEventListener("resize", scheduleRender);
       window.addEventListener("pagehide", () => {
         if (signalSource) {
@@ -1323,8 +1729,15 @@
         if (signalCacheUnsubscribe) {
           signalCacheUnsubscribe();
         }
+        if (carClockTimer) {
+          window.clearInterval(carClockTimer);
+        }
       });
 
+      updateTrailCount();
+      updateGpsTimeDisplay();
+      refreshCarClock();
+      carClockTimer = window.setInterval(refreshCarClock, CAR_CLOCK_REFRESH_MS);
       loadViews();
       resolveGpsSignals().finally(connectGpsSignals);
     })();

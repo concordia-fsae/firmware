@@ -1,0 +1,3 @@
+description: "Carputer clock manager GPS listener"
+onBuses:
+  - "veh"

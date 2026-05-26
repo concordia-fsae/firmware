@@ -373,36 +373,48 @@ signals:
   date:
     unit: ""
     nativeRepresentation:
+      bitWidth: 5
+      resolution: 1
       range:
         min: 1
         max: 31
   month:
     unit: ""
     nativeRepresentation:
+      bitWidth: 4
+      resolution: 1
       range:
         min: 1
         max: 12
   year:
     unit: ""
     nativeRepresentation:
+      bitWidth: 11
+      resolution: 1
       range:
-        min: 2020
-        max: 2030
+        min: 0
+        max: 2047
   hour:
     unit: ""
     nativeRepresentation:
+      bitWidth: 5
+      resolution: 1
       range:
         min: 0
         max: 24
   minute:
     unit: ""
     nativeRepresentation:
+      bitWidth: 6
+      resolution: 1
       range:
         min: 0
         max: 59
   second:
     unit: ""
     nativeRepresentation:
+      bitWidth: 6
+      resolution: 1
       range:
         min: 0
         max: 59

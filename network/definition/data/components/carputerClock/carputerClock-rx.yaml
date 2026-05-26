@@ -1,0 +1,6 @@
+messages:
+  VCFRONT_gpsDate:
+    sourceBuses: veh
+  VCFRONT_gpsDiagnostics:
+    sourceBuses: veh
+signals:

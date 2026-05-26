@@ -5,6 +5,7 @@ members = [
   "drive-stack/conUDS",
   "drive-stack/car-dashboard",
   "drive-stack/can-bridge",
+  "drive-stack/clock-manager",
   "drive-stack/net-detec",
   "tools/log-processor",
 ]

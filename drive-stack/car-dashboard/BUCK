@@ -52,6 +52,7 @@ rust_library(
         "//drive-stack/net-detec:lib",
         ":yamcan-rust",
         "//third_party:anyhow",
+        "//third_party:chrono",
         "//third_party:clap",
         "//third_party:env_logger",
         "//third_party:futures",

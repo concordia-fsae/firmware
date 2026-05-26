@@ -1,0 +1,14 @@
+[Unit]
+Description=Carputer Clock Manager
+After=ota-agent-drive-stack.service network.target
+PartOf=drive-stack.target
+
+[Service]
+Environment=RUST_LOG=info
+ExecStart=/bin/cfr/clock-manager --iface can0
+Restart=on-failure
+RestartSec=5s
+StartLimitBurst=0
+
+[Install]
+WantedBy=multi-user.target
