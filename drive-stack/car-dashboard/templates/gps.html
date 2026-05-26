@@ -432,11 +432,15 @@
       const MAP_TILE_RENDER_VERSION = "2";
       const MAX_TILE_LAT = 85.05112878;
       const MAX_TRAIL_POINTS = 5000;
+      const MAX_SPEED_SAMPLES = 20000;
       const MIN_TRAIL_DISTANCE_M = 0.75;
       const TRAIL_HOVER_RADIUS_PX = 12;
+      const SPEED_SAMPLE_MATCH_WINDOW_MS = 1500;
       const CAR_CLOCK_REFRESH_MS = 1000;
       const FALLBACK_LAT_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lat";
       const FALLBACK_LON_SIGNAL_ID = "veh/VCFRONT_gpsPosition/VCFRONT_lon";
+      const FALLBACK_GPS_SPEED_SIGNAL_ID = "veh/VCFRONT_gpsHeading/VCFRONT_speed";
+      const FALLBACK_VEHICLE_SPEED_SIGNAL_ID = "veh/VCFRONT_vehicleSpeed/VCFRONT_vehicleSpeed";
       const FALLBACK_GPS_DATE_SIGNAL_IDS = {
         day: "veh/VCFRONT_gpsDate/VCFRONT_day",
         month: "veh/VCFRONT_gpsDate/VCFRONT_month",
@@ -478,9 +482,13 @@
       let savedViews = [];
       let latSignalId = FALLBACK_LAT_SIGNAL_ID;
       let lonSignalId = FALLBACK_LON_SIGNAL_ID;
+      let gpsSpeedSignalId = FALLBACK_GPS_SPEED_SIGNAL_ID;
+      let vehicleSpeedSignalId = FALLBACK_VEHICLE_SPEED_SIGNAL_ID;
       let gpsDateSignalIds = { ...FALLBACK_GPS_DATE_SIGNAL_IDS };
       let gpsDateSignalById = new Map(Object.entries(gpsDateSignalIds).map(([part, signalId]) => [signalId, part]));
       let gpsTimeParts = {};
+      let gpsSpeedSamples = [];
+      let vehicleSpeedSamples = [];
       let latestLat = null;
       let latestLon = null;
       let carPosition = null;
@@ -591,10 +599,108 @@
         return `${Math.trunc(Number(timestampMs)).toLocaleString()} ms`;
       }
 
+      function formatSpeed(sample) {
+        if (!sample || !Number.isFinite(Number(sample.value))) {
+          return "No sample";
+        }
+        const metersPerSecond = Number(sample.value);
+        const kilometersPerHour = metersPerSecond * 3.6;
+        return `${metersPerSecond.toFixed(2)} m/s (${kilometersPerHour.toFixed(1)} km/h)`;
+      }
+
       function distanceMeters(a, b) {
         const latMeters = (b.lat - a.lat) * 111320;
         const lonMeters = (b.lon - a.lon) * 111320 * Math.cos(((a.lat + b.lat) / 2) * Math.PI / 180);
         return Math.hypot(latMeters, lonMeters);
+      }
+
+      function nearestTrailPoint(timestampMs) {
+        if (!trailPoints.length) {
+          return null;
+        }
+        let lo = 0;
+        let hi = trailPoints.length;
+        while (lo < hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (trailPoints[mid].timestampMs < timestampMs) {
+            lo = mid + 1;
+          } else {
+            hi = mid;
+          }
+        }
+        const candidates = [trailPoints[lo], trailPoints[lo - 1]].filter(Boolean);
+        let best = null;
+        let bestDelta = SPEED_SAMPLE_MATCH_WINDOW_MS + 1;
+        for (const point of candidates) {
+          const delta = Math.abs(point.timestampMs - timestampMs);
+          if (delta < bestDelta) {
+            best = point;
+            bestDelta = delta;
+          }
+        }
+        return bestDelta <= SPEED_SAMPLE_MATCH_WINDOW_MS ? best : null;
+      }
+
+      function recordSpeedSample(samples, valueKey, timestampKey, timestampMs, value) {
+        const numericValue = Number(value);
+        const numericTimestamp = Number(timestampMs);
+        if (!Number.isFinite(numericValue) || !Number.isFinite(numericTimestamp)) {
+          return;
+        }
+        const sample = {
+          timestampMs: numericTimestamp,
+          value: numericValue,
+        };
+        samples.push(sample);
+        if (samples.length > MAX_SPEED_SAMPLES) {
+          samples.splice(0, samples.length - MAX_SPEED_SAMPLES);
+        }
+        const point = nearestTrailPoint(numericTimestamp);
+        if (point) {
+          point[valueKey] = numericValue;
+          point[timestampKey] = numericTimestamp;
+        }
+      }
+
+      function nearestSpeedSample(samples, timestampMs) {
+        if (!samples.length || !Number.isFinite(Number(timestampMs))) {
+          return null;
+        }
+        let lo = 0;
+        let hi = samples.length;
+        while (lo < hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (samples[mid].timestampMs < timestampMs) {
+            lo = mid + 1;
+          } else {
+            hi = mid;
+          }
+        }
+        const candidates = [samples[lo], samples[lo - 1]].filter(Boolean);
+        let best = null;
+        let bestDelta = SPEED_SAMPLE_MATCH_WINDOW_MS + 1;
+        for (const sample of candidates) {
+          const delta = Math.abs(sample.timestampMs - timestampMs);
+          if (delta < bestDelta) {
+            best = sample;
+            bestDelta = delta;
+          }
+        }
+        return bestDelta <= SPEED_SAMPLE_MATCH_WINDOW_MS ? best : null;
+      }
+
+      function speedSampleForPoint(point, samples, valueKey, timestampKey) {
+        const nearest = nearestSpeedSample(samples, point.timestampMs);
+        if (nearest) {
+          return nearest;
+        }
+        if (!Number.isFinite(Number(point[valueKey]))) {
+          return null;
+        }
+        return {
+          timestampMs: point[timestampKey] || point.timestampMs,
+          value: Number(point[valueKey]),
+        };
       }
 
       function clearTrailLayer() {
@@ -614,10 +720,16 @@
       }
 
       function appendTrailPoint(position) {
+        const gpsSpeed = nearestSpeedSample(gpsSpeedSamples, position.timestampMs);
+        const vehicleSpeed = nearestSpeedSample(vehicleSpeedSamples, position.timestampMs);
         const point = {
           lat: position.lat,
           lon: position.lon,
           timestampMs: position.timestampMs,
+          gpsSpeed: gpsSpeed ? gpsSpeed.value : null,
+          gpsSpeedTimestampMs: gpsSpeed ? gpsSpeed.timestampMs : null,
+          vehicleSpeed: vehicleSpeed ? vehicleSpeed.value : null,
+          vehicleSpeedTimestampMs: vehicleSpeed ? vehicleSpeed.timestampMs : null,
         };
         const previous = trailPoints[trailPoints.length - 1];
         if (previous && distanceMeters(previous, point) < MIN_TRAIL_DISTANCE_M) {
@@ -834,11 +946,15 @@
       }
 
       function showMapHover(point, screen, geometry) {
+        const gpsSpeed = speedSampleForPoint(point, gpsSpeedSamples, "gpsSpeed", "gpsSpeedTimestampMs");
+        const vehicleSpeed = speedSampleForPoint(point, vehicleSpeedSamples, "vehicleSpeed", "vehicleSpeedTimestampMs");
         mapHoverTooltip.innerHTML = `
           <div class="map-hover-row"><strong>Logged at (ms)</strong> ${escapeHtml(formatLoggedTimeMs(point.timestampMs))}</div>
           <div class="map-hover-row"><strong>timestamp_ms</strong> ${escapeHtml(formatTimestampMsValue(point.timestampMs))}</div>
           <div class="map-hover-row"><strong>Latitude</strong> ${escapeHtml(String(point.lat))} deg</div>
           <div class="map-hover-row"><strong>Longitude</strong> ${escapeHtml(String(point.lon))} deg</div>
+          <div class="map-hover-row"><strong>GPS Speed</strong> ${escapeHtml(formatSpeed(gpsSpeed))}</div>
+          <div class="map-hover-row"><strong>Vehicle Speed</strong> ${escapeHtml(formatSpeed(vehicleSpeed))}</div>
         `;
         mapHoverTooltip.hidden = false;
 
@@ -1156,6 +1272,10 @@
             } else if (sample.signal_id === lonSignalId) {
               latestLon = Number(sample.value);
               positionUpdated = true;
+            } else if (sample.signal_id === gpsSpeedSignalId) {
+              recordSpeedSample(gpsSpeedSamples, "gpsSpeed", "gpsSpeedTimestampMs", event.timestamp_ms, sample.value);
+            } else if (sample.signal_id === vehicleSpeedSignalId) {
+              recordSpeedSample(vehicleSpeedSamples, "vehicleSpeed", "vehicleSpeedTimestampMs", event.timestamp_ms, sample.value);
             } else if (gpsDateSignalById.has(sample.signal_id)) {
               gpsTimeParts[gpsDateSignalById.get(sample.signal_id)] = Number(sample.value);
               gpsTimeUpdated = true;
@@ -1171,7 +1291,7 @@
       }
 
       function applySignalSnapshot(snapshot) {
-        let timestampMs = Date.now();
+        let timestampMs = null;
         let positionUpdated = false;
         let gpsTimeUpdated = false;
         for (const entry of snapshot.signals || []) {
@@ -1183,17 +1303,26 @@
           if (entry.signalId === latSignalId) {
             latestLat = Number(last.v);
             positionUpdated = true;
+            timestampMs = Math.max(timestampMs || 0, Number(last.t) || 0);
           } else if (entry.signalId === lonSignalId) {
             latestLon = Number(last.v);
             positionUpdated = true;
+            timestampMs = Math.max(timestampMs || 0, Number(last.t) || 0);
+          } else if (entry.signalId === gpsSpeedSignalId) {
+            for (const point of points) {
+              recordSpeedSample(gpsSpeedSamples, "gpsSpeed", "gpsSpeedTimestampMs", point.t, point.v);
+            }
+          } else if (entry.signalId === vehicleSpeedSignalId) {
+            for (const point of points) {
+              recordSpeedSample(vehicleSpeedSamples, "vehicleSpeed", "vehicleSpeedTimestampMs", point.t, point.v);
+            }
           } else if (gpsDateSignalById.has(entry.signalId)) {
             gpsTimeParts[gpsDateSignalById.get(entry.signalId)] = Number(last.v);
             gpsTimeUpdated = true;
           }
-          timestampMs = Math.max(timestampMs, Number(last.t) || timestampMs);
         }
         if (positionUpdated) {
-          updateCarPosition(timestampMs);
+          updateCarPosition(timestampMs || Date.now());
         }
         if (gpsTimeUpdated) {
           updateGpsTimeDisplay();
@@ -1221,6 +1350,19 @@
             latSignalId = latSignal.id;
             lonSignalId = lonSignal.id;
           }
+          const gpsSpeedSignal = signals.find((signal) => {
+            const message = String(signal.message_name || "").toLowerCase();
+            const name = String(signal.signal_name || "").toLowerCase();
+            const suffix = name.split("_").pop();
+            return message.includes("gpsheading") && suffix === "speed";
+          });
+          const vehicleSpeedSignal = signals.find((signal) => {
+            const message = String(signal.message_name || "").toLowerCase();
+            const name = String(signal.signal_name || "").toLowerCase();
+            return message.includes("vehiclespeed") && (name === "vehiclespeed" || name.endsWith("_vehiclespeed"));
+          });
+          gpsSpeedSignalId = gpsSpeedSignal ? gpsSpeedSignal.id : FALLBACK_GPS_SPEED_SIGNAL_ID;
+          vehicleSpeedSignalId = vehicleSpeedSignal ? vehicleSpeedSignal.id : FALLBACK_VEHICLE_SPEED_SIGNAL_ID;
           const gpsDateSignals = {};
           for (const part of Object.keys(FALLBACK_GPS_DATE_SIGNAL_IDS)) {
             const signal = signals.find((candidate) => {
@@ -1240,7 +1382,7 @@
       }
 
       function gpsSignalIds() {
-        return [latSignalId, lonSignalId, ...Object.values(gpsDateSignalIds)]
+        return [latSignalId, lonSignalId, gpsSpeedSignalId, vehicleSpeedSignalId, ...Object.values(gpsDateSignalIds)]
           .filter((signalId, index, signalIds) => signalId && signalIds.indexOf(signalId) === index);
       }
 
