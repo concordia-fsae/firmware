@@ -15,7 +15,7 @@
 #define BMS_MAX_SEGMENTS    8U
 _Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
 
-#define BMS_VPACK_SOURCE    BMS.pack_voltage_calculated
+#define BMS_VPACK_SOURCE (BMS.pack_voltage_sense_fault ? BMS.pack_voltage_calculated : BMS.pack_voltage_measured)
 
 // TDK HVC43 series, worst case 200A load at break
 // https://www.tdk-electronics.tdk.com/inf/100/ds/HVC43MC_B88269X.pdf
