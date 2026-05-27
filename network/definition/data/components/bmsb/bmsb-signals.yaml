@@ -392,3 +392,14 @@ signals:
         max: 40
       signedness: unsigned
     continuous: true
+
+  targetBalancingVoltage:
+    unit: 'V'
+    description: Voltage to balance cells until
+    nativeRepresentation:
+      bitWidth: 16
+      resolution: 0.005
+      range:
+        min: 0
+        max: 5
+    continuous: true

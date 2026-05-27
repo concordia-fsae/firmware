@@ -150,3 +150,10 @@ messages:
     sourceBuses: veh
     signals:
       packPower:
+
+  balancingCommand:
+    description: Command to balance to a target voltage
+    cycleTimeMs: 1000
+    id: 0x7c0
+    signals:
+      targetBalancingVoltage:

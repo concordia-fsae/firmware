@@ -45,6 +45,9 @@
 
 #define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE    0.1f
 
+#define BALANCING_DELTA_CUTOFF                         0.03f // [V]
+#define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f // [V]
+
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -348,6 +351,31 @@ void BMS_continueCharging(void)
     BMS.charging_paused = false;
 }
 
+bool BMS_startBalancing(void)
+{
+    if ((BMS.voltages.min < BALANCING_MIN_VOLTAGE_ALLOWED) ||
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+        )
+    {
+        return false;
+    }
+
+    BMS.balancing = true;
+
+    return true;
+}
+
+bool BMS_stopBalancing(void)
+{
+    if (!BMS.balancing)
+    {
+        return false;
+    }
+
+    BMS.balancing = false;
+    return true;
+}
+
 static void BMS_init(void)
 {
     memset(&BMS, 0x00, sizeof(BMSB_S));
@@ -379,6 +407,11 @@ static void BMS10Hz_PRD(void)
     BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
     BMS.voltages                = tmp.voltages;
     BMS.max_temp                = tmp.max_temp;
+
+    if (BMS.balancing)
+    {
+        BMS.balancing = (BMS.voltages.max - BMS.voltages.min) > BALANCING_DELTA_CUTOFF;
+    }
 }
 
 static void BMS100Hz_PRD(void)
@@ -413,6 +446,7 @@ static void BMS100Hz_PRD(void)
     {
         openAllContactors();
         drv_timer_stop(&precharge_timer);
+        BMS.balancing = false;
     }
     else
     {
