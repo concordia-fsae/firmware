@@ -21,7 +21,7 @@
 #define START_TIMER_MS    500U
 #define START_DUTY        1.0f
 #define FAN_ON_DUTY       0.4f
-#define PUMP_ON_DUTY      0.8f
+#define PUMP_ON_DUTY      1.0f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S

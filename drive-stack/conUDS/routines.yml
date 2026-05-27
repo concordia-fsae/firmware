@@ -1,4 +1,8 @@
 nodes:
+  bmsb:
+    routines:
+      socInit:
+        id: 0x0300
   vcfront:
     routines:
       resetOdometer:

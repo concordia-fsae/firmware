@@ -148,6 +148,8 @@ fn main() -> Result<()> {
         opts.iface, gps_ids
     );
 
+    set_ntp(&opts, true).context("failed to enable NTP while waiting for GPS lock")?;
+
     let mut gate = ClockGate::default();
     loop {
         let (frame, id) = recv_frame(&socket)
@@ -236,8 +238,7 @@ fn gps_datetime(message: &GpsDateMessage) -> Option<NaiveDateTime> {
 }
 
 fn set_system_clock(opts: &Opts, datetime: NaiveDateTime) -> Result<()> {
-    run_privileged(&opts.timedatectl_bin, &["set-ntp", "false"], opts.dry_run)
-        .context("failed to disable NTP before setting system clock")?;
+    set_ntp(opts, false).context("failed to disable NTP before setting system clock")?;
 
     let timestamp = clock_set_timestamp(datetime);
     run_privileged(
@@ -248,6 +249,11 @@ fn set_system_clock(opts: &Opts, datetime: NaiveDateTime) -> Result<()> {
     .with_context(|| format!("failed to set system clock to {timestamp}"))?;
 
     Ok(())
+}
+
+fn set_ntp(opts: &Opts, enabled: bool) -> Result<()> {
+    let value = if enabled { "true" } else { "false" };
+    run_privileged(&opts.timedatectl_bin, &["set-ntp", value], opts.dry_run)
 }
 
 fn gps_offset_datetime(datetime: NaiveDateTime) -> Result<NaiveDateTime> {

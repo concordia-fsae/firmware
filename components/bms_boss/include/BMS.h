@@ -15,7 +15,7 @@
 #define BMS_MAX_SEGMENTS    8U
 _Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
 
-#define BMS_VPACK_SOURCE    BMS.pack_voltage_calculated
+#define BMS_VPACK_SOURCE    (BMS.pack_voltage_sense_fault ? BMS.pack_voltage_calculated : BMS.pack_voltage_measured)
 
 // TDK HVC43 series, worst case 200A load at break
 // https://www.tdk-electronics.tdk.com/inf/100/ds/HVC43MC_B88269X.pdf
@@ -65,6 +65,7 @@ typedef struct
     uint8_t          connected_segments;
     float32_t        charge_limit;    // [A] precision 1A
     float32_t        discharge_limit; // [A] precision 1A
+    uint32_t         last_step_ms;
     float32_t        pack_voltage_calculated;
     float32_t        pack_voltage_measured;
     float32_t        pack_current;
@@ -89,8 +90,7 @@ typedef struct
 
 typedef struct
 {
-    float32_t pack_amp_hours;
-    float32_t cell_amp_hours[BMS_CONFIGURED_SERIES_SEGMENTS * BMS_CONFIGURED_SERIES_CELLS];
+    float32_t soc;
     uint8_t   spare[16U];
 } LIB_NVM_STORAGE(nvm_bmsData_S);
 
@@ -127,3 +127,4 @@ float32_t BMSB_getContactorSohPrecharge(void);
 uint32_t  BMSB_getContactorLifetimeHvp(void);
 uint32_t  BMSB_getContactorLifetimeHvn(void);
 uint32_t  BMSB_getContactorLifetimePrecharge(void);
+bool      BMSB_initSOC(void);
