@@ -3,6 +3,8 @@ nodes:
     routines:
       socInit:
         id: 0x0300
+      balancing:
+        id: 0x0301
   vcfront:
     routines:
       resetOdometer:

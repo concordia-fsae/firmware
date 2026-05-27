@@ -130,6 +130,43 @@ static void routine_socInit(udsRoutineControlType_E routineControlType, uint8_t 
     }
 }
 
+static void routine_balancing(udsRoutineControlType_E routineControlType, uint8_t *payload, uint8_t payloadLengthBytes)
+{
+    UNUSED(payloadLengthBytes);
+    UNUSED(payload);
+
+    switch (routineControlType)
+    {
+        case UDS_ROUTINE_CONTROL_START:
+            if (BMS_startBalancing())
+            {
+                uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
+            }
+            else
+            {
+                uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_CONDITIONS_NOT_CORRECT);
+            }
+            break;
+
+        case UDS_ROUTINE_CONTROL_GET_RESULT:
+        case UDS_ROUTINE_CONTROL_STOP:
+            if (BMS_stopBalancing())
+            {
+                uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_STOP, payload, 0x02);
+            }
+            else
+            {
+                uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_CONDITIONS_NOT_CORRECT);
+            }
+            break;
+
+        case UDS_ROUTINE_CONTROL_NONE:
+        default:
+            uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
+            break;
+    }
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -240,6 +277,10 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
     {
         case 0x0300:
             routine_socInit(routineControlType, payload + 2U, payloadLengthBytes);
+            break;
+
+        case 0x0301:
+            routine_balancing(routineControlType, payload + 2U, payloadLengthBytes);
             break;
 
         case 0xf0f0:
