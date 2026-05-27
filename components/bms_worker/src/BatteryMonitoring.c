@@ -29,7 +29,8 @@
  ******************************************************************************/
 
 #define BMS_CONFIGURED_BALANCING_TIMEOUT    1100
-#define BMS_CONFIGURED_BALANCING_MARGIN     0.050f // [V], precision 1mV
+#define BMS_CONFIGURED_BALANCING_MARGIN     0.01f // [V], precision 1mV
+#define BMS_CONFIGURED_MIN_BALANCING        3.10f // [V], precision 1mV
 #define BMS_START_DELAY_MS                  100U
 
 #define BMS_CONFIGURED_SAMPLING_TIME_MS     20
@@ -182,9 +183,11 @@ void BMS_measurementComplete(void)
 {
     if (BMS.state == BMS_HOLDING)
     {
+        float32_t target = 0.0f;
+        const bool balance = CANRX_get_signal(VEH, BMSB_targetBalancingVoltage, &target) == CANRX_MESSAGE_VALID;
         BMS.state = BMS_WAITING;
-#if FEATURE_CELL_BALANCING
-        if (CANRX_get_signal_timeSinceLastMessageMS(VEH, TOOLING_targetBalancingVoltage) < BMS_CONFIGURED_BALANCING_TIMEOUT)
+
+        if (balance && (target < CELL_VOLTAGE_THRESH_OV))
         {
             static bool even = false;
 
@@ -192,19 +195,20 @@ void BMS_measurementComplete(void)
 
             for (uint8_t i = (even) ? 0 : 1; i < BMS_CONFIGURED_SERIES_CELLS; i += 2)
             {
-                max_chip.config.balancing |= (BMS.cells[i].voltage > (CANRX_get_signal(VEH, TOOLING_targetBalancingVoltage) + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
+                max_chip.config.balancing |= (BMS.cells[i].voltage > (target + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
             }
 
             even = (even == false);
         }
         else
-#endif // FEATURE_CELL_BALANCING
         {
+#if FEATURE_IS_ENABLED(FEATURE_BALANCE_ON_BOOT)
             if (bms.startBalanceSeq < BMS_CONFIGURED_SERIES_CELLS)
             {
                 max_chip.config.balancing = 0x01 << bms.startBalanceSeq;
             }
             else
+#endif
             {
                 max_chip.config.balancing = 0x00;
             }

@@ -2,6 +2,6 @@ config:
   prefix: feature
   description: Feature definitions for the BMS Worker
 defs:
-  cell_balancing:
   canrx_swi:
   cantx_swi:
+  balance_on_boot:
