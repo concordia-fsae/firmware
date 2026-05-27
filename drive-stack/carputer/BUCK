@@ -124,11 +124,13 @@ carputer_platform_targets(
         "can-bridge-veh.service",
         "log-processor.service",
         "dashboard.service",
+        "influxd.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
         "log-processor.service",
         "dashboard.service",
+        "influxd.service",
     ],
 )
 
@@ -147,11 +149,13 @@ carputer_platform_targets(
         "can-bridge-veh.service",
         "log-processor.service",
         "dashboard.service",
+        "influxd.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
         "log-processor.service",
         "dashboard.service",
+        "influxd.service",
     ],
 )
 
@@ -172,11 +176,13 @@ carputer_deploy_targets_manifest(
         "can-bridge-veh.service",
         "log-processor.service",
         "dashboard.service",
+        "influxd.service",
     ],
     uds_stop_services = [
         "can-bridge-veh.service",
         "log-processor.service",
         "dashboard.service",
+        "influxd.service",
     ],
     visibility = ["PUBLIC"],
 )
