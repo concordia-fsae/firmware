@@ -730,24 +730,31 @@ static void tcEvaluateParams(void)
         drv_timer_stop(&torque_data.paramTcChangeTimer);
     }
 }
-static float32_t desiredRegenTorque(void)
+static float32_t evaluate_regenTorque(void)
 {
-    float32_t decel;
+    float32_t  decel;
+    const bool accel_valid = (CANRX_get_signal(VEH, VCPDU_lon, &decel) == CANRX_MESSAGE_VALID);
+    float32_t  brakePressure_rear;
+    const bool brake_valid = (CANRX_get_signal(VEH, VCREAR_brakePressure, &brakePressure_rear) == CANRX_MESSAGE_VALID);
 
-    (void)CANRX_get_signal(VEH, VCPDU_lon, &decel);
-    float32_t weight_tranfer          = -(decel * CG_HEIGHT * CAR_MASS) / WHEEL_BASE;
-    float32_t dynamic_rearWeight      = CAR_WEIGHT / 2 - weight_tranfer;
-    float32_t rear_weight_percentage  = dynamic_rearWeight / (CAR_WEIGHT);
-    float32_t total_brakeForce        = decel * CAR_MASS;
-    float32_t required_rearAxleForce  = total_brakeForce * rear_weight_percentage;
-    float32_t required_rearAxleTorque = required_rearAxleForce * (WHEEL_DIAMETER / 2);
-    float32_t brake_pressureRear;
-    (void)CANRX_get_signal(VEH, VCREAR_brakePressure, &brake_pressureRear);
-    brake_pressureRear = brake_pressureRear * 6895;
-    float32_t brake_torque = brake_pressureRear * REAR_CALIPER_AREA * EFFECTIVE_ROTOR_RADIUS;
-    float32_t regen_torque = required_rearAxleTorque - brake_torque;
-    regen_torque       = regen_torque / GEAR_RATIO;
-    return(regen_torque);
+    if (accel_valid && brake_valid)
+    {
+        float32_t weightTranfer           = -(decel * CG_HEIGHT * CAR_MASS) / WHEEL_BASE;
+        float32_t dynamic_rearWeight      = CAR_WEIGHT / 2 - weightTranfer; // assuming 50/50 weight front/rear
+        float32_t rearWeight_percentage   = dynamic_rearWeight / (CAR_WEIGHT);
+        float32_t total_brakeForce        = decel * CAR_MASS;
+        float32_t required_rearAxleForce  = total_brakeForce * rearWeight_percentage;
+        float32_t required_rearAxleTorque = required_rearAxleForce * (WHEEL_DIAMETER / 2);
+        brakePressure_rear = brakePressure_rear * 6895;    // converting  PSI to PA
+        float32_t brake_torque            = brakePressure_rear * REAR_CALIPER_AREA * EFFECTIVE_ROTOR_RADIUS;
+        float32_t regen_torque            = required_rearAxleTorque - brake_torque;
+        regen_torque       = regen_torque / GEAR_RATIO;
+        return regen_torque;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 /******************************************************************************
@@ -1102,7 +1109,7 @@ static void torque_periodic_100Hz(void)
     }
 #endif
 #if FEATURE_IS_ENABLED(FEATURE_REGEN)
-    torque_data.regenTorque       = desiredRegenTorque();
+    torque_data.regenTorque       = evaluate_regenTorque();
 #endif
 #if !FEATURE_IS_ENABLED(FEATURE_REGEN)
     torque_data.regenTorque       = 0;
