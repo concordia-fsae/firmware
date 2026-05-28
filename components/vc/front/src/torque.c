@@ -82,7 +82,7 @@
 #define WHEEL_DIAMETER                   0.4064f
 #define WHEEL_BASE                       1.543f
 #define CG_HEIGHT                        0.350f
-#define EFFECTIVE_ROTOR_RADIUS           0.127f
+#define EFFECTIVE_ROTOR_RADIUS           0.0769f
 #define CAR_WEIGHT                       2795.0f
 #define REAR_CALIPER_AREA                0.00045239f
 
@@ -743,11 +743,10 @@ static float32_t desiredRegenTorque(void)
     float32_t required_rearAxleTorque = required_rearAxleForce * (WHEEL_DIAMETER / 2);
     float32_t brake_pressureRear;
     (void)CANRX_get_signal(VEH, VCREAR_brakePressure, &brake_pressureRear);
-    float32_t brake_torque            = brake_pressureRear * REAR_CALIPER_AREA * EFFECTIVE_ROTOR_RADIUS;
-    float32_t regen_torque            = required_rearAxleTorque - brake_torque;
-    regen_torque = SATURATE(0.0f, regen_torque, ABSOLUTE_MAX_TORQUE);
-    regen_torque = regen_torque / GEAR_RATIO;
-
+    brake_pressureRear = brake_pressureRear * 6895;
+    float32_t brake_torque = brake_pressureRear * REAR_CALIPER_AREA * EFFECTIVE_ROTOR_RADIUS;
+    float32_t regen_torque = required_rearAxleTorque - brake_torque;
+    regen_torque       = regen_torque / GEAR_RATIO;
     return(regen_torque);
 }
 
@@ -1105,7 +1104,7 @@ static void torque_periodic_100Hz(void)
 #if FEATURE_IS_ENABLED(FEATURE_REGEN)
     torque_data.regenTorque       = desiredRegenTorque();
 #endif
-#if FEATURE_IS_ENABLED(!FEATURE_REGEN)
+#if !FEATURE_IS_ENABLED(FEATURE_REGEN)
     torque_data.regenTorque       = 0;
 #endif
     torque_data.torqueDriverInput = torque;
