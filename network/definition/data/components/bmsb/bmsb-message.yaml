@@ -32,6 +32,16 @@ messages:
       packSOC:
       packCurrent:
 
+  packStats:
+    description: Pack performance metrics
+    cycleTimeMs: 100
+    id: 0x252
+    sourceBuses: veh
+    signals:
+      maxCellTemp:
+      maxCellVoltage:
+      minCellVoltage:
+
   information:
     description: BMS Boss Information
     cycleTimeMs: 100
@@ -96,9 +106,6 @@ messages:
     signals:
       maxDischarge:
       maxCharge:
-      maxCellTemp:
-      maxCellVoltage:
-      minCellVoltage:
 
   ioStatus:
     description: "Status of the BMSB inputs"
