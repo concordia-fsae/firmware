@@ -78,6 +78,15 @@
 #define PEDAL_APPLIED_THRESHOLD          0.10f
 #define VEHICLE_STOPPED_THRESHOLD        0.5
 
+#define CAR_MASS                         285.0f
+#define WHEEL_DIAMETER                   0.4064f
+#define WHEEL_BASE                       1.543f
+#define CG_HEIGHT                        0.350f
+#define EFFECTIVE_ROTOR_RADIUS           0.0769f
+#define CAR_WEIGHT                       2795.0f
+#define REAR_CALIPER_AREA                0.00045239f
+
+
 /******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
@@ -88,6 +97,7 @@ static struct
     torque_gear_E                 gear;
     torque_raceMode_E             race_mode;
     float32_t                     torque;
+    float32_t                     regenTorque;
     float32_t                     torquePreload;
     float32_t                     torqueDriverInput;
     float32_t                     torque_request_max;
@@ -101,7 +111,6 @@ static struct
     bool                          race_mode_change_active;
     bool                          regenEnabled;
     bool                          isRegenerating;
-
     drv_timer_S                   torque_change_timer;
     drv_timer_S                   launch_control_timer;
     drv_timer_S                   preloadChangeTimer;
@@ -721,6 +730,32 @@ static void tcEvaluateParams(void)
         drv_timer_stop(&torque_data.paramTcChangeTimer);
     }
 }
+static float32_t evaluate_regenTorque(void)
+{
+    float32_t  decel;
+    const bool accel_valid = (CANRX_get_signal(VEH, VCPDU_lon, &decel) == CANRX_MESSAGE_VALID);
+    float32_t  brakePressure_rear;
+    const bool brake_valid = (CANRX_get_signal(VEH, VCREAR_brakePressure, &brakePressure_rear) == CANRX_MESSAGE_VALID);
+
+    if (accel_valid && brake_valid)
+    {
+        float32_t weightTranfer           = -(decel * CG_HEIGHT * CAR_MASS) / WHEEL_BASE;
+        float32_t dynamic_rearWeight      = CAR_WEIGHT / 2 - weightTranfer; // assuming 50/50 weight front/rear
+        float32_t rearWeight_percentage   = dynamic_rearWeight / (CAR_WEIGHT);
+        float32_t total_brakeForce        = decel * CAR_MASS;
+        float32_t required_rearAxleForce  = total_brakeForce * rearWeight_percentage;
+        float32_t required_rearAxleTorque = required_rearAxleForce * (WHEEL_DIAMETER / 2);
+        brakePressure_rear = brakePressure_rear * 6895;    // converting  PSI to PA
+        float32_t brake_torque            = brakePressure_rear * REAR_CALIPER_AREA * EFFECTIVE_ROTOR_RADIUS;
+        float32_t regen_torque            = required_rearAxleTorque - brake_torque;
+        regen_torque       = regen_torque / GEAR_RATIO;
+        return regen_torque;
+    }
+    else
+    {
+        return 0;
+    }
+}
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
@@ -1073,7 +1108,12 @@ static void torque_periodic_100Hz(void)
         torque = SATURATE(-maxVdTorque, torque, maxVdTorque);
     }
 #endif
-    const float32_t regenTorque = REGEN_MAX_TORQUE_N * brake_position;
+#if FEATURE_IS_ENABLED(FEATURE_REGEN)
+    torque_data.regenTorque       = evaluate_regenTorque();
+#endif
+#if !FEATURE_IS_ENABLED(FEATURE_REGEN)
+    torque_data.regenTorque       = 0;
+#endif
     torque_data.torqueDriverInput = torque;
     torque_data.torqueCorrection  = torque_data.torqueReduction * torque;
 
@@ -1098,7 +1138,7 @@ static void torque_periodic_100Hz(void)
     }
     else
     {
-        torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -regenTorque;
+        torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -torque_data.regenTorque;
         torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     }
 
