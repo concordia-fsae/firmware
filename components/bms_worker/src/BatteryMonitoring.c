@@ -282,6 +282,11 @@ void BMS_measurementComplete(void)
     }
 }
 
+bool BMS_areCellsBalancing(void)
+{
+    return bms.balancingCells != 0x00;
+}
+
 /**
  * @brief  BMS Module init function
  */

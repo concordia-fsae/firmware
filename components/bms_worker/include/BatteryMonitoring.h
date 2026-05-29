@@ -85,3 +85,4 @@ void               BMS_toSleep(void);
 void               BMS_wakeUp(void);
 MAX_selectedCell_E BMS_getCurrentOutputCell(void);
 void               BMS_measurementComplete(void);
+bool               BMS_areCellsBalancing(void);
