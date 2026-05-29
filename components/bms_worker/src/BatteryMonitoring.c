@@ -338,7 +338,6 @@ static void BMS100Hz_PRD()
             max_chip.config.sampling           = true;
             max_chip.config.diagnostic_enabled = false;
             max_chip.config.low_power_mode     = false;
-            max_chip.config.balancing          = 0x00;
             max_chip.config.output.state       = MAX_PACK_VOLTAGE;
             max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
 
