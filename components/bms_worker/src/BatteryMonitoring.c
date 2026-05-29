@@ -69,6 +69,9 @@ static struct bms_S
     drv_timer_S timerChipError;
 
     uint8_t     startBalanceSeq;
+    uint16_t    balancingCells;
+    bool        checkBalance;
+    bool        determineCellsToBalance;
 } bms;
 
 /******************************************************************************
@@ -193,12 +196,33 @@ void BMS_measurementComplete(void)
 
             max_chip.config.balancing = 0x00;
 
-            for (uint8_t i = (even) ? 0 : 1; i < BMS_CONFIGURED_SERIES_CELLS; i += 2)
+            if (!bms.checkBalance)
             {
-                max_chip.config.balancing |= (BMS.cells[i].voltage > (target + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
-            }
+                if (!bms.determineCellsToBalance)
+                {
+                    for (uint8_t i = (even) ? 0 : 1; i < BMS_CONFIGURED_SERIES_CELLS; i += 2)
+                    {
+                        max_chip.config.balancing |= bms.balancingCells & (1 << i);
+                    }
 
-            even = (even == false);
+                    even = (even == false);
+                }
+                else
+                {
+                    bms.balancingCells = 0x00;
+                    for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
+                    {
+                        bms.balancingCells |= (BMS.cells[i].voltage > (target + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
+                    }
+
+                    bms.determineCellsToBalance = false;
+                }
+            }
+            else
+            {
+                bms.checkBalance = false;
+                bms.determineCellsToBalance = true;
+            }
         }
         else
         {
@@ -212,6 +236,9 @@ void BMS_measurementComplete(void)
             {
                 max_chip.config.balancing = 0x00;
             }
+
+            bms.checkBalance = true;
+            bms.determineCellsToBalance = false;
         }
         MAX_readWriteToChip();
     }
@@ -355,6 +382,8 @@ static void BMS1Hz_PRD()
     {
         bms.startBalanceSeq++;
     }
+
+    bms.checkBalance = true;
 }
 
 /**
