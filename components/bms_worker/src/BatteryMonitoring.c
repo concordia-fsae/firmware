@@ -116,7 +116,6 @@ static void calcSegStats(void)
 {
     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
     {
-        BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i) + BMS.cells[i].parasitic_corr;
         if ((BMS.cells[i].voltage > CELL_DISCONNECTED_THRESH_LOW) &&
             (BMS.cells[i].voltage < CELL_DISCONNECTED_THRESH_HIGH)
             )
@@ -185,17 +184,19 @@ void BMS_setOutputCell(MAX_selectedCell_E cell)
  */
 void BMS_measurementComplete(void)
 {
+    float32_t  target           = 0.0f;
+    const bool balance          = CANRX_get_signal(VEH, BMSB_targetBalancingVoltage, &target) == CANRX_MESSAGE_VALID;
+    const bool skipSegmentCheck = bms.balancingCells != 0x00;
+
+    max_chip.config.balancing = 0x00;
+
     if (BMS.state == BMS_HOLDING)
     {
-        float32_t target = 0.0f;
-        const bool balance = CANRX_get_signal(VEH, BMSB_targetBalancingVoltage, &target) == CANRX_MESSAGE_VALID;
         BMS.state = BMS_WAITING;
 
         if (balance && (target < CELL_VOLTAGE_THRESH_OV))
         {
             static bool even = false;
-
-            max_chip.config.balancing = 0x00;
 
             if (!bms.checkBalance)
             {
@@ -209,33 +210,13 @@ void BMS_measurementComplete(void)
 
                     even = (even == false);
                 }
-                else
-                {
-                    bms.balancingCells = 0x00;
-                    bms.balancingCellsEntireCycle = 0x00;
-
-                    for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
-                    {
-                        bms.balancingCells |= (BMS.cells[i].voltage > (target + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
-                    }
-
-                    bms.balancingCellsEntireCycle |= (bms.balancingCells & 0x01) && !(bms.balancingCells & 0x02) ? 0x01 : 0x00;
-
-                    for (uint8_t i = 1; i < BMS_CONFIGURED_SERIES_CELLS; i++)
-                    {
-                        const bool balancingPrev = (bms.balancingCells & (0x01 << (i - 1))) != 0x00;
-                        const bool balancingNext = (bms.balancingCells & (0x01 << (i + 1))) != 0x00;
-                        const bool balancing = (bms.balancingCells & (0x01 << i)) != 0x00;
-                        bms.balancingCellsEntireCycle |= balancing & !(balancingPrev || balancingNext) ? 1 << i : 0x00;
-                    }
-
-                    bms.determineCellsToBalance = false;
-                }
             }
             else
             {
-                bms.checkBalance = false;
-                bms.determineCellsToBalance = true;
+                bms.balancingCells            = 0x00;
+                bms.balancingCellsEntireCycle = 0x00;
+                bms.checkBalance              = false;
+                bms.determineCellsToBalance   = true;
             }
         }
         else
@@ -247,12 +228,10 @@ void BMS_measurementComplete(void)
             }
             else
 #endif
-            {
-                max_chip.config.balancing = 0x00;
-            }
-
-            bms.checkBalance = true;
-            bms.determineCellsToBalance = false;
+            bms.balancingCells            = 0x00;
+            bms.balancingCellsEntireCycle = 0x00;
+            bms.checkBalance              = true;
+            bms.determineCellsToBalance   = false;
         }
         MAX_readWriteToChip();
     }
@@ -273,7 +252,34 @@ void BMS_measurementComplete(void)
     MAX_readWriteToChip();
     BMS.state                          = BMS_CALIBRATING;
 
-    calcSegStats();
+    if (!skipSegmentCheck)
+    {
+        for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
+        {
+            BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i) + BMS.cells[i].parasitic_corr;
+        }
+        calcSegStats();
+
+        if (bms.determineCellsToBalance)
+        {
+            for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
+            {
+                bms.balancingCells |= (BMS.cells[i].voltage > (target + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
+            }
+
+            bms.balancingCellsEntireCycle |= (bms.balancingCells & 0x01) && !(bms.balancingCells & 0x02) ? 0x01 : 0x00;
+
+            for (uint8_t i = 1; i < BMS_CONFIGURED_SERIES_CELLS; i++)
+            {
+                const bool balancingPrev = (bms.balancingCells & (0x01 << (i - 1))) != 0x00;
+                const bool balancingNext = (bms.balancingCells & (0x01 << (i + 1))) != 0x00;
+                const bool balancing     = (bms.balancingCells & (0x01 << i)) != 0x00;
+                bms.balancingCellsEntireCycle |= balancing & !(balancingPrev || balancingNext) ? 1 << i : 0x00;
+            }
+
+            bms.determineCellsToBalance = false;
+        }
+    }
 }
 
 /**
