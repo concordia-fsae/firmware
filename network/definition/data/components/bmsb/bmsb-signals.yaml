@@ -221,7 +221,33 @@ signals:
       resolution: 0.1
       range:
         min: 0
-        max: 75
+        max: 100
+      signedness: unsigned
+    continuous: true
+
+  maxDischargeModeled:
+    unit: 'A'
+    description: BMS Battery Model Discharge Limit Raw
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 14
+      resolution: 0.1
+      range:
+        min: 0
+        max: 1000
+      signedness: unsigned
+    continuous: true
+
+  maxChargeModeled:
+    unit: 'A'
+    description: BMS Battery Model Charge Limit Raw
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 10
+      resolution: 0.1
+      range:
+        min: 0
+        max: 100
       signedness: unsigned
     continuous: true
 
