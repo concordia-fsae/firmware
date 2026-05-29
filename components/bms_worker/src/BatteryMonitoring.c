@@ -70,6 +70,7 @@ static struct bms_S
 
     uint8_t     startBalanceSeq;
     uint16_t    balancingCells;
+    uint16_t    balancingCellsEntireCycle;
     bool        checkBalance;
     bool        determineCellsToBalance;
 } bms;
@@ -200,6 +201,7 @@ void BMS_measurementComplete(void)
             {
                 if (!bms.determineCellsToBalance)
                 {
+                    max_chip.config.balancing = bms.balancingCellsEntireCycle;
                     for (uint8_t i = (even) ? 0 : 1; i < BMS_CONFIGURED_SERIES_CELLS; i += 2)
                     {
                         max_chip.config.balancing |= bms.balancingCells & (1 << i);
@@ -210,9 +212,21 @@ void BMS_measurementComplete(void)
                 else
                 {
                     bms.balancingCells = 0x00;
+                    bms.balancingCellsEntireCycle = 0x00;
+
                     for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
                     {
                         bms.balancingCells |= (BMS.cells[i].voltage > (target + BMS_CONFIGURED_BALANCING_MARGIN)) ? 1 << i : 0x00;
+                    }
+
+                    bms.balancingCellsEntireCycle |= (bms.balancingCells & 0x01) && !(bms.balancingCells & 0x02) ? 0x01 : 0x00;
+
+                    for (uint8_t i = 1; i < BMS_CONFIGURED_SERIES_CELLS; i++)
+                    {
+                        const bool balancingPrev = (bms.balancingCells & (0x01 << (i - 1))) != 0x00;
+                        const bool balancingNext = (bms.balancingCells & (0x01 << (i + 1))) != 0x00;
+                        const bool balancing = (bms.balancingCells & (0x01 << i)) != 0x00;
+                        bms.balancingCellsEntireCycle |= balancing & !(balancingPrev || balancingNext) ? 1 << i : 0x00;
                     }
 
                     bms.determineCellsToBalance = false;
