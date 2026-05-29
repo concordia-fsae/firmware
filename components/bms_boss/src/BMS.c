@@ -341,14 +341,26 @@ bool BMS_SFT_checkElconChargerTimeout(void)
     return(CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
 }
 
-void BMS_stopCharging(void)
+bool BMS_stopCharging(void)
 {
+    if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+    {
+        return false;
+    }
+
     BMS.charging_paused = true;
+    return true;
 }
 
-void BMS_continueCharging(void)
+bool BMS_startCharging(void)
 {
+    if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+    {
+        return false;
+    }
+
     BMS.charging_paused = false;
+    return true;
 }
 
 bool BMS_startBalancing(void)
@@ -434,7 +446,12 @@ static void BMS100Hz_PRD(void)
     {
         chargeLimit(&BMS, &bm);
         dischargeLimit(&BMS, &bm);
-        BMS.soc = batteryModel_getSOC(&bm);;
+        BMS.soc = batteryModel_getSOC(&bm);
+
+        if (BMS.charging_paused)
+        {
+            BMS.charge_limit = 0.0f;
+        }
     }
     else
     {
@@ -446,7 +463,8 @@ static void BMS100Hz_PRD(void)
     {
         openAllContactors();
         drv_timer_stop(&precharge_timer);
-        BMS.balancing = false;
+        BMS.balancing       = false;
+        BMS.charging_paused = false;
     }
     else
     {
