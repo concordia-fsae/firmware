@@ -76,7 +76,11 @@
               {% endif %}
             </select>
             <input id="routine-payload" name="payload_hex" type="text" placeholder="Optional hex payload">
-            <button type="submit" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Run Routine</button>
+          </div>
+          <div class="routine-actions">
+            <button type="submit" data-routine-action="start" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Start Routine</button>
+            <button type="submit" data-routine-action="stop" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Stop Routine</button>
+            <button type="submit" data-routine-action="result" {% if controller.routine_options|length == 0 %}disabled{% endif %}>Get Result</button>
           </div>
         </form>
         <form id="flash-form" class="stack-form">
@@ -202,6 +206,7 @@
     const recoverForm = document.getElementById("recover-form");
     const recoverButton = document.getElementById("recover-button");
     const routineForm = document.getElementById("routine-form");
+    const routineButtons = Array.from(document.querySelectorAll("[data-routine-action]"));
     let latestController = initialController;
     let latestJobs = initialJobsSnapshot.jobs || [];
     let testerPresentActive = false;
@@ -388,6 +393,12 @@
       feedback.hidden = false;
       feedback.className = isError ? "feedback error" : "feedback";
       feedback.textContent = message;
+    }
+
+    function routineActionLabel(action) {
+      if (action === "stop") return "Routine stop";
+      if (action === "result") return "Routine result";
+      return "Routine start";
     }
 
     async function submitForm(url, formData) {
@@ -590,15 +601,25 @@
         setFeedback("No routine is configured for this controller.", true);
         return;
       }
+      const action = event.submitter && event.submitter.dataset.routineAction
+        ? event.submitter.dataset.routineAction
+        : "start";
+      routineButtons.forEach((button) => {
+        button.disabled = true;
+      });
       try {
         const payload = await submitForm(
-          `/api/controllers/${encodeURIComponent(controllerName)}/routines/${encodeURIComponent(routineName)}`,
+          `/api/controllers/${encodeURIComponent(controllerName)}/routines/${encodeURIComponent(routineName)}/${encodeURIComponent(action)}`,
           new FormData(routineForm),
         );
         mergeJob(payload.job);
-        setFeedback(`Routine job queued: ${payload.job_id}`, false);
+        setFeedback(`${routineActionLabel(action)} job queued: ${payload.job_id}`, false);
       } catch (error) {
         setFeedback(error.message, true);
+      } finally {
+        routineButtons.forEach((button) => {
+          button.disabled = false;
+        });
       }
     });
 

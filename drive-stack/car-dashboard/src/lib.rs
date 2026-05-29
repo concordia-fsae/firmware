@@ -18,7 +18,8 @@ use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
 use conUDS::config::Config as UdsConfig;
 use conUDS::modules::uds::{
-    DiagnosticSessionKind, DiagnosticSessionResponse, RoutineStartResponse, UdsWorkerHandle,
+    DiagnosticSessionKind, DiagnosticSessionResponse, RoutineControlAction, RoutineControlResponse,
+    UdsWorkerHandle,
 };
 use futures::StreamExt;
 use libc::{
@@ -1073,11 +1074,11 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_current_session);
 
-    let run_routine = warp::path!("api" / "controllers" / String / "routines" / String)
+    let routine_action = warp::path!("api" / "controllers" / String / "routines" / String / String)
         .and(warp::post())
         .and(warp::body::form())
         .and(state_filter.clone())
-        .and_then(handle_run_routine);
+        .and_then(handle_routine_action);
 
     let reset_controller = warp::path!("api" / "controllers" / String / "reset")
         .and(warp::post())
@@ -1278,7 +1279,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(signal_cache_worker_js)
         .or(read_current_session)
         .or(enter_session)
-        .or(run_routine)
+        .or(routine_action)
         .or(reset_controller)
         .or(flash_controller)
         .or(recover_controller)
@@ -1293,7 +1294,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/database', '/controllers/:name', '/api/signals/manifest', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/database', '/controllers/:name', '/api/signals/manifest', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1824,13 +1825,23 @@ async fn handle_enter_session(
     }))
 }
 
-async fn handle_run_routine(
+async fn handle_routine_action(
     controller_name: String,
     routine_name: String,
+    action_name: String,
     request: RoutineActionRequest,
     state: AppState,
 ) -> Result<warp::reply::Response, Infallible> {
     let controller_name = controller_name.to_ascii_lowercase();
+    let action = match parse_routine_action(&action_name) {
+        Ok(action) => action,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
     let Some(capability) = state.capabilities.get(&controller_name).cloned() else {
         return Ok(json_error_response(
             warp::http::StatusCode::NOT_FOUND,
@@ -1859,8 +1870,15 @@ async fn handle_run_routine(
         }
     };
 
-    let detail = format!("Queued routine {}", routine.name);
-    let job = match create_job(&state, &controller_name, "run-routine", detail).await {
+    let detail = format!("Queued routine {} {}", action.label(), routine.name);
+    let job = match create_job(
+        &state,
+        &controller_name,
+        routine_operation_key(action),
+        detail,
+    )
+    .await
+    {
         Ok(job) => job,
         Err(error) => {
             return Ok(json_error_response(
@@ -1873,7 +1891,7 @@ async fn handle_run_routine(
     let state_for_job = state.clone();
     let job_id = job.id.clone();
     tokio::spawn(async move {
-        run_routine_job(state_for_job, capability, job_id, routine, payload).await;
+        run_routine_job(state_for_job, capability, job_id, routine, action, payload).await;
     });
 
     Ok(json_success_response(ActionAcceptedResponse {
@@ -2402,6 +2420,31 @@ fn parse_session_key(session: &str) -> Result<DiagnosticSessionKind> {
         _ => Err(anyhow::anyhow!(
             "unsupported diagnostic session '{session}'"
         )),
+    }
+}
+
+fn parse_routine_action(action: &str) -> Result<RoutineControlAction> {
+    match action {
+        "start" => Ok(RoutineControlAction::Start),
+        "stop" => Ok(RoutineControlAction::Stop),
+        "result" | "get-result" => Ok(RoutineControlAction::GetResult),
+        _ => Err(anyhow::anyhow!("unsupported routine action '{action}'")),
+    }
+}
+
+fn routine_operation_key(action: RoutineControlAction) -> &'static str {
+    match action {
+        RoutineControlAction::Start => "routine-start",
+        RoutineControlAction::Stop => "routine-stop",
+        RoutineControlAction::GetResult => "routine-result",
+    }
+}
+
+fn routine_action_present_participle(action: RoutineControlAction) -> &'static str {
+    match action {
+        RoutineControlAction::Start => "Starting",
+        RoutineControlAction::Stop => "Stopping",
+        RoutineControlAction::GetResult => "Getting result for",
     }
 }
 
@@ -3480,6 +3523,7 @@ async fn run_routine_job(
     capability: ControllerCapability,
     job_id: String,
     routine: RoutineCapability,
+    action: RoutineControlAction,
     payload: Option<Vec<u8>>,
 ) {
     let Some(worker) = state.uds_workers.get(&capability.name).cloned() else {
@@ -3494,12 +3538,23 @@ async fn run_routine_job(
         return;
     };
     info!(
-        "starting routine job '{}' for controller='{}' routine='{}' on iface='{}'",
-        job_id, capability.name, routine.name, capability.uds_iface
+        "starting routine {} job '{}' for controller='{}' routine='{}' on iface='{}'",
+        action.label(),
+        job_id,
+        capability.name,
+        routine.name,
+        capability.uds_iface
     );
     {
         let mut jobs = state.jobs.write().await;
-        jobs.mark_started(&job_id, format!("Running routine {}", routine.name));
+        jobs.mark_started(
+            &job_id,
+            format!(
+                "{} routine {}",
+                routine_action_present_participle(action),
+                routine.name
+            ),
+        );
     }
     let _ = state.publish_jobs_if_changed().await;
 
@@ -3520,7 +3575,7 @@ async fn run_routine_job(
         }
     };
 
-    let result = worker.routine_start(routine_id, payload).await;
+    let result = worker.routine_control(action, routine_id, payload).await;
 
     match result {
         Ok(response) => {
@@ -4056,15 +4111,25 @@ fn format_tester_present_response(response: &[u8]) -> (String, Option<String>) {
 
 fn format_routine_response(
     routine_name: &str,
-    response: RoutineStartResponse,
+    response: RoutineControlResponse,
 ) -> (String, Option<String>, Option<String>) {
     match response {
-        RoutineStartResponse::Positive { text, payload, .. } => (
-            format!("Routine '{}' completed successfully", routine_name),
+        RoutineControlResponse::Positive {
+            action,
+            text,
+            payload,
+            ..
+        } => (
+            format!(
+                "Routine '{}' {} completed successfully",
+                routine_name,
+                action.label()
+            ),
             text,
             (!payload.is_empty()).then(|| hex_string(&payload)),
         ),
-        RoutineStartResponse::Negative {
+        RoutineControlResponse::Negative {
+            action,
             nrc,
             description,
             payload,
@@ -4072,8 +4137,11 @@ fn format_routine_response(
             ..
         } => (
             format!(
-                "Routine '{}' rejected: NRC 0x{:02X} ({})",
-                routine_name, nrc, description
+                "Routine '{}' {} rejected: NRC 0x{:02X} ({})",
+                routine_name,
+                action.label(),
+                nrc,
+                description
             ),
             text,
             (!payload.is_empty()).then(|| hex_string(&payload)),
