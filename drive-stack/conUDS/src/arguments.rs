@@ -51,6 +51,8 @@ pub enum ArgSubCommands {
     SetSession(SubArgSetSession),
     PersistentTesterPresent(SubArgPersistentTesterPresent),
     RoutineStart(SubArgRoutineStart),
+    RoutineStop(SubArgRoutineStop),
+    RoutineGetResult(SubArgRoutineGetResult),
     RoutineList(SubArgRoutineList),
 }
 
@@ -125,6 +127,24 @@ pub struct SubArgPersistentTesterPresent {}
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "routineStart")]
 pub struct SubArgRoutineStart {
+    /// routine name (as defined in the node manifest)
+    #[argh(positional)]
+    pub routine: String,
+}
+
+/// Stop a named routine
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "routineStop")]
+pub struct SubArgRoutineStop {
+    /// routine name (as defined in the node manifest)
+    #[argh(positional)]
+    pub routine: String,
+}
+
+/// Get results for a named routine
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "routineGetResult")]
+pub struct SubArgRoutineGetResult {
     /// routine name (as defined in the node manifest)
     #[argh(positional)]
     pub routine: String,
