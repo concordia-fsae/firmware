@@ -168,3 +168,12 @@ messages:
     id: 0x7c0
     signals:
       targetBalancingVoltage:
+      
+  batteryModel:
+    description: BMS Tractive System Battery Model information
+    cycleTimeMs: 100
+    id: 0x7a2
+    sourceBuses: veh
+    signals:
+      maxDischargeModeled:
+      maxChargeModeled:
