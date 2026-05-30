@@ -29,7 +29,7 @@
 #define TC_KI                         (0.0f)
 // Kd = Kp * tDerivative
 // Kd = TC_KP * 0.100
-#define TC_KD                         (0.1f * TC_KP)
+#define TC_KD                         (0.0f * TC_KP)
 #define TC_DTERM_LPF_CUTOFF_FREQ      100
 #define TC_ILEAK_MS                   500U
 
