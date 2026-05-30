@@ -368,6 +368,18 @@
       font-weight: 800;
     }
 
+    .pack-bottom-link {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 2px;
+    }
+
+    .pack-bottom-link a {
+      color: var(--accent);
+      font-weight: 800;
+      text-decoration: none;
+    }
+
     @media (max-width: 1040px) {
       .pack-summary,
       .pack-panel-grid,
@@ -551,6 +563,10 @@
         </div>
       </div>
     </section>
+
+    <nav class="pack-bottom-link" aria-label="HV Pack extra views">
+      <a href="/sicko-mode">Sicko Mode</a>
+    </nav>
   </section>
 
   <script id="initial-manifest" type="application/json">{{ initial_manifest_json|safe }}</script>

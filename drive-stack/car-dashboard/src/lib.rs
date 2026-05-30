@@ -1351,6 +1351,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_hv_pack);
 
+    let sicko_mode = warp::path("sicko-mode")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_sicko_mode);
+
     let notes = warp::path("notes")
         .and(warp::path::end())
         .and(warp::get())
@@ -1458,6 +1464,11 @@ pub async fn run(opts: Opts) -> Result<()> {
     let signal_cache_worker_js = warp::path!("assets" / "signal-cache-worker.js")
         .and(warp::get())
         .map(handle_signal_cache_worker_js);
+
+    let sicko_mode_subway_surfers_gif =
+        warp::path!("assets" / "sicko-mode-subway-surfers.gif")
+            .and(warp::get())
+            .map(handle_sicko_mode_subway_surfers_gif);
 
     let enter_session = warp::path!("api" / "controllers" / String / "session")
         .and(warp::post())
@@ -1660,6 +1671,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(signals)
         .or(gps)
         .or(hv_pack)
+        .or(sicko_mode)
         .or(notes)
         .or(controller)
         .or(database)
@@ -1678,6 +1690,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(uplot_js)
         .or(uplot_css)
         .or(signal_cache_worker_js)
+        .or(sicko_mode_subway_surfers_gif)
         .or(read_current_session)
         .or(enter_session)
         .or(routine_action)
@@ -1695,7 +1708,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/hv-pack', '/notes', '/database', '/controllers/:name', '/api/signals/manifest', '/api/notes', '/notes-events', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/hv-pack', '/sicko-mode', '/notes', '/database', '/controllers/:name', '/api/signals/manifest', '/api/notes', '/notes-events', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/assets/sicko-mode-subway-surfers.gif', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1844,6 +1857,20 @@ async fn handle_hv_pack(state: AppState) -> Result<warp::reply::Response, Infall
     });
     Ok(render_template_response(
         views::render_hv_pack(&initial_manifest_json, &initial_state_json),
+        warp::http::StatusCode::OK,
+    ))
+}
+
+async fn handle_sicko_mode(state: AppState) -> Result<warp::reply::Response, Infallible> {
+    debug!("serving Sicko Mode page");
+    let initial_manifest_json = state.signal_manifest_json().unwrap_or_else(|_| {
+        serde_json::to_string(&SignalManifestResponse {
+            signals: Vec::new(),
+        })
+        .unwrap()
+    });
+    Ok(render_template_response(
+        views::render_sicko_mode(&initial_manifest_json),
         warp::http::StatusCode::OK,
     ))
 }
@@ -2251,6 +2278,15 @@ fn handle_signal_cache_worker_js() -> warp::reply::Response {
         include_str!("../static/signal-cache-worker.js"),
         "content-type",
         "application/javascript; charset=utf-8",
+    )
+    .into_response()
+}
+
+fn handle_sicko_mode_subway_surfers_gif() -> warp::reply::Response {
+    warp::reply::with_header(
+        include_bytes!("../static/sicko-mode-subway-surfers.gif").as_slice(),
+        "content-type",
+        "image/gif",
     )
     .into_response()
 }
