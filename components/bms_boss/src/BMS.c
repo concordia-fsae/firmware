@@ -407,7 +407,7 @@ static void BMS10Hz_PRD(void)
 
     getSegmentStats(&tmp);
 
-    if (BMS.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
+    if (tmp.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
     {
         tmp.fault = true;
     }
