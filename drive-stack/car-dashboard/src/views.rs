@@ -132,6 +132,16 @@ pub fn render_gps() -> Result<String> {
         .context("rendering gps.html template")
 }
 
+pub fn render_notes() -> Result<String> {
+    environment()?
+        .get_template("notes.html")
+        .context("loading notes.html template")?
+        .render(context! {
+            page_title => "Notes",
+        })
+        .context("rendering notes.html template")
+}
+
 pub fn render_controller(
     controller: &ControllerStatus,
     capability: &ControllerCapability,
@@ -328,6 +338,12 @@ fn environment() -> Result<&'static Environment<'static>> {
         if let Err(error) = env
             .add_template("gps.html", include_str!("../templates/gps.html"))
             .context("adding gps.html template")
+        {
+            return Err(error.to_string());
+        }
+        if let Err(error) = env
+            .add_template("notes.html", include_str!("../templates/notes.html"))
+            .context("adding notes.html template")
         {
             return Err(error.to_string());
         }

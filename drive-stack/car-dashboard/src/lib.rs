@@ -12,7 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
-use chrono::SecondsFormat;
+use chrono::{DateTime, SecondsFormat, Utc};
 use clap::Parser;
 use conUDS::FlashStatus;
 use conUDS::SupportedResetTypes;
@@ -45,6 +45,9 @@ use yamcan_dashboard::NetworkBus;
 
 const DEFAULT_PORT: u16 = 8091;
 const DEFAULT_DATABASE_PORT: u16 = 8086;
+const DEFAULT_NOTES_INFLUX_URL: &str = "http://localhost:8086";
+const DEFAULT_NOTES_INFLUX_ORG: &str = "CFR";
+const DEFAULT_NOTES_INFLUX_BUCKET: &str = "CarNotes";
 const DEFAULT_OFFLINE_TIMEOUT_SECS: u64 = 3;
 const DEFAULT_SWEEP_INTERVAL_MS: u64 = 250;
 const OTA_AGENT_DISCOVERY_TIMEOUT_SECS: u64 = 2;
@@ -63,6 +66,11 @@ const MAX_MAP_ZOOM: u8 = 19;
 const SIGNAL_SAMPLE_BATCH_INTERVAL_MS: u64 = 100;
 const SIGNAL_EVENT_QUEUE_CAPACITY: usize = 4096;
 const SIGNAL_BROADCAST_QUEUE_CAPACITY: usize = 8;
+const DEFAULT_NOTES_LIMIT: usize = 50;
+const MAX_NOTES_LIMIT: usize = 200;
+const MAX_NOTE_TEXT_BYTES: usize = 32 * 1024;
+const MAX_NOTE_SUBSYSTEM_BYTES: usize = 128;
+const NOTES_QUERY_RANGE: &str = "-3650d";
 const MAX_MAP_TILE_UPLOAD_BYTES: u64 = 1024 * 1024;
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const JPEG_SIGNATURE: &[u8; 3] = b"\xff\xd8\xff";
@@ -94,6 +102,18 @@ pub struct Opts {
 
     #[arg(long)]
     pub database_viewer_token: Option<String>,
+
+    #[arg(long, default_value = DEFAULT_NOTES_INFLUX_URL)]
+    pub notes_influx_url: String,
+
+    #[arg(long)]
+    pub notes_influx_token: Option<String>,
+
+    #[arg(long, default_value = DEFAULT_NOTES_INFLUX_ORG)]
+    pub notes_influx_org: String,
+
+    #[arg(long, default_value = DEFAULT_NOTES_INFLUX_BUCKET)]
+    pub notes_influx_bucket: String,
 
     #[arg(
         long,
@@ -511,6 +531,87 @@ struct ClockResponse {
     local_time: String,
 }
 
+#[derive(Debug, Clone)]
+struct InfluxNotesConfig {
+    url: String,
+    token: String,
+    org: String,
+    bucket: String,
+}
+
+#[derive(Clone)]
+struct InfluxNotesClient {
+    config: InfluxNotesConfig,
+    http: reqwest::Client,
+    bucket_ready: Arc<Mutex<bool>>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+struct NotesQuery {
+    subsystem: Option<String>,
+    limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct CreateNoteRequest {
+    subsystem: String,
+    text: String,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+struct CarNote {
+    subsystem: String,
+    text: String,
+    logged_at_ms: u64,
+    logged_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NotesResponse {
+    ok: bool,
+    influx_configured: bool,
+    bucket: String,
+    subsystems: Vec<String>,
+    notes: Vec<CarNote>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct CreateNoteResponse {
+    ok: bool,
+    bucket: String,
+    subsystems: Vec<String>,
+    note: CarNote,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct NoteCreatedEvent {
+    note: CarNote,
+    subsystems: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct InfluxBucketsResponse {
+    #[serde(default)]
+    buckets: Vec<InfluxBucketInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+struct InfluxBucketInfo {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct InfluxOrgsResponse {
+    #[serde(default)]
+    orgs: Vec<InfluxOrgInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+struct InfluxOrgInfo {
+    id: String,
+    name: String,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct TileCoord {
     z: u8,
@@ -604,12 +705,14 @@ struct AppState {
     state_events: broadcast::Sender<String>,
     job_events: broadcast::Sender<String>,
     signal_events: broadcast::Sender<Arc<SignalSampleBatch>>,
+    notes_events: broadcast::Sender<String>,
     last_state_payload: Arc<Mutex<String>>,
     last_jobs_payload: Arc<Mutex<String>>,
     jobs: Arc<RwLock<JobStore>>,
     tester_present: Arc<Mutex<BTreeMap<String, TesterPresentHandle>>>,
     map_store: Arc<MapStoreConfig>,
     map_store_lock: Arc<Mutex<()>>,
+    notes_influx: Option<Arc<InfluxNotesClient>>,
 }
 
 impl DashboardStore {
@@ -839,6 +942,244 @@ impl AppState {
         }
         Ok(())
     }
+
+    async fn notes_subsystems(&self) -> Vec<String> {
+        let mut subsystems = BTreeSet::new();
+        if let Some(client) = self.notes_influx.as_ref() {
+            match client.list_measurements().await {
+                Ok(measurements) => {
+                    subsystems.extend(measurements);
+                }
+                Err(error) => {
+                    warn!("failed to load note subsystem measurements from Influx: {error}");
+                }
+            }
+        }
+
+        subsystems.into_iter().collect()
+    }
+}
+
+impl InfluxNotesClient {
+    fn new(config: InfluxNotesConfig) -> Result<Self> {
+        let http = reqwest::Client::builder()
+            .timeout(Duration::from_secs(8))
+            .build()
+            .context("building Influx notes HTTP client")?;
+        Ok(Self {
+            config,
+            http,
+            bucket_ready: Arc::new(Mutex::new(false)),
+        })
+    }
+
+    async fn write_note(&self, note: &CarNote, timestamp_ns: u64) -> Result<()> {
+        self.ensure_bucket_once().await;
+
+        let mut line = String::new();
+        append_influx_key(&mut line, &note.subsystem);
+        line.push_str(",source=dashboard text=");
+        let encoded_text = serde_json::to_string(&note.text).context("encoding note text")?;
+        append_influx_string_field(&mut line, &encoded_text);
+        line.push(' ');
+        line.push_str(&timestamp_ns.to_string());
+
+        let response = self
+            .http
+            .post(self.influx_url("/api/v2/write"))
+            .query(&[
+                ("org", self.config.org.as_str()),
+                ("bucket", self.config.bucket.as_str()),
+                ("precision", "ns"),
+            ])
+            .bearer_auth(&self.config.token)
+            .header(reqwest::header::CONTENT_TYPE, "text/plain; charset=utf-8")
+            .body(line)
+            .send()
+            .await
+            .context("sending note to Influx")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!("Influx write failed ({status}): {body}"));
+        }
+
+        let mut bucket_ready = self.bucket_ready.lock().await;
+        *bucket_ready = true;
+        Ok(())
+    }
+
+    async fn query_notes(&self, subsystem: Option<&str>, limit: usize) -> Result<Vec<CarNote>> {
+        self.ensure_bucket_once().await;
+
+        let mut flux = format!(
+            "from(bucket: {})\n  |> range(start: {})\n  |> filter(fn: (r) => r._field == \"text\")\n",
+            flux_string_literal(&self.config.bucket),
+            NOTES_QUERY_RANGE
+        );
+        if let Some(subsystem) = subsystem {
+            flux.push_str("  |> filter(fn: (r) => r._measurement == ");
+            flux.push_str(&flux_string_literal(subsystem));
+            flux.push_str(")\n");
+        }
+        flux.push_str(
+            "  |> keep(columns: [\"_time\", \"_measurement\", \"_value\"])\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n",
+        );
+        flux.push_str(&format!("  |> limit(n: {limit})\n"));
+
+        let csv = self.query_flux(&flux).await?;
+        parse_notes_csv(&csv)
+    }
+
+    async fn list_measurements(&self) -> Result<Vec<String>> {
+        self.ensure_bucket_once().await;
+
+        let flux = format!(
+            "import \"influxdata/influxdb/schema\"\nschema.measurements(bucket: {})\n",
+            flux_string_literal(&self.config.bucket)
+        );
+        let csv = self.query_flux(&flux).await?;
+        parse_single_value_csv(&csv)
+    }
+
+    async fn query_flux(&self, flux: &str) -> Result<String> {
+        let response = self
+            .http
+            .post(self.influx_url("/api/v2/query"))
+            .query(&[("org", self.config.org.as_str())])
+            .bearer_auth(&self.config.token)
+            .header(reqwest::header::ACCEPT, "application/csv")
+            .header(reqwest::header::CONTENT_TYPE, "application/vnd.flux")
+            .body(flux.to_string())
+            .send()
+            .await
+            .context("querying Influx")?;
+
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        if !status.is_success() {
+            return Err(anyhow::anyhow!("Influx query failed ({status}): {body}"));
+        }
+
+        Ok(body)
+    }
+
+    async fn ensure_bucket_once(&self) {
+        let mut bucket_ready = self.bucket_ready.lock().await;
+        if *bucket_ready {
+            return;
+        }
+        match self.ensure_bucket_exists().await {
+            Ok(()) => {
+                *bucket_ready = true;
+            }
+            Err(error) => {
+                warn!(
+                    "failed to ensure Influx notes bucket '{}' exists: {error}",
+                    self.config.bucket
+                );
+            }
+        }
+    }
+
+    async fn ensure_bucket_exists(&self) -> Result<()> {
+        if self.bucket_exists().await? {
+            return Ok(());
+        }
+
+        let org_id = self
+            .lookup_org_id()
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Influx org '{}' not found", self.config.org))?;
+        let body = serde_json::to_string(&serde_json::json!({
+            "orgID": org_id,
+            "name": self.config.bucket,
+            "retentionRules": [],
+        }))
+        .context("encoding Influx bucket create request")?;
+        let response = self
+            .http
+            .post(self.influx_url("/api/v2/buckets"))
+            .bearer_auth(&self.config.token)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body)
+            .send()
+            .await
+            .context("creating Influx notes bucket")?;
+
+        let status = response.status();
+        if status.is_success() || status == reqwest::StatusCode::CONFLICT {
+            return Ok(());
+        }
+
+        let body = response.text().await.unwrap_or_default();
+        Err(anyhow::anyhow!(
+            "Influx bucket create failed ({status}): {body}"
+        ))
+    }
+
+    async fn bucket_exists(&self) -> Result<bool> {
+        let response = self
+            .http
+            .get(self.influx_url("/api/v2/buckets"))
+            .query(&[
+                ("org", self.config.org.as_str()),
+                ("name", self.config.bucket.as_str()),
+            ])
+            .bearer_auth(&self.config.token)
+            .send()
+            .await
+            .context("checking Influx notes bucket")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!(
+                "Influx bucket lookup failed ({status}): {body}"
+            ));
+        }
+
+        let body = response.text().await.unwrap_or_default();
+        let body = serde_json::from_str::<InfluxBucketsResponse>(&body)
+            .context("decoding Influx bucket lookup response")?;
+        Ok(body
+            .buckets
+            .iter()
+            .any(|bucket| bucket.name == self.config.bucket))
+    }
+
+    async fn lookup_org_id(&self) -> Result<Option<String>> {
+        let response = self
+            .http
+            .get(self.influx_url("/api/v2/orgs"))
+            .query(&[("org", self.config.org.as_str())])
+            .bearer_auth(&self.config.token)
+            .send()
+            .await
+            .context("looking up Influx org")?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!(
+                "Influx org lookup failed ({status}): {body}"
+            ));
+        }
+
+        let body = response.text().await.unwrap_or_default();
+        let body = serde_json::from_str::<InfluxOrgsResponse>(&body)
+            .context("decoding Influx org lookup response")?;
+        Ok(body
+            .orgs
+            .into_iter()
+            .find(|org| org.name == self.config.org)
+            .map(|org| org.id))
+    }
+
+    fn influx_url(&self, path: &str) -> String {
+        format!("{}{}", self.config.url.trim_end_matches('/'), path)
+    }
 }
 
 pub async fn run(opts: Opts) -> Result<()> {
@@ -911,6 +1252,25 @@ pub async fn run(opts: Opts) -> Result<()> {
     let (state_events, _) = broadcast::channel(64);
     let (job_events, _) = broadcast::channel(64);
     let (signal_events, _) = broadcast::channel(SIGNAL_BROADCAST_QUEUE_CAPACITY);
+    let (notes_events, _) = broadcast::channel(64);
+    let notes_influx = match opts.notes_influx_token.clone() {
+        Some(token) => match InfluxNotesClient::new(InfluxNotesConfig {
+            url: opts.notes_influx_url.clone(),
+            token,
+            org: opts.notes_influx_org.clone(),
+            bucket: opts.notes_influx_bucket.clone(),
+        }) {
+            Ok(client) => Some(Arc::new(client)),
+            Err(error) => {
+                warn!("Influx notes client disabled: {error}");
+                None
+            }
+        },
+        None => {
+            warn!("Influx notes client disabled: --notes-influx-token was not provided");
+            None
+        }
+    };
     let state = AppState {
         store,
         capabilities,
@@ -921,12 +1281,14 @@ pub async fn run(opts: Opts) -> Result<()> {
         state_events,
         job_events,
         signal_events,
+        notes_events,
         last_state_payload: Arc::new(Mutex::new(String::new())),
         last_jobs_payload: Arc::new(Mutex::new(String::new())),
         jobs,
         tester_present: Arc::new(Mutex::new(BTreeMap::new())),
         map_store,
         map_store_lock: Arc::new(Mutex::new(())),
+        notes_influx,
     };
 
     info!("seeding initial dashboard snapshot");
@@ -981,6 +1343,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_gps);
 
+    let notes = warp::path("notes")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_notes);
+
     let controller = warp::path!("controllers" / String)
         .and(warp::get())
         .and(state_filter.clone())
@@ -1000,6 +1368,26 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::get())
         .and(state_filter.clone())
         .and_then(handle_signal_manifest);
+
+    let list_notes = warp::path!("api" / "notes")
+        .and(warp::get())
+        .and(warp::query::<NotesQuery>())
+        .and(state_filter.clone())
+        .and_then(handle_list_notes);
+
+    let create_note = warp::path!("api" / "notes")
+        .and(warp::post())
+        .and(warp::body::content_length_limit(
+            (MAX_NOTE_TEXT_BYTES + MAX_NOTE_SUBSYSTEM_BYTES + 1024) as u64,
+        ))
+        .and(warp::body::json())
+        .and(state_filter.clone())
+        .and_then(handle_create_note);
+
+    let notes_events = warp::path("notes-events")
+        .and(warp::get())
+        .and(state_filter.clone())
+        .map(handle_notes_events);
 
     let map_views = warp::path!("api" / "maps" / "views")
         .and(warp::get())
@@ -1263,9 +1651,13 @@ pub async fn run(opts: Opts) -> Result<()> {
     let routes = home
         .or(signals)
         .or(gps)
+        .or(notes)
         .or(controller)
         .or(database)
         .or(signal_manifest)
+        .or(list_notes)
+        .or(create_note)
+        .or(notes_events)
         .or(map_views)
         .or(map_debug)
         .or(create_map_view)
@@ -1294,7 +1686,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/database', '/controllers/:name', '/api/signals/manifest', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/notes', '/database', '/controllers/:name', '/api/signals/manifest', '/api/notes', '/notes-events', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1425,6 +1817,159 @@ async fn handle_gps(_state: AppState) -> Result<warp::reply::Response, Infallibl
         views::render_gps(),
         warp::http::StatusCode::OK,
     ))
+}
+
+async fn handle_notes(_state: AppState) -> Result<warp::reply::Response, Infallible> {
+    debug!("serving notes page");
+    Ok(render_template_response(
+        views::render_notes(),
+        warp::http::StatusCode::OK,
+    ))
+}
+
+async fn handle_list_notes(
+    query: NotesQuery,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let subsystem = match query.subsystem.as_deref().map(normalize_note_subsystem) {
+        Some(Ok(subsystem)) => Some(subsystem),
+        Some(Err(error)) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+        None => None,
+    };
+    let limit = query
+        .limit
+        .unwrap_or(DEFAULT_NOTES_LIMIT)
+        .clamp(1, MAX_NOTES_LIMIT);
+    let subsystems = state.notes_subsystems().await;
+
+    let notes = if let Some(client) = state.notes_influx.as_ref() {
+        match client.query_notes(subsystem.as_deref(), limit).await {
+            Ok(notes) => notes,
+            Err(error) => {
+                warn!("failed to query Influx notes: {error}");
+                return Ok(json_error_response(
+                    warp::http::StatusCode::BAD_GATEWAY,
+                    &format!("failed to query notes: {}", format_anyhow_chain(&error)),
+                ));
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    Ok(json_notes_response(NotesResponse {
+        ok: true,
+        influx_configured: state.notes_influx.is_some(),
+        bucket: state
+            .notes_influx
+            .as_ref()
+            .map(|client| client.config.bucket.clone())
+            .unwrap_or_else(|| DEFAULT_NOTES_INFLUX_BUCKET.to_string()),
+        subsystems,
+        notes,
+    }))
+}
+
+async fn handle_create_note(
+    request: CreateNoteRequest,
+    state: AppState,
+) -> Result<warp::reply::Response, Infallible> {
+    let subsystem = match normalize_note_subsystem(&request.subsystem) {
+        Ok(subsystem) => subsystem,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
+    let text = match normalize_note_text(request.text) {
+        Ok(text) => text,
+        Err(error) => {
+            return Ok(json_error_response(
+                warp::http::StatusCode::BAD_REQUEST,
+                &error.to_string(),
+            ));
+        }
+    };
+    let Some(client) = state.notes_influx.as_ref() else {
+        return Ok(json_error_response(
+            warp::http::StatusCode::SERVICE_UNAVAILABLE,
+            "Influx notes are not configured",
+        ));
+    };
+
+    let logged_at_ns = now_ns();
+    let logged_at_ms = logged_at_ns / 1_000_000;
+    let note = CarNote {
+        subsystem,
+        text,
+        logged_at_ms,
+        logged_at: note_timestamp_label(logged_at_ms),
+    };
+    if let Err(error) = client.write_note(&note, logged_at_ns).await {
+        warn!("failed to write Influx note: {error}");
+        return Ok(json_error_response(
+            warp::http::StatusCode::BAD_GATEWAY,
+            &format!("failed to write note: {}", format_anyhow_chain(&error)),
+        ));
+    }
+
+    let mut subsystems = state.notes_subsystems().await;
+    if !subsystems.contains(&note.subsystem) {
+        subsystems.push(note.subsystem.clone());
+        subsystems.sort();
+    }
+
+    if let Ok(payload) = serde_json::to_string(&NoteCreatedEvent {
+        note: note.clone(),
+        subsystems: subsystems.clone(),
+    }) {
+        let _ = state.notes_events.send(payload);
+    }
+
+    Ok(json_create_note_response(CreateNoteResponse {
+        ok: true,
+        bucket: client.config.bucket.clone(),
+        subsystems,
+        note,
+    }))
+}
+
+fn handle_notes_events(state: AppState) -> impl Reply {
+    info!(
+        "notes SSE client connected; subscriber count will become {}",
+        state.notes_events.receiver_count() + 1
+    );
+    let stream = futures::stream::unfold(state.notes_events.subscribe(), |mut rx| async move {
+        loop {
+            match rx.recv().await {
+                Ok(payload) => {
+                    return Some((
+                        Ok::<Event, Infallible>(Event::default().event("note").data(payload)),
+                        rx,
+                    ));
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => {
+                    warn!("notes SSE client lagged behind; requesting reload");
+                    return Some((
+                        Ok::<Event, Infallible>(Event::default().event("reload").data("{}")),
+                        rx,
+                    ));
+                }
+                Err(broadcast::error::RecvError::Closed) => {
+                    info!("notes SSE stream closed");
+                    return None;
+                }
+            }
+        }
+    });
+    warp::sse::reply(warp::sse::keep_alive().stream(stream))
 }
 
 async fn handle_signal_manifest(state: AppState) -> Result<warp::reply::Response, Infallible> {
@@ -4168,6 +4713,210 @@ fn format_anyhow_chain(error: &anyhow::Error) -> String {
     parts.join(": ")
 }
 
+fn normalize_note_subsystem(value: &str) -> Result<String> {
+    let subsystem = value.trim();
+    if subsystem.is_empty() {
+        return Err(anyhow::anyhow!("subsystem is required"));
+    }
+    if subsystem.len() > MAX_NOTE_SUBSYSTEM_BYTES {
+        return Err(anyhow::anyhow!(
+            "subsystem must be at most {MAX_NOTE_SUBSYSTEM_BYTES} bytes"
+        ));
+    }
+    if subsystem.chars().any(char::is_control) {
+        return Err(anyhow::anyhow!(
+            "subsystem cannot contain control characters"
+        ));
+    }
+    Ok(subsystem.to_string())
+}
+
+fn normalize_note_text(value: String) -> Result<String> {
+    if value.trim().is_empty() {
+        return Err(anyhow::anyhow!("note text is required"));
+    }
+    if value.len() > MAX_NOTE_TEXT_BYTES {
+        return Err(anyhow::anyhow!(
+            "note text must be at most {MAX_NOTE_TEXT_BYTES} bytes"
+        ));
+    }
+    Ok(value)
+}
+
+fn note_timestamp_label(timestamp_ms: u64) -> String {
+    DateTime::<Utc>::from_timestamp_millis(timestamp_ms as i64)
+        .unwrap_or_else(Utc::now)
+        .to_rfc3339_opts(SecondsFormat::Millis, true)
+}
+
+fn append_influx_key(out: &mut String, value: &str) {
+    for ch in value.chars() {
+        match ch {
+            ' ' | ',' | '=' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
+}
+
+fn append_influx_string_field(out: &mut String, value: &str) {
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' | '\\' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
+    out.push('"');
+}
+
+fn flux_string_literal(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+fn parse_notes_csv(csv: &str) -> Result<Vec<CarNote>> {
+    let (headers, rows) = parse_influx_csv(csv).context("reading Influx notes CSV")?;
+    if headers.is_empty() {
+        return Ok(Vec::new());
+    }
+    let time_index = csv_header_index(&headers, "_time")?;
+    let measurement_index = csv_header_index(&headers, "_measurement")?;
+    let value_index = csv_header_index(&headers, "_value")?;
+    let mut notes = Vec::new();
+
+    for record in rows {
+        let Some(time) = record.get(time_index).filter(|value| !value.is_empty()) else {
+            continue;
+        };
+        let Some(subsystem) = record
+            .get(measurement_index)
+            .filter(|value| !value.is_empty())
+        else {
+            continue;
+        };
+        let Some(raw_text) = record.get(value_index) else {
+            continue;
+        };
+        let logged_at_ms = parse_influx_timestamp_ms(time).unwrap_or_default();
+        notes.push(CarNote {
+            subsystem: subsystem.to_string(),
+            text: serde_json::from_str::<String>(raw_text).unwrap_or_else(|_| raw_text.to_string()),
+            logged_at_ms,
+            logged_at: if logged_at_ms == 0 {
+                time.to_string()
+            } else {
+                note_timestamp_label(logged_at_ms)
+            },
+        });
+    }
+
+    Ok(notes)
+}
+
+fn parse_single_value_csv(csv: &str) -> Result<Vec<String>> {
+    let (headers, rows) = parse_influx_csv(csv).context("reading Influx CSV")?;
+    if headers.is_empty() {
+        return Ok(Vec::new());
+    }
+    let value_index = csv_header_index(&headers, "_value")?;
+    let mut values = BTreeSet::new();
+    for record in rows {
+        if let Some(value) = record.get(value_index).filter(|value| !value.is_empty()) {
+            values.insert(value.to_string());
+        }
+    }
+    Ok(values.into_iter().collect())
+}
+
+fn parse_influx_csv(csv: &str) -> Result<(Vec<String>, Vec<Vec<String>>)> {
+    let records = parse_csv_records(csv)?;
+    let mut records = records
+        .into_iter()
+        .filter(|record| !record.iter().all(|field| field.is_empty()))
+        .filter(|record| !record.first().is_some_and(|field| field.starts_with('#')));
+
+    let Some(headers) = records.next() else {
+        return Ok((Vec::new(), Vec::new()));
+    };
+    let rows = records
+        .filter(|record| record != &headers)
+        .collect::<Vec<_>>();
+    Ok((headers, rows))
+}
+
+fn parse_csv_records(csv: &str) -> Result<Vec<Vec<String>>> {
+    let mut records = Vec::new();
+    let mut record = Vec::new();
+    let mut field = String::new();
+    let mut chars = csv.chars().peekable();
+    let mut in_quotes = false;
+
+    while let Some(ch) = chars.next() {
+        if in_quotes {
+            if ch == '"' {
+                if chars.peek() == Some(&'"') {
+                    field.push('"');
+                    chars.next();
+                } else {
+                    in_quotes = false;
+                }
+            } else {
+                field.push(ch);
+            }
+            continue;
+        }
+
+        match ch {
+            '"' if field.is_empty() => {
+                in_quotes = true;
+            }
+            ',' => {
+                record.push(std::mem::take(&mut field));
+            }
+            '\n' => {
+                record.push(std::mem::take(&mut field));
+                records.push(std::mem::take(&mut record));
+            }
+            '\r' => {
+                if chars.peek() == Some(&'\n') {
+                    continue;
+                }
+                record.push(std::mem::take(&mut field));
+                records.push(std::mem::take(&mut record));
+            }
+            _ => field.push(ch),
+        }
+    }
+
+    if in_quotes {
+        return Err(anyhow::anyhow!("unterminated quoted CSV field"));
+    }
+    if !field.is_empty() || !record.is_empty() {
+        record.push(field);
+        records.push(record);
+    }
+
+    Ok(records)
+}
+
+fn csv_header_index(headers: &[String], name: &str) -> Result<usize> {
+    headers
+        .iter()
+        .position(|header| header.as_str() == name)
+        .ok_or_else(|| anyhow::anyhow!("Influx CSV missing '{name}' column"))
+}
+
+fn parse_influx_timestamp_ms(value: &str) -> Option<u64> {
+    DateTime::parse_from_rfc3339(value)
+        .ok()
+        .and_then(|timestamp| u64::try_from(timestamp.timestamp_millis()).ok())
+}
+
 fn json_error_response(status: warp::http::StatusCode, message: &str) -> warp::reply::Response {
     let body = serde_json::json!({
         "ok": false,
@@ -4224,6 +4973,15 @@ fn json_current_session_response(body: CurrentSessionResponse) -> warp::reply::R
     warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
 }
 
+fn json_notes_response(body: NotesResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::OK).into_response()
+}
+
+fn json_create_note_response(body: CreateNoteResponse) -> warp::reply::Response {
+    warp::reply::with_status(warp::reply::json(&body), warp::http::StatusCode::CREATED)
+        .into_response()
+}
+
 async fn ota_agent_error_message(status: HttpStatusCode, response: reqwest::Response) -> String {
     match response.text().await {
         Ok(body) => match serde_json::from_str::<OtaAgentErrorReply>(&body) {
@@ -4263,10 +5021,8 @@ fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl 
                 loop {
                     match rx.try_recv() {
                         Ok(batch) => {
-                            events.extend(filter_signal_sample_events(
-                                batch.as_ref(),
-                                &selected_ids,
-                            ));
+                            events
+                                .extend(filter_signal_sample_events(batch.as_ref(), &selected_ids));
                         }
                         Err(broadcast::error::TryRecvError::Empty) => {
                             break;
@@ -4968,6 +5724,13 @@ fn now_ms() -> u64 {
         .as_millis() as u64
 }
 
+fn now_ns() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as u64
+}
+
 fn render_template_response(
     rendered: Result<String>,
     status: warp::http::StatusCode,
@@ -5023,6 +5786,20 @@ mod tests {
     fn tracked_controller_names_include_non_uds_pm100dx() {
         let tracked = tracked_controller_names();
         assert!(tracked.iter().any(|controller| controller == "pm100dx"));
+    }
+
+    #[test]
+    fn empty_influx_csv_parses_as_no_notes() {
+        assert_eq!(parse_notes_csv("").unwrap(), Vec::<CarNote>::new());
+        assert_eq!(
+            parse_notes_csv("#datatype,string,long\n#group,false,false\n").unwrap(),
+            Vec::<CarNote>::new()
+        );
+    }
+
+    #[test]
+    fn empty_influx_csv_parses_as_no_measurements() {
+        assert_eq!(parse_single_value_csv("").unwrap(), Vec::<String>::new());
     }
 
     #[test]
