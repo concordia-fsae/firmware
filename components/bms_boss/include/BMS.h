@@ -59,10 +59,13 @@ typedef struct
 typedef struct
 {
     BMS_Contactors_E contacts;
-    bool             fault                    :1;
-    bool             pack_voltage_sense_fault :1;
-    bool             charging_paused          :1;
-    bool             balancing                :1;
+    bool             fault                       :1;
+    bool             pack_voltage_sense_fault    :1;
+    bool             charging_paused             :1;
+    bool             balancing                   :1;
+    bool             worker_bms_fault_latched    :1;
+    bool             worker_temp_fault_latched   :1;
+    bool             worker_disconnected_latched :1;
     uint8_t          connected_segments;
     float32_t        charge_limit;    // [A] precision 1A
     float32_t        discharge_limit; // [A] precision 1A

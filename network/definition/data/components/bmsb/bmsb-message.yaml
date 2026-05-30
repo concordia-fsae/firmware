@@ -16,6 +16,9 @@ messages:
       contactorLowSohHvp:
       contactorLowSohHvn:
       contactorLowSohPrecharge:
+      workerBmsFault:
+      workerTempFault:
+      workerDisconnected:
 
   criticalData:
     description: BMS Boss Critical Data

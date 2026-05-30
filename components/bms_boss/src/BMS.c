@@ -173,11 +173,13 @@ static void cycleContacts(void)
     }
 }
 
-static void getSegmentStats(BMSB_S* bms)
+static void getSegmentStats(BMSB_S* bms, bool* workerBmsFault, bool* workerTempFault)
 {
     bms->fault                   = false;
     bms->pack_voltage_calculated = 0.0f;
     bms->pack_voltage_measured   = 0.0f;
+    *workerBmsFault              = false;
+    *workerTempFault             = false;
     bms->voltages.max            = 0.0f;
     bms->voltages.min            = 5.0f;
     bms->max_temp                = 0.0f;
@@ -194,10 +196,13 @@ static void getSegmentStats(BMSB_S* bms)
         {
             continue;
         }
-        else if (worker_valid && ((faultBMS == CAN_FLAG_SET) || (faultTemp == CAN_FLAG_SET)))
-        {
-            bms->fault = true;
-        }
+
+        const bool worker_bms_fault  = faultBMS == CAN_FLAG_SET;
+        const bool worker_temp_fault = faultTemp == CAN_FLAG_SET;
+
+        *workerBmsFault  |= worker_bms_fault;
+        *workerTempFault |= worker_temp_fault;
+        bms->fault       |= worker_bms_fault || worker_temp_fault;
 
         float32_t pack_voltage = 0.0f, max_voltage = 0.0f, min_voltage = 0.0f, max_temp = 0.0f;
         UNUSED(CANRX_get_signalDuplicate(VEH, BMSW_segmentVoltage, &pack_voltage, i));
@@ -220,6 +225,25 @@ static void getSegmentStats(BMSB_S* bms)
             bms->connected_segments++;
         }
     }
+}
+
+static bool workerFaultLatchResetRequested(void)
+{
+    return drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_BMS_IMD_RESET) == DRV_IO_ACTIVE;
+}
+
+static bool updateLatchedWorkerFault(bool latched, bool faulted, bool resetRequested)
+{
+    if (faulted)
+    {
+        return true;
+    }
+    else if (resetRequested)
+    {
+        return false;
+    }
+
+    return latched;
 }
 
 static bool checkBmsFaulted(void)
@@ -245,6 +269,10 @@ static bool checkBmsFaulted(void)
     app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVP,        BMSB_getContactorSohHvp() < CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
     app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHHVN,        BMSB_getContactorSohHvn() < CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
     app_faultManager_setFaultState(FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE,  BMSB_getContactorSohPrecharge() < CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE);
+
+    app_faultManager_setFaultState(FM_FAULT_BMSB_WORKERBMSFAULT,            BMS.worker_bms_fault_latched);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_WORKERTEMPFAULT,           BMS.worker_temp_fault_latched);
+    app_faultManager_setFaultState(FM_FAULT_BMSB_WORKERDISCONNECTED,        BMS.worker_disconnected_latched);
 
     if (bmsFault)
     {
@@ -403,22 +431,32 @@ static void BMS_init(void)
 
 static void BMS10Hz_PRD(void)
 {
-    BMSB_S tmp = { 0x00 };
+    BMSB_S tmp             = { 0x00 };
+    bool   workerBmsFault  = false;
+    bool   workerTempFault = false;
 
-    getSegmentStats(&tmp);
+    getSegmentStats(&tmp, &workerBmsFault, &workerTempFault);
 
-    if (tmp.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS)
+    const bool workerDisconnected = tmp.connected_segments != BMS_CONFIGURED_SERIES_SEGMENTS;
+
+    if (workerDisconnected)
     {
         tmp.fault = true;
     }
 
-    BMS.soc                     = tmp.soc;
-    BMS.fault                   = tmp.fault;
+    const bool resetWorkerFaults = workerFaultLatchResetRequested();
 
-    BMS.connected_segments      = tmp.connected_segments;
-    BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
-    BMS.voltages                = tmp.voltages;
-    BMS.max_temp                = tmp.max_temp;
+    BMS.worker_bms_fault_latched    = updateLatchedWorkerFault(BMS.worker_bms_fault_latched, workerBmsFault, resetWorkerFaults);
+    BMS.worker_temp_fault_latched   = updateLatchedWorkerFault(BMS.worker_temp_fault_latched, workerTempFault, resetWorkerFaults);
+    BMS.worker_disconnected_latched = updateLatchedWorkerFault(BMS.worker_disconnected_latched, workerDisconnected, resetWorkerFaults);
+
+    BMS.soc                         = tmp.soc;
+    BMS.fault                       = tmp.fault;
+
+    BMS.connected_segments          = tmp.connected_segments;
+    BMS.pack_voltage_calculated     = tmp.pack_voltage_calculated;
+    BMS.voltages                    = tmp.voltages;
+    BMS.max_temp                    = tmp.max_temp;
 
     if (BMS.balancing)
     {
