@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <style>
+    .shell {
+      max-width: none;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: none;
+    }
+
+    .sicko-mode-view {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 0.62fr);
+      gap: 18px;
+      align-items: stretch;
+      min-height: 760px;
+      overflow: hidden;
+    }
+
+    .sicko-soc-chart {
+      position: relative;
+      min-width: 0;
+      min-height: 560px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background:
+        linear-gradient(rgba(39, 76, 119, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(39, 76, 119, 0.08) 1px, transparent 1px),
+        rgba(31, 42, 47, 0.08);
+      background-size: 56px 56px;
+    }
+
+    .sicko-soc-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 0%;
+      background: linear-gradient(0deg, #2d7f5e, #67a86b);
+      transition: height 160ms ease;
+    }
+
+    .sicko-soc-value {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8rem;
+      line-height: 0.95;
+      font-weight: 900;
+      color: var(--ink);
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .sicko-media {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .sicko-phone-crop {
+      width: min(100%, 400px);
+      height: 100%;
+      max-height: 760px;
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #000;
+    }
+
+    .sicko-gif {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    @media (min-width: 1400px) {
+      .sicko-soc-value {
+        font-size: 10rem;
+      }
+    }
+
+    @media (max-width: 1040px) {
+      .sicko-mode-view {
+        grid-template-columns: 1fr;
+        min-height: 0;
+      }
+
+      .sicko-soc-chart {
+        min-height: 500px;
+      }
+
+      .sicko-phone-crop {
+        height: auto;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .sicko-soc-chart {
+        min-height: 400px;
+      }
+
+      .sicko-soc-value {
+        font-size: 4.25rem;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <section class="sicko-mode-view" aria-label="Sicko Mode">
+    <div
+      id="sicko-soc-chart"
+      class="sicko-soc-chart"
+      role="meter"
+      aria-label="State of charge"
+      aria-valuemin="0"
+      aria-valuemax="100"
+    >
+      <div id="sicko-soc-fill" class="sicko-soc-fill"></div>
+      <div id="sicko-soc-value" class="sicko-soc-value">--%</div>
+    </div>
+    <div class="sicko-media">
+      <div class="sicko-phone-crop">
+        <img class="sicko-gif" src="/assets/sicko-mode-subway-surfers.gif" alt="">
+      </div>
+    </div>
+  </section>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const SOC_SIGNAL_ID = "veh/BMSB_criticalData/BMSB_packSOC";
+    const signalIds = [SOC_SIGNAL_ID];
+    let directSignalSource = null;
+
+    const els = {
+      chart: document.getElementById("sicko-soc-chart"),
+      value: document.getElementById("sicko-soc-value"),
+      fill: document.getElementById("sicko-soc-fill"),
+    };
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function renderSoc(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        els.value.textContent = "--%";
+        els.fill.style.height = "0%";
+        els.chart.removeAttribute("aria-valuenow");
+        return;
+      }
+
+      const bounded = clamp(numeric, 0, 100);
+      els.value.textContent = `${numeric.toFixed(1)}%`;
+      els.fill.style.height = `${bounded}%`;
+      els.chart.setAttribute("aria-valuenow", bounded.toFixed(1));
+    }
+
+    function ingestBatch(batch) {
+      for (const signalEvent of batch.events || []) {
+        for (const sample of signalEvent.samples || []) {
+          if (sample.signal_id === SOC_SIGNAL_ID) {
+            renderSoc(sample.value);
+          }
+        }
+      }
+    }
+
+    function ingestSnapshot(snapshot) {
+      const signal = (snapshot.signals || []).find((entry) => entry.signalId === SOC_SIGNAL_ID);
+      if (!signal) {
+        return;
+      }
+      const points = signal.points || [];
+      const point = points[points.length - 1];
+      if (point) {
+        renderSoc(point.v);
+      }
+    }
+
+    function subscribeToSoc() {
+      if (window.dashboardSignalCache && window.dashboardSignalCache.isAvailable()) {
+        window.dashboardSignalCache.subscribe((message) => {
+          if (message.type === "signal-batch") {
+            ingestBatch(message.payload || { events: [] });
+          }
+        });
+        window.dashboardSignalCache.setSubscription(signalIds, false);
+        window.dashboardSignalCache.getSnapshot(signalIds).then(ingestSnapshot);
+        return;
+      }
+
+      directSignalSource = new EventSource(`/signal-events?signals=${encodeURIComponent(signalIds.join(","))}`);
+      directSignalSource.addEventListener("signal-sample", (event) => {
+        ingestBatch(JSON.parse(event.data));
+      });
+    }
+
+    subscribeToSoc();
+
+    window.addEventListener("pagehide", () => {
+      if (directSignalSource) {
+        directSignalSource.close();
+      }
+    });
+  </script>
+{% endblock %}

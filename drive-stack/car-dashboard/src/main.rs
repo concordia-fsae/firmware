@@ -1,7 +1,9 @@
+#![recursion_limit = "512"]
+
 use anyhow::Result;
 use clap::Parser;
 
-use dashboard::{Opts, run};
+use dashboard::{run, Opts};
 
 #[tokio::main]
 async fn main() -> Result<()> {
