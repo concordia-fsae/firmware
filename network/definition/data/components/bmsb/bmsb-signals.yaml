@@ -29,6 +29,15 @@ signals:
   timeout:
     description: Timed out TS nodes
     discreteValues: faultStatus
+  workerBmsFault:
+    description: One or more BMS workers reported a BMS fault
+    discreteValues: faultStatus
+  workerTempFault:
+    description: One or more BMS workers reported a temperature fault
+    discreteValues: faultStatus
+  workerDisconnected:
+    description: One or more configured BMS workers are disconnected
+    discreteValues: faultStatus
 
   nlg513ControlByte:
     description: Brusa NLG513 Control Byte
@@ -75,7 +84,7 @@ signals:
     unit: 'A'
     description: BMS Boss Pack Charge Limit
     nativeRepresentation:
-      bitWidth: 8
+      bitWidth: 5
       resolution: 1
       range:
         min: 0
@@ -97,12 +106,22 @@ signals:
     unit: 'V'
     description: BMS Boss Pack Voltage
     nativeRepresentation:
-      bitWidth: 15
+      bitWidth: 14
       resolution: 0.1
       range:
         min: 0
         max: 450
     continuous: true
+
+  connectedSegments:
+    unit: ''
+    description: Number of BMS worker segments currently connected
+    nativeRepresentation:
+      bitWidth: 4
+      resolution: 1
+      range:
+        min: 0
+        max: 15
 
   packVoltageCalculated:
     unit: 'V'

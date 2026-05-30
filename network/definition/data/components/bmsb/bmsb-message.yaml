@@ -16,6 +16,9 @@ messages:
       contactorLowSohHvp:
       contactorLowSohHvn:
       contactorLowSohPrecharge:
+      workerBmsFault:
+      workerTempFault:
+      workerDisconnected:
 
   criticalData:
     description: BMS Boss Critical Data
@@ -31,6 +34,7 @@ messages:
       packVoltage:
       packSOC:
       packCurrent:
+      connectedSegments:
 
   packStats:
     description: Pack performance metrics
