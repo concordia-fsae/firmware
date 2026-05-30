@@ -7,6 +7,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "app_faultManager.h"
 #include "brakePressure.h"
 #include "drv_inputAD_componentSpecific.h"
 #include "Module.h"
@@ -14,6 +15,13 @@
 
 #include "drv_inputAD.h"
 #include "Yamcan.h"
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define BRAKE_PRESSURE_VOLTAGE_LOW_THRESHOLD     0.15f
+#define BRAKE_PRESSURE_VOLTAGE_HIGH_THRESHOLD    2.85f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -60,6 +68,10 @@ static void brakePressure_periodic_100Hz(void)
     {
         brakePressure_data.pressure = (brakePressure_data.voltage - 0.5f) * 500.0f;
     }
+
+    app_faultManager_setFaultState(FM_FAULT_VCREAR_BRAKEPRESSURESENSORFAULT,
+                                   (brakePressure_data.voltage < BRAKE_PRESSURE_VOLTAGE_LOW_THRESHOLD) ||
+                                   (brakePressure_data.voltage > BRAKE_PRESSURE_VOLTAGE_HIGH_THRESHOLD));
 }
 
 /******************************************************************************

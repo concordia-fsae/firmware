@@ -17,6 +17,7 @@ messages:
       wheelSpeedSensorLocked:
       mcCalibratingResolver:
       mcCalibratingResolverFailed:
+      brakePressureSensorFault:
 
   torqueInsights:
     description: VCREAR Torque limits

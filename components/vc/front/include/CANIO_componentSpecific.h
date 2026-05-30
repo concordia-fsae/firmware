@@ -53,7 +53,6 @@
 #define set_apps1Voltage(m, b, n, s)                       set(m, b, n, s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_APPS1))
 #define set_apps2Voltage(m, b, n, s)                       set(m, b, n, s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_APPS2))
 #define set_brakePotVoltage(m, b, n, s)                    set(m, b, n, s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_PR))
-#define set_brakePrVoltage(m, b, n, s)                     set(m, b, n, s, drv_pedalMonitor_getPedalVoltage(DRV_PEDALMONITOR_BRAKE_PR))
 #define set_acceleratorState(m, b, n, s)                   set(m, b, n, s, apps_getStateCAN())
 #define set_bppcState(m, b, n, s)                          set(m, b, n, s, bppc_getStateCAN())
 #define set_runButtonStatus(m, b, n, s)                    set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_RUN_BUTTON) == DRV_IO_ACTIVE) ? \
@@ -80,6 +79,7 @@
 #define set_launchControl75mTime(m, b, n, s)               set(m, b, n, s, torque_getLaunchControl75mTime())
 
 #define set_brakePressure(m, b, n, s)                      set(m, b, n, s, brakePressure_getBrakePressure())
+#define set_brakePrVoltage(m, b, n, s)                     set(m, b, n, s, brakePressure_getBrakePressureVoltage())
 #define set_5vCriticalHsdState(m, b, n, s)                 set(m, b, n, s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
 #define set_5vExtHsdState(m, b, n, s)                      set(m, b, n, s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_EXT))
 #define set_bmsLightState(m, b, n, s)                      set(m, b, n, s, cockpitLights_bms_getStateCAN())
