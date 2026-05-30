@@ -568,19 +568,16 @@
       <a href="/sicko-mode">Sicko Mode</a>
     </nav>
   </section>
-
-  <script id="initial-manifest" type="application/json">{{ initial_manifest_json|safe }}</script>
-  <script id="initial-state" type="application/json">{{ initial_state_json|safe }}</script>
 {% endblock %}
 
 {% block scripts %}
   <script>
-    const initialManifest = JSON.parse(document.getElementById("initial-manifest").textContent);
-    const initialState = JSON.parse(document.getElementById("initial-state").textContent);
     const SEGMENT_COUNT = 8;
     const VOLTAGE_CELL_COUNT = 16;
     const TEMP_SENSOR_COUNT = 20;
     const HISTORY_LIMIT = 240;
+    const ROUTINE_OPTIMISTIC_MS = 12000;
+    const RENDER_INTERVAL_MS = 250;
 
     const latest = new Map();
     const packCurrentHistory = [];
@@ -637,6 +634,21 @@
       els.chargeActionStatus.classList.toggle("error", isError);
     }
 
+    function setRoutineOptimisticState(routine, active) {
+      routineUiState[routine] = {
+        active,
+        requestedAt: Date.now(),
+      };
+    }
+
+    function optimisticRoutineActive(routine) {
+      const state = routineUiState[routine];
+      if (!state || Date.now() - state.requestedAt > ROUTINE_OPTIMISTIC_MS) {
+        return null;
+      }
+      return state.active;
+    }
+
     async function submitBmsbRoutine(routine, action, button) {
       const label = routineDisplayName(routine, action);
       const buttons = Array.from(document.querySelectorAll("[data-bmsb-routine]"));
@@ -657,11 +669,13 @@
         if (!response.ok || payload.ok === false) {
           throw new Error(payload.error || `Routine request failed with HTTP ${response.status}`);
         }
-        routineUiState[routine] = action === "start";
+        setRoutineOptimisticState(routine, action === "start");
         setChargeActionStatus("");
-        renderChargeActions();
+        renderSummary();
       } catch (error) {
+        routineUiState[routine] = null;
         setChargeActionStatus(`${label} failed: ${error.message}`, true);
+        renderChargeActions();
       } finally {
         buttons.forEach((item) => {
           item.disabled = false;
@@ -714,6 +728,17 @@
       return `bmsw${segment}`;
     }
 
+    function segmentVoltageSignalId(prefix, index) {
+      return signalId(`${prefix}_cellVoltages${Math.floor(index / 6)}`, `${prefix}_cellVoltage${index}`);
+    }
+
+    function segmentTempSignalId(prefix, index) {
+      if (index === 1 || index === 20) {
+        return signalId(`${prefix}_miscData`, `${prefix}_cellTemp${index}`);
+      }
+      return signalId(`${prefix}_cellTemps${index <= 10 ? 0 : 1}`, `${prefix}_cellTemp${index}`);
+    }
+
     const bmsb = {
       soc: signalId("BMSB_criticalData", "BMSB_packSOC"),
       charge: signalId("BMSB_criticalData", "BMSB_packChargeLimit"),
@@ -729,10 +754,11 @@
       tsmsChg: signalId("BMSB_ioStatus", "BMSB_tsmsChg"),
     };
 
-    const manifestSignals = new Map((initialManifest.signals || []).map((signal) => [signal.id, signal]));
     const baseSignalIds = new Set(Object.values(bmsb));
     let directSignalSource = null;
-    let signalCacheSubscribed = false;
+    let renderTimer = null;
+    let renderFramePending = false;
+    let lastRenderAt = 0;
 
     const segmentSignals = Array.from({ length: SEGMENT_COUNT }, (_, segment) => {
       const prefix = segmentPrefix(segment);
@@ -741,31 +767,15 @@
         voltageMax: signalId(`${prefix}_criticalData`, `${prefix}_voltageMax`),
         voltageMin: signalId(`${prefix}_criticalData`, `${prefix}_voltageMin`),
         segmentVoltage: signalId(`${prefix}_criticalData`, `${prefix}_segmentVoltage`),
-        cellVoltages: Array(VOLTAGE_CELL_COUNT).fill(null),
-        cellTemps: Array(TEMP_SENSOR_COUNT + 1).fill(null),
+        cellVoltages: Array.from(
+          { length: VOLTAGE_CELL_COUNT },
+          (_value, index) => segmentVoltageSignalId(prefix, index),
+        ),
+        cellTemps: Array.from(
+          { length: TEMP_SENSOR_COUNT + 1 },
+          (_value, index) => (index === 0 ? null : segmentTempSignalId(prefix, index)),
+        ),
       };
-
-      for (const entry of initialManifest.signals || []) {
-        if (entry.bus !== "veh" || !entry.signal_name.startsWith(prefix)) {
-          continue;
-        }
-        const voltageMatch = entry.signal_name.match(new RegExp(`^${prefix}_cellVoltage(\\d+)$`));
-        if (voltageMatch) {
-          const index = Number(voltageMatch[1]);
-          if (index >= 0 && index < VOLTAGE_CELL_COUNT) {
-            signals.cellVoltages[index] = entry.id;
-          }
-          continue;
-        }
-
-        const tempMatch = entry.signal_name.match(new RegExp(`^${prefix}_cellTemp(\\d+)$`));
-        if (tempMatch) {
-          const index = Number(tempMatch[1]);
-          if (index >= 1 && index <= TEMP_SENSOR_COUNT) {
-            signals.cellTemps[index] = entry.id;
-          }
-        }
-      }
 
       baseSignalIds.add(signals.tempMax);
       baseSignalIds.add(signals.voltageMax);
@@ -773,12 +783,6 @@
       baseSignalIds.add(signals.segmentVoltage);
       return signals;
     });
-
-    for (const entry of initialManifest.signals || []) {
-      if (entry.bus === "veh" && entry.message_name === "BMSB_faults") {
-        baseSignalIds.add(entry.id);
-      }
-    }
 
     function detailSignalIds(segment) {
       const signals = segmentSignals[segment];
@@ -789,9 +793,7 @@
     }
 
     function currentSubscriptionIds() {
-      return Array
-        .from(new Set([...baseSignalIds, ...detailSignalIds(selectedSegment)]))
-        .filter((id) => manifestSignals.has(id));
+      return Array.from(new Set([...baseSignalIds, ...detailSignalIds(selectedSegment)]));
     }
 
     function renderSegmentCards() {
@@ -1000,7 +1002,7 @@
     function updateFromDashboardState(state) {
       const controller = (state.controllers || []).find((item) => item.name === "bmsb");
       bmsbFaults = controller ? (controller.faults || []) : [];
-      renderFaults();
+      scheduleRender();
     }
 
     function renderSegmentDetails() {
@@ -1040,7 +1042,7 @@
       }
     }
 
-    function isChargingActive() {
+    function telemetryChargingActive() {
       const tsmsChg = latestPoint(bmsb.tsmsChg);
       if (tsmsChg && tsmsChg.label) {
         if (tsmsChg.label.toUpperCase() !== "ON") {
@@ -1054,15 +1056,47 @@
       if (Number.isFinite(chargeLimit)) {
         return chargeLimit > 0.05;
       }
-      return routineUiState.charging === true;
+      return null;
     }
 
-    function isBalancingActive() {
+    function isChargingActive() {
+      const optimistic = optimisticRoutineActive("charging");
+      if (optimistic !== null) {
+        return optimistic;
+      }
+      return telemetryChargingActive() === true;
+    }
+
+    function telemetryBalancingActive() {
       const targetVoltage = latestValue(bmsb.targetVoltage);
       if (Number.isFinite(targetVoltage)) {
         return targetVoltage < 4.49;
       }
-      return routineUiState.balancing === true;
+      return null;
+    }
+
+    function isBalancingActive() {
+      const optimistic = optimisticRoutineActive("balancing");
+      if (optimistic !== null) {
+        return optimistic;
+      }
+      return telemetryBalancingActive() === true;
+    }
+
+    function pendingRoutineLabel(routine, telemetryActive) {
+      const optimistic = optimisticRoutineActive(routine);
+      if (optimistic === null || telemetryActive === optimistic) {
+        return "";
+      }
+      return optimistic ? "starting" : "stopping";
+    }
+
+    function formatPendingSignal(signalId, digits, fallbackUnit, pendingLabel) {
+      const value = formatSignal(signalId, digits, fallbackUnit);
+      if (!pendingLabel) {
+        return value;
+      }
+      return value === "--" ? pendingLabel : `${value} (${pendingLabel})`;
     }
 
     function renderChargeActions() {
@@ -1089,11 +1123,13 @@
       els.packMaxVoltage.textContent = formatSignal(bmsb.maxCellVoltage, 3, "V");
       els.packMinVoltage.textContent = formatSignal(bmsb.minCellVoltage, 3, "V");
       els.packMaxTemp.textContent = formatSignal(bmsb.maxCellTemp, 0, "degC");
-      els.tableCharge.textContent = formatSignal(bmsb.charge, 0, "A");
+      const chargingPending = pendingRoutineLabel("charging", telemetryChargingActive());
+      const balancingPending = pendingRoutineLabel("balancing", telemetryBalancingActive());
+      els.tableCharge.textContent = formatPendingSignal(bmsb.charge, 0, "A", chargingPending);
       els.tableDischarge.textContent = formatSignal(bmsb.discharge, 0, "A");
       els.tablePackVoltage.textContent = formatSignal(bmsb.packVoltage, 1, "V");
       els.tableIsolation.textContent = formatSignal(bmsb.isolationResistance, 0, "kOhm");
-      els.targetVoltagePill.textContent = `Target ${formatSignal(bmsb.targetVoltage, 3, "V")}`;
+      els.targetVoltagePill.textContent = `Target ${formatPendingSignal(bmsb.targetVoltage, 3, "V", balancingPending)}`;
       els.packCurrentPill.textContent = `Current ${formatSignal(bmsb.packCurrent, 1, "A")}`;
       els.connectedSegmentsPill.textContent = `Segments ${formatSignal(bmsb.connectedSegments, 0, "")}`;
       renderChargeActions();
@@ -1101,6 +1137,7 @@
 
     function renderAll() {
       renderSummary();
+      renderFaults();
       renderSegments();
       renderSegmentDetails();
       renderPackVoltageChart();
@@ -1108,6 +1145,43 @@
       renderPackCurrentChart();
       const latestTimestamp = Array.from(latest.values()).reduce((max, entry) => Math.max(max, entry.t || 0), 0);
       els.segmentUpdated.textContent = latestTimestamp ? `Updated ${new Date(latestTimestamp).toLocaleTimeString()}` : "Waiting for data";
+    }
+
+    function renderNow() {
+      lastRenderAt = performance.now();
+      renderAll();
+    }
+
+    function renderOnNextFrame() {
+      if (renderFramePending) {
+        return;
+      }
+      renderFramePending = true;
+      window.requestAnimationFrame(() => {
+        renderFramePending = false;
+        renderNow();
+      });
+    }
+
+    function scheduleRender() {
+      if (renderFramePending) {
+        return;
+      }
+      const delay = Math.max(0, RENDER_INTERVAL_MS - (performance.now() - lastRenderAt));
+      if (delay === 0) {
+        if (renderTimer) {
+          window.clearTimeout(renderTimer);
+          renderTimer = null;
+        }
+        renderOnNextFrame();
+        return;
+      }
+      if (!renderTimer) {
+        renderTimer = window.setTimeout(() => {
+          renderTimer = null;
+          renderOnNextFrame();
+        }, delay);
+      }
     }
 
     function rememberPackCurrentPoint(timestamp, value) {
@@ -1133,7 +1207,7 @@
       latest.set(sample.signal_id, {
         value,
         label: sample.label || null,
-        unit: sample.unit || (manifestSignals.get(sample.signal_id) || {}).unit || "",
+        unit: sample.unit || "",
         t: timestamp,
       });
       if (sample.signal_id === bmsb.packCurrent) {
@@ -1147,48 +1221,11 @@
           ingestSample(signalEvent, sample);
         }
       }
-      renderAll();
-    }
-
-    function ingestSnapshot(snapshot) {
-      const now = Date.now();
-      for (const signal of snapshot.signals || []) {
-        const points = signal.points || [];
-        const point = points[points.length - 1];
-        if (!point) {
-          continue;
-        }
-        if (signal.signalId === bmsb.packCurrent) {
-          for (const historyPoint of points) {
-            rememberPackCurrentPoint(historyPoint.t || now, Number(historyPoint.v));
-          }
-        }
-        latest.set(signal.signalId, {
-          value: Number(point.v),
-          label: point.label || null,
-          unit: (manifestSignals.get(signal.signalId) || {}).unit || "",
-          t: point.t || now,
-        });
-      }
-      renderAll();
+      scheduleRender();
     }
 
     function updateSignalSubscription() {
       const signalIds = currentSubscriptionIds();
-      if (window.dashboardSignalCache && window.dashboardSignalCache.isAvailable()) {
-        if (!signalCacheSubscribed) {
-          window.dashboardSignalCache.subscribe((message) => {
-            if (message.type === "signal-batch") {
-              ingestBatch(message.payload || { events: [] });
-            }
-          });
-          signalCacheSubscribed = true;
-        }
-        window.dashboardSignalCache.setSubscription(signalIds, false);
-        window.dashboardSignalCache.getSnapshot(signalIds).then(ingestSnapshot);
-        return;
-      }
-
       if (directSignalSource) {
         directSignalSource.close();
       }
@@ -1199,14 +1236,20 @@
     }
 
     renderSegmentCards();
-    updateFromDashboardState(initialState);
-    renderAll();
+    renderNow();
 
     updateSignalSubscription();
 
-    const stateSource = new EventSource("/events");
+    const stateSource = new EventSource("/events?controller=bmsb&jobs=false&initial=false");
     stateSource.addEventListener("state", (event) => {
       updateFromDashboardState(JSON.parse(event.data));
+    });
+
+    window.addEventListener("pagehide", () => {
+      stateSource.close();
+      if (directSignalSource) {
+        directSignalSource.close();
+      }
     });
 
     document.querySelectorAll("[data-bmsb-routine]").forEach((button) => {

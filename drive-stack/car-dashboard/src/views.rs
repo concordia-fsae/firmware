@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::sync::OnceLock;
 
 use anyhow::{Context, Result};
-use minijinja::{Environment, context};
+use minijinja::{context, Environment};
 use serde::Serialize;
 
 use crate::{
@@ -132,25 +132,22 @@ pub fn render_gps() -> Result<String> {
         .context("rendering gps.html template")
 }
 
-pub fn render_hv_pack(initial_manifest_json: &str, initial_state_json: &str) -> Result<String> {
+pub fn render_hv_pack() -> Result<String> {
     environment()?
         .get_template("hv_pack.html")
         .context("loading hv_pack.html template")?
         .render(context! {
             page_title => "HV Pack",
-            initial_manifest_json => initial_manifest_json,
-            initial_state_json => initial_state_json,
         })
         .context("rendering hv_pack.html template")
 }
 
-pub fn render_sicko_mode(initial_manifest_json: &str) -> Result<String> {
+pub fn render_sicko_mode() -> Result<String> {
     environment()?
         .get_template("sicko_mode.html")
         .context("loading sicko_mode.html template")?
         .render(context! {
             page_title => "Sicko Mode",
-            initial_manifest_json => initial_manifest_json,
         })
         .context("rendering sicko_mode.html template")
 }

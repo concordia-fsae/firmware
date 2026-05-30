@@ -16,28 +16,29 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{Context, Result};
 use chrono::{DateTime, SecondsFormat, Utc};
 use clap::Parser;
-use conUDS::FlashStatus;
-use conUDS::SupportedResetTypes;
 use conUDS::config::Config as UdsConfig;
 use conUDS::modules::uds::{
     DiagnosticSessionKind, DiagnosticSessionResponse, RoutineControlAction, RoutineControlResponse,
     UdsWorkerHandle,
 };
+use conUDS::FlashStatus;
+use conUDS::SupportedResetTypes;
 use futures::StreamExt;
 use libc::{
-    AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW, CAN_RTR_FLAG, CAN_SFF_MASK, EINTR,
-    SO_TIMESTAMPING, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE, SOF_TIMESTAMPING_RX_HARDWARE,
-    SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE, SOL_SOCKET, bind, c_void, can_frame,
-    if_nametoindex, iovec, msghdr, recvmsg, sa_family_t, sockaddr, sockaddr_can, socket, socklen_t,
+    bind, c_void, can_frame, if_nametoindex, iovec, msghdr, recvmsg, sa_family_t, sockaddr,
+    sockaddr_can, socket, socklen_t, AF_CAN, CAN_EFF_FLAG, CAN_EFF_MASK, CAN_ERR_FLAG, CAN_RAW,
+    CAN_RTR_FLAG, CAN_SFF_MASK, EINTR, SOCK_RAW, SOF_TIMESTAMPING_RAW_HARDWARE,
+    SOF_TIMESTAMPING_RX_HARDWARE, SOF_TIMESTAMPING_RX_SOFTWARE, SOF_TIMESTAMPING_SOFTWARE,
+    SOL_SOCKET, SO_TIMESTAMPING,
 };
 use log::{debug, info, warn};
 use net_detec::{Client as MdnsClient, DiscoveryFilter};
 use reqwest::StatusCode as HttpStatusCode;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{Mutex, RwLock, broadcast, mpsc, oneshot};
-use warp::Buf;
+use tokio::sync::{broadcast, mpsc, oneshot, Mutex, RwLock};
 use warp::multipart::{FormData, Part};
 use warp::sse::Event;
+use warp::Buf;
 use warp::{Filter, Reply};
 
 mod views;
@@ -65,8 +66,6 @@ const DEFAULT_MAP_TILE_SOURCE_ID: &str = OPENSTREETMAP_MAP_TILE_SOURCE_ID;
 const DEFAULT_MAP_TILE_TEMPLATE: &str = OPENSTREETMAP_MAP_TILE_TEMPLATE;
 const MAP_TILE_USER_AGENT: &str = "cfr-car-dashboard/0.1 offline-map-cache";
 const MAX_MAP_ZOOM: u8 = 19;
-const SIGNAL_SAMPLE_BATCH_INTERVAL_MS: u64 = 100;
-const SIGNAL_EVENT_QUEUE_CAPACITY: usize = 4096;
 const SIGNAL_BROADCAST_QUEUE_CAPACITY: usize = 8;
 const DEFAULT_NOTES_LIMIT: usize = 50;
 const MAX_NOTES_LIMIT: usize = 200;
@@ -276,7 +275,7 @@ pub struct LiveSignal {
     pub updated_at_ms: u64,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ControllerStatus {
     pub name: String,
     pub online: bool,
@@ -285,7 +284,7 @@ pub struct ControllerStatus {
     pub critical_signals: Vec<LiveSignal>,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DashboardSnapshot {
     pub controllers: Vec<ControllerStatus>,
 }
@@ -362,6 +361,16 @@ struct NormalizedUpdate {
 struct SignalEventQuery {
     #[serde(default)]
     signals: String,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+struct DashboardEventQuery {
+    #[serde(default)]
+    controller: Option<String>,
+    #[serde(default)]
+    jobs: Option<bool>,
+    #[serde(default)]
+    initial: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -907,6 +916,17 @@ impl AppState {
         store.snapshot(Instant::now())
     }
 
+    async fn controllers_snapshot_json(
+        &self,
+        controller_names: &BTreeSet<String>,
+    ) -> Result<String> {
+        let mut snapshot = self.snapshot().await;
+        snapshot
+            .controllers
+            .retain(|controller| controller_names.contains(&controller.name));
+        serde_json::to_string(&snapshot).context("serializing controller dashboard snapshot")
+    }
+
     fn signal_manifest_json(&self) -> Result<String> {
         serde_json::to_string(&*self.signal_manifest).context("serializing signal manifest")
     }
@@ -1354,8 +1374,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     let sicko_mode = warp::path("sicko-mode")
         .and(warp::path::end())
         .and(warp::get())
-        .and(state_filter.clone())
-        .and_then(handle_sicko_mode);
+        .map(handle_sicko_mode);
 
     let notes = warp::path("notes")
         .and(warp::path::end())
@@ -1465,10 +1484,9 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(warp::get())
         .map(handle_signal_cache_worker_js);
 
-    let sicko_mode_subway_surfers_gif =
-        warp::path!("assets" / "sicko-mode-subway-surfers.gif")
-            .and(warp::get())
-            .map(handle_sicko_mode_subway_surfers_gif);
+    let sicko_mode_subway_surfers_gif = warp::path!("assets" / "sicko-mode-subway-surfers.gif")
+        .and(warp::get())
+        .map(handle_sicko_mode_subway_surfers_gif);
 
     let enter_session = warp::path!("api" / "controllers" / String / "session")
         .and(warp::post())
@@ -1550,8 +1568,12 @@ pub async fn run(opts: Opts) -> Result<()> {
 
     let events = warp::path("events")
         .and(warp::get())
+        .and(warp::query::<DashboardEventQuery>())
         .and(state_filter.clone())
-        .map(|state: AppState| {
+        .map(|query: DashboardEventQuery, state: AppState| {
+            let controller_filter = Arc::new(parse_controller_filter(query.controller));
+            let include_jobs = query.jobs.unwrap_or(true);
+            let include_initial = query.initial.unwrap_or(true);
             let state_for_state_updates = state.clone();
             let state_for_job_updates = state.clone();
             let state_events = state.state_events.clone();
@@ -1562,99 +1584,155 @@ pub async fn run(opts: Opts) -> Result<()> {
             );
             let initial_state = futures::stream::once({
                 let state = state.clone();
+                let controller_filter = controller_filter.clone();
                 async move {
-                    let payload = state.snapshot_json().await.unwrap_or_else(|_| {
-                        serde_json::to_string(&DashboardSnapshot {
-                            controllers: Vec::new(),
-                        })
-                        .unwrap()
-                    });
-                    Ok::<Event, Infallible>(Event::default().event("state").data(payload))
-                }
-            });
-
-            let initial_jobs = futures::stream::once({
-                let state = state.clone();
-                async move {
-                    let payload = state.jobs_snapshot_json().await.unwrap_or_else(|_| {
-                        serde_json::to_string(&JobsSnapshot { jobs: Vec::new() }).unwrap()
-                    });
-                    Ok::<Event, Infallible>(Event::default().event("jobs").data(payload))
-                }
-            });
-
-            let state_updates = futures::stream::unfold(state_events.subscribe(), move |mut rx| {
-                let state = state_for_state_updates.clone();
-                async move {
-                    loop {
-                        match rx.recv().await {
-                            Ok(payload) => {
-                                return Some((
-                                    Ok::<Event, Infallible>(
-                                        Event::default().event("state").data(payload),
-                                    ),
-                                    rx,
-                                ));
-                            }
-                            Err(broadcast::error::RecvError::Lagged(_)) => {
-                                warn!("SSE client lagged behind; resending latest snapshot");
-                                let payload = state.snapshot_json().await.unwrap_or_else(|_| {
+                    if !include_initial {
+                        return None;
+                    }
+                    let payload =
+                        if let Some(controller_names) = controller_filter.as_ref().as_ref() {
+                            state
+                                .controllers_snapshot_json(controller_names)
+                                .await
+                                .unwrap_or_else(|_| {
                                     serde_json::to_string(&DashboardSnapshot {
                                         controllers: Vec::new(),
                                     })
                                     .unwrap()
-                                });
-                                return Some((
-                                    Ok::<Event, Infallible>(
-                                        Event::default().event("state").data(payload),
-                                    ),
-                                    rx,
-                                ));
-                            }
-                            Err(broadcast::error::RecvError::Closed) => {
-                                info!("SSE stream closed");
-                                return None;
-                            }
-                        }
-                    }
+                                })
+                        } else {
+                            state.snapshot_json().await.unwrap_or_else(|_| {
+                                serde_json::to_string(&DashboardSnapshot {
+                                    controllers: Vec::new(),
+                                })
+                                .unwrap()
+                            })
+                        };
+                    Some(Ok::<Event, Infallible>(
+                        Event::default().event("state").data(payload),
+                    ))
                 }
-            });
+            })
+            .filter_map(|event| async move { event });
 
-            let job_updates = futures::stream::unfold(job_events.subscribe(), move |mut rx| {
-                let state = state_for_job_updates.clone();
+            let initial_jobs = futures::stream::once({
+                let state = state.clone();
                 async move {
-                    loop {
-                        match rx.recv().await {
-                            Ok(payload) => {
-                                return Some((
-                                    Ok::<Event, Infallible>(
-                                        Event::default().event("jobs").data(payload),
-                                    ),
-                                    rx,
-                                ));
-                            }
-                            Err(broadcast::error::RecvError::Lagged(_)) => {
-                                warn!("SSE jobs client lagged behind; resending latest snapshot");
-                                let payload =
-                                    state.jobs_snapshot_json().await.unwrap_or_else(|_| {
-                                        serde_json::to_string(&JobsSnapshot { jobs: Vec::new() })
+                    if !include_initial || !include_jobs {
+                        return None;
+                    }
+                    let payload = state.jobs_snapshot_json().await.unwrap_or_else(|_| {
+                        serde_json::to_string(&JobsSnapshot { jobs: Vec::new() }).unwrap()
+                    });
+                    Some(Ok::<Event, Infallible>(
+                        Event::default().event("jobs").data(payload),
+                    ))
+                }
+            })
+            .filter_map(|event| async move { event });
+
+            let state_updates = futures::stream::unfold(
+                (state_events.subscribe(), controller_filter.clone()),
+                move |(mut rx, controller_filter)| {
+                    let state = state_for_state_updates.clone();
+                    async move {
+                        loop {
+                            match rx.recv().await {
+                                Ok(payload) => {
+                                    let payload = filter_dashboard_snapshot_json(
+                                        &payload,
+                                        controller_filter.as_ref().as_ref(),
+                                    );
+                                    return Some((
+                                        Ok::<Event, Infallible>(
+                                            Event::default().event("state").data(payload),
+                                        ),
+                                        (rx, controller_filter),
+                                    ));
+                                }
+                                Err(broadcast::error::RecvError::Lagged(_)) => {
+                                    warn!("SSE client lagged behind; resending latest snapshot");
+                                    let payload = if let Some(controller_names) =
+                                        controller_filter.as_ref().as_ref()
+                                    {
+                                        state
+                                            .controllers_snapshot_json(controller_names)
+                                            .await
+                                            .unwrap_or_else(|_| {
+                                                serde_json::to_string(&DashboardSnapshot {
+                                                    controllers: Vec::new(),
+                                                })
+                                                .unwrap()
+                                            })
+                                    } else {
+                                        state.snapshot_json().await.unwrap_or_else(|_| {
+                                            serde_json::to_string(&DashboardSnapshot {
+                                                controllers: Vec::new(),
+                                            })
                                             .unwrap()
-                                    });
-                                return Some((
-                                    Ok::<Event, Infallible>(
-                                        Event::default().event("jobs").data(payload),
-                                    ),
-                                    rx,
-                                ));
-                            }
-                            Err(broadcast::error::RecvError::Closed) => {
-                                info!("jobs SSE stream closed");
-                                return None;
+                                        })
+                                    };
+                                    return Some((
+                                        Ok::<Event, Infallible>(
+                                            Event::default().event("state").data(payload),
+                                        ),
+                                        (rx, controller_filter),
+                                    ));
+                                }
+                                Err(broadcast::error::RecvError::Closed) => {
+                                    info!("SSE stream closed");
+                                    return None;
+                                }
                             }
                         }
                     }
-                }
-            });
+                },
+            );
+
+            let job_updates =
+                futures::stream::unfold((include_jobs, job_events.subscribe()), move |state| {
+                    let (include_jobs, mut rx) = state;
+                    let state = state_for_job_updates.clone();
+                    async move {
+                        if !include_jobs {
+                            return None;
+                        }
+                        loop {
+                            match rx.recv().await {
+                                Ok(payload) => {
+                                    return Some((
+                                        Ok::<Event, Infallible>(
+                                            Event::default().event("jobs").data(payload),
+                                        ),
+                                        (include_jobs, rx),
+                                    ));
+                                }
+                                Err(broadcast::error::RecvError::Lagged(_)) => {
+                                    warn!(
+                                        "SSE jobs client lagged behind; resending latest snapshot"
+                                    );
+                                    let payload =
+                                        state.jobs_snapshot_json().await.unwrap_or_else(|_| {
+                                            serde_json::to_string(&JobsSnapshot {
+                                                jobs: Vec::new(),
+                                            })
+                                            .unwrap()
+                                        });
+                                    return Some((
+                                        Ok::<Event, Infallible>(
+                                            Event::default().event("jobs").data(payload),
+                                        ),
+                                        (include_jobs, rx),
+                                    ));
+                                }
+                                Err(broadcast::error::RecvError::Closed) => {
+                                    info!("jobs SSE stream closed");
+                                    return None;
+                                }
+                            }
+                        }
+                    }
+                });
 
             let stream = initial_state
                 .chain(initial_jobs)
@@ -1841,38 +1919,17 @@ async fn handle_gps(_state: AppState) -> Result<warp::reply::Response, Infallibl
     ))
 }
 
-async fn handle_hv_pack(state: AppState) -> Result<warp::reply::Response, Infallible> {
+async fn handle_hv_pack(_state: AppState) -> Result<warp::reply::Response, Infallible> {
     debug!("serving HV pack page");
-    let initial_manifest_json = state.signal_manifest_json().unwrap_or_else(|_| {
-        serde_json::to_string(&SignalManifestResponse {
-            signals: Vec::new(),
-        })
-        .unwrap()
-    });
-    let initial_state_json = state.snapshot_json().await.unwrap_or_else(|_| {
-        serde_json::to_string(&DashboardSnapshot {
-            controllers: Vec::new(),
-        })
-        .unwrap()
-    });
     Ok(render_template_response(
-        views::render_hv_pack(&initial_manifest_json, &initial_state_json),
+        views::render_hv_pack(),
         warp::http::StatusCode::OK,
     ))
 }
 
-async fn handle_sicko_mode(state: AppState) -> Result<warp::reply::Response, Infallible> {
+fn handle_sicko_mode() -> warp::reply::Response {
     debug!("serving Sicko Mode page");
-    let initial_manifest_json = state.signal_manifest_json().unwrap_or_else(|_| {
-        serde_json::to_string(&SignalManifestResponse {
-            signals: Vec::new(),
-        })
-        .unwrap()
-    });
-    Ok(render_template_response(
-        views::render_sicko_mode(&initial_manifest_json),
-        warp::http::StatusCode::OK,
-    ))
+    render_template_response(views::render_sicko_mode(), warp::http::StatusCode::OK)
 }
 
 async fn handle_notes(_state: AppState) -> Result<warp::reply::Response, Infallible> {
@@ -5047,6 +5104,33 @@ fn json_create_note_response(body: CreateNoteResponse) -> warp::reply::Response 
         .into_response()
 }
 
+fn parse_controller_filter(value: Option<String>) -> Option<BTreeSet<String>> {
+    let controllers = value?
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect::<BTreeSet<_>>();
+    (!controllers.is_empty()).then_some(controllers)
+}
+
+fn filter_dashboard_snapshot_json(
+    payload: &str,
+    controller_names: Option<&BTreeSet<String>>,
+) -> String {
+    let Some(controller_names) = controller_names else {
+        return payload.to_string();
+    };
+
+    let Ok(mut snapshot) = serde_json::from_str::<DashboardSnapshot>(payload) else {
+        return payload.to_string();
+    };
+    snapshot
+        .controllers
+        .retain(|controller| controller_names.contains(&controller.name));
+    serde_json::to_string(&snapshot).unwrap_or_else(|_| payload.to_string())
+}
+
 async fn ota_agent_error_message(status: HttpStatusCode, response: reqwest::Response) -> String {
     match response.text().await {
         Ok(body) => match serde_json::from_str::<OtaAgentErrorReply>(&body) {
@@ -5072,7 +5156,7 @@ fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl 
         (state.signal_events.subscribe(), selected_ids),
         |(mut rx, selected_ids)| async move {
             loop {
-                let mut events = match rx.recv().await {
+                let events = match rx.recv().await {
                     Ok(batch) => filter_signal_sample_events(batch.as_ref(), &selected_ids),
                     Err(broadcast::error::RecvError::Lagged(skipped)) => {
                         warn!("signal SSE client lagged behind by {skipped} batch(es)");
@@ -5082,24 +5166,6 @@ fn signal_events_reply(state: AppState, selected_ids: BTreeSet<String>) -> impl 
                         return None;
                     }
                 };
-
-                loop {
-                    match rx.try_recv() {
-                        Ok(batch) => {
-                            events
-                                .extend(filter_signal_sample_events(batch.as_ref(), &selected_ids));
-                        }
-                        Err(broadcast::error::TryRecvError::Empty) => {
-                            break;
-                        }
-                        Err(broadcast::error::TryRecvError::Lagged(skipped)) => {
-                            warn!("signal SSE client lagged behind by {skipped} batch(es)");
-                        }
-                        Err(broadcast::error::TryRecvError::Closed) => {
-                            return None;
-                        }
-                    }
-                }
 
                 if events.is_empty() {
                     continue;
@@ -5464,8 +5530,6 @@ fn spawn_signal_broadcast_worker(
     bus: yamcan::Bus,
     signal_events: broadcast::Sender<Arc<SignalSampleBatch>>,
 ) {
-    let (tx, mut rx) = mpsc::channel::<SignalSampleEvent>(SIGNAL_EVENT_QUEUE_CAPACITY);
-    let signal_events_for_decode = signal_events.clone();
     thread::spawn(move || {
         info!("shared signal stream worker starting for iface='{iface}'");
         let iface_map = [(iface.as_str(), bus)];
@@ -5483,9 +5547,6 @@ fn spawn_signal_broadcast_worker(
                 return;
             }
         };
-        let mut dropped_frames = 0_u64;
-        let mut last_drop_warning = Instant::now();
-
         loop {
             let (frame, id) = match recv_veh_frame(&socket) {
                 Ok(frame) => frame,
@@ -5494,67 +5555,18 @@ fn spawn_signal_broadcast_worker(
                     return;
                 }
             };
-            if signal_events_for_decode.receiver_count() == 0 {
+            if signal_events.receiver_count() == 0 {
                 continue;
             }
             let Some(event) = decode_signal_frame(&binding, frame, id) else {
                 continue;
             };
-            match tx.try_send(event) {
-                Ok(()) => {}
-                Err(mpsc::error::TrySendError::Full(_)) => {
-                    dropped_frames = dropped_frames.saturating_add(1);
-                    if last_drop_warning.elapsed() >= Duration::from_secs(1) {
-                        warn!(
-                            "signal stream decode queue is full; dropped {dropped_frames} decoded frame(s)"
-                        );
-                        dropped_frames = 0;
-                        last_drop_warning = Instant::now();
-                    }
-                }
-                Err(mpsc::error::TrySendError::Closed(_)) => {
-                    return;
-                }
+            if signal_events.receiver_count() == 0 {
+                continue;
             }
-        }
-    });
-
-    tokio::spawn(async move {
-        let mut interval =
-            tokio::time::interval(Duration::from_millis(SIGNAL_SAMPLE_BATCH_INTERVAL_MS));
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        let mut pending: Vec<SignalSampleEvent> = Vec::new();
-        loop {
-            tokio::select! {
-                maybe_event = rx.recv() => {
-                    match maybe_event {
-                        Some(event) => pending.push(event),
-                        None => {
-                            if !pending.is_empty() && signal_events.receiver_count() > 0 {
-                                let _ = signal_events.send(Arc::new(SignalSampleBatch {
-                                    events: pending,
-                                }));
-                            }
-                            break;
-                        }
-                    }
-                }
-                _ = interval.tick() => {
-                    while let Ok(event) = rx.try_recv() {
-                        pending.push(event);
-                    }
-                    if pending.is_empty() {
-                        continue;
-                    }
-                    if signal_events.receiver_count() == 0 {
-                        pending.clear();
-                        continue;
-                    }
-                    let _ = signal_events.send(Arc::new(SignalSampleBatch {
-                        events: std::mem::take(&mut pending),
-                    }));
-                }
-            }
+            let _ = signal_events.send(Arc::new(SignalSampleBatch {
+                events: vec![event],
+            }));
         }
     });
 }
