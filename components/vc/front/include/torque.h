@@ -145,6 +145,7 @@ CAN_raceMode_E                torque_getRaceModeCAN(void);
 torque_launchControlState_E   torque_getLaunchControlState(void);
 CAN_launchControlState_E      torque_getLaunchControlStateCAN(void);
 bool                          torque_isLaunching(void);
+float32_t                     torque_getLaunchControl75mTime(void);
 torque_tractionControlState_E torque_getTractionControlState(void);
 CAN_tractionControlState_E    torque_getTractionControlStateCAN(void);
 bool                          tc_isParamEnabled(tc_paramState_E param);

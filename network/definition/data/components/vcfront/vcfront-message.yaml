@@ -168,6 +168,7 @@ messages:
     cycleTimeMs: 100
     signals:
       preloadTorqueDebug:
+      launchControl75mTime:
 
   tractionControlDebug2:
     description: Traction Control Debug 2

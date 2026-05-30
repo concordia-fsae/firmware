@@ -77,6 +77,7 @@
 #define set_torqueDriverInput(m, b, n, s)                  set(m, b, n, s, torque_getTorqueDriverInput())
 
 #define set_preloadTorqueDebug(m, b, n, s)                 set(m, b, n, s, torque_getPreloadTorque())
+#define set_launchControl75mTime(m, b, n, s)               set(m, b, n, s, torque_getLaunchControl75mTime())
 
 #define set_brakePressure(m, b, n, s)                      set(m, b, n, s, brakePressure_getBrakePressure())
 #define set_5vCriticalHsdState(m, b, n, s)                 set(m, b, n, s, drv_tps20xx_getStateCAN(DRV_TPS20XX_CHANNEL_5V_CRITICAL))
@@ -169,4 +170,3 @@
 #define set_brakeTempFLVoltage(m, b, n, s)                 set(m, b, n, s, brakeTemp_getVoltage(BRAKETEMP_LEFT))
 #define set_brakeTempFR(m, b, n, s)                        set(m, b, n, s, brakeTemp_getTemperature(BRAKETEMP_RIGHT))
 #define set_brakeTempFRVoltage(m, b, n, s)                 set(m, b, n, s, brakeTemp_getVoltage(BRAKETEMP_RIGHT))
-

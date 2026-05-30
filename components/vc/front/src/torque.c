@@ -54,6 +54,8 @@
 #define LC_THROTTLE_THRESHOLD            0.15
 #define LC_THROTTLE_DISABLE_HYST         0.05
 #define LC_THROTTLE_START_CUTOFF         0.10
+#define LC_75M_DISTANCE_KM               0.075f
+#define LC_75M_TIMEOUT_MS                5000U
 
 #define REGEN_BRAKE_START_THRESH         0.10f
 #define REGEN_BRAKE_STOP_THRESH          0.05f
@@ -113,6 +115,7 @@ static struct
     bool                          isRegenerating;
     drv_timer_S                   torque_change_timer;
     drv_timer_S                   launch_control_timer;
+    drv_timer_S                   launch_75m_timer;
     drv_timer_S                   preloadChangeTimer;
     drv_timer_S                   slip_change_timer;
     drv_timer_S                   paramTcSaveTimer;
@@ -121,6 +124,8 @@ static struct
     torque_launchControlState_E   launchControlState;
     torque_tractionControlState_E tractionControlState;
     float32_t                     acceleratorMaxLaunchValue;
+    float32_t                     launch75mStartOdometerKm;
+    float32_t                     launch75mTime;
 
     uint32_t                      lastTimeampMS;
     float32_t                     slipRear;
@@ -183,6 +188,64 @@ static CANRX_MESSAGE_health_E (*paramRequestStateCanSignal[PARAMSTATE_COUNT])(CA
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
+
+static void launch_control_75m_reset(void)
+{
+    torque_data.launch75mStartOdometerKm = 0.0f;
+    torque_data.launch75mTime            = 0.0f;
+    drv_timer_stop(&torque_data.launch_75m_timer);
+}
+
+static void launch_control_75m_start(void)
+{
+    torque_data.launch75mStartOdometerKm = app_vehicleSpeed_getOdometer();
+    torque_data.launch75mTime            = 0.0f;
+    drv_timer_start(&torque_data.launch_75m_timer, LC_75M_TIMEOUT_MS);
+}
+
+static void launch_control_75m_set_time(float32_t time_s)
+{
+    torque_data.launch75mTime = SATURATE(0.0f, time_s, 5.0f);
+}
+
+static void launch_control_75m_update(void)
+{
+    const app_vehicleState_state_E vehicle_state = app_vehicleState_getState();
+    const bool hv_active = (vehicle_state == VEHICLESTATE_ON_HV) ||
+                           (vehicle_state == VEHICLESTATE_TS_RUN);
+
+    if (!hv_active)
+    {
+        launch_control_75m_reset();
+        return;
+    }
+
+    const drv_timer_state_E timer_state = drv_timer_getState(&torque_data.launch_75m_timer);
+    if (timer_state == DRV_TIMER_STOPPED)
+    {
+        return;
+    }
+
+    const uint32_t elapsed_ms = drv_timer_getElapsedTimeMs(&torque_data.launch_75m_timer);
+    if (timer_state == DRV_TIMER_EXPIRED)
+    {
+        launch_control_75m_set_time(5.0f);
+        if (torque_data.launchControlState == LC_STATE_LAUNCH)
+        {
+            torque_data.launchControlState = LC_STATE_INACTIVE;
+        }
+        drv_timer_stop(&torque_data.launch_75m_timer);
+        return;
+    }
+
+    const float32_t elapsed_s   = ((float32_t)elapsed_ms) / 1000.0f;
+    const float32_t distance_km = app_vehicleSpeed_getOdometer() - torque_data.launch75mStartOdometerKm;
+    launch_control_75m_set_time(elapsed_s);
+    if (distance_km >= LC_75M_DISTANCE_KM)
+    {
+        drv_timer_stop(&torque_data.launch_75m_timer);
+    }
+}
 
 static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake_position)
 {
@@ -310,6 +373,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
                     )
                 {
                     torque_data.launchControlState = LC_STATE_HOLDING;
+                    launch_control_75m_reset();
                     drv_timer_stop(&torque_data.launch_control_timer);
                 }
                 else
@@ -377,6 +441,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             else if (brake_position < LC_BRAKE_THRESHOLD_LAUNCH)
             {
                 torque_data.launchControlState = LC_STATE_LAUNCH;
+                launch_control_75m_start();
             }
 
             torque_data.acceleratorMaxLaunchValue = accelerator_position;
@@ -423,6 +488,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
     }
 
     app_faultManager_setFaultState(FM_FAULT_VCFRONT_LAUNCHREJECTED, launchRejected);
+    launch_control_75m_update();
 }
 
 static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
@@ -899,6 +965,11 @@ bool torque_isLaunching(void)
     return launching;
 }
 
+float32_t torque_getLaunchControl75mTime(void)
+{
+    return torque_data.launch75mTime;
+}
+
 /**
  * @brief Translate launch control state to CAN
  * @return CAN state of the launch control state
@@ -1048,6 +1119,7 @@ static void torque_init(void)
 
     drv_timer_init(&torque_data.torque_change_timer);
     drv_timer_init(&torque_data.launch_control_timer);
+    drv_timer_init(&torque_data.launch_75m_timer);
     drv_timer_init(&torque_data.preloadChangeTimer);
     drv_timer_init(&torque_data.slip_change_timer);
     drv_timer_init(&torque_data.paramTcSaveTimer);
