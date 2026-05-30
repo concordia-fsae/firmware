@@ -9,17 +9,6 @@ signals:
         min: 0
         max: 100
 
-  targetBalancingVoltage:
-    unit: 'V'
-    description: Voltage to balance cells until
-    nativeRepresentation:
-      bitWidth: 16
-      resolution: 0.005
-      range:
-        min: 0
-        max: 5
-    continuous: true
-
   eepromAddress:
     description: Address for eeprom write
     discreteValues: pm100dxEepromAddress

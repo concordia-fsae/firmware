@@ -47,19 +47,49 @@ enum NodeExecutionState {
 }
 
 #[derive(Debug, Clone)]
-pub enum RoutineStartResponse {
+pub enum RoutineControlResponse {
     Positive {
+        action: RoutineControlAction,
+        response_type: u8,
         payload: Vec<u8>,
         text: Option<String>,
         raw: Vec<u8>,
     },
     Negative {
+        action: RoutineControlAction,
         nrc: u8,
         description: String,
         payload: Vec<u8>,
         text: Option<String>,
         raw: Vec<u8>,
     },
+}
+
+pub type RoutineStartResponse = RoutineControlResponse;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoutineControlAction {
+    Start,
+    Stop,
+    GetResult,
+}
+
+impl RoutineControlAction {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Start => "start",
+            Self::Stop => "stop",
+            Self::GetResult => "get result",
+        }
+    }
+
+    fn uds_type(self) -> RoutineControlType {
+        match self {
+            Self::Start => RoutineControlType::StartRoutine,
+            Self::Stop => RoutineControlType::StopRoutine,
+            Self::GetResult => RoutineControlType::RequestRoutineResult,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -214,8 +244,8 @@ impl DiagnosticSessionResponse {
     }
 }
 
-impl RoutineStartResponse {
-    fn from_raw(resp: Vec<u8>) -> Result<Self> {
+impl RoutineControlResponse {
+    fn from_raw(action: RoutineControlAction, routine_id: u16, resp: Vec<u8>) -> Result<Self> {
         if resp.is_empty() {
             return Err(anyhow!("Empty ECU response"));
         }
@@ -223,7 +253,7 @@ impl RoutineStartResponse {
         if resp[0] == 0x7F {
             if resp.len() < 3 {
                 return Err(anyhow!(
-                    "Malformed negative routine start response: {:02X?}",
+                    "Malformed negative routine control response: {:02X?}",
                     resp
                 ));
             }
@@ -235,6 +265,7 @@ impl RoutineStartResponse {
             };
 
             return Ok(Self::Negative {
+                action,
                 nrc: resp[2],
                 description: UdsErrorByte::from(resp[2]).desc().to_string(),
                 text: decode_routine_payload_text(&payload),
@@ -246,27 +277,42 @@ impl RoutineStartResponse {
         let expected_sid = u8::from(UdsCommand::RoutineControl) + 0x40;
         if resp[0] != expected_sid {
             return Err(anyhow!(
-                "Unexpected routine start response SID 0x{:02X}, expected 0x{:02X}",
+                "Unexpected routine control response SID 0x{:02X}, expected 0x{:02X}",
                 resp[0],
                 expected_sid
             ));
         }
 
-        if resp.len() < 4 {
+        if resp.len() < 2 {
             return Err(anyhow!(
-                "Malformed positive routine start response: {:02X?}",
+                "Malformed positive routine control response: {:02X?}",
                 resp
             ));
         }
 
-        let payload = resp[4..].to_vec();
+        let response_type = resp[1];
+        let payload_start = routine_payload_start(routine_id, &resp);
+        let payload = resp[payload_start..].to_vec();
 
         Ok(Self::Positive {
+            action,
+            response_type,
             text: decode_routine_payload_text(&payload),
             payload,
             raw: resp,
         })
     }
+}
+
+fn routine_payload_start(routine_id: u16, resp: &[u8]) -> usize {
+    if resp.len() >= 4 {
+        let echoed_id = u16::from_le_bytes([resp[2], resp[3]]);
+        if echoed_id == routine_id {
+            return 4;
+        }
+    }
+
+    2
 }
 
 fn decode_routine_payload_text(payload: &[u8]) -> Option<String> {
@@ -311,10 +357,11 @@ enum UdsWorkerCommand {
         session: DiagnosticSessionKind,
         resp: oneshot::Sender<Result<DiagnosticSessionResponse, String>>,
     },
-    RoutineStart {
+    RoutineControl {
+        action: RoutineControlAction,
         routine_id: u16,
         data: Option<Vec<u8>>,
-        resp: oneshot::Sender<Result<RoutineStartResponse, String>>,
+        resp: oneshot::Sender<Result<RoutineControlResponse, String>>,
     },
     ResetNode {
         reset_type: SupportedResetTypes,
@@ -437,12 +484,40 @@ impl UdsSession {
         self.client.enter_diagnostic_session(session).await
     }
 
+    pub async fn routine_control(
+        &mut self,
+        action: RoutineControlAction,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.client.routine_control(action, routine_id, data).await
+    }
+
     pub async fn routine_start(
         &mut self,
         routine_id: u16,
         data: Option<Vec<u8>>,
     ) -> Result<RoutineStartResponse> {
-        self.client.routine_start(routine_id, data).await
+        self.routine_control(RoutineControlAction::Start, routine_id, data)
+            .await
+    }
+
+    pub async fn routine_stop(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.routine_control(RoutineControlAction::Stop, routine_id, data)
+            .await
+    }
+
+    pub async fn routine_get_result(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.routine_control(RoutineControlAction::GetResult, routine_id, data)
+            .await
     }
 
     pub async fn file_download(&mut self, path: &PathBuf, address: u32) -> Result<()> {
@@ -597,13 +672,14 @@ impl UdsWorkerHandle {
                                 .map_err(|e| e.to_string()),
                         );
                     }
-                    UdsWorkerCommand::RoutineStart {
+                    UdsWorkerCommand::RoutineControl {
+                        action,
                         routine_id,
                         data,
                         resp,
                     } => {
                         let _ = resp.send(
-                            uds.routine_start(routine_id, data)
+                            uds.routine_control(action, routine_id, data)
                                 .await
                                 .map_err(|e| e.to_string()),
                         );
@@ -751,14 +827,16 @@ impl UdsWorkerHandle {
             .map_err(|e| anyhow!(e))
     }
 
-    pub async fn routine_start(
+    pub async fn routine_control(
         &self,
+        action: RoutineControlAction,
         routine_id: u16,
         data: Option<Vec<u8>>,
-    ) -> Result<RoutineStartResponse> {
+    ) -> Result<RoutineControlResponse> {
         let (tx, rx) = oneshot::channel();
         self.tx
-            .send(UdsWorkerCommand::RoutineStart {
+            .send(UdsWorkerCommand::RoutineControl {
+                action,
                 routine_id,
                 data,
                 resp: tx,
@@ -768,6 +846,33 @@ impl UdsWorkerHandle {
         rx.await
             .map_err(|_| anyhow!("UDS worker response channel closed"))?
             .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn routine_start(
+        &self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineStartResponse> {
+        self.routine_control(RoutineControlAction::Start, routine_id, data)
+            .await
+    }
+
+    pub async fn routine_stop(
+        &self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.routine_control(RoutineControlAction::Stop, routine_id, data)
+            .await
+    }
+
+    pub async fn routine_get_result(
+        &self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.routine_control(RoutineControlAction::GetResult, routine_id, data)
+            .await
     }
 
     pub async fn reset_node(&self, reset_type: SupportedResetTypes) -> Result<()> {
@@ -1219,16 +1324,14 @@ impl UdsClient {
         }
     }
 
-    /// Start the given routine
-    pub async fn routine_start(
+    /// Send a routine-control request for the given routine.
+    pub async fn routine_control(
         &mut self,
+        action: RoutineControlAction,
         routine_id: u16,
         data: Option<Vec<u8>>,
-    ) -> Result<RoutineStartResponse> {
-        let mut buf = vec![
-            UdsCommand::RoutineControl.into(),
-            RoutineControlType::StartRoutine.into(),
-        ];
+    ) -> Result<RoutineControlResponse> {
+        let mut buf = vec![UdsCommand::RoutineControl.into(), action.uds_type().into()];
 
         buf.extend_from_slice(&routine_id.to_le_bytes());
 
@@ -1236,18 +1339,53 @@ impl UdsClient {
             buf.extend(data)
         }
 
-        debug!("Starting routine 0x{:02x}: {:02x?}", routine_id, buf);
+        debug!(
+            "Sending routine {} request for 0x{:02x}: {:02x?}",
+            action.label(),
+            routine_id,
+            buf
+        );
 
         match CanioCmd::send_recv(&buf, self.uds_queue_tx.clone(), 50).await {
             Ok(resp) => {
-                debug!("Start routine response: {:02x?}", resp);
-                RoutineStartResponse::from_raw(resp)
+                debug!("Routine {} response: {:02x?}", action.label(), resp);
+                RoutineControlResponse::from_raw(action, routine_id, resp)
             }
             Err(e) => {
                 error!("When waiting for response from ECU: {}", e);
                 Err(e.into())
             }
         }
+    }
+
+    /// Start the given routine
+    pub async fn routine_start(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineStartResponse> {
+        self.routine_control(RoutineControlAction::Start, routine_id, data)
+            .await
+    }
+
+    /// Stop the given routine
+    pub async fn routine_stop(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.routine_control(RoutineControlAction::Stop, routine_id, data)
+            .await
+    }
+
+    /// Request parsed results from the ECU for the given routine
+    pub async fn routine_get_result(
+        &mut self,
+        routine_id: u16,
+        data: Option<Vec<u8>>,
+    ) -> Result<RoutineControlResponse> {
+        self.routine_control(RoutineControlAction::GetResult, routine_id, data)
+            .await
     }
 
     /// Request results from the ECU for the given routine

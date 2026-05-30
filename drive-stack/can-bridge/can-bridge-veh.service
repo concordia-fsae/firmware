@@ -4,7 +4,7 @@ After=ota-agent-drive-stack.service network.target
 PartOf=drive-stack.target
 
 [Service]
-ExecStart=/bin/cfr/can-bridge-veh can0 -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 1 --log-size 250000000 --log-to-influx --influx-url http://localhost:8086 --influx-token GvtrxIRjm2P_P8NWAQHTaRpOnX-oLqjqv_2BY2Kh1z2ts4oYBtbB2SSapIc5rv0o5hWnqkpwBKbaPX55dK7Lrw== --influx-org CFR --influx-bucket CarTelemetry --influx-batch-size 5000 --influx-batch-bytes 4194304
+ExecStart=/bin/cfr/can-bridge-veh can0 -q --tmp-dir /application/logs/can/tmp --log-dir /application/logs/can --log-mins 1 --log-size 250000000 --log-to-influx --influx-url http://localhost:8086 --influx-token 3fy247LOoo332BmnHgvd6o0LJ9fwsLHyuweJHbOlgQKh9vbDQ6xm2TPC7InPPin0Cs_O2t8n_BeJT9qalQFqQA== --influx-org CFR --influx-bucket CarTelemetry --influx-batch-size 5000 --influx-batch-bytes 4194304
 CPUSchedulingPolicy=fifo
 CPUSchedulingPriority=30
 Restart=always

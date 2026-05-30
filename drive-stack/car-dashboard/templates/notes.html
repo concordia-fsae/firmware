@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <style>
+    .notes-layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 440px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .notes-form {
+      display: grid;
+      gap: 14px;
+    }
+    .notes-inline {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .notes-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .note-textarea {
+      min-height: 180px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+    .notes-filter {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .notes-filter .filter-field {
+      flex: 1 1 240px;
+    }
+    .notes-list {
+      display: grid;
+      gap: 12px;
+    }
+    .note-entry {
+      display: grid;
+      gap: 10px;
+    }
+    .note-entry-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .note-subsystem {
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .note-text {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.45;
+    }
+    .notes-status {
+      min-height: 1.4em;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .notes-status.error {
+      color: var(--fault);
+      font-weight: 700;
+    }
+    .notes-empty {
+      display: grid;
+      place-items: center;
+      min-height: 180px;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    @media (max-width: 980px) {
+      .notes-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 700px) {
+      .notes-inline {
+        grid-template-columns: 1fr;
+      }
+      .notes-actions,
+      .notes-filter {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .notes-actions button,
+      .notes-filter button {
+        width: 100%;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <h2 class="page-title">Notes</h2>
+  </section>
+
+  <div class="notes-layout">
+    <section class="card">
+      <h3 class="section-title">Log note</h3>
+      <form id="note-form" class="notes-form">
+        <div>
+          <label class="field-label" for="note-subsystem">Subsystem</label>
+          <div class="notes-inline">
+            <select id="note-subsystem" name="subsystem"></select>
+            <input id="new-subsystem" class="search-input" type="text" maxlength="128" placeholder="New subsystem">
+            <button id="add-subsystem" type="button">Add</button>
+          </div>
+        </div>
+        <div>
+          <label class="field-label" for="note-text">Note</label>
+          <textarea id="note-text" class="note-textarea" name="text" maxlength="32768" required></textarea>
+        </div>
+        <div class="notes-actions">
+          <button id="submit-note" type="submit">Log note</button>
+          <span id="note-status" class="notes-status" role="status"></span>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <div class="card notes-filter">
+        <label class="filter-field">
+          <span class="field-label">Subsystem filter</span>
+          <select id="filter-subsystem"></select>
+        </label>
+        <button id="refresh-notes" type="button">Refresh</button>
+      </div>
+      <div id="notes-list" class="notes-list"></div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (() => {
+      const noteForm = document.getElementById("note-form");
+      const subsystemSelect = document.getElementById("note-subsystem");
+      const filterSelect = document.getElementById("filter-subsystem");
+      const newSubsystemInput = document.getElementById("new-subsystem");
+      const addSubsystemButton = document.getElementById("add-subsystem");
+      const noteText = document.getElementById("note-text");
+      const submitButton = document.getElementById("submit-note");
+      const refreshButton = document.getElementById("refresh-notes");
+      const statusNode = document.getElementById("note-status");
+      const notesList = document.getElementById("notes-list");
+
+      let subsystems = [];
+      let notes = [];
+      let notesSource = null;
+
+      function setStatus(message, isError = false) {
+        statusNode.textContent = message || "";
+        statusNode.classList.toggle("error", Boolean(isError));
+      }
+
+      function normalizeSubsystem(value) {
+        return value.trim();
+      }
+
+      function sortedUnique(values) {
+        return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      }
+
+      function addSubsystems(values) {
+        subsystems = sortedUnique(subsystems.concat(values || []));
+        renderSubsystemOptions();
+      }
+
+      function addSubsystemOption(value) {
+        const subsystem = normalizeSubsystem(value);
+        if (!subsystem) {
+          setStatus("Subsystem is required.", true);
+          return false;
+        }
+        if (subsystem.length > 128) {
+          setStatus("Subsystem is too long.", true);
+          return false;
+        }
+        addSubsystems([subsystem]);
+        subsystemSelect.value = subsystem;
+        newSubsystemInput.value = "";
+        setStatus("");
+        return true;
+      }
+
+      function renderSubsystemOptions() {
+        const selectedSubsystem = subsystemSelect.value;
+        const selectedFilter = filterSelect.value;
+        subsystemSelect.replaceChildren();
+        filterSelect.replaceChildren(new Option("All subsystems", ""));
+
+        for (const subsystem of subsystems) {
+          subsystemSelect.appendChild(new Option(subsystem, subsystem));
+          filterSelect.appendChild(new Option(subsystem, subsystem));
+        }
+
+        if (subsystems.includes(selectedSubsystem)) {
+          subsystemSelect.value = selectedSubsystem;
+        }
+        if (!subsystemSelect.value && subsystems.length) {
+          subsystemSelect.value = subsystems[0];
+        }
+        if (subsystems.includes(selectedFilter)) {
+          filterSelect.value = selectedFilter;
+        }
+      }
+
+      function formatTime(value) {
+        const time = Date.parse(value);
+        if (!Number.isFinite(time)) {
+          return value || "";
+        }
+        return new Intl.DateTimeFormat(undefined, {
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }).format(new Date(time));
+      }
+
+      function renderNotes() {
+        notesList.replaceChildren();
+        if (!notes.length) {
+          const empty = document.createElement("div");
+          empty.className = "notes-empty";
+          empty.textContent = "No notes found.";
+          notesList.appendChild(empty);
+          return;
+        }
+
+        for (const note of notes) {
+          const card = document.createElement("article");
+          card.className = "card note-entry";
+
+          const header = document.createElement("div");
+          header.className = "note-entry-header";
+
+          const subsystem = document.createElement("span");
+          subsystem.className = "note-subsystem";
+          subsystem.textContent = note.subsystem || "Unknown";
+
+          const time = document.createElement("span");
+          time.className = "meta";
+          time.textContent = formatTime(note.logged_at);
+
+          header.append(subsystem, time);
+
+          const text = document.createElement("p");
+          text.className = "note-text";
+          text.textContent = note.text || "";
+
+          card.append(header, text);
+          notesList.appendChild(card);
+        }
+      }
+
+      function noteKey(note) {
+        return `${note.logged_at_ms || ""}\n${note.subsystem || ""}\n${note.text || ""}`;
+      }
+
+      function noteMatchesFilter(note) {
+        return !filterSelect.value || filterSelect.value === note.subsystem;
+      }
+
+      function mergeIncomingNote(note) {
+        if (!note || !note.subsystem) {
+          return;
+        }
+        addSubsystems([note.subsystem]);
+        if (!noteMatchesFilter(note)) {
+          return;
+        }
+        const incomingKey = noteKey(note);
+        notes = [note].concat(notes.filter((existing) => noteKey(existing) !== incomingKey));
+        notes.sort((a, b) => Number(b.logged_at_ms || 0) - Number(a.logged_at_ms || 0));
+        notes = notes.slice(0, 50);
+        renderNotes();
+      }
+
+      async function readJson(response) {
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || `Request failed with HTTP ${response.status}`);
+        }
+        return payload;
+      }
+
+      async function loadNotes() {
+        const params = new URLSearchParams({ limit: "50" });
+        if (filterSelect.value) {
+          params.set("subsystem", filterSelect.value);
+        }
+        const response = await fetch(`/api/notes?${params.toString()}`, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        const payload = await readJson(response);
+        subsystems = sortedUnique(payload.subsystems || []);
+        notes = payload.notes || [];
+        renderSubsystemOptions();
+        renderNotes();
+        setStatus(payload.influx_configured ? "" : "Influx notes are not configured.", !payload.influx_configured);
+      }
+
+      function connectNotesEvents() {
+        if (!("EventSource" in window)) {
+          return;
+        }
+        notesSource = new EventSource("/notes-events");
+        notesSource.addEventListener("note", (event) => {
+          try {
+            const payload = JSON.parse(event.data || "{}");
+            addSubsystems(payload.subsystems || []);
+            mergeIncomingNote(payload.note);
+          } catch (error) {
+            console.error("failed to process note event", error);
+          }
+        });
+        notesSource.addEventListener("reload", () => {
+          loadNotes().catch((error) => {
+            setStatus(error.message, true);
+          });
+        });
+        notesSource.onerror = (event) => {
+          console.error("notes stream error", event);
+        };
+        window.addEventListener("pagehide", () => {
+          if (notesSource) {
+            notesSource.close();
+          }
+        });
+      }
+
+      addSubsystemButton.addEventListener("click", () => {
+        addSubsystemOption(newSubsystemInput.value);
+      });
+
+      newSubsystemInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addSubsystemOption(newSubsystemInput.value);
+        }
+      });
+
+      filterSelect.addEventListener("change", () => {
+        loadNotes().catch((error) => {
+          setStatus(error.message, true);
+        });
+      });
+
+      refreshButton.addEventListener("click", () => {
+        loadNotes().catch((error) => {
+          setStatus(error.message, true);
+        });
+      });
+
+      noteForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const subsystem = normalizeSubsystem(subsystemSelect.value || newSubsystemInput.value);
+        const text = noteText.value;
+        if (!subsystem) {
+          setStatus("Subsystem is required.", true);
+          return;
+        }
+        if (!text.trim()) {
+          setStatus("Note text is required.", true);
+          return;
+        }
+
+        submitButton.disabled = true;
+        setStatus("Logging...");
+        try {
+          const response = await fetch("/api/notes", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ subsystem, text }),
+          });
+          const payload = await readJson(response);
+          addSubsystems(payload.subsystems || [subsystem]);
+          noteText.value = "";
+          renderSubsystemOptions();
+          subsystemSelect.value = subsystem;
+          filterSelect.value = subsystem;
+          mergeIncomingNote(payload.note);
+          setStatus("Logged.");
+          await loadNotes();
+        } catch (error) {
+          setStatus(error.message, true);
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      renderSubsystemOptions();
+      renderNotes();
+      loadNotes().catch((error) => {
+        setStatus(error.message, true);
+      });
+      connectNotesEvents();
+    })();
+  </script>
+{% endblock %}

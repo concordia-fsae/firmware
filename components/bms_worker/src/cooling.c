@@ -8,11 +8,11 @@
  ******************************************************************************/
 
 /**< Module header */
+#include "BatteryMonitoring.h"
 #include "cooling.h"
 #include "drv_timer.h"
 #include "Module.h"
 #include "Yamcan.h"
-
 #define STARTUP_TIMER    10000
 
 static drv_timer_S               start_up;
@@ -128,7 +128,7 @@ static void cooling10Hz_PRD(void)
 {
     drv_timer_state_E boot_timer_state = drv_timer_getState(&start_up);
     uint8_t           percent_beans    = 0;
-    float32_t         override         = 0.0f;
+    float32_t         override         = BMS_areCellsBalancing() ? 0.3f : 0.0f;
 
     if (boot_timer_state == DRV_TIMER_RUNNING)
     {

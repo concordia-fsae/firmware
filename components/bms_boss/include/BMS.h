@@ -62,6 +62,7 @@ typedef struct
     bool             fault                    :1;
     bool             pack_voltage_sense_fault :1;
     bool             charging_paused          :1;
+    bool             balancing                :1;
     uint8_t          connected_segments;
     float32_t        charge_limit;    // [A] precision 1A
     float32_t        discharge_limit; // [A] precision 1A
@@ -119,8 +120,10 @@ NVM_SIZE_ASSERT(nvm_bmsbContactorData_S, 28U);
 bool      BMS_SFT_checkMCTimeout(void);
 bool      BMS_SFT_checkBrusaChargerTimeout(void);
 bool      BMS_SFT_checkElconChargerTimeout(void);
-void      BMS_stopCharging(void);
-void      BMS_continueCharging(void);
+bool      BMS_stopCharging(void);
+bool      BMS_startCharging(void);
+bool      BMS_startBalancing(void);
+bool      BMS_stopBalancing(void);
 float32_t BMSB_getContactorSohHvp(void);
 float32_t BMSB_getContactorSohHvn(void);
 float32_t BMSB_getContactorSohPrecharge(void);

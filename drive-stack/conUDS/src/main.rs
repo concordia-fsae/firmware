@@ -8,7 +8,7 @@ use simplelog::{CombinedLogger, TermLogger, WriteLogger};
 use conUDS::arguments::{ArgSubCommands, Arguments};
 use conUDS::config::Config;
 use conUDS::modules::uds::{
-    CurrentDiagnosticSession, DiagnosticSessionResponse, RoutineStartResponse, UdsWorkerHandle,
+    CurrentDiagnosticSession, DiagnosticSessionResponse, RoutineControlResponse, UdsWorkerHandle,
 };
 use conUDS::{FlashStatus, UpdateResult};
 
@@ -345,8 +345,81 @@ async fn main() {
                 routine.routine, routine_id, node
             );
             match uds.routine_start(routine_id, None).await {
-                Ok(resp) => println!("{}", fmt_routine_start_response(&resp)),
+                Ok(resp) => println!("{}", fmt_routine_control_response(&resp)),
                 Err(e) => error!("While starting routine '{}': {}", routine.routine, e),
+            }
+        }
+
+        ArgSubCommands::RoutineStop(routine) => {
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'routineStop'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let Some(routine_id) = routine_id_for_node(uds_node, &routine.routine) else {
+                let available = fmt_available_routines(uds_node);
+                error!(
+                    "Routine '{}' not defined for node '{}'. Available: {}",
+                    routine.routine, node, available
+                );
+                std::process::exit(1)
+            };
+
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            );
+            info!(
+                "Stopping routine '{}' (0x{:04X}) for node '{}'",
+                routine.routine, routine_id, node
+            );
+            match uds.routine_stop(routine_id, None).await {
+                Ok(resp) => println!("{}", fmt_routine_control_response(&resp)),
+                Err(e) => error!("While stopping routine '{}': {}", routine.routine, e),
+            }
+        }
+
+        ArgSubCommands::RoutineGetResult(routine) => {
+            let node = args.node.clone().unwrap_or_else(|| {
+                error!("-n <node> is required for 'routineGetResult'.");
+                std::process::exit(1)
+            });
+            let uds_node = cfg.nodes.get(&node).unwrap_or_else(|| {
+                error!("UDS node '{}' not defined", node);
+                std::process::exit(1)
+            });
+
+            let Some(routine_id) = routine_id_for_node(uds_node, &routine.routine) else {
+                let available = fmt_available_routines(uds_node);
+                error!(
+                    "Routine '{}' not defined for node '{}'. Available: {}",
+                    routine.routine, node, available
+                );
+                std::process::exit(1)
+            };
+
+            let uds = UdsWorkerHandle::new(
+                args.device.clone(),
+                uds_node.request_id,
+                uds_node.response_id,
+                true,
+            );
+            info!(
+                "Getting result for routine '{}' (0x{:04X}) for node '{}'",
+                routine.routine, routine_id, node
+            );
+            match uds.routine_get_result(routine_id, None).await {
+                Ok(resp) => println!("{}", fmt_routine_control_response(&resp)),
+                Err(e) => error!(
+                    "While getting result for routine '{}': {}",
+                    routine.routine, e
+                ),
             }
         }
 
@@ -489,17 +562,28 @@ fn average_duration(durations: &[Duration]) -> Duration {
     Duration::from_nanos(avg_nanos as u64)
 }
 
-fn fmt_routine_start_response(resp: &RoutineStartResponse) -> String {
+fn fmt_routine_control_response(resp: &RoutineControlResponse) -> String {
     match resp {
-        RoutineStartResponse::Positive { payload, text, .. } => {
+        RoutineControlResponse::Positive {
+            action,
+            payload,
+            text,
+            raw,
+            ..
+        } => {
             let text = text
                 .as_ref()
                 .map(|text| format!(" text=\"{text}\""))
                 .unwrap_or_default();
             let data = fmt_payload(payload);
-            format!("Routine start positive response:{text}{data}")
+            format!(
+                "Routine {} positive response: raw=[{}]{text}{data}",
+                action.label(),
+                fmt_hex(raw)
+            )
         }
-        RoutineStartResponse::Negative {
+        RoutineControlResponse::Negative {
+            action,
             nrc,
             description,
             payload,
@@ -511,7 +595,10 @@ fn fmt_routine_start_response(resp: &RoutineStartResponse) -> String {
                 .map(|text| format!(" text=\"{text}\""))
                 .unwrap_or_default();
             let data = fmt_payload(payload);
-            format!("Routine start negative response: NRC=0x{nrc:02X} ({description}){text}{data}")
+            format!(
+                "Routine {} negative response: NRC=0x{nrc:02X} ({description}){text}{data}",
+                action.label()
+            )
         }
     }
 }

@@ -25,4 +25,4 @@ messages:
     node: 7
 signals:
   TOOLING_commandedFansDutyCycle:
-  TOOLING_targetBalancingVoltage:
+  BMSB_targetBalancingVoltage:

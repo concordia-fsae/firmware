@@ -33,9 +33,6 @@ typedef enum
     BMS_WAITING,
     BMS_SAMPLING,
     BMS_DIAGNOSTIC,
-#if FEATURE_IS_ENABLED(FEATURE_CELL_BALANCING)
-    BMS_BALANCING,
-#endif // FEATURE_CELL_BALANCING
     BMS_ERROR,
 } BMS_State_E;
 
@@ -88,3 +85,4 @@ void               BMS_toSleep(void);
 void               BMS_wakeUp(void);
 MAX_selectedCell_E BMS_getCurrentOutputCell(void);
 void               BMS_measurementComplete(void);
+bool               BMS_areCellsBalancing(void);

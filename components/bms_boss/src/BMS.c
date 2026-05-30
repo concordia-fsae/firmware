@@ -45,6 +45,9 @@
 
 #define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE    0.1f
 
+#define BALANCING_DELTA_CUTOFF                         0.03f // [V]
+#define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f // [V]
+
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -57,8 +60,8 @@ batteryModel_S bm = {
         .Qnoise         = { { { 7e-8f,                   0.0f, 0.0f }, { 0.0f, 6e-5f, 0.0f }, { 0.0f, 0.0f, 6e-5f } } },
         .Pinit          = { { { 1e-4f,                   0.0f, 0.0f }, { 0.0f, 1e-4f, 0.0f }, { 0.0f, 0.0f, 1e-4f } } },
         .cellAH         = BMS_CELL_RATED_AMPHOURS,
-        .minCellVoltage =                    2.5f,
-        .maxCellVoltage =                    4.1f,
+        .minCellVoltage =                    2.4f, // TODO: Improve top end live cell voltage
+        .maxCellVoltage =                    4.2f, // TODO: Improve bottom end live cell voltage
         .socMap         = &SOC_OCV_FUNC,
         .docvMap        = &SOC_dOCV_FUNC,
         .RiMapDischarge = &SOC_Ri_DISCHARGE_FUNC,
@@ -338,14 +341,51 @@ bool BMS_SFT_checkElconChargerTimeout(void)
     return(CANRX_validate(PRIVBMS, ELCON_criticalData) != CANRX_MESSAGE_VALID);
 }
 
-void BMS_stopCharging(void)
+bool BMS_stopCharging(void)
 {
+    if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+    {
+        return false;
+    }
+
     BMS.charging_paused = true;
+    return true;
 }
 
-void BMS_continueCharging(void)
+bool BMS_startCharging(void)
 {
+    if (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+    {
+        return false;
+    }
+
     BMS.charging_paused = false;
+    return true;
+}
+
+bool BMS_startBalancing(void)
+{
+    if ((BMS.voltages.min < BALANCING_MIN_VOLTAGE_ALLOWED) ||
+        (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+        )
+    {
+        return false;
+    }
+
+    BMS.balancing = true;
+
+    return true;
+}
+
+bool BMS_stopBalancing(void)
+{
+    if (!BMS.balancing)
+    {
+        return false;
+    }
+
+    BMS.balancing = false;
+    return true;
 }
 
 static void BMS_init(void)
@@ -379,6 +419,11 @@ static void BMS10Hz_PRD(void)
     BMS.pack_voltage_calculated = tmp.pack_voltage_calculated;
     BMS.voltages                = tmp.voltages;
     BMS.max_temp                = tmp.max_temp;
+
+    if (BMS.balancing)
+    {
+        BMS.balancing = (BMS.voltages.max - BMS.voltages.min) > BALANCING_DELTA_CUTOFF;
+    }
 }
 
 static void BMS100Hz_PRD(void)
@@ -401,7 +446,12 @@ static void BMS100Hz_PRD(void)
     {
         chargeLimit(&BMS, &bm);
         dischargeLimit(&BMS, &bm);
-        BMS.soc = batteryModel_getSOC(&bm);;
+        BMS.soc = batteryModel_getSOC(&bm);
+
+        if (BMS.charging_paused)
+        {
+            BMS.charge_limit = 0.0f;
+        }
     }
     else
     {
@@ -413,6 +463,8 @@ static void BMS100Hz_PRD(void)
     {
         openAllContactors();
         drv_timer_stop(&precharge_timer);
+        BMS.balancing       = false;
+        BMS.charging_paused = false;
     }
     else
     {
