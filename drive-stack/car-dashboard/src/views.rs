@@ -132,6 +132,18 @@ pub fn render_gps() -> Result<String> {
         .context("rendering gps.html template")
 }
 
+pub fn render_hv_pack(initial_manifest_json: &str, initial_state_json: &str) -> Result<String> {
+    environment()?
+        .get_template("hv_pack.html")
+        .context("loading hv_pack.html template")?
+        .render(context! {
+            page_title => "HV Pack",
+            initial_manifest_json => initial_manifest_json,
+            initial_state_json => initial_state_json,
+        })
+        .context("rendering hv_pack.html template")
+}
+
 pub fn render_notes() -> Result<String> {
     environment()?
         .get_template("notes.html")
@@ -338,6 +350,12 @@ fn environment() -> Result<&'static Environment<'static>> {
         if let Err(error) = env
             .add_template("gps.html", include_str!("../templates/gps.html"))
             .context("adding gps.html template")
+        {
+            return Err(error.to_string());
+        }
+        if let Err(error) = env
+            .add_template("hv_pack.html", include_str!("../templates/hv_pack.html"))
+            .context("adding hv_pack.html template")
         {
             return Err(error.to_string());
         }

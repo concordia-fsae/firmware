@@ -1345,6 +1345,12 @@ pub async fn run(opts: Opts) -> Result<()> {
         .and(state_filter.clone())
         .and_then(handle_gps);
 
+    let hv_pack = warp::path("hv-pack")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(state_filter.clone())
+        .and_then(handle_hv_pack);
+
     let notes = warp::path("notes")
         .and(warp::path::end())
         .and(warp::get())
@@ -1653,6 +1659,7 @@ pub async fn run(opts: Opts) -> Result<()> {
     let routes = home
         .or(signals)
         .or(gps)
+        .or(hv_pack)
         .or(notes)
         .or(controller)
         .or(database)
@@ -1688,7 +1695,7 @@ pub async fn run(opts: Opts) -> Result<()> {
         .or(health);
     let addr = ([0, 0, 0, 0], opts.port);
     info!(
-        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/notes', '/database', '/controllers/:name', '/api/signals/manifest', '/api/notes', '/notes-events', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
+        "starting HTTP server on http://0.0.0.0:{} with routes '/', '/signals', '/gps', '/hv-pack', '/notes', '/database', '/controllers/:name', '/api/signals/manifest', '/api/notes', '/notes-events', '/api/maps/views', '/api/maps/debug', '/api/maps/views/:id', '/api/maps/views/plan', '/api/maps/views/commit', '/api/maps/tiles/:z/:x/:y', '/api/clock', '/assets/uPlot.iife.min.js', '/assets/uPlot.min.css', '/assets/signal-cache-worker.js', '/api/controllers/:name/current-session', '/api/controllers/:name/session', '/api/controllers/:name/routines/:routine/:action', '/api/controllers/:name/reset', '/api/controllers/:name/flash', '/api/controllers/:name/recover', '/api/controllers/:name/tester-present', '/api/controllers/:name/tester-present/request', '/api/controllers/:name/jobs', '/events', '/signal-events', '/healthz'",
         opts.port
     );
     let (_, server) = warp::serve(routes)
@@ -1817,6 +1824,26 @@ async fn handle_gps(_state: AppState) -> Result<warp::reply::Response, Infallibl
     debug!("serving GPS map page");
     Ok(render_template_response(
         views::render_gps(),
+        warp::http::StatusCode::OK,
+    ))
+}
+
+async fn handle_hv_pack(state: AppState) -> Result<warp::reply::Response, Infallible> {
+    debug!("serving HV pack page");
+    let initial_manifest_json = state.signal_manifest_json().unwrap_or_else(|_| {
+        serde_json::to_string(&SignalManifestResponse {
+            signals: Vec::new(),
+        })
+        .unwrap()
+    });
+    let initial_state_json = state.snapshot_json().await.unwrap_or_else(|_| {
+        serde_json::to_string(&DashboardSnapshot {
+            controllers: Vec::new(),
+        })
+        .unwrap()
+    });
+    Ok(render_template_response(
+        views::render_hv_pack(&initial_manifest_json, &initial_state_json),
         warp::http::StatusCode::OK,
     ))
 }

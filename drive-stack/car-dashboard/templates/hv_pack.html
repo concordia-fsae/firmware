@@ -1,0 +1,1202 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <style>
+    .pack-layout {
+      display: grid;
+      gap: 18px;
+    }
+
+    .pack-summary {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-rows: minmax(86px, auto) auto;
+      gap: 10px 18px;
+      align-items: stretch;
+    }
+
+    .soc-panel {
+      display: grid;
+      grid-column: 1 / span 3;
+      grid-row: 1 / span 2;
+      gap: 12px;
+      align-content: center;
+    }
+
+    .soc-value {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(2rem, 6vw, 4.2rem);
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .soc-bar {
+      position: relative;
+      height: 20px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(31, 42, 47, 0.08);
+    }
+
+    .soc-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2d7f5e, #67a86b);
+      transition: width 160ms ease;
+    }
+
+    .stat-card {
+      display: grid;
+      gap: 8px;
+      align-content: center;
+      grid-row: 1;
+      align-self: stretch;
+      min-height: 0;
+      padding: 8px 10px;
+      grid-column: auto;
+    }
+
+    .pack-summary .stat-card:nth-of-type(2) {
+      grid-column: 4;
+    }
+
+    .pack-summary .stat-card:nth-of-type(3) {
+      grid-column: 5;
+    }
+
+    .pack-summary .stat-card:nth-of-type(4) {
+      grid-column: 6;
+    }
+
+    .stat-card .stat-label {
+      font-size: 0.72rem;
+    }
+
+    .stat-card .stat-value {
+      font-size: clamp(1.05rem, 2vw, 1.45rem);
+      min-height: 0;
+    }
+
+    .charge-actions {
+      grid-column: 4 / span 3;
+      grid-row: 2;
+      display: grid;
+      grid-template-rows: minmax(42px, 1fr) auto;
+      gap: 6px;
+      align-content: stretch;
+      min-height: 64px;
+      padding: 10px;
+    }
+
+    .charge-action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      height: 100%;
+    }
+
+    .charge-action-button {
+      min-width: 0;
+      height: 100%;
+      min-height: 42px;
+      padding: 7px 8px;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .charge-action-button.stop {
+      background: var(--fault);
+    }
+
+    .charge-action-status {
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.25;
+    }
+
+    .charge-action-status:empty {
+      display: none;
+    }
+
+    .charge-action-status.error {
+      color: var(--fault);
+      font-weight: 700;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: clamp(1.25rem, 3vw, 2.05rem);
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .pack-panel-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: stretch;
+      grid-auto-rows: minmax(360px, auto);
+    }
+
+    .pack-panel-grid > .card {
+      height: 100%;
+      min-width: 0;
+    }
+
+    .chart-card {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .pack-chart {
+      display: block;
+      width: 100%;
+      height: 250px;
+      min-height: 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background:
+        linear-gradient(rgba(39, 76, 119, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(39, 76, 119, 0.08) 1px, transparent 1px),
+        rgba(255, 255, 255, 0.7);
+      background-size: 44px 44px;
+    }
+
+    .current-chart {
+      height: 250px;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .legend-dot.min { background: #2d7f5e; }
+    .legend-dot.max { background: #a63d40; }
+    .legend-dot.target { background: #7b5aa6; }
+
+    .pack-data-card {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      align-content: stretch;
+    }
+
+    .pack-data-card .table-wrap {
+      align-self: stretch;
+      display: grid;
+    }
+
+    .pack-data-card table {
+      height: 100%;
+    }
+
+    .pack-data-card th,
+    .pack-data-card td {
+      vertical-align: middle;
+    }
+
+    .fault-chip-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .fault-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(166, 61, 64, 0.12);
+      color: var(--fault);
+      font-weight: 800;
+      font-size: 0.82rem;
+    }
+
+    .segment-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .segment-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .segment-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(39, 76, 119, 0.1);
+    }
+
+    .segment-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .segment-title {
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--accent);
+      background: #fff;
+    }
+
+    .icon-button svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .segment-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mini-metric {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .mini-metric span {
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .mini-metric strong {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.95rem;
+      overflow-wrap: anywhere;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .cell-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+      gap: 8px;
+    }
+
+    .cell-readout {
+      display: grid;
+      gap: 3px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .cell-readout span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .cell-readout strong {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.92rem;
+    }
+
+    .chart-axis,
+    .chart-label {
+      fill: var(--muted);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .chart-title {
+      fill: var(--ink);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 1040px) {
+      .pack-summary,
+      .pack-panel-grid,
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .pack-summary {
+        grid-template-rows: auto;
+      }
+
+      .soc-panel,
+      .stat-card {
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      .charge-actions {
+        grid-column: auto;
+        grid-row: auto;
+      }
+
+      .charge-action-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .pack-summary .stat-card:nth-of-type(2),
+      .pack-summary .stat-card:nth-of-type(3),
+      .pack-summary .stat-card:nth-of-type(4) {
+        grid-column: auto;
+      }
+
+      .stat-card {
+        align-self: stretch;
+      }
+
+      .pack-panel-grid {
+        grid-auto-rows: auto;
+      }
+
+      .pack-panel-grid > .card {
+        min-height: 0;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <h2 class="page-title">HV Pack</h2>
+    <p class="page-copy">Live BMSB and segment data for pack health, charging limits, and cell balance.</p>
+  </section>
+
+  <section class="pack-layout">
+    <section class="pack-summary">
+      <article class="card soc-panel">
+        <div class="stat-label">State Of Charge</div>
+        <div id="soc-value" class="soc-value">--%</div>
+        <div class="soc-bar" aria-label="State of charge">
+          <div id="soc-fill" class="soc-fill"></div>
+        </div>
+      </article>
+      <article class="card stat-card">
+        <div class="stat-label">Max Cell Voltage</div>
+        <div id="pack-max-voltage" class="stat-value">--</div>
+      </article>
+      <article class="card stat-card">
+        <div class="stat-label">Min Cell Voltage</div>
+        <div id="pack-min-voltage" class="stat-value">--</div>
+      </article>
+      <article class="card stat-card">
+        <div class="stat-label">Max Cell Temp</div>
+        <div id="pack-max-temp" class="stat-value">--</div>
+      </article>
+      <article class="card charge-actions">
+        <div class="charge-action-grid">
+          <button class="charge-action-button" type="button" data-bmsb-routine="charging" data-bmsb-action="start">Start Charging</button>
+          <button class="charge-action-button stop" type="button" data-bmsb-routine="charging" data-bmsb-action="stop" hidden>Stop Charging</button>
+          <button class="charge-action-button" type="button" data-bmsb-routine="balancing" data-bmsb-action="start">Start Balancing</button>
+          <button class="charge-action-button stop" type="button" data-bmsb-routine="balancing" data-bmsb-action="stop" hidden>Stop Balancing</button>
+        </div>
+        <div id="charge-action-status" class="charge-action-status" role="status" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <section class="pack-panel-grid">
+      <article class="card chart-card">
+        <div class="plot-header">
+          <div>
+            <div class="plot-name">Pack Cell Voltage</div>
+            <div class="plot-meta">BMSB min, max, and balancing target</div>
+          </div>
+          <div id="target-voltage-pill" class="pill">Target --</div>
+        </div>
+        <svg id="pack-voltage-chart" class="pack-chart" viewBox="0 0 760 250" role="img" aria-label="Pack min, max, and balancing target voltage chart"></svg>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-dot min"></span>Min</span>
+          <span class="legend-item"><span class="legend-dot max"></span>Max</span>
+          <span class="legend-item"><span class="legend-dot target"></span>Target</span>
+        </div>
+      </article>
+
+      <article class="card chart-card">
+        <div class="plot-header">
+          <div>
+            <div class="plot-name">Segment Cell Voltage</div>
+            <div class="plot-meta">Every segment min and max</div>
+          </div>
+          <div id="connected-segments-pill" class="pill">Segments --</div>
+        </div>
+        <svg id="segment-voltage-chart" class="pack-chart" viewBox="0 0 760 250" role="img" aria-label="Segment min and max voltage chart"></svg>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-dot min"></span>Segment Min</span>
+          <span class="legend-item"><span class="legend-dot max"></span>Segment Max</span>
+        </div>
+      </article>
+
+      <article class="card pack-data-card">
+        <h3 class="section-title">Pack Data</h3>
+        <div class="table-wrap">
+          <table>
+            <tbody>
+              <tr>
+                <th>Charge Limit</th>
+                <td id="table-charge">--</td>
+              </tr>
+              <tr>
+                <th>Discharge Limit</th>
+                <td id="table-discharge">--</td>
+              </tr>
+              <tr>
+                <th>Pack Voltage</th>
+                <td id="table-pack-voltage">--</td>
+              </tr>
+              <tr>
+                <th>Isolation Resistance</th>
+                <td id="table-isolation">--</td>
+              </tr>
+              <tr>
+                <th>Active BMSB Faults</th>
+                <td id="table-faults">--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card chart-card">
+        <div class="plot-header">
+          <div>
+            <div class="plot-name">Pack Current</div>
+            <div class="plot-meta">Recent BMSB pack current</div>
+          </div>
+          <div id="pack-current-pill" class="pill">Current --</div>
+        </div>
+        <svg id="pack-current-chart" class="pack-chart current-chart" viewBox="0 0 760 250" role="img" aria-label="Pack current chart"></svg>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="plot-header">
+        <h3 class="section-title">Segments</h3>
+        <span class="meta" id="segment-updated">Waiting for data</span>
+      </div>
+      <div id="segment-grid" class="segment-grid"></div>
+    </section>
+
+    <section id="segment-detail" class="card">
+      <div class="plot-header">
+        <h3 id="detail-title" class="section-title">Segment 0 Detail</h3>
+        <span id="detail-status" class="meta">Waiting for data</span>
+      </div>
+      <div class="detail-grid">
+        <div>
+          <h4 class="section-title">Cell Voltages</h4>
+          <div id="cell-voltage-grid" class="cell-grid"></div>
+        </div>
+        <div>
+          <h4 class="section-title">Temperature Sensors</h4>
+          <div id="cell-temp-grid" class="cell-grid"></div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <script id="initial-manifest" type="application/json">{{ initial_manifest_json|safe }}</script>
+  <script id="initial-state" type="application/json">{{ initial_state_json|safe }}</script>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const initialManifest = JSON.parse(document.getElementById("initial-manifest").textContent);
+    const initialState = JSON.parse(document.getElementById("initial-state").textContent);
+    const SEGMENT_COUNT = 8;
+    const VOLTAGE_CELL_COUNT = 16;
+    const TEMP_SENSOR_COUNT = 20;
+    const HISTORY_LIMIT = 240;
+
+    const latest = new Map();
+    const packCurrentHistory = [];
+    const routineUiState = {
+      charging: null,
+      balancing: null,
+    };
+    let selectedSegment = 0;
+    let bmsbFaults = [];
+
+    const els = {
+      socValue: document.getElementById("soc-value"),
+      socFill: document.getElementById("soc-fill"),
+      packMaxVoltage: document.getElementById("pack-max-voltage"),
+      packMinVoltage: document.getElementById("pack-min-voltage"),
+      packMaxTemp: document.getElementById("pack-max-temp"),
+      targetVoltagePill: document.getElementById("target-voltage-pill"),
+      connectedSegmentsPill: document.getElementById("connected-segments-pill"),
+      packVoltageChart: document.getElementById("pack-voltage-chart"),
+      segmentVoltageChart: document.getElementById("segment-voltage-chart"),
+      packCurrentChart: document.getElementById("pack-current-chart"),
+      packCurrentPill: document.getElementById("pack-current-pill"),
+      tableCharge: document.getElementById("table-charge"),
+      tableDischarge: document.getElementById("table-discharge"),
+      tablePackVoltage: document.getElementById("table-pack-voltage"),
+      tableIsolation: document.getElementById("table-isolation"),
+      tableFaults: document.getElementById("table-faults"),
+      chargeActionStatus: document.getElementById("charge-action-status"),
+      segmentGrid: document.getElementById("segment-grid"),
+      segmentUpdated: document.getElementById("segment-updated"),
+      detailTitle: document.getElementById("detail-title"),
+      detailStatus: document.getElementById("detail-status"),
+      cellVoltageGrid: document.getElementById("cell-voltage-grid"),
+      cellTempGrid: document.getElementById("cell-temp-grid"),
+    };
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function routineDisplayName(routine, action) {
+      const verb = action === "stop" ? "Stop" : "Start";
+      const name = routine === "balancing" ? "Balance" : "Charge";
+      return `${verb} ${name}`;
+    }
+
+    function setChargeActionStatus(message, isError = false) {
+      els.chargeActionStatus.textContent = message;
+      els.chargeActionStatus.classList.toggle("error", isError);
+    }
+
+    async function submitBmsbRoutine(routine, action, button) {
+      const label = routineDisplayName(routine, action);
+      const buttons = Array.from(document.querySelectorAll("[data-bmsb-routine]"));
+      buttons.forEach((item) => {
+        item.disabled = true;
+      });
+      setChargeActionStatus("");
+      try {
+        const response = await fetch(
+          `/api/controllers/bmsb/routines/${encodeURIComponent(routine)}/${encodeURIComponent(action)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(),
+          },
+        );
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || `Routine request failed with HTTP ${response.status}`);
+        }
+        routineUiState[routine] = action === "start";
+        setChargeActionStatus("");
+        renderChargeActions();
+      } catch (error) {
+        setChargeActionStatus(`${label} failed: ${error.message}`, true);
+      } finally {
+        buttons.forEach((item) => {
+          item.disabled = false;
+        });
+        if (button) {
+          button.focus();
+        }
+      }
+    }
+
+    function normalizeUnit(unit) {
+      if (unit === "amps") return "A";
+      if (unit === "volts") return "V";
+      if (unit === "pct") return "%";
+      if (unit === "degC") return "degC";
+      if (unit === "kW") return "kW";
+      if (unit === "none") return "";
+      return unit || "";
+    }
+
+    function latestPoint(signalId) {
+      const entry = latest.get(signalId);
+      return entry || null;
+    }
+
+    function latestValue(signalId) {
+      const entry = latestPoint(signalId);
+      return entry && Number.isFinite(entry.value) ? entry.value : null;
+    }
+
+    function formatSignal(signalId, digits = 2, fallbackUnit = "") {
+      const entry = latestPoint(signalId);
+      if (!entry || !Number.isFinite(entry.value)) {
+        return "--";
+      }
+      const unit = normalizeUnit(entry.unit || fallbackUnit);
+      const value = entry.value.toFixed(digits);
+      return unit ? `${value} ${unit}` : value;
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function signalId(messageName, signalName) {
+      return `veh/${messageName}/${signalName}`;
+    }
+
+    function segmentPrefix(segment) {
+      return `bmsw${segment}`;
+    }
+
+    const bmsb = {
+      soc: signalId("BMSB_criticalData", "BMSB_packSOC"),
+      charge: signalId("BMSB_criticalData", "BMSB_packChargeLimit"),
+      discharge: signalId("BMSB_criticalData", "BMSB_packDischargeLimit"),
+      packCurrent: signalId("BMSB_criticalData", "BMSB_packCurrent"),
+      packVoltage: signalId("BMSB_criticalData", "BMSB_packVoltage"),
+      connectedSegments: signalId("BMSB_criticalData", "BMSB_connectedSegments"),
+      isolationResistance: signalId("BMSB_imdStatus", "BMSB_imdIsolationResistance"),
+      maxCellTemp: signalId("BMSB_packStats", "BMSB_maxCellTemp"),
+      maxCellVoltage: signalId("BMSB_packStats", "BMSB_maxCellVoltage"),
+      minCellVoltage: signalId("BMSB_packStats", "BMSB_minCellVoltage"),
+      targetVoltage: signalId("BMSB_balancingCommand", "BMSB_targetBalancingVoltage"),
+      tsmsChg: signalId("BMSB_ioStatus", "BMSB_tsmsChg"),
+    };
+
+    const manifestSignals = new Map((initialManifest.signals || []).map((signal) => [signal.id, signal]));
+    const baseSignalIds = new Set(Object.values(bmsb));
+    let directSignalSource = null;
+    let signalCacheSubscribed = false;
+
+    const segmentSignals = Array.from({ length: SEGMENT_COUNT }, (_, segment) => {
+      const prefix = segmentPrefix(segment);
+      const signals = {
+        tempMax: signalId(`${prefix}_criticalData`, `${prefix}_tempMax`),
+        voltageMax: signalId(`${prefix}_criticalData`, `${prefix}_voltageMax`),
+        voltageMin: signalId(`${prefix}_criticalData`, `${prefix}_voltageMin`),
+        segmentVoltage: signalId(`${prefix}_criticalData`, `${prefix}_segmentVoltage`),
+        cellVoltages: Array(VOLTAGE_CELL_COUNT).fill(null),
+        cellTemps: Array(TEMP_SENSOR_COUNT + 1).fill(null),
+      };
+
+      for (const entry of initialManifest.signals || []) {
+        if (entry.bus !== "veh" || !entry.signal_name.startsWith(prefix)) {
+          continue;
+        }
+        const voltageMatch = entry.signal_name.match(new RegExp(`^${prefix}_cellVoltage(\\d+)$`));
+        if (voltageMatch) {
+          const index = Number(voltageMatch[1]);
+          if (index >= 0 && index < VOLTAGE_CELL_COUNT) {
+            signals.cellVoltages[index] = entry.id;
+          }
+          continue;
+        }
+
+        const tempMatch = entry.signal_name.match(new RegExp(`^${prefix}_cellTemp(\\d+)$`));
+        if (tempMatch) {
+          const index = Number(tempMatch[1]);
+          if (index >= 1 && index <= TEMP_SENSOR_COUNT) {
+            signals.cellTemps[index] = entry.id;
+          }
+        }
+      }
+
+      baseSignalIds.add(signals.tempMax);
+      baseSignalIds.add(signals.voltageMax);
+      baseSignalIds.add(signals.voltageMin);
+      baseSignalIds.add(signals.segmentVoltage);
+      return signals;
+    });
+
+    for (const entry of initialManifest.signals || []) {
+      if (entry.bus === "veh" && entry.message_name === "BMSB_faults") {
+        baseSignalIds.add(entry.id);
+      }
+    }
+
+    function detailSignalIds(segment) {
+      const signals = segmentSignals[segment];
+      return [
+        ...signals.cellVoltages.filter(Boolean),
+        ...signals.cellTemps.filter(Boolean),
+      ];
+    }
+
+    function currentSubscriptionIds() {
+      return Array
+        .from(new Set([...baseSignalIds, ...detailSignalIds(selectedSegment)]))
+        .filter((id) => manifestSignals.has(id));
+    }
+
+    function renderSegmentCards() {
+      els.segmentGrid.innerHTML = segmentSignals.map((_signals, segment) => `
+        <article class="segment-card ${segment === selectedSegment ? "selected" : ""}" data-segment-card="${segment}">
+          <div class="segment-top">
+            <div class="segment-title">Segment ${segment}</div>
+            <button class="icon-button" type="button" title="View segment ${segment}" aria-label="View segment ${segment}" data-view-segment="${segment}">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+          <div class="segment-metrics">
+            <div class="mini-metric">
+              <span>Min</span>
+              <strong data-segment-min="${segment}">--</strong>
+            </div>
+            <div class="mini-metric">
+              <span>Max</span>
+              <strong data-segment-max="${segment}">--</strong>
+            </div>
+            <div class="mini-metric">
+              <span>Temp</span>
+              <strong data-segment-temp="${segment}">--</strong>
+            </div>
+          </div>
+        </article>
+      `).join("");
+
+      els.segmentGrid.querySelectorAll("[data-view-segment]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedSegment = Number(button.dataset.viewSegment);
+          updateSignalSubscription();
+          renderAll();
+          document.getElementById("segment-detail").scrollIntoView({ block: "nearest" });
+        });
+      });
+    }
+
+    function chartDomain(values, fallbackMin, fallbackMax, padding) {
+      const valid = values.filter(Number.isFinite);
+      if (!valid.length) {
+        return [fallbackMin, fallbackMax];
+      }
+      let min = Math.min(...valid);
+      let max = Math.max(...valid);
+      if (Math.abs(max - min) < 0.01) {
+        min -= 0.05;
+        max += 0.05;
+      }
+      return [Math.max(0, min - padding), Math.min(5, max + padding)];
+    }
+
+    function rangeDomain(values, fallbackMin, fallbackMax, minPadding) {
+      const valid = values.filter(Number.isFinite);
+      if (!valid.length) {
+        return [fallbackMin, fallbackMax];
+      }
+      let min = Math.min(...valid);
+      let max = Math.max(...valid);
+      if (Math.abs(max - min) < 0.01) {
+        min -= minPadding;
+        max += minPadding;
+      }
+      const padding = Math.max(minPadding, Math.abs(max - min) * 0.12);
+      return [min - padding, max + padding];
+    }
+
+    function renderPackVoltageChart() {
+      const min = latestValue(bmsb.minCellVoltage);
+      const max = latestValue(bmsb.maxCellVoltage);
+      const target = latestValue(bmsb.targetVoltage);
+      const [domainMin, domainMax] = chartDomain([min, max, target], 2.5, 4.5, 0.08);
+      const left = 72;
+      const right = 720;
+      const top = 34;
+      const bottom = 202;
+      const markerXs = {
+        min: left + (right - left) * 0.16,
+        max: left + (right - left) * 0.50,
+        target: left + (right - left) * 0.84,
+      };
+      const yFor = (value) => bottom - ((value - domainMin) / (domainMax - domainMin)) * (bottom - top);
+      const markers = [
+        { label: "Min", value: min, key: "min", className: "min", color: "#2d7f5e" },
+        { label: "Max", value: max, key: "max", className: "max", color: "#a63d40" },
+        { label: "Target", value: target, key: "target", className: "target", color: "#7b5aa6" },
+      ].filter((marker) => Number.isFinite(marker.value));
+      const rangeLine = Number.isFinite(min) && Number.isFinite(max)
+        ? `<line x1="${markerXs.min}" y1="${yFor(min)}" x2="${markerXs.max}" y2="${yFor(max)}" stroke="rgba(31,42,47,0.24)" stroke-width="3"></line>`
+        : "";
+
+      els.packVoltageChart.innerHTML = `
+        <text class="chart-axis" x="12" y="${top + 4}">${domainMax.toFixed(2)} V</text>
+        <text class="chart-axis" x="12" y="${bottom + 4}">${domainMin.toFixed(2)} V</text>
+        <line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="#8b949b" stroke-width="1.5"></line>
+        <line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="#8b949b" stroke-width="1.5"></line>
+        <line x1="${left}" y1="${yFor(domainMax)}" x2="${right}" y2="${yFor(domainMax)}" stroke="rgba(31,42,47,0.12)" stroke-width="1"></line>
+        <line x1="${left}" y1="${yFor(domainMin)}" x2="${right}" y2="${yFor(domainMin)}" stroke="rgba(31,42,47,0.12)" stroke-width="1"></line>
+        ${rangeLine}
+        ${markers.map((marker) => {
+          const x = markerXs[marker.key];
+          const y = yFor(marker.value);
+          return `
+            <line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="rgba(31,42,47,0.12)" stroke-width="1"></line>
+            <circle cx="${x}" cy="${y}" r="7" fill="${marker.color}"></circle>
+            <text class="chart-title" x="${x}" y="${Math.max(top + 12, y - 13)}" text-anchor="middle">${marker.label}</text>
+            <text class="chart-label" x="${x}" y="${Math.min(bottom - 8, y + 26)}" text-anchor="middle">${marker.value.toFixed(3)} V</text>
+            <text class="chart-axis" x="${x}" y="228" text-anchor="middle">${marker.label}</text>
+          `;
+        }).join("")}
+      `;
+    }
+
+    function renderPackCurrentChart() {
+      const history = packCurrentHistory.filter((point) => Number.isFinite(point.value));
+      els.packCurrentPill.textContent = `Current ${formatSignal(bmsb.packCurrent, 1, "A")}`;
+
+      const left = 64;
+      const right = 720;
+      const top = 34;
+      const bottom = 202;
+      const values = history.map((point) => point.value);
+      const [domainMin, domainMax] = rangeDomain([...values, 0], -10, 10, 1);
+      const minTime = history.length ? history[0].t : 0;
+      const maxTime = history.length ? history[history.length - 1].t : 0;
+      const xFor = (point) => {
+        if (history.length < 2 || maxTime === minTime) {
+          return (left + right) / 2;
+        }
+        return left + ((point.t - minTime) / (maxTime - minTime)) * (right - left);
+      };
+      const yFor = (value) => bottom - ((value - domainMin) / (domainMax - domainMin)) * (bottom - top);
+      const points = history.map((point) => `${xFor(point)},${yFor(point.value)}`).join(" ");
+      const zeroY = yFor(0);
+      const newest = history[history.length - 1];
+      const newestLabel = newest ? `${newest.value.toFixed(1)} A` : "--";
+
+      els.packCurrentChart.innerHTML = `
+        <text class="chart-axis" x="12" y="${top + 4}">${domainMax.toFixed(1)} A</text>
+        <text class="chart-axis" x="12" y="${bottom + 4}">${domainMin.toFixed(1)} A</text>
+        <line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="#8b949b" stroke-width="1.5"></line>
+        <line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="#8b949b" stroke-width="1.5"></line>
+        <line x1="${left}" y1="${zeroY}" x2="${right}" y2="${zeroY}" stroke="rgba(31,42,47,0.22)" stroke-width="1.5" stroke-dasharray="7 7"></line>
+        ${points ? `<polyline points="${points}" fill="none" stroke="#274c77" stroke-width="3"></polyline>` : ""}
+        ${history.map((point) => `<circle cx="${xFor(point)}" cy="${yFor(point.value)}" r="3.5" fill="#274c77"></circle>`).join("")}
+        <text class="chart-axis" x="${left}" y="228" text-anchor="middle">Oldest</text>
+        <text class="chart-axis" x="${right}" y="228" text-anchor="middle">Latest</text>
+        <text class="chart-title" x="${right}" y="${top + 4}" text-anchor="end">${newestLabel}</text>
+      `;
+    }
+
+    function renderSegmentVoltageChart() {
+      const maxValues = segmentSignals.map((signals) => latestValue(signals.voltageMax));
+      const minValues = segmentSignals.map((signals) => latestValue(signals.voltageMin));
+      const [domainMin, domainMax] = chartDomain([...maxValues, ...minValues], 2.5, 4.5, 0.08);
+      const left = 62;
+      const right = 720;
+      const top = 34;
+      const bottom = 202;
+      const xFor = (index) => left + (index / (SEGMENT_COUNT - 1)) * (right - left);
+      const yFor = (value) => bottom - ((value - domainMin) / (domainMax - domainMin)) * (bottom - top);
+      const point = (value, index) => Number.isFinite(value) ? `${xFor(index)},${yFor(value)}` : null;
+      const maxPoints = maxValues.map(point).filter(Boolean).join(" ");
+      const minPoints = minValues.map(point).filter(Boolean).join(" ");
+      const rows = Array.from({ length: SEGMENT_COUNT }, (_, index) => {
+        const x = xFor(index);
+        return `
+          <line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" stroke="rgba(31,42,47,0.12)" stroke-width="1"></line>
+          <text class="chart-axis" x="${x}" y="228" text-anchor="middle">${index}</text>
+        `;
+      }).join("");
+
+      els.segmentVoltageChart.innerHTML = `
+        <text class="chart-axis" x="12" y="${top + 4}">${domainMax.toFixed(2)} V</text>
+        <text class="chart-axis" x="12" y="${bottom + 4}">${domainMin.toFixed(2)} V</text>
+        <line x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" stroke="#8b949b" stroke-width="1.5"></line>
+        <line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" stroke="#8b949b" stroke-width="1.5"></line>
+        ${rows}
+        ${minPoints ? `<polyline points="${minPoints}" fill="none" stroke="#2d7f5e" stroke-width="3"></polyline>` : ""}
+        ${maxPoints ? `<polyline points="${maxPoints}" fill="none" stroke="#a63d40" stroke-width="3"></polyline>` : ""}
+        ${minValues.map((value, index) => Number.isFinite(value) ? `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="5" fill="#2d7f5e"></circle>` : "").join("")}
+        ${maxValues.map((value, index) => Number.isFinite(value) ? `<circle cx="${xFor(index)}" cy="${yFor(value)}" r="5" fill="#a63d40"></circle>` : "").join("")}
+      `;
+    }
+
+    function renderFaults() {
+      if (!bmsbFaults.length) {
+        els.tableFaults.innerHTML = `<span class="meta">No active faults</span>`;
+        return;
+      }
+
+      els.tableFaults.innerHTML = `
+        <div class="fault-chip-list">
+          ${bmsbFaults.map((fault) => `
+            <span class="fault-chip" title="${escapeHtml(fault.source_message || "")}">
+              ${escapeHtml(fault.signal_name || "fault")}
+            </span>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function updateFromDashboardState(state) {
+      const controller = (state.controllers || []).find((item) => item.name === "bmsb");
+      bmsbFaults = controller ? (controller.faults || []) : [];
+      renderFaults();
+    }
+
+    function renderSegmentDetails() {
+      const signals = segmentSignals[selectedSegment];
+      els.detailTitle.textContent = `Segment ${selectedSegment} Detail`;
+      els.detailStatus.textContent = `Max ${formatSignal(signals.voltageMax, 3, "V")} - Min ${formatSignal(signals.voltageMin, 3, "V")}`;
+      els.cellVoltageGrid.innerHTML = signals.cellVoltages.map((id, index) => `
+        <div class="cell-readout">
+          <span>Cell ${index}</span>
+          <strong>${id ? formatSignal(id, 3, "V") : "--"}</strong>
+        </div>
+      `).join("");
+      els.cellTempGrid.innerHTML = signals.cellTemps.slice(1).map((id, offset) => {
+        const index = offset + 1;
+        return `
+          <div class="cell-readout">
+            <span>Temp ${index}</span>
+            <strong>${id ? formatSignal(id, 1, "degC") : "--"}</strong>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderSegments() {
+      for (let segment = 0; segment < SEGMENT_COUNT; segment += 1) {
+        const signals = segmentSignals[segment];
+        const card = els.segmentGrid.querySelector(`[data-segment-card="${segment}"]`);
+        if (card) {
+          card.classList.toggle("selected", segment === selectedSegment);
+        }
+        const minNode = els.segmentGrid.querySelector(`[data-segment-min="${segment}"]`);
+        const maxNode = els.segmentGrid.querySelector(`[data-segment-max="${segment}"]`);
+        const tempNode = els.segmentGrid.querySelector(`[data-segment-temp="${segment}"]`);
+        if (minNode) minNode.textContent = formatSignal(signals.voltageMin, 3, "V");
+        if (maxNode) maxNode.textContent = formatSignal(signals.voltageMax, 3, "V");
+        if (tempNode) tempNode.textContent = formatSignal(signals.tempMax, 0, "degC");
+      }
+    }
+
+    function isChargingActive() {
+      const tsmsChg = latestPoint(bmsb.tsmsChg);
+      if (tsmsChg && tsmsChg.label) {
+        if (tsmsChg.label.toUpperCase() !== "ON") {
+          return false;
+        }
+      } else if (tsmsChg && Number.isFinite(tsmsChg.value) && tsmsChg.value !== 2) {
+        return false;
+      }
+
+      const chargeLimit = latestValue(bmsb.charge);
+      if (Number.isFinite(chargeLimit)) {
+        return chargeLimit > 0.05;
+      }
+      return routineUiState.charging === true;
+    }
+
+    function isBalancingActive() {
+      const targetVoltage = latestValue(bmsb.targetVoltage);
+      if (Number.isFinite(targetVoltage)) {
+        return targetVoltage < 4.49;
+      }
+      return routineUiState.balancing === true;
+    }
+
+    function renderChargeActions() {
+      const chargingActive = isChargingActive();
+      const balancingActive = isBalancingActive();
+      document.querySelectorAll("[data-bmsb-routine]").forEach((button) => {
+        const routine = button.dataset.bmsbRoutine;
+        const action = button.dataset.bmsbAction;
+        const active = routine === "charging" ? chargingActive : balancingActive;
+        button.hidden = active ? action !== "stop" : action !== "start";
+      });
+    }
+
+    function renderSummary() {
+      const soc = latestValue(bmsb.soc);
+      if (Number.isFinite(soc)) {
+        els.socValue.textContent = `${soc.toFixed(1)}%`;
+        els.socFill.style.width = `${clamp(soc, 0, 100)}%`;
+      } else {
+        els.socValue.textContent = "--%";
+        els.socFill.style.width = "0%";
+      }
+
+      els.packMaxVoltage.textContent = formatSignal(bmsb.maxCellVoltage, 3, "V");
+      els.packMinVoltage.textContent = formatSignal(bmsb.minCellVoltage, 3, "V");
+      els.packMaxTemp.textContent = formatSignal(bmsb.maxCellTemp, 0, "degC");
+      els.tableCharge.textContent = formatSignal(bmsb.charge, 0, "A");
+      els.tableDischarge.textContent = formatSignal(bmsb.discharge, 0, "A");
+      els.tablePackVoltage.textContent = formatSignal(bmsb.packVoltage, 1, "V");
+      els.tableIsolation.textContent = formatSignal(bmsb.isolationResistance, 0, "kOhm");
+      els.targetVoltagePill.textContent = `Target ${formatSignal(bmsb.targetVoltage, 3, "V")}`;
+      els.packCurrentPill.textContent = `Current ${formatSignal(bmsb.packCurrent, 1, "A")}`;
+      els.connectedSegmentsPill.textContent = `Segments ${formatSignal(bmsb.connectedSegments, 0, "")}`;
+      renderChargeActions();
+    }
+
+    function renderAll() {
+      renderSummary();
+      renderSegments();
+      renderSegmentDetails();
+      renderPackVoltageChart();
+      renderSegmentVoltageChart();
+      renderPackCurrentChart();
+      const latestTimestamp = Array.from(latest.values()).reduce((max, entry) => Math.max(max, entry.t || 0), 0);
+      els.segmentUpdated.textContent = latestTimestamp ? `Updated ${new Date(latestTimestamp).toLocaleTimeString()}` : "Waiting for data";
+    }
+
+    function rememberPackCurrentPoint(timestamp, value) {
+      if (!Number.isFinite(value)) {
+        return;
+      }
+      const t = Number.isFinite(timestamp) ? timestamp : Date.now();
+      const existing = packCurrentHistory.find((point) => point.t === t);
+      if (existing) {
+        existing.value = value;
+      } else {
+        packCurrentHistory.push({ t, value });
+      }
+      packCurrentHistory.sort((a, b) => a.t - b.t);
+      if (packCurrentHistory.length > HISTORY_LIMIT) {
+        packCurrentHistory.splice(0, packCurrentHistory.length - HISTORY_LIMIT);
+      }
+    }
+
+    function ingestSample(signalEvent, sample) {
+      const value = Number(sample.value);
+      const timestamp = signalEvent.timestamp_ms;
+      latest.set(sample.signal_id, {
+        value,
+        label: sample.label || null,
+        unit: sample.unit || (manifestSignals.get(sample.signal_id) || {}).unit || "",
+        t: timestamp,
+      });
+      if (sample.signal_id === bmsb.packCurrent) {
+        rememberPackCurrentPoint(timestamp, value);
+      }
+    }
+
+    function ingestBatch(batch) {
+      for (const signalEvent of batch.events || []) {
+        for (const sample of signalEvent.samples || []) {
+          ingestSample(signalEvent, sample);
+        }
+      }
+      renderAll();
+    }
+
+    function ingestSnapshot(snapshot) {
+      const now = Date.now();
+      for (const signal of snapshot.signals || []) {
+        const points = signal.points || [];
+        const point = points[points.length - 1];
+        if (!point) {
+          continue;
+        }
+        if (signal.signalId === bmsb.packCurrent) {
+          for (const historyPoint of points) {
+            rememberPackCurrentPoint(historyPoint.t || now, Number(historyPoint.v));
+          }
+        }
+        latest.set(signal.signalId, {
+          value: Number(point.v),
+          label: point.label || null,
+          unit: (manifestSignals.get(signal.signalId) || {}).unit || "",
+          t: point.t || now,
+        });
+      }
+      renderAll();
+    }
+
+    function updateSignalSubscription() {
+      const signalIds = currentSubscriptionIds();
+      if (window.dashboardSignalCache && window.dashboardSignalCache.isAvailable()) {
+        if (!signalCacheSubscribed) {
+          window.dashboardSignalCache.subscribe((message) => {
+            if (message.type === "signal-batch") {
+              ingestBatch(message.payload || { events: [] });
+            }
+          });
+          signalCacheSubscribed = true;
+        }
+        window.dashboardSignalCache.setSubscription(signalIds, false);
+        window.dashboardSignalCache.getSnapshot(signalIds).then(ingestSnapshot);
+        return;
+      }
+
+      if (directSignalSource) {
+        directSignalSource.close();
+      }
+      directSignalSource = new EventSource(`/signal-events?signals=${encodeURIComponent(signalIds.join(","))}`);
+      directSignalSource.addEventListener("signal-sample", (event) => {
+        ingestBatch(JSON.parse(event.data));
+      });
+    }
+
+    renderSegmentCards();
+    updateFromDashboardState(initialState);
+    renderAll();
+
+    updateSignalSubscription();
+
+    const stateSource = new EventSource("/events");
+    stateSource.addEventListener("state", (event) => {
+      updateFromDashboardState(JSON.parse(event.data));
+    });
+
+    document.querySelectorAll("[data-bmsb-routine]").forEach((button) => {
+      button.addEventListener("click", () => {
+        submitBmsbRoutine(button.dataset.bmsbRoutine, button.dataset.bmsbAction, button);
+      });
+    });
+  </script>
+{% endblock %}
