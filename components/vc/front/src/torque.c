@@ -209,8 +209,8 @@ static void launch_control_75m_set_time(float32_t time_s)
 static void launch_control_75m_update(void)
 {
     const app_vehicleState_state_E vehicle_state = app_vehicleState_getState();
-    const bool hv_active = (vehicle_state == VEHICLESTATE_ON_HV) ||
-                           (vehicle_state == VEHICLESTATE_TS_RUN);
+    const bool                     hv_active     = (vehicle_state == VEHICLESTATE_ON_HV) ||
+                                                   (vehicle_state == VEHICLESTATE_TS_RUN);
 
     if (!hv_active)
     {
@@ -398,7 +398,7 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             else if (accelerator_position > LC_THROTTLE_THRESHOLD)
             {
                 drv_timer_start(&torque_data.launch_control_timer, LC_SETTLING_MS);
-                torque_data.launchControlState        = LC_STATE_SETTLING;
+                torque_data.launchControlState = LC_STATE_SETTLING;
             }
             break;
 

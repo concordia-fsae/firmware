@@ -19,7 +19,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TC_MAX                        0.7f  // Handle heavy slip conditions
+#define TC_MAX                        0.7f // Handle heavy slip conditions
 #define TC_ILIM                       0.0f // Allow heavy integral limits in sustained slip with leak
 #define TC_KP                         (0.591f)
 #define TC_KI                         (0.0f)
