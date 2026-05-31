@@ -52,7 +52,6 @@
 #define LC_BRAKE_THRESHOLD               0.30
 #define LC_BRAKE_THRESHOLD_LAUNCH        0.05
 #define LC_THROTTLE_THRESHOLD            0.15
-#define LC_THROTTLE_DISABLE_HYST         0.05
 #define LC_THROTTLE_START_CUTOFF         0.10
 #define LC_75M_DISTANCE_KM               0.075f
 #define LC_75M_TIMEOUT_MS                5000U
@@ -123,7 +122,6 @@ static struct
 
     torque_launchControlState_E   launchControlState;
     torque_tractionControlState_E tractionControlState;
-    float32_t                     acceleratorMaxLaunchValue;
     float32_t                     launch75mStartOdometerKm;
     float32_t                     launch75mTime;
 
@@ -401,7 +399,6 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
             {
                 drv_timer_start(&torque_data.launch_control_timer, LC_SETTLING_MS);
                 torque_data.launchControlState        = LC_STATE_SETTLING;
-                torque_data.acceleratorMaxLaunchValue = 0.0f;
             }
             break;
 
@@ -443,8 +440,6 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
                 torque_data.launchControlState = LC_STATE_LAUNCH;
                 launch_control_75m_start();
             }
-
-            torque_data.acceleratorMaxLaunchValue = accelerator_position;
             break;
 
         case LC_STATE_LAUNCH:
@@ -454,15 +449,11 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
                 torque_data.launchControlState = LC_STATE_REJECTED;
                 drv_timer_start(&torque_data.launch_control_timer, LC_REJECTED_MS);
             }
-            else if ((accelerator_position < torque_data.acceleratorMaxLaunchValue - LC_THROTTLE_DISABLE_HYST) ||
+            else if ((accelerator_position < LC_THROTTLE_START_CUTOFF) ||
                      (brake_position > LC_BRAKE_THRESHOLD)
                      )
             {
                 torque_data.launchControlState = LC_STATE_INACTIVE;
-            }
-            else if (accelerator_position > torque_data.acceleratorMaxLaunchValue)
-            {
-                torque_data.acceleratorMaxLaunchValue = accelerator_position;
             }
             break;
 
