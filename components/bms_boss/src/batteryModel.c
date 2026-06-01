@@ -17,6 +17,12 @@
 #include "lib_interpolation.h"
 
 /******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define  RI_SAFETY_FACTOR    1.0f;
+
+/******************************************************************************
  *                             T Y P E D E F S
  ******************************************************************************/
 
@@ -124,8 +130,8 @@ static void current_limit(batteryModel_S* batteryModel, float32_t minCellVoltage
     float32_t RiDischarge = (lib_interpolation_interpolate(batteryModel->config.RiMapDischarge, batteryModel_getSOC(batteryModel) * 100));
     float32_t RiCharge    = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, batteryModel_getSOC(batteryModel) * 100));
 
-    RiDischarge                  = RiDischarge * 1.0f; // safety factor find maximum deviation from average in cell testing
-    RiCharge                     = RiCharge * 1.0f;    // safety factor find maximum deviation from average in cell testing
+    RiDischarge                  = RiDischarge * RI_SAFETY_FACTOR;
+    RiCharge                     = RiCharge * RI_SAFETY_FACTOR;
 
     batteryModel->dischargeLimit = (batteryModel->config.minCellVoltage - minCellVoltage) / RiDischarge + cellCurrent;
     batteryModel->chargeLimit    = (batteryModel->config.maxCellVoltage - maxCellVoltage) / RiCharge + cellCurrent;
