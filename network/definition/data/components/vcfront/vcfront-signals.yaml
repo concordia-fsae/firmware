@@ -346,6 +346,17 @@ signals:
     description: State of the launch control system
     discreteValues: launchControlState
 
+  launchControl75mTime:
+    description: Time from launch start to 75 meters
+    unit: s
+    nativeRepresentation:
+      bitWidth: 10
+      range:
+        min: 0
+        max: 5
+      resolution: 0.005
+    continuous: true
+
   tractionControlState:
     description: State of the traction control system
     discreteValues: tractionControlState
@@ -519,4 +530,3 @@ signals:
   brakeTempFRVoltage:
     description: Voltage of FR brake temp sensors
     template: voltsPrecise
-

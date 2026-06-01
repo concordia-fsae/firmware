@@ -19,17 +19,11 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TC_MAX                        0.7f  // Handle heavy slip conditions
-#define TC_ILIM                       0.55f // Allow heavy integral limits in sustained slip with leak
-// Cutoff: TC_MAX. Point of full cutoff: 50% slip error
-// 70% aggressivity (vibes)
-#define TC_KP                         ((TC_MAX / 0.5f) * 0.7f)
-// Ki = Kp / tIntegrator
-// Ki = TC_KP / 0.250
-#define TC_KI                         (4 * TC_KP)
-// Kd = Kp * tDerivative
-// Kd = TC_KP * 0.100
-#define TC_KD                         (0.1f * TC_KP)
+#define TC_MAX                        0.7f // Handle heavy slip conditions
+#define TC_ILIM                       0.0f // Allow heavy integral limits in sustained slip with leak
+#define TC_KP                         (0.591f)
+#define TC_KI                         (0.0f)
+#define TC_KD                         (0.70f)
 #define TC_DTERM_LPF_CUTOFF_FREQ      100
 #define TC_ILEAK_MS                   500U
 
@@ -145,6 +139,7 @@ CAN_raceMode_E                torque_getRaceModeCAN(void);
 torque_launchControlState_E   torque_getLaunchControlState(void);
 CAN_launchControlState_E      torque_getLaunchControlStateCAN(void);
 bool                          torque_isLaunching(void);
+float32_t                     torque_getLaunchControl75mTime(void);
 torque_tractionControlState_E torque_getTractionControlState(void);
 CAN_tractionControlState_E    torque_getTractionControlStateCAN(void);
 bool                          tc_isParamEnabled(tc_paramState_E param);

@@ -12,6 +12,7 @@
 #include "app_faultManager.h"
 #include "apps.h"
 #include "drv_pedalMonitor.h"
+#include "drv_timer.h"
 #include "lib_utility.h"
 #include "Module.h"
 #include "ModuleDesc.h"
@@ -22,10 +23,12 @@
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(FEATURE_WIGGLY_PEDAL)
-# define PEDAL_TOLERANCE    0.20f
+# define PEDAL_TOLERANCE                0.20f
 #else
-# define PEDAL_TOLERANCE    0.10f
+# define PEDAL_TOLERANCE                0.10f
 #endif
+
+#define APPS_DISAGREEMENT_TIMEOUT_MS    30
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -35,6 +38,7 @@ static struct
 {
     float32_t    pedal_position; // [%] 0.0f - 1.0f | 0.0f = 0% ad 1.0f = 100%
     apps_state_E state;
+    drv_timer_S  appsFaultTimer;
 #if FEATURE_IS_ENABLED(FEATURE_BYPASSABLE_APPS)
     bool         isBypassed;
     bool         bypassRequested;
@@ -83,6 +87,7 @@ CAN_appsState_E apps_getStateCAN(void)
 static void apps_init(void)
 {
     memset(&apps_data, 0x00U, sizeof(apps_data));
+    drv_timer_initWithRuntime(&apps_data.appsFaultTimer, APPS_DISAGREEMENT_TIMEOUT_MS);
 }
 
 static void apps_periodic_100Hz(void)
@@ -109,8 +114,10 @@ static void apps_periodic_100Hz(void)
         const float32_t apps1           = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS1);
         const float32_t apps2           = drv_pedalMonitor_getPedalPosition(DRV_PEDALMONITOR_APPS2);
         const float32_t apps_difference = apps1 - apps2;
+        const bool      disagreement    = (apps_difference > PEDAL_TOLERANCE) || (apps_difference < -PEDAL_TOLERANCE);
+        const bool      faulted         = drv_timer_run(&apps_data.appsFaultTimer, disagreement) == DRV_TIMER_EXPIRED;
 
-        if ((apps_difference > PEDAL_TOLERANCE) || (apps_difference < -PEDAL_TOLERANCE))
+        if (faulted)
         {
             state = APPS_DISAGREEMENT;
         }
