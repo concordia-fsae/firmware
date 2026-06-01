@@ -298,7 +298,7 @@
 
     .segment-metrics {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
       gap: 8px;
     }
 
@@ -575,6 +575,7 @@
     const SEGMENT_COUNT = 8;
     const VOLTAGE_CELL_COUNT = 16;
     const TEMP_SENSOR_COUNT = 20;
+    const BALANCING_TEMP_COUNT = 2;
     const HISTORY_LIMIT = 240;
     const ROUTINE_OPTIMISTIC_MS = 12000;
     const RENDER_INTERVAL_MS = 250;
@@ -739,6 +740,14 @@
       return signalId(`${prefix}_cellTemps${index <= 10 ? 0 : 1}`, `${prefix}_cellTemp${index}`);
     }
 
+    function segmentBalancingTempSignalId(prefix, index) {
+      return signalId(`${prefix}_environment`, `${prefix}_tempBalancing${index}`);
+    }
+
+    function segmentBoardTempSignalId(prefix) {
+      return signalId(`${prefix}_environment`, `${prefix}_tempBoard`);
+    }
+
     const bmsb = {
       soc: signalId("BMSB_criticalData", "BMSB_packSOC"),
       charge: signalId("BMSB_criticalData", "BMSB_packChargeLimit"),
@@ -775,12 +784,19 @@
           { length: TEMP_SENSOR_COUNT + 1 },
           (_value, index) => (index === 0 ? null : segmentTempSignalId(prefix, index)),
         ),
+        balancingTemps: Array.from(
+          { length: BALANCING_TEMP_COUNT },
+          (_value, index) => segmentBalancingTempSignalId(prefix, index),
+        ),
+        boardTemp: segmentBoardTempSignalId(prefix),
       };
 
       baseSignalIds.add(signals.tempMax);
       baseSignalIds.add(signals.voltageMax);
       baseSignalIds.add(signals.voltageMin);
       baseSignalIds.add(signals.segmentVoltage);
+      signals.balancingTemps.forEach((id) => baseSignalIds.add(id));
+      baseSignalIds.add(signals.boardTemp);
       return signals;
     });
 
@@ -820,6 +836,18 @@
             <div class="mini-metric">
               <span>Temp</span>
               <strong data-segment-temp="${segment}">--</strong>
+            </div>
+            <div class="mini-metric">
+              <span>Bal 0</span>
+              <strong data-segment-balance-temp="${segment}-0">--</strong>
+            </div>
+            <div class="mini-metric">
+              <span>Bal 1</span>
+              <strong data-segment-balance-temp="${segment}-1">--</strong>
+            </div>
+            <div class="mini-metric">
+              <span>Board</span>
+              <strong data-segment-board-temp="${segment}">--</strong>
             </div>
           </div>
         </article>
@@ -1015,12 +1043,25 @@
           <strong>${id ? formatSignal(id, 3, "V") : "--"}</strong>
         </div>
       `).join("");
-      els.cellTempGrid.innerHTML = signals.cellTemps.slice(1).map((id, offset) => {
-        const index = offset + 1;
+      const tempReadouts = [
+        ...signals.cellTemps.slice(1).map((id, offset) => ({
+          id,
+          label: `Temp ${offset + 1}`,
+        })),
+        ...signals.balancingTemps.map((id, index) => ({
+          id,
+          label: `Balance ${index}`,
+        })),
+        {
+          id: signals.boardTemp,
+          label: "Board",
+        },
+      ];
+      els.cellTempGrid.innerHTML = tempReadouts.map((readout) => {
         return `
           <div class="cell-readout">
-            <span>Temp ${index}</span>
-            <strong>${id ? formatSignal(id, 1, "degC") : "--"}</strong>
+            <span>${readout.label}</span>
+            <strong>${readout.id ? formatSignal(readout.id, 1, "degC") : "--"}</strong>
           </div>
         `;
       }).join("");
@@ -1036,9 +1077,15 @@
         const minNode = els.segmentGrid.querySelector(`[data-segment-min="${segment}"]`);
         const maxNode = els.segmentGrid.querySelector(`[data-segment-max="${segment}"]`);
         const tempNode = els.segmentGrid.querySelector(`[data-segment-temp="${segment}"]`);
+        const boardTempNode = els.segmentGrid.querySelector(`[data-segment-board-temp="${segment}"]`);
         if (minNode) minNode.textContent = formatSignal(signals.voltageMin, 3, "V");
         if (maxNode) maxNode.textContent = formatSignal(signals.voltageMax, 3, "V");
         if (tempNode) tempNode.textContent = formatSignal(signals.tempMax, 0, "degC");
+        if (boardTempNode) boardTempNode.textContent = formatSignal(signals.boardTemp, 0, "degC");
+        signals.balancingTemps.forEach((id, index) => {
+          const node = els.segmentGrid.querySelector(`[data-segment-balance-temp="${segment}-${index}"]`);
+          if (node) node.textContent = formatSignal(id, 0, "degC");
+        });
       }
     }
 
