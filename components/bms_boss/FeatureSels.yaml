@@ -13,3 +13,4 @@ features:
   app_rtos: true
   nvm_task: true
   hw_flash_delay: true
+  feature_no_tsms_balancing: false

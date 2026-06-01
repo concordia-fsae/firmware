@@ -394,7 +394,11 @@ bool BMS_startCharging(void)
 bool BMS_startBalancing(void)
 {
     if ((BMS.voltages.min < BALANCING_MIN_VOLTAGE_ALLOWED) ||
+#if FEATURE_IS_DISABLED(FEATURE_NO_TSMS_BALANCING)
         (drv_inputAD_getLogicLevel(DRV_INPUTAD_DIGITAL_TSMS_CHG) != DRV_IO_LOGIC_HIGH)
+#else
+        false
+#endif
         )
     {
         return false;
@@ -501,7 +505,9 @@ static void BMS100Hz_PRD(void)
     {
         openAllContactors();
         drv_timer_stop(&precharge_timer);
+#if FEATURE_IS_DISABLED(FEATURE_NO_TSMS_BALANCING)
         BMS.balancing       = false;
+#endif
         BMS.charging_paused = false;
     }
     else

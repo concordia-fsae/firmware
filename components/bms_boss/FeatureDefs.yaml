@@ -4,3 +4,4 @@ config:
 defs:
   canrx_swi:
   cantx_swi:
+  no_tsms_balancing:
