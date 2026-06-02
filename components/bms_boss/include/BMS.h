@@ -10,6 +10,7 @@
 #include "stdbool.h"
 #include "stdint.h"
 
+#include "batteryModel.h"
 #include "LIB_Types.h"
 
 #define BMS_MAX_SEGMENTS    8U
@@ -113,6 +114,7 @@ extern nvm_bmsData_S           current_data;
 extern nvm_bmsbContactorData_S contactor_data;
 
 extern BMSB_S                  BMS;
+extern batteryModel_S          bm;
 
 NVM_SIZE_ASSERT(nvm_bmsbContactorData_S, 28U);
 
