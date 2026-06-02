@@ -159,6 +159,17 @@ signals:
         max: 200
     continuous: true
 
+  vcRearTorqueCurrentLimit:
+    description: Torque limit to satisfy max DCL from BMSB
+    unit: Nm
+    nativeRepresentation:
+      bitWidth: 8
+      resolution: 1
+      range:
+        min: 0
+        max: 200
+    continuous: true
+
   requestContactorsOpen:
     description: Request open contactor state from the battery
     discreteValues: digitalStatus

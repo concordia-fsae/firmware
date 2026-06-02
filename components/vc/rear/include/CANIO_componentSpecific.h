@@ -74,3 +74,5 @@
 #define set_brakeTempRLVoltage(m, b, n, s)                    set(m, b, n, s, brakeTemp_getVoltage(BRAKETEMP_LEFT))
 #define set_brakeTempRR(m, b, n, s)                           set(m, b, n, s, brakeTemp_getTemperature(BRAKETEMP_RIGHT))
 #define set_brakeTempRRVoltage(m, b, n, s)                    set(m, b, n, s, brakeTemp_getVoltage(BRAKETEMP_RIGHT))
+#define set_vcRearTorqueCurrentLimit(m, b, n, s)              set(m, b, n, s, mcManager_getvcRearTorqueLimit())
+
