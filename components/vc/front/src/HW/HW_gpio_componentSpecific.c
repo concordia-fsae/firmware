@@ -52,8 +52,8 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_PINRESET,
     },
     [HW_GPIO_ADC_SPARE1] =        {
-        .port       = GPIOC,
-        .pin        = GPIO_PIN_0,
+        .port       = GPIOA,
+        .pin        = GPIO_PIN_4,
         .mode       = GPIO_MODE_ANALOG,
         .speed      = GPIO_SPEED_FREQ_HIGH,
         .pull       = GPIO_NOPULL,
@@ -108,8 +108,8 @@ const HW_GPIO_S HW_GPIO_pinmux[HW_GPIO_COUNT] = {
         .resetState = HW_GPIO_NOSET,
     },
     [HW_GPIO_ADC_L_SHK_DISP] =    {
-        .port       = GPIOA,
-        .pin        = GPIO_PIN_4,
+        .port       = GPIOC,
+        .pin        = GPIO_PIN_0,
         .mode       = GPIO_MODE_ANALOG,
         .speed      = GPIO_SPEED_FREQ_HIGH,
         .pull       = GPIO_NOPULL,

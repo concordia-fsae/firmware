@@ -37,11 +37,11 @@ static shockpot_S                  shockpot;
 
 static lib_interpolation_point_S   shockpot_MapPoints[] = {
     {
-        .x = 0.3f,    // voltage
+        .x = 0.0f,    // voltage
         .y = 75.0f,
     },
     {
-        .x = 2.7f,    // sensor reference voltage
+        .x = 2.94f,    // sensor reference voltage
         .y = 0.0f,
     },
 };

@@ -28,16 +28,16 @@
 #define ADC_CALIBRATION_TIMEOUT                    10U
 
 #define ADC_BANK1_CHANNEL_R_BR_TEMP                ADC_CHANNEL_7
-#define ADC_BANK1_CHANNEL_L_SHK_DISP               ADC_CHANNEL_4
+#define ADC_BANK1_CHANNEL_L_SHK_DISP               ADC_CHANNEL_10
 #define ADC_BANK1_CHANNEL_PU1                      ADC_CHANNEL_14
 #define ADC_BANK1_CHANNEL_BR_POT                   ADC_CHANNEL_3
-#define ADC_BANK1_CHANNEL_SPARE1                   ADC_CHANNEL_10
-#define ADC_BANK1_CHANNEL_SPARE2                   ADC_CHANNEL_11
+#define ADC_BANK1_CHANNEL_SPARE1                   ADC_CHANNEL_4
+#define ADC_BANK1_CHANNEL_SPARE2                   ADC_CHANNEL_6
 #define ADC_BANK1_CHANNEL_APPS_P1                  ADC_CHANNEL_1
 #define ADC_BANK1_CHANNEL_MCU_TEMP                 ADC_CHANNEL_TEMPSENSOR
 
 #define ADC_BANK2_CHANNEL_L_BR_TEMP                ADC_CHANNEL_5
-#define ADC_BANK2_CHANNEL_R_SHK_DISP               ADC_CHANNEL_6
+#define ADC_BANK2_CHANNEL_R_SHK_DISP               ADC_CHANNEL_11
 #define ADC_BANK2_CHANNEL_PU2                      ADC_CHANNEL_15
 #define ADC_BANK2_CHANNEL_BR_PR                    ADC_CHANNEL_8
 #define ADC_BANK2_CHANNEL_SPARE3                   ADC_CHANNEL_12
