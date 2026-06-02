@@ -28,22 +28,22 @@ signals:
     description: Segment Minimum Cell Voltage
     unit: V
     nativeRepresentation:
-      bitWidth: 10
+      bitWidth: 13
       range:
         min: 0
         max: 5
-      resolution: 0.005
+      resolution: 0.001
     continuous: true
 
   voltageMax:
     description: Segment Maximum Cell Voltage
     unit: V
     nativeRepresentation:
-      bitWidth: 10
+      bitWidth: 13
       range:
         min: 0
         max: 5
-      resolution: 0.005
+      resolution: 0.001
     continuous: true
 
   segmentVoltage:
