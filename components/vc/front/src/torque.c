@@ -1179,6 +1179,7 @@ static void torque_periodic_100Hz(void)
 #endif
     torque_data.torqueDriverInput = torque;
     torque_data.torqueCorrection  = torque_data.torqueReduction * torque;
+    const float32_t torqueOutput = torque - torque_data.torqueCorrection;
 
     if ((torque_data.launchControlState == LC_STATE_HOLDING) ||
         (torque_data.launchControlState == LC_STATE_SETTLING)
@@ -1196,12 +1197,12 @@ static void torque_periodic_100Hz(void)
     }
     else if (torque_data.launchControlState == LC_STATE_LAUNCH)
     {
-        torque                          = lib_rateLimit_linear_update(&torque_data.launchRateLimit, torque_request_max);
+        torque                          = lib_rateLimit_linear_update(&torque_data.launchRateLimit, torqueOutput);
         torque_data.torqueRateLimit.y_n = torque;
     }
     else
     {
-        torque = !torque_data.isRegenerating ? torque - torque_data.torqueCorrection : -torque_data.regenTorque;
+        torque = !torque_data.isRegenerating ? torqueOutput : -torque_data.regenTorque;
         torque = lib_rateLimit_linear_update(&torque_data.torqueRateLimit, torque);
     }
 
