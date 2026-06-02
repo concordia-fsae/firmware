@@ -72,7 +72,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_maxCellTemp(m, b, n, s)                    set(m, b, n, s, BMS.max_temp);
 #define set_maxCellVoltage(m, b, n, s)                 set(m, b, n, s, BMS.voltages.max);
 #define set_minCellVoltage(m, b, n, s)                 set(m, b, n, s, BMS.voltages.min);
-#define set_targetBalancingVoltage(m, b, n, s)         set(m, b, n, s, BMS.balancing ? (BMS.voltages.min + BMS.voltages.max) / 2 : 4.5f)
+#define set_targetBalancingVoltage(m, b, n, s)         set(m, b, n, s, BMS.balancing ? (BMS.charging_paused ? BMS.voltages.min : (BMS.voltages.min + BMS.voltages.max) / 2) : 4.5f)
 #define set_packTemperature(m, b, n, s)                set(m, b, n, s, ENV.board.ambient_temp)
 #define set_tsmsChg(m, b, n, s)                        set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_ACTIVE) ? \
                                                            CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
