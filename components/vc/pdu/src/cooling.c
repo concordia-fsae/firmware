@@ -32,6 +32,13 @@ static struct
     drv_timer_S enableTimerFan;
     drv_timer_S enableTimerPump;
 } cooling;
+static struct
+{
+    bool isTestPump;
+    bool isTestFan;
+    bool wasRequestPump;
+    bool wasRequestFan;
+} test;
 
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
@@ -75,6 +82,10 @@ static void setDuty(drv_vn9008_E channel, float32_t duty, drv_timer_S* enableTim
 static void cooling_init()
 {
     drv_timer_init(&cooling.enableTimerFan);
+    test.wasRequestFan  = false;
+    test.wasRequestPump = false;
+    test.isTestPump     = false;
+    test.isTestFan      = false;
 }
 
 /**
@@ -82,22 +93,29 @@ static void cooling_init()
  */
 static void cooling10Hz_PRD(void)
 {
-    CAN_digitalStatus_E tmp        = CAN_DIGITALSTATUS_SNA;
-    const bool          testPump   = (CANRX_get_signal(VEH, SWS_requestTestPump, &tmp) == CANRX_MESSAGE_VALID) &&
-                                     (tmp == CAN_DIGITALSTATUS_ON);
-    const bool          testFan    = (CANRX_get_signal(VEH, SWS_requestTestFan, &tmp) == CANRX_MESSAGE_VALID) &&
-                                     (tmp == CAN_DIGITALSTATUS_ON);
-    const bool          isHV       = app_vehicleState_getState() == VEHICLESTATE_ON_HV;
-    const bool          isRun      = app_vehicleState_getState() == VEHICLESTATE_TS_RUN;
+    CAN_digitalStatus_E requestChangePump = CAN_DIGITALSTATUS_SNA;
+    CAN_digitalStatus_E requestChangeFan  = CAN_DIGITALSTATUS_SNA;
+    const bool          requestedPump     = (CANRX_get_signal(VEH, SWS_requestTestPump, &requestChangePump) == CANRX_MESSAGE_VALID) && (requestChangePump == CAN_DIGITALSTATUS_ON);
+    const bool          requestedFan      = (CANRX_get_signal(VEH, SWS_requestTestFan, &requestChangeFan) == CANRX_MESSAGE_VALID) && (requestChangeFan == CAN_DIGITALSTATUS_ON);
+    const bool          isHV              = app_vehicleState_getState() == VEHICLESTATE_ON_HV;
+    const bool          isRun             = app_vehicleState_getState() == VEHICLESTATE_TS_RUN;
 
-    const bool          faultPump  = (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERCURRENT) ||
-                                     (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERTEMP);
-    const bool          faultFan   = (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERCURRENT) ||
-                                     (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERTEMP);
-    const float32_t     dutyFan    = testFan ? 1.0f : FAN_ON_DUTY;
-    const float32_t     dutyPump   = testPump ? 1.0f : PUMP_ON_DUTY;
-    const bool          enablePump = (isHV || isRun || testPump) && !faultPump;
-    const bool          enableFan  = (isRun || testFan) && !faultFan;
+    const bool          faultPump         = (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERCURRENT) ||
+                                            (drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP) == DRV_HSD_STATE_OVERTEMP);
+    const bool          faultFan          = (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERCURRENT) ||
+                                            (drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN) == DRV_HSD_STATE_OVERTEMP);
+
+    test.isTestPump    ^= (!test.wasRequestPump && requestedPump);
+    test.isTestFan     ^= (!test.wasRequestFan && requestedFan);
+    test.wasRequestPump = requestedPump;
+    test.wasRequestFan  = requestedFan;
+    test.isTestFan     &= !faultFan;
+    test.isTestPump    &= !faultPump;
+
+    const float32_t dutyFan    = test.isTestFan ? 1.0f : FAN_ON_DUTY;
+    const float32_t dutyPump   = test.isTestPump ? 1.0f : PUMP_ON_DUTY;
+    const bool      enablePump = (isHV || isRun || test.isTestPump) && !faultPump;
+    const bool      enableFan  = (isRun || test.isTestFan) && !faultFan;
 
     setDuty(DRV_VN9008_CHANNEL_PUMP, enablePump ? dutyPump : 0.0f, &cooling.enableTimerPump, faultPump);
     setDuty(DRV_VN9008_CHANNEL_FAN,  enableFan ? dutyFan : 0.0f,   &cooling.enableTimerFan,  faultFan);
