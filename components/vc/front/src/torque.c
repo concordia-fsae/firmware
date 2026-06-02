@@ -77,7 +77,7 @@
 #define SLEEP_TIMEOUT_MS                 15 * 60000
 
 #define PEDAL_APPLIED_THRESHOLD          0.10f
-#define VEHICLE_STOPPED_THRESHOLD        0.5
+#define VEHICLE_STOPPED_THRESHOLD        0.2
 
 #define CAR_MASS                         285.0f
 #define WHEEL_DIAMETER                   0.4064f
