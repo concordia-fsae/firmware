@@ -25,7 +25,7 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUFFER_SIZE           2048U
+#define BUFFER_SIZE           10000U
 #define MAX_NMEA_SENTENCE     83U
 #define GPS_TIMEOUT_MS        2000U
 #define GPS_YEAR_OFFSET       2000U
