@@ -45,7 +45,7 @@
 
 #define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE    0.1f
 
-#define BALANCING_DELTA_CUTOFF                         0.03f // [V]
+#define BALANCING_DELTA_CUTOFF                         0.01f // [V]
 #define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f // [V]
 
 /******************************************************************************
