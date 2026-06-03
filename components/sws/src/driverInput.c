@@ -185,6 +185,12 @@ static configAction_S configActions[DRIVERINPUT_CONFIG_COUNT] = {
     PARAM_STATE(DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM, VEH, VCFRONT_paramTcTireModelLimit,
                 DRIVERINPUT_REQUEST_TC_TIRE_MODEL_LIM
                 ),
+    [DRIVERINPUT_CONFIG_TC_MAPPING] = {
+        .requestButtonLeft  = DRIVERINPUT_REQUEST_TC_MAPPING_DEC,
+        .requestButtonRight = DRIVERINPUT_REQUEST_TC_MAPPING_INC,
+        .optionButtonLeft   = CAN_CONFIGOPTION_SNA,
+        .optionButtonRight  = CAN_CONFIGOPTION_SNA,
+    },
     [DRIVERINPUT_CONFIG_FUNCTION_TEST_PUMPFAN] = {
         .requestButtonLeft  = DRIVERINPUT_REQUEST_TEST_PUMP,
         .requestButtonRight = DRIVERINPUT_REQUEST_TEST_FAN,
@@ -312,6 +318,74 @@ static CAN_configOption_E canDigitalToConfigOption(CAN_digitalStatus_E status)
     return (status == CAN_DIGITALSTATUS_ON) ? CAN_CONFIGOPTION_DISABLE : CAN_CONFIGOPTION_ENABLE;
 }
 
+static CAN_configOption_E tcMappingToConfigOption(CAN_tcMapping_E mapping)
+{
+    CAN_configOption_E option = CAN_CONFIGOPTION_SNA;
+
+    switch (mapping)
+    {
+        case CAN_TCMAPPING_CUSTOM:
+            option = CAN_CONFIGOPTION_TC_MAPPING_CUSTOM;
+            break;
+
+        case CAN_TCMAPPING_MAP_100NM:
+            option = CAN_CONFIGOPTION_TC_MAPPING_100NM;
+            break;
+
+        case CAN_TCMAPPING_MAP_150NM:
+            option = CAN_CONFIGOPTION_TC_MAPPING_150NM;
+            break;
+
+        default:
+            break;
+    }
+
+    return option;
+}
+
+static void updateTcMappingConfigOptions(void)
+{
+    if (data.config != DRIVERINPUT_CONFIG_TC_MAPPING)
+    {
+        return;
+    }
+
+    CAN_tcMapping_E mapping = CAN_TCMAPPING_SNA;
+    if (CANRX_get_signal(VEH, VCFRONT_paramTcMapping, &mapping) != CANRX_MESSAGE_VALID)
+    {
+        configActions[DRIVERINPUT_CONFIG_TC_MAPPING].optionButtonLeft  = CAN_CONFIGOPTION_SNA;
+        configActions[DRIVERINPUT_CONFIG_TC_MAPPING].optionButtonRight = CAN_CONFIGOPTION_SNA;
+        return;
+    }
+
+    CAN_tcMapping_E leftMapping  = CAN_TCMAPPING_SNA;
+    CAN_tcMapping_E rightMapping = CAN_TCMAPPING_SNA;
+
+    switch (mapping)
+    {
+        case CAN_TCMAPPING_CUSTOM:
+            leftMapping  = CAN_TCMAPPING_MAP_100NM;
+            rightMapping = CAN_TCMAPPING_MAP_150NM;
+            break;
+
+        case CAN_TCMAPPING_MAP_100NM:
+            leftMapping  = CAN_TCMAPPING_CUSTOM;
+            rightMapping = CAN_TCMAPPING_MAP_150NM;
+            break;
+
+        case CAN_TCMAPPING_MAP_150NM:
+            leftMapping  = CAN_TCMAPPING_MAP_100NM;
+            rightMapping = CAN_TCMAPPING_CUSTOM;
+            break;
+
+        default:
+            break;
+    }
+
+    configActions[DRIVERINPUT_CONFIG_TC_MAPPING].optionButtonLeft  = tcMappingToConfigOption(leftMapping);
+    configActions[DRIVERINPUT_CONFIG_TC_MAPPING].optionButtonRight = tcMappingToConfigOption(rightMapping);
+}
+
 static void update_params(const bool tq_inc, const bool tq_dec,
                           const bool sl_inc, const bool sl_dec,
                           const bool db_tq_inc, const bool db_tq_dec,
@@ -336,6 +410,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
                                                         CAN_CONFIGOPTION_SNA) :
                                                        CAN_CONFIGOPTION_NONE;
     }
+    updateTcMappingConfigOptions();
 
     // Torque axis
     if (data.page != DRIVERINPUT_PAGE_CONFIG)
@@ -696,6 +771,10 @@ CAN_configSelection_E driverInput_getConfigSelectedCAN(void)
         {
             case DRIVERINPUT_CONFIG_TC_TIRE_MODEL_LIM:
                 config = CAN_CONFIGSELECTION_TC_TIRE_MODEL_LIM;
+                break;
+
+            case DRIVERINPUT_CONFIG_TC_MAPPING:
+                config = CAN_CONFIGSELECTION_TC_MAPPING;
                 break;
 
             case DRIVERINPUT_CONFIG_PARAM_TC_KP:

@@ -160,6 +160,12 @@ signals:
   requestFluxWeakeningCurrentInc:
     description: Request increment of motor controller flux weakening current
     discreteValues: digitalStatus
+  requestTcMappingDec:
+    description: Request previous traction control PID mapping
+    discreteValues: digitalStatus
+  requestTcMappingInc:
+    description: Request next traction control PID mapping
+    discreteValues: digitalStatus
 
   requestScreen:
     description: Current STW screen page being requested

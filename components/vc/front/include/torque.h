@@ -19,11 +19,24 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define TC_MAX                        0.7f // Handle heavy slip conditions
-#define TC_ILIM                       0.0f // Allow heavy integral limits in sustained slip with leak
-#define TC_KP                         (0.591f)
-#define TC_KI                         (0.0f)
-#define TC_KD                         (0.70f)
+#define TC_100NM_MAX                  0.7f // Handle heavy slip conditions
+#define TC_100NM_ILIM                 0.0f // Allow heavy integral limits in sustained slip with leak
+#define TC_100NM_KP                   (0.591f)
+#define TC_100NM_KI                   (0.0f)
+#define TC_100NM_KD                   (0.70f)
+#define TC_100NM_TORQUE               100U
+#define TC_130NM_MAX                  0.7f // Handle heavy slip conditions
+#define TC_130NM_ILIM                 0.0f // Allow heavy integral limits in sustained slip with leak
+#define TC_130NM_KP                   (0.591f)
+#define TC_130NM_KI                   (0.0f)
+#define TC_130NM_KD                   (0.70f)
+#define TC_130NM_TORQUE               130U
+#define TC_150NM_MAX                  0.75f // Handle heavy slip conditions
+#define TC_150NM_ILIM                 0.0f  // Allow heavy integral limits in sustained slip with leak
+#define TC_150NM_KP                   (0.470f)
+#define TC_150NM_KI                   (0.0f)
+#define TC_150NM_KD                   (0.110f)
+#define TC_150NM_TORQUE               150U
 #define TC_DTERM_LPF_CUTOFF_FREQ      100
 #define TC_ILEAK_MS                   500U
 
@@ -31,15 +44,38 @@
 #define TC_PID_CONV_THOU_F32(x)       (((float32_t)x) / 1000.0f)
 #define TC_PID_CONV_PERCENT_U8(x)     (x * 100U)
 #define TC_PID_CONV_THOU_U16(x)       (x * 1000U)
-#define TC_SET_DEFAULT_PID(decl)                                           \
-        decl                   = {                                         \
-            .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_MAX),  \
-            .percentILim       = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_ILIM), \
-            .thousandthKp      = (uint16_t)TC_PID_CONV_THOU_U16(TC_KP),    \
-            .thousandthKi      = (uint16_t)TC_PID_CONV_THOU_U16(TC_KI),    \
-            .thousandthKd      = (uint16_t)TC_PID_CONV_THOU_U16(TC_KD),    \
-            .tLeakMs           = TC_ILEAK_MS,                              \
-            .spare             = { 0U },                                   \
+#define TC_SET_DEFAULT_PID(decl)                                                 \
+        decl                   = {                                               \
+            .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_130NM_MAX),  \
+            .percentILim       = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_130NM_ILIM), \
+            .thousandthKp      = (uint16_t)TC_PID_CONV_THOU_U16(TC_130NM_KP),    \
+            .thousandthKi      = (uint16_t)TC_PID_CONV_THOU_U16(TC_130NM_KI),    \
+            .thousandthKd      = (uint16_t)TC_PID_CONV_THOU_U16(TC_130NM_KD),    \
+            .tLeakMs           = TC_ILEAK_MS,                                    \
+            .maxTorqueNm       = TC_130NM_TORQUE,                                \
+            .spare             = { 0U },                                         \
+        };
+#define TC_SET_150NM_PID(decl)                                                   \
+        decl                   = {                                               \
+            .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_150NM_MAX),  \
+            .percentILim       = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_150NM_ILIM), \
+            .thousandthKp      = (uint16_t)TC_PID_CONV_THOU_U16(TC_150NM_KP),    \
+            .thousandthKi      = (uint16_t)TC_PID_CONV_THOU_U16(TC_150NM_KI),    \
+            .thousandthKd      = (uint16_t)TC_PID_CONV_THOU_U16(TC_150NM_KD),    \
+            .tLeakMs           = TC_ILEAK_MS,                                    \
+            .maxTorqueNm       = TC_150NM_TORQUE,                                \
+            .spare             = { 0U },                                         \
+        };
+#define TC_SET_100NM_PID(decl)                                                   \
+        decl                   = {                                               \
+            .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_100NM_MAX),  \
+            .percentILim       = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_100NM_ILIM), \
+            .thousandthKp      = (uint16_t)TC_PID_CONV_THOU_U16(TC_100NM_KP),    \
+            .thousandthKi      = (uint16_t)TC_PID_CONV_THOU_U16(TC_100NM_KI),    \
+            .thousandthKd      = (uint16_t)TC_PID_CONV_THOU_U16(TC_100NM_KD),    \
+            .tLeakMs           = TC_ILEAK_MS,                                    \
+            .maxTorqueNm       = TC_100NM_TORQUE,                                \
+            .spare             = { 0U },                                         \
         };
 
 /******************************************************************************
@@ -88,6 +124,14 @@ typedef enum
     RACEMODE_ENABLED,
 } torque_raceMode_E;
 
+typedef enum
+{
+    TC_MAPPING_CUSTOM = 0x00U,
+    TC_MAPPING_100NM,
+    TC_MAPPING_150NM,
+    TC_MAPPING_COUNT,
+} tc_mapping_E;
+
 // This backs our NVM parameters, each new parameter should be added before COUNT
 typedef enum
 {
@@ -98,7 +142,8 @@ typedef enum
 typedef struct
 {
     FLAG_create(params, PARAMSTATE_COUNT);
-    uint16_t spare[2];
+    uint16_t selectedTcMapping;
+    uint16_t spare[1];
 } LIB_NVM_STORAGE(nvm_tcParamState_S);
 extern nvm_tcParamState_S tcParamState_data;
 
@@ -110,9 +155,13 @@ typedef struct
     uint16_t thousandthKi;
     uint16_t thousandthKd;
     uint16_t tLeakMs;
-    uint16_t spare[6U];
+    uint16_t maxTorqueNm;
+    uint16_t spare[5U];
 } LIB_NVM_STORAGE(nvm_tcPid_S);
 extern nvm_tcPid_S tcPid_data;
+
+NVM_SIZE_ASSERT(nvm_tcParamState_S, 6U);
+NVM_SIZE_ASSERT(nvm_tcPid_S,        22U);
 
 /******************************************************************************
  *            P U B L I C  F U N C T I O N  P R O T O T Y P E S
@@ -143,3 +192,10 @@ float32_t                     torque_getLaunchControl75mTime(void);
 torque_tractionControlState_E torque_getTractionControlState(void);
 CAN_tractionControlState_E    torque_getTractionControlStateCAN(void);
 bool                          tc_isParamEnabled(tc_paramState_E param);
+CAN_tcMapping_E               tc_getMappingCAN(void);
+float32_t                     tc_getParamPidMax(void);
+float32_t                     tc_getParamILim(void);
+float32_t                     tc_getParamKp(void);
+float32_t                     tc_getParamKi(void);
+float32_t                     tc_getParamKd(void);
+float32_t                     tc_getParamTLeak(void);

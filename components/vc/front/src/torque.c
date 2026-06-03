@@ -112,6 +112,9 @@ static struct
     bool                          race_mode_change_active;
     bool                          regenEnabled;
     bool                          isRegenerating;
+    bool                          customTcPidWritePending;
+    bool                          tcMappingIncActive;
+    bool                          tcMappingDecActive;
     drv_timer_S                   torque_change_timer;
     drv_timer_S                   launch_control_timer;
     drv_timer_S                   launch_75m_timer;
@@ -119,6 +122,8 @@ static struct
     drv_timer_S                   slip_change_timer;
     drv_timer_S                   paramTcSaveTimer;
     drv_timer_S                   paramTcChangeTimer;
+    nvm_tcPid_S                   tcPid100Nm;
+    nvm_tcPid_S                   tcPid150Nm;
 
     torque_launchControlState_E   launchControlState;
     torque_tractionControlState_E tractionControlState;
@@ -183,6 +188,9 @@ static CANRX_MESSAGE_health_E (*paramRequestStateCanSignal[PARAMSTATE_COUNT])(CA
     [PARAMSTATE_TC_TIRE_MODEL_LIMIT] = CANRX_get_signal_func(VEH, SWS_requestTcTireModelLimit),
 };
 
+TC_SET_100NM_PID(static const nvm_tcPid_S tcPid100NmDefault);
+TC_SET_150NM_PID(static const nvm_tcPid_S tcPid150NmDefault);
+
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
@@ -243,6 +251,135 @@ static void launch_control_75m_update(void)
     {
         drv_timer_stop(&torque_data.launch_75m_timer);
     }
+}
+
+static tc_mapping_E tc_getSelectedMapping(void)
+{
+    if (tcParamState_data.selectedTcMapping >= TC_MAPPING_COUNT)
+    {
+        return TC_MAPPING_CUSTOM;
+    }
+
+    return (tc_mapping_E)tcParamState_data.selectedTcMapping;
+}
+
+static bool tc_isCustomMappingSelected(void)
+{
+    return tc_getSelectedMapping() == TC_MAPPING_CUSTOM;
+}
+
+static nvm_tcPid_S* tc_getActivePid(void)
+{
+    nvm_tcPid_S* pid = &tcPid_data;
+
+    switch (tc_getSelectedMapping())
+    {
+        case TC_MAPPING_100NM:
+            pid = &torque_data.tcPid100Nm;
+            break;
+
+        case TC_MAPPING_150NM:
+            pid = &torque_data.tcPid150Nm;
+            break;
+
+        case TC_MAPPING_CUSTOM:
+        default:
+            break;
+    }
+
+    return pid;
+}
+
+static const nvm_tcPid_S* tc_getActivePidConst(void)
+{
+    return tc_getActivePid();
+}
+
+static void tc_requestCustomPidWriteAfterActivity(void)
+{
+    if (tc_isCustomMappingSelected())
+    {
+        torque_data.customTcPidWritePending = true;
+        drv_timer_start(&torque_data.paramTcSaveTimer, TC_PARAM_ACTIVITY_TIMEOUT_MS);
+    }
+}
+
+static void tc_setSelectedMapping(tc_mapping_E mapping)
+{
+    if (mapping >= TC_MAPPING_COUNT)
+    {
+        mapping = TC_MAPPING_CUSTOM;
+    }
+
+    if (tc_getSelectedMapping() != mapping)
+    {
+        tcParamState_data.selectedTcMapping = (uint16_t)mapping;
+        lib_nvm_requestWrite(NVM_ENTRYID_TC_PARAMSTATE);
+    }
+
+    torque_data.torque_request_max = (float32_t)tc_getActivePidConst()->maxTorqueNm;
+}
+
+static tc_mapping_E tc_stepMapping(tc_mapping_E mapping, int16_t step)
+{
+    if (step > 0)
+    {
+        switch (mapping)
+        {
+            case TC_MAPPING_CUSTOM:
+                return TC_MAPPING_150NM;
+
+            case TC_MAPPING_100NM:
+                return TC_MAPPING_150NM;
+
+            case TC_MAPPING_150NM:
+            default:
+                return TC_MAPPING_CUSTOM;
+        }
+    }
+
+    if (step < 0)
+    {
+        switch (mapping)
+        {
+            case TC_MAPPING_CUSTOM:
+                return TC_MAPPING_100NM;
+
+            case TC_MAPPING_150NM:
+                return TC_MAPPING_100NM;
+
+            case TC_MAPPING_100NM:
+            default:
+                return TC_MAPPING_CUSTOM;
+        }
+    }
+
+    return mapping;
+}
+
+static bool tc_evaluateMappingRequest(void)
+{
+    CAN_digitalStatus_E requestIncStatus = CAN_DIGITALSTATUS_SNA;
+    CAN_digitalStatus_E requestDecStatus = CAN_DIGITALSTATUS_SNA;
+    const bool          requestInc       = (CANRX_get_signal(VEH, SWS_requestTcMappingInc, &requestIncStatus) == CANRX_MESSAGE_VALID) &&
+                                           (requestIncStatus == CAN_DIGITALSTATUS_ON);
+    const bool          requestDec       = (CANRX_get_signal(VEH, SWS_requestTcMappingDec, &requestDecStatus) == CANRX_MESSAGE_VALID) &&
+                                           (requestDecStatus == CAN_DIGITALSTATUS_ON);
+    const bool          requestIncRising = requestInc && !torque_data.tcMappingIncActive;
+    const bool          requestDecRising = requestDec && !torque_data.tcMappingDecActive;
+    const int16_t       requestSum       = requestIncRising - requestDecRising;
+
+    torque_data.tcMappingIncActive = requestInc;
+    torque_data.tcMappingDecActive = requestDec;
+
+    if (requestSum != 0)
+    {
+        tc_setSelectedMapping(tc_stepMapping(tc_getSelectedMapping(), requestSum));
+        drv_timer_start(&torque_data.paramTcChangeTimer, TC_PARAM_CHANGE_DELAY_MS);
+        return true;
+    }
+
+    return false;
 }
 
 static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake_position)
@@ -308,7 +445,8 @@ static bool evaluate_mode_change(float32_t brake_position)
 
 static float32_t evaluate_torque_max(void)
 {
-    float32_t           torque_request_max    = torque_data.torque_request_max;
+    nvm_tcPid_S         * pid                 = tc_getActivePid();
+    float32_t           torque_request_max    = (float32_t)pid->maxTorqueNm;
     CAN_digitalStatus_E torque_change_request = CAN_DIGITALSTATUS_SNA;
     const bool          torque_inc_active     = (CANRX_get_signal(VEH, SWS_requestTorqueInc, &torque_change_request) != CANRX_MESSAGE_SNA) &&
                                                 (torque_change_request == CAN_DIGITALSTATUS_ON);
@@ -323,19 +461,20 @@ static float32_t evaluate_torque_max(void)
             drv_timer_start(&torque_data.torque_change_timer, TORQUE_CHANGE_DELAY);
             torque_request_max = torque_inc_active ? torque_request_max + 1 : torque_request_max - 1;
             torque_request_max = SATURATE(MIN_TORQUE_RANGE, torque_request_max, ABSOLUTE_MAX_TORQUE);
+            pid->maxTorqueNm   = (uint16_t)torque_request_max;
+            tc_requestCustomPidWriteAfterActivity();
         }
         else if (timer_state == DRV_TIMER_EXPIRED)
         {
             drv_timer_stop(&torque_data.torque_change_timer);
         }
-
-        torque_data.torque_request_max = torque_request_max;
     }
     else
     {
         drv_timer_stop(&torque_data.torque_change_timer);
     }
 
+    torque_data.torque_request_max = torque_request_max;
     return torque_request_max;
 }
 
@@ -484,16 +623,17 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 
 static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
 {
-    const float32_t kLeak = 1.0f / TC_PID_CONV_THOU_F32(tcPid_data.tLeakMs);
+    const nvm_tcPid_S* pid = tc_getActivePidConst();
+    const float32_t  kLeak = 1.0f / TC_PID_CONV_THOU_F32(pid->tLeakMs);
 
     lib_pid_util_ileak(&torque_data.tractionControlPID, kLeak, dt);
-    torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp);
-    torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi);
-    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(-tcPid_data.thousandthKd);
+    torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(pid->thousandthKp);
+    torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(pid->thousandthKi);
+    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(-pid->thousandthKd);
     lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
-    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentILim));
+    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentILim));
     lib_pid_util_lpf_dTerm(&torque_data.tractionControlPID, dt);
-    lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(tcPid_data.percentMaxTcLimit));
+    lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentMaxTcLimit));
 
     return torque_data.tractionControlPID.y;
 }
@@ -542,10 +682,11 @@ static float32_t evaluate_traction_control(void)
     }
     else
     {
+        const nvm_tcPid_S* pid = tc_getActivePidConst();
         lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f,
-                     TC_PID_CONV_THOU_F32(tcPid_data.thousandthKp),
-                     TC_PID_CONV_THOU_F32(tcPid_data.thousandthKi),
-                     TC_PID_CONV_THOU_F32(-tcPid_data.thousandthKd));
+                     TC_PID_CONV_THOU_F32(pid->thousandthKp),
+                     TC_PID_CONV_THOU_F32(pid->thousandthKi),
+                     TC_PID_CONV_THOU_F32(-pid->thousandthKd));
     }
 
     torque_data.slipRear = slip;
@@ -667,6 +808,9 @@ static void tcEvaluateParams(void)
     const drv_timer_state_E timerChangeState  = drv_timer_getState(&torque_data.paramTcChangeTimer);
     const drv_timer_state_E timerSaveState    = drv_timer_getState(&torque_data.paramTcSaveTimer);
     bool                    paramValueChanged = false;
+    const bool              mappingChanged    = tc_evaluateMappingRequest();
+    nvm_tcPid_S             * activePid       = tc_getActivePid();
+    const bool              activePidSaved    = tc_isCustomMappingSelected();
 
     for (uint8_t i = 0U; i < PARAMSTATE_COUNT; i++)
     {
@@ -706,62 +850,62 @@ static void tcEvaluateParams(void)
         switch (i)
         {
             case PARAMVALUE_TC_KP:
-                if (((tcPid_data.thousandthKp > 0U) && (tcPid_data.thousandthKp < 65535U)) ||
-                    ((tcPid_data.thousandthKp == 0U) && (requestSum > 0)) ||
-                    ((tcPid_data.thousandthKp == 65535U) && (requestSum < 0))
+                if (((activePid->thousandthKp > 0U) && (activePid->thousandthKp < 65535U)) ||
+                    ((activePid->thousandthKp == 0U) && (requestSum > 0)) ||
+                    ((activePid->thousandthKp == 65535U) && (requestSum < 0))
                     )
                 {
-                    tcPid_data.thousandthKp = (uint16_t)(tcPid_data.thousandthKp + requestSum);
+                    activePid->thousandthKp = (uint16_t)(activePid->thousandthKp + requestSum);
                 }
                 break;
 
             case PARAMVALUE_TC_KI:
-                if (((tcPid_data.thousandthKi > 0U) && (tcPid_data.thousandthKi < 65535U)) ||
-                    ((tcPid_data.thousandthKi == 0U) && (requestSum > 0)) ||
-                    ((tcPid_data.thousandthKi == 65535U) && (requestSum < 0))
+                if (((activePid->thousandthKi > 0U) && (activePid->thousandthKi < 65535U)) ||
+                    ((activePid->thousandthKi == 0U) && (requestSum > 0)) ||
+                    ((activePid->thousandthKi == 65535U) && (requestSum < 0))
                     )
                 {
-                    tcPid_data.thousandthKi = (uint16_t)(tcPid_data.thousandthKi + requestSum);
+                    activePid->thousandthKi = (uint16_t)(activePid->thousandthKi + requestSum);
                 }
                 break;
 
             case PARAMVALUE_TC_KD:
-                if (((tcPid_data.thousandthKd > 0U) && (tcPid_data.thousandthKd < 65535U)) ||
-                    ((tcPid_data.thousandthKd == 0U) && (requestSum > 0)) ||
-                    ((tcPid_data.thousandthKd == 65535U) && (requestSum < 0))
+                if (((activePid->thousandthKd > 0U) && (activePid->thousandthKd < 65535U)) ||
+                    ((activePid->thousandthKd == 0U) && (requestSum > 0)) ||
+                    ((activePid->thousandthKd == 65535U) && (requestSum < 0))
                     )
                 {
-                    tcPid_data.thousandthKd = (uint16_t)(tcPid_data.thousandthKd + requestSum);
+                    activePid->thousandthKd = (uint16_t)(activePid->thousandthKd + requestSum);
                 }
                 break;
 
             case PARAMVALUE_TC_MAX_LIM:
-                if (((tcPid_data.percentMaxTcLimit > 0U) && (tcPid_data.percentMaxTcLimit < 100U)) ||
-                    ((tcPid_data.percentMaxTcLimit == 0U) && (requestSum > 0)) ||
-                    ((tcPid_data.percentMaxTcLimit == 100U) && (requestSum < 0))
+                if (((activePid->percentMaxTcLimit > 0U) && (activePid->percentMaxTcLimit < 100U)) ||
+                    ((activePid->percentMaxTcLimit == 0U) && (requestSum > 0)) ||
+                    ((activePid->percentMaxTcLimit == 100U) && (requestSum < 0))
                     )
                 {
-                    tcPid_data.percentMaxTcLimit = (uint8_t)(tcPid_data.percentMaxTcLimit + requestSum);
+                    activePid->percentMaxTcLimit = (uint8_t)(activePid->percentMaxTcLimit + requestSum);
                 }
                 break;
 
             case PARAMVALUE_TC_ILIM:
-                if (((tcPid_data.percentILim > 0U) && (tcPid_data.percentILim < 100U)) ||
-                    ((tcPid_data.percentILim == 0U) && (requestSum > 0)) ||
-                    ((tcPid_data.percentILim == 100U) && (requestSum < 0))
+                if (((activePid->percentILim > 0U) && (activePid->percentILim < 100U)) ||
+                    ((activePid->percentILim == 0U) && (requestSum > 0)) ||
+                    ((activePid->percentILim == 100U) && (requestSum < 0))
                     )
                 {
-                    tcPid_data.percentILim = (uint8_t)(tcPid_data.percentILim + requestSum);
+                    activePid->percentILim = (uint8_t)(activePid->percentILim + requestSum);
                 }
                 break;
 
             case PARAMVALUE_TC_TLEAK_MS:
-                if (((tcPid_data.tLeakMs > 1U) && (tcPid_data.tLeakMs < 65535U)) ||
-                    ((tcPid_data.tLeakMs == 1U) && (requestSum > 0)) ||
-                    ((tcPid_data.tLeakMs == 65535U) && (requestSum < 0))
+                if (((activePid->tLeakMs > 1U) && (activePid->tLeakMs < 65535U)) ||
+                    ((activePid->tLeakMs == 1U) && (requestSum > 0)) ||
+                    ((activePid->tLeakMs == 65535U) && (requestSum < 0))
                     )
                 {
-                    tcPid_data.tLeakMs = (uint16_t)(tcPid_data.tLeakMs + requestSum);
+                    activePid->tLeakMs = (uint16_t)(activePid->tLeakMs + requestSum);
                 }
                 break;
         }
@@ -774,17 +918,29 @@ static void tcEvaluateParams(void)
             drv_timer_start(&torque_data.paramTcChangeTimer, TC_PARAM_CHANGE_DELAY_MS);
         }
 
-        drv_timer_start(&torque_data.paramTcSaveTimer, TC_PARAM_ACTIVITY_TIMEOUT_MS);
+        if (activePidSaved)
+        {
+            tc_requestCustomPidWriteAfterActivity();
+        }
     }
     else
     {
         if (timerSaveState == DRV_TIMER_EXPIRED)
         {
+            drv_timer_stop(&torque_data.paramTcSaveTimer);
             drv_timer_stop(&torque_data.paramTcChangeTimer);
-            lib_nvm_requestWrite(NVM_ENTRYID_TC_PID);
+
+            if (torque_data.customTcPidWritePending)
+            {
+                torque_data.customTcPidWritePending = false;
+                lib_nvm_requestWrite(NVM_ENTRYID_TC_PID);
+            }
         }
 
-        drv_timer_stop(&torque_data.paramTcChangeTimer);
+        if (!mappingChanged)
+        {
+            drv_timer_stop(&torque_data.paramTcChangeTimer);
+        }
     }
 }
 static float32_t evaluate_regenTorque(void)
@@ -1104,6 +1260,61 @@ bool tc_isParamEnabled(tc_paramState_E param)
     return FLAG_get(tcParamState_data.params, param);
 }
 
+CAN_tcMapping_E tc_getMappingCAN(void)
+{
+    CAN_tcMapping_E mapping = CAN_TCMAPPING_SNA;
+
+    switch (tc_getSelectedMapping())
+    {
+        case TC_MAPPING_CUSTOM:
+            mapping = CAN_TCMAPPING_CUSTOM;
+            break;
+
+        case TC_MAPPING_100NM:
+            mapping = CAN_TCMAPPING_MAP_100NM;
+            break;
+
+        case TC_MAPPING_150NM:
+            mapping = CAN_TCMAPPING_MAP_150NM;
+            break;
+
+        default:
+            break;
+    }
+
+    return mapping;
+}
+
+float32_t tc_getParamPidMax(void)
+{
+    return TC_PID_CONV_PERCENT_F32(tc_getActivePidConst()->percentMaxTcLimit);
+}
+
+float32_t tc_getParamILim(void)
+{
+    return TC_PID_CONV_PERCENT_F32(tc_getActivePidConst()->percentILim);
+}
+
+float32_t tc_getParamKp(void)
+{
+    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->thousandthKp);
+}
+
+float32_t tc_getParamKi(void)
+{
+    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->thousandthKi);
+}
+
+float32_t tc_getParamKd(void)
+{
+    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->thousandthKd);
+}
+
+float32_t tc_getParamTLeak(void)
+{
+    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->tLeakMs);
+}
+
 static void torque_init(void)
 {
     memset(&torque_data, 0x00U, sizeof(torque_data));
@@ -1114,9 +1325,27 @@ static void torque_init(void)
     drv_timer_init(&torque_data.preloadChangeTimer);
     drv_timer_init(&torque_data.slip_change_timer);
     drv_timer_init(&torque_data.paramTcSaveTimer);
+    drv_timer_init(&torque_data.paramTcChangeTimer);
+
+    torque_data.tcPid100Nm = tcPid100NmDefault;
+    torque_data.tcPid150Nm = tcPid150NmDefault;
+
+    if ((tcPid_data.maxTorqueNm < MIN_TORQUE_RANGE) ||
+        (tcPid_data.maxTorqueNm > ABSOLUTE_MAX_TORQUE)
+        )
+    {
+        tcPid_data.maxTorqueNm = TC_130NM_TORQUE;
+        lib_nvm_requestWrite(NVM_ENTRYID_TC_PID);
+    }
+
+    if (tcParamState_data.selectedTcMapping >= TC_MAPPING_COUNT)
+    {
+        tcParamState_data.selectedTcMapping = TC_MAPPING_CUSTOM;
+        lib_nvm_requestWrite(NVM_ENTRYID_TC_PARAMSTATE);
+    }
 
     torque_data.state                         = TORQUE_INACTIVE;
-    torque_data.torque_request_max            = DEFAULT_BOOT_TORQUE;
+    torque_data.torque_request_max            = (float32_t)tc_getActivePidConst()->maxTorqueNm;
     torque_data.gear                          = GEAR_F;
     torque_data.launchControlState            = LC_STATE_INACTIVE;
     torque_data.tractionControlState          = TC_STATE_INACTIVE;
@@ -1131,7 +1360,11 @@ static void torque_init(void)
 
     torque_data.torquePreload                 = LC_PRELOAD_TORQUE_INIT;
 
-    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f, TC_KP, TC_KI, -TC_KD);
+    const nvm_tcPid_S* pid = tc_getActivePidConst();
+    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f,
+                 TC_PID_CONV_THOU_F32(pid->thousandthKp),
+                 TC_PID_CONV_THOU_F32(pid->thousandthKi),
+                 TC_PID_CONV_THOU_F32(-pid->thousandthKd));
     lib_pid_util_lpf_dTermSetCutoff(&torque_data.tractionControlPID, TC_DTERM_LPF_CUTOFF_FREQ);
 }
 
