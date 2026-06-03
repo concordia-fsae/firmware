@@ -29,8 +29,8 @@
  ******************************************************************************/
 
 #define BMS_CONFIGURED_BALANCING_TIMEOUT    1100
-#define BMS_CONFIGURED_BALANCING_MARGIN     0.01f // [V], precision 1mV
-#define BMS_CONFIGURED_MIN_BALANCING        3.10f // [V], precision 1mV
+#define BMS_CONFIGURED_BALANCING_MARGIN     0.003f // [V], precision 1mV
+#define BMS_CONFIGURED_MIN_BALANCING        3.10f  // [V], precision 1mV
 #define BMS_START_DELAY_MS                  100U
 
 #define BMS_CONFIGURED_SAMPLING_TIME_MS     30
