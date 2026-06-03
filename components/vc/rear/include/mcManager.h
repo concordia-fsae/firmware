@@ -42,6 +42,7 @@ uint8_t                       mcManager_getResolverCalibrationAttempts(void);
 float32_t                     mcManager_getResolverCalibrationConfiguredAngleDeg(void);
 float32_t                     mcManager_getResolverCalibrationDeltaFilteredMeasuredDeg(void);
 float32_t                     mcManager_getFluxWeakeningCurrent(void);
+float32_t                     mcManager_getvcRearTorqueLimit(void);
 bool                          mcManager_clearEepromCommand(void);
 bool                          mcManager_startResolverCalibration(void);
 bool                          mcManager_testResolverCalibration(void);

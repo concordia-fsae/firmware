@@ -131,6 +131,7 @@ static struct
 
     uint16_t                      axle_rpm;
     float32_t                     tempTsCap;
+    float32_t                     vcRear_torqueLimitCurrent;
 } mcManager_data;
 
 static struct
@@ -551,6 +552,10 @@ float32_t mcManager_getFluxWeakeningCurrent(void)
                             eepromParameters[EEPROM_PARAMETER_FLUX_WEAKENING_CURRENT].savedRaw) :
            0.0f;
 }
+float32_t mcManager_getvcRearTorqueLimit(void)
+{
+    return mcManager_data.vcRear_torqueLimitCurrent;
+}
 
 bool mcManager_startResolverCalibration(void)
 {
@@ -620,21 +625,28 @@ static void mcManager_init(void)
     mcManager_data.clear_faults                                             = false;
 
     eepromParameters[EEPROM_PARAMETER_FLUX_WEAKENING_CURRENT].readRequested = true;
+    mcManager_data.vcRear_torqueLimitCurrent                                = 0.0;
 }
 
 static void mcManager_periodic_100Hz(void)
 {
-    float32_t                     torque_command  = 0.0f;
-    mcManager_enable_E            enable          = MCMANAGER_DISABLE;
-    CAN_prechargeContactorState_E contactor_state = CAN_PRECHARGECONTACTORSTATE_SNA;
-    int16_t                       motor_rpm       = 0;
-    bool                          speed_valid     = false;
-    bool                          miaBms          = false;
+    float32_t                     torque_command    = 0.0f;
+    mcManager_enable_E            enable            = MCMANAGER_DISABLE;
+    CAN_prechargeContactorState_E contactor_state   = CAN_PRECHARGECONTACTORSTATE_SNA;
+    int16_t                       motor_rpm         = 0;
+    bool                          speed_valid       = false;
+    bool                          miaBms            = false;
+    bool                          discharge_valid   = false;
+    bool                          voltage_valid     = false;
+    float32_t                     BMSB_maxDischarge = 0.0f;
+    float32_t                     BMSB_voltage      = 0.0f;
 
     eepromHandleResponses();
 
-    speed_valid = CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
-    miaBms      = CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state) != CANRX_MESSAGE_VALID;
+    speed_valid     = CANRX_get_signal(VEH, PM100DX_motorSpeedCritical, &motor_rpm) == CANRX_MESSAGE_VALID;
+    miaBms          = CANRX_get_signal(VEH, BMSB_packContactorState, &contactor_state) != CANRX_MESSAGE_VALID;
+    discharge_valid = CANRX_get_signal(VEH, BMSB_maxDischarge, &BMSB_maxDischarge) == CANRX_MESSAGE_VALID;
+    voltage_valid   = CANRX_get_signal(VEH, BMSB_packVoltage, &BMSB_voltage) == CANRX_MESSAGE_VALID;
     app_faultManager_setFaultState(FM_FAULT_VCREAR_MIAMC, !speed_valid);
 
     bool       mcFaulted = app_faultManager_getNetworkedFault_anySet(VEH, PM100DX_faults);
@@ -649,7 +661,14 @@ static void mcManager_periodic_100Hz(void)
 
     motor_rpm                = (int16_t)((motor_rpm < 0) ? -motor_rpm : motor_rpm);
     mcManager_data.axle_rpm  = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
-
+    if (speed_valid && discharge_valid && voltage_valid && (motor_rpm > 0))
+    {
+        mcManager_data.vcRear_torqueLimitCurrent = BMSB_voltage * BMSB_maxDischarge / (RPM_TO_RAD_P_S((float32_t)motor_rpm));
+    }
+    else
+    {
+        mcManager_data.vcRear_torqueLimitCurrent = MCMANAGER_TORQUE_LIMIT;
+    }
     switch (app_vehicleState_getState())
     {
         case VEHICLESTATE_TS_RUN:
@@ -884,7 +903,8 @@ static void mcManager_periodic_100Hz(void)
 
     mcManager_data.last_contactor_state = contactor_state;
     mcManager_data.enable               = enable;
-    torque_command                      = SATURATE(minLimit, torque_command, maxLimit);
+    const float32_t effectiveMaxLimit = (!isRegenTorque && (mcManager_data.vcRear_torqueLimitCurrent < maxLimit)) ? mcManager_data.vcRear_torqueLimitCurrent : maxLimit;
+    torque_command                      = SATURATE(minLimit, torque_command, effectiveMaxLimit);
     lib_rateLimit_linear_update(&mcManager_data.torque_command, torque_command);
 
     eepromTransmitPending();

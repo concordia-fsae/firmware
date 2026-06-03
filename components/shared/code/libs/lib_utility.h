@@ -34,9 +34,10 @@
 # define READ_REG(REG)                          ((REG))
 # define MODIFY_REG(REG, CLEARMASK, SETMASK)    WRITE_REG((REG), (((READ_REG(REG)) & (~(CLEARMASK))) | (SETMASK)))
 #endif // if FEATURE_IS_ENABLED(MCU_STM32_USE_HAL)
-
-#define RAD_TO_DEG                              (180.0f / 3.14159265358979323846f)
+#define PI                                      3.14159265358979323846f
+#define RAD_TO_DEG                              (180.0f / PI)
 #define DEG_TO_RAD                              (1 / RAD_TO_DEG)
+#define RPM_TO_RAD_P_S(RPM)                     ((RPM) * 2.0f * PI / 60.0f)
 
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S

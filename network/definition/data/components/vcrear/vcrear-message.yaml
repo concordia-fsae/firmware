@@ -18,6 +18,14 @@ messages:
       mcCalibratingResolver:
       mcCalibratingResolverFailed:
 
+  torqueInsights:
+    description: VCREAR Torque limits
+    cycleTimeMs: 100
+    id: 0x240
+    sourceBuses: veh
+    signals:
+      vcRearTorqueCurrentLimit:
+
   request:
     description: VCREAR request states
     cycleTimeMs: 100
