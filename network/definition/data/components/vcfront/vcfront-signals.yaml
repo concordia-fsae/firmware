@@ -245,10 +245,10 @@ signals:
     unit: Nm
     nativeRepresentation:
       bitWidth: 7
-      resolution: 1
+      resolution: 1.5
       range:
         min: 25
-        max: 150
+        max: 175
     continuous: true
 
   preloadTorqueDebug:
@@ -270,7 +270,7 @@ signals:
       bitWidth: 7
       range:
         min: 0
-        max: 150
+        max: 175
     continuous: true
 
   torqueRequestCorrectionDebug:
@@ -280,7 +280,7 @@ signals:
       bitWidth: 8
       range:
         min: 0
-        max: 150
+        max: 175
       resolution: 1
     continuous: true
 
@@ -447,6 +447,9 @@ signals:
   paramTcTireModelLimit:
     description: Active status of the traction control tire model algorithm
     discreteValues: digitalStatus
+  paramTcMapping:
+    description: Active traction control PID mapping
+    discreteValues: tcMapping
   paramTcPidMax:
     description: Max percentage limit of the driver input torque
     unit: "%"

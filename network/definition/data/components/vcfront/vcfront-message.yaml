@@ -293,6 +293,7 @@ messages:
     sourceBuses: veh
     signals:
       paramTcTireModelLimit:
+      paramTcMapping:
 
   brTempFront:
     description: Front Rotor Temperatures

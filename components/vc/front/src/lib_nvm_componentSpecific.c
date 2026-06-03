@@ -24,6 +24,74 @@ extern lib_nvm_nvmCycleLog_S  cycleLog;
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
 
+#if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+# define TC_PARAMSTATE_NVM_VERSION    1U
+# define TC_PID_NVM_VERSION           1U
+
+typedef struct
+{
+    FLAG_create(params, PARAMSTATE_COUNT);
+    uint16_t spare[2U];
+} LIB_NVM_STORAGE(nvm_tcParamState_v0_S);
+
+typedef struct
+{
+    uint8_t  percentMaxTcLimit;
+    uint8_t  percentILim;
+    uint16_t thousandthKp;
+    uint16_t thousandthKi;
+    uint16_t thousandthKd;
+    uint16_t tLeakMs;
+    uint16_t spare[6U];
+} LIB_NVM_STORAGE(nvm_tcPid_v0_S);
+
+NVM_SIZE_ASSERT(nvm_tcParamState_v0_S, sizeof(nvm_tcParamState_S));
+NVM_SIZE_ASSERT(nvm_tcPid_v0_S,        sizeof(nvm_tcPid_S));
+
+static uint16_t version_handler_tcParamState(const uint16_t version, const storage_t* const entry_Ptr)
+{
+    uint16_t new_version = version;
+
+    if (new_version == 0U)
+    {
+        nvm_tcParamState_v0_S flash = { 0U };
+        memcpy(&flash,                   entry_Ptr,    sizeof(flash));
+
+        memcpy(tcParamState_data.params, flash.params, sizeof(tcParamState_data.params));
+        tcParamState_data.selectedTcMapping = TC_MAPPING_CUSTOM;
+        memset(tcParamState_data.spare, 0x00U, sizeof(tcParamState_data.spare));
+
+        new_version                         = TC_PARAMSTATE_NVM_VERSION;
+    }
+
+    return new_version;
+}
+
+static uint16_t version_handler_tcPid(const uint16_t version, const storage_t* const entry_Ptr)
+{
+    uint16_t new_version = version;
+
+    if (new_version == 0U)
+    {
+        nvm_tcPid_v0_S flash = { 0U };
+        memcpy(&flash, entry_Ptr, sizeof(flash));
+
+        tcPid_data.percentMaxTcLimit = flash.percentMaxTcLimit;
+        tcPid_data.percentILim       = flash.percentILim;
+        tcPid_data.thousandthKp      = flash.thousandthKp;
+        tcPid_data.thousandthKi      = flash.thousandthKi;
+        tcPid_data.thousandthKd      = flash.thousandthKd;
+        tcPid_data.tLeakMs           = flash.tLeakMs;
+        tcPid_data.maxTorqueNm       = TC_130NM_TORQUE;
+        memset(tcPid_data.spare, 0x00U, sizeof(tcPid_data.spare));
+
+        new_version                  = TC_PID_NVM_VERSION;
+    }
+
+    return new_version;
+}
+#endif // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
+
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -39,8 +107,9 @@ static const nvm_steeringCalibration_S steerinCalibration_data_default = {
     .spare = { 0U },
 };
 static const nvm_tcParamState_S        tcParamState_data_default = {
-    .params = { 0U },
-    .spare  = { 0U },
+    .params            = { 0U },
+    .selectedTcMapping = TC_MAPPING_CUSTOM,
+    .spare             = { 0U },
 };
 LIB_NVM_MEMORY_REGION(nvm_tcParamState_S tcParamState_data) = { 0U };
 TC_SET_DEFAULT_PID(static const nvm_tcPid_S tcPid_data_default);
@@ -79,15 +148,17 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .entrySize              = sizeof(nvm_tcParamState_S),
         .entryDefault_Ptr       = &tcParamState_data_default,
         .entryRam_Ptr           = &tcParamState_data,
-        .minTimeBetweenWritesMs =                     10000U,
-        .version                =                         0U,
+        .minTimeBetweenWritesMs =                        10000U,
+        .version                = TC_PARAMSTATE_NVM_VERSION,
+        .versionHandler_Fn      = &version_handler_tcParamState,
     },
     [NVM_ENTRYID_TC_PID] =              {
         .entrySize              = sizeof(nvm_tcPid_S),
         .entryDefault_Ptr       = &tcPid_data_default,
         .entryRam_Ptr           = &tcPid_data,
-        .minTimeBetweenWritesMs =              10000U,
-        .version                =                  0U,
+        .minTimeBetweenWritesMs =                 10000U,
+        .version                = TC_PID_NVM_VERSION,
+        .versionHandler_Fn      = &version_handler_tcPid,
     },
 };
 #endif // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)

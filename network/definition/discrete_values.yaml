@@ -235,6 +235,12 @@ tractionControlState:
   ERROR: 4
   LOCKOUT: 5
 
+tcMapping:
+  SNA: 0
+  CUSTOM: 1
+  MAP_100NM: 2
+  MAP_150NM: 3
+
 sleepFollowerState:
   SNA: 0
   OK_TO_SLEEP: 1
@@ -283,6 +289,7 @@ configSelection:
   CALIB_DYNAMICS2: 11
   PARAM_TC_TLEAK: 12
   PARAM_FLUX_WEAKENING_CURRENT: 13
+  TC_MAPPING: 14
 configOption:
   SNA: 0
   NONE: 1
@@ -297,6 +304,9 @@ configOption:
   TEST_FAN: 10
   CALIB_IMU_YAW: 11
   IMU_SELFTEST: 12
+  TC_MAPPING_CUSTOM: 13
+  TC_MAPPING_100NM: 14
+  TC_MAPPING_150NM: 15
 configUnit:
   NONE: 0
   N: 1

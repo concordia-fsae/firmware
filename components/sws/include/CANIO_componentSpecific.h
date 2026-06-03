@@ -103,6 +103,8 @@
 #define set_requestTcTLeakMsInc(m, b, n, s)               set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_TLEAK_MS_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestFluxWeakeningCurrentDec(m, b, n, s)    set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_FLUX_WEAKENING_CURRENT_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_requestFluxWeakeningCurrentInc(m, b, n, s)    set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_FLUX_WEAKENING_CURRENT_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcMappingDec(m, b, n, s)               set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_MAPPING_DEC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
+#define set_requestTcMappingInc(m, b, n, s)               set(m, b, n, s, driverInput_getDigital(DRIVERINPUT_REQUEST_TC_MAPPING_INC) ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #define set_requestScreen(m, b, n, s)                     set(m, b, n, s, driverInput_getScreenCAN())
 #define set_driverConfigSelection(m, b, n, s)             set(m, b, n, s, driverInput_getConfigSelectedCAN())
