@@ -45,8 +45,9 @@
 
 #define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE    0.1f
 
-#define BALANCING_DELTA_CUTOFF                         0.01f // [V]
-#define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f // [V]
+#define BALANCING_DELTA_CUTOFF                         0.01f    // [V]
+#define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f    // [V]
+#define MAX_POWER                                      80000.0f // Watts
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -134,6 +135,10 @@ static void dischargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
     if (bms->discharge_limit > BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)
     {
         bms->discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+    }
+    if ((bms->discharge_limit * bms->pack_voltage_calculated) > MAX_POWER)
+    {
+        bms->discharge_limit = MAX_POWER / bms->pack_voltage_calculated;
     }
 }
 

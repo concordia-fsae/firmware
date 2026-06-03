@@ -663,11 +663,11 @@ static void mcManager_periodic_100Hz(void)
     mcManager_data.axle_rpm  = (uint16_t)(motor_rpm / DRIVETRAIN_MULTIPLIER);
     if (speed_valid && discharge_valid && voltage_valid && (motor_rpm > 0))
     {
-        mcManager_data.vcRear_torqueLimitCurrent = BMSB_voltage * BMSB_maxDischarge / ((float32_t)motor_rpm * 0.10472f);
+        mcManager_data.vcRear_torqueLimitCurrent = BMSB_voltage * BMSB_maxDischarge / (RPM_TO_RAD_P_S((float32_t)motor_rpm));
     }
     else
     {
-        mcManager_data.vcRear_torqueLimitCurrent = 0.0f;
+        mcManager_data.vcRear_torqueLimitCurrent = MCMANAGER_TORQUE_LIMIT;
     }
     switch (app_vehicleState_getState())
     {

@@ -21,7 +21,7 @@ messages:
   torqueInsights:
     description: VCREAR Torque limits
     cycleTimeMs: 100
-    id: 0x201
+    id: 0x240
     sourceBuses: veh
     signals:
       vcRearTorqueCurrentLimit:
