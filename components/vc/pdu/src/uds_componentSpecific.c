@@ -19,6 +19,7 @@
 # include "uds_componentSpecific.h"
 
 // other includes
+# include "app_vehicleState.h"
 # include "crashSensor.h"
 # include "FreeRTOS.h"
 # include "HW.h"
@@ -48,6 +49,8 @@ extern void     isotp_user_debug(const char* message, ...);
  *                              D E F I N E S
  ******************************************************************************/
 
+# define ROUTINE_RESET_CRASH_ID      0x1000U
+# define ROUTINE_DISABLE_SLEEP_ID    0x1001U
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -90,6 +93,40 @@ static void routine_resetCrash(udsRoutineControlType_E routineControlType, uint8
 
         case UDS_ROUTINE_CONTROL_GET_RESULT:
         case UDS_ROUTINE_CONTROL_STOP:
+        case UDS_ROUTINE_CONTROL_NONE:
+        default:
+            uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
+            break;
+    }
+}
+
+static void routine_disableSleep(udsRoutineControlType_E routineControlType,
+                                 uint8_t                 *payload,
+                                 uint8_t                 payloadLengthBytes)
+{
+    UNUSED(payloadLengthBytes);
+
+    switch (routineControlType)
+    {
+        case UDS_ROUTINE_CONTROL_START:
+            app_vehicleState_disableSleep();
+            uds_sendPositiveResponse(
+                UDS_SID_ROUTINE_CONTROL,
+                UDS_ROUTINE_CONTROL_START,
+                payload,
+                0x02);
+            break;
+
+        case UDS_ROUTINE_CONTROL_STOP:
+            app_vehicleState_allowSleep();
+            uds_sendPositiveResponse(
+                UDS_SID_ROUTINE_CONTROL,
+                UDS_ROUTINE_CONTROL_STOP,
+                payload,
+                0x02);
+            break;
+
+        case UDS_ROUTINE_CONTROL_GET_RESULT:
         case UDS_ROUTINE_CONTROL_NONE:
         default:
             uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_SUB_FUNCTION_NOT_SUPPORTED);
@@ -205,8 +242,12 @@ void uds_cb_routineControl(udsRoutineControlType_E routineControlType, uint8_t *
 
     switch (routineId.u16)
     {
-        case 0x1000:
-            routine_resetCrash(routineControlType, payload + 2U, payloadLengthBytes);
+        case ROUTINE_RESET_CRASH_ID:
+            routine_resetCrash(routineControlType, payload, payloadLengthBytes);
+            break;
+
+        case ROUTINE_DISABLE_SLEEP_ID:
+            routine_disableSleep(routineControlType, payload, payloadLengthBytes);
             break;
 
         default:

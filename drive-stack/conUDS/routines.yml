@@ -17,6 +17,8 @@ nodes:
     routines:
       resetCrash:
         id: 0x1000
+      disableSleep:
+        id: 0x1001
   vcrear:
     routines:
       calibrateResolver:
