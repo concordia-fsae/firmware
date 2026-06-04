@@ -334,6 +334,7 @@ static void BMS100Hz_PRD()
         max_chip.config.output.output.cell = BMS_CONFIGURED_SERIES_CELLS - 1;    /**< Prepare for next step */
         BMS.delayed_measurement            = true;
         BMS.state                          = BMS_PARASITIC_MEASUREMENT;
+        MAX_readWriteToChip();
     }
     else if (BMS.state == BMS_SAMPLING)
     {
