@@ -45,7 +45,7 @@
 
 #define CONTACTOR_SOH_LOW_WARN_THRESHOLD_PERCENTAGE    0.1f
 
-#define BALANCING_DELTA_CUTOFF                         0.01f    // [V]
+#define BALANCING_DELTA_CUTOFF                         0.005f   // [V]
 #define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f    // [V]
 #define MAX_POWER                                      80000.0f // Watts
 
@@ -532,6 +532,11 @@ static void BMS100Hz_PRD(void)
                 float32_t  chg_voltage = 0.0f;
                 const bool mc_valid    = (CANRX_get_signal(VEH, PM100DX_tractiveSystemVoltage, &ts_voltage) == CANRX_MESSAGE_VALID);
                 const bool chg_valid   = (CANRX_get_signal(VEH, BRUSA513_dcBusVoltage, &chg_voltage) == CANRX_MESSAGE_VALID);
+
+                if (chg_valid)
+                {
+                    BMS_startBalancing();
+                }
 
                 if ((((mc_valid == true) && (ts_voltage > 0.95f * BMS_VPACK_SOURCE)) ||
                      ((chg_valid == true) && (chg_voltage > 0.95f * BMS_VPACK_SOURCE))) &&
