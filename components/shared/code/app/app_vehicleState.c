@@ -35,6 +35,7 @@ struct
 
     drv_timer_S                  sleepTimeout;
     app_vehicleState_sleepable_E sleepState;
+    bool                         sleepDisabled;
 
     bool                         faultReset;
 } vehicleState_data;
@@ -101,7 +102,8 @@ static CAN_sleepFollowerState_E translateToCANSleepableState(app_vehicleState_sl
 
 static void eval_sleep(void)
 {
-    const bool sleepExpired = drv_timer_getState(&vehicleState_data.sleepTimeout) == DRV_TIMER_EXPIRED;
+    const bool sleepExpired = !vehicleState_data.sleepDisabled &&
+                              (drv_timer_getState(&vehicleState_data.sleepTimeout) == DRV_TIMER_EXPIRED);
 
     vehicleState_data.sleepState = sleepExpired ? SLEEPABLE_OK : SLEEPABLE_NOK;
 
@@ -319,6 +321,17 @@ void app_vehicleState_delaySleep(uint32_t ms)
     {
         drv_timer_start(&vehicleState_data.sleepTimeout, ms);
     }
+}
+
+void app_vehicleState_disableSleep(void)
+{
+    vehicleState_data.sleepDisabled = true;
+}
+
+void app_vehicleState_allowSleep(void)
+{
+    vehicleState_data.sleepDisabled = false;
+    drv_timer_start(&vehicleState_data.sleepTimeout, 0U);
 }
 
 bool app_vehicleState_sleeping(void)

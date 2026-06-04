@@ -99,6 +99,8 @@ typedef enum
 void                     app_vehicleState_init(void);
 void                     app_vehicleState_run100Hz(void);
 void                     app_vehicleState_delaySleep(uint32_t ms);
+void                     app_vehicleState_disableSleep(void);
+void                     app_vehicleState_allowSleep(void);
 // Accessors
 bool                     app_vehicleState_sleeping(void);
 bool                     app_vehicleState_getFaultReset(void);
