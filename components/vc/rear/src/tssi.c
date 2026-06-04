@@ -25,7 +25,8 @@
 static struct
 {
     tssi_state_E state;
-    drv_timer_S  timer;
+    drv_timer_S  redLightTimer;
+    drv_timer_S  imdInitTimer;
 } tssi_data;
 
 /******************************************************************************
@@ -42,9 +43,9 @@ static void setRed(void)
 {
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_TSSI_G_EN, DRV_IO_INACTIVE);
 
-    if (drv_timer_getState(&tssi_data.timer) == DRV_TIMER_EXPIRED)
+    if (drv_timer_getState(&tssi_data.redLightTimer) == DRV_TIMER_EXPIRED)
     {
-        drv_timer_start(&tssi_data.timer, 250U);
+        drv_timer_start(&tssi_data.redLightTimer, 250U);
         drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_TSSI_R_EN);
     }
 }
@@ -77,7 +78,8 @@ static void tssi_init(void)
 {
     memset(&tssi_data, 0x00U, sizeof(tssi_data));
     tssi_data.state = TSSI_INIT;
-    drv_timer_init(&tssi_data.timer);
+    drv_timer_init(&tssi_data.redLightTimer);
+    drv_timer_init(&tssi_data.imdInitTimer);
     setGreen();
 }
 
@@ -101,6 +103,7 @@ static void tssi_periodic_10Hz(void)
             // This will delay the next run of the TSSI by 100ms, allowing enough time for the state of the
             // shutdown circuit to update and be re-transmitted over CAN
             tssi_data.state = TSSI_ON_GREEN;
+            drv_timer_start(&tssi_data.imdInitTimer, 10000);
         }
         return;
     }
@@ -109,12 +112,19 @@ static void tssi_periodic_10Hz(void)
         (bmsStatus == CAN_DIGITALSTATUS_ON) && (imdStatus == CAN_DIGITALSTATUS_ON)
         )
     {
-        drv_timer_stop(&tssi_data.timer);
+        if (drv_timer_getState(&tssi_data.imdInitTimer) == DRV_TIMER_EXPIRED)
+        {
+            drv_timer_stop(&tssi_data.imdInitTimer);
+        }
+        drv_timer_stop(&tssi_data.redLightTimer);
         tssi_data.state = TSSI_ON_GREEN;
     }
-    else if (tssi_data.state == TSSI_ON_GREEN)
+    else if ((tssi_data.state == TSSI_ON_GREEN) && ((drv_timer_getState(&tssi_data.imdInitTimer) == DRV_TIMER_EXPIRED) ||
+                                                    (drv_timer_getState(&tssi_data.imdInitTimer) == DRV_TIMER_STOPPED))
+             )
     {
-        drv_timer_start(&tssi_data.timer, 250);
+        drv_timer_stop(&tssi_data.imdInitTimer);
+        drv_timer_start(&tssi_data.redLightTimer, 250);
         tssi_data.state = TSSI_ON_RED;
     }
 
