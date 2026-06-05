@@ -177,3 +177,4 @@ messages:
     signals:
       maxDischargeModeled:
       maxChargeModeled:
+      driveTimeRemaining:

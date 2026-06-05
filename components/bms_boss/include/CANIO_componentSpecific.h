@@ -70,6 +70,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define transmit_BMSB_currentLimit                     (BMS_SFT_checkMCTimeout() == false)
 #define set_maxCharge(m, b, n, s)                      set(m, b, n, s, BMS.charge_limit);
 #define set_maxDischarge(m, b, n, s)                   set(m, b, n, s, BMS.discharge_limit);
+#define set_driveTimeRemaining(m, b, n, s)             set(m, b, n, s, BMS.driveTimeRemaining / 60);
 #define set_packRH(m, b, n, s)                         set(m, b, n, s, ENV.board.rh)
 #define set_maxCellTemp(m, b, n, s)                    set(m, b, n, s, BMS.max_temp);
 #define set_maxCellVoltage(m, b, n, s)                 set(m, b, n, s, BMS.voltages.max);

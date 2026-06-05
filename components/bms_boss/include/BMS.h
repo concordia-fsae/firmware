@@ -70,6 +70,7 @@ typedef struct
     uint8_t          connected_segments;
     float32_t        charge_limit;    // [A] precision 1A
     float32_t        discharge_limit; // [A] precision 1A
+    float32_t        driveTimeRemaining;
     uint32_t         last_step_ms;
     float32_t        pack_voltage_calculated;
     float32_t        pack_voltage_measured;

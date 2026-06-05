@@ -97,6 +97,7 @@ class Units(Enum):
     none = ""
     m = "m"
     cm = "cm"
+    min = "min"
     s = "s"
     ms = "ms"
     volts = "V"
