@@ -255,7 +255,8 @@ void BMS_measurementComplete(void)
     {
         for (uint8_t i = 0; i < BMS_CONFIGURED_SERIES_CELLS; i++)
         {
-            BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i) + BMS.cells[i].parasitic_corr;
+            // Adding parasitic correction makes our measurements less accurate
+            BMS.cells[i].voltage = drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CELL1 + i);    // - BMS.cells[i].parasitic_corr;
         }
         calcSegStats();
 

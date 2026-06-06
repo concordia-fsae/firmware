@@ -296,27 +296,25 @@ static void calculateWheelSpeed(void)
 static void calculateVehicleSpeed(void)
 {
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER)
-    float32_t                  speed                    = vehicle.vehicleSpeedLinear;
-    float32_t                  accelLon                 = 0.0f;
-    float32_t                  anglePitch               = 0.0f;
-    int16_t                    motor_rpm                = 0;
-    const uint16_t             ggaPoses                 = app_gps_getSentenceCountGga();
-    const bool                 accelValid               = (CANRX_IMU_LON(&accelLon) == CANRX_MESSAGE_VALID);
-    const bool                 angleValid               = (CANRX_IMU_ANGLEPITCH(&anglePitch) == CANRX_MESSAGE_VALID);
-    const bool                 motorValid               = (CANRX_MOTOR_SPEED(&motor_rpm) == CANRX_MESSAGE_VALID);
-    const uint32_t             currentTime              = HW_TIM_getTimeMS();
-    const float32_t            delta_t                  = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
-    const bool                 validGPS                 = app_gps_isValid();
-    const uint16_t             frontAxleRpm             = app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT);
-    uint64_t                   frontWheelSampleBaseTick = 0U;
-    const bool                 motorInReverse           = (motor_rpm < 0) && motorValid;
-    lib_simpleFilter_cumAvgF_S updateSpeed;
-    lib_simpleFilter_cumAvgF_clear(&updateSpeed);
+    float32_t       speed                    = vehicle.vehicleSpeedLinear;
+    float32_t       accelLon                 = 0.0f;
+    float32_t       anglePitch               = 0.0f;
+    int16_t         motor_rpm                = 0;
+    const uint16_t  ggaPoses                 = app_gps_getSentenceCountGga();
+    const bool      accelValid               = (CANRX_IMU_LON(&accelLon) == CANRX_MESSAGE_VALID);
+    const bool      angleValid               = (CANRX_IMU_ANGLEPITCH(&anglePitch) == CANRX_MESSAGE_VALID);
+    const bool      motorValid               = (CANRX_MOTOR_SPEED(&motor_rpm) == CANRX_MESSAGE_VALID);
+    const uint32_t  currentTime              = HW_TIM_getTimeMS();
+    const float32_t delta_t                  = (float32_t)(currentTime - vehicle.lastTimestampMS) / 1000.0f;
+    const bool      validGPS                 = app_gps_isValid();
+    const uint16_t  frontAxleRpm             = app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT);
+    uint64_t        frontWheelSampleBaseTick = 0U;
+    const bool      motorInReverse           = (motor_rpm < 0) && motorValid;
 
     if (accelValid && angleValid && (delta_t > 0.0f))
     {
         const float32_t accelAlongAxis = accelLon + (GRAVITY * sinf(anglePitch * DEG_TO_RAD));
-        lib_simpleFilter_cumAvgF_increment(&updateSpeed, accelAlongAxis * delta_t);
+        speed += accelAlongAxis * delta_t;
     }
 
     const float32_t gpsMps = app_gps_getHeadingRef()->speedMps;
@@ -326,23 +324,24 @@ static void calculateVehicleSpeed(void)
     {
         vehicle.gpsMps        = gpsMps;
         vehicle.countGgaPoses = ggaPoses;
-        lib_simpleFilter_cumAvgF_increment(&updateSpeed, motorInReverse ? -gpsMps : gpsMps);
+        speed                 = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -gpsMps : gpsMps);
     }
 # pragma GCC diagnostic pop
     if (hasValidFrontWheelReference() && getFreshFrontWheelReference(&frontWheelSampleBaseTick))
     {
         const float32_t tmp = RPM_TO_MPS(frontAxleRpm);
-        lib_simpleFilter_cumAvgF_increment(&updateSpeed, motorInReverse ? -tmp : tmp);
+        speed                                = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, motorInReverse ? -tmp : tmp);
         vehicle.lastFrontWheelSampleBaseTick = frontWheelSampleBaseTick;
     }
 
-    float32_t newSpeedSample = (motor_rpm < MOTOR_SPEED_ZERO_RPM) ? 0.0f : lib_simpleFilter_cumAvgF_average(&updateSpeed);
-    motor_rpm = (int16_t)((motor_rpm < 0) ? -motor_rpm : motor_rpm);
-    if (motorValid && (motor_rpm < MOTOR_SPEED_ZERO_RPM))
+    if (motorValid)
     {
-        newSpeedSample = 0.0f;
+        motor_rpm = (int16_t)((motor_rpm < 0) ? -motor_rpm : motor_rpm);
+        if (motor_rpm < MOTOR_SPEED_ZERO_RPM)
+        {
+            speed = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, 0.0f);
+        }
     }
-    speed                      = lib_simpleFilter_lpf_step(&vehicle.lpfSpeed, newSpeedSample);
 
     vehicle.vehicleSpeedLinear = speed;
 

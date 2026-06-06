@@ -49,6 +49,11 @@
 #define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f    // [V]
 #define MAX_POWER                                      80000.0f // Watts
 
+#define TRICKLE_CHARGE_CURRENT                         (0.1f * BMS_CONFIGURED_PARALLEL_CELLS)
+#define SLOW_TRICKLE_CHARGE_CURRENT                    0.1f
+#define TRICKLE_CHARGE_VOLTAGE                         4.1f
+#define SLOW_TRICKLE_CHARGE_VOLTAGE                    4.15f
+
 /******************************************************************************
  *                           P U B L I C  V A R S
  ******************************************************************************/
@@ -90,13 +95,19 @@ static drv_timer_S precharge_timer;
 
 static void chargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 {
+    const bool      trickleCharge = bms->voltages.max > TRICKLE_CHARGE_VOLTAGE;
+    const float32_t chargeCurrent = trickleCharge ?
+                                    (bms->balancing && (bms->voltages.max > SLOW_TRICKLE_CHARGE_VOLTAGE) ? SLOW_TRICKLE_CHARGE_CURRENT : TRICKLE_CHARGE_CURRENT) :
+                                    batteryModel->chargeLimit * BMS_CONFIGURED_PARALLEL_CELLS;
+
+
     if ((bms->max_temp > 60.0f) || bms->fault)
     {
         bms->charge_limit = 0;
         return;
     }
 
-    bms->charge_limit = batteryModel->chargeLimit * BMS_CONFIGURED_PARALLEL_CELLS;
+    bms->charge_limit = SATURATE(0.0f, chargeCurrent, batteryModel->chargeLimit * BMS_CONFIGURED_PARALLEL_CELLS);
 
     if (bms->max_temp >= 48)
     {
