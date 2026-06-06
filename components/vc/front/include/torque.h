@@ -23,13 +23,13 @@
 #define TC_100NM_ILIM                 0.0f // Allow heavy integral limits in sustained slip with leak
 #define TC_100NM_KP                   (0.591f)
 #define TC_100NM_KI                   (0.0f)
-#define TC_100NM_KD                   (0.70f)
+#define TC_100NM_KD                   (0.070f)
 #define TC_100NM_TORQUE               100U
 #define TC_130NM_MAX                  0.7f // Handle heavy slip conditions
 #define TC_130NM_ILIM                 0.0f // Allow heavy integral limits in sustained slip with leak
 #define TC_130NM_KP                   (0.591f)
 #define TC_130NM_KI                   (0.0f)
-#define TC_130NM_KD                   (0.70f)
+#define TC_130NM_KD                   (0.070f)
 #define TC_130NM_TORQUE               130U
 #define TC_150NM_MAX                  0.75f // Handle heavy slip conditions
 #define TC_150NM_ILIM                 0.0f  // Allow heavy integral limits in sustained slip with leak
