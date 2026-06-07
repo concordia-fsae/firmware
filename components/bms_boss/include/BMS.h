@@ -20,11 +20,11 @@ _Static_assert(BMS_MAX_SEGMENTS >= BMS_CONFIGURED_SERIES_SEGMENTS);
 
 // TDK HVC43 series, worst case 200A load at break
 // https://www.tdk-electronics.tdk.com/inf/100/ds/HVC43MC_B88269X.pdf
-#define BMSB_CONTACTOR_LIFETIME_HVC43    1000U
+#define BMSB_CONTACTOR_LIFETIME_HVC43    10000U
 
 // Comus 3350 series reed relay, no cycle count published in datasheet
 // https://www.comus-intl.com/wp-content/uploads/2017/01/High-Voltage-Reed-Relays.pdf
-#define BMSB_CONTACTOR_LIFETIME_3350_PRECHARGE    2000U
+#define BMSB_CONTACTOR_LIFETIME_3350_PRECHARGE    10000U
 
 typedef enum
 {
