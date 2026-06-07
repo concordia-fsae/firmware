@@ -23,7 +23,7 @@ static lib_interpolation_point_S fan_curve[] = {
         .y = 0.0f,  // duty cycle
     },
     {
-        .x = 50,    // degC
+        .x = 45,    // degC
         .y = 1.0f,  // duty cycle
     },
 };
