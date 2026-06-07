@@ -13,7 +13,17 @@
 #include "drv_timer.h"
 #include "Module.h"
 #include "Yamcan.h"
-#define STARTUP_TIMER    10000
+
+/******************************************************************************
+ *                              D E F I N E S
+ ******************************************************************************/
+
+#define STARTUP_TIMER             10000
+#define FAN_BALANCING_OVERRIDE    0.5f
+
+/******************************************************************************
+ *                         P R I V A T E  V A R S
+ ******************************************************************************/
 
 static drv_timer_S               start_up;
 
@@ -23,7 +33,7 @@ static lib_interpolation_point_S fan_curve[] = {
         .y = 0.0f,  // duty cycle
     },
     {
-        .x = 50,    // degC
+        .x = 45,    // degC
         .y = 1.0f,  // duty cycle
     },
 };
@@ -128,7 +138,7 @@ static void cooling10Hz_PRD(void)
 {
     drv_timer_state_E boot_timer_state = drv_timer_getState(&start_up);
     uint8_t           percent_beans    = 0;
-    float32_t         override         = BMS_areCellsBalancing() ? 0.3f : 0.0f;
+    float32_t         override         = BMS_areCellsBalancing() ? FAN_BALANCING_OVERRIDE : 0.0f;
 
     if (boot_timer_state == DRV_TIMER_RUNNING)
     {

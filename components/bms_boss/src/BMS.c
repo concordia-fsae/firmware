@@ -49,10 +49,10 @@
 #define BALANCING_MIN_VOLTAGE_ALLOWED                  3.00f    // [V]
 #define MAX_POWER                                      80000.0f // Watts
 
-#define TRICKLE_CHARGE_CURRENT                         (0.1f * BMS_CONFIGURED_PARALLEL_CELLS)
-#define SLOW_TRICKLE_CHARGE_CURRENT                    0.1f
-#define TRICKLE_CHARGE_VOLTAGE                         4.1f
-#define SLOW_TRICKLE_CHARGE_VOLTAGE                    4.15f
+#define TRICKLE_CHARGE_CURRENT                         (1.0f * BMS_CONFIGURED_PARALLEL_CELLS)
+#define SLOW_TRICKLE_CHARGE_CURRENT                    0.25f
+#define TRICKLE_CHARGE_VOLTAGE                         4.15f
+#define SLOW_TRICKLE_CHARGE_VOLTAGE                    4.175f
 
 /******************************************************************************
  *                           P U B L I C  V A R S
