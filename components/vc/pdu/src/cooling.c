@@ -20,7 +20,7 @@
 
 #define START_TIMER_MS                500U
 #define START_DUTY                    1.0f
-#define FAN_ON_DUTY                   0.4f
+#define FAN_ON_DUTY                   0.6f
 #define PUMP_ON_DUTY                  1.0f
 
 #define COOLING_LATCH_START_THRESH    50.0f
