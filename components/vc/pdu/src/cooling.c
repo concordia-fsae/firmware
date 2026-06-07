@@ -18,10 +18,13 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define START_TIMER_MS    500U
-#define START_DUTY        1.0f
-#define FAN_ON_DUTY       0.4f
-#define PUMP_ON_DUTY      1.0f
+#define START_TIMER_MS                500U
+#define START_DUTY                    1.0f
+#define FAN_ON_DUTY                   0.4f
+#define PUMP_ON_DUTY                  1.0f
+
+#define COOLING_LATCH_START_THRESH    50.0f
+#define COOLING_LATCH_STOP_THRESH     45.0f
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -31,7 +34,9 @@ static struct
 {
     drv_timer_S enableTimerFan;
     drv_timer_S enableTimerPump;
+    bool        drivetrainCoolingLatched;
 } cooling;
+
 static struct
 {
     bool isTestPump;
@@ -93,6 +98,19 @@ static void cooling_init()
  */
 static void cooling10Hz_PRD(void)
 {
+    float32_t motorTemp = 0.0f;
+
+    (void)CANRX_get_signal(VEH, PM100DX_motorTemp, &motorTemp);
+
+    if (cooling.drivetrainCoolingLatched)
+    {
+        cooling.drivetrainCoolingLatched = motorTemp > COOLING_LATCH_STOP_THRESH;
+    }
+    else
+    {
+        cooling.drivetrainCoolingLatched = motorTemp > COOLING_LATCH_START_THRESH;
+    }
+
     CAN_digitalStatus_E requestChangePump = CAN_DIGITALSTATUS_SNA;
     CAN_digitalStatus_E requestChangeFan  = CAN_DIGITALSTATUS_SNA;
     const bool          requestedPump     = (CANRX_get_signal(VEH, SWS_requestTestPump, &requestChangePump) == CANRX_MESSAGE_VALID) && (requestChangePump == CAN_DIGITALSTATUS_ON);
@@ -114,8 +132,8 @@ static void cooling10Hz_PRD(void)
 
     const float32_t dutyFan    = test.isTestFan ? 1.0f : FAN_ON_DUTY;
     const float32_t dutyPump   = test.isTestPump ? 1.0f : PUMP_ON_DUTY;
-    const bool      enablePump = (isHV || isRun || test.isTestPump) && !faultPump;
-    const bool      enableFan  = (isRun || test.isTestFan) && !faultFan;
+    const bool      enablePump = (isHV || isRun || test.isTestPump || cooling.drivetrainCoolingLatched) && !faultPump;
+    const bool      enableFan  = (isRun || test.isTestFan || cooling.drivetrainCoolingLatched) && !faultFan;
 
     setDuty(DRV_VN9008_CHANNEL_PUMP, enablePump ? dutyPump : 0.0f, &cooling.enableTimerPump, faultPump);
     setDuty(DRV_VN9008_CHANNEL_FAN,  enableFan ? dutyFan : 0.0f,   &cooling.enableTimerFan,  faultFan);
