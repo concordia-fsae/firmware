@@ -36,7 +36,8 @@
 // MINIMUM_TS_ACTIVE 9.0V
 // MINIMUM_BOARD     8.0V
 #define BATTERY_OVERVOLTAGE       15.0f
-#define BATTERY_RECHARGED         11.50f
+#define BATTERY_RECHARGED         11.0f
+#define BATTERY_CHARGED           10.50f
 #define BATTERY_CUTOFF_SFTY_HI    8.00f
 #define BATTERY_CUTOFF_SFTY_LO    7.75f
 #define BATTERY_CUTOFF_ANY_HI     7.00f
@@ -126,7 +127,7 @@ static void updateDeepSleepState(void)
 static void evalAbilities(void)
 {
     const bool resetFaults = app_vehicleState_getFaultReset();
-    const bool lowBattery  = pm_data.glv_voltage < BATTERY_RECHARGED;
+    const bool lowBattery  = pm_data.glv_voltage < BATTERY_CHARGED;
     const bool charged     = pm_data.charged ?
                              (pm_data.glv_voltage > BATTERY_CUTOFF_ANY_LO) :
                              (pm_data.glv_voltage > BATTERY_RECHARGED);
