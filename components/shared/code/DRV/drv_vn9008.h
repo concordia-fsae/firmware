@@ -47,6 +47,7 @@ typedef struct
     drv_outputAD_channelDigital_E enable_cs;
     float32_t                     current_limit_amp;
     uint16_t                      oc_timeout_ms;
+    bool                          autoReset;
 } drv_vn9008_channelConfig_S;
 
 extern const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT];
