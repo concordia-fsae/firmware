@@ -48,5 +48,5 @@ carputer_application_target(
         "application/config/ota-agent/discovery.yaml": "discovery.yaml",
         "application/config/ota-agent/ota-agent.toml": "ota-agent.toml",
     },
-    include_artifact_hash = False,
+    include_artifact_hash = True,
 )

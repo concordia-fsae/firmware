@@ -114,7 +114,7 @@ carputer_platform_targets(
     apps = CARPUTER_APPS,
     app_targets = CARPUTER_APP_TARGETS,
     firmware = CFR25_FIRMWARE,
-    include_artifact_hashes = False,
+    include_artifact_hashes = True,
     uds_manifest = "//network:manifest-uds",
     uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
     uds_requires_manual_recovery = [
@@ -139,7 +139,7 @@ carputer_platform_targets(
     apps = CARPUTER_APPS,
     app_targets = CARPUTER_APP_TARGETS,
     firmware = CFR26_FIRMWARE,
-    include_artifact_hashes = False,
+    include_artifact_hashes = True,
     uds_manifest = "//network:manifest-uds",
     uds_routines_manifest = "//drive-stack/conUDS:routines-manifest",
     uds_requires_manual_recovery = [
@@ -165,7 +165,7 @@ carputer_deploy_targets_manifest(
     bundle_filename = "carputer.tgz",
     bundle_node = "carputer",
     firmware = CFR26_FIRMWARE,
-    include_artifact_hashes = False,
+    include_artifact_hashes = True,
     out = "deploy-targets.yaml",
     platform = "cfr26",
     uds_manifest = "//network:manifest-uds",

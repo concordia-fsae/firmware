@@ -122,6 +122,7 @@ typedef struct
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
     uint32_t      pageSize;
     storage_t     * currentPtr;
+    bool          deferRecordDiscard;
 #endif
 } lib_nvm_data_S;
 
@@ -162,6 +163,7 @@ static void            recordPopulateDefault(lib_nvm_entry_t entryId);
 static void            recordWrite(lib_nvm_entry_t entryId);
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
+static void            rebuildBlockFromRam(uint32_t addr, lib_nvm_blockHeader_S * const oldBlock);
 static void            invalidateBlock(lib_nvm_blockHeader_S * const block);
 static void            initializeNVMBlock(uint32_t addr);
 static uint32_t        getBlockBaseAddress(uint32_t addr);
@@ -185,9 +187,12 @@ void lib_nvm_init(void)
                                            &data.entry_action_queue);
 #endif
 
-    lib_nvm_blockHeader_S* block_hdr       = (lib_nvm_blockHeader_S*)NVM_ORIGIN;
-    uint8_t              total_failed_crc  = 0U;
-    uint8_t              total_failed_init = 0U;
+    lib_nvm_blockHeader_S* block_hdr         = (lib_nvm_blockHeader_S*)NVM_ORIGIN;
+    uint8_t              total_failed_crc    = 0U;
+    uint8_t              total_failed_init   = 0U;
+    bool                 rebuild_block       = false;
+    uint32_t             rebuild_addr        = 0U;
+    lib_nvm_blockHeader_S* rebuild_old_block = NULL;
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
     data.pageSize = LIB_NVM_GET_FLASH_PAGE_SIZE();
 
@@ -213,7 +218,8 @@ void lib_nvm_init(void)
         )
     {
         // TODO: Handle block versioning
-        initializeNVMBlock((uint32_t)block_hdr);
+        rebuild_block = true;
+        rebuild_addr  = (uint32_t)block_hdr;
         total_failed_init++;
     }
     else
@@ -230,17 +236,13 @@ void lib_nvm_init(void)
             {
                 lib_nvm_crc_t crc = 0xff;
 
-                if (hdr->entryId >= NVM_ENTRYID_COUNT)
-                {
-                    // TODO : Handle failure
-                    // initializeNVMBlock((uint32_t)data.currentPtr); // Immediately scrap the block and start with last elements?
-                    total_failed_init++;
-                    break;
-                }
-
                 crc = crc8_calculate(crc, (uint8_t*)record, hdr->entrySize);
 
-                if (crc == hdr->crc)
+                if (hdr->entryId >= NVM_ENTRYID_COUNT)
+                {
+                    total_failed_init++;
+                }
+                else if (crc == hdr->crc)
                 {
                     records[hdr->entryId].currentNvmAddr_Ptr = (storage_t*)hdr;
                 }
@@ -300,6 +302,10 @@ void lib_nvm_init(void)
         }
     }
     initializeEmptyRecords();
+    if (rebuild_block)
+    {
+        rebuildBlockFromRam(rebuild_addr, rebuild_old_block);
+    }
     recordLog.totalRecordsVersionFailed += failed_records;
     recordLog.totalFailedRecordInit     += total_failed_init;
     recordLog.totalFailedCrc            += total_failed_crc;
@@ -373,14 +379,9 @@ void lib_nvm_run(void)
  */
 bool lib_nvm_nvmInitializeNewBlock(void)
 {
-    for (lib_nvm_entry_t entry = 0U; entry < NVM_ENTRYID_COUNT; entry++)
-    {
-        records[entry].currentNvmAddr_Ptr = NULL;
-    }
-
     lib_nvm_blockHeader_S* currentBlock = (lib_nvm_blockHeader_S*)getBlockBaseAddress((uint32_t)data.currentPtr);
-    initializeNVMBlock(getNextBlockStart((uint32_t)data.currentPtr));
-    invalidateBlock(currentBlock);
+
+    rebuildBlockFromRam(getNextBlockStart((uint32_t)data.currentPtr), currentBlock);
 
     return true;
 }
@@ -619,9 +620,8 @@ static void recordWrite(const lib_nvm_entry_t entryId)
 #endif
         if ((uint32_t)block_header != getBlockBaseAddress((uint32_t)data.currentPtr))
         {
-            initializeNVMBlock(getNextBlockStart((uint32_t)current_hdr));
-            invalidateBlock(block_header);
-            continue;
+            rebuildBlockFromRam(getNextBlockStart((uint32_t)current_hdr), block_header);
+            return;
         }
 
 
@@ -648,8 +648,8 @@ static void recordWrite(const lib_nvm_entry_t entryId)
 #endif // NVM_FLASH_BACKED
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
-        // Once the record has been written to NVM, set the record as valid in flash
-        if (currentRecord != NULL)
+        // Only retire the previous record after the replacement is safely in place.
+        if (!data.deferRecordDiscard && (currentRecord != NULL))
         {
             storage_t disc = SET_STATE;
             LIB_NVM_WRITE_TO_FLASH((uint32_t)&currentRecord->discarded,
@@ -664,6 +664,23 @@ static void recordWrite(const lib_nvm_entry_t entryId)
 }
 
 #if FEATURE_IS_ENABLED(NVM_FLASH_BACKED)
+static void rebuildBlockFromRam(uint32_t addr, lib_nvm_blockHeader_S * const oldBlock)
+{
+    initializeNVMBlock(addr);
+
+    data.deferRecordDiscard = true;
+    for (lib_nvm_entry_t entry = 0U; entry < NVM_ENTRYID_COUNT; entry++)
+    {
+        recordWrite(entry);
+    }
+    data.deferRecordDiscard = false;
+
+    if (oldBlock != NULL)
+    {
+        invalidateBlock(oldBlock);
+    }
+}
+
 static void invalidateBlock(lib_nvm_blockHeader_S * const block)
 {
     storage_t            disc     = SET_STATE;
@@ -694,10 +711,6 @@ static void initializeNVMBlock(uint32_t addr)
     for (lib_nvm_entry_t index = 0U; index < NVM_ENTRYID_COUNT; index++)
     {
         records[index].writeRequired = true;
-        if (HW_mcuShuttingDown())
-        {
-            recordWrite(index);
-        }
     }
 
     LIB_NVM_WRITE_TO_FLASH(page_base,

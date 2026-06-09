@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    ffi::OsString,
     fs::File,
     io::Read,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -2262,7 +2263,10 @@ fn schedule_ota_agent_restart() {
         if let Err(e) =
             run_command("systemctl", &["restart", "--no-block", "ota-agent.service"]).await
         {
-            error!("Failed to restart ota-agent.service after self-update: {}", e);
+            error!(
+                "Failed to restart ota-agent.service after self-update: {}",
+                e
+            );
         }
     });
 }
@@ -2494,6 +2498,232 @@ fn payload_path(release_root: &Path, install_path: &str) -> anyhow::Result<PathB
 }
 
 #[cfg(target_os = "linux")]
+fn read_le_u16(data: &[u8], offset: usize, path: &Path) -> anyhow::Result<u16> {
+    let bytes = data
+        .get(offset..offset + 2)
+        .ok_or_else(|| anyhow!("ELF header in {} is too short", path.display()))?;
+    Ok(u16::from_le_bytes(bytes.try_into().unwrap()))
+}
+
+#[cfg(target_os = "linux")]
+fn read_le_u64(data: &[u8], offset: usize, path: &Path) -> anyhow::Result<u64> {
+    let bytes = data
+        .get(offset..offset + 8)
+        .ok_or_else(|| anyhow!("ELF header in {} is too short", path.display()))?;
+    Ok(u64::from_le_bytes(bytes.try_into().unwrap()))
+}
+
+#[cfg(target_os = "linux")]
+fn check_elf_range(
+    path: &Path,
+    label: &str,
+    offset: u64,
+    size: u64,
+    file_len: u64,
+) -> anyhow::Result<()> {
+    let end = offset
+        .checked_add(size)
+        .ok_or_else(|| anyhow!("{} in {} overflows file size", label, path.display()))?;
+    if end > file_len {
+        bail!(
+            "{} in {} extends past EOF: offset {} + size {} > {}",
+            label,
+            path.display(),
+            offset,
+            size,
+            file_len
+        );
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn check_elf_table(
+    path: &Path,
+    label: &str,
+    offset: u64,
+    entry_size: u16,
+    entry_count: u16,
+    file_len: u64,
+) -> anyhow::Result<()> {
+    if offset == 0 || entry_count == 0 {
+        return Ok(());
+    }
+    if entry_size == 0 {
+        bail!("{} in {} has zero entry size", label, path.display());
+    }
+    let size = u64::from(entry_size)
+        .checked_mul(u64::from(entry_count))
+        .ok_or_else(|| anyhow!("{} in {} overflows file size", label, path.display()))?;
+    check_elf_range(path, label, offset, size, file_len)
+}
+
+#[cfg(target_os = "linux")]
+async fn validate_elf_file_layout(path: &Path) -> anyhow::Result<()> {
+    let data = fs::read(path)
+        .await
+        .with_context(|| format!("reading {}", path.display()))?;
+    let file_len = data.len() as u64;
+
+    if data.len() < 64 {
+        bail!("{} is too short to be an ELF64 executable", path.display());
+    }
+    if data.get(0..4) != Some(b"\x7fELF") {
+        bail!("{} is not an ELF executable", path.display());
+    }
+    if data[4] != 2 {
+        bail!("{} is not an ELF64 executable", path.display());
+    }
+    if data[5] != 1 {
+        bail!("{} is not a little-endian ELF executable", path.display());
+    }
+
+    let phoff = read_le_u64(&data, 32, path)?;
+    let shoff = read_le_u64(&data, 40, path)?;
+    let phentsize = read_le_u16(&data, 54, path)?;
+    let phnum = read_le_u16(&data, 56, path)?;
+    let shentsize = read_le_u16(&data, 58, path)?;
+    let shnum = read_le_u16(&data, 60, path)?;
+
+    check_elf_table(
+        path,
+        "program header table",
+        phoff,
+        phentsize,
+        phnum,
+        file_len,
+    )?;
+    check_elf_table(
+        path,
+        "section header table",
+        shoff,
+        shentsize,
+        shnum,
+        file_len,
+    )?;
+
+    if phoff != 0 && phnum != 0 {
+        if phentsize < 56 {
+            bail!(
+                "program headers in {} are too small: {} bytes",
+                path.display(),
+                phentsize
+            );
+        }
+        for idx in 0..phnum {
+            let base_u64 = phoff
+                .checked_add(u64::from(idx) * u64::from(phentsize))
+                .ok_or_else(|| anyhow!("program header {} in {} overflows", idx, path.display()))?;
+            let base: usize = base_u64.try_into().map_err(|_| {
+                anyhow!(
+                    "program header {} in {} is out of range",
+                    idx,
+                    path.display()
+                )
+            })?;
+            let segment_offset = read_le_u64(&data, base + 8, path)?;
+            let segment_file_size = read_le_u64(&data, base + 32, path)?;
+            if segment_file_size > 0 {
+                check_elf_range(
+                    path,
+                    &format!("program segment {}", idx),
+                    segment_offset,
+                    segment_file_size,
+                    file_len,
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn validate_payload_binary_layouts(release_root: &Path) -> anyhow::Result<()> {
+    let bin_dir = release_root.join("payload/bin/cfr");
+    if !fs::try_exists(&bin_dir).await? {
+        bail!(
+            "bundle is missing payload binary directory {}",
+            bin_dir.display()
+        );
+    }
+
+    let mut entries = fs::read_dir(&bin_dir)
+        .await
+        .with_context(|| format!("reading {}", bin_dir.display()))?;
+    let mut checked = 0usize;
+    while let Some(entry) = entries.next_entry().await? {
+        let path = entry.path();
+        if !is_file_or_symlink(&path).await? {
+            continue;
+        }
+        validate_elf_file_layout(&path)
+            .await
+            .with_context(|| format!("validating payload binary {}", path.display()))?;
+        checked += 1;
+    }
+
+    if checked == 0 {
+        bail!(
+            "bundle contains no payload binaries in {}",
+            bin_dir.display()
+        );
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn validate_global_bundle_contents(release_root: &Path) -> anyhow::Result<()> {
+    validate_payload_binary_layouts(release_root).await?;
+
+    let cfg_path = release_root.join("payload/application/config/ota-agent/deploy-targets.yaml");
+    if !fs::try_exists(&cfg_path).await? {
+        bail!(
+            "bundle is missing deploy targets manifest {}",
+            cfg_path.display()
+        );
+    }
+    let cfg_path_str = cfg_path.to_str().ok_or_else(|| {
+        anyhow!(
+            "invalid deploy targets manifest path {}",
+            cfg_path.display()
+        )
+    })?;
+    let cfg = load_manifest(cfg_path_str).await?;
+
+    for (node, target) in cfg.targets.iter() {
+        let DeployTarget::LocalPackage {
+            artifact,
+            binary,
+            service,
+            resources,
+            ..
+        } = target
+        else {
+            continue;
+        };
+
+        validate_local_package_contents(release_root, node, binary, service.as_ref(), resources)
+            .await?;
+
+        if let Some(expected_sha256) = artifact.sha256.as_ref() {
+            let actual_sha256 =
+                local_payload_sha256(release_root, binary, service.as_ref(), resources).await?;
+            if &actual_sha256 != expected_sha256 {
+                bail!(
+                    "bundle payload hash mismatch for '{}': expected {}, got {}",
+                    node,
+                    expected_sha256,
+                    actual_sha256
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
 async fn validate_local_package_contents(
     release_root: &Path,
     node: &str,
@@ -2509,6 +2739,9 @@ async fn validate_local_package_contents(
             binary_path.display()
         );
     }
+    validate_elf_file_layout(&binary_path)
+        .await
+        .with_context(|| format!("validating package binary for '{}'", node))?;
 
     if let Some(service) = service {
         let service_path = payload_path(release_root, &service.install_path)?;
@@ -2547,6 +2780,19 @@ async fn sha256_file_hex(path: &Path) -> anyhow::Result<String> {
 }
 
 #[cfg(target_os = "linux")]
+async fn update_local_payload_hash(
+    sha: &mut Sha256,
+    install_path: &str,
+    path: &Path,
+) -> anyhow::Result<()> {
+    sha.update(install_path.as_bytes());
+    sha.update(b"\n");
+    sha.update(sha256_file_hex(path).await?.as_bytes());
+    sha.update(b"\n");
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
 async fn local_payload_sha256(
     release_root: &Path,
     binary: &LocalPackageBinary,
@@ -2556,14 +2802,11 @@ async fn local_payload_sha256(
     let mut sha = Sha256::new();
 
     let binary_path = payload_path(release_root, &binary.install_path)?;
-    sha.update(binary.install_path.as_bytes());
-    sha.update(sha256_file_hex(&binary_path).await?.as_bytes());
+    update_local_payload_hash(&mut sha, &binary.install_path, &binary_path).await?;
 
     if let Some(service) = service {
         let service_path = payload_path(release_root, &service.install_path)?;
-        sha.update(service.install_path.as_bytes());
-        sha.update(service.unit.as_bytes());
-        sha.update(sha256_file_hex(&service_path).await?.as_bytes());
+        update_local_payload_hash(&mut sha, &service.install_path, &service_path).await?;
     }
 
     for resource in resources {
@@ -2571,8 +2814,7 @@ async fn local_payload_sha256(
             continue;
         }
         let resource_path = payload_path(release_root, &resource.install_path)?;
-        sha.update(resource.install_path.as_bytes());
-        sha.update(sha256_file_hex(&resource_path).await?.as_bytes());
+        update_local_payload_hash(&mut sha, &resource.install_path, &resource_path).await?;
     }
 
     Ok(hex::encode(sha.finalize()))
@@ -2597,6 +2839,51 @@ async fn copy_tree_contents(src: &Path, dst: &Path) -> anyhow::Result<()> {
         ],
     )
     .await
+}
+
+#[cfg(target_os = "linux")]
+async fn replace_with_symlink(target: &Path, link: &Path) -> anyhow::Result<()> {
+    let parent = link
+        .parent()
+        .ok_or_else(|| anyhow!("link path {} has no parent", link.display()))?;
+    let filename = link
+        .file_name()
+        .ok_or_else(|| anyhow!("link path {} has no filename", link.display()))?;
+    let mut tmp_name = OsString::from(".");
+    tmp_name.push(filename);
+    tmp_name.push(format!(".tmp-{}", std::process::id()));
+    let tmp_link = parent.join(tmp_name);
+
+    match fs::symlink_metadata(&tmp_link).await {
+        Ok(metadata) => {
+            if metadata.file_type().is_dir() && !metadata.file_type().is_symlink() {
+                fs::remove_dir_all(&tmp_link)
+                    .await
+                    .with_context(|| format!("removing {}", tmp_link.display()))?;
+            } else {
+                fs::remove_file(&tmp_link)
+                    .await
+                    .with_context(|| format!("removing {}", tmp_link.display()))?;
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e).with_context(|| format!("reading {}", tmp_link.display())),
+    }
+
+    if let Ok(metadata) = fs::symlink_metadata(link).await {
+        if metadata.file_type().is_dir() && !metadata.file_type().is_symlink() {
+            fs::remove_dir_all(link)
+                .await
+                .with_context(|| format!("removing {}", link.display()))?;
+        }
+    }
+
+    symlink(target, &tmp_link)
+        .with_context(|| format!("creating symlink {}", tmp_link.display()))?;
+    fs::rename(&tmp_link, link)
+        .await
+        .with_context(|| format!("linking {} -> {}", link.display(), target.display()))?;
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]
@@ -3276,6 +3563,10 @@ async fn install_global_bundle(
         let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
         return Err(e);
     }
+    if let Err(e) = validate_global_bundle_contents(&release_root).await {
+        let _ = unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await;
+        return Err(e);
+    }
 
     let script_path = match install_local_support_files(&release_root).await {
         Ok(path) => path,
@@ -3360,15 +3651,7 @@ async fn install_global_bundle(
     log_systemd_status("ota-agent-drive-stack.service").await;
 
     let current_link = baseline_root.join("current");
-    if fs::try_exists(&current_link).await? {
-        let metadata = fs::symlink_metadata(&current_link).await?;
-        if metadata.file_type().is_dir() && !metadata.file_type().is_symlink() {
-            fs::remove_dir_all(&current_link).await?;
-        } else {
-            fs::remove_file(&current_link).await?;
-        }
-    }
-    symlink(&release_root, &current_link)?;
+    replace_with_symlink(&release_root, &current_link).await?;
     unlock_manifest_node(&state.manifest_path, "carputer", &state.manifest_lock).await?;
 
     Ok(UpdateResult {
@@ -3641,16 +3924,7 @@ async fn apply_local_package(
     }
 
     let current_link = package_root.join("current");
-    if fs::try_exists(&current_link).await? {
-        let metadata = fs::symlink_metadata(&current_link).await?;
-        if metadata.file_type().is_dir() && !metadata.file_type().is_symlink() {
-            fs::remove_dir_all(&current_link).await?;
-        } else {
-            fs::remove_file(&current_link).await?;
-        }
-    }
-    symlink(&release_root, &current_link)
-        .with_context(|| format!("linking {}", current_link.display()))?;
+    replace_with_symlink(&release_root, &current_link).await?;
 
     unlock_manifest_node(&state.manifest_path, node, &state.manifest_lock).await?;
 

@@ -20,8 +20,9 @@
 
 #define START_TIMER_MS                500U
 #define START_DUTY                    1.0f
-#define FAN_ON_DUTY                   0.4f
+#define FAN_ON_DUTY                   0.7f
 #define PUMP_ON_DUTY                  1.0f
+#define TEST_DUTY                     1.0f
 
 #define COOLING_LATCH_START_THRESH    50.0f
 #define COOLING_LATCH_STOP_THRESH     45.0f
@@ -130,8 +131,8 @@ static void cooling10Hz_PRD(void)
     test.isTestFan     &= !faultFan;
     test.isTestPump    &= !faultPump;
 
-    const float32_t dutyFan    = test.isTestFan ? 1.0f : FAN_ON_DUTY;
-    const float32_t dutyPump   = test.isTestPump ? 1.0f : PUMP_ON_DUTY;
+    const float32_t dutyFan    = test.isTestFan ? TEST_DUTY : FAN_ON_DUTY;
+    const float32_t dutyPump   = test.isTestPump ? TEST_DUTY : PUMP_ON_DUTY;
     const bool      enablePump = (isHV || isRun || test.isTestPump || cooling.drivetrainCoolingLatched) && !faultPump;
     const bool      enableFan  = (isRun || test.isTestFan || cooling.drivetrainCoolingLatched) && !faultFan;
 

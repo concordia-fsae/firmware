@@ -30,6 +30,7 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
         .enable_cs         = DRV_OUTPUTAD_HP_SNS_EN,
         .current_limit_amp =                          20.0f,
         .oc_timeout_ms     =                            500,
+        .autoReset         = false,
     },
     [DRV_VN9008_CHANNEL_FAN] =  {
         .type   = VN9008_PWM_EN,
@@ -48,5 +49,6 @@ const drv_vn9008_channelConfig_S drv_vn9008_channels[DRV_VN9008_CHANNEL_COUNT] =
         .enable_cs         = DRV_OUTPUTAD_HP_SNS_EN,
         .current_limit_amp =                         15.0f,
         .oc_timeout_ms     =                           250,
+        .autoReset         = true,
     },
 };

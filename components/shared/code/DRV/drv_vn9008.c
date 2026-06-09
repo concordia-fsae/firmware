@@ -97,7 +97,8 @@ void drv_vn9008_run(void)
             case DRV_HSD_STATE_OFF:
                 if (drv_vn9008_data.duty[i] > 0.0f)
                 {
-                    drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, DRV_IO_INACTIVE);
+                    const drv_io_activeState_E stateAutoReset = drv_vn9008_channels[i].autoReset ? DRV_IO_ACTIVE : DRV_IO_INACTIVE;
+                    drv_outputAD_setDigitalActiveState(drv_vn9008_channels[i].fault_reset, stateAutoReset);
                     drv_vn9008_data.state[i] = DRV_HSD_STATE_ON;
                 }
                 break;
