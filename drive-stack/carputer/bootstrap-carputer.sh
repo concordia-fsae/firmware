@@ -28,6 +28,64 @@ log() {
 	echo "[bootstrap] $*"
 }
 
+validate_payload_binaries() {
+	local release_root="$1"
+	local bundle="${2:-}"
+	local bin_dir="${release_root}/payload/bin/cfr"
+	local bin_path
+	local rel_path
+	local expected
+	local actual
+	local readelf_out
+	local checked=0
+
+	if [[ ! -d "${bin_dir}" ]]; then
+		echo "Missing payload binary directory: ${bin_dir}" >&2
+		exit 1
+	fi
+	if ! command -v file >/dev/null 2>&1 || ! command -v readelf >/dev/null 2>&1; then
+		echo "Payload validation requires 'file' and 'readelf'" >&2
+		exit 1
+	fi
+
+	for bin_path in "${bin_dir}"/*; do
+		[[ -f "${bin_path}" ]] || continue
+		checked=$((checked + 1))
+		actual="$(stat -c %s "${bin_path}")"
+		if [[ "${actual}" -le 0 ]]; then
+			echo "Invalid zero-length payload binary: ${bin_path}" >&2
+			exit 1
+		fi
+		if [[ -n "${bundle}" ]]; then
+			rel_path="./${bin_path#"${release_root}/"}"
+			expected="$(tar -tzvf "${bundle}" "${rel_path}" | awk '{print $3}' | head -n1)"
+			if [[ -z "${expected}" || "${expected}" -le 0 ]]; then
+				echo "Missing archive entry size for ${rel_path}" >&2
+				exit 1
+			fi
+			if [[ "${actual}" != "${expected}" ]]; then
+				echo "Size mismatch for ${rel_path}: expected ${expected}, got ${actual}" >&2
+				exit 1
+			fi
+		fi
+		if ! file "${bin_path}" | grep -q "ELF"; then
+			echo "Payload binary is not an ELF executable: ${bin_path}" >&2
+			exit 1
+		fi
+		readelf_out="$(readelf -h "${bin_path}" 2>&1 || true)"
+		if printf '%s\n' "${readelf_out}" | grep -q "Error:"; then
+			printf '%s\n' "${readelf_out}" >&2
+			echo "Invalid ELF metadata in payload binary: ${bin_path}" >&2
+			exit 1
+		fi
+	done
+
+	if [[ "${checked}" -eq 0 ]]; then
+		echo "No payload binaries found in ${bin_dir}" >&2
+		exit 1
+	fi
+}
+
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 	--local)
@@ -94,6 +152,7 @@ if [[ "${LOCAL_MODE}" -eq 1 ]]; then
 		echo "Missing payload in ${release_root}" >&2
 		exit 1
 	fi
+	validate_payload_binaries "${release_root}"
 
 	echo "[bootstrap] Updating active payload"
 	if [[ -d "${state_root}/active" && ! -L "${state_root}/active" ]]; then
@@ -112,6 +171,10 @@ if [[ "${LOCAL_MODE}" -eq 1 ]]; then
 	sudo mkdir -p /usr/local/libexec/ota-agent
 	sudo cp "${release_root}/bootstrap/ota-agent-drive-stack-activate.sh" \
 		/usr/local/libexec/ota-agent/drive-stack-activate.sh
+	if [ -f "${release_root}/bootstrap/bootstrap-carputer.sh" ]; then
+		sudo install -m 0755 "${release_root}/bootstrap/bootstrap-carputer.sh" \
+			/usr/local/bin/bootstrap-carputer
+	fi
 	if [ -f "${release_root}/bootstrap/bootstrap-startup.sh" ]; then
 		sudo cp "${release_root}/bootstrap/bootstrap-startup.sh" \
 			/usr/local/libexec/ota-agent/bootstrap-startup.sh
@@ -147,11 +210,11 @@ if [[ "${LOCAL_MODE}" -eq 1 ]]; then
 			sudo systemctl daemon-reload
 		fi
 	fi
-	if systemctl list-unit-files | grep -q '^ota-agent.service'; then
+	if systemctl list-unit-files --no-legend ota-agent.service | grep -q '^ota-agent.service'; then
 		echo "[bootstrap] Restarting ota-agent.service"
 		sudo systemctl restart ota-agent.service
 	fi
-	if systemctl list-unit-files | grep -q '^bootstrap-carputer.service'; then
+	if systemctl list-unit-files --no-legend bootstrap-carputer.service | grep -q '^bootstrap-carputer.service'; then
 		echo "[bootstrap] Disabling bootstrap-carputer.service"
 		sudo systemctl disable --now bootstrap-carputer.service || true
 	fi
@@ -191,9 +254,69 @@ state_root="/var/lib/ota-agent/local-deploy"
 ts="$(date +%Y%m%d-%H%M%S)"
 release_root="${state_root}/releases/boot-${ts}"
 
+validate_payload_binaries() {
+    local release_root="$1"
+    local bundle="${2:-}"
+    local bin_dir="${release_root}/payload/bin/cfr"
+    local bin_path
+    local rel_path
+    local expected
+    local actual
+    local readelf_out
+    local checked=0
+
+    if [ ! -d "${bin_dir}" ]; then
+        echo "Missing payload binary directory: ${bin_dir}" >&2
+        exit 1
+    fi
+    if ! command -v file >/dev/null 2>&1 || ! command -v readelf >/dev/null 2>&1; then
+        echo "Payload validation requires 'file' and 'readelf'" >&2
+        exit 1
+    fi
+
+    for bin_path in "${bin_dir}"/*; do
+        [ -f "${bin_path}" ] || continue
+        checked=$((checked + 1))
+        actual="$(stat -c %s "${bin_path}")"
+        if [ "${actual}" -le 0 ]; then
+            echo "Invalid zero-length payload binary: ${bin_path}" >&2
+            exit 1
+        fi
+        if [ -n "${bundle}" ]; then
+            rel_path="./${bin_path#"${release_root}/"}"
+            expected="$(tar -tzvf "${bundle}" "${rel_path}" | awk '{print $3}' | head -n1)"
+            if [ -z "${expected}" ] || [ "${expected}" -le 0 ]; then
+                echo "Missing archive entry size for ${rel_path}" >&2
+                exit 1
+            fi
+            if [ "${actual}" != "${expected}" ]; then
+                echo "Size mismatch for ${rel_path}: expected ${expected}, got ${actual}" >&2
+                exit 1
+            fi
+        fi
+        if ! file "${bin_path}" | grep -q "ELF"; then
+            echo "Payload binary is not an ELF executable: ${bin_path}" >&2
+            exit 1
+        fi
+        readelf_out="$(readelf -h "${bin_path}" 2>&1 || true)"
+        if printf '%s\n' "${readelf_out}" | grep -q "Error:"; then
+            printf '%s\n' "${readelf_out}" >&2
+            echo "Invalid ELF metadata in payload binary: ${bin_path}" >&2
+            exit 1
+        fi
+    done
+
+    if [ "${checked}" -eq 0 ]; then
+        echo "No payload binaries found in ${bin_dir}" >&2
+        exit 1
+    fi
+}
+
 echo "[bootstrap] Extracting ${bundle} to ${release_root}"
+gzip -t "${bundle}"
 sudo mkdir -p "${release_root}"
 sudo tar -C "${release_root}" -xzf "${bundle}"
+validate_payload_binaries "${release_root}" "${bundle}"
 sudo ln -sfn "${release_root}" "${state_root}/current"
 
 echo "[bootstrap] Updating active payload"
@@ -213,6 +336,10 @@ echo "[bootstrap] Installing activation scripts"
 sudo mkdir -p /usr/local/libexec/ota-agent
 sudo cp "${state_root}/current/bootstrap/ota-agent-drive-stack-activate.sh" \
     /usr/local/libexec/ota-agent/drive-stack-activate.sh
+if [ -f "${state_root}/current/bootstrap/bootstrap-carputer.sh" ]; then
+    sudo install -m 0755 "${state_root}/current/bootstrap/bootstrap-carputer.sh" \
+        /usr/local/bin/bootstrap-carputer
+fi
 if [ -f "${state_root}/current/bootstrap/bootstrap-startup.sh" ]; then
     sudo cp "${state_root}/current/bootstrap/bootstrap-startup.sh" \
         /usr/local/libexec/ota-agent/bootstrap-startup.sh
@@ -242,11 +369,11 @@ else
         sudo systemctl daemon-reload
     fi
 fi
-if systemctl list-unit-files | grep -q '^ota-agent.service'; then
+if systemctl list-unit-files --no-legend ota-agent.service | grep -q '^ota-agent.service'; then
     echo "[bootstrap] Restarting ota-agent.service"
     sudo systemctl restart ota-agent.service
 fi
-if systemctl list-unit-files | grep -q '^bootstrap-carputer.service'; then
+if systemctl list-unit-files --no-legend bootstrap-carputer.service | grep -q '^bootstrap-carputer.service'; then
     echo "[bootstrap] Disabling bootstrap-carputer.service"
     sudo systemctl disable --now bootstrap-carputer.service || true
 fi

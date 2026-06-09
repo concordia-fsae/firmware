@@ -72,5 +72,5 @@ carputer_application_target(
     binary_install_name = "clock-manager",
     service_src = "clock-manager.service",
     service_install_name = "clock-manager.service",
-    include_artifact_hash = False,
+    include_artifact_hash = True,
 )

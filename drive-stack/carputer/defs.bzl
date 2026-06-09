@@ -104,7 +104,7 @@ def _carputer_deploy_target_info_impl(ctx: AnalysisContext) -> list[Provider]:
             script_lines.append('printf "%s\\n" "{}" >> "$TMP"'.format(
                 _manifest_yaml_escape("/etc/systemd/system/{}".format(ctx.attrs.service_install_name)),
             ))
-            script_lines.append('sha256sum "${{{}}}" | awk \'{print $1}\' >> "$TMP"'.format(arg_index))
+            script_lines.append('sha256sum "${{{}}}" | awk \'{{print $1}}\' >> "$TMP"'.format(arg_index))
             hidden.append(service)
             arg_files.append(service)
             arg_index += 1
@@ -114,12 +114,12 @@ def _carputer_deploy_target_info_impl(ctx: AnalysisContext) -> list[Provider]:
             script_lines.append('printf "%s\\n" "{}" >> "$TMP"'.format(
                 _manifest_yaml_escape("/{}".format(ctx.attrs.resource_hash_install_paths[idx])),
             ))
-            script_lines.append('sha256sum "${{{}}}" | awk \'{print $1}\' >> "$TMP"'.format(arg_index))
+            script_lines.append('sha256sum "${{{}}}" | awk \'{{print $1}}\' >> "$TMP"'.format(arg_index))
             hidden.append(resource)
             arg_files.append(resource)
             arg_index += 1
 
-        script_lines.append('sha256sum "$TMP" | awk \'{print $1}\' > "${{{}}}"'.format(arg_index))
+        script_lines.append('sha256sum "$TMP" | awk \'{{print $1}}\' > "${{{}}}"'.format(arg_index))
         script = ctx.actions.write(
             "hash-payload.sh",
             [
@@ -217,9 +217,7 @@ def _carputer_deploy_targets_manifest_impl(ctx: AnalysisContext) -> list[Provide
             '      install_path: "{}"'.format(_manifest_yaml_escape(binary_path)),
         ])
         if ctx.attrs.include_artifact_hashes and target.artifact_sha256_file != None:
-            sha_var = "local_sha_{}".format(arg_index - 3)
-            script_lines.insert(len(script_lines) - 2, '{}="$(cat "${{{}}}")"'.format(sha_var, arg_index))
-            script_lines.insert(len(script_lines) - 2, '      sha256: "${}"'.format(sha_var))
+            script_lines.insert(len(script_lines) - 2, '      sha256: "$(cat "${{{}}}")"'.format(arg_index))
             arg_index += 1
         if target.service_install_name != None:
             service_path = "/etc/systemd/system/{}".format(target.service_install_name)
@@ -270,9 +268,7 @@ def _carputer_deploy_targets_manifest_impl(ctx: AnalysisContext) -> list[Provide
             '    stop_services:',
         ])
         if ctx.attrs.include_artifact_hashes:
-            sha_var = "firmware_sha_{}".format(arg_index - 3)
-            script_lines.insert(len(script_lines) - 1, '{}="$(cat "${{{}}}")"'.format(sha_var, arg_index))
-            script_lines.insert(len(script_lines) - 1, '      sha256: "${}"'.format(sha_var))
+            script_lines.insert(len(script_lines) - 1, '      sha256: "$(cat "${{{}}}")"'.format(arg_index))
             arg_index += 1
         for unit in ctx.attrs.uds_stop_services:
             script_lines.append('      - "{}"'.format(_manifest_yaml_escape(unit)))
@@ -678,7 +674,7 @@ def carputer_platform_targets(
         uds_stop_services = [],
         uds_start_services = [],
         bundle_node = "carputer",
-        include_artifact_hashes = False,
+        include_artifact_hashes = True,
         visibility = ["PUBLIC"]):
     platform_name = platform_output_name(platform)
     manifest_name = "deploy-targets-{}".format(platform_name)

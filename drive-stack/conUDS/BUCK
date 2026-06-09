@@ -71,5 +71,6 @@ carputer_application_target(
         "application/config/ota-agent/uds-manifest.yaml": "//network:manifest-uds",
         "application/config/ota-agent/uds-routines.yaml": ":routines-manifest",
     },
-    include_artifact_hash = False,
+    hash_resource_deps = {},
+    include_artifact_hash = True,
 )
