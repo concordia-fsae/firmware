@@ -33,6 +33,9 @@ signals:
   mcCalibratingResolverFailed:
     description: Motor controller manager resolver calibration failed
     discreteValues: faultStatus
+  brakePressureSensorFault:
+    description: VCREAR brake pressure faulted
+    discreteValues: faultStatus
 
   # Signals
   brakeLightState:

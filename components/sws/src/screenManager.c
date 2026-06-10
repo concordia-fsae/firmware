@@ -61,6 +61,9 @@ typedef enum
     WARN_CONTACTOR_SOH_LOW,
     WARN_IMU_YAW_CALIBRATION_FAILED,
     WARN_RESOLVER_CALIBRATING_FAILED,
+    WARN_BRAKE_PRESSURE_SENSOR_REAR,
+    WARN_BRAKE_PRESSURE_SENSOR_FRONT,
+    WARN_STEERING_ANGLE_SENSOR,
     WARN_COUNT,
 } warnings_E;
 
@@ -188,6 +191,18 @@ static CAN_screenWarnings_E translateWarningToCAN(warnings_E warning)
             ret = CAN_SCREENWARNINGS_RESOLVER_CALIBRATING_FAILED;
             break;
 
+        case WARN_BRAKE_PRESSURE_SENSOR_REAR:
+            ret = CAN_SCREENWARNINGS_BRAKE_PRESSURE_SENSOR_REAR_FAULT;
+            break;
+
+        case WARN_BRAKE_PRESSURE_SENSOR_FRONT:
+            ret = CAN_SCREENWARNINGS_BRAKE_PRESSURE_SENSOR_FRONT_FAULT;
+            break;
+
+        case WARN_STEERING_ANGLE_SENSOR:
+            ret = CAN_SCREENWARNINGS_STEERING_ANGLE_SENSOR_FAULT;
+            break;
+
         case WARN_NONE:
         case WARN_COUNT:
             break;
@@ -250,6 +265,9 @@ static void getWarnings(void)
                                            app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHHVN) ||
                                            app_faultManager_getNetworkedFault_state(VEH, BMSB_faults, FM_FAULT_BMSB_CONTACTORLOWSOHPRECHARGE);
     const bool resolverCalibrationFailed = app_faultManager_getNetworkedFault_state(VEH, VCPDU_faults, FM_FAULT_VCREAR_MCCALIBRATINGRESOLVERFAILED);
+    const bool brakePressureSensorRear   = app_faultManager_getNetworkedFault_state(VEH, VCREAR_faults, FM_FAULT_VCREAR_BRAKEPRESSURESENSORFAULT);
+    const bool brakePressureSensorFront  = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_BRAKEPRESSURESENSORFAULT);
+    const bool steeringAngleSensor       = app_faultManager_getNetworkedFault_state(VEH, VCFRONT_faults, FM_FAULT_VCFRONT_STEERINGANGLESENSORFAULT);
 
     WARNING_INGRESS(WARN_LOW_GLV,                     lowGLV);
     WARNING_INGRESS(WARN_CONTACTS_OPEN_IN_RUN,        contactsOpeninRun);
@@ -258,6 +276,9 @@ static void getWarnings(void)
     WARNING_INGRESS(WARN_APPS_DISABLED,               appsBypassed);
     WARNING_INGRESS(WARN_CONTACTOR_SOH_LOW,           contactorSohLow);
     WARNING_INGRESS(WARN_RESOLVER_CALIBRATING_FAILED, resolverCalibrationFailed);
+    WARNING_INGRESS(WARN_BRAKE_PRESSURE_SENSOR_REAR,  brakePressureSensorRear);
+    WARNING_INGRESS(WARN_BRAKE_PRESSURE_SENSOR_FRONT, brakePressureSensorFront);
+    WARNING_INGRESS(WARN_STEERING_ANGLE_SENSOR,       steeringAngleSensor);
 }
 
 static void determineActiveWarning(void)

@@ -9,7 +9,7 @@ messages:
       launchRejected:
       gearChangeRejected:
       gpsDeviceError:
-      steeringSensorFault:
+      steeringAngleSensorFault:
       brakeSensorFault:
       apps1SensorFault:
       apps2SensorFault:
@@ -21,6 +21,7 @@ messages:
       gpsDataNotValid:
       wheelSpeedSensorDegraded:
       wheelSpeedSensorLocked:
+      brakePressureSensorFault:
 
   udsResponse:
     description: UDS response message from the VCFRONT

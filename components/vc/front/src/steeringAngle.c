@@ -7,13 +7,13 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "app_faultManager.h"
 #include "drv_inputAD.h"
 #include "drv_inputAD_componentSpecific.h"
 #include "Module.h"
 #include "ModuleDesc.h"
 #include "steeringAngle.h"
 
-#include "app_faultManager.h"
 #include "lib_interpolation.h"
 #include "Yamcan.h"
 
@@ -21,9 +21,11 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define DEG90_V               0.78f
-#define OC_SC_V_MARGIN        0.250f
-#define MAX_SENSOR_VOLTAGE    3.0f
+#define DEG90_V                                  0.78f
+#define OC_SC_V_MARGIN                           0.250f
+#define MAX_SENSOR_VOLTAGE                       3.0f
+#define STEERING_ANGLE_VOLTAGE_LOW_THRESHOLD     OC_SC_V_MARGIN
+#define STEERING_ANGLE_VOLTAGE_HIGH_THRESHOLD    (MAX_SENSOR_VOLTAGE - OC_SC_V_MARGIN)
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -89,7 +91,8 @@ static void steeringAngle_init(void)
  */
 static void steeringAngle_periodic_10Hz(void)
 {
-    bool                faulted   = false;
+    const bool          faulted   = (steeringAngle_data.voltage < STEERING_ANGLE_VOLTAGE_LOW_THRESHOLD) ||
+                                    (steeringAngle_data.voltage > STEERING_ANGLE_VOLTAGE_HIGH_THRESHOLD);
     CAN_digitalStatus_E tmp       = CAN_DIGITALSTATUS_SNA;
     const bool          calibrate = (CANRX_get_signal(VEH, SWS_requestCalibSteerAngle, &tmp) == CANRX_MESSAGE_VALID) &&
                                     (tmp == CAN_DIGITALSTATUS_ON);
@@ -102,11 +105,8 @@ static void steeringAngle_periodic_10Hz(void)
         lib_nvm_requestWrite(NVM_ENTRYID_STEERINGCALIBRATION);
     }
 
-    if ((steeringAngle_data.voltage < OC_SC_V_MARGIN) ||
-        (steeringAngle_data.voltage > (MAX_SENSOR_VOLTAGE - OC_SC_V_MARGIN))
-        )
+    if (faulted)
     {
-        faulted                  = true;
         steeringAngle_data.angle = 0.0f;
     }
     else
@@ -114,7 +114,7 @@ static void steeringAngle_periodic_10Hz(void)
         steeringAngle_data.angle = (lib_interpolation_interpolate(&steering_map, steeringAngle_data.voltage - steeringCalibration_data.zero));
     }
 
-    app_faultManager_setFaultState(FM_FAULT_VCFRONT_STEERINGSENSORFAULT, faulted);
+    app_faultManager_setFaultState(FM_FAULT_VCFRONT_STEERINGANGLESENSORFAULT, faulted);
 }
 
 /******************************************************************************

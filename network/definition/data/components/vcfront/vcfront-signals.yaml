@@ -33,6 +33,12 @@ signals:
   faulted5vExt:
     description: 5V external power rail faulted
     discreteValues: faultStatus
+  brakePressureSensorFault:
+    description: VCFRONT brake pressure sensor faulted
+    discreteValues: faultStatus
+  steeringAngleSensorFault:
+    description: Steering angle sensor faulted
+    discreteValues: faultStatus
 
   gpsUartOreCount:
     description: UART overrun error count for GPS
@@ -140,10 +146,6 @@ signals:
   gpsPairAlarmEulerAnomaly:
     description: PAIRMSG 91 euler anomaly
     discreteValues: flag
-
-  steeringSensorFault:
-    description: Steering angle sensor is faulted
-    discreteValues: faultStatus
 
   brakeSensorFault:
     description: Brake sensor is faulted
