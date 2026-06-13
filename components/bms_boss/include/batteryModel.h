@@ -65,11 +65,16 @@ typedef struct
         float32_t initialCellVoltage;
         float32_t elapsedTime;
     }                init_vrc2;
-    soc_col_vector_S X; // State Matrix {SOC, VRC1, VRC2}
+    soc_col_vector_S X;    // State Matrix {SOC, VRC1, VRC2}
+    soc_matrix_S     A;
+    soc_col_vector_S B;
     soc_matrix_S     P; // Covariance
     float32_t        cellVoltageSim;
     float32_t        dischargeLimit;
     float32_t        chargeLimit;
+    float32_t        driveTimeRemaining;
+    float32_t        avgPower;
+    float32_t        avgTime;
     soc_col_vector_S tmpVec;
     soc_col_vector_S tmpVec2;
     soc_matrix_S     eye3;

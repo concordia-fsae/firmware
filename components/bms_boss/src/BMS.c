@@ -478,6 +478,8 @@ static void BMS10Hz_PRD(void)
     BMS.voltages                    = tmp.voltages;
     BMS.max_temp                    = tmp.max_temp;
 
+    BMS.driveTimeRemaining          = bm.driveTimeRemaining;
+
     if (BMS.balancing)
     {
         BMS.balancing = (BMS.voltages.max - BMS.voltages.min) > BALANCING_DELTA_CUTOFF;

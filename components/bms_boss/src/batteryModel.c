@@ -20,7 +20,10 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define  RI_SAFETY_FACTOR    1.0f;
+#define  RI_SAFETY_FACTOR              1.0f
+#define  DRIVETIME_AVG_WINDOW_S        60
+#define  DRIVETIME_MIN_SOC             0.01
+#define  DRIVETIME_MODEL_TIMESTEP_S    10
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -64,33 +67,43 @@ static void cell_params_update(batteryModel_S* batteryModel, float32_t cellCurre
     }
 }
 
-static void model_state_run(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t dt)
+static void model_states_run(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t dt)
 {
     cell_params_S cellParams;
 
     cell_params_update(batteryModel, cellCurrent, cellVoltage, &cellParams, batteryModel->X.elemCol[0]);
 
-    float32_t        tau1 = cellParams.R1 * cellParams.C1;
-    float32_t        tau2 = cellParams.R2 * cellParams.C2;
+    float32_t tau1 = cellParams.R1 * cellParams.C1;
+    float32_t tau2 = cellParams.R2 * cellParams.C2;
 
-    soc_matrix_S     A    = { { { 1.0f, 0.0f, 0.0f }, { 0.0f, expf(-dt / tau1), 0.0f }, { 0.0f, 0.0f, expf(-dt / tau2) } } };
-    soc_col_vector_S B    = { { dt / (batteryModel->config.cellAH * 3600), -cellParams.R1 * (1 - expf(-dt / tau1)), -cellParams.R2 * (1 - expf(-dt / tau2)) } };
+    batteryModel->A = (soc_matrix_S){ { { 1.0f, 0.0f, 0.0f }, { 0.0f, expf(-dt / tau1), 0.0f }, { 0.0f, 0.0f, expf(-dt / tau2) } } };
+    batteryModel->B = (soc_col_vector_S){ { dt / (batteryModel->config.cellAH * 3600), -cellParams.R1 * (1 - expf(-dt / tau1)), -cellParams.R2 * (1 - expf(-dt / tau2)) } };
 
     // X = A*X + B*I(k);
-    LIB_LINALG_MUL_RMATCVEC_SET(&A, &batteryModel->X, &batteryModel->tmpVec);
-    LIB_LINALG_MUL_CVECSCALAR(&B, cellCurrent, &batteryModel->tmpVec2);
+    LIB_LINALG_MUL_RMATCVEC_SET(&batteryModel->A, &batteryModel->X, &batteryModel->tmpVec);
+    LIB_LINALG_MUL_CVECSCALAR(&batteryModel->B, cellCurrent, &batteryModel->tmpVec2);
     LIB_LINALG_SUM_CVEC(&batteryModel->tmpVec, &batteryModel->tmpVec2, &batteryModel->X);
 
+    batteryModel->cellVoltageSim = cellParams.OCV - batteryModel->X.elemCol[1] - batteryModel->X.elemCol[2] + cellCurrent * cellParams.Ri;
+}
+
+static void model_prediction_run(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t cellCurrent, float32_t dt)
+{
+    cell_params_S cellParams;
+
+    cell_params_update(batteryModel, cellCurrent, cellVoltage, &cellParams, batteryModel->X.elemCol[0]);
+
+    model_states_run(batteryModel, cellVoltage, cellCurrent, dt);
+
     // P = A*P*A' + Q_noise;
-    LIB_LINALG_TRANSPOSE_MAT_GET(&A, &batteryModel->tmpMatrix);
+    LIB_LINALG_TRANSPOSE_MAT_GET(&batteryModel->A, &batteryModel->tmpMatrix);
     LIB_LINALG_MUL_RMATRMAT_SET(&batteryModel->P, &batteryModel->tmpMatrix,  &batteryModel->tmpMatrix2);
-    LIB_LINALG_MUL_RMATRMAT_SET(&A,               &batteryModel->tmpMatrix2, &batteryModel->tmpMatrix);
+    LIB_LINALG_MUL_RMATRMAT_SET(&batteryModel->A, &batteryModel->tmpMatrix2, &batteryModel->tmpMatrix);
     LIB_LINALG_SUM_MAT(&batteryModel->tmpMatrix, &batteryModel->config.Qnoise, &batteryModel->P);
 
     float32_t        dOCV   = lib_interpolation_interpolate(batteryModel->config.docvMap, batteryModel->X.elemCol[0] * 100);
     soc_row_vector_S H      = { { dOCV, -1, -1 } }; // jacobian vector
 
-    batteryModel->cellVoltageSim = cellParams.OCV - batteryModel->X.elemCol[1] - batteryModel->X.elemCol[2] + cellCurrent * cellParams.Ri;
     float32_t        error  = cellVoltage - batteryModel->cellVoltageSim;
 
     // K = P*H'*(H*P*H' + R_noise)^-1;
@@ -146,6 +159,21 @@ static void current_limit(batteryModel_S* batteryModel, float32_t minCellVoltage
     }
 }
 
+static void driveTime_remaining(batteryModel_S* batteryModel, float32_t cellVoltage, float32_t avgPower)
+{
+    int            numIterations   = 0;
+
+    batteryModel->driveTimeRemaining = 0;
+    batteryModel_S batteryModelTmp = *batteryModel;
+    batteryModelTmp.cellVoltageSim   = cellVoltage;
+    while (batteryModel_getSOC(&batteryModelTmp) > DRIVETIME_MIN_SOC && batteryModel->driveTimeRemaining <= 30 * 60)
+    {
+        model_states_run(&batteryModelTmp, cellVoltage, avgPower / batteryModelTmp.cellVoltageSim, DRIVETIME_MODEL_TIMESTEP_S);
+        batteryModel->driveTimeRemaining = batteryModel->driveTimeRemaining + DRIVETIME_MODEL_TIMESTEP_S;
+        numIterations++;
+    }
+}
+
 /******************************************************************************
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
@@ -176,10 +204,15 @@ void batteryModel_init(batteryModel_S* batteryModel, float32_t soc)
     batteryModel->state                        = INIT;
     batteryModel->init_vrc2.initialCellVoltage = 0;
     batteryModel->init_vrc2.elapsedTime        = 0;
+    batteryModel->driveTimeRemaining           = 0;
+    batteryModel->avgPower                     = 0;
+    batteryModel->avgTime                      = 0;
     batteryModel->X                            = (soc_col_vector_S){ { soc, 0, 0 } };
+    batteryModel->A                            = (soc_matrix_S){ { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } } };
+    batteryModel->B                            = (soc_col_vector_S){ { 0.0f, 0.0f, 0.0f } };
     batteryModel->P                            = batteryModel->config.Pinit; // conifg
     batteryModel->cellVoltageSim               = 0;                          // conifg
-    batteryModel->dischargeLimit               = 0;                          // using this for now, not sure how to initialise this
+    batteryModel->dischargeLimit               = 0;
     batteryModel->chargeLimit                  = 0;
     batteryModel->tmpVec                       = (soc_col_vector_S){ 0 };
     batteryModel->tmpVec2                      = (soc_col_vector_S){ 0 };
@@ -236,7 +269,17 @@ void batteryModel_run(batteryModel_S* batteryModel, float32_t cellVoltage, float
     }
     else if (batteryModel->state == RUNNING)
     {
-        model_state_run(batteryModel, cellVoltage, cellCurrent, dt);
+        model_prediction_run(batteryModel, cellVoltage, cellCurrent, dt);
         current_limit(batteryModel, minCellVoltage, maxCellVoltage, cellCurrent);
+
+        batteryModel->avgTime  = batteryModel->avgTime + dt;
+        batteryModel->avgPower = batteryModel->avgPower + cellCurrent * cellVoltage * dt;
+        if (batteryModel->avgTime >= DRIVETIME_AVG_WINDOW_S)
+        {
+            batteryModel->avgPower = batteryModel->avgPower / batteryModel->avgTime;
+            driveTime_remaining(batteryModel, cellVoltage, batteryModel->avgPower);
+            batteryModel->avgPower = 0;
+            batteryModel->avgTime  = 0;
+        }
     }
 }

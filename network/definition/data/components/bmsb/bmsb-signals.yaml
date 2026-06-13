@@ -251,6 +251,19 @@ signals:
       signedness: unsigned
     continuous: true
 
+  driveTimeRemaining:
+    unit: "min"
+    description: BMS Battery Time Remaining to Drive
+    nativeRepresentation:
+      endianness: little
+      bitWidth: 9
+      resolution: 0.1
+      range:
+        min: 0
+        max: 45
+      signedness: unsigned
+    continuous: true
+
   packRH:
     description: The relative humidity at the BMSB
     unit: "%"
