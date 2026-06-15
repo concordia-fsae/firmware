@@ -645,33 +645,27 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.lastTimeampMS = timestamp;
 
-    const float32_t               vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
-    const float32_t               slip         = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
-    float32_t                     multiplier   = 0.0f;
+    const float32_t               vehicleSpeed               = app_vehicleSpeed_getVehicleSpeed();
+    const float32_t               slip                       = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
+    float32_t                     multiplier                 = 0.0f;
 
-    torque_tractionControlState_E nextState    = TC_STATE_ERROR;
-    if ((vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS) &&
-        (torque_data.gear == GEAR_F) &&
-        (torque_data.race_mode == RACEMODE_ENABLED)
-        )
-    {
+    torque_tractionControlState_E nextState                  = TC_STATE_ERROR;
+
 #if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
-        CAN_digitalStatus_E traction_control_requested = CAN_DIGITALSTATUS_SNA;
-        bool                requested                  = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
-                                                         (traction_control_requested == CAN_DIGITALSTATUS_ON);
-        if (requested)
-        {
-            nextState = TC_STATE_ACTIVE;
-        }
-        else
-#endif
-        {
-            nextState = TC_STATE_INACTIVE;
-        }
+    CAN_digitalStatus_E           traction_control_requested = CAN_DIGITALSTATUS_SNA;
+    bool                          requested                  = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
+                                                               (traction_control_requested == CAN_DIGITALSTATUS_ON);
+    const bool                    tcAllowed                  = (vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS) &&
+                                                               (torque_data.gear == GEAR_F) &&
+                                                               (torque_data.race_mode == RACEMODE_ENABLED);
+    if (requested)
+    {
+        nextState = tcAllowed ? TC_STATE_ACTIVE : TC_STATE_LOCKOUT;
     }
     else
+#endif // if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
     {
-        nextState = TC_STATE_LOCKOUT;
+        nextState = TC_STATE_INACTIVE;
     }
 
     torque_data.tractionControlState = nextState;
