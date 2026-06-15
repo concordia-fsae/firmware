@@ -689,6 +689,8 @@ static float32_t evaluate_traction_control(void)
 
 static void evaluateRegenEnabled(float32_t accelPosition, float32_t brakePosition)
 {
+    bool                regenAllowed = false;
+
 #if FEATURE_IS_ENABLED(FEATURE_REGEN)
     CAN_digitalStatus_E regenEnabled = CAN_DIGITALSTATUS_SNA;
     bool                requested    = (CANRX_get_signal(VEH, SWS_requestRegenEnabled, &regenEnabled) != CANRX_MESSAGE_SNA) &&
@@ -696,13 +698,13 @@ static void evaluateRegenEnabled(float32_t accelPosition, float32_t brakePositio
     const float32_t     vehicleSpeed = app_vehicleSpeed_getVehicleSpeed();
 
     torque_data.regenEnabled = requested && (torque_data.gear == GEAR_F) &&
-                               (vehicleSpeed > REGEN_SPEED_CUTOFF_MPS) &&
                                (accelPosition < REGEN_ACCEL_CUTOFF);
+    regenAllowed             = torque_data.regenEnabled && (vehicleSpeed > REGEN_SPEED_CUTOFF_MPS);
 #else
     torque_data.regenEnabled = false;
 #endif
 
-    if (torque_data.regenEnabled)
+    if (regenAllowed)
     {
         if (torque_data.isRegenerating)
         {
