@@ -1,0 +1,68 @@
+buildscript.run = false
+
+['cfg(target_arch = "x86_64")']
+cfgs = ["blake3_sse2_ffi", "blake3_sse41_ffi", "blake3_avx2_ffi", "blake3_avx512_ffi"]
+
+[['cfg(all(target_arch = "x86_64", any(target_os = "linux", target_os = "macos")))'.cxx_library]]
+name = "simd_x86_unix"
+srcs = [
+    "c/blake3.c",
+    "c/blake3_dispatch.c",
+    "c/blake3_portable.c",
+    "c/blake3_sse2_x86-64_unix.S",
+    "c/blake3_sse41_x86-64_unix.S",
+    "c/blake3_avx2_x86-64_unix.S",
+    "c/blake3_avx512_x86-64_unix.S",
+]
+compiler_flags = ["-mavx512f", "-mavx512vl"]
+headers = ["c/*.h"]
+target_compatible_with = [
+    "prelude//cpu/constraints:x86_64",
+    "prelude//os/constraints:linux || prelude//os/constraints:macos",
+]
+
+[['cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "gnu"))'.cxx_library]]
+name = "simd_x86_windows_gnu"
+srcs = [
+    "c/blake3.c",
+    "c/blake3_dispatch.c",
+    "c/blake3_portable.c",
+    "c/blake3_sse2_x86-64_windows_gnu.S",
+    "c/blake3_sse41_x86-64_windows_gnu.S",
+    "c/blake3_avx2_x86-64_windows_gnu.S",
+    "c/blake3_avx512_x86-64_windows_gnu.S",
+]
+compiler_flags = ["-mavx512f", "-mavx512vl"]
+headers = ["c/*.h"]
+target_compatible_with = [
+    "prelude//cpu/constraints:x86_64",
+    "prelude//os/constraints:windows",
+]
+
+[['cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))'.cxx_library]]
+name = "simd_x86_windows_msvc"
+srcs = [
+    "c/blake3.c",
+    "c/blake3_dispatch.c",
+    "c/blake3_portable.c",
+    "c/blake3_sse2_x86-64_windows_msvc.asm",
+    "c/blake3_sse41_x86-64_windows_msvc.asm",
+    "c/blake3_avx2_x86-64_windows_msvc.asm",
+    "c/blake3_avx512_x86-64_windows_msvc.asm",
+]
+headers = ["c/*.h"]
+target_compatible_with = [
+    "prelude//cpu/constraints:x86_64",
+    "prelude//os/constraints:windows",
+]
+
+['cfg(any(target_arch = "aarch64", target_arch = "arm"))']
+cfgs = ["blake3_neon"]
+
+[['cfg(target_arch = "aarch64")'.cxx_library]]
+name = "simd_neon-aarch64"
+srcs = ["c/blake3_neon.c"]
+headers = ["c/*.h"]
+target_compatible_with = [
+    "prelude//cpu/constraints:arm64",
+]

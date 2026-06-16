@@ -1,0 +1,14 @@
+name: git submodule init
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/.github/.github/actions/fast-submodule@master
+      with:
+        submodule: rust
+    - run: git -C rust log --all
+      shell: bash
+    - uses: dtolnay/.github/.github/actions/fast-submodule@master
+      with:
+        working-directory: rust
+        submodule: library/backtrace

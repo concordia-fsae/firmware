@@ -1,0 +1,3 @@
+[[rustc_flags_select]]
+"//constraints:compiler" = []
+"//constraints:library" = ["-Zforce-unstable-if-unmarked"]

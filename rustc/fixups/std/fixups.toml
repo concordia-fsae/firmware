@@ -1,0 +1,18 @@
+extra_srcs = [
+    "../backtrace/src/**/*.rs",
+    "../core/src/error.md",
+    "../core/src/ffi/*.md",
+    "../core/src/primitive_docs.rs",
+    "../core/src/macros/panic.md",
+    "../portable-simd/crates/core_simd/src/core_simd_docs.md",
+    "../portable-simd/crates/std_float/**/*.rs",
+    "../stdarch/crates/core_arch/src/core_arch_docs.md",
+]
+
+buildscript.run = true
+rustc_flags = ["-Zforce-unstable-if-unmarked"]
+preferred_linkage = "any"
+
+['cfg(any(target_os = "linux", target_os = "macos", windows))']
+omit_deps = ["panic_abort"]
+extra_deps = [":panic_unwind-0.0.0"]

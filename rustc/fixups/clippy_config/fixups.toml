@@ -1,0 +1,8 @@
+extra_deps = [
+    ":rustc_data_structures-0.0.0",
+    ":rustc_errors-0.0.0",
+    ":rustc_hir-0.0.0",
+    ":rustc_middle-0.0.0",
+    ":rustc_session-0.0.0",
+    ":rustc_span-0.0.0",
+]

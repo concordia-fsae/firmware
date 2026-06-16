@@ -4,8 +4,8 @@ PLATFORM = enum(
 )
 
 PLATFORMS = struct(
-    CFR25 = PLATFORM.cfr25,
-    CFR26 = PLATFORM.cfr26,
+    CFR25 = PLATFORM("cfr25"),
+    CFR26 = PLATFORM("cfr26"),
 )
 
 ALL_PLATFORMS = [

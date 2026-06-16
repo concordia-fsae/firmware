@@ -1,0 +1,15 @@
+buildscript.run = false
+rustc_flags = ["@$(location //fixups/rustc_llvm:rustc-flags)"]
+
+[[cxx_library]]
+name = "llvm-wrapper"
+srcs = ["llvm-wrapper/*.cpp"]
+headers = ["llvm-wrapper/*.h"]
+compiler_flags = [
+    "--config=$(location //fixups/rustc_llvm:cxx-flags)",
+]
+preprocessor_flags = [
+    "-I$(location //stage0:ci_llvm)/include",
+    "--config=$(location //fixups/rustc_llvm:preprocessor-flags)",
+]
+deps = ["//fixups/rustc_llvm:llvm"]

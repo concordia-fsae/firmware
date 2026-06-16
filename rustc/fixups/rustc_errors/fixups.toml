@@ -1,0 +1,1 @@
+extra_srcs = ["../rustc_error_codes/src/error_codes/**"]

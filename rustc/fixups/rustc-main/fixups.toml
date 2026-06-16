@@ -1,0 +1,9 @@
+buildscript.run = false
+rustc_flags = ["-Zcrate-attr=allow(unfulfilled_lint_expectations)"]
+linker_flags = ["-Wl,-rpath,$ORIGIN/../lib"]
+omit_deps = [
+    "rustc_codegen_ssa",
+    "rustc_driver_impl",
+    "rustc_smir",
+    "stable_mir",
+]
