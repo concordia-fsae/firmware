@@ -178,3 +178,4 @@ messages:
       maxDischargeModeled:
       maxChargeModeled:
       driveTimeRemaining:
+      socMin:

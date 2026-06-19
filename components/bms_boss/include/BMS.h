@@ -78,6 +78,8 @@ typedef struct
     float32_t        packCurrentRaw;
     float32_t        packPowerKW;
     float32_t        soc;
+    float32_t        socMin;
+    float32_t        socMax;
     float32_t        max_temp; // [deg C] precision 1degC
     struct
     {

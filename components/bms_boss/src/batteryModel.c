@@ -24,6 +24,7 @@
 #define  DRIVETIME_AVG_WINDOW_S        60
 #define  DRIVETIME_MIN_SOC             0.01
 #define  DRIVETIME_MODEL_TIMESTEP_S    10
+#define  SOC_MIN_MAX_ITERATIONS        5
 
 /******************************************************************************
  *                             T Y P E D E F S
@@ -135,6 +136,48 @@ static void model_prediction_run(batteryModel_S* batteryModel, float32_t cellVol
     if (batteryModel->X.elemCol[0] < 0.0f)
     {
         batteryModel->X.elemCol[0] = 0.0f;
+    }
+}
+
+static void soc_minMax(batteryModel_S* batteryModel, float32_t minCellVoltage, float32_t maxCellVoltage, float32_t cellCurrent)
+{
+    float32_t Ri = 0;
+
+    if (cellCurrent <= 0)
+    {
+        Ri = (lib_interpolation_interpolate(batteryModel->config.RiMapDischarge, batteryModel_getSOC(batteryModel) * 100));
+    }
+    else
+    {
+        Ri = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, batteryModel_getSOC(batteryModel) * 100));
+    }
+
+    float32_t SOC_min_last = lib_interpolation_interpolate(batteryModel->config.ocvMap, (minCellVoltage + batteryModel_getVRC1(batteryModel) + batteryModel_getVRC2(batteryModel) - cellCurrent * Ri));
+    float32_t SOC_max_last = lib_interpolation_interpolate(batteryModel->config.ocvMap, (maxCellVoltage + batteryModel_getVRC1(batteryModel) + batteryModel_getVRC2(batteryModel) - cellCurrent * Ri));
+
+    for (int i = 0; i < SOC_MIN_MAX_ITERATIONS; i++)
+    {
+        float Ri_min = 0;
+        float Ri_max = 0;
+        if (cellCurrent <= 0)
+        {
+            Ri_min = (lib_interpolation_interpolate(batteryModel->config.RiMapDischarge, SOC_min_last * 100));
+            Ri_max = (lib_interpolation_interpolate(batteryModel->config.RiMapDischarge, SOC_max_last * 100));
+        }
+        else
+        {
+            Ri_min = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, SOC_min_last * 100));
+            Ri_max = (lib_interpolation_interpolate(batteryModel->config.RiMapCharge, SOC_max_last * 100));
+        }
+        float32_t SOC_min = lib_interpolation_interpolate(batteryModel->config.ocvMap, (minCellVoltage + batteryModel_getVRC1(batteryModel) + batteryModel_getVRC2(batteryModel) - cellCurrent * Ri_min));
+        float32_t SOC_max = lib_interpolation_interpolate(batteryModel->config.ocvMap, (maxCellVoltage + batteryModel_getVRC1(batteryModel) + batteryModel_getVRC2(batteryModel) - cellCurrent * Ri_max));
+
+        if ((fabs(SOC_min - SOC_min_last) < 0.01) && (fabs(SOC_max - SOC_max_last) < 0.01))
+        {
+            break;
+        }
+        SOC_min_last = SOC_min;
+        SOC_max_last = SOC_max;
     }
 }
 
@@ -271,6 +314,7 @@ void batteryModel_run(batteryModel_S* batteryModel, float32_t cellVoltage, float
     {
         model_prediction_run(batteryModel, cellVoltage, cellCurrent, dt);
         current_limit(batteryModel, minCellVoltage, maxCellVoltage, cellCurrent);
+        soc_minMax(batteryModel, minCellVoltage, maxCellVoltage, cellCurrent);
 
         batteryModel->avgTime  = batteryModel->avgTime + dt;
         batteryModel->avgPower = batteryModel->avgPower + cellCurrent * cellVoltage * dt;
