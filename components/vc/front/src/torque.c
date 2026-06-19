@@ -655,8 +655,7 @@ static float32_t evaluate_traction_control(void)
     CAN_digitalStatus_E           traction_control_requested = CAN_DIGITALSTATUS_SNA;
     bool                          requested                  = (CANRX_get_signal(VEH, SWS_requestTractionControl, &traction_control_requested) != CANRX_MESSAGE_SNA) &&
                                                                (traction_control_requested == CAN_DIGITALSTATUS_ON);
-    const bool                    tcAllowed                  = (vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS) &&
-                                                               (torque_data.gear == GEAR_F) &&
+    const bool                    tcAllowed                  = (torque_data.gear == GEAR_F) &&
                                                                (torque_data.race_mode == RACEMODE_ENABLED);
     if (requested)
     {
@@ -670,7 +669,8 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.tractionControlState = nextState;
 
-    if (torque_data.tractionControlState == TC_STATE_ACTIVE)
+    if ((torque_data.tractionControlState == TC_STATE_ACTIVE) &&
+        (vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS))
     {
         multiplier = calc_traction_control_reduction(torque_data.slip_request, slip, dt);
     }
