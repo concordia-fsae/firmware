@@ -47,6 +47,7 @@ typedef struct
         float32_t                   minCellVoltage;
         float32_t                   maxCellVoltage;
         lib_interpolation_mapping_S * socMap;
+        lib_interpolation_mapping_S * ocvMap;
         lib_interpolation_mapping_S * docvMap;
         lib_interpolation_mapping_S * RiMapDischarge;
         lib_interpolation_mapping_S * R1MapDischarge;
@@ -69,6 +70,8 @@ typedef struct
     soc_matrix_S     A;
     soc_col_vector_S B;
     soc_matrix_S     P; // Covariance
+    float32_t        socMin;
+    float32_t        socMax;
     float32_t        cellVoltageSim;
     float32_t        dischargeLimit;
     float32_t        chargeLimit;

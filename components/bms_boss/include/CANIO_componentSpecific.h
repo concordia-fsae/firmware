@@ -55,6 +55,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_packVoltageMeasurementFault(m, b, n, s)    set(m, b, n, s, BMS.pack_voltage_sense_fault ? CAN_FLAG_SET : CAN_FLAG_CLEARED)
 #define set_packCycleCountedCoulombs(m, b, n, s)       set(m, b, n, s, BMS.counted_coulombs.amp_hr)
 #define set_packSOC(m, b, n, s)                        set(m, b, n, s, current_data.soc * 100)
+#define set_socMin(m, b, n, s)                         set(m, b, n, s, BMS.socMin * 100)
 #define set_packCurrent(m, b, n, s)                    set(m, b, n, s, BMS.pack_current)
 #define set_packPower(m, b, n, s)                      set(m, b, n, s, BMS.packPowerKW)
 #define set_packContactorState(m, b, n, s)             set(m, b, n, s, CANIO_tx_getContactorState())
