@@ -52,7 +52,7 @@
 #define TRICKLE_CHARGE_CURRENT                         (1.0f * BMS_CONFIGURED_PARALLEL_CELLS)
 #define SLOW_TRICKLE_CHARGE_CURRENT                    0.25f
 #define TRICKLE_CHARGE_VOLTAGE                         4.15f
-#define SLOW_TRICKLE_CHARGE_VOLTAGE                    4.175f
+#define SLOW_TRICKLE_CHARGE_VOLTAGE                    4.20f
 
 /******************************************************************************
  *                           P U B L I C  V A R S
