@@ -486,7 +486,6 @@ static void BMS10Hz_PRD(void)
     BMS.worker_temp_fault_latched   = updateLatchedWorkerFault(BMS.worker_temp_fault_latched, workerTempFault, resetWorkerFaults);
     BMS.worker_disconnected_latched = updateLatchedWorkerFault(BMS.worker_disconnected_latched, workerDisconnected, resetWorkerFaults);
 
-    BMS.soc                         = tmp.soc;
     BMS.fault                       = tmp.fault;
 
     BMS.connected_segments          = tmp.connected_segments;
