@@ -18,6 +18,7 @@ cargo install --path tools/carputer/influx-export
 
 # 2. install bash tab-completion (once)
 influx-export completions bash > ~/.local/share/bash-completion/completions/influx-export
+# you will need to make the directories for this
 #    open a new shell afterwards
 
 # 3. populate the signal list for tab-completion (while on the car network)
