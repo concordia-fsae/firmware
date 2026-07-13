@@ -29,11 +29,11 @@ static drv_timer_S               start_up;
 
 static lib_interpolation_point_S fan_curve[] = {
     {
-        .x = 35,    // degC
+        .x = 58,    // degC
         .y = 0.0f,  // duty cycle
     },
     {
-        .x = 45,    // degC
+        .x = 60,    // degC
         .y = 1.0f,  // duty cycle
     },
 };
