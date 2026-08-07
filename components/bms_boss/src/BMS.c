@@ -137,7 +137,7 @@ static void dischargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 
     if (bms->max_temp >= 48.0f)
     {
-        const float32_t derateRatio = SATURATE(0.5f, (1.0f - ((bms->max_temp - 48.0f) / 12.0f)), 1.0f);
+        const float32_t derateRatio          = SATURATE(0.0f, (1.0f - ((bms->max_temp - 48.0f) / 12.0f)), 1.0f);
         const float32_t maxDischargeFromTemp = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS * derateRatio;
         if (bms->discharge_limit > maxDischargeFromTemp)
         {
@@ -151,7 +151,7 @@ static void dischargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
     }
     else if (bms->soc <= 0.1)
     {
-        const float32_t derateRatio = SATURATE(0.5f, (1.0f + ((bms->soc - 0.15f) * 5.0f)), 1.0f);
+        const float32_t derateRatio         = SATURATE(0.5f, (1.0f + ((bms->soc - 0.15f) * 5.0f)), 1.0f);
         const float32_t maxDischargeFromSoc = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS * derateRatio;
         if (bms->discharge_limit > maxDischargeFromSoc)
         {
