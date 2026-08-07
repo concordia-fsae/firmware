@@ -66,9 +66,10 @@ batteryModel_S bm = {
         .Qnoise         = { { { 7e-8f,                   0.0f, 0.0f }, { 0.0f, 6e-5f, 0.0f }, { 0.0f, 0.0f, 6e-5f } } },
         .Pinit          = { { { 1e-4f,                   0.0f, 0.0f }, { 0.0f, 1e-4f, 0.0f }, { 0.0f, 0.0f, 1e-4f } } },
         .cellAH         = BMS_CELL_RATED_AMPHOURS,
-        .minCellVoltage =                    2.4f, // TODO: Improve top end live cell voltage
-        .maxCellVoltage =                    4.2f, // TODO: Improve bottom end live cell voltage
+        .minCellVoltage =                    2.0f, // TODO: Improve top end live cell voltage
+        .maxCellVoltage =                   4.25f, // TODO: Improve bottom end live cell voltage
         .socMap         = &SOC_OCV_FUNC,
+        .ocvMap         = &OCV_SOC_FUNC,
         .docvMap        = &SOC_dOCV_FUNC,
         .RiMapDischarge = &SOC_Ri_DISCHARGE_FUNC,
         .R1MapDischarge = &SOC_R1_DISCHARGE_FUNC,
@@ -126,7 +127,7 @@ static void chargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 
 static void dischargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 {
-    if ((bms->max_temp > 60.0f) || bms->fault)
+    if ((bms->max_temp > 60.0f) || bms->fault || (bms->soc <= 0.0f))
     {
         bms->discharge_limit = 0.0f;
         return;
@@ -136,20 +137,35 @@ static void dischargeLimit(BMSB_S* bms, batteryModel_S* batteryModel)
 
     if (bms->max_temp >= 48.0f)
     {
-        bms->discharge_limit += -((bms->max_temp - 48.0f) / 12.0f) * BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
+        const float32_t derateRatio          = SATURATE(0.0f, (1.0f - ((bms->max_temp - 48.0f) / 12.0f)), 1.0f);
+        const float32_t maxDischargeFromTemp = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS * derateRatio;
+        if (bms->discharge_limit > maxDischargeFromTemp)
+        {
+            bms->discharge_limit = maxDischargeFromTemp;
+        }
     }
 
     if (bms->discharge_limit < 0.0f)
     {
         bms->discharge_limit = 0.0f;
     }
+    else if (bms->soc <= 0.1)
+    {
+        const float32_t derateRatio         = SATURATE(0.5f, (1.0f + ((bms->soc - 0.15f) * 5.0f)), 1.0f);
+        const float32_t maxDischargeFromSoc = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS * derateRatio;
+        if (bms->discharge_limit > maxDischargeFromSoc)
+        {
+            bms->discharge_limit = maxDischargeFromSoc;
+        }
+    }
+
     if (bms->discharge_limit > BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS)
     {
         bms->discharge_limit = BMS_MAX_CONT_DISCHARGE_CURRENT * BMS_CONFIGURED_PARALLEL_CELLS;
     }
-    if ((bms->discharge_limit * bms->pack_voltage_calculated) > MAX_POWER)
+    if ((bms->discharge_limit * bms->pack_voltage_measured) > MAX_POWER)
     {
-        bms->discharge_limit = MAX_POWER / bms->pack_voltage_calculated;
+        bms->discharge_limit = MAX_POWER / bms->pack_voltage_measured;
     }
 }
 
@@ -470,7 +486,6 @@ static void BMS10Hz_PRD(void)
     BMS.worker_temp_fault_latched   = updateLatchedWorkerFault(BMS.worker_temp_fault_latched, workerTempFault, resetWorkerFaults);
     BMS.worker_disconnected_latched = updateLatchedWorkerFault(BMS.worker_disconnected_latched, workerDisconnected, resetWorkerFaults);
 
-    BMS.soc                         = tmp.soc;
     BMS.fault                       = tmp.fault;
 
     BMS.connected_segments          = tmp.connected_segments;
@@ -500,13 +515,16 @@ static void BMS100Hz_PRD(void)
 
     batteryModel_run(&bm, BMS.pack_voltage_measured / (BMS_CONFIGURED_SERIES_CELLS * BMS_CONFIGURED_SERIES_SEGMENTS), BMS.pack_current / BMS_CONFIGURED_PARALLEL_CELLS,
                      BMS.voltages.min, BMS.voltages.max, (float32_t)delta_t / 1000.0f);
+
     current_data.soc = SATURATE(0.0f, batteryModel_getSOC(&bm), 1.0f);
 
     if (BMS.connected_segments == BMS_CONFIGURED_SERIES_SEGMENTS)
     {
         chargeLimit(&BMS, &bm);
         dischargeLimit(&BMS, &bm);
-        BMS.soc = batteryModel_getSOC(&bm);
+        BMS.soc    = batteryModel_getSOC(&bm);
+        BMS.socMin = bm.socMin;
+        BMS.socMax = bm.socMax;
 
         if (BMS.charging_paused)
         {

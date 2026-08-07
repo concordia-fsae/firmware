@@ -51,6 +51,9 @@ _Static_assert(BATTERY_CUTOFF_ANY_HI < BATTERY_CUTOFF_SFTY_LO,  "Battery cutoff 
 _Static_assert(BATTERY_CUTOFF_SFTY_HI <= BATTERY_RECHARGED,     "Battery must be considered recharged at a higher voltage than the highest cutoff.");
 _Static_assert(BATTERY_RECHARGED < BATTERY_OVERVOLTAGE,         "Overvoltage must be highest voltage value.");
 
+#define WORKER_OFF_TIMER_MS       250U
+#define WORKER_REBOOT_TIMER_MS    250U
+
 /******************************************************************************
  *                         P R I V A T E  V A R S
  ******************************************************************************/
@@ -59,6 +62,8 @@ static struct
 {
     drv_timer_S underVoltageTimeout;
     drv_timer_S safetyCutoffTimeout;
+    drv_timer_S workerOffTimer;
+    drv_timer_S workerRebootTimer;
 
     float32_t   total_current;
     float32_t   glv_voltage;
@@ -187,6 +192,11 @@ static void powerManager_init(void)
     drv_timer_init(&pm_data.underVoltageTimeout);
     drv_timer_init(&pm_data.safetyCutoffTimeout);
 
+    drv_timer_init(&pm_data.workerOffTimer);
+    drv_timer_init(&pm_data.workerRebootTimer);
+    drv_timer_start(&pm_data.workerOffTimer,    WORKER_OFF_TIMER_MS);
+    drv_timer_start(&pm_data.workerRebootTimer, WORKER_REBOOT_TIMER_MS + WORKER_REBOOT_TIMER_MS);
+
     drv_tps2hb16ab_init();
     drv_vn9008_init();
     drv_tps20xx_init();
@@ -217,11 +227,14 @@ static void powerManager_periodic_100Hz(void)
     drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_VCU_SFTY_EN, shutdown_en);
 #endif
 
-    const bool                sleeping    = app_vehicleState_sleeping();
-    const drv_tps20xx_state_E stateCrit   = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_CRITICAL);
-    const drv_tps20xx_state_E stateExt    = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_EXT);
-    const bool                faultedCrit = (stateCrit == DRV_TPS20XX_STATE_FAULTED_OC) || (stateCrit == DRV_TPS20XX_STATE_FAULTED_OT);
-    const bool                faultedExt  = (stateExt == DRV_TPS20XX_STATE_FAULTED_OC) || (stateExt == DRV_TPS20XX_STATE_FAULTED_OT);
+    const bool                sleeping       = app_vehicleState_sleeping();
+    const drv_tps20xx_state_E stateCrit      = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_CRITICAL);
+    const drv_tps20xx_state_E stateExt       = drv_tps20xx_getState(DRV_TPS20XX_CHANNEL_5V_EXT);
+    const bool                faultedCrit    = (stateCrit == DRV_TPS20XX_STATE_FAULTED_OC) || (stateCrit == DRV_TPS20XX_STATE_FAULTED_OT);
+    const bool                faultedExt     = (stateExt == DRV_TPS20XX_STATE_FAULTED_OC) || (stateExt == DRV_TPS20XX_STATE_FAULTED_OT);
+    const bool                workersOff     = drv_timer_getState(&pm_data.workerOffTimer) == DRV_TIMER_EXPIRED;
+    const bool                workersReboot  = drv_timer_getState(&pm_data.workerRebootTimer) == DRV_TIMER_EXPIRED;
+    const bool                workersPowered = !(workersOff ^ workersReboot);
 
     app_faultManager_setFaultState(FM_FAULT_VCPDU_FAULTED5VCRITICAL, faultedCrit);
     app_faultManager_setFaultState(FM_FAULT_VCPDU_FAULTED5VEXT,      faultedExt);
@@ -250,7 +263,7 @@ static void powerManager_periodic_100Hz(void)
                                             ((i == DRV_TPS2HB16AB_IC_MC_VCU3) && (n == DRV_TPS2HB16AB_OUT_2)));
             const bool isShutdownCircuit = (i == DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN) && (n == DRV_TPS2HB16AB_OUT_2);
 
-            bool       enableLoad        = (pm_data.okBattery && !pm_data.sleeping) || requiredLoad;
+            bool       enableLoad        = ((pm_data.okBattery && !pm_data.sleeping) || requiredLoad) && workersPowered;
 
             if ((pm_data.deepSleep && isVcuHsd) || (isShutdownCircuit && !pm_data.okSafety))
             {

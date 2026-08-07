@@ -413,7 +413,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
     updateTcMappingConfigOptions();
 
     // Torque axis
-    if (data.page != DRIVERINPUT_PAGE_CONFIG)
+    if (data.page == DRIVERINPUT_PAGE_BUTTONS)
     {
         if (!axis_any_db && (tq_inc ^ tq_dec))
         {
@@ -427,7 +427,7 @@ static void update_params(const bool tq_inc, const bool tq_dec,
             }
         }
     }
-    else
+    else if (data.page == DRIVERINPUT_PAGE_CONFIG)
     {
         if (tq_inc)
         {
@@ -448,15 +448,15 @@ static void update_params(const bool tq_inc, const bool tq_dec,
     // Slip axis (independent of torque axis, but uses the same stability gate)
     if (!axis_any_db && (sl_inc ^ sl_dec))
     {
-        if (sl_inc && !sl_dec && (data.page != DRIVERINPUT_PAGE_CONFIG))
+        if (sl_inc && !sl_dec && (data.page == DRIVERINPUT_PAGE_BUTTONS))
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_INC] = true;
         }
-        else if (sl_dec && !sl_inc && (data.page != DRIVERINPUT_PAGE_CONFIG))
+        else if (sl_dec && !sl_inc && (data.page == DRIVERINPUT_PAGE_BUTTONS))
         {
             status[DRIVERINPUT_REQUEST_TC_SLIP_DEC] = true;
         }
-        else if (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING)
+        else if ((data.page == DRIVERINPUT_PAGE_CONFIG) && (drv_timer_getState(&data.config_timer) != DRV_TIMER_RUNNING))
         {
             // initial step immediately
             if (sl_dec && (data.config > (DRIVERINPUT_CONFIG_NONE + 1)))

@@ -461,3 +461,14 @@ signals:
         min: 0
         max: 5
     continuous: true
+
+  socMin:
+    unit: 'm'
+    description: SOC of Cell with lowest voltage in the  Pack
+    nativeRepresentation:
+      resolution: 0.1
+      bitWidth: 10
+      range:
+        min: 0
+        max: 100
+    continuous: true
