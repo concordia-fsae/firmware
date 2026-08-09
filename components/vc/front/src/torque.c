@@ -669,9 +669,7 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.tractionControlState = nextState;
 
-    if ((torque_data.tractionControlState == TC_STATE_ACTIVE) &&
-        (vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS)
-        )
+    if (torque_data.tractionControlState == TC_STATE_ACTIVE)
     {
         multiplier = calc_traction_control_reduction(torque_data.slip_request, slip, dt);
     }
