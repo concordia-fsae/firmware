@@ -135,13 +135,15 @@ static void routine_resetTcPid(udsRoutineControlType_E routineControlType, uint8
     switch (routineControlType)
     {
         case UDS_ROUTINE_CONTROL_START:
-            if (lib_nvm_writeRequired(NVM_ENTRYID_TC_PID))
+            if (lib_nvm_writeRequired(NVM_ENTRYID_TC_PID) ||
+                lib_nvm_writeRequired(NVM_ENTRYID_TC_SLOW_PID))
             {
                 uds_sendNegativeResponse(UDS_SID_ROUTINE_CONTROL, UDS_NRC_BUSY_REPEAT_REQUEST);
             }
             else
             {
                 lib_nvm_clearEntry(NVM_ENTRYID_TC_PID);
+                lib_nvm_clearEntry(NVM_ENTRYID_TC_SLOW_PID);
                 uds_sendPositiveResponse(UDS_SID_ROUTINE_CONTROL, UDS_ROUTINE_CONTROL_START, payload, 0x02);
             }
             break;

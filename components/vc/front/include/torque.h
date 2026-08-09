@@ -39,11 +39,24 @@
 #define TC_150NM_TORQUE               150U
 #define TC_DTERM_LPF_CUTOFF_FREQ      100
 #define TC_ILEAK_MS                   500U
+#define TC_SLOW_REFERENCE_RPM         10.0f
 
 #define TC_PID_CONV_PERCENT_F32(x)    (((float32_t)x) / 100.0f)
 #define TC_PID_CONV_THOU_F32(x)       (((float32_t)x) / 1000.0f)
 #define TC_PID_CONV_PERCENT_U8(x)     (x * 100U)
 #define TC_PID_CONV_THOU_U16(x)       (x * 1000U)
+#define TC_SET_DEFAULT_SLOW_PID(decl)                                                   \
+        decl                   = {                                                      \
+            .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_130NM_MAX),         \
+            .percentILim       = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_130NM_ILIM),        \
+            .thousandthKp      = (uint16_t)TC_PID_CONV_THOU_U16(TC_130NM_KP /           \
+                                                                TC_SLOW_REFERENCE_RPM), \
+            .thousandthKi      = (uint16_t)TC_PID_CONV_THOU_U16(TC_130NM_KI /           \
+                                                                TC_SLOW_REFERENCE_RPM), \
+            .thousandthKd      = (uint16_t)TC_PID_CONV_THOU_U16(TC_130NM_KD /           \
+                                                                TC_SLOW_REFERENCE_RPM), \
+            .tLeakMs           = TC_ILEAK_MS,                                           \
+        };
 #define TC_SET_DEFAULT_PID(decl)                                                 \
         decl                   = {                                               \
             .percentMaxTcLimit = (uint8_t)TC_PID_CONV_PERCENT_U8(TC_130NM_MAX),  \
@@ -155,12 +168,25 @@ typedef struct
     uint16_t thousandthKi;
     uint16_t thousandthKd;
     uint16_t tLeakMs;
+} LIB_NVM_STORAGE(nvm_tcPidGains_S);
+
+typedef struct
+{
+    uint8_t  percentMaxTcLimit;
+    uint8_t  percentILim;
+    uint16_t thousandthKp;
+    uint16_t thousandthKi;
+    uint16_t thousandthKd;
+    uint16_t tLeakMs;
     uint16_t maxTorqueNm;
     uint16_t spare[5U];
 } LIB_NVM_STORAGE(nvm_tcPid_S);
+
 extern nvm_tcPid_S tcPid_data;
+extern nvm_tcPidGains_S tcSlowPid_data;
 
 NVM_SIZE_ASSERT(nvm_tcParamState_S, 6U);
+NVM_SIZE_ASSERT(nvm_tcPidGains_S,   10U);
 NVM_SIZE_ASSERT(nvm_tcPid_S,        22U);
 
 /******************************************************************************

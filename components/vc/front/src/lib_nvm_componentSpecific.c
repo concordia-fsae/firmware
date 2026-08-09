@@ -114,6 +114,8 @@ static const nvm_tcParamState_S        tcParamState_data_default = {
 LIB_NVM_MEMORY_REGION(nvm_tcParamState_S tcParamState_data) = { 0U };
 TC_SET_DEFAULT_PID(static const nvm_tcPid_S tcPid_data_default);
 LIB_NVM_MEMORY_REGION(nvm_tcPid_S tcPid_data)               = { 0U };
+TC_SET_DEFAULT_SLOW_PID(static const nvm_tcPidGains_S tcSlowPid_data_default);
+LIB_NVM_MEMORY_REGION(nvm_tcPidGains_S tcSlowPid_data)      = { 0U };
 
 const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
     [NVM_ENTRYID_LOG] =                 {
@@ -159,6 +161,13 @@ const lib_nvm_entry_S lib_nvm_entries[NVM_ENTRYID_COUNT] = {
         .minTimeBetweenWritesMs =                 10000U,
         .version                = TC_PID_NVM_VERSION,
         .versionHandler_Fn      = &version_handler_tcPid,
+    },
+    [NVM_ENTRYID_TC_SLOW_PID] =         {
+        .entrySize              = sizeof(nvm_tcPidGains_S),
+        .entryDefault_Ptr       = &tcSlowPid_data_default,
+        .entryRam_Ptr           = &tcSlowPid_data,
+        .minTimeBetweenWritesMs =                      10000U,
+        .version                =                          0U,
     },
 };
 #endif // if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)

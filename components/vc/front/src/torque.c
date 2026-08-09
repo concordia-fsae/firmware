@@ -92,6 +92,21 @@
  *                             T Y P E D E F S
  ******************************************************************************/
 
+typedef enum
+{
+    CONTROLLER_SLOW,
+    CONTROLLER_FAST,
+} torque_controller_E;
+
+typedef struct
+{
+    torque_controller_E controller;
+    lib_pid_S*          pid;
+    float32_t           target;
+    float32_t           actual;
+    nvm_tcPidGains_S    pidConfig;
+} tractionControlEvaluation_S;
+
 static struct
 {
     torque_state_E                state;
@@ -113,6 +128,7 @@ static struct
     bool                          regenEnabled;
     bool                          isRegenerating;
     bool                          customTcPidWritePending;
+    bool                          slowTcPidWritePending;
     bool                          tcMappingIncActive;
     bool                          tcMappingDecActive;
     drv_timer_S                   torque_change_timer;
@@ -135,7 +151,9 @@ static struct
     float32_t                     torqueCorrection;
     float32_t                     torqueReduction;
     float32_t                     maxVdTorque;
-    lib_pid_S                     tractionControlPID;
+    torque_controller_E           tractionControlController;
+    lib_pid_S                     tractionControlFastPID;
+    lib_pid_S                     tractionControlSlowPID;
 
     FLAG_create(tcParamsWasRequested, PARAMSTATE_COUNT);
 } torque_data;
@@ -194,6 +212,8 @@ TC_SET_150NM_PID(static const nvm_tcPid_S tcPid150NmDefault);
 /******************************************************************************
  *                     P R I V A T E  F U N C T I O N S
  ******************************************************************************/
+
+static tractionControlEvaluation_S tc_getEvaluation(float32_t vehicleSpeed);
 
 static void launch_control_75m_reset(void)
 {
@@ -295,9 +315,67 @@ static const nvm_tcPid_S* tc_getActivePidConst(void)
     return tc_getActivePid();
 }
 
-static void tc_requestCustomPidWriteAfterActivity(void)
+static nvm_tcPidGains_S tc_getFastPidGains(const nvm_tcPid_S* pid)
 {
-    if (tc_isCustomMappingSelected())
+    return (nvm_tcPidGains_S) {
+               .percentMaxTcLimit = pid->percentMaxTcLimit,
+               .percentILim       = pid->percentILim,
+               .thousandthKp      = pid->thousandthKp,
+               .thousandthKi      = pid->thousandthKi,
+               .thousandthKd      = pid->thousandthKd,
+               .tLeakMs           = pid->tLeakMs,
+    };
+}
+
+static lib_pid_S* tc_getActiveControllerPid(void)
+{
+    return (torque_data.tractionControlController == CONTROLLER_FAST)
+        ? &torque_data.tractionControlFastPID
+        : &torque_data.tractionControlSlowPID;
+}
+
+static torque_controller_E tc_getSelectedController(void)
+{
+    return (app_vehicleSpeed_getVehicleSpeed() < TC_VEHICLESPEED_THRESHOLD_MPS) ? CONTROLLER_SLOW : CONTROLLER_FAST;
+}
+
+static nvm_tcPidGains_S tc_getActiveParamGains(void)
+{
+    return (tc_getSelectedController() == CONTROLLER_SLOW)
+        ? tcSlowPid_data
+        : tc_getFastPidGains(tc_getActivePidConst());
+}
+
+static void tc_stepU16Param(uint16_t* param, int16_t step, uint16_t min, uint16_t max)
+{
+    if (((*param > min) && (*param < max)) ||
+        ((*param == min) && (step > 0)) ||
+        ((*param == max) && (step < 0))
+        )
+    {
+        *param = (uint16_t)(*param + step);
+    }
+}
+
+static void tc_stepU8Param(uint8_t* param, int16_t step, uint8_t min, uint8_t max)
+{
+    if (((*param > min) && (*param < max)) ||
+        ((*param == min) && (step > 0)) ||
+        ((*param == max) && (step < 0))
+        )
+    {
+        *param = (uint8_t)(*param + step);
+    }
+}
+
+static void tc_requestPidWriteAfterActivity(torque_controller_E controller)
+{
+    if (controller == CONTROLLER_SLOW)
+    {
+        torque_data.slowTcPidWritePending = true;
+        drv_timer_start(&torque_data.paramTcSaveTimer, TC_PARAM_ACTIVITY_TIMEOUT_MS);
+    }
+    else if (tc_isCustomMappingSelected())
     {
         torque_data.customTcPidWritePending = true;
         drv_timer_start(&torque_data.paramTcSaveTimer, TC_PARAM_ACTIVITY_TIMEOUT_MS);
@@ -462,7 +540,7 @@ static float32_t evaluate_torque_max(void)
             torque_request_max = torque_inc_active ? torque_request_max + 1 : torque_request_max - 1;
             torque_request_max = SATURATE(MIN_TORQUE_RANGE, torque_request_max, ABSOLUTE_MAX_TORQUE);
             pid->maxTorqueNm   = (uint16_t)torque_request_max;
-            tc_requestCustomPidWriteAfterActivity();
+            tc_requestPidWriteAfterActivity(CONTROLLER_FAST);
         }
         else if (timer_state == DRV_TIMER_EXPIRED)
         {
@@ -621,21 +699,103 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
     launch_control_75m_update();
 }
 
-static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
+static void tc_initPid(lib_pid_S* controllerPid, const nvm_tcPidGains_S* gains)
 {
-    const nvm_tcPid_S* pid = tc_getActivePidConst();
-    const float32_t  kLeak = 1.0f / TC_PID_CONV_THOU_F32(pid->tLeakMs);
+    lib_pid_init(controllerPid, 0.0f, 0.0f,
+                 TC_PID_CONV_THOU_F32(gains->thousandthKp),
+                 TC_PID_CONV_THOU_F32(gains->thousandthKi),
+                 TC_PID_CONV_THOU_F32(-gains->thousandthKd));
+    lib_pid_util_lpf_dTermSetCutoff(controllerPid, TC_DTERM_LPF_CUTOFF_FREQ);
+}
 
-    lib_pid_util_ileak(&torque_data.tractionControlPID, kLeak, dt);
-    torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(pid->thousandthKp);
-    torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(pid->thousandthKi);
-    torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(-pid->thousandthKd);
-    lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
-    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentILim));
-    lib_pid_util_lpf_dTerm(&torque_data.tractionControlPID, dt);
-    lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentMaxTcLimit));
+static void tc_updatePidGains(lib_pid_S* controllerPid, const nvm_tcPidGains_S* gains)
+{
+    controllerPid->kp = TC_PID_CONV_THOU_F32(gains->thousandthKp);
+    controllerPid->ki = TC_PID_CONV_THOU_F32(gains->thousandthKi);
+    controllerPid->kd = TC_PID_CONV_THOU_F32(-gains->thousandthKd);
+}
 
-    return torque_data.tractionControlPID.y;
+static tractionControlEvaluation_S tc_getEvaluation(float32_t vehicleSpeed)
+{
+    const bool useSlowPid = vehicleSpeed < TC_VEHICLESPEED_THRESHOLD_MPS;
+
+    if (useSlowPid)
+    {
+        const float32_t frontAxleRpm           = (float32_t)app_vehicleSpeed_getAxleSpeedRotational(AXLE_FRONT);
+        const float32_t rearAxleRpm            = (float32_t)app_vehicleSpeed_getAxleSpeedRotational(AXLE_REAR);
+        const float32_t targetWheelSpeedDelta  = frontAxleRpm * torque_data.slip_request;
+        const float32_t actualWheelSpeedDelta  = rearAxleRpm - frontAxleRpm;
+
+        return (tractionControlEvaluation_S) {
+                   .controller = CONTROLLER_SLOW,
+                   .pid        = &torque_data.tractionControlSlowPID,
+                   .target     = targetWheelSpeedDelta,
+                   .actual     = actualWheelSpeedDelta,
+                   .pidConfig  = tcSlowPid_data,
+        };
+    }
+
+    return (tractionControlEvaluation_S) {
+               .controller = CONTROLLER_FAST,
+               .pid        = &torque_data.tractionControlFastPID,
+               .target     = torque_data.slip_request,
+               .actual     = app_vehicleSpeed_getAxleSlip(AXLE_REAR),
+               .pidConfig  = tc_getFastPidGains(tc_getActivePid()),
+    };
+}
+
+static void tc_backCalculatePid(lib_pid_S* controllerPid, const lib_pid_S* previousPid,
+                                float32_t target, float32_t actual, float32_t dt,
+                                const nvm_tcPidGains_S* gains)
+{
+    const float32_t output = SATURATE(TC_MIN, previousPid->y,
+                                      TC_PID_CONV_PERCENT_F32(gains->percentMaxTcLimit));
+    const float32_t iMax   = TC_PID_CONV_PERCENT_F32(gains->percentILim);
+    const float32_t x      = actual - target;
+    const float32_t pTerm  = controllerPid->kp * x;
+    const float32_t dTerm  = controllerPid->kd * (x / dt);
+    const float32_t iStep  = controllerPid->ki * x * dt;
+
+    controllerPid->x      = x;
+    controllerPid->x_1    = x;
+    controllerPid->p_term = pTerm;
+    controllerPid->i_term = SATURATE(TC_MIN, output - pTerm - dTerm - iStep, iMax);
+    controllerPid->d_term = dTerm;
+
+    controllerPid->filterDTerm.y   = dTerm;
+    controllerPid->filterDTerm.y_1 = dTerm;
+    controllerPid->y               = output;
+}
+
+static float32_t calc_traction_control_reduction(const tractionControlEvaluation_S* evaluation, float32_t dt)
+{
+    const nvm_tcPidGains_S* gains = &evaluation->pidConfig;
+    const float32_t         kLeak = 1.0f / TC_PID_CONV_THOU_F32(gains->tLeakMs);
+
+    if (dt <= 0.0f)
+    {
+        return evaluation->pid->y;
+    }
+
+    tc_updatePidGains(evaluation->pid, gains);
+
+    if (torque_data.tractionControlController != evaluation->controller)
+    {
+        tc_backCalculatePid(evaluation->pid, tc_getActiveControllerPid(),
+                            evaluation->target, evaluation->actual, dt, gains);
+        torque_data.tractionControlController = evaluation->controller;
+    }
+    else
+    {
+        lib_pid_util_ileak(evaluation->pid, kLeak, dt);
+    }
+
+    lib_pid_typeb_calc(evaluation->pid, evaluation->target, evaluation->actual, dt);
+    lib_pid_util_ilim(evaluation->pid, TC_MIN, TC_PID_CONV_PERCENT_F32(gains->percentILim));
+    lib_pid_util_lpf_dTerm(evaluation->pid, dt);
+    lib_pid_typeb_sum(evaluation->pid, TC_MIN, TC_PID_CONV_PERCENT_F32(gains->percentMaxTcLimit));
+
+    return evaluation->pid->y;
 }
 
 static float32_t evaluate_traction_control(void)
@@ -646,7 +806,7 @@ static float32_t evaluate_traction_control(void)
     torque_data.lastTimeampMS = timestamp;
 
     const float32_t               vehicleSpeed               = app_vehicleSpeed_getVehicleSpeed();
-    const float32_t               slip                       = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
+    const tractionControlEvaluation_S tcEvaluation           = tc_getEvaluation(vehicleSpeed);
     float32_t                     multiplier                 = 0.0f;
 
     torque_tractionControlState_E nextState                  = TC_STATE_ERROR;
@@ -671,18 +831,18 @@ static float32_t evaluate_traction_control(void)
 
     if (torque_data.tractionControlState == TC_STATE_ACTIVE)
     {
-        multiplier = calc_traction_control_reduction(torque_data.slip_request, slip, dt);
+        multiplier = calc_traction_control_reduction(&tcEvaluation, dt);
     }
     else
     {
         const nvm_tcPid_S* pid = tc_getActivePidConst();
-        lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f,
-                     TC_PID_CONV_THOU_F32(pid->thousandthKp),
-                     TC_PID_CONV_THOU_F32(pid->thousandthKi),
-                     TC_PID_CONV_THOU_F32(-pid->thousandthKd));
+        const nvm_tcPidGains_S fastGains = tc_getFastPidGains(pid);
+        tc_initPid(&torque_data.tractionControlFastPID, &fastGains);
+        tc_initPid(&torque_data.tractionControlSlowPID, &tcSlowPid_data);
+        torque_data.tractionControlController = tcEvaluation.controller;
     }
 
-    torque_data.slipRear = slip;
+    torque_data.slipRear = (vehicleSpeed >= TC_VEHICLESPEED_THRESHOLD_MPS) ? app_vehicleSpeed_getAxleSlip(AXLE_REAR) : 0.0f;
     return multiplier;
 }
 
@@ -804,8 +964,10 @@ static void tcEvaluateParams(void)
     const drv_timer_state_E timerSaveState    = drv_timer_getState(&torque_data.paramTcSaveTimer);
     bool                    paramValueChanged = false;
     const bool              mappingChanged    = tc_evaluateMappingRequest();
-    nvm_tcPid_S             * activePid       = tc_getActivePid();
-    const bool              activePidSaved    = tc_isCustomMappingSelected();
+    const torque_controller_E selectedController = tc_getSelectedController();
+    nvm_tcPid_S             * activeFastPid   = tc_getActivePid();
+    nvm_tcPidGains_S        * activeSlowPid   = &tcSlowPid_data;
+    const bool              activePidSaved    = (selectedController == CONTROLLER_SLOW) || tc_isCustomMappingSelected();
 
     for (uint8_t i = 0U; i < PARAMSTATE_COUNT; i++)
     {
@@ -845,63 +1007,33 @@ static void tcEvaluateParams(void)
         switch (i)
         {
             case PARAMVALUE_TC_KP:
-                if (((activePid->thousandthKp > 0U) && (activePid->thousandthKp < 65535U)) ||
-                    ((activePid->thousandthKp == 0U) && (requestSum > 0)) ||
-                    ((activePid->thousandthKp == 65535U) && (requestSum < 0))
-                    )
-                {
-                    activePid->thousandthKp = (uint16_t)(activePid->thousandthKp + requestSum);
-                }
+                tc_stepU16Param((selectedController == CONTROLLER_SLOW) ? &activeSlowPid->thousandthKp : &activeFastPid->thousandthKp,
+                                requestSum, 0U, 65535U);
                 break;
 
             case PARAMVALUE_TC_KI:
-                if (((activePid->thousandthKi > 0U) && (activePid->thousandthKi < 65535U)) ||
-                    ((activePid->thousandthKi == 0U) && (requestSum > 0)) ||
-                    ((activePid->thousandthKi == 65535U) && (requestSum < 0))
-                    )
-                {
-                    activePid->thousandthKi = (uint16_t)(activePid->thousandthKi + requestSum);
-                }
+                tc_stepU16Param((selectedController == CONTROLLER_SLOW) ? &activeSlowPid->thousandthKi : &activeFastPid->thousandthKi,
+                                requestSum, 0U, 65535U);
                 break;
 
             case PARAMVALUE_TC_KD:
-                if (((activePid->thousandthKd > 0U) && (activePid->thousandthKd < 65535U)) ||
-                    ((activePid->thousandthKd == 0U) && (requestSum > 0)) ||
-                    ((activePid->thousandthKd == 65535U) && (requestSum < 0))
-                    )
-                {
-                    activePid->thousandthKd = (uint16_t)(activePid->thousandthKd + requestSum);
-                }
+                tc_stepU16Param((selectedController == CONTROLLER_SLOW) ? &activeSlowPid->thousandthKd : &activeFastPid->thousandthKd,
+                                requestSum, 0U, 65535U);
                 break;
 
             case PARAMVALUE_TC_MAX_LIM:
-                if (((activePid->percentMaxTcLimit > 0U) && (activePid->percentMaxTcLimit < 100U)) ||
-                    ((activePid->percentMaxTcLimit == 0U) && (requestSum > 0)) ||
-                    ((activePid->percentMaxTcLimit == 100U) && (requestSum < 0))
-                    )
-                {
-                    activePid->percentMaxTcLimit = (uint8_t)(activePid->percentMaxTcLimit + requestSum);
-                }
+                tc_stepU8Param((selectedController == CONTROLLER_SLOW) ? &activeSlowPid->percentMaxTcLimit : &activeFastPid->percentMaxTcLimit,
+                               requestSum, 0U, 100U);
                 break;
 
             case PARAMVALUE_TC_ILIM:
-                if (((activePid->percentILim > 0U) && (activePid->percentILim < 100U)) ||
-                    ((activePid->percentILim == 0U) && (requestSum > 0)) ||
-                    ((activePid->percentILim == 100U) && (requestSum < 0))
-                    )
-                {
-                    activePid->percentILim = (uint8_t)(activePid->percentILim + requestSum);
-                }
+                tc_stepU8Param((selectedController == CONTROLLER_SLOW) ? &activeSlowPid->percentILim : &activeFastPid->percentILim,
+                               requestSum, 0U, 100U);
                 break;
 
             case PARAMVALUE_TC_TLEAK_MS:
-                if (((activePid->tLeakMs > 1U) && (activePid->tLeakMs < 65535U)) ||
-                    ((activePid->tLeakMs == 1U) && (requestSum > 0)) ||
-                    ((activePid->tLeakMs == 65535U) && (requestSum < 0))
-                    )
-                {
-                    activePid->tLeakMs = (uint16_t)(activePid->tLeakMs + requestSum);
-                }
+                tc_stepU16Param((selectedController == CONTROLLER_SLOW) ? &activeSlowPid->tLeakMs : &activeFastPid->tLeakMs,
+                                requestSum, 1U, 65535U);
                 break;
         }
     }
@@ -915,7 +1047,7 @@ static void tcEvaluateParams(void)
 
         if (activePidSaved)
         {
-            tc_requestCustomPidWriteAfterActivity();
+            tc_requestPidWriteAfterActivity(selectedController);
         }
     }
     else
@@ -929,6 +1061,12 @@ static void tcEvaluateParams(void)
             {
                 torque_data.customTcPidWritePending = false;
                 lib_nvm_requestWrite(NVM_ENTRYID_TC_PID);
+            }
+
+            if (torque_data.slowTcPidWritePending)
+            {
+                torque_data.slowTcPidWritePending = false;
+                lib_nvm_requestWrite(NVM_ENTRYID_TC_SLOW_PID);
             }
         }
 
@@ -1026,17 +1164,17 @@ float32_t torque_getSlipTarget(void)
 
 float32_t torque_getSlipErrorP(void)
 {
-    return torque_data.tractionControlPID.p_term;
+    return tc_getActiveControllerPid()->p_term;
 }
 
 float32_t torque_getSlipErrorI(void)
 {
-    return torque_data.tractionControlPID.i_term;
+    return tc_getActiveControllerPid()->i_term;
 }
 
 float32_t torque_getSlipErrorD(void)
 {
-    return torque_data.tractionControlPID.d_term;
+    return tc_getActiveControllerPid()->d_term;
 }
 
 float32_t torque_getTorqueReduction(void)
@@ -1282,32 +1420,32 @@ CAN_tcMapping_E tc_getMappingCAN(void)
 
 float32_t tc_getParamPidMax(void)
 {
-    return TC_PID_CONV_PERCENT_F32(tc_getActivePidConst()->percentMaxTcLimit);
+    return TC_PID_CONV_PERCENT_F32(tc_getActiveParamGains().percentMaxTcLimit);
 }
 
 float32_t tc_getParamILim(void)
 {
-    return TC_PID_CONV_PERCENT_F32(tc_getActivePidConst()->percentILim);
+    return TC_PID_CONV_PERCENT_F32(tc_getActiveParamGains().percentILim);
 }
 
 float32_t tc_getParamKp(void)
 {
-    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->thousandthKp);
+    return TC_PID_CONV_THOU_F32(tc_getActiveParamGains().thousandthKp);
 }
 
 float32_t tc_getParamKi(void)
 {
-    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->thousandthKi);
+    return TC_PID_CONV_THOU_F32(tc_getActiveParamGains().thousandthKi);
 }
 
 float32_t tc_getParamKd(void)
 {
-    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->thousandthKd);
+    return TC_PID_CONV_THOU_F32(tc_getActiveParamGains().thousandthKd);
 }
 
 float32_t tc_getParamTLeak(void)
 {
-    return TC_PID_CONV_THOU_F32(tc_getActivePidConst()->tLeakMs);
+    return TC_PID_CONV_THOU_F32(tc_getActiveParamGains().tLeakMs);
 }
 
 static void torque_init(void)
@@ -1344,6 +1482,7 @@ static void torque_init(void)
     torque_data.gear                          = GEAR_F;
     torque_data.launchControlState            = LC_STATE_INACTIVE;
     torque_data.tractionControlState          = TC_STATE_INACTIVE;
+    torque_data.tractionControlController     = CONTROLLER_FAST;
 
     torque_data.slip_request                  = TC_TARGET_SLIP;
     torque_data.torqueRateLimit.y_n           = 0.0f;
@@ -1356,11 +1495,9 @@ static void torque_init(void)
     torque_data.torquePreload                 = LC_PRELOAD_TORQUE_INIT;
 
     const nvm_tcPid_S* pid = tc_getActivePidConst();
-    lib_pid_init(&torque_data.tractionControlPID, 0.0f, 0.0f,
-                 TC_PID_CONV_THOU_F32(pid->thousandthKp),
-                 TC_PID_CONV_THOU_F32(pid->thousandthKi),
-                 TC_PID_CONV_THOU_F32(-pid->thousandthKd));
-    lib_pid_util_lpf_dTermSetCutoff(&torque_data.tractionControlPID, TC_DTERM_LPF_CUTOFF_FREQ);
+    const nvm_tcPidGains_S fastGains = tc_getFastPidGains(pid);
+    tc_initPid(&torque_data.tractionControlFastPID, &fastGains);
+    tc_initPid(&torque_data.tractionControlSlowPID, &tcSlowPid_data);
 }
 
 static void torque_periodic_100Hz(void)
