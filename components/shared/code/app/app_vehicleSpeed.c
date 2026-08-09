@@ -215,6 +215,13 @@ static uint16_t getWheelCalculationRpm(wheel_E wheel)
     return isWheelUnavailable(wheel) ? getFallbackWheelRpm(wheel) : vehicle.raw_rpm_wheel[wheel];
 }
 
+static float32_t calculateSlip(float32_t referenceSpeed, float32_t vehicleSpeed)
+{
+    const float32_t slip = (referenceSpeed - vehicleSpeed) / vehicleSpeed;
+
+    return isfinite(slip) ? slip : 0.0f;
+}
+
 static void calculateWheelFaults(void)
 {
 #if WHEELSPEED_FAULTS_ENABLED
@@ -398,7 +405,7 @@ float32_t app_vehicleSpeed_getTireSlip(wheel_E wheel)
     const float32_t vel_tire = app_vehicleSpeed_getWheelSpeedLinear(wheel);
     const float32_t vel_veh  = app_vehicleSpeed_getVehicleSpeed();
 
-    return (vel_tire - vel_veh) / vel_veh;
+    return calculateSlip(vel_tire, vel_veh);
 }
 
 float32_t app_vehicleSpeed_getAxleSlip(axle_E axle)
@@ -406,7 +413,7 @@ float32_t app_vehicleSpeed_getAxleSlip(axle_E axle)
     const float32_t vel_axle = RPM_TO_MPS(app_vehicleSpeed_getAxleSpeedRotational(axle));
     const float32_t vel_veh  = app_vehicleSpeed_getVehicleSpeed();
 
-    return (vel_axle - vel_veh) / vel_veh;
+    return calculateSlip(vel_axle, vel_veh);
 }
 
 #if FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_LEADER) || FEATURE_IS_ENABLED(FEATURE_VEHICLESPEED_USEODOMETER)
