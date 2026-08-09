@@ -31,6 +31,7 @@ def _codegen_outs(rust_wrapper: bool = False):
     if rust_wrapper:
         outs["lib.rs"] = ["generated/lib.rs"]
         outs["yamcan.rs"] = ["generated/yamcan.rs"]
+        outs["rust_faults_generated.rs"] = ["generated/rust_faults_generated.rs"]
         outs["rust_model_generated.rs"] = ["generated/rust_model_generated.rs"]
         outs["rust_decode_generated.rs"] = ["generated/rust_decode_generated.rs"]
     return outs
@@ -107,6 +108,7 @@ def generate_rust_library(
         srcs = [
             codegen_target + "[lib.rs]",
             codegen_target + "[yamcan.rs]",
+            codegen_target + "[rust_faults_generated.rs]",
             codegen_target + "[rust_model_generated.rs]",
             codegen_target + "[rust_decode_generated.rs]",
         ],

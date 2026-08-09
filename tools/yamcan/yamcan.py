@@ -1087,6 +1087,7 @@ def codegen(
         ]
         if rust_codegen:
             makos += [
+                ["rust_faults_generated.rs.mako", {"nodes": [can_nodes[node]]}],
                 ["rust_model_generated.rs.mako", {"nodes": [can_nodes[node]]}],
                 [
                     "rust_decode_generated.rs.mako",
