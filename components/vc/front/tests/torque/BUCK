@@ -1,0 +1,38 @@
+load("//tools/c_unit:defs.bzl", "c_unit_test")
+
+c_unit_test(
+    name = "torque_test",
+    srcs = [
+        "test_torque.c",
+        "//components/vc/front:src/torque.c",
+        "//components/shared/code:DRV/drv_timer.c",
+        "//components/shared/code:libs/lib_pid.c",
+        "//components/shared/code:libs/lib_rateLimit.c",
+        "//components/shared/code:libs/lib_simpleFilter.c",
+    ],
+    headers = {
+        "BuildDefines.h": "include/BuildDefines.h",
+        "FeatureDefines.h": "include/FeatureDefines.h",
+        "FeatureDefines_generated.h": "include/FeatureDefines_generated.h",
+        "HW_tim_componentSpecific.h": "include/HW_tim_componentSpecific.h",
+        "Module_componentSpecific.h": "include/Module_componentSpecific.h",
+        "Yamcan.h": "include/Yamcan.h",
+        "app_vehicleState_componentSpecific.h": "include/app_vehicleState_componentSpecific.h",
+        "lib_nvm.h": "include/lib_nvm.h",
+        "stm32f1xx.h": "include/stm32f1xx.h",
+    },
+    deps = [
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//components/vc/front:host-test-headers",
+    ],
+    compiler_flags = [
+        "-include",
+        "BuildDefines.h",
+        "-Wno-unused-function",
+    ],
+    linker_flags = [
+        "-lm",
+    ],
+    run_name = "torque_test_run",
+)
