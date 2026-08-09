@@ -29,6 +29,7 @@
 #include "app_vehicleState_componentSpecific.h"
 #include "LIB_Types.h"
 #include "Module.h"
+#include "ModuleDesc.h"
 #include "Yamcan.h"
 
 /******************************************************************************

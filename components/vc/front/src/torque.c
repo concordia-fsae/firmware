@@ -659,7 +659,8 @@ static float32_t evaluate_traction_control(void)
     torque_data.lastTimeampMS = timestamp;
 
     const float32_t               vehicleSpeed               = app_vehicleSpeed_getVehicleSpeed();
-    const float32_t               slip                       = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
+    const float32_t               rawSlip                    = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
+    float32_t                     slip                       = isfinite(rawSlip) ? rawSlip : 0.0f;
     float32_t                     multiplier                 = 0.0f;
 
     torque_tractionControlState_E nextState                  = TC_STATE_ERROR;
@@ -717,7 +718,7 @@ static void evaluateRegenEnabled(float32_t accelPosition, float32_t brakePositio
 #else
     UNUSED(accelPosition);
     torque_data.regenEnabled = false;
-#endif
+#endif // if FEATURE_IS_ENABLED(FEATURE_REGEN)
 
     if (regenAllowed)
     {

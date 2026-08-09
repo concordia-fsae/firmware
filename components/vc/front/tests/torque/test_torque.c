@@ -4,7 +4,6 @@
 #include "app_vehicleState.h"
 #include "apps.h"
 #include "bppc.h"
-#include "ModuleDesc.h"
 #include "vd.h"
 
 #include <math.h>
