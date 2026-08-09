@@ -1,0 +1,30 @@
+load("//tools/c_unit:defs.bzl", "c_unit_test")
+
+c_unit_test(
+    name = "vehicle_speed_test",
+    srcs = [
+        "test_vehicleSpeed.c",
+        "//components/shared/code:app/app_vehicleSpeed.c",
+    ],
+    headers = {
+        "BuildDefines.h": "include/BuildDefines.h",
+        "FeatureDefines_generated.h": "include/FeatureDefines_generated.h",
+        "HW_tim_componentSpecific.h": "include/HW_tim_componentSpecific.h",
+        "Module_componentSpecific.h": "include/Module_componentSpecific.h",
+        "Yamcan.h": "include/Yamcan.h",
+        "app_vehicleState_componentSpecific.h": "include/app_vehicleState_componentSpecific.h",
+        "stm32f1xx.h": "include/stm32f1xx.h",
+    },
+    deps = [
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+    ],
+    compiler_flags = [
+        "-include",
+        "BuildDefines.h",
+    ],
+    linker_flags = [
+        "-lm",
+    ],
+    run_name = "vehicle_speed_test_run",
+)
