@@ -23,12 +23,12 @@ extern const ModuleDesc_S CANIO_rx;
 extern const ModuleDesc_S UDS_desc;
 extern const ModuleDesc_S apps_desc;
 extern const ModuleDesc_S bppc_desc;
+extern const ModuleDesc_S brakePressure_desc;
+extern const ModuleDesc_S steeringAngle_desc;
 extern const ModuleDesc_S vd_desc;
 extern const ModuleDesc_S torque_desc;
 extern const ModuleDesc_S powerManager_desc;
 extern const ModuleDesc_S cockpitLights_desc;
-extern const ModuleDesc_S brakePressure_desc;
-extern const ModuleDesc_S steeringAngle_desc;
 extern const ModuleDesc_S shockpot_desc;
 extern const ModuleDesc_S sys_desc;
 extern const ModuleDesc_S brakeTemp_desc;
@@ -45,14 +45,14 @@ typedef enum
     MODULE_APPS,
     MODULE_BPPC,
     MODULE_VEHICLESTATE,
-    MODULE_VD,
-    MODULE_TORQUE,
-    MODULE_POWERMANAGER,
-    MODULE_COCKPITLIGHTS,
-    MODULE_GPS,
     MODULE_WHEELSPEED,
     MODULE_BRAKEPRESSURE,
     MODULE_STEERINGANGLE,
+    MODULE_VD,
+    MODULE_TORQUE,
+    MODULE_GPS,
+    MODULE_POWERMANAGER,
+    MODULE_COCKPITLIGHTS,
     MODULE_SHOCKPOT,
     MODULE_SYS,
     MODULE_BRAKETEMP,
