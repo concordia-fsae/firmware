@@ -10,6 +10,41 @@ from .can import (
     CanSignalDescriptor,
     DecodedCanMessage,
 )
+from .datapath import DataPath
+from .model import PeriodicDataPathProducer
+
+
+class PeriodicCanSender(PeriodicDataPathProducer):
+    def __init__(
+        self,
+        can: CanInterface,
+        message: CanMessageDescriptor,
+        *,
+        scheduler_period: int | float = 100,
+        scheduler_unit: str = "ms",
+        **signals: float | int | IntEnum,
+    ) -> None:
+        self.can = can
+        self.message = message
+        self.signals = dict(signals)
+        super().__init__(
+            DataPath.can_bus(message.bus_name),
+            self._produce,
+            scheduler_period=scheduler_period,
+            scheduler_unit=scheduler_unit,
+        )
+
+    def set(self, **signals: float | int | IntEnum) -> PeriodicCanSender:
+        self.signals.update(signals)
+        return self
+
+    def _produce(self, producer: PeriodicDataPathProducer) -> CanEvent:
+        packet = self.can.encode(self.message, **self.signals)
+        return CanEvent.from_packet(
+            self.message.bus,
+            packet,
+            timestamp_ns=producer.elapsed_ns,
+        )
 
 
 class CanInterface:
@@ -186,6 +221,28 @@ class CanInterface:
         }
         return self._model._can_encode_message_raw(
             message.bus, message.name, **raw_signals
+        )
+
+    def periodic_send(
+        self,
+        message: str | CanMessageDescriptor,
+        *,
+        bus: int | str | CanBusDescriptor | None = None,
+        period: int | float = 100,
+        unit: str = "ms",
+        **signals: float | int | IntEnum,
+    ) -> PeriodicCanSender:
+        descriptor = (
+            self.message(message, bus=bus) if isinstance(message, str) else message
+        )
+        if bus is not None and self._model._coerce_can_bus(bus) != descriptor.bus:
+            raise ValueError(f"message {descriptor.name!r} is not on bus {bus!r}")
+        return PeriodicCanSender(
+            self,
+            descriptor,
+            scheduler_period=period,
+            scheduler_unit=unit,
+            **signals,
         )
 
     def _tx_message_descriptor(

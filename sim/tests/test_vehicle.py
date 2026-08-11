@@ -5,6 +5,11 @@ def test_vcpdu_hsd_power_controls_vehicle_controller_online_state(vehicle_cluste
     VehicleState = vehicle_cluster.vcpdu.can.enums.VehicleState
     SleepFollowerState = vehicle_cluster.vcpdu.can.enums.SleepFollowerState
     vcpdu = vehicle_cluster.vcpdu
+    sleepable_inputs = vcpdu.periodic_all_waking_controllers_sleepable(
+        SleepFollowerState.OK_TO_SLEEP,
+        period=100,
+    )
+    vehicle_cluster.add_components(*sleepable_inputs.values())
 
     vehicle_cluster.run_until(
         lambda: not vehicle_cluster.vcfront.is_online()
@@ -24,7 +29,6 @@ def test_vcpdu_hsd_power_controls_vehicle_controller_online_state(vehicle_cluste
     assert vehicle_cluster.vcfront.is_online()
     assert vehicle_cluster.vcrear.is_online()
 
-    assert vcpdu.send_all_waking_controllers_sleepable(SleepFollowerState.OK_TO_SLEEP)
     vcpdu.allow_sleep()
     vehicle_cluster.run_until(
         lambda: vcpdu.latest_vehicle_state() == VehicleState.SLEEP,
@@ -36,9 +40,7 @@ def test_vcpdu_hsd_power_controls_vehicle_controller_online_state(vehicle_cluste
     assert vehicle_cluster.vcfront.is_online()
     assert vehicle_cluster.vcrear.is_online()
 
-    assert vcpdu.send_waking_controller_sleepable(
-        "vcfront", SleepFollowerState.NOK_TO_SLEEP
-    )
+    sleepable_inputs["vcfront"].set(VCFRONT_sleepable=SleepFollowerState.NOK_TO_SLEEP)
     vehicle_cluster.run_until(
         lambda: vcpdu.latest_vehicle_state() == VehicleState.ON_GLV,
         timeout=1000,

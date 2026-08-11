@@ -37,6 +37,11 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
 
     controllers = vcpdu.waking_sleepable_controllers()
     assert controllers == ("sws", "vcfront")
+    sleepable_inputs = vcpdu.periodic_all_waking_controllers_sleepable(
+        SleepFollowerState.OK_TO_SLEEP,
+        period=100,
+    )
+    vcpdu_cluster.add_components(*sleepable_inputs.values())
 
     vcpdu_cluster.run_until(
         lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
@@ -45,7 +50,6 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
         message="vcpdu should boot to ON_GLV before it can sleep",
     )
 
-    assert vcpdu.send_all_waking_controllers_sleepable(SleepFollowerState.OK_TO_SLEEP)
     for controller, wake_state in (
         ("sws", SleepFollowerState.SNA),
         ("sws", SleepFollowerState.NOK_TO_SLEEP),
@@ -65,7 +69,9 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
             message="vcpdu should enter SLEEP when all waking controllers are OK to sleep",
         )
 
-        assert vcpdu.send_waking_controller_sleepable(controller, wake_state)
+        sleepable_inputs[controller].set(
+            **{f"{controller.upper()}_sleepable": wake_state}
+        )
         before_wake = len(observed)
         vcpdu_cluster.run_until(
             lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
@@ -78,8 +84,8 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
             VehicleState.INIT,
             VehicleState.ON_GLV,
         ]
-        assert vcpdu.send_waking_controller_sleepable(
-            controller, SleepFollowerState.OK_TO_SLEEP
+        sleepable_inputs[controller].set(
+            **{f"{controller.upper()}_sleepable": SleepFollowerState.OK_TO_SLEEP}
         )
 
 

@@ -71,6 +71,31 @@ class VcpduModelExtensions:
             for controller in self.waking_sleepable_controllers()
         )
 
+    def periodic_waking_controller_sleepable(
+        self, controller: str, state, *, period: int | float = 100, unit: str = "ms"
+    ):
+        prefix = controller.upper()
+        return self.can.periodic_send(
+            f"{prefix}_sleep",
+            bus="veh",
+            period=period,
+            unit=unit,
+            **{f"{prefix}_sleepable": state},
+        )
+
+    def periodic_all_waking_controllers_sleepable(
+        self, state, *, period: int | float = 100, unit: str = "ms"
+    ) -> dict[str, object]:
+        return {
+            controller: self.periodic_waking_controller_sleepable(
+                controller,
+                state,
+                period=period,
+                unit=unit,
+            )
+            for controller in self.waking_sleepable_controllers()
+        }
+
     def request_test_hsd(self, hsd_channel, requested: bool) -> bool:
         signal_name = self._hsd_signal_name(
             hsd_channel,

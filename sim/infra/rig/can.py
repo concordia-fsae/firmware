@@ -49,6 +49,14 @@ class CanEvent(ctypes.Structure):
         ("packet", CanPacket),
     ]
 
+    @classmethod
+    def from_packet(cls, bus: int, packet: CanPacket, *, timestamp_ns: int = 0):
+        event = cls()
+        event.bus = int(bus)
+        event.timestamp_ns = int(timestamp_ns)
+        event.packet = packet
+        return event
+
 
 @dataclass(frozen=True)
 class CanBusDescriptor:

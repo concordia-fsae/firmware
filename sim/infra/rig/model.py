@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+from collections.abc import Callable
 from typing import TypeVar
 
 from .datapath import DataPath, ModelDataPaths
@@ -134,6 +135,67 @@ class ModelRig:
 
 class ComponentRig(ModelRig):
     """Pure Python model that can run standalone or inside a cluster."""
+
+
+class PeriodicDataPathProducer(ComponentRig):
+    """Scheduled component that emits model-input payloads on a datapath."""
+
+    def __init__(
+        self,
+        path: DataPath,
+        payload: object
+        | Callable[[PeriodicDataPathProducer], object | tuple[object, ...] | None],
+        *,
+        scheduler_period: int | float = 1,
+        scheduler_unit: str = "ms",
+    ) -> None:
+        super().__init__(
+            scheduler_period=scheduler_period,
+            scheduler_unit=scheduler_unit,
+        )
+        self.path = path
+        self._payload = payload
+        self._last_emit_ns = 0
+        self._pending_payloads: list[object] = []
+        self.datapaths.add_output(
+            path,
+            pending=lambda: len(self._pending_payloads),
+            recv=self._recv,
+            recv_many=self._recv_many,
+        )
+
+    def reset(self) -> None:
+        super().reset()
+        self._last_emit_ns = 0
+        self._pending_payloads.clear()
+
+    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
+        return duration_to_ns(duration, unit=unit)
+
+    def _run_for_from_runtime(self, duration_ns: int) -> None:
+        self.elapsed_ns += duration_ns
+        if self._scheduler_period_ns is None:
+            return
+        if self.elapsed_ns - self._last_emit_ns >= self._scheduler_period_ns:
+            self._last_emit_ns = self.elapsed_ns
+            self._run_scheduled()
+
+    def _run_scheduled(self) -> None:
+        produced = self._payload(self) if callable(self._payload) else self._payload
+        if produced is None:
+            return
+        if isinstance(produced, tuple):
+            self._pending_payloads.extend(produced)
+            return
+        self._pending_payloads.append(produced)
+
+    def _recv(self) -> object | None:
+        return self._pending_payloads.pop(0) if self._pending_payloads else None
+
+    def _recv_many(self, count: int) -> tuple[object, ...]:
+        payloads = tuple(self._pending_payloads[:count])
+        del self._pending_payloads[:count]
+        return payloads
 
 
 def extend_model_class(

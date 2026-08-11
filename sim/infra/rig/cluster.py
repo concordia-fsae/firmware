@@ -506,6 +506,25 @@ class ClusterRig:
         self.comm.reset()
         self._rust_runtime = self._create_rust_runtime()
 
+    def add_component(self, component: ComponentRig) -> ComponentRig:
+        if self.elapsed_ns != 0:
+            raise RuntimeError(
+                "components must be added before a cluster starts running"
+            )
+        name = f"__component_{len(self.components)}"
+        self.components = (*self.components, component)
+        self._component_nodes[name] = component
+        self._rig_nodes[name] = component
+        component._cluster_rig = self
+        component._cluster_node_name = name
+        self._online_nodes[name] = True
+        self.comm.connect_node_interfaces()
+        self._rust_runtime = self._create_rust_runtime()
+        return component
+
+    def add_components(self, *components: ComponentRig) -> tuple[ComponentRig, ...]:
+        return tuple(self.add_component(component) for component in components)
+
     def has_feature(self, feature: str) -> bool:
         return feature in self.features
 

@@ -43,6 +43,7 @@ from .cluster import (
 from .model import (
     ComponentRig,
     ModelRig,
+    PeriodicDataPathProducer,
     extend_model_class,
 )
 from .node import NodeRig
@@ -88,6 +89,7 @@ __all__ = [
     "ModelDataPathOutputConnector",
     "ModelDataPaths",
     "ModelRig",
+    "PeriodicDataPathProducer",
     "buck_output",
     "duration_to_ns",
     "extend_model_class",

@@ -5,6 +5,7 @@ from sim.infra.rig import (
     ComponentRig,
     DataPath,
     ModelRig,
+    PeriodicDataPathProducer,
 )
 
 
@@ -269,6 +270,24 @@ def test_component_scheduler_runs_all_due_periods_when_used_standalone():
 
     assert component.scheduled_times_ns == [250_000, 500_000, 750_000, 1_000_000]
     assert component.elapsed_ns == 1_000_000
+
+
+def test_periodic_datapath_producer_routes_model_inputs():
+    path = DataPath(("periodic", "input"))
+    sink = PythonConsumer(path)
+    producer = PeriodicDataPathProducer(
+        path,
+        lambda model: {"timestamp_ns": model.elapsed_ns},
+        scheduler_period=100,
+        scheduler_unit="us",
+    )
+
+    cluster = ClusterRig(producer=producer, sink=sink)
+    cluster.run_for(250, unit="us", step=250)
+
+    assert sink.received_payloads == [
+        {"timestamp_ns": 250_000},
+    ]
 
 
 def test_model_rig_set_online_resets_and_gates_scheduler_ticks():
