@@ -11,6 +11,7 @@ def generate_feature_tree(
         node_id: int | None = None,
         build_renderer: str = DEFAULT_RENDERER,
         feature_overrides: dict[str, str | int | bool] = {},
+        visibility: list[str] | None = None,
         **kwargs):
     exported_identifier = ".variant-{}"
 
@@ -44,6 +45,7 @@ def generate_feature_tree(
             "BuildDefines_generated.h": ["BuildDefines_generated.h"],
             "FeatureDefines_generated.h": ["FeatureDefines_generated.h"],
         },
+        visibility = visibility,
     )
     __rules__["prebuilt_cxx_library"](
         name = name,
@@ -54,4 +56,5 @@ def generate_feature_tree(
             "BuildDefines_generated.h": ":{}[BuildDefines_generated.h]".format(uv_name),
             "FeatureDefines_generated.h": ":{}[FeatureDefines_generated.h]".format(uv_name),
         },
+        visibility = visibility,
     )

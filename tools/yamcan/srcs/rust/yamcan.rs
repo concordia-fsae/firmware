@@ -80,6 +80,14 @@ pub struct SignalDescriptor<B: NetworkBus> {
     pub fqid: &'static str,
     pub unit: Option<&'static str>,
     pub kind: SignalKind,
+    pub enum_name: Option<&'static str>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct EnumValueDescriptor {
+    pub enum_name: &'static str,
+    pub label: &'static str,
+    pub raw: i32,
 }
 
 #[derive(Clone, Copy)]
@@ -126,6 +134,17 @@ pub struct SignalAccessor {
 
 pub trait NetworkBus: Copy + Eq + Hash {
     fn as_str(self) -> &'static str;
+}
+
+pub trait GeneratedCanNetwork {
+    type Bus: NetworkBus;
+    type TxSignalDescriptor;
+
+    fn message_descriptors() -> &'static [MessageDescriptor<Self::Bus>];
+    fn signal_descriptors() -> &'static [SignalDescriptor<Self::Bus>];
+    fn tx_message_descriptors() -> &'static [MessageDescriptor<Self::Bus>];
+    fn tx_signal_descriptors() -> &'static [Self::TxSignalDescriptor];
+    fn enum_value_descriptors() -> &'static [EnumValueDescriptor];
 }
 
 #[derive(Clone, Copy, Debug)]
