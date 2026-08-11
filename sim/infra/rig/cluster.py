@@ -527,8 +527,9 @@ class ClusterRig:
     def set_node_online(self, name: str, online: bool) -> None:
         if name not in self._rig_nodes:
             raise KeyError(f"node {name!r} is not in this rig")
+        was_online = self._online_nodes[name]
         self._online_nodes[name] = online
-        if not online:
+        if was_online and not online:
             self._rig_nodes[name].reset()
 
     def disable_node(self, name: str) -> None:
@@ -544,7 +545,7 @@ class ClusterRig:
 
     def _online_node_instances(self) -> tuple[object, ...]:
         return tuple(
-            node for name, node in self._rig_nodes.items() if self._online_nodes[name]
+            node for name, node in self._rig_nodes.items() if self.node_online(name)
         )
 
     def _next_cluster_scheduler_step_ns(

@@ -5,10 +5,16 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Protocol
 
-from .datapath import ComponentDataPathBinding, DataPathLink
+from .datapath import (
+    ComponentDataPathBinding,
+    DataPath,
+    DataPathLink,
+    ModelDataPathOutputConnector,
+)
 from .cluster import ClusterRig
 from .model import ComponentRig
 from .node import NodeRig
+from .power import PowerControlPath, PowerInterface
 
 
 class ClusterSpecFactory(Protocol):
@@ -20,6 +26,8 @@ class ClusterSpecFactory(Protocol):
 class RigNodeSpec(Protocol):
     name: object
     components: tuple[ComponentSpec, ...]
+    model_outputs: tuple[ModelDataPathOutputConnector | PowerControlPath, ...]
+    power_input: PowerControlPath | None
 
     def rig(self) -> object: ...
 
@@ -30,6 +38,8 @@ class NodeSpec:
     rig_class: type[NodeRig]
     hardware: str | None = None
     components: tuple[ComponentSpec, ...] = ()
+    model_outputs: tuple[ModelDataPathOutputConnector | PowerControlPath, ...] = ()
+    power_input: PowerControlPath | None = None
 
     def rig(self) -> NodeRig:
         return self.rig_class(self.library_path())
@@ -71,6 +81,10 @@ class ClusterSpec:
         for node in self.nodes:
             node_name = rig_node_name(node.name)
             nodes[node_name] = node.rig()
+            for output in node.model_outputs:
+                output.connect(nodes[node_name])
+            if node.power_input is not None:
+                PowerInterface.connect_node_input(nodes[node_name], node.power_input)
             components.extend(
                 (node_name, component, component.rig()) for component in node.components
             )

@@ -25,8 +25,12 @@ Fault = _enums.Fault
 SpiDevice = _enums.SpiDevice
 TimerChannel = _enums.TimerChannel
 TimerPort = _enums.TimerPort
+Tps2hb16abIc = _enums.Tps2hb16abIc
+Tps2hb16abOutput = _enums.Tps2hb16abOutput
 Vn9008Channel = _enums.Vn9008Channel
 VcpduModelExtensions.AnalogInput = AnalogInput
+VcpduModelExtensions.Tps2hb16abIc = Tps2hb16abIc
+VcpduModelExtensions.Tps2hb16abOutput = Tps2hb16abOutput
 VcpduModelExtensions.Vn9008Channel = Vn9008Channel
 
 
@@ -47,6 +51,8 @@ __all__ = [
     "SpiDevice",
     "TimerChannel",
     "TimerPort",
+    "Tps2hb16abIc",
+    "Tps2hb16abOutput",
     "Vn9008Channel",
     "PLATFORM_VARIANTS",
     "VCPDU_CLUSTERS",

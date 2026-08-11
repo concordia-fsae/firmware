@@ -28,6 +28,7 @@ from .datapath import (
     DataPathLink,
     DataPathRecord,
     ModelDataPathInputConnector,
+    ModelDataPathOutputConnector,
     ModelDataPaths,
 )
 from .can_interface import CanInterface
@@ -45,6 +46,7 @@ from .model import (
     extend_model_class,
 )
 from .node import NodeRig
+from .power import PowerControlEvent, PowerControlPath, PowerInterface
 from .peripherals import (
     SpiInterface,
     SpiTransaction,
@@ -83,6 +85,7 @@ __all__ = [
     "DataPathRecord",
     "DecodedCanMessage",
     "ModelDataPathInputConnector",
+    "ModelDataPathOutputConnector",
     "ModelDataPaths",
     "ModelRig",
     "buck_output",
@@ -98,6 +101,9 @@ __all__ = [
     "load_generated_module",
     "load_shared_library",
     "repo_root",
+    "PowerControlEvent",
+    "PowerControlPath",
+    "PowerInterface",
     "run_until",
     "shared_library_mode",
     "ClusterCatalog",

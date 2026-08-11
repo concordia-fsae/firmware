@@ -72,6 +72,11 @@ class ModelDataPathInputConnector:
 
 
 @dataclass(frozen=True)
+class ModelDataPathOutputConnector:
+    connect: Callable[[object], None]
+
+
+@dataclass(frozen=True)
 class ComponentDataPathOutput:
     path: Callable[[object], DataPath]
 

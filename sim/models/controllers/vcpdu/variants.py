@@ -1,13 +1,23 @@
 from __future__ import annotations
 
-from sim.infra.rig import ClusterCatalog, ClusterSpec, NodeSpec
+from sim.infra.rig import (
+    ClusterCatalog,
+    ClusterSpec,
+    ModelDataPathOutputConnector,
+    NodeSpec,
+    PowerControlPath,
+)
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
 from sim.models.platforms import PLATFORM_VARIANTS
 
 from . import AnalogInput, TimerChannel, TimerPort, VcpduModel, Vn9008Channel
 
 
-def vcpdu_node(hardware: str | None = None) -> NodeSpec:
+def vcpdu_node(
+    hardware: str | None = None,
+    *,
+    model_outputs: tuple[ModelDataPathOutputConnector | PowerControlPath, ...] = (),
+) -> NodeSpec:
     pump_voltage = VcpduModel.timer.duty_events(TimerPort.PWM, TimerChannel._1)
     fan_voltage = VcpduModel.timer.duty_events(TimerPort.HP, TimerChannel._2)
     components = (
@@ -41,6 +51,7 @@ def vcpdu_node(hardware: str | None = None) -> NodeSpec:
         VcpduModel,
         hardware=hardware,
         components=components,
+        model_outputs=model_outputs,
     )
 
 
