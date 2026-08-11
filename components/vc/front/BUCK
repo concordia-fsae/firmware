@@ -152,6 +152,25 @@ prebuilt_cxx_library(
     exported_deps = platform_selected_targets(platform_variants),
 )
 
+prebuilt_cxx_library(
+    name = "host-test-headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = {
+        "apps.h": "include/apps.h",
+        "bppc.h": "include/bppc.h",
+        "torque.h": "include/torque.h",
+        "vd.h": "include/vd.h",
+    },
+    visibility = ["//components/vc/front/tests/..."],
+)
+
+export_file(
+    name = "src/torque.c",
+    src = "src/torque.c",
+    visibility = ["//components/vc/front/tests/..."],
+)
+
 compiler_flags += ["-include", "BuildDefines.h"]
 
 generate_code(

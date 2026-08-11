@@ -1,7 +1,9 @@
 load("@prelude//toolchains:genrule.bzl", "system_genrule_toolchain")
 load("@prelude//toolchains:python.bzl", "system_python_bootstrap_toolchain")
+load("@prelude//toolchains:remote_test_execution.bzl", "remote_test_execution_toolchain")
 load("@prelude//toolchains:rust.bzl", "system_rust_toolchain")
 load("@prelude//toolchains/cxx.bzl", "system_cxx_toolchain")
+load("@prelude//tests:test_toolchain.bzl", "noop_test_toolchain")
 load("@toolchains//gcc:defs.bzl", "download_gcc_distribution", "gcc_toolchain")
 
 system_python_bootstrap_toolchain(
@@ -11,6 +13,16 @@ system_python_bootstrap_toolchain(
 
 system_genrule_toolchain(
     name = "genrule",
+    visibility = ["PUBLIC"],
+)
+
+noop_test_toolchain(
+    name = "test",
+    visibility = ["PUBLIC"],
+)
+
+remote_test_execution_toolchain(
+    name = "remote_test_execution",
     visibility = ["PUBLIC"],
 )
 

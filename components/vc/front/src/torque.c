@@ -26,6 +26,8 @@
 #include "lib_rateLimit.h"
 #include "Yamcan.h"
 
+#include <math.h>
+
 /******************************************************************************
  *                              D E F I N E S
  ******************************************************************************/
@@ -392,6 +394,11 @@ static bool evaluate_gear_change(float32_t accelerator_position, float32_t brake
                                      (gear_change_request == CAN_DIGITALSTATUS_ON);
     const bool      gear_change_rising = !gear_change_was_requested && torque_data.gear_change_active;
     const float32_t vehicleSpeed       = app_vehicleSpeed_getVehicleSpeed();
+#if FEATURE_IS_DISABLED(FEATURE_REVERSE)
+    UNUSED(accelerator_position);
+    UNUSED(brake_position);
+    UNUSED(vehicleSpeed);
+#endif
     if (gear_change_rising)
     {
 #if FEATURE_IS_ENABLED(FEATURE_REVERSE)
@@ -624,16 +631,24 @@ static void evaluate_launch_control(float32_t accelerator_position, float32_t br
 static float32_t calc_traction_control_reduction(float32_t target_slip, float32_t actual_slip, float32_t dt)
 {
     const nvm_tcPid_S* pid = tc_getActivePidConst();
-    const float32_t  kLeak = 1.0f / TC_PID_CONV_THOU_F32(pid->tLeakMs);
+    const float32_t  tLeak = TC_PID_CONV_THOU_F32(pid->tLeakMs);
+    const float32_t  kLeak = (tLeak > 0.0f) ? (1.0f / tLeak) : 0.0f;
+    const float32_t  iLim  = SATURATE(TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentILim), 1.0f);
+    const float32_t  yLim  = SATURATE(TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentMaxTcLimit), 1.0f);
 
     lib_pid_util_ileak(&torque_data.tractionControlPID, kLeak, dt);
     torque_data.tractionControlPID.kp = TC_PID_CONV_THOU_F32(pid->thousandthKp);
     torque_data.tractionControlPID.ki = TC_PID_CONV_THOU_F32(pid->thousandthKi);
     torque_data.tractionControlPID.kd = TC_PID_CONV_THOU_F32(-pid->thousandthKd);
     lib_pi_typeb_calc(&torque_data.tractionControlPID, target_slip, actual_slip, dt);
-    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentILim));
+    lib_pid_util_ilim(&torque_data.tractionControlPID, TC_MIN, iLim);
     lib_pid_util_lpf_dTerm(&torque_data.tractionControlPID, dt);
-    lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, TC_PID_CONV_PERCENT_F32(pid->percentMaxTcLimit));
+    lib_pid_typeb_sum(&torque_data.tractionControlPID, TC_MIN, yLim);
+
+    if (!isfinite(torque_data.tractionControlPID.y))
+    {
+        torque_data.tractionControlPID.y = 0.0f;
+    }
 
     return torque_data.tractionControlPID.y;
 }
@@ -645,10 +660,9 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.lastTimeampMS = timestamp;
 
-    const float32_t               vehicleSpeed               = app_vehicleSpeed_getVehicleSpeed();
-    const float32_t               slip                       = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
+    const float32_t               rawSlip                    = app_vehicleSpeed_getAxleSlip(AXLE_REAR);
+    float32_t                     slip                       = isfinite(rawSlip) ? rawSlip : 0.0f;
     float32_t                     multiplier                 = 0.0f;
-
     torque_tractionControlState_E nextState                  = TC_STATE_ERROR;
 
 #if FEATURE_IS_ENABLED(FEATURE_TRACTION_CONTROL)
@@ -669,9 +683,7 @@ static float32_t evaluate_traction_control(void)
 
     torque_data.tractionControlState = nextState;
 
-    if ((torque_data.tractionControlState == TC_STATE_ACTIVE) &&
-        (vehicleSpeed > TC_VEHICLESPEED_THRESHOLD_MPS)
-        )
+    if (torque_data.tractionControlState == TC_STATE_ACTIVE)
     {
         multiplier = calc_traction_control_reduction(torque_data.slip_request, slip, dt);
     }
@@ -702,8 +714,9 @@ static void evaluateRegenEnabled(float32_t accelPosition, float32_t brakePositio
                                (accelPosition < REGEN_ACCEL_CUTOFF);
     regenAllowed             = torque_data.regenEnabled && (vehicleSpeed > REGEN_SPEED_CUTOFF_MPS);
 #else
+    UNUSED(accelPosition);
     torque_data.regenEnabled = false;
-#endif
+#endif // if FEATURE_IS_ENABLED(FEATURE_REGEN)
 
     if (regenAllowed)
     {
