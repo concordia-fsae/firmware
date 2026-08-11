@@ -163,6 +163,51 @@ def test_custom_datapath_routes_explicitly_between_paths():
     assert received_payloads == ["packet"]
 
 
+def test_custom_datapath_routes_batches_when_supported():
+    source = FakeNode()
+    sink = FakeNode()
+    pending_payloads = ["first", "second", "third"]
+    received_batches = []
+    recv_many_calls = []
+    send_many_calls = []
+    batched_path = DataPath(("batched", "stream"))
+
+    def recv_many(count: int):
+        recv_many_calls.append(count)
+        payloads = tuple(pending_payloads[:count])
+        del pending_payloads[:count]
+        return payloads
+
+    def send_many(payloads):
+        send_many_calls.append(payloads)
+        received_batches.append(payloads)
+        return len(payloads)
+
+    source.datapaths.add_output(
+        batched_path,
+        pending=lambda: len(pending_payloads),
+        recv=lambda: None,
+        recv_many=recv_many,
+    )
+    sink.datapaths.add_input(
+        batched_path,
+        send=lambda payload: False,
+        send_many=send_many,
+    )
+
+    cluster = ClusterRig(source=source, sink=sink)
+    cluster.run_for(1)
+
+    assert recv_many_calls == [3]
+    assert send_many_calls == [("first", "second", "third")]
+    assert received_batches == [("first", "second", "third")]
+    assert [record.payload for record in cluster.dataroutes.records(batched_path)] == [
+        "first",
+        "second",
+        "third",
+    ]
+
+
 def test_can_node_connections_use_generated_common_bus_names_only():
     source = FakeNode()
     sink = FakeNode()

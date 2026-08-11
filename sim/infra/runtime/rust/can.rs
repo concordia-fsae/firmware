@@ -57,6 +57,15 @@ impl CanRuntime {
             .is_some()
     }
 
+    fn push_rx_many(&mut self, bus: u8, packets: &[CanPacket]) -> u32 {
+        let Some(queue) = self.rx.get_mut(bus as usize) else {
+            return 0;
+        };
+        let count = packets.len().min(u32::MAX as usize);
+        queue.extend(packets.iter().copied().take(count));
+        count as u32
+    }
+
     fn pop_rx(&mut self, bus: u8) -> Option<CanPacket> {
         self.rx.get_mut(bus as usize).and_then(VecDeque::pop_front)
     }
@@ -76,6 +85,21 @@ impl CanRuntime {
 
     fn pop_tx(&mut self, bus: u8) -> Option<CanEvent> {
         self.tx.get_mut(bus as usize).and_then(VecDeque::pop_front)
+    }
+
+    fn pop_tx_many(&mut self, bus: u8, out: &mut [CanEvent]) -> u32 {
+        let Some(queue) = self.tx.get_mut(bus as usize) else {
+            return 0;
+        };
+        let mut count = 0;
+        for slot in out.iter_mut() {
+            let Some(event) = queue.pop_front() else {
+                break;
+            };
+            *slot = event;
+            count += 1;
+        }
+        count
     }
 
     fn rx_count(&self, bus: u8) -> u32 {
@@ -188,8 +212,20 @@ pub fn send(bus: u8, packet: &CanPacket) -> bool {
     }
 }
 
+pub fn send_many(bus: u8, packets: &[CanPacket]) -> u32 {
+    let count = CAN_RUNTIME.lock().unwrap().push_rx_many(bus, packets);
+    if count > 0 {
+        unsafe { rig_runtime_can_notify_rx(bus) };
+    }
+    count
+}
+
 pub fn recv_event(bus: u8) -> Option<CanEvent> {
     CAN_RUNTIME.lock().unwrap().pop_tx(bus)
+}
+
+pub fn recv_events(bus: u8, out: &mut [CanEvent]) -> u32 {
+    CAN_RUNTIME.lock().unwrap().pop_tx_many(bus, out)
 }
 
 pub fn recv(bus: u8) -> Option<CanPacket> {
@@ -607,6 +643,19 @@ pub extern "C" fn rig_runtime_can_push_rx(bus: u8, packet: *const CanPacket) -> 
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_can_push_rx_many(
+    bus: u8,
+    packets: *const CanPacket,
+    count: u32,
+) -> u32 {
+    if packets.is_null() {
+        return 0;
+    }
+    let packets = unsafe { std::slice::from_raw_parts(packets, count as usize) };
+    send_many(bus, packets)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_runtime_can_pop_rx(bus: u8, packet: *mut CanPacket) -> bool {
     if packet.is_null() {
         return false;
@@ -661,6 +710,19 @@ pub extern "C" fn rig_runtime_can_pop_tx_event(bus: u8, event: *mut CanEvent) ->
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_can_pop_tx_events(
+    bus: u8,
+    events: *mut CanEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    recv_events(bus, events)
 }
 
 #[unsafe(no_mangle)]

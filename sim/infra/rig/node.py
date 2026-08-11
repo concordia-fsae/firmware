@@ -202,6 +202,45 @@ class NodeRig(ModelRig):
             return event
         return None
 
+    def _can_recv_events(
+        self, bus: int | str | CanBusDescriptor, capacity: int
+    ) -> tuple[CanEvent, ...]:
+        if capacity <= 0:
+            return ()
+        bus_index = self._coerce_can_bus(bus)
+        self._require_can_bus(bus_index)
+        events = (CanEvent * capacity)()
+        count = int(
+            self._ffi_can_recv_events(
+                ctypes.c_uint8(bus_index),
+                events,
+                ctypes.c_uint32(capacity),
+            )
+        )
+        return tuple(events[index] for index in range(count))
+
+    def _can_send_events(
+        self, bus: int | str | CanBusDescriptor, events: tuple[object, ...]
+    ) -> int:
+        if not events:
+            return 0
+        bus_index = self._coerce_can_bus(bus)
+        self._require_can_bus(bus_index)
+        packets = (CanPacket * len(events))()
+        for index, event in enumerate(events):
+            if not isinstance(event, CanEvent):
+                raise TypeError(
+                    f"CAN datapaths require CanEvent payloads, got {type(event).__name__}"
+                )
+            packets[index] = event.packet
+        return int(
+            self._can_send_many(
+                ctypes.c_uint8(bus_index),
+                packets,
+                ctypes.c_uint32(len(events)),
+            )
+        )
+
     def _can_recv_message(self, message: CanMessageDescriptor) -> CanEvent | None:
         latest = None
         while self._can_tx_count_value(message.bus):
@@ -306,6 +345,7 @@ class NodeRig(ModelRig):
                     path,
                     pending=lambda bus=bus: self.can.tx_count(bus),
                     recv=lambda bus=bus: self.can.recv(bus),
+                    recv_many=lambda count, bus=bus: self._can_recv_events(bus, count),
                 )
                 self.datapaths.add_input(
                     path,
@@ -313,6 +353,9 @@ class NodeRig(ModelRig):
                         bus,
                         event.packet.id,
                         event.packet.payload,
+                    ),
+                    send_many=lambda events, bus=bus: self._can_send_events(
+                        bus, events
                     ),
                 )
 
@@ -326,12 +369,18 @@ class NodeRig(ModelRig):
                 path
             ),
             recv=lambda path=path, peripheral=peripheral: peripheral.recv(path),
+            recv_many=lambda count,
+            path=path,
+            peripheral=peripheral: peripheral.recv_many(path, count),
         )
         self.datapaths.add_input(
             path,
             send=lambda event,
             path=path,
             peripheral=peripheral: peripheral.send_payload(path, event),
+            send_many=lambda events,
+            path=path,
+            peripheral=peripheral: peripheral.send_payloads(path, events),
         )
 
     def supports_datapath(self, path: DataPath) -> bool:
@@ -453,6 +502,16 @@ class NodeRig(ModelRig):
             [ctypes.c_uint8, ctypes.POINTER(CanEvent)],
             ctypes.c_bool,
         )
+        self._ffi_can_recv_events = self._bind_symbol(
+            "rig_model_can_recv_events",
+            [ctypes.c_uint8, ctypes.POINTER(CanEvent), ctypes.c_uint32],
+            ctypes.c_uint32,
+        )
+        self._can_send_many = self._bind_symbol(
+            "rig_model_can_send_many",
+            [ctypes.c_uint8, ctypes.POINTER(CanPacket), ctypes.c_uint32],
+            ctypes.c_uint32,
+        )
         self._can_rx_count = self._bind_symbol(
             "rig_model_can_rx_count",
             [ctypes.c_uint8],
@@ -473,6 +532,16 @@ class NodeRig(ModelRig):
             [ctypes.c_int, ctypes.c_int, ctypes.POINTER(TimerChannelEvent)],
             ctypes.c_bool,
         )
+        self._timer_recv_duties = self._bind_symbol(
+            "rig_model_timer_recv_duties",
+            [
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.POINTER(TimerChannelEvent),
+                ctypes.c_uint32,
+            ],
+            ctypes.c_uint32,
+        )
         self._timer_duty_output_count = self._bind_symbol(
             "rig_model_timer_duty_output_count",
             [ctypes.c_int, ctypes.c_int],
@@ -483,14 +552,34 @@ class NodeRig(ModelRig):
             [ctypes.POINTER(TimerChannelEvent)],
             ctypes.c_bool,
         )
+        self._timer_send_duties = self._bind_symbol(
+            "rig_model_timer_send_duties",
+            [ctypes.POINTER(TimerChannelEvent), ctypes.c_uint32],
+            ctypes.c_uint32,
+        )
         self._timer_recv_frequency = self._bind_symbol(
             "rig_model_timer_recv_frequency",
             [ctypes.c_int, ctypes.c_int, ctypes.POINTER(TimerChannelEvent)],
             ctypes.c_bool,
         )
+        self._timer_recv_frequencies = self._bind_symbol(
+            "rig_model_timer_recv_frequencies",
+            [
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.POINTER(TimerChannelEvent),
+                ctypes.c_uint32,
+            ],
+            ctypes.c_uint32,
+        )
         self._timer_frequency_output_count = self._bind_symbol(
             "rig_model_timer_frequency_output_count",
             [ctypes.c_int, ctypes.c_int],
+            ctypes.c_uint32,
+        )
+        self._timer_send_frequencies = self._bind_symbol(
+            "rig_model_timer_send_frequencies",
+            [ctypes.POINTER(TimerChannelEvent), ctypes.c_uint32],
             ctypes.c_uint32,
         )
         self._timer_send_capture = self._bind_symbol(
@@ -503,10 +592,20 @@ class NodeRig(ModelRig):
             [ctypes.POINTER(SpiTransaction)],
             ctypes.c_bool,
         )
+        self._spi_send_many = self._bind_symbol(
+            "rig_model_spi_send_many",
+            [ctypes.POINTER(SpiTransaction), ctypes.c_uint32],
+            ctypes.c_uint32,
+        )
         self._spi_recv = self._bind_symbol(
             "rig_model_spi_recv",
             [ctypes.c_int, ctypes.POINTER(SpiTransaction)],
             ctypes.c_bool,
+        )
+        self._spi_recv_many = self._bind_symbol(
+            "rig_model_spi_recv_many",
+            [ctypes.c_int, ctypes.POINTER(SpiTransaction), ctypes.c_uint32],
+            ctypes.c_uint32,
         )
         self._spi_output_count = self._bind_symbol(
             "rig_model_spi_output_count",

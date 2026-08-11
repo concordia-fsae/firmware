@@ -117,6 +117,21 @@ pub fn push_input(transaction: SpiTransaction) -> bool {
         .push(transaction)
 }
 
+pub fn push_inputs(transactions: &[SpiTransaction]) -> u32 {
+    let mut spi = SPI_MODEL.lock().unwrap();
+    let mut count = 0;
+    for transaction in transactions {
+        if spi
+            .peripheral(transaction.spi_device())
+            .inputs
+            .push(*transaction)
+        {
+            count += 1;
+        }
+    }
+    count
+}
+
 pub fn pop_input(device: i32) -> Option<SpiTransaction> {
     SPI_MODEL
         .lock()
@@ -144,6 +159,20 @@ pub fn pop_output(device: i32) -> Option<SpiTransaction> {
         .pop()
 }
 
+pub fn pop_outputs(device: i32, out: &mut [SpiTransaction]) -> u32 {
+    let mut spi = SPI_MODEL.lock().unwrap();
+    let output = &mut spi.peripheral(SpiDevice { device }).outputs;
+    let mut count = 0;
+    for slot in out.iter_mut() {
+        let Some(transaction) = output.pop() else {
+            break;
+        };
+        *slot = transaction;
+        count += 1;
+    }
+    count
+}
+
 pub fn output_count(device: i32) -> u32 {
     SPI_MODEL
         .lock()
@@ -159,6 +188,18 @@ pub extern "C" fn rig_runtime_spi_push_input(transaction: *const SpiTransaction)
         return false;
     }
     push_input(unsafe { *transaction })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_spi_push_inputs(
+    transactions: *const SpiTransaction,
+    count: u32,
+) -> u32 {
+    if transactions.is_null() {
+        return 0;
+    }
+    let transactions = unsafe { std::slice::from_raw_parts(transactions, count as usize) };
+    push_inputs(transactions)
 }
 
 #[unsafe(no_mangle)]
@@ -198,6 +239,19 @@ pub extern "C" fn rig_runtime_spi_pop_output(
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_spi_pop_outputs(
+    device: i32,
+    transactions: *mut SpiTransaction,
+    capacity: u32,
+) -> u32 {
+    if transactions.is_null() {
+        return 0;
+    }
+    let transactions = unsafe { std::slice::from_raw_parts_mut(transactions, capacity as usize) };
+    pop_outputs(device, transactions)
 }
 
 #[unsafe(no_mangle)]

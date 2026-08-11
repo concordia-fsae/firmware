@@ -111,19 +111,49 @@ class ClusterDataRoutes:
             if not self._cluster.node_online(route.source_node):
                 continue
             while route.source.pending():
-                payload = route.source.recv()
-                if payload is None:
+                pending = route.source.pending()
+                payloads = self._recv_route_payloads(route.source, pending)
+                if not payloads:
                     break
 
-                record = DataPathRecord(
-                    route.source.node,
-                    route.source.path,
-                    payload,
-                    self._cluster.elapsed_ns,
-                )
-                fanout.records.append(record)
+                for payload in payloads:
+                    fanout.records.append(
+                        DataPathRecord(
+                            route.source.node,
+                            route.source.path,
+                            payload,
+                            self._cluster.elapsed_ns,
+                        )
+                    )
                 for sink in route.sinks:
-                    sink.send(payload)
+                    self._send_route_payloads(sink, payloads)
+
+    @staticmethod
+    def _recv_route_payloads(
+        source: DataPathSource[object],
+        pending: int,
+    ) -> tuple[object, ...]:
+        if source.recv_many is not None:
+            return source.recv_many(pending)
+
+        payload = source.recv()
+        return () if payload is None else (payload,)
+
+    @staticmethod
+    def _send_route_payloads(
+        sink: DataPathSink[object],
+        payloads: tuple[object, ...],
+    ) -> None:
+        if sink.send_many is not None:
+            accepted = sink.send_many(payloads)
+            if accepted != len(payloads):
+                raise RuntimeError(
+                    f"datapath sink {sink.node!r} accepted {accepted} of {len(payloads)} payloads"
+                )
+            return
+
+        for payload in payloads:
+            sink.send(payload)
 
     def _routes_for_path(self, path: DataPath) -> tuple[_DataPathRoute, ...]:
         key = datapath_key(path)
@@ -154,6 +184,7 @@ class ClusterDataRoutes:
                 path=output.path,
                 pending=output.pending,
                 recv=output.recv,
+                recv_many=output.recv_many,
             )
         raise KeyError(
             f"node {link.source_node!r} has no output for datapath " f"{link.path!r}"
@@ -171,6 +202,7 @@ class ClusterDataRoutes:
                     node=link.sink_node,
                     path=input_.path,
                     send=input_.send,
+                    send_many=input_.send_many,
                 )
             )
         if not sinks:

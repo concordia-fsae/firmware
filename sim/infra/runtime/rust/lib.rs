@@ -152,6 +152,32 @@ pub extern "C" fn rig_model_can_recv_event(bus: u8, event: *mut CanEvent) -> boo
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_model_can_recv_events(
+    bus: u8,
+    events: *mut CanEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    can::recv_events(bus, events)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_can_send_many(
+    bus: u8,
+    packets: *const CanPacket,
+    count: u32,
+) -> u32 {
+    if packets.is_null() {
+        return 0;
+    }
+    let packets = unsafe { std::slice::from_raw_parts(packets, count as usize) };
+    can::send_many(bus, packets)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_can_rx_count(bus: u8) -> u32 {
     can::rx_count(bus)
 }
@@ -167,6 +193,18 @@ pub extern "C" fn rig_model_timer_send_duty(event: *const timer::TimerChannelEve
         return false;
     }
     timer::push_duty_input(unsafe { *event })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_send_duties(
+    events: *const timer::TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts(events, count as usize) };
+    timer::push_duty_inputs(events)
 }
 
 #[unsafe(no_mangle)]
@@ -188,6 +226,20 @@ pub extern "C" fn rig_model_timer_recv_duty(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_recv_duties(
+    port: i32,
+    channel: i32,
+    events: *mut timer::TimerChannelEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    timer::pop_duty_outputs(port, channel, events)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_timer_duty_output_count(port: i32, channel: i32) -> u32 {
     timer::duty_output_count(port, channel)
 }
@@ -198,6 +250,18 @@ pub extern "C" fn rig_model_timer_send_frequency(event: *const timer::TimerChann
         return false;
     }
     timer::push_frequency_input(unsafe { *event })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_send_frequencies(
+    events: *const timer::TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts(events, count as usize) };
+    timer::push_frequency_inputs(events)
 }
 
 #[unsafe(no_mangle)]
@@ -216,6 +280,20 @@ pub extern "C" fn rig_model_timer_recv_frequency(
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_recv_frequencies(
+    port: i32,
+    channel: i32,
+    events: *mut timer::TimerChannelEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    timer::pop_frequency_outputs(port, channel, events)
 }
 
 #[unsafe(no_mangle)]
@@ -240,6 +318,18 @@ pub extern "C" fn rig_model_spi_send(transaction: *const spi::SpiTransaction) ->
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_model_spi_send_many(
+    transactions: *const spi::SpiTransaction,
+    count: u32,
+) -> u32 {
+    if transactions.is_null() {
+        return 0;
+    }
+    let transactions = unsafe { std::slice::from_raw_parts(transactions, count as usize) };
+    spi::push_inputs(transactions)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_spi_recv(device: i32, transaction: *mut spi::SpiTransaction) -> bool {
     if transaction.is_null() {
         return false;
@@ -251,6 +341,19 @@ pub extern "C" fn rig_model_spi_recv(device: i32, transaction: *mut spi::SpiTran
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_spi_recv_many(
+    device: i32,
+    transactions: *mut spi::SpiTransaction,
+    capacity: u32,
+) -> u32 {
+    if transactions.is_null() {
+        return 0;
+    }
+    let transactions = unsafe { std::slice::from_raw_parts_mut(transactions, capacity as usize) };
+    spi::pop_outputs(device, transactions)
 }
 
 #[unsafe(no_mangle)]

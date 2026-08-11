@@ -136,6 +136,20 @@ class TimerPeripheralInterface:
             )
         return self._send_event(_peripheral_binding(path), payload)
 
+    def send_payloads(self, path: DataPath, payloads: tuple[object, ...]) -> int:
+        if not payloads:
+            return 0
+        binding = _peripheral_binding(path)
+        events = (TimerChannelEvent * len(payloads))()
+        for index, payload in enumerate(payloads):
+            if not isinstance(payload, TimerChannelEvent):
+                raise TypeError(
+                    f"timer datapaths require TimerChannelEvent payloads, got {type(payload).__name__}"
+                )
+            events[index] = payload
+        send_many = self._send_many_symbol(binding)
+        return int(send_many(events, ctypes.c_uint32(len(payloads))))
+
     def recv(
         self,
         path: DataPath,
@@ -150,6 +164,26 @@ class TimerPeripheralInterface:
         ):
             return event
         return None
+
+    def recv_many(
+        self,
+        path: DataPath,
+        capacity: int,
+    ) -> tuple[TimerChannelEvent, ...]:
+        if capacity <= 0:
+            return ()
+        binding = _peripheral_binding(path)
+        events = (TimerChannelEvent * capacity)()
+        recv_many = self._recv_many_symbol(binding)
+        count = int(
+            recv_many(
+                ctypes.c_int(binding.port if binding.port is not None else 0),
+                ctypes.c_int(binding.channel if binding.channel is not None else 0),
+                events,
+                ctypes.c_uint32(capacity),
+            )
+        )
+        return tuple(events[index] for index in range(count))
 
     def output_count(
         self,
@@ -171,11 +205,25 @@ class TimerPeripheralInterface:
             return bool(self._model._timer_send_frequency(ctypes.byref(event)))
         raise ValueError(f"unsupported timer interface {binding.interface!r}")
 
+    def _send_many_symbol(self, binding: PeripheralBinding):
+        if binding.interface == self._TIMER_DUTY:
+            return self._model._timer_send_duties
+        if binding.interface == self._TIMER_FREQUENCY:
+            return self._model._timer_send_frequencies
+        raise ValueError(f"unsupported timer interface {binding.interface!r}")
+
     def _recv_symbol(self, binding: PeripheralBinding):
         if binding.interface == self._TIMER_DUTY:
             return self._model._timer_recv_duty
         if binding.interface == self._TIMER_FREQUENCY:
             return self._model._timer_recv_frequency
+        raise ValueError(f"unsupported timer interface {binding.interface!r}")
+
+    def _recv_many_symbol(self, binding: PeripheralBinding):
+        if binding.interface == self._TIMER_DUTY:
+            return self._model._timer_recv_duties
+        if binding.interface == self._TIMER_FREQUENCY:
+            return self._model._timer_recv_frequencies
         raise ValueError(f"unsupported timer interface {binding.interface!r}")
 
     def _count_symbol(self, binding: PeripheralBinding):
@@ -216,6 +264,21 @@ class SpiPeripheralInterface:
             )
         return bool(self._model._spi_send(ctypes.byref(payload)))
 
+    def send_payloads(self, path: DataPath, payloads: tuple[object, ...]) -> int:
+        _peripheral_binding(path)
+        if not payloads:
+            return 0
+        transactions = (SpiTransaction * len(payloads))()
+        for index, payload in enumerate(payloads):
+            if not isinstance(payload, SpiTransaction):
+                raise TypeError(
+                    f"SPI datapaths require SpiTransaction payloads, got {type(payload).__name__}"
+                )
+            transactions[index] = payload
+        return int(
+            self._model._spi_send_many(transactions, ctypes.c_uint32(len(payloads)))
+        )
+
     def recv(self, path: DataPath) -> SpiTransaction | None:
         binding = _peripheral_binding(path)
         transaction = SpiTransaction()
@@ -225,6 +288,20 @@ class SpiPeripheralInterface:
         ):
             return transaction
         return None
+
+    def recv_many(self, path: DataPath, capacity: int) -> tuple[SpiTransaction, ...]:
+        if capacity <= 0:
+            return ()
+        binding = _peripheral_binding(path)
+        transactions = (SpiTransaction * capacity)()
+        count = int(
+            self._model._spi_recv_many(
+                ctypes.c_int(binding.device if binding.device is not None else 0),
+                transactions,
+                ctypes.c_uint32(capacity),
+            )
+        )
+        return tuple(transactions[index] for index in range(count))
 
     def output_count(self, path: DataPath) -> int:
         binding = _peripheral_binding(path)
