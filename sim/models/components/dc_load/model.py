@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -87,11 +88,12 @@ class DcLoadModel(ComponentRig):
         self._previous_voltage = 0.0
         self._last_update_ns = 0
         self._pending_current = False
+        self._timer_route_callbacks = []
         self.datapaths.add_input(
             self.voltage_input_channel,
             send=self._set_voltage_from_timer,
         )
-        self.datapaths.add_output(
+        self.add_scalar_output(
             self.current_output_channel,
             pending=lambda: 1 if self._pending_current else 0,
             recv=self._recv_current,
@@ -141,3 +143,49 @@ class DcLoadModel(ComponentRig):
             return None
         self._pending_current = False
         return self.output_current
+
+    def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+        if path == self.voltage_input_channel:
+            return ("timer", self._timer_sink_route_abi(path))
+        return super().rust_datapath_route_abi(path)
+
+    def _timer_sink_route_abi(self, path: DataPath) -> tuple[int, int, int, int, int, int]:
+        binding = path.peripheral_binding
+        if binding is None or binding.interface not in ("timer.duty", "timer.frequency"):
+            raise ValueError(f"datapath {path!r} is not a timer channel")
+
+        count_callback = self._ScalarCountCallback(lambda: 0)
+        recv_callback = self._TimerRecvManyCallback(lambda _port, _channel, _events, _capacity: 0)
+        send_callback = self._TimerSendManyCallback(self._send_timer_events)
+        self._timer_route_callbacks.extend(
+            (count_callback, recv_callback, send_callback)
+        )
+        return (
+            1 if binding.interface == "timer.duty" else 2,
+            int(binding.port if binding.port is not None else 0),
+            int(binding.channel if binding.channel is not None else 0),
+            self._callback_address(count_callback),
+            self._callback_address(recv_callback),
+            self._callback_address(send_callback),
+        )
+
+    def _send_timer_events(self, events, count: int) -> int:
+        accepted = 0
+        for index in range(int(count)):
+            if not self._set_voltage_from_timer(events[index]):
+                break
+            accepted += 1
+        return accepted
+
+    _TimerRecvManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.c_int32,
+        ctypes.c_int32,
+        ctypes.POINTER(TimerChannelEvent),
+        ctypes.c_uint32,
+    )
+    _TimerSendManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.POINTER(TimerChannelEvent),
+        ctypes.c_uint32,
+    )

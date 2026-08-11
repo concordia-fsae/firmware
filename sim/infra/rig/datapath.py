@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -15,6 +16,13 @@ class PeripheralBinding:
     channel: int | None = None
     port: int | None = None
     device: int | None = None
+
+
+class ScalarEvent(ctypes.Structure):
+    _fields_ = [
+        ("value", ctypes.c_float),
+        ("timestamp_ns", ctypes.c_uint64),
+    ]
 
 
 @dataclass(frozen=True)

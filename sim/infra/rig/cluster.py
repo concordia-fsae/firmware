@@ -13,6 +13,7 @@ from .datapath import (
     DataPathSink,
     DataPathSource,
     FanoutDataPath,
+    ScalarEvent,
     datapath_key,
 )
 from .model import ComponentRig, ModelRig
@@ -62,6 +63,11 @@ class ClusterDataRoutes:
             sink_node=sink_node,
         ):
             return
+        if self._requires_native_route(path):
+            raise TypeError(
+                f"datapath {path!r} between {source_node!r} and {sink_node!r} "
+                "requires a Rust route ABI"
+            )
         link = DataPathLink(
             path=path,
             source_node=source_node,
@@ -83,6 +89,11 @@ class ClusterDataRoutes:
                     if sink_node != source_node and sink.datapaths.inputs(output.path)
                 )
                 if not sink_nodes:
+                    if getattr(node, "rust_datapath_route_abi", lambda _path: None)(
+                        output.path
+                    ) is not None:
+                        self._fanout(output.path)
+                        continue
                     self.connect(output.path, source_node=source_node)
                     continue
                 for sink_node in sink_nodes:
@@ -119,7 +130,10 @@ class ClusterDataRoutes:
         }
 
     def records(self, path: DataPath) -> tuple[DataPathRecord[object], ...]:
-        return tuple(self._fanout(path).records)
+        records = tuple(self._fanout(path).records)
+        if records:
+            return records
+        return self._native_scalar_records(path)
 
     def reversed_records(self, path: DataPath):
         return reversed(self._fanout(path).records)
@@ -288,6 +302,8 @@ class ClusterDataRoutes:
         if source_kind == "timer":
             interface, port, channel, source_count, source_recv_many, _source_send_many = source_args
             _sink_interface, _sink_port, _sink_channel, _sink_count, _sink_recv_many, sink_send_many = sink_args
+            if (interface, port, channel) != (_sink_interface, _sink_port, _sink_channel):
+                return False
             connected = self._cluster._rust_runtime.add_timer_route(
                 source_node=source_node,
                 interface=interface,
@@ -309,12 +325,60 @@ class ClusterDataRoutes:
                 sink_node=sink_node,
                 sink_send_many=sink_send_many,
             )
+        elif source_kind == "scalar":
+            route_id, source_count, source_recv_many, _source_send_many = source_args
+            _sink_route_id, _sink_count, _sink_recv_many, sink_send_many = sink_args
+            if route_id != _sink_route_id:
+                return False
+            connected = self._cluster._rust_runtime.add_scalar_route(
+                source_node=source_node,
+                route_id=route_id,
+                source_count=source_count,
+                source_recv_many=source_recv_many,
+                sink_node=sink_node,
+                sink_send_many=sink_send_many,
+            )
         else:
             connected = False
 
         if connected:
             self._native_routes.add(key)
         return connected
+
+    @staticmethod
+    def _requires_native_route(path: DataPath) -> bool:
+        binding = path.peripheral_binding
+        return binding is not None and binding.interface in {
+            "timer.duty",
+            "timer.frequency",
+            "spi.transaction",
+        }
+
+    def _native_scalar_records(self, path: DataPath) -> tuple[DataPathRecord[object], ...]:
+        native_records: list[DataPathRecord[object]] = []
+        for node_name, node in self._cluster._rig_nodes.items():
+            route_abi = getattr(node, "rust_datapath_route_abi", lambda _path: None)(path)
+            if route_abi is None:
+                continue
+            kind, args = route_abi
+            if kind != "scalar":
+                continue
+            route_id = args[0]
+            event = ScalarEvent()
+            if self._cluster._rust_runtime.latest_scalar_event(
+                node_name,
+                route_id,
+                event,
+            ):
+                native_records.append(
+                    DataPathRecord(
+                        source=node_name,
+                        path=path,
+                        payload=float(event.value),
+                        timestamp_ns=int(event.timestamp_ns),
+                    )
+                )
+        return tuple(native_records)
 
 
 class ClusterCanComms:
@@ -337,10 +401,11 @@ class ClusterCanComms:
             if not self._node_has_datapath_output(source_node, path):
                 continue
             if len(node_names) == 1:
-                self._dataroutes.connect(
-                    path,
-                    source_node=source_node,
-                )
+                if not self._connect_native_source(path, source_node=source_node):
+                    self._dataroutes.connect(
+                        path,
+                        source_node=source_node,
+                    )
                 continue
             for sink_node in node_names:
                 if sink_node == source_node:
@@ -374,10 +439,8 @@ class ClusterCanComms:
                     if self._node_has_datapath_input(sink_node, path)
                 )
                 if not sink_nodes:
-                    self._dataroutes.connect(
-                        path,
-                        source_node=source_node,
-                    )
+                    if not self._connect_native_source(path, source_node=source_node):
+                        self._dataroutes.connect(path, source_node=source_node)
                     continue
                 for sink_node in sink_nodes:
                     if self._connect_native_route(
@@ -428,8 +491,8 @@ class ClusterCanComms:
             return True
 
         bus_name = str(path.parts[1])
-        source = self._cluster.nodes.get(source_node)
-        sink = self._cluster.nodes.get(sink_node)
+        source = self._cluster._rig_nodes.get(source_node)
+        sink = self._cluster._rig_nodes.get(sink_node)
         if source is None or sink is None:
             return False
         source_abi = getattr(source, "rust_can_route_abi", lambda _bus: None)(bus_name)
@@ -450,6 +513,37 @@ class ClusterCanComms:
         ):
             return False
 
+        self._native_routes.add(key)
+        return True
+
+    def _connect_native_source(
+        self,
+        path: DataPath,
+        *,
+        source_node: str,
+    ) -> bool:
+        if not self._is_can_path(path):
+            return False
+        key = (datapath_key(path), source_node, "")
+        if key in self._native_routes:
+            return True
+        bus_name = str(path.parts[1])
+        source = self._cluster._rig_nodes.get(source_node)
+        if source is None:
+            return False
+        source_abi = getattr(source, "rust_can_route_abi", lambda _bus: None)(bus_name)
+        if source_abi is None:
+            return False
+        source_bus, source_tx_count, source_recv_events, _source_send_many = source_abi
+        if not self._cluster._rust_runtime.add_can_route(
+            source_node=source_node,
+            source_bus=source_bus,
+            source_tx_count=source_tx_count,
+            source_recv_events=source_recv_events,
+        ):
+            raise RuntimeError(
+                f"failed to register Rust CAN source route for {source_node!r} {path!r}"
+            )
         self._native_routes.add(key)
         return True
 
@@ -512,7 +606,6 @@ class ClusterCanComms:
             else message.id
         )
 
-        path = self.path(bus_descriptor)
         event = CanEvent()
         if self._cluster._rust_runtime.latest_can_message(
             node,
@@ -521,15 +614,6 @@ class ClusterCanComms:
             event,
         ):
             return event
-
-        for record in self._dataroutes.reversed_records(path):
-            if record.source != node or not isinstance(record.payload, CanEvent):
-                continue
-            if (
-                record.payload.bus == bus_descriptor.index
-                and record.payload.packet.id == message_id
-            ):
-                return record.payload
         return None
 
     def latest_bus_event(
@@ -546,13 +630,6 @@ class ClusterCanComms:
         ):
             return event
 
-        record = self._dataroutes.latest_record(
-            self.path(bus_descriptor),
-            source_node=node,
-        )
-        if isinstance(record, DataPathRecord) and isinstance(record.payload, CanEvent):
-            if record.payload.bus == bus_descriptor.index:
-                return record.payload
         return None
 
 
@@ -590,6 +667,23 @@ class ClusterTimerComms(_TypedClusterComms[TimerChannelEvent]):
     def __init__(self, cluster: ClusterRig, dataroutes: ClusterDataRoutes) -> None:
         self._cluster = cluster
         super().__init__(dataroutes, TimerChannelEvent)
+
+    def records(self, path: DataPath) -> tuple[DataPathRecord[TimerChannelEvent], ...]:
+        records = super().records(path)
+        if records or path.peripheral_binding is None:
+            return records
+        for node in self._cluster.nodes:
+            event = self.latest_event(path, node=node)
+            if event is not None:
+                return (
+                    DataPathRecord(
+                        source=node,
+                        path=path,
+                        payload=event,
+                        timestamp_ns=int(event.timestamp_ns),
+                    ),
+                )
+        return ()
 
     def latest_event(
         self,

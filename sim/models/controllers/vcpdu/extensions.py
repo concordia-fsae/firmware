@@ -135,7 +135,7 @@ class VcpduModelExtensions:
         cls, *, hsd_channel, analog_input
     ) -> ModelDataPathInputConnector:
         def connect(node, path) -> None:
-            node.datapaths.add_input(
+            node.add_scalar_input(
                 path,
                 send=lambda current: node.set_vn9008_current_feedback(
                     hsd_channel,

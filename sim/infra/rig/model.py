@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import ctypes
+import zlib
 from collections.abc import Callable
 from typing import TypeVar
 
-from .datapath import DataPath, ModelDataPaths
+from .datapath import DataPath, ModelDataPaths, ScalarEvent, datapath_key
 from .runtime import RustNodeSchedulerAbi, _RustClusterRuntime
 from .time import duration_to_ns
 
@@ -20,6 +21,17 @@ class ModelRig:
     _ClusterFastForwardForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
     _ClusterNextStepCallback = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_uint64)
     _ClusterResetCallback = ctypes.CFUNCTYPE(None)
+    _ScalarCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32)
+    _ScalarRecvManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.POINTER(ScalarEvent),
+        ctypes.c_uint32,
+    )
+    _ScalarSendManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.POINTER(ScalarEvent),
+        ctypes.c_uint32,
+    )
 
     def __init__(
         self,
@@ -31,6 +43,8 @@ class ModelRig:
         self._cluster_rig: ClusterRig | None = None
         self._cluster_node_name: str | None = None
         self.elapsed_ns = 0
+        self._scalar_route_abis: dict[str, tuple[int, int, int, int]] = {}
+        self._scalar_callbacks = []
         self._scheduler_period_ns = (
             None
             if scheduler_period is None
@@ -97,6 +111,81 @@ class ModelRig:
 
     def supports_datapath(self, path: DataPath) -> bool:
         return bool(self.datapaths.outputs(path))
+
+    def add_scalar_output(
+        self,
+        path: DataPath,
+        *,
+        pending: Callable[[], int],
+        recv: Callable[[], float | int | None],
+    ) -> None:
+        key = datapath_key(path)
+
+        def recv_many(events, capacity: int) -> int:
+            count = 0
+            for _ in range(int(capacity)):
+                value = recv()
+                if value is None:
+                    break
+                event = ScalarEvent()
+                event.value = float(value)
+                event.timestamp_ns = int(self.elapsed_ns)
+                events[count] = event
+                count += 1
+            return count
+
+        count_callback = self._ScalarCountCallback(lambda: int(pending()))
+        recv_callback = self._ScalarRecvManyCallback(recv_many)
+        send_callback = self._ScalarSendManyCallback(lambda _events, _count: 0)
+        self._scalar_callbacks.extend((count_callback, recv_callback, send_callback))
+        self._scalar_route_abis[key] = (
+            _route_id(key),
+            self._callback_address(count_callback),
+            self._callback_address(recv_callback),
+            self._callback_address(send_callback),
+        )
+        self.datapaths.add_output(
+            path,
+            pending=pending,
+            recv=recv,
+        )
+
+    def add_scalar_input(
+        self,
+        path: DataPath,
+        *,
+        send: Callable[[float], bool],
+    ) -> None:
+        key = datapath_key(path)
+
+        def send_many(events, count: int) -> int:
+            accepted = 0
+            for index in range(int(count)):
+                if not send(float(events[index].value)):
+                    break
+                accepted += 1
+            return accepted
+
+        count_callback = self._ScalarCountCallback(lambda: 0)
+        recv_callback = self._ScalarRecvManyCallback(lambda _events, _capacity: 0)
+        send_callback = self._ScalarSendManyCallback(send_many)
+        self._scalar_callbacks.extend((count_callback, recv_callback, send_callback))
+        self._scalar_route_abis[key] = (
+            _route_id(key),
+            self._callback_address(count_callback),
+            self._callback_address(recv_callback),
+            self._callback_address(send_callback),
+        )
+        self.datapaths.add_input(
+            path,
+            send=send,
+        )
+
+    def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+        scalar_abi = self._scalar_route_abis.get(datapath_key(path))
+        if scalar_abi is not None:
+            return ("scalar", scalar_abi)
+        return None
 
     def set_online(self, online: bool) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
@@ -228,3 +317,7 @@ def extend_model_class(
         },
     )
     return extended  # type: ignore[return-value]
+
+
+def _route_id(key: str) -> int:
+    return zlib.crc32(key.encode("utf-8"))

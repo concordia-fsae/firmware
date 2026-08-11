@@ -144,6 +144,23 @@ class _RustClusterRuntime:
             [ctypes.c_uint32, ctypes.c_int32, ctypes.c_void_p],
             ctypes.c_bool,
         )
+        self._add_scalar_route = bind_symbol(
+            "rig_cluster_add_scalar_route",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_size_t,
+            ],
+            ctypes.c_bool,
+        )
+        self._latest_scalar_event = bind_symbol(
+            "rig_cluster_latest_scalar_event",
+            [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p],
+            ctypes.c_bool,
+        )
         self._elapsed_ns = bind_symbol(
             "rig_cluster_elapsed_ns",
             restype=ctypes.c_uint64,
@@ -191,15 +208,21 @@ class _RustClusterRuntime:
         source_bus: int,
         source_tx_count: int,
         source_recv_events: int,
-        sink_node: str,
-        sink_bus: int,
-        sink_send_many: int,
+        sink_node: str | None = None,
+        sink_bus: int = 0,
+        sink_send_many: int = 0,
     ) -> bool:
         try:
             source_index = self._node_indices[source_node]
-            sink_index = self._node_indices[sink_node]
         except KeyError:
             return False
+        if sink_node is None:
+            sink_index = 0xFFFFFFFF
+        else:
+            try:
+                sink_index = self._node_indices[sink_node]
+            except KeyError:
+                return False
         return bool(
             self._add_can_route(
                 ctypes.c_uint32(source_index),
@@ -261,6 +284,32 @@ class _RustClusterRuntime:
             self._add_spi_route(
                 ctypes.c_uint32(source_index),
                 ctypes.c_int32(device),
+                ctypes.c_size_t(source_count),
+                ctypes.c_size_t(source_recv_many),
+                ctypes.c_uint32(sink_index),
+                ctypes.c_size_t(sink_send_many),
+            )
+        )
+
+    def add_scalar_route(
+        self,
+        *,
+        source_node: str,
+        route_id: int,
+        source_count: int,
+        source_recv_many: int,
+        sink_node: str,
+        sink_send_many: int,
+    ) -> bool:
+        try:
+            source_index = self._node_indices[source_node]
+            sink_index = self._node_indices[sink_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_scalar_route(
+                ctypes.c_uint32(source_index),
+                ctypes.c_uint32(route_id),
                 ctypes.c_size_t(source_count),
                 ctypes.c_size_t(source_recv_many),
                 ctypes.c_uint32(sink_index),
@@ -366,6 +415,18 @@ class _RustClusterRuntime:
                 ctypes.c_uint32(index),
                 ctypes.c_int32(device),
                 ctypes.byref(transaction),
+            )
+        )
+
+    def latest_scalar_event(self, source_node: str, route_id: int, event) -> bool:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return False
+        return bool(
+            self._latest_scalar_event(
+                ctypes.c_uint32(index),
+                ctypes.c_uint32(route_id),
+                ctypes.byref(event),
             )
         )
 

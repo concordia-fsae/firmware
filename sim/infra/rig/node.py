@@ -120,6 +120,9 @@ class NodeRig(ModelRig):
         )
 
     def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+        model_abi = super().rust_datapath_route_abi(path)
+        if model_abi is not None:
+            return model_abi
         try:
             if self._timer_peripherals.supports(path):
                 return ("timer", self._timer_peripherals.rust_route_abi(path))
