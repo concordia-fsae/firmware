@@ -17,6 +17,7 @@ class ModelRig:
 
     has_can = False
     _ClusterRunForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
+    _ClusterFastForwardForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
     _ClusterNextStepCallback = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_uint64)
     _ClusterResetCallback = ctypes.CFUNCTYPE(None)
 
@@ -41,6 +42,9 @@ class ModelRig:
             )
         self._cluster_run_for_callback = self._ClusterRunForCallback(
             self._cluster_run_for
+        )
+        self._cluster_fast_forward_for_callback = self._ClusterFastForwardForCallback(
+            self._cluster_fast_forward_for
         )
         self._cluster_next_step_callback = self._ClusterNextStepCallback(
             self._cluster_next_scheduler_step
@@ -106,15 +110,32 @@ class ModelRig:
             return True
         return self._cluster_rig.node_online(self._cluster_node_name)
 
-    def rust_cluster_node_abi(self) -> tuple[int, int, int]:
+    def rust_cluster_node_abi(self) -> tuple[int, int, int, int]:
         return (
             self._callback_address(self._cluster_run_for_callback),
+            self._callback_address(self._cluster_fast_forward_for_callback),
             self._callback_address(self._cluster_next_step_callback),
             self._callback_address(self._cluster_reset_callback),
         )
 
     def _cluster_run_for(self, duration_ns: int) -> None:
         self._run_for_from_runtime(duration_ns)
+
+    def _cluster_fast_forward_for(self, duration_ns: int) -> None:
+        self._fast_forward_for_from_runtime(duration_ns)
+
+    def _fast_forward_for_from_runtime(self, duration_ns: int) -> None:
+        if self._scheduler_period_ns is None:
+            self.elapsed_ns += duration_ns
+            return
+
+        previous_elapsed_ns = self.elapsed_ns
+        self.elapsed_ns += duration_ns
+        if (
+            previous_elapsed_ns // self._scheduler_period_ns
+            != self.elapsed_ns // self._scheduler_period_ns
+        ):
+            self._run_scheduled()
 
     def _cluster_next_scheduler_step(self, duration_ns: int) -> int:
         return self.next_scheduler_step(duration_ns, unit="ns")

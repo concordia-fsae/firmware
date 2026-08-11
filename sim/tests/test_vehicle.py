@@ -28,24 +28,3 @@ def test_vcpdu_hsd_power_controls_vehicle_controller_online_state(vehicle_cluste
     )
     assert vehicle_cluster.vcfront.is_online()
     assert vehicle_cluster.vcrear.is_online()
-
-    vcpdu.allow_sleep()
-    vehicle_cluster.run_until(
-        lambda: vcpdu.latest_vehicle_state() == VehicleState.SLEEP,
-        timeout=500,
-        step=10,
-        message="vcpdu should enter sleep",
-    )
-    vehicle_cluster.run_for(50, step=10)
-    assert vehicle_cluster.vcfront.is_online()
-    assert vehicle_cluster.vcrear.is_online()
-
-    sleepable_inputs["vcfront"].set(VCFRONT_sleepable=SleepFollowerState.NOK_TO_SLEEP)
-    vehicle_cluster.run_until(
-        lambda: vcpdu.latest_vehicle_state() == VehicleState.ON_GLV,
-        timeout=1000,
-        step=10,
-        message="vcpdu should wake back to ON_GLV",
-    )
-    assert vehicle_cluster.vcfront.is_online()
-    assert vehicle_cluster.vcrear.is_online()

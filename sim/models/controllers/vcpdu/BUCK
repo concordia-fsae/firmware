@@ -113,7 +113,6 @@ rig_bindgen(
         "Module_10Hz_TSK",
         "Module_1Hz_TSK",
         "drv_outputAD_toggleDigitalState",
-        "app_vehicleState_allowSleep",
         "YAMCAN_shared_init_static",
     ],
     allowlist_vars = [

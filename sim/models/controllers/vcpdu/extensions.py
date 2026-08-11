@@ -32,7 +32,6 @@ class VcpduModelExtensions:
             [ctypes.c_int],
             ctypes.c_float,
         )
-        self._allow_sleep = self._bind_model_symbol("allow_sleep")
 
     def latest_vehicle_state(self):
         return self.can.latest_signal(
@@ -46,9 +45,6 @@ class VcpduModelExtensions:
         if state is not None and (not observed or observed[-1] != state):
             observed.append(state)
         return state
-
-    def allow_sleep(self) -> None:
-        self._allow_sleep()
 
     def waking_sleepable_controllers(self) -> tuple[str, ...]:
         controllers = []

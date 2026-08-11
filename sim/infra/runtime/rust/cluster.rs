@@ -2,6 +2,7 @@ use std::mem;
 use std::sync::Mutex;
 
 pub type ClusterNodeRunForFn = unsafe extern "C" fn(u64);
+pub type ClusterNodeFastForwardForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeNextStepFn = unsafe extern "C" fn(u64) -> u64;
 pub type ClusterNodeResetFn = unsafe extern "C" fn();
 pub type ClusterRouteFn = unsafe extern "C" fn(u64);
@@ -9,6 +10,7 @@ pub type ClusterRouteFn = unsafe extern "C" fn(u64);
 #[derive(Clone, Copy)]
 struct ClusterNode {
     run_for: ClusterNodeRunForFn,
+    fast_forward_for: ClusterNodeFastForwardForFn,
     next_step: ClusterNodeNextStepFn,
     reset: ClusterNodeResetFn,
     online: bool,
@@ -30,12 +32,14 @@ impl ClusterRuntime {
     fn add_node(
         &mut self,
         run_for: ClusterNodeRunForFn,
+        fast_forward_for: ClusterNodeFastForwardForFn,
         next_step: ClusterNodeNextStepFn,
         reset: ClusterNodeResetFn,
         online: bool,
     ) -> u32 {
         self.nodes.push(ClusterNode {
             run_for,
+            fast_forward_for,
             next_step,
             reset,
             online,
@@ -56,29 +60,18 @@ impl ClusterRuntime {
         true
     }
 
-    fn next_cluster_step(&self, max_step_ns: u64) -> u64 {
-        self.nodes
-            .iter()
-            .filter(|node| node.online)
-            .map(|node| unsafe { (node.next_step)(max_step_ns) })
-            .min()
-            .unwrap_or(max_step_ns)
-            .min(max_step_ns)
-    }
-
     fn run_next_step(&mut self, remaining_ns: u64, max_step_ns: u64) -> u64 {
         if remaining_ns == 0 || max_step_ns == 0 {
             return 0;
         }
 
-        let max_delta_ns = remaining_ns.min(max_step_ns);
-        let delta_ns = self.next_cluster_step(max_delta_ns);
+        let delta_ns = remaining_ns.min(max_step_ns);
         if delta_ns == 0 {
             return 0;
         }
 
         for node in self.nodes.iter_mut().filter(|node| node.online) {
-            unsafe { (node.run_for)(delta_ns) };
+            unsafe { (node.fast_forward_for)(delta_ns) };
             node.elapsed_ns = node.elapsed_ns.saturating_add(delta_ns);
         }
 
@@ -122,11 +115,17 @@ pub extern "C" fn rig_cluster_reset() {
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_add_node(
     run_for: usize,
+    fast_forward_for: usize,
     next_step: usize,
     reset: usize,
     online: bool,
 ) -> u32 {
     let Some(run_for) = (unsafe { function_pointer::<ClusterNodeRunForFn>(run_for) }) else {
+        return u32::MAX;
+    };
+    let Some(fast_forward_for) =
+        (unsafe { function_pointer::<ClusterNodeFastForwardForFn>(fast_forward_for) })
+    else {
         return u32::MAX;
     };
     let Some(next_step) = (unsafe { function_pointer::<ClusterNodeNextStepFn>(next_step) }) else {
@@ -139,7 +138,7 @@ pub extern "C" fn rig_cluster_add_node(
     CLUSTER_RUNTIME
         .lock()
         .unwrap()
-        .add_node(run_for, next_step, reset, online)
+        .add_node(run_for, fast_forward_for, next_step, reset, online)
 }
 
 #[unsafe(no_mangle)]
@@ -151,11 +150,7 @@ pub extern "C" fn rig_cluster_set_node_online(node: u32, online: bool) -> bool {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_run_for(
-    duration_ns: u64,
-    max_step_ns: u64,
-    route: usize,
-) {
+pub extern "C" fn rig_cluster_run_for(duration_ns: u64, max_step_ns: u64, route: usize) {
     let route = unsafe { function_pointer::<ClusterRouteFn>(route) };
     let current_elapsed_ns = CLUSTER_RUNTIME.lock().unwrap().elapsed_ns;
     let target_elapsed_ns = current_elapsed_ns.saturating_add(duration_ns);

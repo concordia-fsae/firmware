@@ -114,11 +114,6 @@ pub extern "C" fn vcpdu_sim_get_vn9008_cs_amps_per_volt(channel: i32) -> f32 {
     unsafe { bindings::drv_vn9008_channels[channel as usize].cs_amp_per_volt }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn vcpdu_sim_allow_sleep() {
-    unsafe { bindings::app_vehicleState_allowSleep() };
-}
-
 rig_yamcan_network!(
     VCPDU_CAN_NETWORK,
     rust_model_generated,

@@ -52,7 +52,13 @@ class _RustClusterRuntime:
         self._reset = bind_symbol("rig_cluster_reset")
         self._add_node = bind_symbol(
             "rig_cluster_add_node",
-            [ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_bool],
+            [
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_bool,
+            ],
             ctypes.c_uint32,
         )
         self._set_node_online = bind_symbol(
@@ -85,10 +91,11 @@ class _RustClusterRuntime:
         self._node_indices.clear()
 
     def add_node(self, name: str, node, *, online: bool = True) -> None:
-        run_for, next_step, reset = node.rust_cluster_node_abi()
+        run_for, fast_forward_for, next_step, reset = node.rust_cluster_node_abi()
         index = int(
             self._add_node(
                 ctypes.c_size_t(run_for),
+                ctypes.c_size_t(fast_forward_for),
                 ctypes.c_size_t(next_step),
                 ctypes.c_size_t(reset),
                 ctypes.c_bool(online),
