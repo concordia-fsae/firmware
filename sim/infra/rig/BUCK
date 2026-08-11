@@ -1,0 +1,28 @@
+filegroup(
+    name = "rig",
+    srcs = [
+        "__init__.py",
+        "artifacts.py",
+        "can.py",
+        "catalog.py",
+        "datapath.py",
+        "gen_python_enums.py",
+        "gen_python_model.py",
+        "model.py",
+        "pytest.py",
+        "time.py",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "gen-python-enums",
+    src = "gen_python_enums.py",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "gen-python-model",
+    src = "gen_python_model.py",
+    visibility = ["PUBLIC"],
+)
