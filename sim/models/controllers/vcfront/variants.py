@@ -1,0 +1,24 @@
+from __future__ import annotations
+
+from sim.infra.rig import ClusterCatalog, ClusterSpec, NodeSpec
+from sim.models.platforms import PLATFORM_VARIANTS
+
+from . import VcfrontModel
+
+
+def vcfront_node(hardware: str | None = None) -> NodeSpec:
+    return NodeSpec("vcfront", VcfrontModel, hardware=hardware)
+
+
+def vcfront_cluster_spec(hardware: str | None = None) -> ClusterSpec:
+    prefix = f"{hardware}-" if hardware is not None else ""
+    return ClusterSpec(
+        name=f"{prefix}vcfront-cluster",
+        hardware=hardware,
+        nodes=(vcfront_node(hardware),),
+    )
+
+
+VCFRONT_CLUSTERS = ClusterCatalog(
+    *(vcfront_cluster_spec(hardware) for hardware in PLATFORM_VARIANTS),
+)
