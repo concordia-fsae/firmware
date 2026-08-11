@@ -63,9 +63,11 @@ class ClusterDataRoutes:
             self._route_cache.clear()
         self._fanout(path)
 
-    def connect_available_paths(self) -> None:
+    def connect_available_paths(self, *, exclude=None) -> None:
         for source_node, node in self._cluster._rig_nodes.items():
             for output in node.datapaths.outputs():
+                if exclude is not None and exclude(output.path):
+                    continue
                 sink_nodes = tuple(
                     sink_node
                     for sink_node, sink in self._cluster._rig_nodes.items()
@@ -81,7 +83,7 @@ class ClusterDataRoutes:
                         sink_node=sink_node,
                     )
 
-    def route(self, path: DataPath | None = None) -> None:
+    def _route(self, path: DataPath | None = None) -> None:
         paths = (path,) if path is not None else self.paths
         for path_name in paths:
             self._route_path(path_name)
@@ -250,6 +252,7 @@ class ClusterCanComms:
     def __init__(self, cluster: ClusterRig, dataroutes: ClusterDataRoutes) -> None:
         self._cluster = cluster
         self._dataroutes = dataroutes
+        self._native_routes: set[tuple[str, str, str]] = set()
 
     def connect_bus(
         self,
@@ -272,6 +275,12 @@ class ClusterCanComms:
                 if sink_node == source_node:
                     continue
                 if not self._node_has_datapath_input(sink_node, path):
+                    continue
+                if self._connect_native_route(
+                    path,
+                    source_node=source_node,
+                    sink_node=sink_node,
+                ):
                     continue
                 self._dataroutes.connect(
                     path,
@@ -300,6 +309,12 @@ class ClusterCanComms:
                     )
                     continue
                 for sink_node in sink_nodes:
+                    if self._connect_native_route(
+                        path,
+                        source_node=source_node,
+                        sink_node=sink_node,
+                    ):
+                        continue
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
@@ -328,6 +343,45 @@ class ClusterCanComms:
             )
         )
 
+    def _connect_native_route(
+        self,
+        path: DataPath,
+        *,
+        source_node: str,
+        sink_node: str,
+    ) -> bool:
+        if not self._is_can_path(path):
+            return False
+        key = (datapath_key(path), source_node, sink_node)
+        if key in self._native_routes:
+            return True
+
+        bus_name = str(path.parts[1])
+        source = self._cluster.nodes.get(source_node)
+        sink = self._cluster.nodes.get(sink_node)
+        if source is None or sink is None:
+            return False
+        source_abi = getattr(source, "rust_can_route_abi", lambda _bus: None)(bus_name)
+        sink_abi = getattr(sink, "rust_can_route_abi", lambda _bus: None)(bus_name)
+        if source_abi is None or sink_abi is None:
+            return False
+
+        source_bus, source_tx_count, source_recv_events, _source_send_many = source_abi
+        sink_bus, _sink_tx_count, _sink_recv_events, sink_send_many = sink_abi
+        if not self._cluster._rust_runtime.add_can_route(
+            source_node=source_node,
+            source_bus=source_bus,
+            source_tx_count=source_tx_count,
+            source_recv_events=source_recv_events,
+            sink_node=sink_node,
+            sink_bus=sink_bus,
+            sink_send_many=sink_send_many,
+        ):
+            return False
+
+        self._native_routes.add(key)
+        return True
+
     @property
     def events(self) -> tuple[RoutedCanEvent, ...]:
         events = []
@@ -346,13 +400,9 @@ class ClusterCanComms:
                     )
         return tuple(events)
 
-    def route(self) -> None:
-        for path in self._dataroutes.paths:
-            if self._is_can_path(path):
-                self._dataroutes.route(path)
-
     def reset(self) -> None:
         self.clear()
+        self._native_routes.clear()
 
     def clear(self) -> None:
         for path in self._dataroutes.paths:
@@ -384,6 +434,15 @@ class ClusterCanComms:
         )
 
         path = self.path(bus_descriptor)
+        event = CanEvent()
+        if self._cluster._rust_runtime.latest_can_message(
+            node,
+            bus_descriptor.index,
+            message_id,
+            event,
+        ):
+            return event
+
         for record in self._dataroutes.reversed_records(path):
             if record.source != node or not isinstance(record.payload, CanEvent):
                 continue
@@ -400,6 +459,14 @@ class ClusterCanComms:
         bus: int | str | CanBusDescriptor,
     ) -> CanEvent | None:
         bus_descriptor = self._cluster.nodes[node].can.bus(bus)
+        event = CanEvent()
+        if self._cluster._rust_runtime.latest_can_bus_event(
+            node,
+            bus_descriptor.index,
+            event,
+        ):
+            return event
+
         record = self._dataroutes.latest_record(
             self.path(bus_descriptor),
             source_node=node,
@@ -457,15 +524,15 @@ class ClusterComms:
         self.timer = ClusterTimerComms(dataroutes)
         self.spi = ClusterSpiComms(dataroutes)
 
-    def route(self) -> None:
-        self._dataroutes.route()
+    def _route(self) -> None:
+        self._dataroutes._route()
 
     def reset(self) -> None:
         self._dataroutes.reset()
 
     def connect_node_interfaces(self) -> None:
         self.can.connect_available_nodes()
-        self._dataroutes.connect_available_paths()
+        self._dataroutes.connect_available_paths(exclude=ClusterCanComms._is_can_path)
 
 
 class ClusterRig:
@@ -504,8 +571,8 @@ class ClusterRig:
         self.elapsed_ns = 0
         self.dataroutes = ClusterDataRoutes(self)
         self.comm = ClusterComms(self, self.dataroutes)
-        self.comm.connect_node_interfaces()
         self._rust_runtime = self._create_rust_runtime()
+        self.comm.connect_node_interfaces()
 
     def _reject_duplicate_shared_libraries(self) -> None:
         nodes_by_library: dict[pathlib.Path, list[str]] = {}
@@ -546,6 +613,7 @@ class ClusterRig:
         self.elapsed_ns = 0
         self.comm.reset()
         self._rust_runtime = self._create_rust_runtime()
+        self.comm.connect_node_interfaces()
 
     def add_component(self, component: ComponentRig) -> ComponentRig:
         return self.add_components(component)[0]
@@ -567,14 +635,30 @@ class ClusterRig:
             component._cluster_rig = self
             component._cluster_node_name = name
             self._online_nodes[name] = True
-        self.comm.connect_node_interfaces()
         self._rust_runtime = self._create_rust_runtime()
+        self.comm.connect_node_interfaces()
         return components
 
     def has_feature(self, feature: str) -> bool:
         return feature in self.features
 
     def run_for(
+        self,
+        duration: int | float,
+        *,
+        unit: str = "ms",
+        step: int | float = 1,
+        step_unit: str | None = None,
+    ) -> None:
+        duration_ns = duration_to_ns(duration, unit=unit)
+        step_ns = duration_to_ns(step, unit=step_unit or unit)
+        if step_ns <= 0:
+            raise ValueError(f"step must be positive, got {step}")
+
+        self._rust_runtime.run_for(duration_ns, step_ns)
+        self._sync_elapsed_from_runtime()
+
+    def fast_forward_for(
         self,
         duration: int | float,
         *,
@@ -599,9 +683,11 @@ class ClusterRig:
         step: int | float = 1,
         step_unit: str | None = None,
         message: str | None = None,
+        fast_forward: bool = False,
     ) -> int:
+        run_for = self.fast_forward_for if fast_forward else self.run_for
         return run_until(
-            lambda delta_ns: self.run_for(
+            lambda delta_ns: run_for(
                 delta_ns, unit="ns", step=delta_ns, step_unit="ns"
             ),
             predicate,
@@ -654,7 +740,7 @@ class ClusterRig:
 
     def _route_from_runtime(self, elapsed_ns: int) -> None:
         self.elapsed_ns = elapsed_ns
-        self.comm.route()
+        self.comm._route()
 
     def _sync_elapsed_from_runtime(self) -> None:
         self.elapsed_ns = self._rust_runtime.elapsed_ns()

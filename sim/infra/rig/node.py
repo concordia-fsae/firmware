@@ -104,6 +104,20 @@ class NodeRig(ModelRig):
             self._function_address(self._new),
         )
 
+    def rust_can_route_abi(
+        self, bus: int | str | CanBusDescriptor
+    ) -> tuple[int, int, int, int] | None:
+        if not self.has_can:
+            return None
+        bus_index = self._coerce_can_bus(bus)
+        self._require_can_bus(bus_index)
+        return (
+            bus_index,
+            self._function_address(self._can_tx_count),
+            self._function_address(self._ffi_can_recv_events),
+            self._function_address(self._can_send_many),
+        )
+
     def set_analog_input(self, channel: int, voltage: float) -> None:
         self._set_analog_input(ctypes.c_int(channel), ctypes.c_float(voltage))
 

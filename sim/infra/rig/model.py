@@ -179,7 +179,6 @@ class PeriodicDataPathProducer(ComponentRig):
         )
         self.path = path
         self._payload = payload
-        self._last_emit_ns = 0
         self._pending_payloads: list[object] = []
         self.datapaths.add_output(
             path,
@@ -190,19 +189,7 @@ class PeriodicDataPathProducer(ComponentRig):
 
     def reset(self) -> None:
         super().reset()
-        self._last_emit_ns = 0
         self._pending_payloads.clear()
-
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        return duration_to_ns(duration, unit=unit)
-
-    def _run_for_from_runtime(self, duration_ns: int) -> None:
-        self.elapsed_ns += duration_ns
-        if self._scheduler_period_ns is None:
-            return
-        if self.elapsed_ns - self._last_emit_ns >= self._scheduler_period_ns:
-            self._last_emit_ns = self.elapsed_ns
-            self._run_scheduled()
 
     def _run_scheduled(self) -> None:
         produced = self._payload(self) if callable(self._payload) else self._payload

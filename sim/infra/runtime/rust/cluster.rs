@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::mem;
 use std::sync::Mutex;
 
@@ -6,6 +7,25 @@ pub type ClusterNodeFastForwardForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeNextStepFn = unsafe extern "C" fn(u64) -> u64;
 pub type ClusterNodeResetFn = unsafe extern "C" fn();
 pub type ClusterRouteFn = unsafe extern "C" fn(u64);
+pub type ClusterCanTxCountFn = unsafe extern "C" fn(u8) -> u32;
+pub type ClusterCanRecvEventsFn = unsafe extern "C" fn(u8, *mut CanEvent, u32) -> u32;
+pub type ClusterCanSendManyFn = unsafe extern "C" fn(u8, *const CanPacket, u32) -> u32;
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CanPacket {
+    pub id: u32,
+    pub len: u8,
+    pub data: [u8; 8],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CanEvent {
+    pub bus: u8,
+    pub timestamp_ns: u64,
+    pub packet: CanPacket,
+}
 
 #[derive(Clone, Copy)]
 struct ClusterNode {
@@ -17,15 +37,37 @@ struct ClusterNode {
     elapsed_ns: u64,
 }
 
+#[derive(Clone, Copy)]
+struct ClusterCanRoute {
+    source_node: u32,
+    source_bus: u8,
+    source_tx_count: ClusterCanTxCountFn,
+    source_recv_events: ClusterCanRecvEventsFn,
+    sink_node: u32,
+    sink_bus: u8,
+    sink_send_many: ClusterCanSendManyFn,
+}
+
+#[derive(Clone, Copy)]
+struct ClusterCanRecord {
+    source_node: u32,
+    bus: u8,
+    event: CanEvent,
+}
+
 #[derive(Default)]
 struct ClusterRuntime {
     nodes: Vec<ClusterNode>,
+    can_routes: Vec<ClusterCanRoute>,
+    can_records: VecDeque<ClusterCanRecord>,
     elapsed_ns: u64,
 }
 
 impl ClusterRuntime {
     fn reset(&mut self) {
         self.nodes.clear();
+        self.can_routes.clear();
+        self.can_records.clear();
         self.elapsed_ns = 0;
     }
 
@@ -46,6 +88,16 @@ impl ClusterRuntime {
             elapsed_ns: 0,
         });
         (self.nodes.len() - 1) as u32
+    }
+
+    fn add_can_route(&mut self, route: ClusterCanRoute) -> bool {
+        if self.nodes.get(route.source_node as usize).is_none()
+            || self.nodes.get(route.sink_node as usize).is_none()
+        {
+            return false;
+        }
+        self.can_routes.push(route);
+        true
     }
 
     fn set_node_online(&mut self, node: u32, online: bool) -> bool {
@@ -95,7 +147,52 @@ impl ClusterRuntime {
         }
 
         self.elapsed_ns = self.elapsed_ns.saturating_add(delta_ns);
+        self.route_can();
         delta_ns
+    }
+
+    fn route_can(&mut self) {
+        for route in self.can_routes.iter().copied() {
+            let Some(source) = self.nodes.get(route.source_node as usize) else {
+                continue;
+            };
+            if !source.online {
+                continue;
+            }
+
+            let pending = unsafe { (route.source_tx_count)(route.source_bus) };
+            if pending == 0 {
+                continue;
+            }
+
+            let mut events = vec![CanEvent::default(); pending as usize];
+            let count = unsafe {
+                (route.source_recv_events)(route.source_bus, events.as_mut_ptr(), pending)
+            };
+            let count = count.min(pending) as usize;
+            if count == 0 {
+                continue;
+            }
+            events.truncate(count);
+
+            let packets: Vec<CanPacket> = events.iter().map(|event| event.packet).collect();
+            if !packets.is_empty() {
+                unsafe {
+                    (route.sink_send_many)(
+                        route.sink_bus,
+                        packets.as_ptr(),
+                        packets.len().min(u32::MAX as usize) as u32,
+                    )
+                };
+            }
+
+            self.can_records
+                .extend(events.into_iter().map(|event| ClusterCanRecord {
+                    source_node: route.source_node,
+                    bus: route.source_bus,
+                    event,
+                }));
+        }
     }
 
     fn node_elapsed_ns(&self, node: u32) -> u64 {
@@ -112,10 +209,32 @@ impl ClusterRuntime {
         }
         count as u32
     }
+
+    fn latest_can_message(&self, source_node: u32, bus: u8, message_id: u32) -> Option<CanEvent> {
+        self.can_records
+            .iter()
+            .rev()
+            .find(|record| {
+                record.source_node == source_node
+                    && record.bus == bus
+                    && record.event.packet.id == message_id
+            })
+            .map(|record| record.event)
+    }
+
+    fn latest_can_bus_event(&self, source_node: u32, bus: u8) -> Option<CanEvent> {
+        self.can_records
+            .iter()
+            .rev()
+            .find(|record| record.source_node == source_node && record.bus == bus)
+            .map(|record| record.event)
+    }
 }
 
 static CLUSTER_RUNTIME: Mutex<ClusterRuntime> = Mutex::new(ClusterRuntime {
     nodes: Vec::new(),
+    can_routes: Vec::new(),
+    can_records: VecDeque::new(),
     elapsed_ns: 0,
 });
 
@@ -166,6 +285,43 @@ pub extern "C" fn rig_cluster_set_node_online(node: u32, online: bool) -> bool {
         .lock()
         .unwrap()
         .set_node_online(node, online)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_can_route(
+    source_node: u32,
+    source_bus: u8,
+    source_tx_count: usize,
+    source_recv_events: usize,
+    sink_node: u32,
+    sink_bus: u8,
+    sink_send_many: usize,
+) -> bool {
+    let Some(source_tx_count) =
+        (unsafe { function_pointer::<ClusterCanTxCountFn>(source_tx_count) })
+    else {
+        return false;
+    };
+    let Some(source_recv_events) =
+        (unsafe { function_pointer::<ClusterCanRecvEventsFn>(source_recv_events) })
+    else {
+        return false;
+    };
+    let Some(sink_send_many) =
+        (unsafe { function_pointer::<ClusterCanSendManyFn>(sink_send_many) })
+    else {
+        return false;
+    };
+
+    CLUSTER_RUNTIME.lock().unwrap().add_can_route(ClusterCanRoute {
+        source_node,
+        source_bus,
+        source_tx_count,
+        source_recv_events,
+        sink_node,
+        sink_bus,
+        sink_send_many,
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -221,4 +377,45 @@ pub extern "C" fn rig_cluster_node_elapsed_ns_many(out: *mut u64, capacity: u32)
     }
     let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
     CLUSTER_RUNTIME.lock().unwrap().node_elapsed_ns_many(out)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_latest_can_message(
+    source_node: u32,
+    bus: u8,
+    message_id: u32,
+    out: *mut CanEvent,
+) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    let Some(event) = CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .latest_can_message(source_node, bus, message_id)
+    else {
+        return false;
+    };
+    unsafe { *out = event };
+    true
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_latest_can_bus_event(
+    source_node: u32,
+    bus: u8,
+    out: *mut CanEvent,
+) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    let Some(event) = CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .latest_can_bus_event(source_node, bus)
+    else {
+        return false;
+    };
+    unsafe { *out = event };
+    true
 }

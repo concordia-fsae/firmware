@@ -76,6 +76,7 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
         lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.SLEEP,
         timeout=16 * 60000,
         step=10000,
+        fast_forward=True,
         message="vcpdu should enter SLEEP when all waking controllers are OK to sleep",
     )
 

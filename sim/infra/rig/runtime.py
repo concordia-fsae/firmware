@@ -70,6 +70,29 @@ class _RustClusterRuntime:
             "rig_cluster_run_for",
             [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_bool, ctypes.c_size_t],
         )
+        self._add_can_route = bind_symbol(
+            "rig_cluster_add_can_route",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint8,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_uint8,
+                ctypes.c_size_t,
+            ],
+            ctypes.c_bool,
+        )
+        self._latest_can_message = bind_symbol(
+            "rig_cluster_latest_can_message",
+            [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint32, ctypes.c_void_p],
+            ctypes.c_bool,
+        )
+        self._latest_can_bus_event = bind_symbol(
+            "rig_cluster_latest_can_bus_event",
+            [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_void_p],
+            ctypes.c_bool,
+        )
         self._elapsed_ns = bind_symbol(
             "rig_cluster_elapsed_ns",
             restype=ctypes.c_uint64,
@@ -104,6 +127,34 @@ class _RustClusterRuntime:
         if index == 0xFFFFFFFF:
             raise RuntimeError(f"failed to register Rust cluster node {name!r}")
         self._node_indices[name] = index
+
+    def add_can_route(
+        self,
+        *,
+        source_node: str,
+        source_bus: int,
+        source_tx_count: int,
+        source_recv_events: int,
+        sink_node: str,
+        sink_bus: int,
+        sink_send_many: int,
+    ) -> bool:
+        try:
+            source_index = self._node_indices[source_node]
+            sink_index = self._node_indices[sink_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_can_route(
+                ctypes.c_uint32(source_index),
+                ctypes.c_uint8(source_bus),
+                ctypes.c_size_t(source_tx_count),
+                ctypes.c_size_t(source_recv_events),
+                ctypes.c_uint32(sink_index),
+                ctypes.c_uint8(sink_bus),
+                ctypes.c_size_t(sink_send_many),
+            )
+        )
 
     def run_for(
         self, duration_ns: int, step_ns: int, *, fast_forward: bool = False
@@ -142,6 +193,33 @@ class _RustClusterRuntime:
             if index < count:
                 elapsed_by_name[name] = int(values[index])
         return elapsed_by_name
+
+    def latest_can_message(
+        self, source_node: str, bus: int, message_id: int, event
+    ) -> bool:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return False
+        return bool(
+            self._latest_can_message(
+                ctypes.c_uint32(index),
+                ctypes.c_uint8(bus),
+                ctypes.c_uint32(message_id),
+                ctypes.byref(event),
+            )
+        )
+
+    def latest_can_bus_event(self, source_node: str, bus: int, event) -> bool:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return False
+        return bool(
+            self._latest_can_bus_event(
+                ctypes.c_uint32(index),
+                ctypes.c_uint8(bus),
+                ctypes.byref(event),
+            )
+        )
 
     def _route_callback_fn(self, elapsed_ns: int) -> None:
         if self._route is not None:
