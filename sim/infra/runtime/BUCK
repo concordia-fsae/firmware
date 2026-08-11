@@ -1,0 +1,31 @@
+export_file(
+    name = "runtime-src",
+    src = "rust/lib.rs",
+    visibility = ["PUBLIC"],
+)
+
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["PUBLIC"],
+    )
+    for file in glob(["c/src/*.c", "rust/*.rs"])
+]
+
+export_file(
+    name = "c/src/runtime_state.h",
+    src = "c/src/runtime_state.h",
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = {
+        header.removeprefix("c/include/"): header
+        for header in glob(["c/include/**/*.h"])
+    },
+    visibility = ["PUBLIC"],
+)

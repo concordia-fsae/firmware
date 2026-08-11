@@ -1,0 +1,377 @@
+load("@prelude//:rules.bzl", __rules__ = "rules")
+load("//components/vehicle_platform:platforms.bzl", "platform_output_name", "platform_target_label")
+
+RIG_RUNTIME_ENV = "RIG_RUNTIME_RS"
+RIG_RUNTIME_SRC = "//sim/infra/runtime:runtime-src"
+RIG_RUNTIME_RUST_ENV = {
+    "RIG_RUNTIME_RUST_APP_RS": "//sim/infra/runtime:rust/app.rs",
+    "RIG_RUNTIME_RUST_CAN_RS": "//sim/infra/runtime:rust/can.rs",
+    "RIG_RUNTIME_RUST_CORE_RS": "//sim/infra/runtime:rust/core.rs",
+    "RIG_RUNTIME_RUST_DATAPATH_RS": "//sim/infra/runtime:rust/datapath.rs",
+    "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/infra/runtime:rust/faults.rs",
+    "RIG_RUNTIME_RUST_FFI_RS": "//sim/infra/runtime:rust/ffi.rs",
+    "RIG_RUNTIME_RUST_IO_RS": "//sim/infra/runtime:rust/io.rs",
+    "RIG_RUNTIME_RUST_MODEL_RS": "//sim/infra/runtime:rust/model.rs",
+    "RIG_RUNTIME_RUST_MODULE_DESC_RS": "//sim/infra/runtime:rust/module_desc.rs",
+    "RIG_RUNTIME_RUST_NVM_RS": "//sim/infra/runtime:rust/nvm.rs",
+    "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/infra/runtime:rust/rt_controller.rs",
+    "RIG_RUNTIME_RUST_SPI_RS": "//sim/infra/runtime:rust/spi.rs",
+    "RIG_RUNTIME_RUST_TIMER_RS": "//sim/infra/runtime:rust/timer.rs",
+}
+
+_DEFAULT_MODEL_C_FLAGS = [
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-include",
+    "BuildDefines.h",
+    "-include",
+    "Utility.h",
+    "-include",
+    "string.h",
+    "-Wno-unused-parameter",
+]
+
+_RIG_RUNTIME_MODULE_SRCS = {
+    "core": ["//sim/infra/runtime:c/src/core.c"],
+    "faults": ["//sim/infra/runtime:c/src/faults.c"],
+    "io": ["//sim/infra/runtime:c/src/io.c"],
+    "peripherals": ["//sim/infra/runtime:c/src/peripherals.c"],
+    "spi": ["//sim/infra/runtime:c/src/spi.c"],
+    "time": ["//sim/infra/runtime:c/src/time.c"],
+}
+
+def rig_runtime_srcs(modules: list[str]):
+    srcs = []
+    for module in modules:
+        if module not in _RIG_RUNTIME_MODULE_SRCS:
+            fail("unknown rig runtime module '{}'; expected one of {}".format(module, _RIG_RUNTIME_MODULE_SRCS.keys()))
+        srcs += _RIG_RUNTIME_MODULE_SRCS[module]
+    return srcs
+
+def rig_platforms_from_variants(platform_variants):
+    return [
+        platform
+        for platform, _variant in platform_variants
+    ]
+
+def rig_model_python(
+        name: str = "python",
+        srcs: list[str] = [],
+        visibility: list[str] | None = None):
+    __rules__["filegroup"](
+        name = name,
+        srcs = srcs,
+        visibility = visibility,
+    )
+
+def rig_model_c_support(
+        name: str = "model-c-support",
+        srcs: list[str] = [],
+        deps: list[str] = [],
+        compiler_flags: list[str] | None = None,
+        visibility: list[str] | None = None,
+        **kwargs):
+    __rules__["cxx_library"](
+        name = name,
+        srcs = srcs,
+        compiler_flags = compiler_flags if compiler_flags else _DEFAULT_MODEL_C_FLAGS,
+        header_namespace = "",
+        deps = deps,
+        preferred_linkage = "static",
+        visibility = visibility,
+        **kwargs
+    )
+
+def _rust_link_args(link_deps: list[str], extra_link_args: list[str]):
+    return " ".join([
+        "-C link-arg=$(location {})".format(dep)
+        for dep in link_deps
+    ] + [
+        "-C link-arg={}".format(arg)
+        for arg in extra_link_args
+    ])
+
+def _rust_genrule_env(rust_env: dict[str, str]):
+    return " ".join([
+        "{}=$PWD/$(location {})".format(name, target)
+        for name, target in rust_env.items()
+    ])
+
+def _rust_test_env(rust_env: dict[str, str]):
+    return {
+        name: "$(location {})".format(target)
+        for name, target in rust_env.items()
+    }
+
+def _bindgen_allowlist_args(
+        allowlist_types: list[str],
+        allowlist_functions: list[str],
+        allowlist_vars: list[str]):
+    return " ".join(
+        ["--allowlist-type {}".format(item) for item in allowlist_types] +
+        ["--allowlist-function {}".format(item) for item in allowlist_functions] +
+        ["--allowlist-var {}".format(item) for item in allowlist_vars]
+    )
+
+def _bindgen_header_lines(include_headers: list[str]):
+    return " ".join([
+        "printf '#include \"%s\"\\n' \"{}\" >> $WRAPPER;".format(header)
+        for header in include_headers
+    ])
+
+def rig_bindgen(
+        name: str,
+        out: str,
+        include_headers: list[str],
+        deps: list[str] = [],
+        headers: dict[str, str] = {},
+        allowlist_types: list[str] = [],
+        allowlist_functions: list[str] = [],
+        allowlist_vars: list[str] = [],
+        bindgen_flags: list[str] = [],
+        clang_flags: list[str] = [],
+        visibility: list[str] | None = None):
+    context_name = name + "-c-context"
+
+    __rules__["cxx_library"](
+        name = context_name,
+        header_namespace = "",
+        headers = headers,
+        exported_deps = deps,
+    )
+
+    clang_arg_string = " ".join(clang_flags)
+    __rules__["genrule"](
+        name = name,
+        out = out,
+        cmd = "WRAPPER=$TMP/bindgen-wrapper.h; " +
+              ": > $WRAPPER; " +
+              _bindgen_header_lines(include_headers) +
+              "bindgen $WRAPPER " +
+              _bindgen_allowlist_args(allowlist_types, allowlist_functions, allowlist_vars) +
+              " " +
+              " ".join(bindgen_flags) +
+              " -- " +
+              "$(cppflags :{}) ".format(context_name) +
+              clang_arg_string +
+              " > $OUT; " +
+              "sed -i 's/^extern \"C\"/unsafe extern \"C\"/' $OUT",
+        visibility = visibility,
+    )
+
+def rig_feature_consts(
+        name: str = "features-rs",
+        out: str = "features.rs",
+        deps: list[str] = [],
+        allowlist_vars: list[str] = [],
+        bindgen_flags: list[str] = [],
+        clang_flags: list[str] = [],
+        visibility: list[str] | None = None):
+    rig_bindgen(
+        name = name,
+        out = out,
+        include_headers = [
+            "FeatureDefines_generated.h",
+        ],
+        deps = deps,
+        allowlist_vars = allowlist_vars,
+        bindgen_flags = [
+            "--no-layout-tests",
+        ] + bindgen_flags,
+        clang_flags = clang_flags,
+        visibility = visibility,
+    )
+
+def rig_python_enums(
+        name: str,
+        out: str,
+        include_headers: list[str],
+        deps: list[str] = [],
+        headers: dict[str, str] = {},
+        c_enums: list[str] = [],
+        rust_sources: list[str] = [],
+        rust_enums: list[str] = [],
+        clang_flags: list[str] = [],
+        visibility: list[str] | None = None):
+    context_name = name + "-c-context"
+
+    __rules__["cxx_library"](
+        name = context_name,
+        header_namespace = "",
+        headers = headers,
+        exported_deps = deps,
+    )
+
+    __rules__["genrule"](
+        name = name,
+        out = out,
+        cmd = "PROJECT=$PWD/$(location //sim/infra:uv-project); " +
+              "WRAPPER=$TMP/python-enums-wrapper.h; " +
+              ": > $WRAPPER; " +
+              _bindgen_header_lines(include_headers) +
+              "UV_INDEX_URL=https://pypi.org/simple " +
+              "UV_DEFAULT_INDEX=https://pypi.org/simple " +
+              "PIP_INDEX_URL=https://pypi.org/simple " +
+              "UV_PROJECT_ENVIRONMENT=/tmp/firmware-sim-rig-venv " +
+              "uv run --locked --project $PROJECT python $(location //sim/infra/rig:gen-python-enums) " +
+              "--c-wrapper $WRAPPER " +
+              " ".join(["--c-enum '{}'".format(item) for item in c_enums]) +
+              " " +
+              " ".join(["--rust-source $(location {})".format(item) for item in rust_sources]) +
+              " " +
+              " ".join(["--rust-enum '{}'".format(item) for item in rust_enums]) +
+              " " +
+              "--out $OUT -- " +
+              "$(cppflags :{}) ".format(context_name) +
+              " ".join(clang_flags),
+        visibility = visibility,
+    )
+
+def rig_python_model(
+        name: str,
+        out: str,
+        rust_source: str,
+        class_name: str,
+        symbol_prefix: str,
+        buck_target: str,
+        env_var: str,
+        enum_env_var: str,
+        enum_target: str,
+        visibility: list[str] | None = None):
+    __rules__["genrule"](
+        name = name,
+        out = out,
+        cmd = "python3 $(location //sim/infra/rig:gen-python-model) " +
+              "--rust-source $(location {}) ".format(rust_source) +
+              "--out $OUT " +
+              "--class-name '{}' ".format(class_name) +
+              "--symbol-prefix '{}' ".format(symbol_prefix) +
+              "--buck-target '{}' ".format(buck_target) +
+              "--env-var '{}' ".format(env_var) +
+              "--enum-env-var '{}' ".format(enum_env_var) +
+              "--enum-target '{}'".format(enum_target),
+        visibility = visibility,
+    )
+
+def rig_embedded_rust_model(
+        name: str = "sil-so",
+        crate: str = "",
+        crate_root: str = "src/lib.rs",
+        out: str = "",
+        link_deps: list[str] = [],
+        test_name: str = "test",
+        test_deps: list[str] | None = None,
+        src_target_name: str = "rust-wrapper-src",
+        extra_link_args: list[str] | None = None,
+        rust_env: dict[str, str] = {},
+        visibility: list[str] | None = None,
+        test_visibility: list[str] | None = None):
+    __rules__["export_file"](
+        name = src_target_name,
+        src = crate_root,
+    )
+
+    __rules__["genrule"](
+        name = name,
+        out = out if out else "lib{}.so".format(crate),
+        cmd = _rust_genrule_env({RIG_RUNTIME_ENV: RIG_RUNTIME_SRC} | RIG_RUNTIME_RUST_ENV | rust_env) +
+              " " +
+              "rustc --edition=2024 --crate-name {} --crate-type cdylib ".format(crate) +
+              "$(location :{}) ".format(src_target_name) +
+              "-o $OUT " +
+              _rust_link_args(link_deps, extra_link_args if extra_link_args else ["-lm"]),
+        visibility = visibility,
+    )
+
+    __rules__["rust_test"](
+        name = test_name,
+        crate = crate,
+        crate_root = crate_root,
+        edition = "2024",
+        srcs = [crate_root],
+        env = _rust_test_env({RIG_RUNTIME_ENV: RIG_RUNTIME_SRC} | RIG_RUNTIME_RUST_ENV | rust_env),
+        deps = test_deps if test_deps != None else link_deps,
+        visibility = test_visibility if test_visibility != None else visibility,
+    )
+
+def rig_embedded_rust_model_platform_aliases(
+        name: str,
+        actual: str,
+        platforms,
+        visibility: list[str] | None = None):
+    [
+        native.configured_alias(
+            name = "{}-{}".format(name, platform_output_name(platform)),
+            actual = actual,
+            platform = platform_target_label(platform),
+            visibility = visibility,
+        )
+        for platform in platforms
+    ]
+
+def rig_platform_sim_lib_env(
+        env_prefix: str,
+        model_target: str,
+        platforms) -> dict[str, str]:
+    return {
+        "{}_{}_SIM_LIB".format(env_prefix, platform_output_name(platform).upper()): "$(location {}:sil-so-{})".format(model_target, platform_output_name(platform))
+        for platform in platforms
+    }
+
+def rig_platform_sim_lib_resources(
+        model_target: str,
+        platforms) -> list[str]:
+    return [
+        "{}:sil-so-{}".format(model_target, platform_output_name(platform))
+        for platform in platforms
+    ]
+
+def rig_platform_variants_env(platforms) -> dict[str, str]:
+    return {
+        "SIM_PLATFORM_VARIANTS": ",".join([
+            platform_output_name(platform)
+            for platform in platforms
+        ]),
+    }
+
+def rig_pytest(
+        name: str,
+        test_file: str,
+        env: dict[str, str] = {},
+        resources: list[str] = [],
+        visibility: list[str] | None = None):
+    uv_runner_name = name + "-uv-runner"
+
+    __rules__["genrule"](
+        name = uv_runner_name,
+        out = "uv-runner",
+        cmd = "printf '%s\n' '#!/usr/bin/env bash' 'project=$1' 'shift' 'exec uv run --locked --project \"$project\" \"$@\"' > $OUT && chmod +x $OUT",
+        executable = True,
+    )
+
+    __rules__["sh_test"](
+        name = name,
+        args = [
+            "$(location //sim/infra:uv-project)",
+            "python",
+            "-m",
+            "pytest",
+            "-p",
+            "no:cacheprovider",
+            "-vv",
+            "--durations=10",
+            test_file,
+        ],
+        env = {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": ".",
+            "PIP_INDEX_URL": "https://pypi.org/simple",
+            "UV_DEFAULT_INDEX": "https://pypi.org/simple",
+            "UV_INDEX_URL": "https://pypi.org/simple",
+            "UV_PROJECT_ENVIRONMENT": "/tmp/firmware-sim-rig-venv",
+        } | env,
+        resources = ["//sim/infra:uv-project"] + resources,
+        test = ":" + uv_runner_name,
+        visibility = visibility,
+    )

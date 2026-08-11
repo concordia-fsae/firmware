@@ -5,7 +5,7 @@ srcs = glob(["*.c"])
     export_file(
         name = file,
         src = file,
-        visibility = ["//components/...", "//sil/..."],
+        visibility = ["//components/...", "//sim/..."],
     )
     for file in srcs
 ]
