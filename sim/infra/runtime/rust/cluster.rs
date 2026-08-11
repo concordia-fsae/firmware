@@ -60,18 +60,37 @@ impl ClusterRuntime {
         true
     }
 
-    fn run_next_step(&mut self, remaining_ns: u64, max_step_ns: u64) -> u64 {
+    fn next_cluster_step(&self, max_step_ns: u64) -> u64 {
+        self.nodes
+            .iter()
+            .filter(|node| node.online)
+            .map(|node| unsafe { (node.next_step)(max_step_ns) })
+            .min()
+            .unwrap_or(max_step_ns)
+            .min(max_step_ns)
+    }
+
+    fn run_next_step(&mut self, remaining_ns: u64, max_step_ns: u64, fast_forward: bool) -> u64 {
         if remaining_ns == 0 || max_step_ns == 0 {
             return 0;
         }
 
-        let delta_ns = remaining_ns.min(max_step_ns);
+        let max_delta_ns = remaining_ns.min(max_step_ns);
+        let delta_ns = if fast_forward {
+            max_delta_ns
+        } else {
+            self.next_cluster_step(max_delta_ns)
+        };
         if delta_ns == 0 {
             return 0;
         }
 
         for node in self.nodes.iter_mut().filter(|node| node.online) {
-            unsafe { (node.fast_forward_for)(delta_ns) };
+            if fast_forward {
+                unsafe { (node.fast_forward_for)(delta_ns) };
+            } else {
+                unsafe { (node.run_for)(delta_ns) };
+            }
             node.elapsed_ns = node.elapsed_ns.saturating_add(delta_ns);
         }
 
@@ -150,7 +169,12 @@ pub extern "C" fn rig_cluster_set_node_online(node: u32, online: bool) -> bool {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_run_for(duration_ns: u64, max_step_ns: u64, route: usize) {
+pub extern "C" fn rig_cluster_run_for(
+    duration_ns: u64,
+    max_step_ns: u64,
+    fast_forward: bool,
+    route: usize,
+) {
     let route = unsafe { function_pointer::<ClusterRouteFn>(route) };
     let current_elapsed_ns = CLUSTER_RUNTIME.lock().unwrap().elapsed_ns;
     let target_elapsed_ns = current_elapsed_ns.saturating_add(duration_ns);
@@ -163,7 +187,7 @@ pub extern "C" fn rig_cluster_run_for(duration_ns: u64, max_step_ns: u64, route:
                 return;
             }
             let remaining_ns = target_elapsed_ns - runtime.elapsed_ns;
-            let delta_ns = runtime.run_next_step(remaining_ns, max_step_ns);
+            let delta_ns = runtime.run_next_step(remaining_ns, max_step_ns, fast_forward);
             (delta_ns, runtime.elapsed_ns)
         };
 

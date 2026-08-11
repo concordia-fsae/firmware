@@ -68,7 +68,7 @@ class _RustClusterRuntime:
         )
         self._run_for = bind_symbol(
             "rig_cluster_run_for",
-            [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_size_t],
+            [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_bool, ctypes.c_size_t],
         )
         self._elapsed_ns = bind_symbol(
             "rig_cluster_elapsed_ns",
@@ -105,10 +105,13 @@ class _RustClusterRuntime:
             raise RuntimeError(f"failed to register Rust cluster node {name!r}")
         self._node_indices[name] = index
 
-    def run_for(self, duration_ns: int, step_ns: int) -> None:
+    def run_for(
+        self, duration_ns: int, step_ns: int, *, fast_forward: bool = False
+    ) -> None:
         self._run_for(
             ctypes.c_uint64(duration_ns),
             ctypes.c_uint64(step_ns),
+            ctypes.c_bool(fast_forward),
             ctypes.c_size_t(
                 ctypes.cast(self._route_callback, ctypes.c_void_p).value or 0
             ),

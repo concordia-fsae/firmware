@@ -252,14 +252,14 @@ def test_can_node_connections_use_generated_common_bus_names_only():
     ] == [ClusterCanComms.path("nose")]
 
 
-def test_component_scheduler_participates_in_cluster_temporal_order():
+def test_component_scheduler_coalesces_missed_periods_during_cluster_fast_forward():
     controller = FakeNode()
     component = ScheduledComponent()
 
     cluster = ClusterRig(controller=controller, component=component)
     cluster.run_for(1)
 
-    assert component.scheduled_times_ns == [250_000, 500_000, 750_000, 1_000_000]
+    assert component.scheduled_times_ns == [1_000_000]
     assert cluster.elapsed_ns == 1_000_000
 
 

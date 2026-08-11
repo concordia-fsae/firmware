@@ -583,7 +583,7 @@ class ClusterRig:
         if step_ns <= 0:
             raise ValueError(f"step must be positive, got {step}")
 
-        self._rust_runtime.run_for(duration_ns, step_ns)
+        self._rust_runtime.run_for(duration_ns, step_ns, fast_forward=True)
         self._sync_elapsed_from_runtime()
 
     def run_until(
