@@ -38,6 +38,7 @@ class ClusterDataRoutes:
         self._links: list[DataPathLink] = []
         self._route_cache: dict[str, tuple[_DataPathRoute, ...]] = {}
         self._latest_records: dict[tuple[str, str], DataPathRecord[object]] = {}
+        self._native_routes: set[tuple[str, str, str]] = set()
 
     def register(self, path: DataPath) -> None:
         self._fanout(path)
@@ -53,6 +54,12 @@ class ClusterDataRoutes:
             raise KeyError(f"source node {source_node!r} is not in this rig")
         if sink_node is not None and sink_node not in self._cluster._rig_nodes:
             raise KeyError(f"sink node {sink_node!r} is not in this rig")
+        if sink_node is not None and self._connect_native_route(
+            path,
+            source_node=source_node,
+            sink_node=sink_node,
+        ):
+            return
         link = DataPathLink(
             path=path,
             source_node=source_node,
@@ -92,6 +99,10 @@ class ClusterDataRoutes:
         for fanout in self._fanouts.values():
             fanout.clear()
         self._latest_records.clear()
+        self._native_routes.clear()
+
+    def clear_native_routes(self) -> None:
+        self._native_routes.clear()
 
     def clear(self, path: DataPath) -> None:
         self._fanout(path).clear()
@@ -241,9 +252,64 @@ class ClusterDataRoutes:
             )
         if not sinks:
             raise KeyError(
-                f"node {link.sink_node!r} has no input for datapath " f"{link.path!r}"
+                    f"node {link.sink_node!r} has no input for datapath " f"{link.path!r}"
             )
         return tuple(sinks)
+
+    def _connect_native_route(
+        self,
+        path: DataPath,
+        *,
+        source_node: str,
+        sink_node: str,
+    ) -> bool:
+        key = (datapath_key(path), source_node, sink_node)
+        if key in self._native_routes:
+            return True
+
+        source = self._cluster._rig_nodes[source_node]
+        sink = self._cluster._rig_nodes[sink_node]
+        source_abi = getattr(source, "rust_datapath_route_abi", lambda _path: None)(
+            path
+        )
+        sink_abi = getattr(sink, "rust_datapath_route_abi", lambda _path: None)(path)
+        if source_abi is None or sink_abi is None:
+            return False
+        source_kind, source_args = source_abi
+        sink_kind, sink_args = sink_abi
+        if source_kind != sink_kind:
+            return False
+
+        if source_kind == "timer":
+            interface, port, channel, source_count, source_recv_many, _source_send_many = source_args
+            _sink_interface, _sink_port, _sink_channel, _sink_count, _sink_recv_many, sink_send_many = sink_args
+            connected = self._cluster._rust_runtime.add_timer_route(
+                source_node=source_node,
+                interface=interface,
+                port=port,
+                channel=channel,
+                source_count=source_count,
+                source_recv_many=source_recv_many,
+                sink_node=sink_node,
+                sink_send_many=sink_send_many,
+            )
+        elif source_kind == "spi":
+            device, source_count, source_recv_many, _source_send_many = source_args
+            _sink_device, _sink_count, _sink_recv_many, sink_send_many = sink_args
+            connected = self._cluster._rust_runtime.add_spi_route(
+                source_node=source_node,
+                device=device,
+                source_count=source_count,
+                source_recv_many=source_recv_many,
+                sink_node=sink_node,
+                sink_send_many=sink_send_many,
+            )
+        else:
+            connected = False
+
+        if connected:
+            self._native_routes.add(key)
+        return connected
 
 
 class ClusterCanComms:
@@ -260,7 +326,7 @@ class ClusterCanComms:
         *,
         nodes: tuple[str, ...] | list[str] | None = None,
     ) -> None:
-        node_names = tuple(self._cluster.nodes) if nodes is None else tuple(nodes)
+        node_names = tuple(self._cluster._rig_nodes) if nodes is None else tuple(nodes)
         path = self.path(bus)
         for source_node in node_names:
             if not self._node_has_datapath_output(source_node, path):
@@ -291,7 +357,7 @@ class ClusterCanComms:
     def connect_nodes(self, nodes: tuple[str, ...] | list[str]) -> None:
         node_names = tuple(nodes)
         for node_name in node_names:
-            if node_name not in self._cluster.nodes:
+            if node_name not in self._cluster._rig_nodes:
                 raise KeyError(f"CAN node {node_name!r} is not in this rig")
 
         for source_node in node_names:
@@ -322,15 +388,15 @@ class ClusterCanComms:
                     )
 
     def _node_has_datapath_output(self, node: str, path: DataPath) -> bool:
-        return bool(self._cluster.nodes[node].datapaths.outputs(path))
+        return bool(self._cluster._rig_nodes[node].datapaths.outputs(path))
 
     def _node_has_datapath_input(self, node: str, path: DataPath) -> bool:
-        return bool(self._cluster.nodes[node].datapaths.inputs(path))
+        return bool(self._cluster._rig_nodes[node].datapaths.inputs(path))
 
     def _node_can_output_paths(self, node: str) -> tuple[DataPath, ...]:
         return tuple(
             output.path
-            for output in self._cluster.nodes[node].datapaths.outputs()
+            for output in self._cluster._rig_nodes[node].datapaths.outputs()
             if self._is_can_path(output.path)
         )
 
@@ -338,7 +404,7 @@ class ClusterCanComms:
         self.connect_nodes(
             tuple(
                 node_name
-                for node_name, node in self._cluster.nodes.items()
+                for node_name, node in self._cluster._rig_nodes.items()
                 if any(self._is_can_path(path) for path in node.datapaths.paths)
             )
         )
@@ -402,6 +468,9 @@ class ClusterCanComms:
 
     def reset(self) -> None:
         self.clear()
+        self._native_routes.clear()
+
+    def clear_native_routes(self) -> None:
         self._native_routes.clear()
 
     def clear(self) -> None:
@@ -508,27 +577,73 @@ class _TypedClusterComms(Generic[PayloadT]):
 
 
 class ClusterTimerComms(_TypedClusterComms[TimerChannelEvent]):
-    def __init__(self, dataroutes: ClusterDataRoutes) -> None:
+    def __init__(self, cluster: ClusterRig, dataroutes: ClusterDataRoutes) -> None:
+        self._cluster = cluster
         super().__init__(dataroutes, TimerChannelEvent)
+
+    def latest_event(
+        self,
+        path: DataPath,
+        *,
+        node: str | None = None,
+    ) -> TimerChannelEvent | None:
+        if node is not None and path.peripheral_binding is not None:
+            binding = path.peripheral_binding
+            if binding.interface in ("timer.duty", "timer.frequency"):
+                event = TimerChannelEvent()
+                interface = 1 if binding.interface == "timer.duty" else 2
+                if self._cluster._rust_runtime.latest_timer_event(
+                    node,
+                    interface,
+                    int(binding.port if binding.port is not None else 0),
+                    int(binding.channel if binding.channel is not None else 0),
+                    event,
+                ):
+                    return event
+        return super().latest_event(path, node=node)
 
 
 class ClusterSpiComms(_TypedClusterComms[SpiTransaction]):
-    def __init__(self, dataroutes: ClusterDataRoutes) -> None:
+    def __init__(self, cluster: ClusterRig, dataroutes: ClusterDataRoutes) -> None:
+        self._cluster = cluster
         super().__init__(dataroutes, SpiTransaction)
+
+    def latest_event(
+        self,
+        path: DataPath,
+        *,
+        node: str | None = None,
+    ) -> SpiTransaction | None:
+        if node is not None and path.peripheral_binding is not None:
+            binding = path.peripheral_binding
+            if binding.interface == "spi.transaction":
+                transaction = SpiTransaction()
+                if self._cluster._rust_runtime.latest_spi_transaction(
+                    node,
+                    int(binding.device if binding.device is not None else 0),
+                    transaction,
+                ):
+                    return transaction
+        return super().latest_event(path, node=node)
 
 
 class ClusterComms:
     def __init__(self, cluster: ClusterRig, dataroutes: ClusterDataRoutes) -> None:
         self._dataroutes = dataroutes
         self.can = ClusterCanComms(cluster, dataroutes)
-        self.timer = ClusterTimerComms(dataroutes)
-        self.spi = ClusterSpiComms(dataroutes)
+        self.timer = ClusterTimerComms(cluster, dataroutes)
+        self.spi = ClusterSpiComms(cluster, dataroutes)
 
     def _route(self) -> None:
         self._dataroutes._route()
 
     def reset(self) -> None:
+        self.can.reset()
         self._dataroutes.reset()
+
+    def clear_native_routes(self) -> None:
+        self.can.clear_native_routes()
+        self._dataroutes.clear_native_routes()
 
     def connect_node_interfaces(self) -> None:
         self.can.connect_available_nodes()
@@ -635,6 +750,7 @@ class ClusterRig:
             component._cluster_rig = self
             component._cluster_node_name = name
             self._online_nodes[name] = True
+        self.comm.clear_native_routes()
         self._rust_runtime = self._create_rust_runtime()
         self.comm.connect_node_interfaces()
         return components

@@ -118,6 +118,16 @@ class NodeRig(ModelRig):
             self._function_address(self._can_send_many),
         )
 
+    def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+        try:
+            if self._timer_peripherals.supports(path):
+                return ("timer", self._timer_peripherals.rust_route_abi(path))
+            if self._spi_peripherals.supports(path):
+                return ("spi", self._spi_peripherals.rust_route_abi(path))
+        except ValueError:
+            return None
+        return None
+
     def set_analog_input(self, channel: int, voltage: float) -> None:
         self._set_analog_input(ctypes.c_int(channel), ctypes.c_float(voltage))
 

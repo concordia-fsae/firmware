@@ -93,6 +93,48 @@ class _RustClusterRuntime:
             [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_void_p],
             ctypes.c_bool,
         )
+        self._add_timer_route = bind_symbol(
+            "rig_cluster_add_timer_route",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint16,
+                ctypes.c_int32,
+                ctypes.c_int32,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_size_t,
+            ],
+            ctypes.c_bool,
+        )
+        self._latest_timer_event = bind_symbol(
+            "rig_cluster_latest_timer_event",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint16,
+                ctypes.c_int32,
+                ctypes.c_int32,
+                ctypes.c_void_p,
+            ],
+            ctypes.c_bool,
+        )
+        self._add_spi_route = bind_symbol(
+            "rig_cluster_add_spi_route",
+            [
+                ctypes.c_uint32,
+                ctypes.c_int32,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_size_t,
+            ],
+            ctypes.c_bool,
+        )
+        self._latest_spi_transaction = bind_symbol(
+            "rig_cluster_latest_spi_transaction",
+            [ctypes.c_uint32, ctypes.c_int32, ctypes.c_void_p],
+            ctypes.c_bool,
+        )
         self._elapsed_ns = bind_symbol(
             "rig_cluster_elapsed_ns",
             restype=ctypes.c_uint64,
@@ -152,6 +194,62 @@ class _RustClusterRuntime:
                 ctypes.c_size_t(source_recv_events),
                 ctypes.c_uint32(sink_index),
                 ctypes.c_uint8(sink_bus),
+                ctypes.c_size_t(sink_send_many),
+            )
+        )
+
+    def add_timer_route(
+        self,
+        *,
+        source_node: str,
+        interface: int,
+        port: int,
+        channel: int,
+        source_count: int,
+        source_recv_many: int,
+        sink_node: str,
+        sink_send_many: int,
+    ) -> bool:
+        try:
+            source_index = self._node_indices[source_node]
+            sink_index = self._node_indices[sink_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_timer_route(
+                ctypes.c_uint32(source_index),
+                ctypes.c_uint16(interface),
+                ctypes.c_int32(port),
+                ctypes.c_int32(channel),
+                ctypes.c_size_t(source_count),
+                ctypes.c_size_t(source_recv_many),
+                ctypes.c_uint32(sink_index),
+                ctypes.c_size_t(sink_send_many),
+            )
+        )
+
+    def add_spi_route(
+        self,
+        *,
+        source_node: str,
+        device: int,
+        source_count: int,
+        source_recv_many: int,
+        sink_node: str,
+        sink_send_many: int,
+    ) -> bool:
+        try:
+            source_index = self._node_indices[source_node]
+            sink_index = self._node_indices[sink_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_spi_route(
+                ctypes.c_uint32(source_index),
+                ctypes.c_int32(device),
+                ctypes.c_size_t(source_count),
+                ctypes.c_size_t(source_recv_many),
+                ctypes.c_uint32(sink_index),
                 ctypes.c_size_t(sink_send_many),
             )
         )
@@ -218,6 +316,34 @@ class _RustClusterRuntime:
                 ctypes.c_uint32(index),
                 ctypes.c_uint8(bus),
                 ctypes.byref(event),
+            )
+        )
+
+    def latest_timer_event(
+        self, source_node: str, interface: int, port: int, channel: int, event
+    ) -> bool:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return False
+        return bool(
+            self._latest_timer_event(
+                ctypes.c_uint32(index),
+                ctypes.c_uint16(interface),
+                ctypes.c_int32(port),
+                ctypes.c_int32(channel),
+                ctypes.byref(event),
+            )
+        )
+
+    def latest_spi_transaction(self, source_node: str, device: int, transaction) -> bool:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return False
+        return bool(
+            self._latest_spi_transaction(
+                ctypes.c_uint32(index),
+                ctypes.c_int32(device),
+                ctypes.byref(transaction),
             )
         )
 
