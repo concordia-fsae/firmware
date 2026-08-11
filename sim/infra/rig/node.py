@@ -27,6 +27,7 @@ from .can import (
 from .cluster import ClusterCanComms
 from .datapath import DataPath
 from .model import ModelRig
+from .runtime import RustNodeSchedulerAbi
 from .peripherals import (
     SpiInterface,
     SpiPeripheralInterface,
@@ -96,12 +97,12 @@ class NodeRig(ModelRig):
         duration_ns = duration_to_ns(duration, unit=unit)
         return int(self._next_scheduler_step(ctypes.c_uint64(duration_ns)))
 
-    def rust_cluster_node_abi(self) -> tuple[int, int, int, int]:
-        return (
-            self._function_address(self._run_for),
-            self._function_address(self._fast_forward_for),
-            self._function_address(self._next_scheduler_step),
-            self._function_address(self._new),
+    def rust_cluster_node_abi(self) -> RustNodeSchedulerAbi:
+        return RustNodeSchedulerAbi(
+            run_for=self._function_address(self._run_for),
+            fast_forward_for=self._function_address(self._fast_forward_for),
+            next_step=self._function_address(self._next_scheduler_step),
+            reset=self._function_address(self._new),
         )
 
     def rust_can_route_abi(

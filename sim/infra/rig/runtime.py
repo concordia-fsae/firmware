@@ -4,8 +4,17 @@ import ctypes
 import os
 import pathlib
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from .artifacts import buck_output, load_shared_library, repo_root
+
+
+@dataclass(frozen=True)
+class RustNodeSchedulerAbi:
+    run_for: int
+    fast_forward_for: int
+    next_step: int
+    reset: int
 
 
 class _StandaloneRustRuntimeHost:
@@ -156,13 +165,18 @@ class _RustClusterRuntime:
         self._node_indices.clear()
 
     def add_node(self, name: str, node, *, online: bool = True) -> None:
-        run_for, fast_forward_for, next_step, reset = node.rust_cluster_node_abi()
+        scheduler = node.rust_cluster_node_abi()
+        if not isinstance(scheduler, RustNodeSchedulerAbi):
+            raise TypeError(
+                f"node {name!r} returned unsupported scheduler ABI "
+                f"{type(scheduler).__name__}"
+            )
         index = int(
             self._add_node(
-                ctypes.c_size_t(run_for),
-                ctypes.c_size_t(fast_forward_for),
-                ctypes.c_size_t(next_step),
-                ctypes.c_size_t(reset),
+                ctypes.c_size_t(scheduler.run_for),
+                ctypes.c_size_t(scheduler.fast_forward_for),
+                ctypes.c_size_t(scheduler.next_step),
+                ctypes.c_size_t(scheduler.reset),
                 ctypes.c_bool(online),
             )
         )

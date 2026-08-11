@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from .datapath import DataPath, ModelDataPaths
-from .runtime import _RustClusterRuntime
+from .runtime import RustNodeSchedulerAbi, _RustClusterRuntime
 from .time import duration_to_ns
 
 
@@ -110,12 +110,14 @@ class ModelRig:
             return True
         return self._cluster_rig.node_online(self._cluster_node_name)
 
-    def rust_cluster_node_abi(self) -> tuple[int, int, int, int]:
-        return (
-            self._callback_address(self._cluster_run_for_callback),
-            self._callback_address(self._cluster_fast_forward_for_callback),
-            self._callback_address(self._cluster_next_step_callback),
-            self._callback_address(self._cluster_reset_callback),
+    def rust_cluster_node_abi(self) -> RustNodeSchedulerAbi:
+        return RustNodeSchedulerAbi(
+            run_for=self._callback_address(self._cluster_run_for_callback),
+            fast_forward_for=self._callback_address(
+                self._cluster_fast_forward_for_callback
+            ),
+            next_step=self._callback_address(self._cluster_next_step_callback),
+            reset=self._callback_address(self._cluster_reset_callback),
         )
 
     def _cluster_run_for(self, duration_ns: int) -> None:
