@@ -46,60 +46,6 @@ class VcpduModelExtensions:
             observed.append(state)
         return state
 
-    def waking_sleepable_controllers(self) -> tuple[str, ...]:
-        controllers = []
-        for signal in self.can.rx_signals:
-            if not signal.signal_name.endswith("_sleepable"):
-                continue
-            controller = signal.signal_name.removesuffix("_sleepable").lower()
-            if controller not in controllers:
-                controllers.append(controller)
-        return tuple(controllers)
-
-    def send_waking_controller_sleepable(self, controller: str, state) -> bool:
-        prefix = controller.upper()
-        message = self.can.message(f"{prefix}_sleep", bus="veh")
-        return self.can.send(message, **{f"{prefix}_sleepable": state})
-
-    def send_all_waking_controllers_sleepable(self, state) -> bool:
-        return all(
-            self.send_waking_controller_sleepable(controller, state)
-            for controller in self.waking_sleepable_controllers()
-        )
-
-    def periodic_waking_controller_sleepable(
-        self, controller: str, state, *, period: int | float = 100, unit: str = "ms"
-    ):
-        prefix = controller.upper()
-        return self.can.periodic_send(
-            f"{prefix}_sleep",
-            bus="veh",
-            period=period,
-            unit=unit,
-            **{f"{prefix}_sleepable": state},
-        )
-
-    def periodic_all_waking_controllers_sleepable(
-        self, state, *, period: int | float = 100, unit: str = "ms"
-    ) -> dict[str, object]:
-        return {
-            controller: self.periodic_waking_controller_sleepable(
-                controller,
-                state,
-                period=period,
-                unit=unit,
-            )
-            for controller in self.waking_sleepable_controllers()
-        }
-
-    def request_test_hsd(self, hsd_channel, requested: bool) -> bool:
-        signal_name = self._hsd_signal_name(
-            hsd_channel,
-            pump="SWS_requestTestPump",
-            fan="SWS_requestTestFan",
-        )
-        return self._send_driver_request(signal_name, requested)
-
     def latest_hsd_duty_cycle(self, hsd_channel) -> float | None:
         signal_name = self._hsd_signal_name(
             hsd_channel,
@@ -128,18 +74,6 @@ class VcpduModelExtensions:
             return False
         self.set_analog_input(analog_channel, float(current_amps) / amps_per_volt)
         return True
-
-    def _send_driver_request(self, signal_name: str, requested: bool) -> bool:
-        DigitalStatus = self.can.enums.DigitalStatus
-        message = self.can.message("SWS_driverRequest", bus="veh")
-        signals = {
-            signal.signal_name: DigitalStatus.OFF
-            for signal in self.can.rx_signals
-            if signal.message_name == message.name
-            and signal.enum_name == "digitalStatus"
-        }
-        signals[signal_name] = DigitalStatus.ON if requested else DigitalStatus.OFF
-        return self.can.send(message, **signals)
 
     def _hsd_signal_name(self, hsd_channel, *, pump: str, fan: str) -> str:
         if int(hsd_channel) == int(self.Vn9008Channel.PUMP):

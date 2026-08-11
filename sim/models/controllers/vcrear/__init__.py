@@ -1,33 +1,64 @@
 from sim.infra.rig import TimerInterface, extend_model_class, load_generated_module
-
 from .extensions import VcrearPytestHelpers
-
-_model = load_generated_module(
-    "VCREAR_MODEL_PY",
-    "//sim/models/controllers/vcrear:vcrear-py",
-    "vcrear_generated_model",
-)
-_enums = load_generated_module(
-    "VCREAR_ENUMS_PY",
-    "//sim/models/controllers/vcrear:enums-py",
-    "vcrear_generated_enums",
-)
-
-AnalogInput = _enums.AnalogInput
-DigitalIo = _enums.DigitalIo
-DigitalOutput = _enums.DigitalOutput
-Fault = _enums.Fault
-TimerChannel = _enums.TimerChannel
-TimerPort = _enums.TimerPort
+from .simple import VcrearSimpleModel
 
 
-class VcrearModel(extend_model_class(_model.VcrearModel, VcrearPytestHelpers)):
-    timer = TimerInterface(TimerPort, TimerChannel)
+def _load_generated() -> None:
+    if "VcrearModel" in globals():
+        return
+
+    model = load_generated_module(
+        "VCREAR_MODEL_PY",
+        "//sim/models/controllers/vcrear:vcrear-py",
+        "vcrear_generated_model",
+    )
+    enums = load_generated_module(
+        "VCREAR_ENUMS_PY",
+        "//sim/models/controllers/vcrear:enums-py",
+        "vcrear_generated_enums",
+    )
+
+    globals()["AnalogInput"] = enums.AnalogInput
+    globals()["DigitalIo"] = enums.DigitalIo
+    globals()["DigitalOutput"] = enums.DigitalOutput
+    globals()["Fault"] = enums.Fault
+    globals()["TimerChannel"] = enums.TimerChannel
+    globals()["TimerPort"] = enums.TimerPort
+
+    class VcrearModel(extend_model_class(model.VcrearModel, VcrearPytestHelpers)):
+        timer = TimerInterface(enums.TimerPort, enums.TimerChannel)
+
+    globals()["VcrearModel"] = VcrearModel
 
 
-from sim.models.platforms import PLATFORM_VARIANTS
+def __getattr__(name: str):
+    if name == "PLATFORM_VARIANTS":
+        from sim.models.platforms import PLATFORM_VARIANTS
 
-from .variants import VCREAR_CLUSTERS
+        globals()["PLATFORM_VARIANTS"] = PLATFORM_VARIANTS
+        return PLATFORM_VARIANTS
+    if name == "VCREAR_CLUSTERS":
+        from .variants import VCREAR_CLUSTERS
+
+        globals()["VCREAR_CLUSTERS"] = VCREAR_CLUSTERS
+        return VCREAR_CLUSTERS
+    if name in _GENERATED_EXPORTS:
+        _load_generated()
+        return globals()[name]
+    raise AttributeError(name)
+
+
+_GENERATED_EXPORTS = {
+    "AnalogInput",
+    "DigitalIo",
+    "DigitalOutput",
+    "Fault",
+    "TimerChannel",
+    "TimerPort",
+    "VcrearModel",
+    "VCREAR_CLUSTERS",
+    "PLATFORM_VARIANTS",
+}
 
 __all__ = [
     "AnalogInput",
@@ -37,6 +68,7 @@ __all__ = [
     "TimerChannel",
     "TimerPort",
     "VCREAR_CLUSTERS",
+    "VcrearSimpleModel",
     "VcrearModel",
     "PLATFORM_VARIANTS",
 ]

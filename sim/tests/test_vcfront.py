@@ -5,6 +5,7 @@ from sim.models.controllers.vcfront import (
     Fault,
 )
 from sim.models.controllers.vcfront.fixtures import vcfront_cluster
+from sim.models.controllers.vcpdu import VcpduSimpleModel
 
 
 @pytest.mark.parametrize(
@@ -110,15 +111,16 @@ def test_torque_request_requires_ts_run_but_driver_input_follows_pedal(
     vcfront = vcfront_cluster.vcfront
     VehicleState = vcfront.can.enums.VehicleState
     state = getattr(VehicleState, vehicle_state)
-    vehicle_state_message = vcfront.can.message("VCPDU_vehicleState", bus="veh")
+    vcpdu = VcpduSimpleModel(vcfront.can)
+    vehicle_state_periodic = vcpdu.periodic_vehicle_state(state, period=20)
+    vcfront_cluster.add_component(vcpdu)
 
     vcfront.set_brake_position(0)
     vcfront.set_accelerator_position(0)
     vcfront_cluster.run_for(30)
 
-    assert vcfront.can.send(vehicle_state_message, VCPDU_vehicleState=state)
-
     vcfront.set_accelerator_position(50)
+    vehicle_state_periodic.set(VCPDU_vehicleState=state)
     vcfront_cluster.run_for(100)
 
     torque = vcfront.can.latest("VCFRONT_torqueManager", bus="veh")

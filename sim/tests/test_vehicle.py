@@ -1,3 +1,5 @@
+from sim.models.controllers.sws import SwsSimpleModel
+from sim.models.controllers.vcfront import VcfrontSimpleModel
 from sim.models.vehicle.fixtures import vehicle_cluster
 
 
@@ -5,11 +7,14 @@ def test_vcpdu_hsd_power_controls_vehicle_controller_online_state(vehicle_cluste
     VehicleState = vehicle_cluster.vcpdu.can.enums.VehicleState
     SleepFollowerState = vehicle_cluster.vcpdu.can.enums.SleepFollowerState
     vcpdu = vehicle_cluster.vcpdu
-    sleepable_inputs = vcpdu.periodic_all_waking_controllers_sleepable(
+    sws = SwsSimpleModel(vcpdu.can)
+    vcfront = VcfrontSimpleModel(vcpdu.can)
+    sws.periodic_sleepable(SleepFollowerState.OK_TO_SLEEP, period=100)
+    vcfront.periodic_sleepable(
         SleepFollowerState.OK_TO_SLEEP,
         period=100,
     )
-    vehicle_cluster.add_components(*sleepable_inputs.values())
+    vehicle_cluster.add_components(sws, vcfront)
 
     vehicle_cluster.run_until(
         lambda: not vehicle_cluster.vcfront.is_online()

@@ -19,11 +19,11 @@ from .can import (
     _CanEnumValueDescriptorAbi,
     _CanMessageDescriptorAbi,
     _CanSignalDescriptorAbi,
+    CanInterface,
     python_enum_attr_member,
     python_enum_class_name,
     python_enum_member,
 )
-from .can_interface import CanInterface
 from .cluster import ClusterCanComms
 from .datapath import DataPath
 from .model import ModelRig

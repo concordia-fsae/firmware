@@ -258,9 +258,10 @@ class ClusterCanComms:
         nodes: tuple[str, ...] | list[str] | None = None,
     ) -> None:
         node_names = tuple(self._cluster.nodes) if nodes is None else tuple(nodes)
+        path = self.path(bus)
         for source_node in node_names:
-            source_bus = self._cluster.nodes[source_node].can.bus(bus)
-            path = self.path(source_bus)
+            if not self._node_has_datapath_output(source_node, path):
+                continue
             if len(node_names) == 1:
                 self._dataroutes.connect(
                     path,
@@ -269,6 +270,8 @@ class ClusterCanComms:
                 continue
             for sink_node in node_names:
                 if sink_node == source_node:
+                    continue
+                if not self._node_has_datapath_input(sink_node, path):
                     continue
                 self._dataroutes.connect(
                     path,
@@ -283,26 +286,20 @@ class ClusterCanComms:
                 raise KeyError(f"CAN node {node_name!r} is not in this rig")
 
         for source_node in node_names:
-            source = self._cluster.nodes[source_node]
-            for source_bus in source.can.buses:
-                path = self.path(source_bus)
-                if not self._node_has_datapath_output(source_node, path):
-                    continue
-                sink_buses = tuple(
+            for path in self._node_can_output_paths(source_node):
+                sink_nodes = tuple(
                     sink_node
                     for sink_node in node_names
                     if sink_node != source_node
-                    for sink_bus in self._cluster.nodes[sink_node].can.buses
-                    if sink_bus.name == source_bus.name
-                    and self._node_has_datapath_input(sink_node, path)
+                    if self._node_has_datapath_input(sink_node, path)
                 )
-                if not sink_buses:
+                if not sink_nodes:
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
                     )
                     continue
-                for sink_node in sink_buses:
+                for sink_node in sink_nodes:
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
@@ -315,12 +312,19 @@ class ClusterCanComms:
     def _node_has_datapath_input(self, node: str, path: DataPath) -> bool:
         return bool(self._cluster.nodes[node].datapaths.inputs(path))
 
+    def _node_can_output_paths(self, node: str) -> tuple[DataPath, ...]:
+        return tuple(
+            output.path
+            for output in self._cluster.nodes[node].datapaths.outputs()
+            if self._is_can_path(output.path)
+        )
+
     def connect_available_nodes(self) -> None:
         self.connect_nodes(
             tuple(
                 node_name
                 for node_name, node in self._cluster.nodes.items()
-                if node.has_can
+                if any(self._is_can_path(path) for path in node.datapaths.paths)
             )
         )
 

@@ -6,12 +6,12 @@ from sim.infra.rig import (
     DataPath,
     ModelRig,
     PeriodicDataPathProducer,
+    SimpleComponent,
+    SimpleNodeRig,
 )
 
 
 class FakeNode(ModelRig):
-    has_can = False
-
     def __init__(self) -> None:
         super().__init__()
         self.run_count = 0
@@ -22,11 +22,6 @@ class FakeNode(ModelRig):
 
     def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
         self.run_count += duration
-
-
-class FakeCan:
-    def __init__(self, buses: tuple[CanBusDescriptor, ...]) -> None:
-        self.buses = buses
 
 
 class ScheduledComponent(ComponentRig):
@@ -214,15 +209,13 @@ def test_can_node_connections_use_generated_common_bus_names_only():
     sink = FakeNode()
     veh = CanBusDescriptor(0, "veh")
     nose = CanBusDescriptor(1, "nose")
-    source.can = FakeCan((veh, nose))
-    sink.can = FakeCan((CanBusDescriptor(0, "veh"),))
     source_payloads = {
         veh: ["veh-packet"],
         nose: ["nose-packet"],
     }
     received_payloads = []
 
-    for bus in source.can.buses:
+    for bus in (veh, nose):
         source.datapaths.add_output(
             ClusterCanComms.path(bus),
             pending=lambda bus=bus: len(source_payloads[bus]),
@@ -230,7 +223,7 @@ def test_can_node_connections_use_generated_common_bus_names_only():
             if source_payloads[bus]
             else None,
         )
-    for bus in sink.can.buses:
+    for bus in (CanBusDescriptor(0, "veh"),):
         sink.datapaths.add_input(
             ClusterCanComms.path(bus),
             send=lambda payload, bus=bus: not received_payloads.append(
@@ -288,6 +281,37 @@ def test_periodic_datapath_producer_routes_model_inputs():
     assert sink.received_payloads == [
         {"timestamp_ns": 250_000},
     ]
+
+
+def test_simple_node_routes_component_ingress_to_explicit_egress_datapath():
+    ingress_path = DataPath(("simple", "ingress"))
+    egress_path = DataPath(("simple", "egress"))
+    source_component = SimpleComponent()
+    transformer_component = SimpleComponent()
+    sink = PythonConsumer(egress_path)
+
+    source_component.add_egress_datapath(ingress_path)
+    transformer_component.add_egress_datapath(egress_path)
+
+    def emit_observed_payload(payload):
+        transformer_component.emit_egress(egress_path, {"observed": payload})
+
+    transformer_component.add_ingress_datapath(
+        ingress_path,
+        handler=emit_observed_payload,
+    )
+    source_component.emit_egress(ingress_path, "payload")
+
+    source = SimpleNodeRig(source_component)
+    transformer = SimpleNodeRig(transformer_component, SimpleComponent())
+    cluster = ClusterRig(source=source, transformer=transformer, sink=sink)
+    cluster.run_for(1)
+
+    assert transformer_component.ingress_datapaths == (ingress_path,)
+    assert transformer_component.egress_datapaths == (egress_path,)
+    assert transformer_component.ingress_events(ingress_path) == ("payload",)
+    assert transformer_component.latest_ingress(ingress_path) == "payload"
+    assert sink.received_payloads == [{"observed": "payload"}]
 
 
 def test_model_rig_set_online_resets_and_gates_scheduler_ticks():

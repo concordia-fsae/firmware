@@ -15,10 +15,12 @@ from .artifacts import (
 from .can import (
     CanBusDescriptor,
     CanEvent,
+    CanInterface,
     CanMessageDescriptor,
     CanPacket,
     CanSignalDescriptor,
     DecodedCanMessage,
+    PeriodicCanMessage,
     RoutedCanEvent,
 )
 from .datapath import (
@@ -31,7 +33,6 @@ from .datapath import (
     ModelDataPathOutputConnector,
     ModelDataPaths,
 )
-from .can_interface import CanInterface
 from .cluster import (
     ClusterCanComms,
     ClusterComms,
@@ -55,6 +56,7 @@ from .peripherals import (
     TimerChannelEvent,
     TimerInterface,
 )
+from .simple import SimpleCanComponent, SimpleComponent, SimpleNodeRig
 from .time import RunUntilTimeout, duration_to_ns, run_until
 
 
@@ -90,6 +92,7 @@ __all__ = [
     "ModelDataPaths",
     "ModelRig",
     "PeriodicDataPathProducer",
+    "PeriodicCanMessage",
     "buck_output",
     "duration_to_ns",
     "extend_model_class",
@@ -100,6 +103,9 @@ __all__ = [
     "TimerCaptureEvent",
     "TimerChannelEvent",
     "TimerInterface",
+    "SimpleCanComponent",
+    "SimpleComponent",
+    "SimpleNodeRig",
     "load_generated_module",
     "load_shared_library",
     "repo_root",

@@ -1,5 +1,7 @@
 import pytest
 
+from sim.models.controllers.sws import SwsSimpleModel
+from sim.models.controllers.vcfront import VcfrontSimpleModel
 from sim.models.controllers.vcpdu import Vn9008Channel
 from sim.models.controllers.vcpdu.fixtures import vcpdu_cluster
 
@@ -49,13 +51,16 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
     observed = []
     wake_state = getattr(SleepFollowerState, wake_state_name)
 
-    controllers = vcpdu.waking_sleepable_controllers()
-    assert controllers == ("sws", "vcfront")
-    sleepable_inputs = vcpdu.periodic_all_waking_controllers_sleepable(
-        SleepFollowerState.OK_TO_SLEEP,
-        period=100,
-    )
-    vcpdu_cluster.add_components(*sleepable_inputs.values())
+    sws = SwsSimpleModel(vcpdu.can)
+    vcfront = VcfrontSimpleModel(vcpdu.can)
+    sleepable_inputs = {
+        "sws": sws.periodic_sleepable(SleepFollowerState.OK_TO_SLEEP, period=100),
+        "vcfront": vcfront.periodic_sleepable(
+            SleepFollowerState.OK_TO_SLEEP,
+            period=100,
+        ),
+    }
+    vcpdu_cluster.add_components(sws, vcfront)
 
     vcpdu_cluster.run_until(
         lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
@@ -101,6 +106,13 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
     hsd_channel,
 ):
     vcpdu = vcpdu_cluster.vcpdu
+    DigitalStatus = vcpdu.can.enums.DigitalStatus
+    sws = SwsSimpleModel(vcpdu.can)
+    driver_request = sws.periodic_driver_request(
+        period=20,
+    )
+    vcpdu_cluster.add_component(sws)
+    request_signal = _driver_request_signal(vcpdu, hsd_channel)
 
     vcpdu_cluster.run_until(
         lambda: vcpdu.latest_hsd_duty_cycle(hsd_channel) == 0
@@ -110,7 +122,7 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         message="VCPDU HSD load should report off before a driver request",
     )
 
-    assert vcpdu.request_test_hsd(hsd_channel, True)
+    driver_request.set(**{request_signal: DigitalStatus.ON})
     vcpdu_cluster.run_until(
         lambda: _positive(vcpdu.latest_hsd_duty_cycle(hsd_channel))
         and _positive(vcpdu.latest_hsd_current(hsd_channel)),
@@ -119,12 +131,12 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         message="VCPDU HSD load should report non-zero current when requested on",
     )
 
-    assert vcpdu.request_test_hsd(hsd_channel, False)
+    driver_request.set(**{request_signal: DigitalStatus.OFF})
     vcpdu_cluster.run_for(250)
     assert _positive(vcpdu.latest_hsd_duty_cycle(hsd_channel))
     assert _positive(vcpdu.latest_hsd_current(hsd_channel))
 
-    assert vcpdu.request_test_hsd(hsd_channel, True)
+    driver_request.set(**{request_signal: DigitalStatus.ON})
     vcpdu_cluster.run_until(
         lambda: vcpdu.latest_hsd_duty_cycle(hsd_channel) == 0
         and vcpdu.latest_hsd_current(hsd_channel) == 0,
@@ -132,6 +144,14 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         step=20,
         message="VCPDU HSD load should report zero current after a second driver request toggles it off",
     )
+
+
+def _driver_request_signal(vcpdu, hsd_channel) -> str:
+    if int(hsd_channel) == int(vcpdu.Vn9008Channel.PUMP):
+        return "SWS_requestTestPump"
+    if int(hsd_channel) == int(vcpdu.Vn9008Channel.FAN):
+        return "SWS_requestTestFan"
+    raise ValueError(f"unsupported HSD channel {hsd_channel!r}")
 
 
 def _positive(value: float | None) -> bool:

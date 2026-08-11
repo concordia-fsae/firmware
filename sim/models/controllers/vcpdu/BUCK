@@ -21,6 +21,7 @@ rig_model_python(
         "__init__.py",
         "extensions.py",
         "fixtures.py",
+        "simple.py",
         "variants.py",
         ":vcpdu-py",
         ":enums-py",
