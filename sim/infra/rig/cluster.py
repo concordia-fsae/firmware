@@ -146,12 +146,21 @@ class ClusterDataRoutes:
     ) -> DataPathRecord[object] | None:
         key = datapath_key(path)
         if source_node is not None:
-            return self._latest_records.get((source_node, key))
+            record = self._latest_records.get((source_node, key))
+            if record is not None:
+                return record
+            for native_record in self._native_scalar_records(path):
+                if native_record.source == source_node:
+                    return native_record
+            return None
 
         latest = None
         for (node, record_key), record in self._latest_records.items():
             if record_key != key:
                 continue
+            if latest is None or record.timestamp_ns >= latest.timestamp_ns:
+                latest = record
+        for record in self._native_scalar_records(path):
             if latest is None or record.timestamp_ns >= latest.timestamp_ns:
                 latest = record
         return latest
@@ -966,8 +975,12 @@ class ClusterRig:
             host=host,
             route=self._route_from_runtime,
         )
-        for name, node in self._rig_nodes.items():
-            runtime.add_node(name, node, online=self.node_online(name))
+        self._building_rust_runtime = runtime
+        try:
+            for name, node in self._rig_nodes.items():
+                runtime.add_node(name, node, online=self.node_online(name))
+        finally:
+            self._building_rust_runtime = None
         return runtime
 
     def _route_from_runtime(self, elapsed_ns: int) -> None:

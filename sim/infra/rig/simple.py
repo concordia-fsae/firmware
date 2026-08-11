@@ -213,8 +213,26 @@ class SimpleNodeRig(ModelRig):
                 send_many=input_.send_many,
             )
 
+    def rust_cluster_node_abi(self):
+        if self._uses_native_scheduler():
+            runtime = getattr(self._cluster_rig, "_building_rust_runtime", None)
+            if runtime is None and self._cluster_rig is not None:
+                runtime = self._cluster_rig._rust_runtime
+            if runtime is None:
+                return super().rust_cluster_node_abi()
+            return runtime.noop_scheduler_abi
+        return super().rust_cluster_node_abi()
+
+    def _uses_native_scheduler(self) -> bool:
+        return bool(self.components) and all(
+            getattr(component, "uses_native_scheduler", False)
+            for component in self.components
+        )
+
     def rust_can_route_abi(self, bus) -> tuple[int, int, int, int] | None:
         for component in self.components:
+            component._cluster_rig = self._cluster_rig
+            component._cluster_node_name = self._cluster_node_name
             route_abi = getattr(component, "rust_can_route_abi", lambda _bus: None)(
                 bus
             )
@@ -238,6 +256,8 @@ class _SimpleCanInterface:
 class SimpleCanComponent(SimpleComponent):
     """Python-only component that emits generated CAN messages."""
 
+    uses_native_scheduler = True
+
     _CanTxCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_uint8)
     _CanRecvEventsCallback = ctypes.CFUNCTYPE(
         ctypes.c_uint32,
@@ -258,7 +278,7 @@ class SimpleCanComponent(SimpleComponent):
         *,
         buses: tuple[str, ...] | list[str] = ("veh",),
     ) -> None:
-        super().__init__(scheduler_period=1, scheduler_unit="ms")
+        super().__init__()
         self._encoder = encoder
         self._buses = tuple(encoder.bus(bus) for bus in buses)
         self._bus_paths = {
@@ -267,6 +287,7 @@ class SimpleCanComponent(SimpleComponent):
         }
         self.can = _SimpleCanInterface(self)
         self._periodic_messages: list[PeriodicCanMessage] = []
+        self._native_periodic_handles: dict[int, int] = {}
         for path in self._bus_paths.values():
             self.add_egress_datapath(path)
         self._can_tx_count_callback = self._CanTxCountCallback(
@@ -283,6 +304,9 @@ class SimpleCanComponent(SimpleComponent):
         super().reset()
         for periodic in self._periodic_messages:
             periodic.last_emit_ns = 0
+        self._native_periodic_handles.clear()
+        for periodic in self._periodic_messages:
+            periodic.native_update = None
 
     def periodic_send(
         self,
@@ -370,11 +394,7 @@ class SimpleCanComponent(SimpleComponent):
         return defaults
 
     def _run_scheduled(self) -> None:
-        for periodic in self._periodic_messages:
-            if self.elapsed_ns - periodic.last_emit_ns < periodic.period_ns:
-                continue
-            periodic.last_emit_ns = self.elapsed_ns
-            self._emit_packet(periodic.message, periodic.packet)
+        pass
 
     def _queue_message(
         self,
@@ -400,12 +420,42 @@ class SimpleCanComponent(SimpleComponent):
             return None
         if bus_descriptor.name not in self._bus_paths:
             return None
+        self._register_native_periodic_messages(bus_descriptor)
         return (
             bus_descriptor.index,
             self._callback_address(self._can_tx_count_callback),
             self._callback_address(self._can_recv_events_callback),
             self._callback_address(self._can_send_many_callback),
         )
+
+    def _register_native_periodic_messages(self, bus_descriptor) -> None:
+        cluster = self._cluster_rig
+        node_name = self._cluster_node_name
+        if cluster is None or node_name is None:
+            return
+        for periodic in self._periodic_messages:
+            if periodic.message.bus != bus_descriptor.index:
+                continue
+            key = id(periodic)
+            if key in self._native_periodic_handles:
+                continue
+            handle = cluster._rust_runtime.add_periodic_can_source(
+                node=node_name,
+                bus=bus_descriptor.index,
+                period_ns=periodic.period_ns,
+                packet=periodic.packet,
+            )
+            if handle == 0xFFFFFFFF:
+                raise RuntimeError(
+                    f"failed to register periodic CAN source {periodic.message.name!r}"
+                )
+            self._native_periodic_handles[key] = handle
+            periodic.native_update = (
+                lambda packet, handle=handle, cluster=cluster: cluster._rust_runtime.update_periodic_can_source(
+                    handle,
+                    packet,
+                )
+            )
 
     def _ffi_can_tx_count(self, bus_index: int) -> int:
         bus = self._bus_descriptor_for_index(bus_index)

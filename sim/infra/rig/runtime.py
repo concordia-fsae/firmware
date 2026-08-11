@@ -161,6 +161,39 @@ class _RustClusterRuntime:
             [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p],
             ctypes.c_bool,
         )
+        self._add_periodic_can_source = bind_symbol(
+            "rig_cluster_add_periodic_can_source",
+            [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint64, ctypes.c_void_p],
+            ctypes.c_uint32,
+        )
+        self._update_periodic_can_source = bind_symbol(
+            "rig_cluster_update_periodic_can_source",
+            [ctypes.c_uint32, ctypes.c_void_p],
+            ctypes.c_bool,
+        )
+        self._add_dc_load = bind_symbol(
+            "rig_cluster_add_dc_load",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_uint16,
+                ctypes.c_int32,
+                ctypes.c_int32,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+            ],
+            ctypes.c_bool,
+        )
+        self._noop_timer_count = bind_symbol("rig_cluster_noop_timer_count")
+        self._noop_timer_recv_many = bind_symbol("rig_cluster_noop_timer_recv_many")
+        self._noop_timer_send_many = bind_symbol("rig_cluster_noop_timer_send_many")
+        self._noop_scalar_count = bind_symbol("rig_cluster_noop_scalar_count")
+        self._noop_scalar_recv_many = bind_symbol("rig_cluster_noop_scalar_recv_many")
+        self._noop_scalar_send_many = bind_symbol("rig_cluster_noop_scalar_send_many")
+        self._noop_run_for = bind_symbol("rig_cluster_noop_run_for")
+        self._noop_next_step = bind_symbol("rig_cluster_noop_next_step")
+        self._noop_reset = bind_symbol("rig_cluster_noop_reset")
         self._elapsed_ns = bind_symbol(
             "rig_cluster_elapsed_ns",
             restype=ctypes.c_uint64,
@@ -317,6 +350,90 @@ class _RustClusterRuntime:
             )
         )
 
+    def add_periodic_can_source(
+        self,
+        *,
+        node: str,
+        bus: int,
+        period_ns: int,
+        packet,
+    ) -> int:
+        try:
+            node_index = self._node_indices[node]
+        except KeyError:
+            return 0xFFFFFFFF
+        return int(
+            self._add_periodic_can_source(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint8(bus),
+                ctypes.c_uint64(period_ns),
+                ctypes.byref(packet),
+            )
+        )
+
+    def update_periodic_can_source(self, handle: int, packet) -> bool:
+        return bool(
+            self._update_periodic_can_source(
+                ctypes.c_uint32(handle),
+                ctypes.byref(packet),
+            )
+        )
+
+    def add_dc_load(
+        self,
+        *,
+        node: str,
+        current_route_id: int,
+        timer_interface: int,
+        timer_port: int,
+        timer_channel: int,
+        resistance_ohms: float,
+        inductance_henrys: float,
+        capacitance_farads: float,
+    ) -> bool:
+        try:
+            node_index = self._node_indices[node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_dc_load(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint32(current_route_id),
+                ctypes.c_uint16(timer_interface),
+                ctypes.c_int32(timer_port),
+                ctypes.c_int32(timer_channel),
+                ctypes.c_float(resistance_ohms),
+                ctypes.c_float(inductance_henrys),
+                ctypes.c_float(capacitance_farads),
+            )
+        )
+
+    @property
+    def noop_timer_route_abi(self) -> tuple[int, int, int]:
+        return (
+            self._function_address(self._noop_timer_count),
+            self._function_address(self._noop_timer_recv_many),
+            self._function_address(self._noop_timer_send_many),
+        )
+
+    @property
+    def noop_scalar_route_abi(self) -> tuple[int, int, int]:
+        return (
+            self._function_address(self._noop_scalar_count),
+            self._function_address(self._noop_scalar_recv_many),
+            self._function_address(self._noop_scalar_send_many),
+        )
+
+    @property
+    def noop_scheduler_abi(self) -> RustNodeSchedulerAbi:
+        run_for = self._function_address(self._noop_run_for)
+        return RustNodeSchedulerAbi(
+            run_for=run_for,
+            fast_forward_for=run_for,
+            next_step=self._function_address(self._noop_next_step),
+            reset=self._function_address(self._noop_reset),
+        )
+
     def run_for(
         self,
         duration_ns: int,
@@ -433,3 +550,10 @@ class _RustClusterRuntime:
     def _route_callback_fn(self, elapsed_ns: int) -> None:
         if self._route is not None:
             self._route(int(elapsed_ns))
+
+    @staticmethod
+    def _function_address(function) -> int:
+        value = ctypes.cast(function, ctypes.c_void_p).value
+        if value is None:
+            raise RuntimeError(f"could not resolve function pointer for {function!r}")
+        return int(value)

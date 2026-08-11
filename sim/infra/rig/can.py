@@ -156,6 +156,7 @@ class PeriodicCanMessage:
     ] = field(repr=False)
     last_emit_ns: int = 0
     packet: CanPacket = field(init=False)
+    native_update: Callable[[CanPacket], None] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         self._refresh_packet()
@@ -167,6 +168,8 @@ class PeriodicCanMessage:
 
     def _refresh_packet(self) -> None:
         self.packet = self.encoder(self.message, self.signals)
+        if self.native_update is not None:
+            self.native_update(self.packet)
 
 
 class PeriodicCanSender(PeriodicDataPathProducer):

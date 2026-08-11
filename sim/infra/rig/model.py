@@ -139,7 +139,7 @@ class ModelRig:
         send_callback = self._ScalarSendManyCallback(lambda _events, _count: 0)
         self._scalar_callbacks.extend((count_callback, recv_callback, send_callback))
         self._scalar_route_abis[key] = (
-            _route_id(key),
+            datapath_route_id(key),
             self._callback_address(count_callback),
             self._callback_address(recv_callback),
             self._callback_address(send_callback),
@@ -171,7 +171,7 @@ class ModelRig:
         send_callback = self._ScalarSendManyCallback(send_many)
         self._scalar_callbacks.extend((count_callback, recv_callback, send_callback))
         self._scalar_route_abis[key] = (
-            _route_id(key),
+            datapath_route_id(key),
             self._callback_address(count_callback),
             self._callback_address(recv_callback),
             self._callback_address(send_callback),
@@ -319,5 +319,5 @@ def extend_model_class(
     return extended  # type: ignore[return-value]
 
 
-def _route_id(key: str) -> int:
+def datapath_route_id(key: str) -> int:
     return zlib.crc32(key.encode("utf-8"))

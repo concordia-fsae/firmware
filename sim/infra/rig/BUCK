@@ -22,6 +22,12 @@ filegroup(
 )
 
 export_file(
+    name = "rust/simple.rs",
+    src = "rust/simple.rs",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
     name = "gen-python-enums",
     src = "gen_python_enums.py",
     visibility = ["PUBLIC"],

@@ -2,6 +2,9 @@ use std::collections::VecDeque;
 use std::mem;
 use std::sync::Mutex;
 
+use super::dc_load::DcLoadModel;
+use super::simple::PeriodicCanSource;
+
 pub type ClusterNodeRunForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeFastForwardForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeNextStepFn = unsafe extern "C" fn(u64) -> u64;
@@ -169,6 +172,8 @@ struct ClusterRuntime {
     timer_routes: Vec<ClusterTimerRoute>,
     spi_routes: Vec<ClusterSpiRoute>,
     scalar_routes: Vec<ClusterScalarRoute>,
+    periodic_can_sources: Vec<PeriodicCanSource>,
+    dc_loads: Vec<DcLoadModel>,
     can_records: VecDeque<ClusterCanRecord>,
     timer_records: VecDeque<ClusterTimerRecord>,
     spi_records: VecDeque<ClusterSpiRecord>,
@@ -183,6 +188,8 @@ impl ClusterRuntime {
         self.timer_routes.clear();
         self.spi_routes.clear();
         self.scalar_routes.clear();
+        self.periodic_can_sources.clear();
+        self.dc_loads.clear();
         self.can_records.clear();
         self.timer_records.clear();
         self.spi_records.clear();
@@ -255,6 +262,66 @@ impl ClusterRuntime {
         true
     }
 
+    fn add_periodic_can_source(
+        &mut self,
+        node: u32,
+        bus: u8,
+        period_ns: u64,
+        packet: CanPacket,
+    ) -> u32 {
+        if self.nodes.get(node as usize).is_none() || period_ns == 0 {
+            return u32::MAX;
+        }
+        self.periodic_can_sources
+            .push(PeriodicCanSource::new(node, bus, period_ns, packet));
+        (self.periodic_can_sources.len() - 1) as u32
+    }
+
+    fn update_periodic_can_source(&mut self, handle: u32, packet: CanPacket) -> bool {
+        let Some(source) = self.periodic_can_sources.get_mut(handle as usize) else {
+            return false;
+        };
+        source.update_packet(packet);
+        true
+    }
+
+    fn add_dc_load(
+        &mut self,
+        node: u32,
+        current_route_id: u32,
+        timer_interface: u16,
+        timer_port: i32,
+        timer_channel: i32,
+        resistance_ohms: f32,
+        inductance_henrys: f32,
+        capacitance_farads: f32,
+    ) -> bool {
+        if self.nodes.get(node as usize).is_none() {
+            return false;
+        }
+        self.dc_loads.retain(|load| {
+            !load.config_matches(
+                node,
+                current_route_id,
+                timer_interface,
+                timer_port,
+                timer_channel,
+            )
+        });
+        self.dc_loads.push(DcLoadModel::new(
+            node,
+            current_route_id,
+            timer_interface,
+            timer_port,
+            timer_channel,
+            resistance_ohms,
+            inductance_henrys,
+            capacitance_farads,
+            self.elapsed_ns,
+        ));
+        true
+    }
+
     fn set_node_online(&mut self, node: u32, online: bool) -> bool {
         let Some(node) = self.nodes.get_mut(node as usize) else {
             return false;
@@ -268,13 +335,28 @@ impl ClusterRuntime {
     }
 
     fn next_cluster_step(&self, max_step_ns: u64) -> u64 {
-        self.nodes
+        let node_step = self
+            .nodes
             .iter()
             .filter(|node| node.online)
             .map(|node| unsafe { (node.next_step)(max_step_ns) })
             .min()
-            .unwrap_or(max_step_ns)
-            .min(max_step_ns)
+            .unwrap_or(max_step_ns);
+        let dc_load_step = self
+            .dc_loads
+            .iter()
+            .filter(|load| self.node_online(load.node()))
+            .map(|load| load.next_step_ns(self.elapsed_ns, max_step_ns))
+            .min()
+            .unwrap_or(max_step_ns);
+        node_step.min(dc_load_step).min(max_step_ns)
+    }
+
+    fn node_online(&self, node: u32) -> bool {
+        self.nodes
+            .get(node as usize)
+            .map(|node| node.online)
+            .unwrap_or(false)
     }
 
     fn run_next_step(&mut self, remaining_ns: u64, max_step_ns: u64, fast_forward: bool) -> u64 {
@@ -304,6 +386,7 @@ impl ClusterRuntime {
         self.elapsed_ns = self.elapsed_ns.saturating_add(delta_ns);
         self.route_can();
         self.route_timer();
+        self.run_dc_loads();
         self.route_spi();
         self.route_scalar();
         delta_ns
@@ -312,6 +395,36 @@ impl ClusterRuntime {
     fn route_can(&mut self) {
         let routes = self.can_routes.clone();
         let mut routed_sources: Vec<(u32, u8)> = Vec::new();
+        let nodes_online: Vec<bool> = self.nodes.iter().map(|node| node.online).collect();
+
+        for source in self.periodic_can_sources.iter_mut() {
+            if !nodes_online
+                .get(source.node() as usize)
+                .copied()
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            let Some(event) = source.emit_if_due(self.elapsed_ns) else {
+                continue;
+            };
+            for sink_route in routes.iter().filter(|route| {
+                route.source_node == source.node()
+                    && route.source_bus == source.bus()
+                    && route.sink_node.is_some()
+            }) {
+                if let Some(sink_send_many) = sink_route.sink_send_many {
+                    unsafe {
+                        sink_send_many(sink_route.sink_bus, &event.packet, 1);
+                    };
+                }
+            }
+            self.can_records.push_back(ClusterCanRecord {
+                source_node: source.node(),
+                bus: source.bus(),
+                event,
+            });
+        }
 
         for route in routes.iter().copied() {
             let source_key = (route.source_node, route.source_bus);
@@ -344,20 +457,17 @@ impl ClusterRuntime {
 
             let packets: Vec<CanPacket> = events.iter().map(|event| event.packet).collect();
             if !packets.is_empty() {
-                for sink_route in routes
-                    .iter()
-                    .filter(|sink_route| {
-                        sink_route.source_node == route.source_node
-                            && sink_route.source_bus == route.source_bus
-                            && sink_route.sink_node.is_some()
-                    })
-                {
+                for sink_route in routes.iter().filter(|sink_route| {
+                    sink_route.source_node == route.source_node
+                        && sink_route.source_bus == route.source_bus
+                        && sink_route.sink_node.is_some()
+                }) {
                     if let Some(sink_send_many) = sink_route.sink_send_many {
                         unsafe {
                             sink_send_many(
-                            sink_route.sink_bus,
-                            packets.as_ptr(),
-                            packets.len().min(u32::MAX as usize) as u32,
+                                sink_route.sink_bus,
+                                packets.as_ptr(),
+                                packets.len().min(u32::MAX as usize) as u32,
                             )
                         };
                     }
@@ -378,7 +488,12 @@ impl ClusterRuntime {
         let mut routed_sources: Vec<(u32, u16, i32, i32)> = Vec::new();
 
         for route in routes.iter().copied() {
-            let source_key = (route.source_node, route.interface, route.port, route.channel);
+            let source_key = (
+                route.source_node,
+                route.interface,
+                route.port,
+                route.channel,
+            );
             if routed_sources.contains(&source_key) {
                 continue;
             }
@@ -412,6 +527,7 @@ impl ClusterRuntime {
                     && sink_route.port == route.port
                     && sink_route.channel == route.channel
             }) {
+                self.update_dc_load_voltage(sink_route, &events);
                 unsafe {
                     (sink_route.sink_send_many)(
                         events.as_ptr(),
@@ -428,6 +544,29 @@ impl ClusterRuntime {
                     channel: route.channel,
                     event,
                 }));
+        }
+    }
+
+    fn update_dc_load_voltage(&mut self, route: &ClusterTimerRoute, events: &[TimerChannelEvent]) {
+        for load in self.dc_loads.iter_mut().filter(|load| {
+            load.voltage_input_matches(route.sink_node, route.interface, route.port, route.channel)
+        }) {
+            load.update_voltage(events);
+        }
+    }
+
+    fn run_dc_loads(&mut self) {
+        let elapsed_ns = self.elapsed_ns;
+        for load in self.dc_loads.iter_mut() {
+            if !self
+                .nodes
+                .get(load.node() as usize)
+                .map(|node| node.online)
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            load.run_until(elapsed_ns);
         }
     }
 
@@ -455,8 +594,9 @@ impl ClusterRuntime {
             }
 
             let mut transactions = vec![SpiTransaction::default(); pending as usize];
-            let count =
-                unsafe { (route.source_recv_many)(route.device, transactions.as_mut_ptr(), pending) };
+            let count = unsafe {
+                (route.source_recv_many)(route.device, transactions.as_mut_ptr(), pending)
+            };
             let count = count.min(pending) as usize;
             if count == 0 {
                 continue;
@@ -464,8 +604,7 @@ impl ClusterRuntime {
             transactions.truncate(count);
 
             for sink_route in routes.iter().filter(|sink_route| {
-                sink_route.source_node == route.source_node
-                    && sink_route.device == route.device
+                sink_route.source_node == route.source_node && sink_route.device == route.device
             }) {
                 unsafe {
                     (sink_route.sink_send_many)(
@@ -475,12 +614,15 @@ impl ClusterRuntime {
                 };
             }
 
-            self.spi_records
-                .extend(transactions.into_iter().map(|transaction| ClusterSpiRecord {
-                    source_node: route.source_node,
-                    device: route.device,
-                    transaction,
-                }));
+            self.spi_records.extend(
+                transactions
+                    .into_iter()
+                    .map(|transaction| ClusterSpiRecord {
+                        source_node: route.source_node,
+                        device: route.device,
+                        transaction,
+                    }),
+            );
         }
     }
 
@@ -502,18 +644,21 @@ impl ClusterRuntime {
                 continue;
             }
 
-            let pending = unsafe { (route.source_count)() };
-            if pending == 0 {
-                continue;
-            }
+            let mut events = self.native_scalar_events(route.source_node, route.route_id);
+            if events.is_empty() {
+                let pending = unsafe { (route.source_count)() };
+                if pending == 0 {
+                    continue;
+                }
 
-            let mut events = vec![ScalarEvent::default(); pending as usize];
-            let count = unsafe { (route.source_recv_many)(events.as_mut_ptr(), pending) };
-            let count = count.min(pending) as usize;
-            if count == 0 {
-                continue;
+                events = vec![ScalarEvent::default(); pending as usize];
+                let count = unsafe { (route.source_recv_many)(events.as_mut_ptr(), pending) };
+                let count = count.min(pending) as usize;
+                if count == 0 {
+                    continue;
+                }
+                events.truncate(count);
             }
-            events.truncate(count);
 
             for sink_route in routes.iter().filter(|sink_route| {
                 sink_route.source_node == route.source_node && sink_route.route_id == route.route_id
@@ -533,6 +678,20 @@ impl ClusterRuntime {
                     event,
                 }));
         }
+    }
+
+    fn native_scalar_events(&mut self, source_node: u32, route_id: u32) -> Vec<ScalarEvent> {
+        let mut events = Vec::new();
+        for load in self
+            .dc_loads
+            .iter_mut()
+            .filter(|load| load.node() == source_node && load.current_route_id() == route_id)
+        {
+            if let Some(event) = load.take_current_event(self.elapsed_ns) {
+                events.push(event);
+            }
+        }
+        events
     }
 
     fn node_elapsed_ns(&self, node: u32) -> u64 {
@@ -612,6 +771,8 @@ static CLUSTER_RUNTIME: Mutex<ClusterRuntime> = Mutex::new(ClusterRuntime {
     timer_routes: Vec::new(),
     spi_routes: Vec::new(),
     scalar_routes: Vec::new(),
+    periodic_can_sources: Vec::new(),
+    dc_loads: Vec::new(),
     can_records: VecDeque::new(),
     timer_records: VecDeque::new(),
     spi_records: VecDeque::new(),
@@ -702,19 +863,22 @@ pub extern "C" fn rig_cluster_add_can_route(
         Some(sink_send_many)
     };
 
-    CLUSTER_RUNTIME.lock().unwrap().add_can_route(ClusterCanRoute {
-        source_node,
-        source_bus,
-        source_tx_count,
-        source_recv_events,
-        sink_node: if sink_node == u32::MAX {
-            None
-        } else {
-            Some(sink_node)
-        },
-        sink_bus,
-        sink_send_many,
-    })
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_can_route(ClusterCanRoute {
+            source_node,
+            source_bus,
+            source_tx_count,
+            source_recv_events,
+            sink_node: if sink_node == u32::MAX {
+                None
+            } else {
+                Some(sink_node)
+            },
+            sink_bus,
+            sink_send_many,
+        })
 }
 
 #[unsafe(no_mangle)]
@@ -833,6 +997,114 @@ pub extern "C" fn rig_cluster_add_scalar_route(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_periodic_can_source(
+    node: u32,
+    bus: u8,
+    period_ns: u64,
+    packet: *const CanPacket,
+) -> u32 {
+    if packet.is_null() {
+        return u32::MAX;
+    }
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_periodic_can_source(node, bus, period_ns, unsafe { *packet })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_update_periodic_can_source(
+    handle: u32,
+    packet: *const CanPacket,
+) -> bool {
+    if packet.is_null() {
+        return false;
+    }
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .update_periodic_can_source(handle, unsafe { *packet })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_dc_load(
+    node: u32,
+    current_route_id: u32,
+    timer_interface: u16,
+    timer_port: i32,
+    timer_channel: i32,
+    resistance_ohms: f32,
+    inductance_henrys: f32,
+    capacitance_farads: f32,
+) -> bool {
+    CLUSTER_RUNTIME.lock().unwrap().add_dc_load(
+        node,
+        current_route_id,
+        timer_interface,
+        timer_port,
+        timer_channel,
+        resistance_ohms,
+        inductance_henrys,
+        capacitance_farads,
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_run_for(_elapsed_ns: u64) {}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_next_step(max_step_ns: u64) -> u64 {
+    max_step_ns
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_reset() {}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_timer_count(_port: i32, _channel: i32) -> u32 {
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_timer_recv_many(
+    _port: i32,
+    _channel: i32,
+    _events: *mut TimerChannelEvent,
+    _capacity: u32,
+) -> u32 {
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_timer_send_many(
+    _events: *const TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    count
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_scalar_count() -> u32 {
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_scalar_recv_many(
+    _events: *mut ScalarEvent,
+    _capacity: u32,
+) -> u32 {
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_scalar_send_many(
+    _events: *const ScalarEvent,
+    count: u32,
+) -> u32 {
+    count
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_run_for(
     duration_ns: u64,
     max_step_ns: u64,
@@ -897,10 +1169,11 @@ pub extern "C" fn rig_cluster_latest_can_message(
     if out.is_null() {
         return false;
     }
-    let Some(event) = CLUSTER_RUNTIME
-        .lock()
-        .unwrap()
-        .latest_can_message(source_node, bus, message_id)
+    let Some(event) =
+        CLUSTER_RUNTIME
+            .lock()
+            .unwrap()
+            .latest_can_message(source_node, bus, message_id)
     else {
         return false;
     };
@@ -939,10 +1212,11 @@ pub extern "C" fn rig_cluster_latest_timer_event(
     if out.is_null() {
         return false;
     }
-    let Some(event) = CLUSTER_RUNTIME
-        .lock()
-        .unwrap()
-        .latest_timer_event(source_node, interface, port, channel)
+    let Some(event) =
+        CLUSTER_RUNTIME
+            .lock()
+            .unwrap()
+            .latest_timer_event(source_node, interface, port, channel)
     else {
         return false;
     };
