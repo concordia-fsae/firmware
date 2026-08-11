@@ -57,7 +57,7 @@ pub mod timer {
 pub use app::AppDesc;
 pub use can::{
     CanEnumValueDescriptor, CanEvent, CanMessageDescriptor, CanNetwork, CanPacket,
-    CanSignalDescriptor,
+    CanSignalDescriptor, CanSignalValue,
 };
 pub use model::{NodeModel, NodeTarget};
 pub use module_desc::{ModuleDesc, ModuleTask};
@@ -647,6 +647,30 @@ pub unsafe extern "C" fn rig_model_can_decode_signal(
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_model_can_decode_signals(
+    bus: u8,
+    packet: *const CanPacket,
+    signal_names: *const *const c_char,
+    values: *mut CanSignalValue,
+    count: u32,
+) -> u32 {
+    if packet.is_null() || signal_names.is_null() || values.is_null() {
+        return 0;
+    }
+
+    let signal_names = unsafe { std::slice::from_raw_parts(signal_names, count as usize) };
+    let mut names = Vec::with_capacity(signal_names.len());
+    for signal_name in signal_names {
+        let Some(name) = (unsafe { c_str_to_str(*signal_name) }) else {
+            return names.len() as u32;
+        };
+        names.push(name);
+    }
+    let values = unsafe { std::slice::from_raw_parts_mut(values, count as usize) };
+    can::decode_signals(bus, unsafe { &*packet }, &names, values)
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rig_model_can_encode_signal(
     bus: u8,
     message_name: *const c_char,
@@ -666,4 +690,31 @@ pub unsafe extern "C" fn rig_model_can_encode_signal(
     can::encode_signal(bus, message_name, signal_name, value, unsafe {
         &mut *packet
     })
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_model_can_encode_signals(
+    bus: u8,
+    message_name: *const c_char,
+    signal_names: *const *const c_char,
+    values: *const CanSignalValue,
+    count: u32,
+    packet: *mut CanPacket,
+) -> u32 {
+    if message_name.is_null() || signal_names.is_null() || values.is_null() || packet.is_null() {
+        return 0;
+    }
+    let Some(message_name) = (unsafe { c_str_to_str(message_name) }) else {
+        return 0;
+    };
+    let signal_names = unsafe { std::slice::from_raw_parts(signal_names, count as usize) };
+    let mut names = Vec::with_capacity(signal_names.len());
+    for signal_name in signal_names {
+        let Some(name) = (unsafe { c_str_to_str(*signal_name) }) else {
+            return names.len() as u32;
+        };
+        names.push(name);
+    }
+    let values = unsafe { std::slice::from_raw_parts(values, count as usize) };
+    can::encode_signals(bus, message_name, &names, values, unsafe { &mut *packet })
 }

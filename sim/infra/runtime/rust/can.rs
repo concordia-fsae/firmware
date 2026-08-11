@@ -152,6 +152,12 @@ pub type CanEnumValueStringFn = fn(u32) -> Option<&'static str>;
 pub type CanDecodeSignalFn = fn(u8, &CanPacket, &str) -> Option<f64>;
 pub type CanEncodeSignalFn = fn(u8, &str, &str, f64, &mut CanPacket) -> bool;
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CanSignalValue {
+    pub value: f64,
+}
+
 #[derive(Clone, Copy)]
 pub struct CanNetwork {
     pub bus_count: fn() -> u8,
@@ -351,6 +357,26 @@ pub fn decode_signal(bus: u8, packet: &CanPacket, signal_name: &str) -> Option<f
     })
 }
 
+pub fn decode_signals(
+    bus: u8,
+    packet: &CanPacket,
+    signal_names: &[&str],
+    values: &mut [CanSignalValue],
+) -> u32 {
+    with_network(0, |network| {
+        let count = signal_names.len().min(values.len()).min(u32::MAX as usize);
+        let mut decoded = 0;
+        for (signal_name, value) in signal_names.iter().zip(values.iter_mut()).take(count) {
+            let Some(decoded_value) = (network.decode_signal)(bus, packet, signal_name) else {
+                break;
+            };
+            value.value = decoded_value;
+            decoded += 1;
+        }
+        decoded
+    })
+}
+
 pub fn encode_signal(
     bus: u8,
     message_name: &str,
@@ -360,6 +386,26 @@ pub fn encode_signal(
 ) -> bool {
     with_network(false, |network| {
         (network.encode_signal)(bus, message_name, signal_name, value, packet)
+    })
+}
+
+pub fn encode_signals(
+    bus: u8,
+    message_name: &str,
+    signal_names: &[&str],
+    values: &[CanSignalValue],
+    packet: &mut CanPacket,
+) -> u32 {
+    with_network(0, |network| {
+        let count = signal_names.len().min(values.len()).min(u32::MAX as usize);
+        let mut encoded = 0;
+        for (signal_name, value) in signal_names.iter().zip(values.iter()).take(count) {
+            if !(network.encode_signal)(bus, message_name, signal_name, value.value, packet) {
+                break;
+            }
+            encoded += 1;
+        }
+        encoded
     })
 }
 

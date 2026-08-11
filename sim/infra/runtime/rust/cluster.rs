@@ -92,6 +92,14 @@ impl ClusterRuntime {
             .map(|node| node.elapsed_ns)
             .unwrap_or(0)
     }
+
+    fn node_elapsed_ns_many(&self, out: &mut [u64]) -> u32 {
+        let count = self.nodes.len().min(out.len()).min(u32::MAX as usize);
+        for (slot, node) in out.iter_mut().zip(self.nodes.iter()).take(count) {
+            *slot = node.elapsed_ns;
+        }
+        count as u32
+    }
 }
 
 static CLUSTER_RUNTIME: Mutex<ClusterRuntime> = Mutex::new(ClusterRuntime {
@@ -149,16 +157,9 @@ pub extern "C" fn rig_cluster_run_for(
     route: usize,
 ) {
     let route = unsafe { function_pointer::<ClusterRouteFn>(route) };
-    let target_elapsed_ns = CLUSTER_RUNTIME
-        .lock()
-        .unwrap()
-        .elapsed_ns
-        .saturating_add(duration_ns);
-    let mut next_route_elapsed_ns = CLUSTER_RUNTIME
-        .lock()
-        .unwrap()
-        .elapsed_ns
-        .saturating_add(max_step_ns);
+    let current_elapsed_ns = CLUSTER_RUNTIME.lock().unwrap().elapsed_ns;
+    let target_elapsed_ns = current_elapsed_ns.saturating_add(duration_ns);
+    let mut next_route_elapsed_ns = current_elapsed_ns.saturating_add(max_step_ns);
 
     loop {
         let (delta_ns, elapsed_ns) = {
@@ -192,4 +193,13 @@ pub extern "C" fn rig_cluster_elapsed_ns() -> u64 {
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_node_elapsed_ns(node: u32) -> u64 {
     CLUSTER_RUNTIME.lock().unwrap().node_elapsed_ns(node)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_node_elapsed_ns_many(out: *mut u64, capacity: u32) -> u32 {
+    if out.is_null() {
+        return 0;
+    }
+    let out = unsafe { std::slice::from_raw_parts_mut(out, capacity as usize) };
+    CLUSTER_RUNTIME.lock().unwrap().node_elapsed_ns_many(out)
 }

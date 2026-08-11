@@ -73,6 +73,11 @@ class _RustClusterRuntime:
             [ctypes.c_uint32],
             ctypes.c_uint64,
         )
+        self._node_elapsed_ns_many = bind_symbol(
+            "rig_cluster_node_elapsed_ns_many",
+            [ctypes.POINTER(ctypes.c_uint64), ctypes.c_uint32],
+            ctypes.c_uint32,
+        )
         self.reset()
 
     def reset(self) -> None:
@@ -116,6 +121,17 @@ class _RustClusterRuntime:
 
     def node_elapsed_ns(self, name: str) -> int:
         return int(self._node_elapsed_ns(ctypes.c_uint32(self._node_indices[name])))
+
+    def node_elapsed_ns_values(self) -> dict[str, int]:
+        if not self._node_indices:
+            return {}
+        values = (ctypes.c_uint64 * len(self._node_indices))()
+        count = int(self._node_elapsed_ns_many(values, ctypes.c_uint32(len(values))))
+        elapsed_by_name = {}
+        for name, index in self._node_indices.items():
+            if index < count:
+                elapsed_by_name[name] = int(values[index])
+        return elapsed_by_name
 
     def _route_callback_fn(self, elapsed_ns: int) -> None:
         if self._route is not None:

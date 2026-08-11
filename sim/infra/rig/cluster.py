@@ -37,6 +37,7 @@ class ClusterDataRoutes:
         self._paths: dict[str, DataPath] = {}
         self._links: list[DataPathLink] = []
         self._route_cache: dict[str, tuple[_DataPathRoute, ...]] = {}
+        self._latest_records: dict[tuple[str, str], DataPathRecord[object]] = {}
 
     def register(self, path: DataPath) -> None:
         self._fanout(path)
@@ -88,12 +89,40 @@ class ClusterDataRoutes:
     def reset(self) -> None:
         for fanout in self._fanouts.values():
             fanout.clear()
+        self._latest_records.clear()
 
     def clear(self, path: DataPath) -> None:
         self._fanout(path).clear()
+        key = datapath_key(path)
+        self._latest_records = {
+            latest_key: record
+            for latest_key, record in self._latest_records.items()
+            if latest_key[1] != key
+        }
 
     def records(self, path: DataPath) -> tuple[DataPathRecord[object], ...]:
         return tuple(self._fanout(path).records)
+
+    def reversed_records(self, path: DataPath):
+        return reversed(self._fanout(path).records)
+
+    def latest_record(
+        self,
+        path: DataPath,
+        *,
+        source_node: str | None = None,
+    ) -> DataPathRecord[object] | None:
+        key = datapath_key(path)
+        if source_node is not None:
+            return self._latest_records.get((source_node, key))
+
+        latest = None
+        for (node, record_key), record in self._latest_records.items():
+            if record_key != key:
+                continue
+            if latest is None or record.timestamp_ns >= latest.timestamp_ns:
+                latest = record
+        return latest
 
     @property
     def paths(self) -> tuple[DataPath, ...]:
@@ -118,14 +147,16 @@ class ClusterDataRoutes:
                     break
 
                 for payload in payloads:
-                    fanout.records.append(
-                        DataPathRecord(
-                            route.source.node,
-                            route.source.path,
-                            payload,
-                            self._cluster.elapsed_ns,
-                        )
+                    record = DataPathRecord(
+                        route.source.node,
+                        route.source.path,
+                        payload,
+                        self._cluster.elapsed_ns,
                     )
+                    fanout.records.append(record)
+                    self._latest_records[
+                        (route.source.node, datapath_key(route.source.path))
+                    ] = record
                 for sink in route.sinks:
                     self._send_route_payloads(sink, payloads)
 
@@ -348,13 +379,15 @@ class ClusterCanComms:
             else message.id
         )
 
-        for routed in reversed(self.events):
+        path = self.path(bus_descriptor)
+        for record in self._dataroutes.reversed_records(path):
+            if record.source != node or not isinstance(record.payload, CanEvent):
+                continue
             if (
-                routed.node == node
-                and routed.bus.index == bus_descriptor.index
-                and routed.event.packet.id == message_id
+                record.payload.bus == bus_descriptor.index
+                and record.payload.packet.id == message_id
             ):
-                return routed.event
+                return record.payload
         return None
 
     def latest_bus_event(
@@ -363,9 +396,13 @@ class ClusterCanComms:
         bus: int | str | CanBusDescriptor,
     ) -> CanEvent | None:
         bus_descriptor = self._cluster.nodes[node].can.bus(bus)
-        for routed in reversed(self.events):
-            if routed.node == node and routed.bus.index == bus_descriptor.index:
-                return routed.event
+        record = self._dataroutes.latest_record(
+            self.path(bus_descriptor),
+            source_node=node,
+        )
+        if isinstance(record, DataPathRecord) and isinstance(record.payload, CanEvent):
+            if record.payload.bus == bus_descriptor.index:
+                return record.payload
         return None
 
 
@@ -507,23 +544,28 @@ class ClusterRig:
         self._rust_runtime = self._create_rust_runtime()
 
     def add_component(self, component: ComponentRig) -> ComponentRig:
+        return self.add_components(component)[0]
+
+    def add_components(self, *components: ComponentRig) -> tuple[ComponentRig, ...]:
         if self.elapsed_ns != 0:
             raise RuntimeError(
                 "components must be added before a cluster starts running"
             )
-        name = f"__component_{len(self.components)}"
-        self.components = (*self.components, component)
-        self._component_nodes[name] = component
-        self._rig_nodes[name] = component
-        component._cluster_rig = self
-        component._cluster_node_name = name
-        self._online_nodes[name] = True
+        if not components:
+            return ()
+
+        start_index = len(self.components)
+        self.components = (*self.components, *components)
+        for offset, component in enumerate(components):
+            name = f"__component_{start_index + offset}"
+            self._component_nodes[name] = component
+            self._rig_nodes[name] = component
+            component._cluster_rig = self
+            component._cluster_node_name = name
+            self._online_nodes[name] = True
         self.comm.connect_node_interfaces()
         self._rust_runtime = self._create_rust_runtime()
-        return component
-
-    def add_components(self, *components: ComponentRig) -> tuple[ComponentRig, ...]:
-        return tuple(self.add_component(component) for component in components)
+        return components
 
     def has_feature(self, feature: str) -> bool:
         return feature in self.features
@@ -612,5 +654,6 @@ class ClusterRig:
 
     def _sync_elapsed_from_runtime(self) -> None:
         self.elapsed_ns = self._rust_runtime.elapsed_ns()
-        for name, node in self._rig_nodes.items():
-            node.elapsed_ns = self._rust_runtime.node_elapsed_ns(name)
+        elapsed_by_node = self._rust_runtime.node_elapsed_ns_values()
+        for name, elapsed_ns in elapsed_by_node.items():
+            self._rig_nodes[name].elapsed_ns = elapsed_ns

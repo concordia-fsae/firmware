@@ -11,6 +11,7 @@ from .can import (
     CanBusDescriptor,
     CanEnumNamespace,
     CanEnumValueDescriptor,
+    CanSignalValue,
     CanEvent,
     CanMessageDescriptor,
     CanPacket,
@@ -68,6 +69,7 @@ class NodeRig(ModelRig):
         self.library_path = self._resolve_library_path(library_path)
         self._lib = load_shared_library(self.library_path)
         self._can_metadata: dict[str, tuple[object, ...]] | None = None
+        self._can_indexes: dict[str, object] | None = None
         self.can = CanInterface(self) if self.has_can else None
         self._timer_peripherals = TimerPeripheralInterface(self)
         self._spi_peripherals = SpiPeripheralInterface(self)
@@ -142,6 +144,34 @@ class NodeRig(ModelRig):
     def _can_enums(self) -> CanEnumNamespace:
         return self._load_can_metadata()["enums"]  # type: ignore[return-value]
 
+    @property
+    def _can_rx_messages_by_key(
+        self,
+    ) -> dict[tuple[str, int | None], CanMessageDescriptor]:
+        return self._load_can_indexes()["rx_messages_by_key"]  # type: ignore[return-value]
+
+    @property
+    def _can_tx_messages_by_key(
+        self,
+    ) -> dict[tuple[str, int | None], CanMessageDescriptor]:
+        return self._load_can_indexes()["tx_messages_by_key"]  # type: ignore[return-value]
+
+    @property
+    def _can_buses_by_name(self) -> dict[str, CanBusDescriptor]:
+        return self._load_can_indexes()["buses_by_name"]  # type: ignore[return-value]
+
+    @property
+    def _signal_enum_names(self) -> dict[str, str]:
+        return self._load_can_indexes()["signal_enum_names"]  # type: ignore[return-value]
+
+    @property
+    def _signal_kinds(self) -> dict[str, str]:
+        return self._load_can_indexes()["signal_kinds"]  # type: ignore[return-value]
+
+    @property
+    def _signals_by_message(self) -> dict[tuple[int, int, str], tuple[str, ...]]:
+        return self._load_can_indexes()["signals_by_message"]  # type: ignore[return-value]
+
     def _can_enum(self, enum_name: str) -> type[IntEnum]:
         try:
             return self._can_enums[enum_name]
@@ -149,7 +179,7 @@ class NodeRig(ModelRig):
             raise KeyError(f"CAN enum {enum_name!r} was not found") from exc
 
     def _can_signal_enum(self, signal_name: str) -> type[IntEnum]:
-        enum_name = self._signal_enum_names().get(signal_name)
+        enum_name = self._signal_enum_names.get(signal_name)
         if enum_name is None:
             raise KeyError(
                 f"CAN signal {signal_name!r} does not have generated enum metadata"
@@ -169,10 +199,17 @@ class NodeRig(ModelRig):
         bus: int | str | CanBusDescriptor | None = None,
         tx: bool = False,
     ) -> CanMessageDescriptor:
-        messages = self._can_tx_messages if tx else self._can_messages
         bus_index = None if bus is None else self._coerce_can_bus(bus)
-        for message in messages:
-            if message.name == name and (bus_index is None or message.bus == bus_index):
+        messages_by_key = (
+            self._can_tx_messages_by_key if tx else self._can_rx_messages_by_key
+        )
+        if bus_index is not None:
+            message = messages_by_key.get((name, bus_index))
+            if message is not None:
+                return message
+        else:
+            message = messages_by_key.get((name, None))
+            if message is not None:
                 return message
         direction = "TX" if tx else "RX"
         bus_text = "" if bus is None else f" on bus {bus!r}"
@@ -290,9 +327,34 @@ class NodeRig(ModelRig):
         packet: CanPacket,
         signal_names: list[str] | tuple[str, ...],
     ) -> dict[str, float]:
+        if not signal_names:
+            return {}
+        bus_index = self._coerce_can_bus(bus)
+        self._require_can_bus(bus_index)
+        encoded_names = tuple(signal_name.encode() for signal_name in signal_names)
+        name_array = (ctypes.c_char_p * len(encoded_names))(*encoded_names)
+        values = (CanSignalValue * len(encoded_names))()
+        decoded = int(
+            self._decode_can_signals(
+                ctypes.c_uint8(bus_index),
+                ctypes.byref(packet),
+                name_array,
+                values,
+                ctypes.c_uint32(len(encoded_names)),
+            )
+        )
+        if decoded != len(encoded_names):
+            failed_signal = (
+                signal_names[decoded]
+                if decoded < len(signal_names)
+                else signal_names[-1]
+            )
+            raise ValueError(
+                f"failed to decode CAN signal {failed_signal!r} from packet id={packet.id}"
+            )
         return {
-            signal_name: self._can_decode_signal_raw(bus, packet, signal_name)
-            for signal_name in signal_names
+            signal_name: float(values[index].value)
+            for index, signal_name in enumerate(signal_names)
         }
 
     def _can_encode_signal_raw(
@@ -310,8 +372,35 @@ class NodeRig(ModelRig):
         self, bus: int | str | CanBusDescriptor, message_name: str, **signals: float
     ) -> CanPacket:
         packet = CanPacket()
-        for signal_name, value in signals.items():
-            self._encode_can_signal_into(bus, message_name, signal_name, value, packet)
+        if not signals:
+            return packet
+        bus_index = self._coerce_can_bus(bus)
+        self._require_can_bus(bus_index)
+        signal_names = tuple(signals)
+        encoded_names = tuple(signal_name.encode() for signal_name in signal_names)
+        name_array = (ctypes.c_char_p * len(encoded_names))(*encoded_names)
+        values = (CanSignalValue * len(signal_names))()
+        for index, signal_name in enumerate(signal_names):
+            values[index].value = float(signals[signal_name])
+        encoded = int(
+            self._encode_can_signals(
+                ctypes.c_uint8(bus_index),
+                message_name.encode(),
+                name_array,
+                values,
+                ctypes.c_uint32(len(signal_names)),
+                ctypes.byref(packet),
+            )
+        )
+        if encoded != len(signal_names):
+            failed_signal = (
+                signal_names[encoded]
+                if encoded < len(signal_names)
+                else signal_names[-1]
+            )
+            raise ValueError(
+                f"failed to encode CAN signal {failed_signal!r} for {message_name!r}"
+            )
         return packet
 
     def _encode_can_signal_into(
@@ -631,9 +720,9 @@ class NodeRig(ModelRig):
         if isinstance(bus, CanBusDescriptor):
             return bus.index
         if isinstance(bus, str):
-            for descriptor in self._can_buses:
-                if descriptor.name.lower() == bus.lower():
-                    return descriptor.index
+            descriptor = self._can_buses_by_name.get(bus.lower())
+            if descriptor is not None:
+                return descriptor.index
             raise ValueError(f"CAN bus {bus!r} was not found")
         return int(bus)
 
@@ -676,6 +765,17 @@ class NodeRig(ModelRig):
             ],
             ctypes.c_bool,
         )
+        self._decode_can_signals = self._bind_symbol(
+            "rig_model_can_decode_signals",
+            [
+                ctypes.c_uint8,
+                ctypes.POINTER(CanPacket),
+                ctypes.POINTER(ctypes.c_char_p),
+                ctypes.POINTER(CanSignalValue),
+                ctypes.c_uint32,
+            ],
+            ctypes.c_uint32,
+        )
         self._encode_can_signal = self._bind_symbol(
             encode_name,
             [
@@ -686,6 +786,18 @@ class NodeRig(ModelRig):
                 ctypes.POINTER(CanPacket),
             ],
             ctypes.c_bool,
+        )
+        self._encode_can_signals = self._bind_symbol(
+            "rig_model_can_encode_signals",
+            [
+                ctypes.c_uint8,
+                ctypes.c_char_p,
+                ctypes.POINTER(ctypes.c_char_p),
+                ctypes.POINTER(CanSignalValue),
+                ctypes.c_uint32,
+                ctypes.POINTER(CanPacket),
+            ],
+            ctypes.c_uint32,
         )
 
     def _bind_can_codegen(self) -> None:
@@ -848,6 +960,53 @@ class NodeRig(ModelRig):
         self._can_metadata = metadata
         return metadata
 
+    def _load_can_indexes(self) -> dict[str, object]:
+        if self._can_indexes is not None:
+            return self._can_indexes
+
+        def message_index(
+            messages: tuple[CanMessageDescriptor, ...],
+        ) -> dict[tuple[str, int | None], CanMessageDescriptor]:
+            by_key: dict[tuple[str, int | None], CanMessageDescriptor] = {}
+            names_seen: set[str] = set()
+            ambiguous_names: set[str] = set()
+            for message in messages:
+                by_key[(message.name, message.bus)] = message
+                if message.name in names_seen:
+                    ambiguous_names.add(message.name)
+                names_seen.add(message.name)
+            for message in messages:
+                if message.name not in ambiguous_names:
+                    by_key[(message.name, None)] = message
+            return by_key
+
+        all_signals = self._can_signals + self._can_tx_signals
+        signal_enum_names = {
+            signal.signal_name: signal.enum_name
+            for signal in all_signals
+            if signal.enum_name
+        }
+        signal_kinds = {signal.signal_name: signal.kind for signal in all_signals}
+        signals_by_message: dict[tuple[int, int, str], list[str]] = {}
+        for signal in all_signals:
+            signals_by_message.setdefault(
+                (signal.bus, signal.message_id, signal.message_name),
+                [],
+            ).append(signal.signal_name)
+
+        self._can_indexes = {
+            "buses_by_name": {bus.name.lower(): bus for bus in self._can_buses},
+            "rx_messages_by_key": message_index(self._can_messages),
+            "tx_messages_by_key": message_index(self._can_tx_messages),
+            "signal_enum_names": signal_enum_names,
+            "signal_kinds": signal_kinds,
+            "signals_by_message": {
+                key: tuple(signal_names)
+                for key, signal_names in signals_by_message.items()
+            },
+        }
+        return self._can_indexes
+
     def _read_can_messages(
         self,
         count_fn,
@@ -941,20 +1100,9 @@ class NodeRig(ModelRig):
             }
         )
 
-    def _signal_enum_names(self) -> dict[str, str]:
-        names: dict[str, str] = {}
-        for signal in self._can_signals + self._can_tx_signals:
-            if signal.enum_name:
-                names[signal.signal_name] = signal.enum_name
-        return names
-
     def _signals_for_message(self, message: CanMessageDescriptor) -> tuple[str, ...]:
-        signals = tuple(
-            signal.signal_name
-            for signal in self._can_tx_signals + self._can_signals
-            if signal.bus == message.bus
-            and signal.message_id == message.id
-            and signal.message_name == message.name
+        signals = self._signals_by_message.get(
+            (message.bus, message.id, message.name), ()
         )
         if not signals:
             raise KeyError(
@@ -963,17 +1111,14 @@ class NodeRig(ModelRig):
         return signals
 
     def _coerce_decoded_can_value(self, signal_name: str, value: float) -> object:
-        enum_name = self._signal_enum_names().get(signal_name)
+        enum_name = self._signal_enum_names.get(signal_name)
         if enum_name:
             enum_type = self._can_enum(enum_name)
             return enum_type(int(value))
         return bool(value) if self._signal_kind(signal_name) == "Boolean" else value
 
     def _signal_kind(self, signal_name: str) -> str | None:
-        for signal in self._can_signals + self._can_tx_signals:
-            if signal.signal_name == signal_name:
-                return signal.kind
-        return None
+        return self._signal_kinds.get(signal_name)
 
     def _read_codegen_string(self, symbol, index: int) -> str:
         for size in (256, 1024, 4096):

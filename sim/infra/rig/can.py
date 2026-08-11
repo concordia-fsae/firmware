@@ -114,6 +114,12 @@ class _CanEnumValueDescriptorAbi(ctypes.Structure):
     ]
 
 
+class CanSignalValue(ctypes.Structure):
+    _fields_ = [
+        ("value", ctypes.c_double),
+    ]
+
+
 @dataclass(frozen=True)
 class DecodedCanMessage:
     message: CanMessageDescriptor
