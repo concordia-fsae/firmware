@@ -7,10 +7,11 @@ from sim.infra.rig import (
     NodeSpec,
     PowerControlPath,
 )
+from sim.models.components.asm330 import Asm330Model
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
 from sim.models.platforms import PLATFORM_VARIANTS
 
-from . import AnalogInput, TimerChannel, TimerPort, VcpduModel, Vn9008Channel
+from . import AnalogInput, SpiDevice, TimerChannel, TimerPort, VcpduModel, Vn9008Channel
 
 
 def vcpdu_node(
@@ -21,6 +22,9 @@ def vcpdu_node(
     pump_voltage = VcpduModel.timer.duty_events(TimerPort.PWM, TimerChannel._1)
     fan_voltage = VcpduModel.timer.duty_events(TimerPort.HP, TimerChannel._2)
     components = (
+        Asm330Model.spec(
+            spi_transactions=VcpduModel.spi.transactions(SpiDevice.IMU),
+        ),
         DcLoadModel.spec(
             voltage_input_channel=pump_voltage,
             load_spec=DcLoadSpec(resistance_ohms=2.0),

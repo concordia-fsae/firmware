@@ -99,6 +99,7 @@ class ClusterSpec:
         for owner_node, component, component_rig in components:
             owner = rig.nodes[owner_node]
             owner.configure_model_outputs_for(component_rig)
+            component_rig.configure_owner(owner)
             for binding in component.bindings:
                 binding.bind(owner, component_rig)
         rig.comm.connect_node_interfaces()

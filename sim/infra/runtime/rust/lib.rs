@@ -2,6 +2,10 @@ pub mod app {
     include!(env!("RIG_RUNTIME_RUST_APP_RS"));
 }
 
+pub mod asm330 {
+    include!(env!("RIG_RUNTIME_RUST_ASM330_RS"));
+}
+
 pub mod can {
     include!(env!("RIG_RUNTIME_RUST_CAN_RS"));
 }

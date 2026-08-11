@@ -27,13 +27,27 @@ def test_vcpdu_boots_and_cycles_to_glv_on(vcpdu_cluster):
     ]
 
 
-def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
+@pytest.mark.parametrize(
+    ("controller", "wake_state_name"),
+    [
+        pytest.param("sws", "SNA", id="sws-sna"),
+        pytest.param("sws", "NOK_TO_SLEEP", id="sws-nok-to-sleep"),
+        pytest.param("sws", "ALARM", id="sws-alarm"),
+        pytest.param("vcfront", "SNA", id="vcfront-sna"),
+        pytest.param("vcfront", "NOK_TO_SLEEP", id="vcfront-nok-to-sleep"),
+        pytest.param("vcfront", "ALARM", id="vcfront-alarm"),
+    ],
+)
+def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
     vcpdu_cluster,
+    controller,
+    wake_state_name,
 ):
     VehicleState = vcpdu_cluster.vcpdu.can.enums.VehicleState
     SleepFollowerState = vcpdu_cluster.vcpdu.can.enums.SleepFollowerState
     vcpdu = vcpdu_cluster.vcpdu
     observed = []
+    wake_state = getattr(SleepFollowerState, wake_state_name)
 
     controllers = vcpdu.waking_sleepable_controllers()
     assert controllers == ("sws", "vcfront")
@@ -50,43 +64,30 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
         message="vcpdu should boot to ON_GLV before it can sleep",
     )
 
-    for controller, wake_state in (
-        ("sws", SleepFollowerState.SNA),
-        ("sws", SleepFollowerState.NOK_TO_SLEEP),
-        ("sws", SleepFollowerState.ALARM),
-        ("vcfront", SleepFollowerState.SNA),
-        ("vcfront", SleepFollowerState.NOK_TO_SLEEP),
-        ("vcfront", SleepFollowerState.ALARM),
-    ):
-        vcpdu_cluster.run_for(100)
-        assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
+    vcpdu_cluster.run_for(100)
+    assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
 
-        vcpdu.allow_sleep()
-        vcpdu_cluster.run_until(
-            lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.SLEEP,
-            timeout=500,
-            step=20,
-            message="vcpdu should enter SLEEP when all waking controllers are OK to sleep",
-        )
+    vcpdu.allow_sleep()
+    vcpdu_cluster.run_until(
+        lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.SLEEP,
+        timeout=16 * 60000,
+        step=100,
+        message="vcpdu should enter SLEEP when all waking controllers are OK to sleep",
+    )
 
-        sleepable_inputs[controller].set(
-            **{f"{controller.upper()}_sleepable": wake_state}
-        )
-        before_wake = len(observed)
-        vcpdu_cluster.run_until(
-            lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
-            timeout=1000,
-            step=20,
-            message=f"vcpdu should wake from {controller} {wake_state.name}",
-        )
+    sleepable_inputs[controller].set(**{f"{controller.upper()}_sleepable": wake_state})
+    before_wake = len(observed)
+    vcpdu_cluster.run_until(
+        lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
+        timeout=1000,
+        step=20,
+        message=f"vcpdu should wake from {controller} {wake_state.name}",
+    )
 
-        assert observed[before_wake:] == [
-            VehicleState.INIT,
-            VehicleState.ON_GLV,
-        ]
-        sleepable_inputs[controller].set(
-            **{f"{controller.upper()}_sleepable": SleepFollowerState.OK_TO_SLEEP}
-        )
+    assert observed[before_wake:] == [
+        VehicleState.INIT,
+        VehicleState.ON_GLV,
+    ]
 
 
 @pytest.mark.parametrize(

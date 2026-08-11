@@ -10,6 +10,8 @@ pub struct SpiDevice {
     pub device: i32,
 }
 
+pub type SpiResponseFn = fn(SpiTransaction) -> Option<SpiTransaction>;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SpiTransaction {
@@ -55,6 +57,7 @@ struct SpiPeripheral {
     device: SpiDevice,
     inputs: DataPath<SpiTransaction>,
     outputs: DataPath<SpiTransaction>,
+    responder: Option<SpiResponseFn>,
 }
 
 impl SpiPeripheral {
@@ -63,12 +66,27 @@ impl SpiPeripheral {
             device,
             inputs: DataPath::new(device),
             outputs: DataPath::new(device),
+            responder: None,
         }
     }
 
     fn reset(&mut self) {
         self.inputs.clear();
         self.outputs.clear();
+    }
+
+    fn push_response_for(&mut self, transaction: SpiTransaction) {
+        if transaction.rx_len == 0 || self.inputs.count() > 0 {
+            return;
+        }
+
+        let Some(responder) = self.responder else {
+            return;
+        };
+        let Some(response) = responder(transaction) else {
+            return;
+        };
+        let _ = self.inputs.push(response);
     }
 }
 
@@ -108,6 +126,11 @@ pub fn configure_device(device: i32) {
     SPI_MODEL.lock().unwrap().peripheral(SpiDevice { device });
 }
 
+pub fn configure_responder(device: i32, responder: Option<SpiResponseFn>) {
+    let mut spi = SPI_MODEL.lock().unwrap();
+    spi.peripheral(SpiDevice { device }).responder = responder;
+}
+
 pub fn push_input(transaction: SpiTransaction) -> bool {
     SPI_MODEL
         .lock()
@@ -142,12 +165,10 @@ pub fn pop_input(device: i32) -> Option<SpiTransaction> {
 }
 
 pub fn push_output(transaction: SpiTransaction) -> bool {
-    SPI_MODEL
-        .lock()
-        .unwrap()
-        .peripheral(transaction.spi_device())
-        .outputs
-        .push(transaction)
+    let mut spi = SPI_MODEL.lock().unwrap();
+    let peripheral = spi.peripheral(transaction.spi_device());
+    peripheral.push_response_for(transaction);
+    peripheral.outputs.push(transaction)
 }
 
 pub fn pop_output(device: i32) -> Option<SpiTransaction> {

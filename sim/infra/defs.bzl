@@ -5,6 +5,7 @@ RIG_RUNTIME_ENV = "RIG_RUNTIME_RS"
 RIG_RUNTIME_SRC = "//sim/infra/runtime:runtime-src"
 RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_APP_RS": "//sim/infra/runtime:rust/app.rs",
+    "RIG_RUNTIME_RUST_ASM330_RS": "//sim/models/components/asm330:rust.rs",
     "RIG_RUNTIME_RUST_CAN_RS": "//sim/infra/runtime:rust/can.rs",
     "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/infra/runtime:rust/cluster.rs",
     "RIG_RUNTIME_RUST_CORE_RS": "//sim/infra/runtime:rust/core.rs",

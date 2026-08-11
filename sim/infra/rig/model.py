@@ -136,6 +136,9 @@ class ModelRig:
 class ComponentRig(ModelRig):
     """Pure Python model that can run standalone or inside a cluster."""
 
+    def configure_owner(self, owner: object) -> None:
+        pass
+
 
 class PeriodicDataPathProducer(ComponentRig):
     """Scheduled component that emits model-input payloads on a datapath."""

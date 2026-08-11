@@ -26,6 +26,7 @@ rig_pytest(
         "{}:vcpdu-py".format(VCPDU_MODEL),
         "{}:sil-so".format(VCPDU_MODEL),
         "//sim/models/components:python",
+        "//sim/models/components/asm330:python",
         "//sim/models/components/dc_load:python",
     ] + rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
@@ -70,6 +71,7 @@ rig_pytest(
         "{}:vcrear-py".format(VCREAR_MODEL),
         "{}:sil-so".format(VCREAR_MODEL),
         "//sim/models/components:python",
+        "//sim/models/components/asm330:python",
         "//sim/models/components/dc_load:python",
     ] +
     rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS) +
@@ -111,6 +113,7 @@ rig_pytest(
         "{}:vcpdu-py".format(VCPDU_MODEL),
         "{}:sil-so".format(VCPDU_MODEL),
         "//sim/models/components:python",
+        "//sim/models/components/asm330:python",
         "//sim/models/components/dc_load:python",
     ] + rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
@@ -161,6 +164,7 @@ rig_pytest(
         "{}:sil-so".format(VCPDU_MODEL),
         "//sim/models/vehicle:python",
         "//sim/models/components:python",
+        "//sim/models/components/asm330:python",
         "//sim/models/components/dc_load:python",
         "{}:enums-py".format(VCREAR_MODEL),
         "{}:vcrear-py".format(VCREAR_MODEL),
