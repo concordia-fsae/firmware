@@ -6,6 +6,10 @@ pub mod can {
     include!(env!("RIG_RUNTIME_RUST_CAN_RS"));
 }
 
+pub mod cluster {
+    include!(env!("RIG_RUNTIME_RUST_CLUSTER_RS"));
+}
+
 mod ffi {
     include!(env!("RIG_RUNTIME_RUST_FFI_RS"));
 }

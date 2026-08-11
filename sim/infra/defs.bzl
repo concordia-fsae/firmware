@@ -6,6 +6,7 @@ RIG_RUNTIME_SRC = "//sim/infra/runtime:runtime-src"
 RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_APP_RS": "//sim/infra/runtime:rust/app.rs",
     "RIG_RUNTIME_RUST_CAN_RS": "//sim/infra/runtime:rust/can.rs",
+    "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/infra/runtime:rust/cluster.rs",
     "RIG_RUNTIME_RUST_CORE_RS": "//sim/infra/runtime:rust/core.rs",
     "RIG_RUNTIME_RUST_DATAPATH_RS": "//sim/infra/runtime:rust/datapath.rs",
     "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/infra/runtime:rust/faults.rs",
@@ -340,6 +341,7 @@ def rig_pytest(
         test_file: str,
         env: dict[str, str] = {},
         resources: list[str] = [],
+        debug: bool = False,
         visibility: list[str] | None = None):
     uv_runner_name = name + "-uv-runner"
 
@@ -360,18 +362,24 @@ def rig_pytest(
             "-p",
             "no:cacheprovider",
             "-vv",
-            "--durations=10",
+        ] +
+        (["--durations=10"] if debug else []) +
+        [
             test_file,
         ],
         env = {
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONPATH": ".",
+            "RIG_RUNTIME_SIM_LIB": "$(location //sim/infra/runtime:runtime-so)",
             "PIP_INDEX_URL": "https://pypi.org/simple",
             "UV_DEFAULT_INDEX": "https://pypi.org/simple",
             "UV_INDEX_URL": "https://pypi.org/simple",
             "UV_PROJECT_ENVIRONMENT": "/tmp/firmware-sim-rig-venv",
         } | env,
-        resources = ["//sim/infra:uv-project"] + resources,
+        resources = [
+            "//sim/infra:uv-project",
+            "//sim/infra/runtime:runtime-so",
+        ] + resources,
         test = ":" + uv_runner_name,
         visibility = visibility,
     )

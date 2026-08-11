@@ -10,6 +10,7 @@ filegroup(
         "gen_python_model.py",
         "model.py",
         "pytest.py",
+        "runtime.py",
         "time.py",
     ],
     visibility = ["PUBLIC"],

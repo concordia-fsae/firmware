@@ -292,14 +292,15 @@ def test_model_rig_set_online_resets_and_gates_scheduler_ticks():
     assert model.ticks == 2
 
 
-def test_single_model_cluster_batches_scheduler_work_into_one_model_run():
+def test_single_model_cluster_uses_rust_runtime_scheduler():
     model = BatchObservedModel()
     cluster = ClusterRig(model=model)
 
     cluster.run_for(5)
 
     assert model.ticks == 5
-    assert model.run_durations_ns == [5_000_000]
+    assert model.elapsed_ns == 5_000_000
+    assert model.run_durations_ns == []
 
 
 def test_cluster_rejects_duplicate_rust_backed_shared_object_instances(tmp_path):

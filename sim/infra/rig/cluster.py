@@ -16,6 +16,7 @@ from .datapath import (
 )
 from .model import ComponentRig, ModelRig
 from .peripherals import SpiTransaction, TimerChannelEvent
+from .runtime import _RustClusterRuntime, _StandaloneRustRuntimeHost
 from .time import duration_to_ns, run_until
 
 
@@ -463,6 +464,7 @@ class ClusterRig:
         self.dataroutes = ClusterDataRoutes(self)
         self.comm = ClusterComms(self, self.dataroutes)
         self.comm.connect_node_interfaces()
+        self._rust_runtime = self._create_rust_runtime()
 
     def _reject_duplicate_shared_libraries(self) -> None:
         nodes_by_library: dict[pathlib.Path, list[str]] = {}
@@ -502,6 +504,7 @@ class ClusterRig:
             self._online_nodes[name] = True
         self.elapsed_ns = 0
         self.comm.reset()
+        self._rust_runtime = self._create_rust_runtime()
 
     def has_feature(self, feature: str) -> bool:
         return feature in self.features
@@ -519,22 +522,8 @@ class ClusterRig:
         if step_ns <= 0:
             raise ValueError(f"step must be positive, got {step}")
 
-        if self._can_run_isolated_batch():
-            self._run_online_nodes(duration_ns)
-            self.elapsed_ns += duration_ns
-            self.comm.route()
-            return
-
-        remaining_ns = duration_ns
-        while remaining_ns:
-            max_delta_ns = min(step_ns, remaining_ns)
-            online_nodes = self._online_node_instances()
-            delta_ns = self._next_cluster_scheduler_step_ns(max_delta_ns, online_nodes)
-            for node in online_nodes:
-                node.run_for(delta_ns, unit="ns")
-            self.elapsed_ns += delta_ns
-            self.comm.route()
-            remaining_ns -= delta_ns
+        self._rust_runtime.run_for(duration_ns, step_ns)
+        self._sync_elapsed_from_runtime()
 
     def run_until(
         self,
@@ -561,8 +550,8 @@ class ClusterRig:
             raise KeyError(f"node {name!r} is not in this rig")
         was_online = self._online_nodes[name]
         self._online_nodes[name] = online
-        if was_online and not online:
-            self._rig_nodes[name].reset()
+        if was_online != online:
+            self._rust_runtime.set_node_online(name, online)
 
     def disable_node(self, name: str) -> None:
         self.set_node_online(name, False)
@@ -575,35 +564,34 @@ class ClusterRig:
             raise KeyError(f"node {name!r} is not in this rig")
         return self._online_nodes[name]
 
-    def _online_node_instances(self) -> tuple[object, ...]:
-        return tuple(
-            node for name, node in self._rig_nodes.items() if self.node_online(name)
+    def _create_rust_runtime(self) -> _RustClusterRuntime:
+        hosts = tuple(
+            node for node in self.nodes.values() if hasattr(node, "_bind_symbol")
         )
-
-    def _next_cluster_scheduler_step_ns(
-        self,
-        max_step_ns: int,
-        online_nodes: tuple[object, ...] | None = None,
-    ) -> int:
-        online_nodes = (
-            self._online_node_instances() if online_nodes is None else online_nodes
+        unsupported_nodes = tuple(
+            name
+            for name, node in self._rig_nodes.items()
+            if not hasattr(node, "rust_cluster_node_abi")
         )
-        if not online_nodes:
-            return max_step_ns
-        return min(
-            self._node_scheduler_step_ns(node, max_step_ns) for node in online_nodes
+        if unsupported_nodes:
+            raise TypeError(
+                "Rust-hosted clusters require every node/component to expose the "
+                f"Rust scheduler callback ABI; missing: {', '.join(unsupported_nodes)}"
+            )
+        host = hosts[0] if hosts else _StandaloneRustRuntimeHost()
+        runtime = _RustClusterRuntime(
+            host=host,
+            route=self._route_from_runtime,
         )
+        for name, node in self._rig_nodes.items():
+            runtime.add_node(name, node, online=self.node_online(name))
+        return runtime
 
-    def _can_run_isolated_batch(self) -> bool:
-        return len(self._online_node_instances()) == 1
+    def _route_from_runtime(self, elapsed_ns: int) -> None:
+        self.elapsed_ns = elapsed_ns
+        self.comm.route()
 
-    def _run_online_nodes(self, duration_ns: int) -> None:
-        for node in self._online_node_instances():
-            node.run_for(duration_ns, unit="ns")
-
-    @staticmethod
-    def _node_scheduler_step_ns(node: object, max_step_ns: int) -> int:
-        next_scheduler_step = getattr(node, "next_scheduler_step", None)
-        if next_scheduler_step is None:
-            return max_step_ns
-        return int(next_scheduler_step(max_step_ns, unit="ns"))
+    def _sync_elapsed_from_runtime(self) -> None:
+        self.elapsed_ns = self._rust_runtime.elapsed_ns()
+        for name, node in self._rig_nodes.items():
+            node.elapsed_ns = self._rust_runtime.node_elapsed_ns(name)

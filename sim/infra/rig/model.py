@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ctypes
 from typing import TypeVar
 
 from .datapath import DataPath, ModelDataPaths
+from .runtime import _RustClusterRuntime
 from .time import duration_to_ns
 
 
@@ -13,6 +15,9 @@ class ModelRig:
     """Schedulable model with datapaths that can participate in a cluster."""
 
     has_can = False
+    _ClusterRunForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
+    _ClusterNextStepCallback = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_uint64)
+    _ClusterResetCallback = ctypes.CFUNCTYPE(None)
 
     def __init__(
         self,
@@ -33,12 +38,24 @@ class ModelRig:
             raise ValueError(
                 f"scheduler period must be positive, got {scheduler_period}"
             )
+        self._cluster_run_for_callback = self._ClusterRunForCallback(
+            self._cluster_run_for
+        )
+        self._cluster_next_step_callback = self._ClusterNextStepCallback(
+            self._cluster_next_scheduler_step
+        )
+        self._cluster_reset_callback = self._ClusterResetCallback(self.reset)
+        self._standalone_runtime: _RustClusterRuntime | None = None
 
     def reset(self) -> None:
         self.elapsed_ns = 0
+        self._standalone_runtime = None
 
     def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
         duration_ns = duration_to_ns(duration, unit=unit)
+        self._runtime().run_for(duration_ns, duration_ns)
+
+    def _run_for_from_runtime(self, duration_ns: int) -> None:
         if self._scheduler_period_ns is None:
             self.elapsed_ns += duration_ns
             return
@@ -87,6 +104,32 @@ class ModelRig:
         if self._cluster_rig is None or self._cluster_node_name is None:
             return True
         return self._cluster_rig.node_online(self._cluster_node_name)
+
+    def rust_cluster_node_abi(self) -> tuple[int, int, int]:
+        return (
+            self._callback_address(self._cluster_run_for_callback),
+            self._callback_address(self._cluster_next_step_callback),
+            self._callback_address(self._cluster_reset_callback),
+        )
+
+    def _cluster_run_for(self, duration_ns: int) -> None:
+        self._run_for_from_runtime(duration_ns)
+
+    def _cluster_next_scheduler_step(self, duration_ns: int) -> int:
+        return self.next_scheduler_step(duration_ns, unit="ns")
+
+    def _runtime(self) -> _RustClusterRuntime:
+        if self._standalone_runtime is None:
+            self._standalone_runtime = _RustClusterRuntime()
+            self._standalone_runtime.add_node("__standalone__", self)
+        return self._standalone_runtime
+
+    @staticmethod
+    def _callback_address(callback) -> int:
+        value = ctypes.cast(callback, ctypes.c_void_p).value
+        if value is None:
+            raise RuntimeError(f"could not resolve callback pointer for {callback!r}")
+        return int(value)
 
 
 class ComponentRig(ModelRig):

@@ -89,6 +89,13 @@ class NodeRig(ModelRig):
         duration_ns = duration_to_ns(duration, unit=unit)
         return int(self._next_scheduler_step(ctypes.c_uint64(duration_ns)))
 
+    def rust_cluster_node_abi(self) -> tuple[int, int, int]:
+        return (
+            self._function_address(self._run_for),
+            self._function_address(self._next_scheduler_step),
+            self._function_address(self._new),
+        )
+
     def set_analog_input(self, channel: int, voltage: float) -> None:
         self._set_analog_input(ctypes.c_int(channel), ctypes.c_float(voltage))
 
@@ -648,6 +655,13 @@ class NodeRig(ModelRig):
         symbol.argtypes = [] if argtypes is None else argtypes
         symbol.restype = restype
         return symbol
+
+    @staticmethod
+    def _function_address(symbol) -> int:
+        value = ctypes.cast(symbol, ctypes.c_void_p).value
+        if value is None:
+            raise RuntimeError(f"could not resolve function pointer for {symbol!r}")
+        return int(value)
 
     def _bind_can_codec(self) -> None:
         decode_name = "rig_model_can_decode_signal"
