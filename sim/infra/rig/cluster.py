@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pathlib
 from dataclasses import dataclass
+from functools import cache
 from typing import Generic, TypeVar
 
 from .can import CanBusDescriptor, CanEvent, CanMessageDescriptor, RoutedCanEvent
@@ -26,6 +27,7 @@ PayloadT = TypeVar("PayloadT")
 @dataclass(frozen=True)
 class _DataPathRoute:
     source_node: str
+    source_key: str
     source: DataPathSource[object]
     sinks: tuple[DataPathSink[object], ...]
 
@@ -104,6 +106,9 @@ class ClusterDataRoutes:
     def clear_native_routes(self) -> None:
         self._native_routes.clear()
 
+    def has_python_routes(self) -> bool:
+        return bool(self._links)
+
     def clear(self, path: DataPath) -> None:
         self._fanout(path).clear()
         key = datapath_key(path)
@@ -167,9 +172,7 @@ class ClusterDataRoutes:
                         self._cluster.elapsed_ns,
                     )
                     fanout.records.append(record)
-                    self._latest_records[
-                        (route.source.node, datapath_key(route.source.path))
-                    ] = record
+                    self._latest_records[(route.source.node, route.source_key)] = record
                 for sink in route.sinks:
                     self._send_route_payloads(sink, payloads)
 
@@ -213,7 +216,9 @@ class ClusterDataRoutes:
         for source_node, links in links_by_source.items():
             source = self._source_for_link(links[0])
             sinks = tuple(sink for link in links for sink in self._sinks_for_link(link))
-            routes.append(_DataPathRoute(source_node, source, sinks))
+            routes.append(
+                _DataPathRoute(source_node, datapath_key(source.path), source, sinks)
+            )
         self._route_cache[key] = tuple(routes)
         return self._route_cache[key]
 
@@ -481,6 +486,11 @@ class ClusterCanComms:
     @classmethod
     def path(cls, bus: CanBusDescriptor | str) -> DataPath:
         bus_name = bus.name if isinstance(bus, CanBusDescriptor) else str(bus)
+        return cls._path_for_bus_name(bus_name)
+
+    @staticmethod
+    @cache
+    def _path_for_bus_name(bus_name: str) -> DataPath:
         return DataPath.can_bus(bus_name)
 
     @classmethod
@@ -645,6 +655,9 @@ class ClusterComms:
         self.can.clear_native_routes()
         self._dataroutes.clear_native_routes()
 
+    def has_python_routes(self) -> bool:
+        return self._dataroutes.has_python_routes()
+
     def connect_node_interfaces(self) -> None:
         self.can.connect_available_nodes()
         self._dataroutes.connect_available_paths(exclude=ClusterCanComms._is_can_path)
@@ -771,7 +784,11 @@ class ClusterRig:
         if step_ns <= 0:
             raise ValueError(f"step must be positive, got {step}")
 
-        self._rust_runtime.run_for(duration_ns, step_ns)
+        self._rust_runtime.run_for(
+            duration_ns,
+            step_ns,
+            route=self.comm.has_python_routes(),
+        )
         self._sync_elapsed_from_runtime()
 
     def fast_forward_for(
@@ -787,7 +804,12 @@ class ClusterRig:
         if step_ns <= 0:
             raise ValueError(f"step must be positive, got {step}")
 
-        self._rust_runtime.run_for(duration_ns, step_ns, fast_forward=True)
+        self._rust_runtime.run_for(
+            duration_ns,
+            step_ns,
+            fast_forward=True,
+            route=self.comm.has_python_routes(),
+        )
         self._sync_elapsed_from_runtime()
 
     def run_until(

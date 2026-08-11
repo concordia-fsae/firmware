@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import ctypes
 from collections.abc import Callable
 from enum import IntEnum
 
-from .can import CanEvent, CanInterface, CanMessageDescriptor, PeriodicCanMessage
+from .can import (
+    CanEvent,
+    CanInterface,
+    CanMessageDescriptor,
+    CanPacket,
+    PeriodicCanMessage,
+)
 from .datapath import DataPath, datapath_key
 from .model import ComponentRig, ModelRig
 from .time import duration_to_ns
@@ -206,6 +213,15 @@ class SimpleNodeRig(ModelRig):
                 send_many=input_.send_many,
             )
 
+    def rust_can_route_abi(self, bus) -> tuple[int, int, int, int] | None:
+        for component in self.components:
+            route_abi = getattr(component, "rust_can_route_abi", lambda _bus: None)(
+                bus
+            )
+            if route_abi is not None:
+                return route_abi
+        return None
+
 
 class _SimpleCanInterface:
     def __init__(self, model: SimpleCanComponent) -> None:
@@ -222,6 +238,20 @@ class _SimpleCanInterface:
 class SimpleCanComponent(SimpleComponent):
     """Python-only component that emits generated CAN messages."""
 
+    _CanTxCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_uint8)
+    _CanRecvEventsCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.c_uint8,
+        ctypes.POINTER(CanEvent),
+        ctypes.c_uint32,
+    )
+    _CanSendManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.c_uint8,
+        ctypes.POINTER(CanPacket),
+        ctypes.c_uint32,
+    )
+
     def __init__(
         self,
         encoder: CanInterface,
@@ -231,10 +261,23 @@ class SimpleCanComponent(SimpleComponent):
         super().__init__(scheduler_period=1, scheduler_unit="ms")
         self._encoder = encoder
         self._buses = tuple(encoder.bus(bus) for bus in buses)
+        self._bus_paths = {
+            bus.name: DataPath.can_bus(bus.name)
+            for bus in self._buses
+        }
         self.can = _SimpleCanInterface(self)
         self._periodic_messages: list[PeriodicCanMessage] = []
-        for bus in self._buses:
-            self.add_egress_datapath(DataPath.can_bus(bus.name))
+        for path in self._bus_paths.values():
+            self.add_egress_datapath(path)
+        self._can_tx_count_callback = self._CanTxCountCallback(
+            self._ffi_can_tx_count
+        )
+        self._can_recv_events_callback = self._CanRecvEventsCallback(
+            self._ffi_can_recv_events
+        )
+        self._can_send_many_callback = self._CanSendManyCallback(
+            self._ffi_can_send_many
+        )
 
     def reset(self) -> None:
         super().reset()
@@ -269,6 +312,9 @@ class SimpleCanComponent(SimpleComponent):
             message=descriptor,
             period_ns=duration_to_ns(period, unit=unit),
             signals=dict(signals),
+            encoder=lambda message, signals: self._encoder.encode(
+                message, **signals
+            ),
         )
         self._periodic_messages.append(periodic)
         return periodic
@@ -328,15 +374,89 @@ class SimpleCanComponent(SimpleComponent):
             if self.elapsed_ns - periodic.last_emit_ns < periodic.period_ns:
                 continue
             periodic.last_emit_ns = self.elapsed_ns
-            self._queue_message(periodic.message, periodic.signals)
+            self._emit_packet(periodic.message, periodic.packet)
 
     def _queue_message(
         self,
         message: CanMessageDescriptor,
         signals: dict[str, float | int | IntEnum],
     ) -> None:
-        packet = self._encoder.encode(message, **signals)
+        self._emit_packet(message, self._encoder.encode(message, **signals))
+
+    def _emit_packet(
+        self,
+        message: CanMessageDescriptor,
+        packet,
+    ) -> None:
         self.emit_egress(
-            DataPath.can_bus(message.bus_name),
+            self._bus_paths[message.bus_name],
             CanEvent.from_packet(message.bus, packet, timestamp_ns=self.elapsed_ns),
         )
+
+    def rust_can_route_abi(self, bus) -> tuple[int, int, int, int] | None:
+        try:
+            bus_descriptor = self._encoder.bus(bus)
+        except (KeyError, ValueError):
+            return None
+        if bus_descriptor.name not in self._bus_paths:
+            return None
+        return (
+            bus_descriptor.index,
+            self._callback_address(self._can_tx_count_callback),
+            self._callback_address(self._can_recv_events_callback),
+            self._callback_address(self._can_send_many_callback),
+        )
+
+    def _ffi_can_tx_count(self, bus_index: int) -> int:
+        bus = self._bus_descriptor_for_index(bus_index)
+        if bus is None:
+            return 0
+        return self.egress_count(self._bus_paths[bus.name])
+
+    def _ffi_can_recv_events(
+        self,
+        bus_index: int,
+        events,
+        capacity: int,
+    ) -> int:
+        bus = self._bus_descriptor_for_index(bus_index)
+        if bus is None or capacity == 0:
+            return 0
+        payloads = self.recv_egress_many(self._bus_paths[bus.name], int(capacity))
+        count = 0
+        for payload in payloads:
+            if not isinstance(payload, CanEvent):
+                continue
+            events[count] = payload
+            count += 1
+        return count
+
+    def _ffi_can_send_many(self, bus_index: int, packets, count: int) -> int:
+        bus = self._bus_descriptor_for_index(bus_index)
+        if bus is None:
+            return 0
+        path = self._bus_paths[bus.name]
+        for index in range(int(count)):
+            self._send_ingress(
+                path,
+                CanEvent.from_packet(
+                    bus.index,
+                    packets[index],
+                    timestamp_ns=self.elapsed_ns,
+                ),
+                handler=None,
+            )
+        return int(count)
+
+    def _bus_descriptor_for_index(self, bus_index: int):
+        for bus in self._buses:
+            if bus.index == int(bus_index):
+                return bus
+        return None
+
+    @staticmethod
+    def _callback_address(callback) -> int:
+        value = ctypes.cast(callback, ctypes.c_void_p).value
+        if value is None:
+            raise RuntimeError(f"could not resolve callback pointer for {callback!r}")
+        return int(value)

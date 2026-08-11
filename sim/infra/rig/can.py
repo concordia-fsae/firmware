@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import ctypes
-from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from enum import IntEnum
 
 from .datapath import DataPath
@@ -151,11 +151,22 @@ class PeriodicCanMessage:
     message: CanMessageDescriptor
     period_ns: int
     signals: dict[str, float | int | IntEnum]
+    encoder: Callable[
+        [CanMessageDescriptor, Mapping[str, float | int | IntEnum]], CanPacket
+    ] = field(repr=False)
     last_emit_ns: int = 0
+    packet: CanPacket = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._refresh_packet()
 
     def set(self, **signals: float | int | IntEnum) -> PeriodicCanMessage:
         self.signals.update(signals)
+        self._refresh_packet()
         return self
+
+    def _refresh_packet(self) -> None:
+        self.packet = self.encoder(self.message, self.signals)
 
 
 class PeriodicCanSender(PeriodicDataPathProducer):

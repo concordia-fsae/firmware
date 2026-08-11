@@ -269,15 +269,23 @@ class _RustClusterRuntime:
         )
 
     def run_for(
-        self, duration_ns: int, step_ns: int, *, fast_forward: bool = False
+        self,
+        duration_ns: int,
+        step_ns: int,
+        *,
+        fast_forward: bool = False,
+        route: bool = True,
     ) -> None:
+        route_callback = (
+            ctypes.cast(self._route_callback, ctypes.c_void_p).value
+            if route and self._route is not None
+            else 0
+        )
         self._run_for(
             ctypes.c_uint64(duration_ns),
             ctypes.c_uint64(step_ns),
             ctypes.c_bool(fast_forward),
-            ctypes.c_size_t(
-                ctypes.cast(self._route_callback, ctypes.c_void_p).value or 0
-            ),
+            ctypes.c_size_t(route_callback or 0),
         )
 
     def set_node_online(self, name: str, online: bool) -> None:
