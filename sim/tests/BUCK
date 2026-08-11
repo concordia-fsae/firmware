@@ -117,29 +117,19 @@ rig_pytest(
 )
 
 rig_pytest(
-    name = "vehicle_cluster",
-    test_file = "sim/tests/test_vehicle.py",
+    name = "vcrear_cluster",
+    test_file = "sim/tests/test_vcrear.py",
     env = {
-        "VCFRONT_ENUMS_PY": "$(location {}:enums-py)".format(VCFRONT_MODEL),
-        "VCFRONT_MODEL_PY": "$(location {}:vcfront-py)".format(VCFRONT_MODEL),
-        "VCFRONT_SIM_LIB": "$(location {}:sil-so)".format(VCFRONT_MODEL),
         "VCREAR_ENUMS_PY": "$(location {}:enums-py)".format(VCREAR_MODEL),
         "VCREAR_MODEL_PY": "$(location {}:vcrear-py)".format(VCREAR_MODEL),
         "VCREAR_SIM_LIB": "$(location {}:sil-so)".format(VCREAR_MODEL),
     } |
     rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCFRONT", VCFRONT_MODEL, ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS),
     resources = [
-        "{}:enums-py".format(VCFRONT_MODEL),
-        "{}:vcfront-py".format(VCFRONT_MODEL),
-        "{}:sil-so".format(VCFRONT_MODEL),
-        "//sim/models/vehicle:python",
         "{}:enums-py".format(VCREAR_MODEL),
         "{}:vcrear-py".format(VCREAR_MODEL),
         "{}:sil-so".format(VCREAR_MODEL),
-    ] +
-    rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),
+    ] + rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
 )
