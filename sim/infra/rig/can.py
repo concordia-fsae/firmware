@@ -7,6 +7,7 @@ from enum import IntEnum
 
 from .datapath import DataPath
 from .model import PeriodicDataPathProducer
+from .time import RunUntilTimeout, duration_to_ns
 
 
 SIGNAL_KIND_NAMES = {
@@ -337,10 +338,65 @@ class CanInterface:
         *,
         bus: int | str | CanBusDescriptor | None = None,
     ) -> object | None:
-        decoded = self.latest(message, bus=bus, signals=(signal,))
+        descriptor = self._tx_message_descriptor(message, bus=bus)
+        cluster = self._model._cluster_rig
+        node_name = self._model._cluster_node_name
+        if cluster is not None and node_name is not None:
+            raw_value = cluster._rust_runtime.latest_can_signal(
+                node_name,
+                descriptor.bus,
+                descriptor.id,
+                signal,
+            )
+            if raw_value is not None:
+                return self._model._coerce_decoded_can_value(signal, raw_value)
+
+        decoded = self.latest(descriptor, signals=(signal,))
         if decoded is None:
             return None
         return getattr(decoded, signal)
+
+    def run_until_signal_eq(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        *,
+        bus: int | str | CanBusDescriptor | None = None,
+        timeout: int | float,
+        unit: str = "ms",
+        step: int | float = 1,
+        step_unit: str | None = None,
+        tolerance: float = 0.0,
+        fast_forward: bool = False,
+        message_on_timeout: str | None = None,
+    ) -> int:
+        descriptor = self._tx_message_descriptor(message, bus=bus)
+        cluster = self._model._cluster_rig
+        node_name = self._model._cluster_node_name
+        if cluster is None or node_name is None:
+            raise RuntimeError("native CAN signal predicates require a clustered model")
+        timeout_ns = duration_to_ns(timeout, unit=unit)
+        step_ns = duration_to_ns(step, unit=step_unit or unit)
+        elapsed_ns = cluster._rust_runtime.run_until_can_signal_eq(
+            source_node=node_name,
+            bus=descriptor.bus,
+            message_id=descriptor.id,
+            signal_name=signal,
+            expected=float(int(expected) if isinstance(expected, IntEnum) else expected),
+            tolerance=float(tolerance),
+            timeout_ns=timeout_ns,
+            step_ns=step_ns,
+            fast_forward=fast_forward,
+            route=cluster.comm.has_python_routes(),
+        )
+        cluster._sync_elapsed_from_runtime()
+        if elapsed_ns is None:
+            detail = "" if message_on_timeout is None else f": {message_on_timeout}"
+            raise RunUntilTimeout(
+                f"condition did not become true within {timeout_ns} ns{detail}"
+            )
+        return elapsed_ns
 
     def rx_count(self, bus: int | str | CanBusDescriptor) -> int:
         return self._model._can_rx_count_value(bus)

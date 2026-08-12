@@ -1,7 +1,10 @@
 use std::collections::VecDeque;
+use std::ffi::CStr;
 use std::mem;
+use std::os::raw::c_char;
 use std::sync::Mutex;
 
+use super::can;
 use super::dc_load::DcLoadModel;
 use super::simple::PeriodicCanSource;
 
@@ -729,6 +732,37 @@ impl ClusterRuntime {
             .map(|record| record.event)
     }
 
+    fn latest_can_signal(
+        &self,
+        source_node: u32,
+        bus: u8,
+        message_id: u32,
+        signal_name: &str,
+    ) -> Option<f64> {
+        let event = self.latest_can_message(source_node, bus, message_id)?;
+        let packet = can::CanPacket {
+            id: event.packet.id,
+            len: event.packet.len,
+            data: event.packet.data,
+        };
+        can::decode_signal(bus, &packet, signal_name)
+    }
+
+    fn latest_can_signal_eq(
+        &self,
+        source_node: u32,
+        bus: u8,
+        message_id: u32,
+        signal_name: &str,
+        expected: f64,
+        tolerance: f64,
+    ) -> bool {
+        let Some(value) = self.latest_can_signal(source_node, bus, message_id, signal_name) else {
+            return false;
+        };
+        (value - expected).abs() <= tolerance
+    }
+
     fn latest_timer_event(
         &self,
         source_node: u32,
@@ -785,6 +819,13 @@ unsafe fn function_pointer<T>(address: usize) -> Option<T> {
         return None;
     }
     Some(unsafe { mem::transmute_copy(&address) })
+}
+
+unsafe fn c_str_to_str<'a>(value: *const c_char) -> Option<&'a str> {
+    if value.is_null() {
+        return None;
+    }
+    unsafe { CStr::from_ptr(value) }.to_str().ok()
 }
 
 #[unsafe(no_mangle)]
@@ -1141,6 +1182,88 @@ pub extern "C" fn rig_cluster_run_for(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_run_until_can_signal_eq(
+    timeout_ns: u64,
+    max_step_ns: u64,
+    fast_forward: bool,
+    route: usize,
+    source_node: u32,
+    bus: u8,
+    message_id: u32,
+    signal_name: *const c_char,
+    expected: f64,
+    tolerance: f64,
+) -> u64 {
+    let Some(signal_name) = (unsafe { c_str_to_str(signal_name) }) else {
+        return u64::MAX;
+    };
+    if timeout_ns == 0 || max_step_ns == 0 {
+        return if CLUSTER_RUNTIME.lock().unwrap().latest_can_signal_eq(
+            source_node,
+            bus,
+            message_id,
+            signal_name,
+            expected,
+            tolerance,
+        ) {
+            0
+        } else {
+            u64::MAX
+        };
+    }
+
+    let route = unsafe { function_pointer::<ClusterRouteFn>(route) };
+    let current_elapsed_ns = CLUSTER_RUNTIME.lock().unwrap().elapsed_ns;
+    let target_elapsed_ns = current_elapsed_ns.saturating_add(timeout_ns);
+    let mut next_route_elapsed_ns = current_elapsed_ns.saturating_add(max_step_ns);
+
+    if CLUSTER_RUNTIME.lock().unwrap().latest_can_signal_eq(
+        source_node,
+        bus,
+        message_id,
+        signal_name,
+        expected,
+        tolerance,
+    ) {
+        return 0;
+    }
+
+    loop {
+        let (delta_ns, elapsed_ns) = {
+            let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
+            if runtime.elapsed_ns >= target_elapsed_ns {
+                return u64::MAX;
+            }
+            let remaining_ns = target_elapsed_ns - runtime.elapsed_ns;
+            let delta_ns = runtime.run_next_step(remaining_ns, max_step_ns, fast_forward);
+            (delta_ns, runtime.elapsed_ns)
+        };
+
+        if delta_ns == 0 {
+            return u64::MAX;
+        }
+
+        if elapsed_ns >= next_route_elapsed_ns || elapsed_ns >= target_elapsed_ns {
+            if let Some(route) = route {
+                unsafe { route(elapsed_ns) };
+                next_route_elapsed_ns = elapsed_ns.saturating_add(max_step_ns);
+            }
+        }
+
+        if CLUSTER_RUNTIME.lock().unwrap().latest_can_signal_eq(
+            source_node,
+            bus,
+            message_id,
+            signal_name,
+            expected,
+            tolerance,
+        ) {
+            return elapsed_ns.saturating_sub(current_elapsed_ns);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_elapsed_ns() -> u64 {
     CLUSTER_RUNTIME.lock().unwrap().elapsed_ns
 }
@@ -1198,6 +1321,32 @@ pub extern "C" fn rig_cluster_latest_can_bus_event(
         return false;
     };
     unsafe { *out = event };
+    true
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_latest_can_signal(
+    source_node: u32,
+    bus: u8,
+    message_id: u32,
+    signal_name: *const c_char,
+    out: *mut f64,
+) -> bool {
+    if out.is_null() {
+        return false;
+    }
+    let Some(signal_name) = (unsafe { c_str_to_str(signal_name) }) else {
+        return false;
+    };
+    let Some(value) = CLUSTER_RUNTIME.lock().unwrap().latest_can_signal(
+        source_node,
+        bus,
+        message_id,
+        signal_name,
+    ) else {
+        return false;
+    };
+    unsafe { *out = value };
     true
 }
 
