@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from .datapath import DataPath, ModelDataPaths, ScalarEvent, datapath_key
-from .runtime import RustNodeSchedulerAbi, _RustClusterRuntime
+from .runtime import RustPythonNodeSchedulerAbi, _RustClusterRuntime
 from .time import duration_to_ns
 
 
@@ -17,9 +17,12 @@ class ModelRig:
     """Schedulable model with datapaths that can participate in a cluster."""
 
     has_can = False
-    _ClusterRunForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
-    _ClusterFastForwardForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
-    _ClusterNextStepCallback = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_uint64)
+    _ClusterScheduledCallback = ctypes.CFUNCTYPE(
+        None,
+        ctypes.c_uint64,
+        ctypes.c_uint64,
+        ctypes.c_bool,
+    )
     _ClusterResetCallback = ctypes.CFUNCTYPE(None)
     _ScalarCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32)
     _ScalarRecvManyCallback = ctypes.CFUNCTYPE(
@@ -54,14 +57,8 @@ class ModelRig:
             raise ValueError(
                 f"scheduler period must be positive, got {scheduler_period}"
             )
-        self._cluster_run_for_callback = self._ClusterRunForCallback(
-            self._cluster_run_for
-        )
-        self._cluster_fast_forward_for_callback = self._ClusterFastForwardForCallback(
-            self._cluster_fast_forward_for
-        )
-        self._cluster_next_step_callback = self._ClusterNextStepCallback(
-            self._cluster_next_scheduler_step
+        self._cluster_scheduled_callback = self._ClusterScheduledCallback(
+            self._cluster_scheduled
         )
         self._cluster_reset_callback = self._ClusterResetCallback(self.reset)
         self._standalone_runtime: _RustClusterRuntime | None = None
@@ -73,23 +70,6 @@ class ModelRig:
     def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
         duration_ns = duration_to_ns(duration, unit=unit)
         self._runtime().run_for(duration_ns, duration_ns)
-
-    def _run_for_from_runtime(self, duration_ns: int) -> None:
-        if self._scheduler_period_ns is None:
-            self.elapsed_ns += duration_ns
-            return
-
-        self.elapsed_ns += duration_ns
-        if self.elapsed_ns % self._scheduler_period_ns == 0:
-            self._run_scheduled()
-
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        if self._scheduler_period_ns is None:
-            return duration_ns
-        elapsed_in_period = self.elapsed_ns % self._scheduler_period_ns
-        remaining_period_ns = self._scheduler_period_ns - elapsed_in_period
-        return min(duration_ns, remaining_period_ns)
 
     def _run_scheduled(self) -> None:
         pass
@@ -195,37 +175,31 @@ class ModelRig:
             return True
         return self._cluster_rig.node_online(self._cluster_node_name)
 
-    def rust_cluster_node_abi(self) -> RustNodeSchedulerAbi:
-        return RustNodeSchedulerAbi(
-            run_for=self._callback_address(self._cluster_run_for_callback),
-            fast_forward_for=self._callback_address(
-                self._cluster_fast_forward_for_callback
-            ),
-            next_step=self._callback_address(self._cluster_next_step_callback),
+    def rust_cluster_node_abi(self) -> RustPythonNodeSchedulerAbi:
+        return self._rust_python_scheduler_abi()
+
+    def _rust_python_scheduler_abi(
+        self,
+        *,
+        period_ns: int | None = None,
+    ) -> RustPythonNodeSchedulerAbi:
+        resolved_period_ns = (
+            self._scheduler_period_ns if period_ns is None else int(period_ns)
+        )
+        return RustPythonNodeSchedulerAbi(
+            scheduled=self._callback_address(self._cluster_scheduled_callback),
             reset=self._callback_address(self._cluster_reset_callback),
+            period_ns=0 if resolved_period_ns is None else resolved_period_ns,
         )
 
-    def _cluster_run_for(self, duration_ns: int) -> None:
-        self._run_for_from_runtime(duration_ns)
-
-    def _cluster_fast_forward_for(self, duration_ns: int) -> None:
-        self._fast_forward_for_from_runtime(duration_ns)
-
-    def _fast_forward_for_from_runtime(self, duration_ns: int) -> None:
-        if self._scheduler_period_ns is None:
-            self.elapsed_ns += duration_ns
-            return
-
-        previous_elapsed_ns = self.elapsed_ns
-        self.elapsed_ns += duration_ns
-        if (
-            previous_elapsed_ns // self._scheduler_period_ns
-            != self.elapsed_ns // self._scheduler_period_ns
-        ):
-            self._run_scheduled()
-
-    def _cluster_next_scheduler_step(self, duration_ns: int) -> int:
-        return self.next_scheduler_step(duration_ns, unit="ns")
+    def _cluster_scheduled(
+        self,
+        elapsed_ns: int,
+        _delta_ns: int,
+        _fast_forward: bool,
+    ) -> None:
+        self.elapsed_ns = int(elapsed_ns)
+        self._run_scheduled()
 
     def _runtime(self) -> _RustClusterRuntime:
         if self._standalone_runtime is None:

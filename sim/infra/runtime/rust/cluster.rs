@@ -12,6 +12,7 @@ pub type ClusterNodeRunForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeFastForwardForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeNextStepFn = unsafe extern "C" fn(u64) -> u64;
 pub type ClusterNodeResetFn = unsafe extern "C" fn();
+pub type ClusterPythonScheduledFn = unsafe extern "C" fn(u64, u64, bool);
 pub type ClusterRouteFn = unsafe extern "C" fn(u64);
 pub type ClusterCanTxCountFn = unsafe extern "C" fn(u8) -> u32;
 pub type ClusterCanRecvEventsFn = unsafe extern "C" fn(u8, *mut CanEvent, u32) -> u32;
@@ -86,13 +87,107 @@ pub struct ScalarEvent {
 }
 
 #[derive(Clone, Copy)]
+enum ClusterNodeScheduler {
+    External {
+        run_for: ClusterNodeRunForFn,
+        fast_forward_for: ClusterNodeFastForwardForFn,
+        next_step: ClusterNodeNextStepFn,
+    },
+    Python {
+        scheduled: Option<ClusterPythonScheduledFn>,
+        period_ns: u64,
+        next_due_ns: u64,
+        input_pending: bool,
+    },
+}
+
+#[derive(Clone, Copy)]
 struct ClusterNode {
-    run_for: ClusterNodeRunForFn,
-    fast_forward_for: ClusterNodeFastForwardForFn,
-    next_step: ClusterNodeNextStepFn,
+    scheduler: ClusterNodeScheduler,
     reset: ClusterNodeResetFn,
     online: bool,
     elapsed_ns: u64,
+}
+
+impl ClusterNode {
+    fn next_step(&self, cluster_elapsed_ns: u64, max_step_ns: u64) -> u64 {
+        match self.scheduler {
+            ClusterNodeScheduler::External { next_step, .. } => unsafe { next_step(max_step_ns) },
+            ClusterNodeScheduler::Python {
+                period_ns,
+                next_due_ns,
+                input_pending,
+                ..
+            } => {
+                if input_pending || period_ns == 0 {
+                    max_step_ns
+                } else if next_due_ns <= cluster_elapsed_ns {
+                    0
+                } else {
+                    (next_due_ns - cluster_elapsed_ns).min(max_step_ns)
+                }
+            }
+        }
+    }
+
+    fn run_for(&mut self, delta_ns: u64, fast_forward: bool) {
+        match self.scheduler {
+            ClusterNodeScheduler::External {
+                run_for,
+                fast_forward_for,
+                ..
+            } => {
+                if fast_forward {
+                    unsafe { fast_forward_for(delta_ns) };
+                } else {
+                    unsafe { run_for(delta_ns) };
+                }
+            }
+            ClusterNodeScheduler::Python { .. } => {}
+        }
+        self.elapsed_ns = self.elapsed_ns.saturating_add(delta_ns);
+    }
+
+    fn mark_input_pending(&mut self) {
+        if let ClusterNodeScheduler::Python { input_pending, .. } = &mut self.scheduler {
+            *input_pending = true;
+        }
+    }
+
+    fn run_due_python(&mut self, cluster_elapsed_ns: u64, fast_forward: bool) {
+        let ClusterNodeScheduler::Python {
+            scheduled,
+            period_ns,
+            next_due_ns,
+            input_pending,
+        } = &mut self.scheduler
+        else {
+            return;
+        };
+
+        let due_to_period = *period_ns != 0 && *next_due_ns <= cluster_elapsed_ns;
+        let due_to_input = *input_pending;
+        if !due_to_period && !due_to_input {
+            return;
+        }
+
+        if let Some(scheduled) = scheduled {
+            unsafe {
+                scheduled(
+                    cluster_elapsed_ns,
+                    cluster_elapsed_ns.saturating_sub(self.elapsed_ns),
+                    fast_forward,
+                )
+            };
+        }
+        self.elapsed_ns = cluster_elapsed_ns;
+        *input_pending = false;
+        if *period_ns != 0 {
+            while *next_due_ns <= cluster_elapsed_ns {
+                *next_due_ns = next_due_ns.saturating_add(*period_ns);
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -209,9 +304,32 @@ impl ClusterRuntime {
         online: bool,
     ) -> u32 {
         self.nodes.push(ClusterNode {
-            run_for,
-            fast_forward_for,
-            next_step,
+            scheduler: ClusterNodeScheduler::External {
+                run_for,
+                fast_forward_for,
+                next_step,
+            },
+            reset,
+            online,
+            elapsed_ns: 0,
+        });
+        (self.nodes.len() - 1) as u32
+    }
+
+    fn add_python_node(
+        &mut self,
+        scheduled: Option<ClusterPythonScheduledFn>,
+        reset: ClusterNodeResetFn,
+        period_ns: u64,
+        online: bool,
+    ) -> u32 {
+        self.nodes.push(ClusterNode {
+            scheduler: ClusterNodeScheduler::Python {
+                scheduled,
+                period_ns,
+                next_due_ns: period_ns,
+                input_pending: false,
+            },
             reset,
             online,
             elapsed_ns: 0,
@@ -298,6 +416,7 @@ impl ClusterRuntime {
         resistance_ohms: f32,
         inductance_henrys: f32,
         capacitance_farads: f32,
+        scheduler_period_ns: u64,
     ) -> bool {
         if self.nodes.get(node as usize).is_none() {
             return false;
@@ -320,18 +439,42 @@ impl ClusterRuntime {
             resistance_ohms,
             inductance_henrys,
             capacitance_farads,
+            scheduler_period_ns,
             self.elapsed_ns,
         ));
         true
     }
 
     fn set_node_online(&mut self, node: u32, online: bool) -> bool {
+        let elapsed_ns = self.elapsed_ns;
         let Some(node) = self.nodes.get_mut(node as usize) else {
             return false;
         };
         if node.online && !online {
             unsafe { (node.reset)() };
             node.elapsed_ns = 0;
+            if let ClusterNodeScheduler::Python {
+                period_ns,
+                next_due_ns,
+                input_pending,
+                ..
+            } = &mut node.scheduler
+            {
+                *next_due_ns = *period_ns;
+                *input_pending = false;
+            }
+        }
+        if !node.online && online {
+            if let ClusterNodeScheduler::Python {
+                period_ns,
+                next_due_ns,
+                input_pending,
+                ..
+            } = &mut node.scheduler
+            {
+                *next_due_ns = elapsed_ns.saturating_add(*period_ns);
+                *input_pending = false;
+            }
         }
         node.online = online;
         true
@@ -342,7 +485,7 @@ impl ClusterRuntime {
             .nodes
             .iter()
             .filter(|node| node.online)
-            .map(|node| unsafe { (node.next_step)(max_step_ns) })
+            .map(|node| node.next_step(self.elapsed_ns, max_step_ns))
             .min()
             .unwrap_or(max_step_ns);
         let dc_load_step = self
@@ -367,6 +510,8 @@ impl ClusterRuntime {
             return 0;
         }
 
+        self.run_due_python_nodes(fast_forward);
+
         let max_delta_ns = remaining_ns.min(max_step_ns);
         let delta_ns = if fast_forward {
             max_delta_ns
@@ -378,27 +523,39 @@ impl ClusterRuntime {
         }
 
         for node in self.nodes.iter_mut().filter(|node| node.online) {
-            if fast_forward {
-                unsafe { (node.fast_forward_for)(delta_ns) };
-            } else {
-                unsafe { (node.run_for)(delta_ns) };
-            }
-            node.elapsed_ns = node.elapsed_ns.saturating_add(delta_ns);
+            node.run_for(delta_ns, fast_forward);
         }
 
         self.elapsed_ns = self.elapsed_ns.saturating_add(delta_ns);
+        self.run_due_python_nodes(fast_forward);
         self.route_can();
         self.route_timer();
         self.run_dc_loads();
         self.route_spi();
         self.route_scalar();
+        self.run_due_python_nodes(fast_forward);
         delta_ns
+    }
+
+    fn run_due_python_nodes(&mut self, fast_forward: bool) {
+        let elapsed_ns = self.elapsed_ns;
+        for node in self.nodes.iter_mut().filter(|node| node.online) {
+            node.run_due_python(elapsed_ns, fast_forward);
+        }
+    }
+
+    fn mark_input_pending(&mut self, node: u32) {
+        let Some(node) = self.nodes.get_mut(node as usize) else {
+            return;
+        };
+        node.mark_input_pending();
     }
 
     fn route_can(&mut self) {
         let routes = self.can_routes.clone();
         let mut routed_sources: Vec<(u32, u8)> = Vec::new();
         let nodes_online: Vec<bool> = self.nodes.iter().map(|node| node.online).collect();
+        let mut input_pending_nodes = Vec::new();
 
         for source in self.periodic_can_sources.iter_mut() {
             if !nodes_online
@@ -416,10 +573,13 @@ impl ClusterRuntime {
                     && route.source_bus == source.bus()
                     && route.sink_node.is_some()
             }) {
-                if let Some(sink_send_many) = sink_route.sink_send_many {
+                if let (Some(sink_node), Some(sink_send_many)) =
+                    (sink_route.sink_node, sink_route.sink_send_many)
+                {
                     unsafe {
                         sink_send_many(sink_route.sink_bus, &event.packet, 1);
                     };
+                    input_pending_nodes.push(sink_node);
                 }
             }
             self.can_records.push_back(ClusterCanRecord {
@@ -427,6 +587,9 @@ impl ClusterRuntime {
                 bus: source.bus(),
                 event,
             });
+        }
+        for sink_node in input_pending_nodes {
+            self.mark_input_pending(sink_node);
         }
 
         for route in routes.iter().copied() {
@@ -465,14 +628,19 @@ impl ClusterRuntime {
                         && sink_route.source_bus == route.source_bus
                         && sink_route.sink_node.is_some()
                 }) {
-                    if let Some(sink_send_many) = sink_route.sink_send_many {
-                        unsafe {
+                    if let (Some(sink_node), Some(sink_send_many)) =
+                        (sink_route.sink_node, sink_route.sink_send_many)
+                    {
+                        let accepted = unsafe {
                             sink_send_many(
                                 sink_route.sink_bus,
                                 packets.as_ptr(),
                                 packets.len().min(u32::MAX as usize) as u32,
                             )
                         };
+                        if accepted > 0 {
+                            self.mark_input_pending(sink_node);
+                        }
                     }
                 }
             }
@@ -531,12 +699,15 @@ impl ClusterRuntime {
                     && sink_route.channel == route.channel
             }) {
                 self.update_dc_load_voltage(sink_route, &events);
-                unsafe {
+                let accepted = unsafe {
                     (sink_route.sink_send_many)(
                         events.as_ptr(),
                         events.len().min(u32::MAX as usize) as u32,
                     )
                 };
+                if accepted > 0 {
+                    self.mark_input_pending(sink_route.sink_node);
+                }
             }
 
             self.timer_records
@@ -609,12 +780,15 @@ impl ClusterRuntime {
             for sink_route in routes.iter().filter(|sink_route| {
                 sink_route.source_node == route.source_node && sink_route.device == route.device
             }) {
-                unsafe {
+                let accepted = unsafe {
                     (sink_route.sink_send_many)(
                         transactions.as_ptr(),
                         transactions.len().min(u32::MAX as usize) as u32,
                     )
                 };
+                if accepted > 0 {
+                    self.mark_input_pending(sink_route.sink_node);
+                }
             }
 
             self.spi_records.extend(
@@ -666,12 +840,15 @@ impl ClusterRuntime {
             for sink_route in routes.iter().filter(|sink_route| {
                 sink_route.source_node == route.source_node && sink_route.route_id == route.route_id
             }) {
-                unsafe {
+                let accepted = unsafe {
                     (sink_route.sink_send_many)(
                         events.as_ptr(),
                         events.len().min(u32::MAX as usize) as u32,
                     )
                 };
+                if accepted > 0 {
+                    self.mark_input_pending(sink_route.sink_node);
+                }
             }
 
             self.scalar_records
@@ -860,6 +1037,24 @@ pub extern "C" fn rig_cluster_add_node(
         .lock()
         .unwrap()
         .add_node(run_for, fast_forward_for, next_step, reset, online)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_python_node(
+    scheduled: usize,
+    reset: usize,
+    period_ns: u64,
+    online: bool,
+) -> u32 {
+    let scheduled = unsafe { function_pointer::<ClusterPythonScheduledFn>(scheduled) };
+    let Some(reset) = (unsafe { function_pointer::<ClusterNodeResetFn>(reset) }) else {
+        return u32::MAX;
+    };
+
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_python_node(scheduled, reset, period_ns, online)
 }
 
 #[unsafe(no_mangle)]
@@ -1077,6 +1272,7 @@ pub extern "C" fn rig_cluster_add_dc_load(
     resistance_ohms: f32,
     inductance_henrys: f32,
     capacitance_farads: f32,
+    scheduler_period_ns: u64,
 ) -> bool {
     CLUSTER_RUNTIME.lock().unwrap().add_dc_load(
         node,
@@ -1087,19 +1283,9 @@ pub extern "C" fn rig_cluster_add_dc_load(
         resistance_ohms,
         inductance_henrys,
         capacitance_farads,
+        scheduler_period_ns,
     )
 }
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_noop_run_for(_elapsed_ns: u64) {}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_noop_next_step(max_step_ns: u64) -> u64 {
-    max_step_ns
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_noop_reset() {}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_noop_timer_count(_port: i32, _channel: i32) -> u32 {

@@ -93,10 +93,6 @@ class NodeRig(ModelRig):
         self.elapsed_ns += duration_ns
         self._fast_forward_for(ctypes.c_uint64(duration_ns))
 
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        return int(self._next_scheduler_step(ctypes.c_uint64(duration_ns)))
-
     def rust_cluster_node_abi(self) -> RustNodeSchedulerAbi:
         return RustNodeSchedulerAbi(
             run_for=self._function_address(self._run_for),

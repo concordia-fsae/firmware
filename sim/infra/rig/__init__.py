@@ -56,7 +56,6 @@ from .peripherals import (
     TimerChannelEvent,
     TimerInterface,
 )
-from .runtime import RustNodeSchedulerAbi
 from .simple import SimpleCanComponent, SimpleComponent, SimpleNodeRig
 from .time import RunUntilTimeout, duration_to_ns, run_until
 
@@ -99,7 +98,6 @@ __all__ = [
     "extend_model_class",
     "RoutedCanEvent",
     "RunUntilTimeout",
-    "RustNodeSchedulerAbi",
     "SpiInterface",
     "SpiTransaction",
     "TimerCaptureEvent",

@@ -56,6 +56,8 @@ class DcLoadModel(ComponentRig):
         *,
         voltage_input_channel: DataPath,
         load_spec: DcLoadSpec,
+        scheduler_period: int | float | None = None,
+        scheduler_unit: str = "ms",
         bindings: tuple[ComponentDataPathBinding, ...] = (),
     ) -> ComponentSpec:
         return ComponentSpec(
@@ -63,6 +65,8 @@ class DcLoadModel(ComponentRig):
             parameters={
                 "voltage_input_channel": voltage_input_channel,
                 "load_spec": load_spec,
+                "scheduler_period": scheduler_period,
+                "scheduler_unit": scheduler_unit,
             },
             bindings=bindings,
         )
@@ -73,8 +77,13 @@ class DcLoadModel(ComponentRig):
         voltage_input_channel: DataPath,
         current_output_channel: DataPath | None = None,
         load_spec: DcLoadSpec,
+        scheduler_period: int | float | None = None,
+        scheduler_unit: str = "ms",
     ) -> None:
-        super().__init__(scheduler_period=1, scheduler_unit="ms")
+        super().__init__(
+            scheduler_period=scheduler_period,
+            scheduler_unit=scheduler_unit,
+        )
         self.voltage_input_channel = voltage_input_channel
         self.current_output_channel = current_output_channel or DataPath.component(
             self,
@@ -149,14 +158,23 @@ class DcLoadModel(ComponentRig):
     def rust_cluster_node_abi(self):
         if self._cluster_rig is None:
             return super().rust_cluster_node_abi()
-        runtime = getattr(self._cluster_rig, "_building_rust_runtime", None)
-        if runtime is None:
-            runtime = self._cluster_rig._rust_runtime
-        return runtime.noop_scheduler_abi
+        return self._rust_python_scheduler_abi(period_ns=0)
 
     def _set_voltage_from_timer(self, event: TimerChannelEvent) -> bool:
         self._input_voltage = max(0.0, float(event.value))
+        if self._scheduler_period_ns is None and self._is_static_resistive_load:
+            self._output_current = self._current_for_step(0.0)
+            self._previous_voltage = self._input_voltage
+            self._last_update_ns = self.elapsed_ns
         return True
+
+    @property
+    def _is_static_resistive_load(self) -> bool:
+        return (
+            self.load_spec.resistance_ohms is not None
+            and self.load_spec.inductance_henrys is None
+            and self.load_spec.capacitance_farads is None
+        )
 
     def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
         self._register_native_dc_load()
@@ -209,6 +227,9 @@ class DcLoadModel(ComponentRig):
             resistance_ohms=_native_component_value(self.load_spec.resistance_ohms),
             inductance_henrys=_native_component_value(self.load_spec.inductance_henrys),
             capacitance_farads=_native_component_value(self.load_spec.capacitance_farads),
+            scheduler_period_ns=0
+            if self._scheduler_period_ns is None
+            else self._scheduler_period_ns,
         ):
             raise RuntimeError("failed to register native DC load")
 

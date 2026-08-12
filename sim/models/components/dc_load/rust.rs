@@ -10,17 +10,17 @@ pub struct DcLoadModel {
     resistance_ohms: f32,
     inductance_henrys: f32,
     capacitance_farads: f32,
+    scheduler_period_ns: u64,
     input_voltage: f32,
     output_current: f32,
     inductor_current: f32,
     previous_voltage: f32,
     last_update_ns: u64,
+    voltage_dirty: bool,
     pending_current: bool,
 }
 
 impl DcLoadModel {
-    pub const PERIOD_NS: u64 = 1_000_000;
-
     pub fn new(
         node: u32,
         current_route_id: u32,
@@ -30,6 +30,7 @@ impl DcLoadModel {
         resistance_ohms: f32,
         inductance_henrys: f32,
         capacitance_farads: f32,
+        scheduler_period_ns: u64,
         elapsed_ns: u64,
     ) -> Self {
         Self {
@@ -41,11 +42,13 @@ impl DcLoadModel {
             resistance_ohms,
             inductance_henrys,
             capacitance_farads,
+            scheduler_period_ns,
             input_voltage: 0.0,
             output_current: 0.0,
             inductor_current: 0.0,
             previous_voltage: 0.0,
             last_update_ns: elapsed_ns,
+            voltage_dirty: false,
             pending_current: false,
         }
     }
@@ -87,26 +90,34 @@ impl DcLoadModel {
     }
 
     pub fn next_step_ns(&self, elapsed_ns: u64, max_step_ns: u64) -> u64 {
-        let elapsed_in_period = elapsed_ns.saturating_sub(self.last_update_ns);
-        if elapsed_in_period >= Self::PERIOD_NS {
-            return Self::PERIOD_NS.min(max_step_ns);
+        if self.scheduler_period_ns == 0 {
+            return max_step_ns;
         }
-        (Self::PERIOD_NS - elapsed_in_period).min(max_step_ns)
+        let elapsed_in_period = elapsed_ns.saturating_sub(self.last_update_ns);
+        if elapsed_in_period >= self.scheduler_period_ns {
+            return self.scheduler_period_ns.min(max_step_ns);
+        }
+        (self.scheduler_period_ns - elapsed_in_period).min(max_step_ns)
     }
 
     pub fn update_voltage(&mut self, events: &[TimerChannelEvent]) {
         if let Some(event) = events.last() {
             self.input_voltage = event.value.max(0.0);
+            self.voltage_dirty = true;
         }
     }
 
     pub fn run_until(&mut self, elapsed_ns: u64) {
         let elapsed_since_update_ns = elapsed_ns.saturating_sub(self.last_update_ns);
-        if elapsed_since_update_ns < Self::PERIOD_NS {
+        if self.scheduler_period_ns == 0 {
+            if !self.voltage_dirty {
+                return;
+            }
+        } else if elapsed_since_update_ns < self.scheduler_period_ns {
             return;
         }
         let dt_seconds = elapsed_since_update_ns as f32 / 1_000_000_000.0;
-        if dt_seconds <= 0.0 {
+        if dt_seconds <= 0.0 && self.capacitance_farads.is_finite() {
             return;
         }
 
@@ -125,6 +136,7 @@ impl DcLoadModel {
         self.output_current = current;
         self.previous_voltage = self.input_voltage;
         self.last_update_ns = elapsed_ns;
+        self.voltage_dirty = false;
         self.pending_current = true;
     }
 

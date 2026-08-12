@@ -170,6 +170,11 @@ class SimpleNodeRig(ModelRig):
     def add_component(self, component: ComponentRig) -> ComponentRig:
         if self._cluster_rig is not None:
             raise RuntimeError("simple components must be added before clustering")
+        if getattr(component, "_scheduler_period_ns", None) is not None:
+            raise ValueError(
+                "scheduled components must be added to a ClusterRig directly so "
+                "Rust can schedule each component independently"
+            )
         self.components.append(component)
         self._bind_component_datapaths(component)
         return component
@@ -178,25 +183,6 @@ class SimpleNodeRig(ModelRig):
         super().reset()
         for component in self.components:
             component.reset()
-
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        if not self.components:
-            return duration_ns
-        return min(
-            component.next_scheduler_step(duration_ns, unit="ns")
-            for component in self.components
-        )
-
-    def _run_for_from_runtime(self, duration_ns: int) -> None:
-        self.elapsed_ns += duration_ns
-        for component in self.components:
-            component._run_for_from_runtime(duration_ns)
-
-    def _fast_forward_for_from_runtime(self, duration_ns: int) -> None:
-        self.elapsed_ns += duration_ns
-        for component in self.components:
-            component._fast_forward_for_from_runtime(duration_ns)
 
     def _bind_component_datapaths(self, component: ComponentRig) -> None:
         for output in component.datapaths.outputs():
@@ -212,22 +198,6 @@ class SimpleNodeRig(ModelRig):
                 send=input_.send,
                 send_many=input_.send_many,
             )
-
-    def rust_cluster_node_abi(self):
-        if self._uses_native_scheduler():
-            runtime = getattr(self._cluster_rig, "_building_rust_runtime", None)
-            if runtime is None and self._cluster_rig is not None:
-                runtime = self._cluster_rig._rust_runtime
-            if runtime is None:
-                return super().rust_cluster_node_abi()
-            return runtime.noop_scheduler_abi
-        return super().rust_cluster_node_abi()
-
-    def _uses_native_scheduler(self) -> bool:
-        return bool(self.components) and all(
-            getattr(component, "uses_native_scheduler", False)
-            for component in self.components
-        )
 
     def rust_can_route_abi(self, bus) -> tuple[int, int, int, int] | None:
         for component in self.components:
@@ -255,8 +225,6 @@ class _SimpleCanInterface:
 
 class SimpleCanComponent(SimpleComponent):
     """Python-only component that emits generated CAN messages."""
-
-    uses_native_scheduler = True
 
     _CanTxCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_uint8)
     _CanRecvEventsCallback = ctypes.CFUNCTYPE(

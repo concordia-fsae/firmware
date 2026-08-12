@@ -17,6 +17,13 @@ class RustNodeSchedulerAbi:
     reset: int
 
 
+@dataclass(frozen=True)
+class RustPythonNodeSchedulerAbi:
+    scheduled: int
+    reset: int
+    period_ns: int
+
+
 class _StandaloneRustRuntimeHost:
     buck_target = "//sim/infra/runtime:runtime-so"
     env_var = "RIG_RUNTIME_SIM_LIB"
@@ -66,6 +73,16 @@ class _RustClusterRuntime:
                 ctypes.c_size_t,
                 ctypes.c_size_t,
                 ctypes.c_size_t,
+                ctypes.c_bool,
+            ],
+            ctypes.c_uint32,
+        )
+        self._add_python_node = bind_symbol(
+            "rig_cluster_add_python_node",
+            [
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint64,
                 ctypes.c_bool,
             ],
             ctypes.c_uint32,
@@ -209,6 +226,7 @@ class _RustClusterRuntime:
                 ctypes.c_float,
                 ctypes.c_float,
                 ctypes.c_float,
+                ctypes.c_uint64,
             ],
             ctypes.c_bool,
         )
@@ -218,9 +236,6 @@ class _RustClusterRuntime:
         self._noop_scalar_count = bind_symbol("rig_cluster_noop_scalar_count")
         self._noop_scalar_recv_many = bind_symbol("rig_cluster_noop_scalar_recv_many")
         self._noop_scalar_send_many = bind_symbol("rig_cluster_noop_scalar_send_many")
-        self._noop_run_for = bind_symbol("rig_cluster_noop_run_for")
-        self._noop_next_step = bind_symbol("rig_cluster_noop_next_step")
-        self._noop_reset = bind_symbol("rig_cluster_noop_reset")
         self._elapsed_ns = bind_symbol(
             "rig_cluster_elapsed_ns",
             restype=ctypes.c_uint64,
@@ -243,20 +258,30 @@ class _RustClusterRuntime:
 
     def add_node(self, name: str, node, *, online: bool = True) -> None:
         scheduler = node.rust_cluster_node_abi()
-        if not isinstance(scheduler, RustNodeSchedulerAbi):
+        if isinstance(scheduler, RustPythonNodeSchedulerAbi):
+            index = int(
+                self._add_python_node(
+                    ctypes.c_size_t(scheduler.scheduled),
+                    ctypes.c_size_t(scheduler.reset),
+                    ctypes.c_uint64(scheduler.period_ns),
+                    ctypes.c_bool(online),
+                )
+            )
+        elif isinstance(scheduler, RustNodeSchedulerAbi):
+            index = int(
+                self._add_node(
+                    ctypes.c_size_t(scheduler.run_for),
+                    ctypes.c_size_t(scheduler.fast_forward_for),
+                    ctypes.c_size_t(scheduler.next_step),
+                    ctypes.c_size_t(scheduler.reset),
+                    ctypes.c_bool(online),
+                )
+            )
+        else:
             raise TypeError(
                 f"node {name!r} returned unsupported scheduler ABI "
                 f"{type(scheduler).__name__}"
             )
-        index = int(
-            self._add_node(
-                ctypes.c_size_t(scheduler.run_for),
-                ctypes.c_size_t(scheduler.fast_forward_for),
-                ctypes.c_size_t(scheduler.next_step),
-                ctypes.c_size_t(scheduler.reset),
-                ctypes.c_bool(online),
-            )
-        )
         if index == 0xFFFFFFFF:
             raise RuntimeError(f"failed to register Rust cluster node {name!r}")
         self._node_indices[name] = index
@@ -417,6 +442,7 @@ class _RustClusterRuntime:
         resistance_ohms: float,
         inductance_henrys: float,
         capacitance_farads: float,
+        scheduler_period_ns: int,
     ) -> bool:
         try:
             node_index = self._node_indices[node]
@@ -432,6 +458,7 @@ class _RustClusterRuntime:
                 ctypes.c_float(resistance_ohms),
                 ctypes.c_float(inductance_henrys),
                 ctypes.c_float(capacitance_farads),
+                ctypes.c_uint64(scheduler_period_ns),
             )
         )
 
@@ -449,16 +476,6 @@ class _RustClusterRuntime:
             self._function_address(self._noop_scalar_count),
             self._function_address(self._noop_scalar_recv_many),
             self._function_address(self._noop_scalar_send_many),
-        )
-
-    @property
-    def noop_scheduler_abi(self) -> RustNodeSchedulerAbi:
-        run_for = self._function_address(self._noop_run_for)
-        return RustNodeSchedulerAbi(
-            run_for=run_for,
-            fast_forward_for=run_for,
-            next_step=self._function_address(self._noop_next_step),
-            reset=self._function_address(self._noop_reset),
         )
 
     def run_for(

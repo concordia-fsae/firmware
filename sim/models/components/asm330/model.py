@@ -19,14 +19,6 @@ class Asm330Model(ComponentRig):
         super().__init__()
         self.spi_transactions = spi_transactions
 
-    def rust_cluster_node_abi(self):
-        if self._cluster_rig is None:
-            return super().rust_cluster_node_abi()
-        runtime = getattr(self._cluster_rig, "_building_rust_runtime", None)
-        if runtime is None:
-            runtime = self._cluster_rig._rust_runtime
-        return runtime.noop_scheduler_abi
-
     def configure_owner(self, owner: object) -> None:
         binding = self.spi_transactions.peripheral_binding
         if binding is None or binding.device is None:
