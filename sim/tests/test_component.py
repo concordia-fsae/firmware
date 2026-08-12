@@ -1,3 +1,6 @@
+from sim.infra.rig import DataPath
+from sim.models.controllers.bmsb import BmsbSimpleModel
+from sim.models.controllers.bmsb.fixtures import bmsb_cluster
 from sim.models.controllers.vcfront.fixtures import vcfront_cluster
 from sim.models.controllers.vcpdu.fixtures import vcpdu_cluster
 from sim.models.controllers.vcrear.fixtures import vcrear_cluster
@@ -73,6 +76,18 @@ def test_vcfront_can_tx_streams_emit_packets_on_every_bus(vcfront_cluster):
 
 def test_vcfront_can_rx_stream_consumes_injected_packet(vcfront_cluster):
     check_can_rx_stream_consumes_injected_packet(vcfront_cluster)
+
+
+def test_bmsb_can_tx_streams_emit_controller_heartbeat(bmsb_cluster):
+    check_can_tx_streams_emit_controller_heartbeat(bmsb_cluster)
+
+
+def test_bmsb_can_tx_streams_emit_packets_on_every_bus(bmsb_cluster):
+    check_can_tx_streams_emit_packets_on_every_bus(bmsb_cluster)
+
+
+def test_bmsb_can_rx_stream_consumes_injected_packet(bmsb_cluster):
+    check_can_rx_stream_consumes_injected_packet(bmsb_cluster)
 
 
 def test_vcpdu_can_tx_streams_emit_controller_heartbeat(vcpdu_cluster):

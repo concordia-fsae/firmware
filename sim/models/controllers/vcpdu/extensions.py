@@ -40,6 +40,12 @@ class VcpduModelExtensions:
             bus="veh",
         )
 
+    def latest_vehicle_state_message(self):
+        return self.can.latest(
+            "VCPDU_vehicleState",
+            bus="veh",
+        )
+
     def record_latest_vehicle_state(self, observed: list) -> object | None:
         state = self.latest_vehicle_state()
         if state is not None and (not observed or observed[-1] != state):
