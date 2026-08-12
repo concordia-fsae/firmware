@@ -30,7 +30,9 @@ class ModelRig:
             else duration_to_ns(scheduler_period, unit=scheduler_unit)
         )
         if self._scheduler_period_ns is not None and self._scheduler_period_ns <= 0:
-            raise ValueError(f"scheduler period must be positive, got {scheduler_period}")
+            raise ValueError(
+                f"scheduler period must be positive, got {scheduler_period}"
+            )
 
     def reset(self) -> None:
         self.elapsed_ns = 0
@@ -76,7 +78,9 @@ class ModelRig:
 
     def set_online(self, online: bool) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
-            raise RuntimeError(f"{type(self).__name__} is not attached to a cluster rig")
+            raise RuntimeError(
+                f"{type(self).__name__} is not attached to a cluster rig"
+            )
         self._cluster_rig.set_node_online(self._cluster_node_name, online)
 
     def is_online(self) -> bool:
@@ -87,7 +91,6 @@ class ModelRig:
 
 class ComponentRig(ModelRig):
     """Pure Python model that can run standalone or inside a cluster."""
-
 
 
 def extend_model_class(
@@ -107,4 +110,3 @@ def extend_model_class(
         },
     )
     return extended  # type: ignore[return-value]
-

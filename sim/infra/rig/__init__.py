@@ -1,4 +1,10 @@
-from .catalog import ClusterCatalog, ClusterSpec, ClusterSpecFactory, ComponentSpec, NodeSpec
+from .catalog import (
+    ClusterCatalog,
+    ClusterSpec,
+    ClusterSpecFactory,
+    ComponentSpec,
+    NodeSpec,
+)
 from .artifacts import (
     buck_output,
     load_generated_module,
@@ -53,6 +59,7 @@ def cluster_rig_fixture(*args, **kwargs):
     from .pytest import cluster_rig_fixture as _cluster_rig_fixture
 
     return _cluster_rig_fixture(*args, **kwargs)
+
 
 __all__ = [
     "NodeRig",

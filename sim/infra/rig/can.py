@@ -21,10 +21,14 @@ class CanPacket(ctypes.Structure):
     ]
 
     @classmethod
-    def from_payload(cls, frame_id: int, payload: bytes | bytearray | list[int] | tuple[int, ...]):
+    def from_payload(
+        cls, frame_id: int, payload: bytes | bytearray | list[int] | tuple[int, ...]
+    ):
         payload_bytes = bytes(payload)
         if len(payload_bytes) > 8:
-            raise ValueError(f"CAN payload must be at most 8 bytes, got {len(payload_bytes)}")
+            raise ValueError(
+                f"CAN payload must be at most 8 bytes, got {len(payload_bytes)}"
+            )
 
         packet = cls()
         packet.id = ctypes.c_uint32(frame_id).value

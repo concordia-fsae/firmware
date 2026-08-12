@@ -137,11 +137,7 @@ class ClusterDataRoutes:
         routes: list[_DataPathRoute] = []
         for source_node, links in links_by_source.items():
             source = self._source_for_link(links[0])
-            sinks = tuple(
-                sink
-                for link in links
-                for sink in self._sinks_for_link(link)
-            )
+            sinks = tuple(sink for link in links for sink in self._sinks_for_link(link))
             routes.append(_DataPathRoute(source_node, source, sinks))
         self._route_cache[key] = tuple(routes)
         return self._route_cache[key]
@@ -160,8 +156,7 @@ class ClusterDataRoutes:
                 recv=output.recv,
             )
         raise KeyError(
-            f"node {link.source_node!r} has no output for datapath "
-            f"{link.path!r}"
+            f"node {link.source_node!r} has no output for datapath " f"{link.path!r}"
         )
 
     def _sinks_for_link(self, link: DataPathLink) -> tuple[DataPathSink[object], ...]:
@@ -180,8 +175,7 @@ class ClusterDataRoutes:
             )
         if not sinks:
             raise KeyError(
-                f"node {link.sink_node!r} has no input for datapath "
-                f"{link.path!r}"
+                f"node {link.sink_node!r} has no input for datapath " f"{link.path!r}"
             )
         return tuple(sinks)
 
@@ -258,11 +252,13 @@ class ClusterCanComms:
         return bool(self._cluster.nodes[node].datapaths.inputs(path))
 
     def connect_available_nodes(self) -> None:
-        self.connect_nodes(tuple(
-            node_name
-            for node_name, node in self._cluster.nodes.items()
-            if node.has_can
-        ))
+        self.connect_nodes(
+            tuple(
+                node_name
+                for node_name, node in self._cluster.nodes.items()
+                if node.has_can
+            )
+        )
 
     @property
     def events(self) -> tuple[RoutedCanEvent, ...]:
@@ -273,7 +269,13 @@ class ClusterCanComms:
             bus_name = str(path.parts[1])
             for record in self._dataroutes.records(path):
                 if isinstance(record.payload, CanEvent):
-                    events.append(RoutedCanEvent(record.source, CanBusDescriptor(record.payload.bus, bus_name), record.payload))
+                    events.append(
+                        RoutedCanEvent(
+                            record.source,
+                            CanBusDescriptor(record.payload.bus, bus_name),
+                            record.payload,
+                        )
+                    )
         return tuple(events)
 
     def route(self) -> None:
@@ -335,7 +337,9 @@ class ClusterCanComms:
 
 
 class _TypedClusterComms(Generic[PayloadT]):
-    def __init__(self, dataroutes: ClusterDataRoutes, payload_type: type[PayloadT]) -> None:
+    def __init__(
+        self, dataroutes: ClusterDataRoutes, payload_type: type[PayloadT]
+    ) -> None:
         self._dataroutes = dataroutes
         self._payload_type = payload_type
 
@@ -390,7 +394,6 @@ class ClusterComms:
         self._dataroutes.connect_available_paths()
 
 
-
 class ClusterRig:
     def __init__(
         self,
@@ -435,7 +438,9 @@ class ClusterRig:
             library_path = getattr(node, "library_path", None)
             if library_path is None:
                 continue
-            nodes_by_library.setdefault(pathlib.Path(library_path).resolve(), []).append(node_name)
+            nodes_by_library.setdefault(
+                pathlib.Path(library_path).resolve(), []
+            ).append(node_name)
 
         duplicates = {
             library_path: node_names
@@ -510,7 +515,9 @@ class ClusterRig:
         message: str | None = None,
     ) -> int:
         return run_until(
-            lambda delta_ns: self.run_for(delta_ns, unit="ns", step=delta_ns, step_unit="ns"),
+            lambda delta_ns: self.run_for(
+                delta_ns, unit="ns", step=delta_ns, step_unit="ns"
+            ),
             predicate,
             timeout_ns=duration_to_ns(timeout, unit=unit),
             step_ns=duration_to_ns(step, unit=step_unit or unit),
@@ -537,9 +544,7 @@ class ClusterRig:
 
     def _online_node_instances(self) -> tuple[object, ...]:
         return tuple(
-            node
-            for name, node in self._rig_nodes.items()
-            if self._online_nodes[name]
+            node for name, node in self._rig_nodes.items() if self._online_nodes[name]
         )
 
     def _next_cluster_scheduler_step_ns(
@@ -547,10 +552,14 @@ class ClusterRig:
         max_step_ns: int,
         online_nodes: tuple[object, ...] | None = None,
     ) -> int:
-        online_nodes = self._online_node_instances() if online_nodes is None else online_nodes
+        online_nodes = (
+            self._online_node_instances() if online_nodes is None else online_nodes
+        )
         if not online_nodes:
             return max_step_ns
-        return min(self._node_scheduler_step_ns(node, max_step_ns) for node in online_nodes)
+        return min(
+            self._node_scheduler_step_ns(node, max_step_ns) for node in online_nodes
+        )
 
     def _can_run_isolated_batch(self) -> bool:
         return len(self._online_node_instances()) == 1

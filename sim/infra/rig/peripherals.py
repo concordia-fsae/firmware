@@ -70,8 +70,6 @@ class SpiTransaction(ctypes.Structure):
         return bytes(self.rx_data[: self.rx_len])
 
 
-
-
 class TimerPeripheralInterface:
     _TIMER_DUTY = "timer.duty"
     _TIMER_FREQUENCY = "timer.frequency"
@@ -85,7 +83,9 @@ class TimerPeripheralInterface:
 
     @classmethod
     def timer_frequency_events(cls, port: object, channel: object) -> DataPath:
-        return cls._timer_events(cls._TIMER_FREQUENCY, "timer", "frequency", port, channel)
+        return cls._timer_events(
+            cls._TIMER_FREQUENCY, "timer", "frequency", port, channel
+        )
 
     @classmethod
     def _timer_events(
@@ -131,7 +131,9 @@ class TimerPeripheralInterface:
 
     def send_payload(self, path: DataPath, payload: object) -> bool:
         if not isinstance(payload, TimerChannelEvent):
-            raise TypeError(f"timer datapaths require TimerChannelEvent payloads, got {type(payload).__name__}")
+            raise TypeError(
+                f"timer datapaths require TimerChannelEvent payloads, got {type(payload).__name__}"
+            )
         return self._send_event(_peripheral_binding(path), payload)
 
     def recv(
@@ -155,10 +157,12 @@ class TimerPeripheralInterface:
     ) -> int:
         binding = _peripheral_binding(path)
         count = self._count_symbol(binding)
-        return int(count(
-            ctypes.c_int(binding.port if binding.port is not None else 0),
-            ctypes.c_int(binding.channel if binding.channel is not None else 0),
-        ))
+        return int(
+            count(
+                ctypes.c_int(binding.port if binding.port is not None else 0),
+                ctypes.c_int(binding.channel if binding.channel is not None else 0),
+            )
+        )
 
     def _send_event(self, binding: PeripheralBinding, event: TimerChannelEvent) -> bool:
         if binding.interface == self._TIMER_DUTY:
@@ -207,7 +211,9 @@ class SpiPeripheralInterface:
     def send_payload(self, path: DataPath, payload: object) -> bool:
         _peripheral_binding(path)
         if not isinstance(payload, SpiTransaction):
-            raise TypeError(f"SPI datapaths require SpiTransaction payloads, got {type(payload).__name__}")
+            raise TypeError(
+                f"SPI datapaths require SpiTransaction payloads, got {type(payload).__name__}"
+            )
         return bool(self._model._spi_send(ctypes.byref(payload)))
 
     def recv(self, path: DataPath) -> SpiTransaction | None:
@@ -222,9 +228,11 @@ class SpiPeripheralInterface:
 
     def output_count(self, path: DataPath) -> int:
         binding = _peripheral_binding(path)
-        return int(self._model._spi_output_count(
-            ctypes.c_int(binding.device if binding.device is not None else 0),
-        ))
+        return int(
+            self._model._spi_output_count(
+                ctypes.c_int(binding.device if binding.device is not None else 0),
+            )
+        )
 
 
 def _peripheral_binding(path: DataPath) -> PeripheralBinding:
@@ -250,14 +258,18 @@ class TimerInterface:
         port, channel = self._coerce(port, channel)
         return TimerPeripheralInterface.timer_frequency_events(port, channel)
 
-    def _coerce(self, port: object, channel: object) -> tuple[IntEnum | int, IntEnum | int]:
+    def _coerce(
+        self, port: object, channel: object
+    ) -> tuple[IntEnum | int, IntEnum | int]:
         return (
             self._coerce_enum(self._port_enum, port, "timer port"),
             self._coerce_enum(self._channel_enum, channel, "timer channel"),
         )
 
     @staticmethod
-    def _coerce_enum(enum_type: type[IntEnum] | None, value: object, label: str) -> IntEnum | int:
+    def _coerce_enum(
+        enum_type: type[IntEnum] | None, value: object, label: str
+    ) -> IntEnum | int:
         if enum_type is None:
             return int(value)  # type: ignore[arg-type]
         if isinstance(value, enum_type):
@@ -265,7 +277,9 @@ class TimerInterface:
         try:
             return enum_type(value)
         except ValueError as exc:
-            raise ValueError(f"{value!r} is not a valid {label} for {enum_type.__name__}") from exc
+            raise ValueError(
+                f"{value!r} is not a valid {label} for {enum_type.__name__}"
+            ) from exc
 
 
 class SpiInterface:
@@ -284,5 +298,6 @@ class SpiInterface:
         try:
             return self._device_enum(device)
         except ValueError as exc:
-            raise ValueError(f"{device!r} is not a valid SPI device for {self._device_enum.__name__}") from exc
-
+            raise ValueError(
+                f"{device!r} is not a valid SPI device for {self._device_enum.__name__}"
+            ) from exc

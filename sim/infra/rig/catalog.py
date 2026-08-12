@@ -14,16 +14,14 @@ from .node import NodeRig
 class ClusterSpecFactory(Protocol):
     name: str
 
-    def rig(self) -> ClusterRig:
-        ...
+    def rig(self) -> ClusterRig: ...
 
 
 class RigNodeSpec(Protocol):
     name: object
     components: tuple[ComponentSpec, ...]
 
-    def rig(self) -> object:
-        ...
+    def rig(self) -> object: ...
 
 
 @dataclass(frozen=True)
@@ -74,8 +72,7 @@ class ClusterSpec:
             node_name = rig_node_name(node.name)
             nodes[node_name] = node.rig()
             components.extend(
-                (node_name, component, component.rig())
-                for component in node.components
+                (node_name, component, component.rig()) for component in node.components
             )
 
         rig = ClusterRig(

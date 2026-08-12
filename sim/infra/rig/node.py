@@ -144,10 +144,14 @@ class NodeRig(ModelRig):
     def _can_signal_enum(self, signal_name: str) -> type[IntEnum]:
         enum_name = self._signal_enum_names().get(signal_name)
         if enum_name is None:
-            raise KeyError(f"CAN signal {signal_name!r} does not have generated enum metadata")
+            raise KeyError(
+                f"CAN signal {signal_name!r} does not have generated enum metadata"
+            )
         return self._can_enum(enum_name)
 
-    def _can_bus_descriptor(self, bus: int | str | CanBusDescriptor) -> CanBusDescriptor:
+    def _can_bus_descriptor(
+        self, bus: int | str | CanBusDescriptor
+    ) -> CanBusDescriptor:
         index = self._coerce_can_bus(bus)
         return self._can_buses[index]
 
@@ -216,7 +220,9 @@ class NodeRig(ModelRig):
         self._require_can_bus(bus_index)
         return int(self._can_tx_count(ctypes.c_uint8(bus_index)))
 
-    def _can_decode_signal_raw(self, bus: int | str | CanBusDescriptor, packet: CanPacket, signal_name: str) -> float:
+    def _can_decode_signal_raw(
+        self, bus: int | str | CanBusDescriptor, packet: CanPacket, signal_name: str
+    ) -> float:
         bus_index = self._coerce_can_bus(bus)
         self._require_can_bus(bus_index)
         value = ctypes.c_double()
@@ -227,7 +233,9 @@ class NodeRig(ModelRig):
             ctypes.byref(value),
         )
         if not ok:
-            raise ValueError(f"failed to decode CAN signal {signal_name!r} from packet id={packet.id}")
+            raise ValueError(
+                f"failed to decode CAN signal {signal_name!r} from packet id={packet.id}"
+            )
         return float(value.value)
 
     def _can_decode_message_raw(
@@ -252,7 +260,9 @@ class NodeRig(ModelRig):
         self._encode_can_signal_into(bus, message_name, signal_name, value, packet)
         return packet
 
-    def _can_encode_message_raw(self, bus: int | str | CanBusDescriptor, message_name: str, **signals: float) -> CanPacket:
+    def _can_encode_message_raw(
+        self, bus: int | str | CanBusDescriptor, message_name: str, **signals: float
+    ) -> CanPacket:
         packet = CanPacket()
         for signal_name, value in signals.items():
             self._encode_can_signal_into(bus, message_name, signal_name, value, packet)
@@ -276,7 +286,9 @@ class NodeRig(ModelRig):
             ctypes.byref(packet),
         )
         if not ok:
-            raise ValueError(f"failed to encode CAN signal {signal_name!r} for {message_name!r}")
+            raise ValueError(
+                f"failed to encode CAN signal {signal_name!r} for {message_name!r}"
+            )
 
     def _configure_abi(self) -> None:
         if self.has_can:
@@ -310,12 +322,16 @@ class NodeRig(ModelRig):
         peripheral = self._peripheral_model(path)
         self.datapaths.add_output(
             path,
-            pending=lambda path=path, peripheral=peripheral: peripheral.output_count(path),
+            pending=lambda path=path, peripheral=peripheral: peripheral.output_count(
+                path
+            ),
             recv=lambda path=path, peripheral=peripheral: peripheral.recv(path),
         )
         self.datapaths.add_input(
             path,
-            send=lambda event, path=path, peripheral=peripheral: peripheral.send_payload(path, event),
+            send=lambda event,
+            path=path,
+            peripheral=peripheral: peripheral.send_payload(path, event),
         )
 
     def supports_datapath(self, path: DataPath) -> bool:
@@ -325,7 +341,9 @@ class NodeRig(ModelRig):
         peripheral = self._peripheral_model_or_none(path)
         if peripheral is not None:
             return peripheral
-        raise ValueError(f"datapath {path!r} is not backed by a known controller peripheral")
+        raise ValueError(
+            f"datapath {path!r} is not backed by a known controller peripheral"
+        )
 
     def _peripheral_model_or_none(self, path: DataPath):
         try:
@@ -341,19 +359,25 @@ class NodeRig(ModelRig):
         paths = []
         for index in range(int(self._datapath_count())):
             descriptor = _ModelDataPathDescriptorAbi()
-            if not self._datapath_descriptor(ctypes.c_uint32(index), ctypes.byref(descriptor)):
+            if not self._datapath_descriptor(
+                ctypes.c_uint32(index), ctypes.byref(descriptor)
+            ):
                 continue
             paths.append(self._datapath_from_descriptor(descriptor))
         return tuple(paths)
 
-    def _datapath_from_descriptor(self, descriptor: _ModelDataPathDescriptorAbi) -> DataPath:
+    def _datapath_from_descriptor(
+        self, descriptor: _ModelDataPathDescriptorAbi
+    ) -> DataPath:
         if descriptor.interface == RIG_MODEL_DATAPATH_TIMER_DUTY:
             return self.timer.duty_events(descriptor.port, descriptor.channel)
         if descriptor.interface == RIG_MODEL_DATAPATH_TIMER_FREQUENCY:
             return self.timer.frequency_events(descriptor.port, descriptor.channel)
         if descriptor.interface == RIG_MODEL_DATAPATH_SPI_TRANSACTION:
             return self.spi.transactions(descriptor.device)
-        raise ValueError(f"unsupported Rust model datapath interface {descriptor.interface}")
+        raise ValueError(
+            f"unsupported Rust model datapath interface {descriptor.interface}"
+        )
 
     def _library_from_env(self) -> pathlib.Path | None:
         library_path = os.environ.get(self.env_var)
@@ -362,7 +386,9 @@ class NodeRig(ModelRig):
     def _build_library(self) -> pathlib.Path:
         return buck_output(self.buck_target, self._root)
 
-    def _resolve_library_path(self, library_path: str | pathlib.Path | None) -> pathlib.Path:
+    def _resolve_library_path(
+        self, library_path: str | pathlib.Path | None
+    ) -> pathlib.Path:
         path = pathlib.Path(library_path) if library_path else self._library_from_env()
         if path is None:
             path = self._build_library()
@@ -491,7 +517,9 @@ class NodeRig(ModelRig):
     def _require_can_bus(self, bus: int) -> None:
         bus_count = self._can_bus_count_value()
         if bus < 0 or bus >= bus_count:
-            raise ValueError(f"CAN bus {bus} out of range for model with {bus_count} buses")
+            raise ValueError(
+                f"CAN bus {bus} out of range for model with {bus_count} buses"
+            )
 
     def _coerce_can_bus(self, bus: int | str | CanBusDescriptor) -> int:
         if isinstance(bus, CanBusDescriptor):
@@ -549,13 +577,17 @@ class NodeRig(ModelRig):
 
     def _bind_can_codegen(self) -> None:
         prefix = "rig_model_can_codegen_"
-        self._can_codegen_bus_count = self._bind_symbol(prefix + "bus_count", restype=ctypes.c_uint8)
+        self._can_codegen_bus_count = self._bind_symbol(
+            prefix + "bus_count", restype=ctypes.c_uint8
+        )
         self._can_codegen_bus_name = self._bind_symbol(
             prefix + "bus_name",
             [ctypes.c_uint8, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t],
             ctypes.c_bool,
         )
-        self._can_codegen_message_count = self._bind_symbol(prefix + "message_count", restype=ctypes.c_uint32)
+        self._can_codegen_message_count = self._bind_symbol(
+            prefix + "message_count", restype=ctypes.c_uint32
+        )
         self._can_codegen_message_descriptor = self._bind_symbol(
             prefix + "message_descriptor",
             [ctypes.c_uint32, ctypes.POINTER(_CanMessageDescriptorAbi)],
@@ -566,7 +598,9 @@ class NodeRig(ModelRig):
             [ctypes.c_uint32, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t],
             ctypes.c_bool,
         )
-        self._can_codegen_tx_message_count = self._bind_symbol(prefix + "tx_message_count", restype=ctypes.c_uint32)
+        self._can_codegen_tx_message_count = self._bind_symbol(
+            prefix + "tx_message_count", restype=ctypes.c_uint32
+        )
         self._can_codegen_tx_message_descriptor = self._bind_symbol(
             prefix + "tx_message_descriptor",
             [ctypes.c_uint32, ctypes.POINTER(_CanMessageDescriptorAbi)],
@@ -577,7 +611,9 @@ class NodeRig(ModelRig):
             [ctypes.c_uint32, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t],
             ctypes.c_bool,
         )
-        self._can_codegen_signal_count = self._bind_symbol(prefix + "signal_count", restype=ctypes.c_uint32)
+        self._can_codegen_signal_count = self._bind_symbol(
+            prefix + "signal_count", restype=ctypes.c_uint32
+        )
         self._can_codegen_signal_descriptor = self._bind_symbol(
             prefix + "signal_descriptor",
             [ctypes.c_uint32, ctypes.POINTER(_CanSignalDescriptorAbi)],
@@ -603,7 +639,9 @@ class NodeRig(ModelRig):
             [ctypes.c_uint32, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t],
             ctypes.c_bool,
         )
-        self._can_codegen_tx_signal_count = self._bind_symbol(prefix + "tx_signal_count", restype=ctypes.c_uint32)
+        self._can_codegen_tx_signal_count = self._bind_symbol(
+            prefix + "tx_signal_count", restype=ctypes.c_uint32
+        )
         self._can_codegen_tx_signal_descriptor = self._bind_symbol(
             prefix + "tx_signal_descriptor",
             [ctypes.c_uint32, ctypes.POINTER(_CanSignalDescriptorAbi)],
@@ -629,7 +667,9 @@ class NodeRig(ModelRig):
             [ctypes.c_uint32, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t],
             ctypes.c_bool,
         )
-        self._can_codegen_enum_value_count = self._bind_symbol(prefix + "enum_value_count", restype=ctypes.c_uint32)
+        self._can_codegen_enum_value_count = self._bind_symbol(
+            prefix + "enum_value_count", restype=ctypes.c_uint32
+        )
         self._can_codegen_enum_value_descriptor = self._bind_symbol(
             prefix + "enum_value_descriptor",
             [ctypes.c_uint32, ctypes.POINTER(_CanEnumValueDescriptorAbi)],
@@ -651,7 +691,9 @@ class NodeRig(ModelRig):
             return self._can_metadata
 
         buses = tuple(
-            CanBusDescriptor(index, self._read_codegen_string(self._can_codegen_bus_name, index))
+            CanBusDescriptor(
+                index, self._read_codegen_string(self._can_codegen_bus_name, index)
+            )
             for index in range(int(self._can_codegen_bus_count()))
         )
         metadata = {
@@ -741,7 +783,9 @@ class NodeRig(ModelRig):
                     message_id=int(descriptor.message_id),
                     signal_name=self._read_codegen_string(signal_name_fn, index),
                     unit=unit or None,
-                    kind=SIGNAL_KIND_NAMES.get(int(descriptor.kind), f"Unknown({int(descriptor.kind)})"),
+                    kind=SIGNAL_KIND_NAMES.get(
+                        int(descriptor.kind), f"Unknown({int(descriptor.kind)})"
+                    ),
                     enum_name=enum_name or None,
                 )
             )
@@ -751,12 +795,18 @@ class NodeRig(ModelRig):
         enum_values = []
         for index in range(int(self._can_codegen_enum_value_count())):
             descriptor = _CanEnumValueDescriptorAbi()
-            if not self._can_codegen_enum_value_descriptor(ctypes.c_uint32(index), ctypes.byref(descriptor)):
+            if not self._can_codegen_enum_value_descriptor(
+                ctypes.c_uint32(index), ctypes.byref(descriptor)
+            ):
                 raise RuntimeError(f"failed to read CAN enum value descriptor {index}")
             enum_values.append(
                 CanEnumValueDescriptor(
-                    enum_name=self._read_codegen_string(self._can_codegen_enum_value_enum_name, index),
-                    label=self._read_codegen_string(self._can_codegen_enum_value_label, index),
+                    enum_name=self._read_codegen_string(
+                        self._can_codegen_enum_value_enum_name, index
+                    ),
+                    label=self._read_codegen_string(
+                        self._can_codegen_enum_value_label, index
+                    ),
                     raw=int(descriptor.raw),
                 )
             )
@@ -771,10 +821,12 @@ class NodeRig(ModelRig):
             members = values_by_enum.setdefault(enum_value.enum_name, {})
             members[python_enum_member(enum_value.label)] = enum_value.raw
             members[python_enum_attr_member(enum_value.label)] = enum_value.raw
-        return CanEnumNamespace({
-            enum_name: IntEnum(python_enum_class_name(enum_name), values)
-            for enum_name, values in values_by_enum.items()
-        })
+        return CanEnumNamespace(
+            {
+                enum_name: IntEnum(python_enum_class_name(enum_name), values)
+                for enum_name, values in values_by_enum.items()
+            }
+        )
 
     def _signal_enum_names(self) -> dict[str, str]:
         names: dict[str, str] = {}
@@ -792,7 +844,9 @@ class NodeRig(ModelRig):
             and signal.message_name == message.name
         )
         if not signals:
-            raise KeyError(f"CAN message {message.name!r} has no generated signal metadata")
+            raise KeyError(
+                f"CAN message {message.name!r} has no generated signal metadata"
+            )
         return signals
 
     def _coerce_decoded_can_value(self, signal_name: str, value: float) -> object:

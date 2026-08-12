@@ -149,7 +149,9 @@ class ModelDataPaths:
     ) -> None:
         self._inputs.append(ModelDataPathInput(path, send))
 
-    def outputs(self, path: DataPath | None = None) -> tuple[ModelDataPathOutput[object], ...]:
+    def outputs(
+        self, path: DataPath | None = None
+    ) -> tuple[ModelDataPathOutput[object], ...]:
         key = None if path is None else datapath_key(path)
         return tuple(
             output
@@ -157,7 +159,9 @@ class ModelDataPaths:
             if key is None or datapath_key(output.path) == key
         )
 
-    def inputs(self, path: DataPath | None = None) -> tuple[ModelDataPathInput[object], ...]:
+    def inputs(
+        self, path: DataPath | None = None
+    ) -> tuple[ModelDataPathInput[object], ...]:
         key = None if path is None else datapath_key(path)
         return tuple(
             input_
@@ -168,6 +172,8 @@ class ModelDataPaths:
     @property
     def paths(self) -> tuple[DataPath, ...]:
         paths: dict[str, DataPath] = {}
-        for path in [output.path for output in self._outputs] + [input_.path for input_ in self._inputs]:
+        for path in [output.path for output in self._outputs] + [
+            input_.path for input_ in self._inputs
+        ]:
             paths.setdefault(datapath_key(path), path)
         return tuple(paths.values())

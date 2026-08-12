@@ -79,7 +79,9 @@ class PythonOwner(ModelRig):
         self.datapaths.add_output(
             path,
             pending=lambda: len(self.pending_payloads),
-            recv=lambda: self.pending_payloads.pop(0) if self.pending_payloads else None,
+            recv=lambda: self.pending_payloads.pop(0)
+            if self.pending_payloads
+            else None,
         )
 
 
@@ -178,20 +180,30 @@ def test_can_node_connections_use_generated_common_bus_names_only():
         source.datapaths.add_output(
             ClusterCanComms.path(bus),
             pending=lambda bus=bus: len(source_payloads[bus]),
-            recv=lambda bus=bus: source_payloads[bus].pop(0) if source_payloads[bus] else None,
+            recv=lambda bus=bus: source_payloads[bus].pop(0)
+            if source_payloads[bus]
+            else None,
         )
     for bus in sink.can.buses:
         sink.datapaths.add_input(
             ClusterCanComms.path(bus),
-            send=lambda payload, bus=bus: not received_payloads.append((bus.name, payload)),
+            send=lambda payload, bus=bus: not received_payloads.append(
+                (bus.name, payload)
+            ),
         )
 
     cluster = ClusterRig(source=source, sink=sink)
     cluster.run_for(1)
 
     assert received_payloads == [("veh", "veh-packet")]
-    assert [record.path for record in cluster.dataroutes.records(ClusterCanComms.path("veh"))] == [ClusterCanComms.path("veh")]
-    assert [record.path for record in cluster.dataroutes.records(ClusterCanComms.path("nose"))] == [ClusterCanComms.path("nose")]
+    assert [
+        record.path
+        for record in cluster.dataroutes.records(ClusterCanComms.path("veh"))
+    ] == [ClusterCanComms.path("veh")]
+    assert [
+        record.path
+        for record in cluster.dataroutes.records(ClusterCanComms.path("nose"))
+    ] == [ClusterCanComms.path("nose")]
 
 
 def test_component_scheduler_participates_in_cluster_temporal_order():
@@ -259,7 +271,9 @@ def test_cluster_rejects_duplicate_rust_backed_shared_object_instances(tmp_path)
         assert "first" in str(exc)
         assert "second" in str(exc)
     else:
-        raise AssertionError("expected duplicate shared-object controller instances to fail")
+        raise AssertionError(
+            "expected duplicate shared-object controller instances to fail"
+        )
 
 
 def test_python_model_owner_configures_outputs_for_component_inputs():

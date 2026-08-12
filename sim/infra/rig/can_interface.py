@@ -73,7 +73,9 @@ class CanInterface:
     ) -> bool:
         if isinstance(bus_or_message, CanMessageDescriptor):
             if frame_id is not None or payload is not None:
-                raise ValueError("frame_id and payload must not be provided when sending a CAN message descriptor")
+                raise ValueError(
+                    "frame_id and payload must not be provided when sending a CAN message descriptor"
+                )
             packet = self.encode(bus_or_message, **signals)
             return self._model._can_send_packet(
                 bus_or_message.bus,
@@ -161,20 +163,30 @@ class CanInterface:
     ) -> DecodedCanMessage:
         event = packet_or_event if isinstance(packet_or_event, CanEvent) else None
         packet = packet_or_event.packet if event is not None else packet_or_event
-        signals = self._model._signals_for_message(message) if signal_names is None else signal_names
-        raw_values = self._model._can_decode_message_raw(message.bus, packet, tuple(signals))
+        signals = (
+            self._model._signals_for_message(message)
+            if signal_names is None
+            else signal_names
+        )
+        raw_values = self._model._can_decode_message_raw(
+            message.bus, packet, tuple(signals)
+        )
         typed_values = {
             signal_name: self._model._coerce_decoded_can_value(signal_name, value)
             for signal_name, value in raw_values.items()
         }
         return DecodedCanMessage(message=message, values=typed_values, event=event)
 
-    def encode(self, message: CanMessageDescriptor, **signals: float | int | IntEnum) -> CanPacket:
+    def encode(
+        self, message: CanMessageDescriptor, **signals: float | int | IntEnum
+    ) -> CanPacket:
         raw_signals = {
             signal_name: int(value) if isinstance(value, IntEnum) else value
             for signal_name, value in signals.items()
         }
-        return self._model._can_encode_message_raw(message.bus, message.name, **raw_signals)
+        return self._model._can_encode_message_raw(
+            message.bus, message.name, **raw_signals
+        )
 
     def _tx_message_descriptor(
         self,
@@ -187,5 +199,3 @@ class CanInterface:
                 raise ValueError(f"message {message.name!r} is not on bus {bus!r}")
             return message
         return self.tx_message(message, bus=bus)
-
-
