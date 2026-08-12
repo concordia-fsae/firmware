@@ -623,7 +623,9 @@ class _RustClusterRuntime:
             )
         )
 
-    def latest_spi_transaction(self, source_node: str, device: int, transaction) -> bool:
+    def latest_spi_transaction(
+        self, source_node: str, device: int, transaction
+    ) -> bool:
         index = self._node_indices.get(source_node)
         if index is None:
             return False

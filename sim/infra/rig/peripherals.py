@@ -235,9 +235,7 @@ class TimerPeripheralInterface:
 
     def rust_route_abi(self, path: DataPath) -> tuple[int, int, int, int, int, int]:
         binding = _peripheral_binding(path)
-        interface = (
-            1 if binding.interface == self._TIMER_DUTY else 2
-        )
+        interface = 1 if binding.interface == self._TIMER_DUTY else 2
         return (
             interface,
             int(binding.port if binding.port is not None else 0),

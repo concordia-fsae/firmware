@@ -348,7 +348,9 @@ class CanInterface:
             bus=descriptor.bus,
             message_id=descriptor.id,
             signal_name=signal,
-            expected=float(int(expected) if isinstance(expected, IntEnum) else expected),
+            expected=float(
+                int(expected) if isinstance(expected, IntEnum) else expected
+            ),
             tolerance=float(tolerance),
             timeout_ns=timeout_ns,
             step_ns=step_ns,

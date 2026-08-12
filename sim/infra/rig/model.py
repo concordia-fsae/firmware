@@ -159,7 +159,9 @@ class ModelRig:
             send=send,
         )
 
-    def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+    def rust_datapath_route_abi(
+        self, path: DataPath
+    ) -> tuple[str, tuple[int, ...]] | None:
         scalar_abi = self._scalar_route_abis.get(datapath_key(path))
         if scalar_abi is not None:
             return ("scalar", scalar_abi)

@@ -89,9 +89,12 @@ class ClusterDataRoutes:
                     if sink_node != source_node and sink.datapaths.inputs(output.path)
                 )
                 if not sink_nodes:
-                    if getattr(node, "rust_datapath_route_abi", lambda _path: None)(
-                        output.path
-                    ) is not None:
+                    if (
+                        getattr(node, "rust_datapath_route_abi", lambda _path: None)(
+                            output.path
+                        )
+                        is not None
+                    ):
                         self._fanout(output.path)
                         continue
                     self.connect(output.path, source_node=source_node)
@@ -280,7 +283,7 @@ class ClusterDataRoutes:
             )
         if not sinks:
             raise KeyError(
-                    f"node {link.sink_node!r} has no input for datapath " f"{link.path!r}"
+                f"node {link.sink_node!r} has no input for datapath " f"{link.path!r}"
             )
         return tuple(sinks)
 
@@ -309,9 +312,27 @@ class ClusterDataRoutes:
             return False
 
         if source_kind == "timer":
-            interface, port, channel, source_count, source_recv_many, _source_send_many = source_args
-            _sink_interface, _sink_port, _sink_channel, _sink_count, _sink_recv_many, sink_send_many = sink_args
-            if (interface, port, channel) != (_sink_interface, _sink_port, _sink_channel):
+            (
+                interface,
+                port,
+                channel,
+                source_count,
+                source_recv_many,
+                _source_send_many,
+            ) = source_args
+            (
+                _sink_interface,
+                _sink_port,
+                _sink_channel,
+                _sink_count,
+                _sink_recv_many,
+                sink_send_many,
+            ) = sink_args
+            if (interface, port, channel) != (
+                _sink_interface,
+                _sink_port,
+                _sink_channel,
+            ):
                 return False
             connected = self._cluster._rust_runtime.add_timer_route(
                 source_node=source_node,
@@ -363,10 +384,14 @@ class ClusterDataRoutes:
             "spi.transaction",
         }
 
-    def _native_scalar_records(self, path: DataPath) -> tuple[DataPathRecord[object], ...]:
+    def _native_scalar_records(
+        self, path: DataPath
+    ) -> tuple[DataPathRecord[object], ...]:
         native_records: list[DataPathRecord[object]] = []
         for node_name, node in self._cluster._rig_nodes.items():
-            route_abi = getattr(node, "rust_datapath_route_abi", lambda _path: None)(path)
+            route_abi = getattr(node, "rust_datapath_route_abi", lambda _path: None)(
+                path
+            )
             if route_abi is None:
                 continue
             kind, args = route_abi

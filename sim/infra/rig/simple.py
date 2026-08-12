@@ -203,9 +203,7 @@ class SimpleNodeRig(ModelRig):
         for component in self.components:
             component._cluster_rig = self._cluster_rig
             component._cluster_node_name = self._cluster_node_name
-            route_abi = getattr(component, "rust_can_route_abi", lambda _bus: None)(
-                bus
-            )
+            route_abi = getattr(component, "rust_can_route_abi", lambda _bus: None)(bus)
             if route_abi is not None:
                 return route_abi
         return None
@@ -249,18 +247,13 @@ class SimpleCanComponent(SimpleComponent):
         super().__init__()
         self._encoder = encoder
         self._buses = tuple(encoder.bus(bus) for bus in buses)
-        self._bus_paths = {
-            bus.name: DataPath.can_bus(bus.name)
-            for bus in self._buses
-        }
+        self._bus_paths = {bus.name: DataPath.can_bus(bus.name) for bus in self._buses}
         self.can = _SimpleCanInterface(self)
         self._periodic_messages: list[PeriodicCanMessage] = []
         self._native_periodic_handles: dict[int, int] = {}
         for path in self._bus_paths.values():
             self.add_egress_datapath(path)
-        self._can_tx_count_callback = self._CanTxCountCallback(
-            self._ffi_can_tx_count
-        )
+        self._can_tx_count_callback = self._CanTxCountCallback(self._ffi_can_tx_count)
         self._can_recv_events_callback = self._CanRecvEventsCallback(
             self._ffi_can_recv_events
         )
@@ -304,9 +297,7 @@ class SimpleCanComponent(SimpleComponent):
             message=descriptor,
             period_ns=duration_to_ns(period, unit=unit),
             signals=dict(signals),
-            encoder=lambda message, signals: self._encoder.encode(
-                message, **signals
-            ),
+            encoder=lambda message, signals: self._encoder.encode(message, **signals),
         )
         self._periodic_messages.append(periodic)
         return periodic
@@ -416,7 +407,9 @@ class SimpleCanComponent(SimpleComponent):
                 )
             self._native_periodic_handles[key] = handle
             periodic.native_update = (
-                lambda packet, handle=handle, cluster=cluster: cluster._rust_runtime.update_periodic_can_source(
+                lambda packet,
+                handle=handle,
+                cluster=cluster: cluster._rust_runtime.update_periodic_can_source(
                     handle,
                     packet,
                 )

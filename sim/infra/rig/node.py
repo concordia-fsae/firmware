@@ -115,7 +115,9 @@ class NodeRig(ModelRig):
             self._function_address(self._can_send_many),
         )
 
-    def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+    def rust_datapath_route_abi(
+        self, path: DataPath
+    ) -> tuple[str, tuple[int, ...]] | None:
         model_abi = super().rust_datapath_route_abi(path)
         if model_abi is not None:
             return model_abi

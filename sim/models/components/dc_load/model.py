@@ -178,7 +178,9 @@ class DcLoadModel(ComponentRig):
             and not _component_present(self.load_spec.capacitance_farads)
         )
 
-    def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
+    def rust_datapath_route_abi(
+        self, path: DataPath
+    ) -> tuple[str, tuple[int, ...]] | None:
         self._register_native_dc_load()
         if path == self.voltage_input_channel:
             return ("timer", self._timer_sink_route_abi(path))
@@ -186,9 +188,14 @@ class DcLoadModel(ComponentRig):
             return ("scalar", self._scalar_source_route_abi(path))
         return None
 
-    def _timer_sink_route_abi(self, path: DataPath) -> tuple[int, int, int, int, int, int]:
+    def _timer_sink_route_abi(
+        self, path: DataPath
+    ) -> tuple[int, int, int, int, int, int]:
         binding = path.peripheral_binding
-        if binding is None or binding.interface not in ("timer.duty", "timer.frequency"):
+        if binding is None or binding.interface not in (
+            "timer.duty",
+            "timer.frequency",
+        ):
             raise ValueError(f"datapath {path!r} is not a timer channel")
 
         count_callback, recv_callback, send_callback = (
@@ -218,11 +225,18 @@ class DcLoadModel(ComponentRig):
         if self._cluster_rig is None or self._cluster_node_name is None:
             return
         binding = self.voltage_input_channel.peripheral_binding
-        if binding is None or binding.interface not in ("timer.duty", "timer.frequency"):
-            raise ValueError(f"datapath {self.voltage_input_channel!r} is not a timer channel")
+        if binding is None or binding.interface not in (
+            "timer.duty",
+            "timer.frequency",
+        ):
+            raise ValueError(
+                f"datapath {self.voltage_input_channel!r} is not a timer channel"
+            )
         if not self._cluster_rig._rust_runtime.add_dc_load(
             node=self._cluster_node_name,
-            current_route_id=datapath_route_id(datapath_key(self.current_output_channel)),
+            current_route_id=datapath_route_id(
+                datapath_key(self.current_output_channel)
+            ),
             timer_interface=1 if binding.interface == "timer.duty" else 2,
             timer_port=int(binding.port if binding.port is not None else 0),
             timer_channel=int(binding.channel if binding.channel is not None else 0),
