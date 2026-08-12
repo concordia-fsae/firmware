@@ -106,6 +106,7 @@ static VCFRONT: Mutex<NodeModel<Vcfront>> = Mutex::new(NodeModel::new(
 ));
 
 rig_model_abi!(VCFRONT);
+rig_model_fault_abi!();
 
 rig_yamcan_network!(
     VCFRONT_CAN_NETWORK,

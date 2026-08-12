@@ -143,6 +143,10 @@ class NodeRig(ModelRig):
         return bool(self._get_digital_io(ctypes.c_int(channel)))
 
     def get_fault(self, fault: int) -> bool:
+        if self._get_fault is None:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not expose local fault state"
+            )
         return bool(self._get_fault(ctypes.c_int(fault)))
 
     def _can_bus_count_value(self) -> int:
@@ -609,7 +613,7 @@ class NodeRig(ModelRig):
             [ctypes.c_int],
             ctypes.c_bool,
         )
-        self._get_fault = self._bind_symbol(
+        self._get_fault = self._bind_optional_symbol(
             "rig_model_get_fault",
             [ctypes.c_int],
             ctypes.c_bool,
@@ -779,6 +783,17 @@ class NodeRig(ModelRig):
         symbol.argtypes = [] if argtypes is None else argtypes
         symbol.restype = restype
         return symbol
+
+    def _bind_optional_symbol(
+        self,
+        name: str,
+        argtypes: list[object] | None = None,
+        restype: object | None = None,
+    ):
+        try:
+            return self._bind_symbol(name, argtypes, restype)
+        except AttributeError:
+            return None
 
     @staticmethod
     def _function_address(symbol) -> int:

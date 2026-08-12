@@ -30,7 +30,7 @@ pub mod datapath {
     include!(env!("RIG_RUNTIME_RUST_DATAPATH_RS"));
 }
 
-mod faults {
+pub mod faults {
     include!(env!("RIG_RUNTIME_RUST_FAULTS_RS"));
 }
 
@@ -117,11 +117,6 @@ pub extern "C" fn rig_model_set_digital_io(channel: i32, state: bool) {
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_model_get_digital_io(channel: i32) -> bool {
     io::get_digital(channel)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_model_get_fault(fault: i32) -> bool {
-    faults::get(fault)
 }
 
 #[unsafe(no_mangle)]

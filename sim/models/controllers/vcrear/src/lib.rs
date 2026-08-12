@@ -100,6 +100,7 @@ static VCREAR: Mutex<NodeModel<Vcrear>> = Mutex::new(NodeModel::new(
 ));
 
 rig_model_abi!(VCREAR);
+rig_model_fault_abi!();
 
 rig_yamcan_network!(
     VCREAR_CAN_NETWORK,
