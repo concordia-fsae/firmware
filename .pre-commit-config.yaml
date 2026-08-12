@@ -26,10 +26,13 @@ repos:
     hooks:
       - id: taplo-format
         files: \.toml$
-  - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.12.0-2
+  - repo: local
     hooks:
       - id: shfmt
+        name: shfmt
+        language: system
+        entry: shfmt
+        args: [-w]
         files: \.sh$
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.17
