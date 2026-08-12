@@ -30,7 +30,7 @@ rig_model_python(
 )
 
 rig_model_c_support(
-    srcs = rig_runtime_srcs(["core", "faults", "io", "peripherals", "spi", "time"]),
+    srcs = rig_runtime_srcs(["can", "core", "faults", "flash", "io", "spi", "swi", "system", "time", "timer_capture", "uart"]),
     compiler_flags = [
         "-std=c11",
         "-Wall",

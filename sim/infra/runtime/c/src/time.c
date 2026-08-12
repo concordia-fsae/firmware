@@ -14,6 +14,11 @@ uint32_t HW_TIM_getTimeMS(void)
     return (uint32_t)(rig_runtime.time_ns / 1000000ULL);
 }
 
+uint32_t HW_getTick(void)
+{
+    return HW_TIM_getTimeMS();
+}
+
 uint64_t rig_runtime_get_time_ns(void)
 {
     return rig_runtime.time_ns;
@@ -22,20 +27,6 @@ uint64_t rig_runtime_get_time_ns(void)
 uint64_t HW_TIM_getBaseTick(void)
 {
     return rig_runtime.time_ns / 1000ULL;
-}
-
-float32_t HW_TIM_getFreq(HW_TIM_channelFreq_E channel)
-{
-    float32_t value = 0.0f;
-
-    (void)rig_runtime_timer_latest_capture_input((int32_t)channel, &value);
-    return value;
-}
-
-uint64_t HW_TIM_getLastCaptureBaseTick(HW_TIM_channelFreq_E channel)
-{
-    (void)channel;
-    return HW_TIM_getBaseTick();
 }
 
 void HW_TIM_setDuty(HW_TIM_port_E port, HW_TIM_channel_E channel, float32_t percentage)

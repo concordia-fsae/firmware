@@ -37,12 +37,18 @@ _DEFAULT_MODEL_C_FLAGS = [
 ]
 
 _RIG_RUNTIME_MODULE_SRCS = {
+    "can": ["//sim/infra/runtime:c/src/can.c"],
     "core": ["//sim/infra/runtime:c/src/core.c"],
+    "flash": ["//sim/infra/runtime:c/src/flash.c"],
     "faults": ["//sim/infra/runtime:c/src/faults.c"],
+    "i2c": ["//sim/infra/runtime:c/src/i2c.c"],
     "io": ["//sim/infra/runtime:c/src/io.c"],
-    "peripherals": ["//sim/infra/runtime:c/src/peripherals.c"],
     "spi": ["//sim/infra/runtime:c/src/spi.c"],
+    "swi": ["//sim/infra/runtime:c/src/swi.c"],
+    "system": ["//sim/infra/runtime:c/src/system.c"],
     "time": ["//sim/infra/runtime:c/src/time.c"],
+    "timer_capture": ["//sim/infra/runtime:c/src/timer_capture.c"],
+    "uart": ["//sim/infra/runtime:c/src/uart.c"],
 }
 
 def rig_runtime_srcs(modules: list[str]):

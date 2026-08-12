@@ -25,6 +25,11 @@ typedef struct
 typedef struct
 {
     uint32_t unused;
+} I2C_HandleTypeDef;
+
+typedef struct
+{
+    uint32_t unused;
 } UART_HandleTypeDef;
 
 typedef struct

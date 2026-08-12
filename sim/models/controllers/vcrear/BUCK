@@ -29,7 +29,7 @@ rig_model_python(
 )
 
 rig_model_c_support(
-    srcs = rig_runtime_srcs(["core", "faults", "io", "peripherals", "time"]),
+    srcs = rig_runtime_srcs(["can", "core", "faults", "flash", "io", "swi", "system", "time", "timer_capture", "uart"]),
     headers = {
         "runtime_state.h": "//sim/infra/runtime:c/src/runtime_state.h",
     },
