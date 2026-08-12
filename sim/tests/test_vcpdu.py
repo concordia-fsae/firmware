@@ -9,7 +9,10 @@ def test_vcpdu_boots_and_cycles_to_glv_on(vcpdu_cluster):
     observed = []
 
     def record_state():
-        return vcpdu_cluster.vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV
+        return (
+            vcpdu_cluster.vcpdu.record_latest_vehicle_state(observed)
+            == VehicleState.ON_GLV
+        )
 
     vcpdu_cluster.run_until(
         record_state,
@@ -75,7 +78,9 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_states(
             VehicleState.INIT,
             VehicleState.ON_GLV,
         ]
-        assert vcpdu.send_waking_controller_sleepable(controller, SleepFollowerState.OK_TO_SLEEP)
+        assert vcpdu.send_waking_controller_sleepable(
+            controller, SleepFollowerState.OK_TO_SLEEP
+        )
 
 
 @pytest.mark.parametrize(

@@ -1,4 +1,9 @@
-from sim.infra.rig import SpiInterface, TimerInterface, extend_model_class, load_generated_module
+from sim.infra.rig import (
+    SpiInterface,
+    TimerInterface,
+    extend_model_class,
+    load_generated_module,
+)
 
 from .extensions import VcpduModelExtensions
 
@@ -28,6 +33,7 @@ VcpduModelExtensions.Vn9008Channel = Vn9008Channel
 class VcpduModel(extend_model_class(_model.VcpduModel, VcpduModelExtensions)):
     timer = TimerInterface(TimerPort, TimerChannel)
     spi = SpiInterface(SpiDevice)
+
 
 from sim.models.platforms import PLATFORM_VARIANTS
 

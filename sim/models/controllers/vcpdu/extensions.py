@@ -12,7 +12,9 @@ class VcpduModelExtensions:
     def _configure_abi(self) -> None:
         super()._configure_abi()
         if self.AnalogInput is None or self.Vn9008Channel is None:
-            raise RuntimeError("VcpduModelExtensions generated enums were not configured")
+            raise RuntimeError(
+                "VcpduModelExtensions generated enums were not configured"
+            )
         self._get_vn9008_cs_amps_per_volt = self._bind_model_symbol(
             "get_vn9008_cs_amps_per_volt",
             [ctypes.c_int],
@@ -83,8 +85,12 @@ class VcpduModelExtensions:
         value = self.can.latest_signal("VCPDU_hsdCurrent1", signal_name, bus="veh")
         return None if value is None else float(value)
 
-    def set_vn9008_current_feedback(self, hsd_channel, analog_channel, current_amps: float) -> bool:
-        amps_per_volt = float(self._get_vn9008_cs_amps_per_volt(ctypes.c_int(int(hsd_channel))))
+    def set_vn9008_current_feedback(
+        self, hsd_channel, analog_channel, current_amps: float
+    ) -> bool:
+        amps_per_volt = float(
+            self._get_vn9008_cs_amps_per_volt(ctypes.c_int(int(hsd_channel)))
+        )
         if amps_per_volt <= 0.0:
             return False
         self.set_analog_input(analog_channel, float(current_amps) / amps_per_volt)
@@ -96,7 +102,8 @@ class VcpduModelExtensions:
         signals = {
             signal.signal_name: DigitalStatus.OFF
             for signal in self.can.rx_signals
-            if signal.message_name == message.name and signal.enum_name == "digitalStatus"
+            if signal.message_name == message.name
+            and signal.enum_name == "digitalStatus"
         }
         signals[signal_name] = DigitalStatus.ON if requested else DigitalStatus.OFF
         return self.can.send(message, **signals)
@@ -109,7 +116,9 @@ class VcpduModelExtensions:
         raise ValueError(f"unsupported VCPDU HSD channel {hsd_channel!r}")
 
     @classmethod
-    def vn9008_current_feedback(cls, *, hsd_channel, analog_input) -> ModelDataPathInputConnector:
+    def vn9008_current_feedback(
+        cls, *, hsd_channel, analog_input
+    ) -> ModelDataPathInputConnector:
         def connect(node, path) -> None:
             node.datapaths.add_input(
                 path,
