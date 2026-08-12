@@ -117,19 +117,19 @@ impl DcLoadModel {
             return;
         }
         let dt_seconds = elapsed_since_update_ns as f32 / 1_000_000_000.0;
-        if dt_seconds <= 0.0 && self.capacitance_farads.is_finite() {
+        if dt_seconds <= 0.0 && component_present(self.capacitance_farads) {
             return;
         }
 
         let mut current = 0.0;
-        if self.resistance_ohms.is_finite() {
+        if component_present(self.resistance_ohms) {
             current += self.input_voltage / self.resistance_ohms;
         }
-        if self.inductance_henrys.is_finite() {
+        if component_present(self.inductance_henrys) {
             self.inductor_current += (self.input_voltage / self.inductance_henrys) * dt_seconds;
             current += self.inductor_current;
         }
-        if self.capacitance_farads.is_finite() {
+        if component_present(self.capacitance_farads) {
             current += self.capacitance_farads
                 * ((self.input_voltage - self.previous_voltage) / dt_seconds);
         }
@@ -150,4 +150,8 @@ impl DcLoadModel {
             timestamp_ns: elapsed_ns,
         })
     }
+}
+
+fn component_present(value: f32) -> bool {
+    value.is_finite() && value > 0.0
 }

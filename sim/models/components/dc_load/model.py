@@ -23,24 +23,26 @@ class DcLoadPort(Enum):
 @dataclass(frozen=True)
 class DcLoadSpec:
     resistance_ohms: float | None = None
-    inductance_henrys: float | None = None
-    capacitance_farads: float | None = None
+    inductance_henrys: float | None = 0.0
+    capacitance_farads: float | None = 0.0
 
     def __post_init__(self) -> None:
-        if self.resistance_ohms is not None and self.resistance_ohms <= 0.0:
-            raise ValueError(f"resistance must be positive, got {self.resistance_ohms}")
-        if self.inductance_henrys is not None and self.inductance_henrys <= 0.0:
-            raise ValueError(
-                f"inductance must be positive, got {self.inductance_henrys}"
+        for field in ("resistance_ohms", "inductance_henrys", "capacitance_farads"):
+            value = getattr(self, field)
+            if value is None:
+                object.__setattr__(self, field, 0.0)
+                value = 0.0
+            if math.isnan(value):
+                raise ValueError(f"{field} must not be NaN")
+            if value < 0.0:
+                raise ValueError(f"{field} must not be negative, got {value}")
+        if not any(
+            _component_present(value)
+            for value in (
+                self.resistance_ohms,
+                self.inductance_henrys,
+                self.capacitance_farads,
             )
-        if self.capacitance_farads is not None and self.capacitance_farads <= 0.0:
-            raise ValueError(
-                f"capacitance must be positive, got {self.capacitance_farads}"
-            )
-        if (
-            self.resistance_ohms is None
-            and self.inductance_henrys is None
-            and self.capacitance_farads is None
         ):
             raise ValueError("DC load spec must include at least one L/R/C component")
 
@@ -142,14 +144,14 @@ class DcLoadModel(ComponentRig):
 
     def _current_for_step(self, dt_seconds: float) -> float:
         current = 0.0
-        if self.load_spec.resistance_ohms is not None:
+        if _component_present(self.load_spec.resistance_ohms):
             current += self.input_voltage / self.load_spec.resistance_ohms
-        if self.load_spec.inductance_henrys is not None:
+        if _component_present(self.load_spec.inductance_henrys):
             self._inductor_current += (
                 self.input_voltage / self.load_spec.inductance_henrys
             ) * dt_seconds
             current += self._inductor_current
-        if self.load_spec.capacitance_farads is not None:
+        if _component_present(self.load_spec.capacitance_farads):
             current += self.load_spec.capacitance_farads * (
                 (self.input_voltage - self._previous_voltage) / dt_seconds
             )
@@ -171,9 +173,9 @@ class DcLoadModel(ComponentRig):
     @property
     def _is_static_resistive_load(self) -> bool:
         return (
-            self.load_spec.resistance_ohms is not None
-            and self.load_spec.inductance_henrys is None
-            and self.load_spec.capacitance_farads is None
+            _component_present(self.load_spec.resistance_ohms)
+            and not _component_present(self.load_spec.inductance_henrys)
+            and not _component_present(self.load_spec.capacitance_farads)
         )
 
     def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
@@ -226,7 +228,9 @@ class DcLoadModel(ComponentRig):
             timer_channel=int(binding.channel if binding.channel is not None else 0),
             resistance_ohms=_native_component_value(self.load_spec.resistance_ohms),
             inductance_henrys=_native_component_value(self.load_spec.inductance_henrys),
-            capacitance_farads=_native_component_value(self.load_spec.capacitance_farads),
+            capacitance_farads=_native_component_value(
+                self.load_spec.capacitance_farads
+            ),
             scheduler_period_ns=0
             if self._scheduler_period_ns is None
             else self._scheduler_period_ns,
@@ -235,4 +239,8 @@ class DcLoadModel(ComponentRig):
 
 
 def _native_component_value(value: float | None) -> float:
-    return math.inf if value is None else float(value)
+    return 0.0 if value is None else float(value)
+
+
+def _component_present(value: float | None) -> bool:
+    return value is not None and math.isfinite(value) and value > 0.0
