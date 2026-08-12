@@ -19,7 +19,6 @@ rig_python_model(
 rig_model_python(
     srcs = [
         "__init__.py",
-        "extensions.py",
         "fixtures.py",
         "simple.py",
         "variants.py",

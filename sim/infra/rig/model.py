@@ -79,13 +79,9 @@ class ModelRig:
             self.elapsed_ns += duration_ns
             return
 
-        remaining_ns = duration_ns
-        while remaining_ns > 0:
-            step_ns = self.next_scheduler_step(remaining_ns, unit="ns")
-            self.elapsed_ns += step_ns
-            remaining_ns -= step_ns
-            if self.elapsed_ns % self._scheduler_period_ns == 0:
-                self._run_scheduled()
+        self.elapsed_ns += duration_ns
+        if self.elapsed_ns % self._scheduler_period_ns == 0:
+            self._run_scheduled()
 
     def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
         duration_ns = duration_to_ns(duration, unit=unit)

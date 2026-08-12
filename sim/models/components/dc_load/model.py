@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ctypes
 import math
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -75,7 +74,7 @@ class DcLoadModel(ComponentRig):
         current_output_channel: DataPath | None = None,
         load_spec: DcLoadSpec,
     ) -> None:
-        super().__init__()
+        super().__init__(scheduler_period=1, scheduler_unit="ms")
         self.voltage_input_channel = voltage_input_channel
         self.current_output_channel = current_output_channel or DataPath.component(
             self,
@@ -87,7 +86,6 @@ class DcLoadModel(ComponentRig):
         self._inductor_current = 0.0
         self._previous_voltage = 0.0
         self._last_update_ns = 0
-        self._timer_route_callbacks = []
         self.datapaths.add_input(
             self.voltage_input_channel,
             send=self._set_voltage_from_timer,
@@ -148,13 +146,6 @@ class DcLoadModel(ComponentRig):
             )
         return current
 
-    def _run_for_from_runtime(self, duration_ns: int) -> None:
-        if self._cluster_rig is not None:
-            self.elapsed_ns += duration_ns
-            return
-        self.elapsed_ns += duration_ns
-        self._run_scheduled()
-
     def rust_cluster_node_abi(self):
         if self._cluster_rig is None:
             return super().rust_cluster_node_abi()
@@ -166,9 +157,6 @@ class DcLoadModel(ComponentRig):
     def _set_voltage_from_timer(self, event: TimerChannelEvent) -> bool:
         self._input_voltage = max(0.0, float(event.value))
         return True
-
-    def _recv_current(self) -> float | None:
-        return None
 
     def rust_datapath_route_abi(self, path: DataPath) -> tuple[str, tuple[int, ...]] | None:
         self._register_native_dc_load()
@@ -223,27 +211,6 @@ class DcLoadModel(ComponentRig):
             capacitance_farads=_native_component_value(self.load_spec.capacitance_farads),
         ):
             raise RuntimeError("failed to register native DC load")
-
-    def _send_timer_events(self, events, count: int) -> int:
-        accepted = 0
-        for index in range(int(count)):
-            if not self._set_voltage_from_timer(events[index]):
-                break
-            accepted += 1
-        return accepted
-
-    _TimerRecvManyCallback = ctypes.CFUNCTYPE(
-        ctypes.c_uint32,
-        ctypes.c_int32,
-        ctypes.c_int32,
-        ctypes.POINTER(TimerChannelEvent),
-        ctypes.c_uint32,
-    )
-    _TimerSendManyCallback = ctypes.CFUNCTYPE(
-        ctypes.c_uint32,
-        ctypes.POINTER(TimerChannelEvent),
-        ctypes.c_uint32,
-    )
 
 
 def _native_component_value(value: float | None) -> float:
