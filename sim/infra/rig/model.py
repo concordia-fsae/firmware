@@ -6,7 +6,12 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from .datapath import DataPath, ModelDataPaths, ScalarEvent, datapath_key
-from .runtime import RustPythonNodeSchedulerAbi, _RustClusterRuntime
+from .runtime import _RustClusterRuntime
+from .scheduler import (
+    PythonSchedulerCallbacks,
+    SchedulerContext,
+    _SchedulerCallbackContextAbi,
+)
 from .time import duration_to_ns
 
 
@@ -19,9 +24,7 @@ class ModelRig:
     has_can = False
     _ClusterScheduledCallback = ctypes.CFUNCTYPE(
         None,
-        ctypes.c_uint64,
-        ctypes.c_uint64,
-        ctypes.c_bool,
+        ctypes.POINTER(_SchedulerCallbackContextAbi),
     )
     _ClusterResetCallback = ctypes.CFUNCTYPE(None)
     _ScalarCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32)
@@ -41,6 +44,7 @@ class ModelRig:
         *,
         scheduler_period: int | float | None = None,
         scheduler_unit: str = "ms",
+        scheduler_callback: Callable[[SchedulerContext], None] | None = None,
     ) -> None:
         self.datapaths = ModelDataPaths()
         self._cluster_rig: ClusterRig | None = None
@@ -57,6 +61,7 @@ class ModelRig:
             raise ValueError(
                 f"scheduler period must be positive, got {scheduler_period}"
             )
+        self._scheduler_callback = scheduler_callback
         self._cluster_scheduled_callback = self._ClusterScheduledCallback(
             self._cluster_scheduled
         )
@@ -70,9 +75,6 @@ class ModelRig:
     def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
         duration_ns = duration_to_ns(duration, unit=unit)
         self._runtime().run_for(duration_ns, duration_ns)
-
-    def _run_scheduled(self) -> None:
-        pass
 
     def configure_datapath(self, path: DataPath) -> None:
         raise ValueError(f"datapath {path!r} is not supported by {type(self).__name__}")
@@ -175,31 +177,33 @@ class ModelRig:
             return True
         return self._cluster_rig.node_online(self._cluster_node_name)
 
-    def rust_cluster_node_abi(self) -> RustPythonNodeSchedulerAbi:
-        return self._rust_python_scheduler_abi()
+    def scheduler_callbacks(self) -> PythonSchedulerCallbacks:
+        return self._python_scheduler_callbacks()
 
-    def _rust_python_scheduler_abi(
+    def _python_scheduler_callbacks(
         self,
         *,
         period_ns: int | None = None,
-    ) -> RustPythonNodeSchedulerAbi:
+    ) -> PythonSchedulerCallbacks:
         resolved_period_ns = (
             self._scheduler_period_ns if period_ns is None else int(period_ns)
         )
-        return RustPythonNodeSchedulerAbi(
-            scheduled=self._callback_address(self._cluster_scheduled_callback),
+        return PythonSchedulerCallbacks(
+            scheduled=self._callback_address(self._cluster_scheduled_callback)
+            if self._scheduler_callback is not None
+            else 0,
             reset=self._callback_address(self._cluster_reset_callback),
             period_ns=0 if resolved_period_ns is None else resolved_period_ns,
         )
 
     def _cluster_scheduled(
         self,
-        elapsed_ns: int,
-        _delta_ns: int,
-        _fast_forward: bool,
+        context_abi,
     ) -> None:
-        self.elapsed_ns = int(elapsed_ns)
-        self._run_scheduled()
+        context = SchedulerContext.from_abi(context_abi.contents)
+        self.elapsed_ns = context.elapsed_ns
+        if self._scheduler_callback is not None:
+            self._scheduler_callback(context)
 
     def _runtime(self) -> _RustClusterRuntime:
         if self._standalone_runtime is None:
@@ -237,6 +241,7 @@ class PeriodicDataPathProducer(ComponentRig):
         super().__init__(
             scheduler_period=scheduler_period,
             scheduler_unit=scheduler_unit,
+            scheduler_callback=self._produce_scheduled,
         )
         self.path = path
         self._payload = payload
@@ -252,7 +257,7 @@ class PeriodicDataPathProducer(ComponentRig):
         super().reset()
         self._pending_payloads.clear()
 
-    def _run_scheduled(self) -> None:
+    def _produce_scheduled(self, context: SchedulerContext) -> None:
         produced = self._payload(self) if callable(self._payload) else self._payload
         if produced is None:
             return

@@ -4,24 +4,9 @@ import ctypes
 import os
 import pathlib
 from collections.abc import Callable
-from dataclasses import dataclass
 
 from .artifacts import buck_output, load_shared_library, repo_root
-
-
-@dataclass(frozen=True)
-class RustNodeSchedulerAbi:
-    run_for: int
-    fast_forward_for: int
-    next_step: int
-    reset: int
-
-
-@dataclass(frozen=True)
-class RustPythonNodeSchedulerAbi:
-    scheduled: int
-    reset: int
-    period_ns: int
+from .scheduler import PythonSchedulerCallbacks, RustSchedulerCallbacks
 
 
 class _StandaloneRustRuntimeHost:
@@ -85,6 +70,11 @@ class _RustClusterRuntime:
                 ctypes.c_uint64,
                 ctypes.c_bool,
             ],
+            ctypes.c_uint32,
+        )
+        self._add_rust_runtime_model_node = bind_symbol(
+            "rig_cluster_add_rust_runtime_model_node",
+            [ctypes.c_bool],
             ctypes.c_uint32,
         )
         self._set_node_online = bind_symbol(
@@ -257,8 +247,15 @@ class _RustClusterRuntime:
         self._node_indices.clear()
 
     def add_node(self, name: str, node, *, online: bool = True) -> None:
-        scheduler = node.rust_cluster_node_abi()
-        if isinstance(scheduler, RustPythonNodeSchedulerAbi):
+        if getattr(node, "rust_runtime_model", lambda: False)():
+            index = int(self._add_rust_runtime_model_node(ctypes.c_bool(online)))
+            if index == 0xFFFFFFFF:
+                raise RuntimeError(f"failed to register Rust cluster node {name!r}")
+            self._node_indices[name] = index
+            return
+
+        scheduler = node.scheduler_callbacks()
+        if isinstance(scheduler, PythonSchedulerCallbacks):
             index = int(
                 self._add_python_node(
                     ctypes.c_size_t(scheduler.scheduled),
@@ -267,7 +264,7 @@ class _RustClusterRuntime:
                     ctypes.c_bool(online),
                 )
             )
-        elif isinstance(scheduler, RustNodeSchedulerAbi):
+        elif isinstance(scheduler, RustSchedulerCallbacks):
             index = int(
                 self._add_node(
                     ctypes.c_size_t(scheduler.run_for),
@@ -279,7 +276,7 @@ class _RustClusterRuntime:
             )
         else:
             raise TypeError(
-                f"node {name!r} returned unsupported scheduler ABI "
+                f"node {name!r} returned unsupported scheduler callbacks "
                 f"{type(scheduler).__name__}"
             )
         if index == 0xFFFFFFFF:

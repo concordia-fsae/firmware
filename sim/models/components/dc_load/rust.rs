@@ -61,6 +61,16 @@ impl DcLoadModel {
         self.current_route_id
     }
 
+    pub fn reset(&mut self, elapsed_ns: u64) {
+        self.input_voltage = 0.0;
+        self.output_current = 0.0;
+        self.inductor_current = 0.0;
+        self.previous_voltage = 0.0;
+        self.last_update_ns = elapsed_ns;
+        self.voltage_dirty = false;
+        self.pending_current = false;
+    }
+
     pub fn voltage_input_matches(
         &self,
         node: u32,

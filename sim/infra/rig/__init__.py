@@ -48,6 +48,11 @@ from .model import (
     extend_model_class,
 )
 from .node import NodeRig
+from .scheduler import (
+    PythonSchedulerCallbacks,
+    RustSchedulerCallbacks,
+    SchedulerContext,
+)
 from .power import PowerControlEvent, PowerControlPath, PowerInterface
 from .peripherals import (
     SpiInterface,
@@ -112,7 +117,10 @@ __all__ = [
     "PowerControlEvent",
     "PowerControlPath",
     "PowerInterface",
+    "PythonSchedulerCallbacks",
     "run_until",
+    "RustSchedulerCallbacks",
+    "SchedulerContext",
     "shared_library_mode",
     "ClusterCatalog",
     "ClusterSpec",

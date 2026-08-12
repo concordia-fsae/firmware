@@ -361,9 +361,6 @@ class SimpleCanComponent(SimpleComponent):
         defaults.update(signals)
         return defaults
 
-    def _run_scheduled(self) -> None:
-        pass
-
     def _queue_message(
         self,
         message: CanMessageDescriptor,

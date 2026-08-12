@@ -12,7 +12,7 @@ pub type ClusterNodeRunForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeFastForwardForFn = unsafe extern "C" fn(u64);
 pub type ClusterNodeNextStepFn = unsafe extern "C" fn(u64) -> u64;
 pub type ClusterNodeResetFn = unsafe extern "C" fn();
-pub type ClusterPythonScheduledFn = unsafe extern "C" fn(u64, u64, bool);
+pub type ClusterPythonScheduledFn = unsafe extern "C" fn(*const SchedulerCallbackContext);
 pub type ClusterRouteFn = unsafe extern "C" fn(u64);
 pub type ClusterCanTxCountFn = unsafe extern "C" fn(u8) -> u32;
 pub type ClusterCanRecvEventsFn = unsafe extern "C" fn(u8, *mut CanEvent, u32) -> u32;
@@ -86,8 +86,17 @@ pub struct ScalarEvent {
     pub timestamp_ns: u64,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SchedulerCallbackContext {
+    pub elapsed_ns: u64,
+    pub delta_ns: u64,
+    pub fast_forward: bool,
+}
+
 #[derive(Clone, Copy)]
 enum ClusterNodeScheduler {
+    RustRuntimeModel,
     External {
         run_for: ClusterNodeRunForFn,
         fast_forward_for: ClusterNodeFastForwardForFn,
@@ -104,7 +113,7 @@ enum ClusterNodeScheduler {
 #[derive(Clone, Copy)]
 struct ClusterNode {
     scheduler: ClusterNodeScheduler,
-    reset: ClusterNodeResetFn,
+    reset: Option<ClusterNodeResetFn>,
     online: bool,
     elapsed_ns: u64,
 }
@@ -112,6 +121,7 @@ struct ClusterNode {
 impl ClusterNode {
     fn next_step(&self, cluster_elapsed_ns: u64, max_step_ns: u64) -> u64 {
         match self.scheduler {
+            ClusterNodeScheduler::RustRuntimeModel => max_step_ns,
             ClusterNodeScheduler::External { next_step, .. } => unsafe { next_step(max_step_ns) },
             ClusterNodeScheduler::Python {
                 period_ns,
@@ -132,6 +142,7 @@ impl ClusterNode {
 
     fn run_for(&mut self, delta_ns: u64, fast_forward: bool) {
         match self.scheduler {
+            ClusterNodeScheduler::RustRuntimeModel => {}
             ClusterNodeScheduler::External {
                 run_for,
                 fast_forward_for,
@@ -172,12 +183,13 @@ impl ClusterNode {
         }
 
         if let Some(scheduled) = scheduled {
+            let context = SchedulerCallbackContext {
+                elapsed_ns: cluster_elapsed_ns,
+                delta_ns: cluster_elapsed_ns.saturating_sub(self.elapsed_ns),
+                fast_forward,
+            };
             unsafe {
-                scheduled(
-                    cluster_elapsed_ns,
-                    cluster_elapsed_ns.saturating_sub(self.elapsed_ns),
-                    fast_forward,
-                )
+                scheduled(&context);
             };
         }
         self.elapsed_ns = cluster_elapsed_ns;
@@ -309,7 +321,17 @@ impl ClusterRuntime {
                 fast_forward_for,
                 next_step,
             },
-            reset,
+            reset: Some(reset),
+            online,
+            elapsed_ns: 0,
+        });
+        (self.nodes.len() - 1) as u32
+    }
+
+    fn add_rust_runtime_model_node(&mut self, online: bool) -> u32 {
+        self.nodes.push(ClusterNode {
+            scheduler: ClusterNodeScheduler::RustRuntimeModel,
+            reset: None,
             online,
             elapsed_ns: 0,
         });
@@ -330,7 +352,7 @@ impl ClusterRuntime {
                 next_due_ns: period_ns,
                 input_pending: false,
             },
-            reset,
+            reset: Some(reset),
             online,
             elapsed_ns: 0,
         });
@@ -445,14 +467,18 @@ impl ClusterRuntime {
         true
     }
 
-    fn set_node_online(&mut self, node: u32, online: bool) -> bool {
+    fn set_node_online(&mut self, node_index: u32, online: bool) -> bool {
         let elapsed_ns = self.elapsed_ns;
-        let Some(node) = self.nodes.get_mut(node as usize) else {
+        let reset_runtime_models;
+        let Some(node) = self.nodes.get_mut(node_index as usize) else {
             return false;
         };
         if node.online && !online {
-            unsafe { (node.reset)() };
+            if let Some(reset) = node.reset {
+                unsafe { reset() };
+            }
             node.elapsed_ns = 0;
+            reset_runtime_models = matches!(node.scheduler, ClusterNodeScheduler::RustRuntimeModel);
             if let ClusterNodeScheduler::Python {
                 period_ns,
                 next_due_ns,
@@ -463,6 +489,8 @@ impl ClusterRuntime {
                 *next_due_ns = *period_ns;
                 *input_pending = false;
             }
+        } else {
+            reset_runtime_models = false;
         }
         if !node.online && online {
             if let ClusterNodeScheduler::Python {
@@ -477,7 +505,16 @@ impl ClusterRuntime {
             }
         }
         node.online = online;
+        if reset_runtime_models {
+            self.reset_rust_runtime_node_models(node_index, elapsed_ns);
+        }
         true
+    }
+
+    fn reset_rust_runtime_node_models(&mut self, node: u32, elapsed_ns: u64) {
+        for load in self.dc_loads.iter_mut().filter(|load| load.node() == node) {
+            load.reset(elapsed_ns);
+        }
     }
 
     fn next_cluster_step(&self, max_step_ns: u64) -> u64 {
@@ -1055,6 +1092,14 @@ pub extern "C" fn rig_cluster_add_python_node(
         .lock()
         .unwrap()
         .add_python_node(scheduled, reset, period_ns, online)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_rust_runtime_model_node(online: bool) -> u32 {
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_rust_runtime_model_node(online)
 }
 
 #[unsafe(no_mangle)]

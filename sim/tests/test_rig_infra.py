@@ -6,6 +6,7 @@ from sim.infra.rig import (
     DataPath,
     ModelRig,
     PeriodicDataPathProducer,
+    SchedulerContext,
     SimpleComponent,
     SimpleNodeRig,
 )
@@ -26,27 +27,34 @@ class FakeNode(ModelRig):
 
 class ScheduledComponent(ComponentRig):
     def __init__(self) -> None:
-        super().__init__(scheduler_period=250, scheduler_unit="us")
         self.scheduled_times_ns = []
+        super().__init__(
+            scheduler_period=250,
+            scheduler_unit="us",
+            scheduler_callback=self._record_scheduled_time,
+        )
 
     def reset(self) -> None:
         super().reset()
         self.scheduled_times_ns.clear()
 
-    def _run_scheduled(self) -> None:
-        self.scheduled_times_ns.append(self.elapsed_ns)
+    def _record_scheduled_time(self, context: SchedulerContext) -> None:
+        self.scheduled_times_ns.append(context.elapsed_ns)
 
 
 class TickModel(ModelRig):
     def __init__(self) -> None:
-        super().__init__(scheduler_period=1)
         self.ticks = 0
+        super().__init__(
+            scheduler_period=1,
+            scheduler_callback=self._tick,
+        )
 
     def reset(self) -> None:
         super().reset()
         self.ticks = 0
 
-    def _run_scheduled(self) -> None:
+    def _tick(self, context: SchedulerContext) -> None:
         self.ticks += 1
 
 

@@ -963,12 +963,16 @@ class ClusterRig:
         unsupported_nodes = tuple(
             name
             for name, node in self._rig_nodes.items()
-            if not hasattr(node, "rust_cluster_node_abi")
+            if not (
+                getattr(node, "rust_runtime_model", lambda: False)()
+                or hasattr(node, "scheduler_callbacks")
+            )
         )
         if unsupported_nodes:
             raise TypeError(
                 "Rust-hosted clusters require every node/component to expose the "
-                f"Rust scheduler callback ABI; missing: {', '.join(unsupported_nodes)}"
+                "scheduler callback interface or opt into Rust runtime model "
+                f"stepping; missing: {', '.join(unsupported_nodes)}"
             )
         host = hosts[0] if hosts else _StandaloneRustRuntimeHost()
         runtime = _RustClusterRuntime(

@@ -10,6 +10,7 @@ from sim.infra.rig import (
     ComponentSpec,
     ComponentRig,
     DataPath,
+    SchedulerContext,
     TimerChannelEvent,
 )
 from sim.infra.rig.datapath import datapath_key
@@ -85,6 +86,7 @@ class DcLoadModel(ComponentRig):
         super().__init__(
             scheduler_period=scheduler_period,
             scheduler_unit=scheduler_unit,
+            scheduler_callback=self._update_current,
         )
         self.voltage_input_channel = voltage_input_channel
         self.current_output_channel = current_output_channel or DataPath.component(
@@ -130,7 +132,7 @@ class DcLoadModel(ComponentRig):
         self._previous_voltage = 0.0
         self._last_update_ns = 0
 
-    def _run_scheduled(self) -> None:
+    def _update_current(self, context: SchedulerContext) -> None:
         if self._cluster_rig is not None:
             return
         elapsed_since_update_ns = self.elapsed_ns - self._last_update_ns
@@ -157,10 +159,8 @@ class DcLoadModel(ComponentRig):
             )
         return current
 
-    def rust_cluster_node_abi(self):
-        if self._cluster_rig is None:
-            return super().rust_cluster_node_abi()
-        return self._rust_python_scheduler_abi(period_ns=0)
+    def rust_runtime_model(self) -> bool:
+        return self._cluster_rig is not None
 
     def _set_voltage_from_timer(self, event: TimerChannelEvent) -> bool:
         self._input_voltage = max(0.0, float(event.value))
