@@ -2,6 +2,7 @@ import pytest
 
 from sim.models.controllers.sws import SwsSimpleModel
 from sim.models.controllers.vcfront import VcfrontSimpleModel
+from sim.models.controllers.bmsb import BmsbSimpleModel
 from sim.models.controllers.vcpdu import Vn9008Channel
 from sim.models.controllers.vcpdu.fixtures import vcpdu_cluster
 
@@ -146,6 +147,61 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         step=20,
         message="VCPDU HSD load should report zero current after a second driver request toggles it off",
     )
+
+@pytest.mark.parametrize(
+    ("bms_safety_enabled", "imd_safety_enabled"),
+    [
+        pytest.param(True, True, id="no-fault"),
+        pytest.param(True, False, id="imd-fault"),
+        pytest.param(False, True, id="bms-fault"),
+    ],
+)
+def test_bmsb_faults_sets_safety_fault(
+    vcpdu_cluster,
+    bms_safety_enabled,
+    imd_safety_enabled,
+):
+    vcpdu = vcpdu_cluster.vcpdu
+    bmsb = BmsbSimpleModel(vcpdu.can)
+    ShutdownCircuitStatus = bmsb.can.enums.ShutdownCircuitStatus
+    DigitalStatus = bmsb.can.enums.DigitalStatus
+    enabled_status = {
+        True: DigitalStatus.ON,
+        False: DigitalStatus.OFF,
+    }
+    expected_status = {
+        True: ShutdownCircuitStatus.CLOSED,
+        False: ShutdownCircuitStatus.OPEN,
+    }
+
+    bmsb.periodic_io_status(
+        period=10,
+        BMSB_bmsStatusMem=enabled_status[bms_safety_enabled],
+        BMSB_imdStatusMem=enabled_status[imd_safety_enabled],
+    )
+
+    vcpdu_cluster.add_component(bmsb)
+
+    def safety_status_matches_expected():
+        status = vcpdu.latest_vehicle_state_message()
+        return status is not None and (
+            status.VCPDU_bmsbSafetyStatus
+            == expected_status[bms_safety_enabled]
+            and status.VCPDU_imdSafetyStatus
+            == expected_status[imd_safety_enabled]
+        )
+
+    vcpdu_cluster.run_until(
+        safety_status_matches_expected,
+        timeout=1000,
+        step=20,
+        message="vcpdu should report BMSB safety status from BMSB_ioStatus",
+    )
+
+    status = vcpdu.latest_vehicle_state_message()
+
+    assert status.VCPDU_bmsbSafetyStatus == expected_status[bms_safety_enabled]
+    assert status.VCPDU_imdSafetyStatus == expected_status[imd_safety_enabled]
 
 
 def _driver_request_signal(vcpdu, hsd_channel) -> str:
