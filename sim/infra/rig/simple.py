@@ -176,6 +176,7 @@ class SimpleNodeRig(ModelRig):
                 "Rust can schedule each component independently"
             )
         self.components.append(component)
+        self._bind_component_interfaces(component)
         self._bind_component_datapaths(component)
         return component
 
@@ -199,6 +200,12 @@ class SimpleNodeRig(ModelRig):
                 send_many=input_.send_many,
             )
 
+    def _bind_component_interfaces(self, component: ComponentRig) -> None:
+        if hasattr(component, "can"):
+            if hasattr(self, "can"):
+                raise ValueError("SimpleNodeRig can only expose one CAN interface")
+            self.can = component.can
+
     def rust_can_route_abi(self, bus) -> tuple[int, int, int, int] | None:
         for component in self.components:
             component._cluster_rig = self._cluster_rig
@@ -217,8 +224,18 @@ class _SimpleCanInterface:
     def buses(self):
         return self._model._buses
 
+    @property
+    def enums(self):
+        return self._model._encoder.enums
+
     def bus(self, bus):
         return self._model._encoder.bus(bus)
+
+    def message(self, name, *, bus=None, tx=False):
+        return self._model._encoder.message(name, bus=bus, tx=tx)
+
+    def tx_message(self, name, *, bus=None):
+        return self._model._encoder.tx_message(name, bus=bus)
 
 
 class SimpleCanComponent(SimpleComponent):
@@ -279,11 +296,7 @@ class SimpleCanComponent(SimpleComponent):
         enum_defaults: dict[str, str] | None = None,
         **signals: float | int | IntEnum,
     ) -> PeriodicCanMessage:
-        descriptor = (
-            self._encoder.message(message, bus=bus)
-            if isinstance(message, str)
-            else message
-        )
+        descriptor = self._message_descriptor(message, bus=bus)
         if DataPath.can_bus(descriptor.bus_name) not in self.egress_datapaths:
             raise ValueError(
                 f"simple CAN model is not configured for bus {descriptor.bus_name!r}"
@@ -310,11 +323,7 @@ class SimpleCanComponent(SimpleComponent):
         enum_defaults: dict[str, str] | None = None,
         **signals: float | int | IntEnum,
     ) -> bool:
-        descriptor = (
-            self._encoder.message(message, bus=bus)
-            if isinstance(message, str)
-            else message
-        )
+        descriptor = self._message_descriptor(message, bus=bus)
         self._queue_message(
             descriptor,
             self.signals_for_message(
@@ -333,14 +342,10 @@ class SimpleCanComponent(SimpleComponent):
         enum_defaults: dict[str, str] | None = None,
         **signals: float | int | IntEnum,
     ) -> dict[str, float | int | IntEnum]:
-        descriptor = (
-            self._encoder.message(message, bus=bus)
-            if isinstance(message, str)
-            else message
-        )
+        descriptor = self._message_descriptor(message, bus=bus)
         defaults = {}
         enum_defaults = enum_defaults or {}
-        for signal in self._encoder.rx_signals:
+        for signal in (*self._encoder.tx_signals, *self._encoder.rx_signals):
             if signal.bus != descriptor.bus or signal.message_name != descriptor.name:
                 continue
             if signal.kind == "Enum" and signal.enum_name in enum_defaults:
@@ -351,6 +356,19 @@ class SimpleCanComponent(SimpleComponent):
                 )
         defaults.update(signals)
         return defaults
+
+    def _message_descriptor(
+        self,
+        message: str | CanMessageDescriptor,
+        *,
+        bus: str = "veh",
+    ) -> CanMessageDescriptor:
+        if not isinstance(message, str):
+            return message
+        try:
+            return self._encoder.tx_message(message, bus=bus)
+        except (KeyError, ValueError):
+            return self._encoder.message(message, bus=bus)
 
     def _queue_message(
         self,
