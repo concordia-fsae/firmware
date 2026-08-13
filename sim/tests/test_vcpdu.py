@@ -226,6 +226,42 @@ def test_vcpdu_enters_ts_run_only_after_contactors_close(vcpdu_ts_run_inputs):
 
 
 @pytest.mark.parametrize(
+    "contactor_state_name",
+    [
+        pytest.param("SNA", id="sna"),
+        pytest.param("OPEN", id="open"),
+        pytest.param("PRECHARGE_CLOSED", id="precharge-closed"),
+        pytest.param("PRECHARGE_HVP_CLOSED", id="precharge-hvp-closed"),
+    ],
+)
+def test_vcpdu_does_not_cycle_from_hv_on_to_ts_run_without_hvp_contactors_closed(
+    vcpdu_ts_run_inputs,
+    contactor_state_name,
+):
+    setup = vcpdu_ts_run_inputs
+    vcpdu = setup.vcpdu
+    DigitalStatus = vcpdu.can.enums.DigitalStatus
+    PrechargeContactorState = vcpdu.can.enums.PrechargeContactorState
+    VehicleState = vcpdu.can.enums.VehicleState
+    observed = []
+
+    assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
+
+    setup.contactor_state.set(
+        BMSB_packContactorState=getattr(PrechargeContactorState, contactor_state_name),
+    )
+    setup.brake_position.set(VCFRONT_brakePosition=12)
+    setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
+
+    for _ in range(50):
+        setup.cluster.run_for(10)
+        vcpdu.record_latest_vehicle_state(observed)
+
+    assert VehicleState.TS_RUN not in observed
+    assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
+
+
+@pytest.mark.parametrize(
     "brake_position",
     [
         pytest.param(0, id="brake-released"),
