@@ -2,7 +2,6 @@ name: 'Build All Firmware'
 
 on:
   pull_request:
-    branches: [master, comp*]
   push:
     branches: [master, comp*]
 
@@ -19,9 +18,9 @@ jobs:
           buck2_version="$(awk -F'=' '/^buck2_version/ {gsub(/[[:space:]]/, "", $2); print $2}' .buckleconfig.toml)"
           echo "buck2_version=$buck2_version" >> "$GITHUB_OUTPUT"
       - name: Install Buck2
-        uses: dtolnay/install-buck2@latest
+        uses: concordia-fsae/install-buck2@latest
         with:
-          version: ${{ steps.buck2_version.outputs.buck2_version }}
+          release: ${{ steps.buck2_version.outputs.buck2_version }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v6
         with:

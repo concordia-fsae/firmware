@@ -28,7 +28,7 @@ def _uv_tool_impl(ctx: AnalysisContext) -> list[Provider]:
         cmd_args(venv_artifact, format = "cd {} || exit 99", parent = 1),
         cmd_args("uv venv -v --no-project .venv"),
         cmd_args("source .venv/bin/activate"),
-        cmd_args("uv sync -v --active --locked"),
+        cmd_args("uv sync -v --active --frozen"),
     ]
     sh_script = ctx.actions.write(
         "sh/create_venv.sh",

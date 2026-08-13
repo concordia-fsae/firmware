@@ -171,6 +171,19 @@ export_file(
     visibility = ["//components/vc/front/tests/..."],
 )
 
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["//sil/..."],
+    )
+    for file in [
+        "FeatureDefs.yaml",
+        "FeatureSels.yaml",
+        "variants.yaml",
+    ]
+]
+
 compiler_flags += ["-include", "BuildDefines.h"]
 
 generate_code(

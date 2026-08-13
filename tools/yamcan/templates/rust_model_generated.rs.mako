@@ -79,6 +79,8 @@ def rust_pascal(name):
 <%
 bus_order = []
 bus_messages = OrderedDict()
+tx_bus_messages = OrderedDict()
+codec_bus_messages = OrderedDict()
 extern_unpacks = OrderedDict()
 extern_getters = OrderedDict()
 base_wrappers = OrderedDict()
@@ -87,14 +89,77 @@ base_value_wrappers = OrderedDict()
 instance_value_wrappers = OrderedDict()
 discrete_enums = OrderedDict()
 
+def codec_signal_entries(message):
+    signal_entries = []
+    for signal in message.signal_objs.values():
+        if signal.validation_role.name != "none":
+            continue
+
+        if signal.discrete_values:
+            enum_type = rust_pascal(signal.discrete_values.name)
+            discrete_enums.setdefault(
+                signal.discrete_values.name,
+                {
+                    "lookup_name": f"yamcan_enum_{signal.discrete_values.name}".lower(),
+                    "type_name": enum_type,
+                    "values": list(signal.discrete_values.values.items()),
+                },
+            )
+            signal_kind = "SignalKind::Enum"
+        elif signal.is_boolean():
+            enum_type = None
+            signal_kind = "SignalKind::Boolean"
+        else:
+            enum_type = None
+            signal_kind = "SignalKind::Numeric"
+
+        signal_entries.append(
+            {
+                "name": signal.name,
+                "enum_name": signal.discrete_values.name if signal.discrete_values else None,
+                "enum_type": enum_type,
+                "unit": signal.unit.name if signal.unit else "",
+                "kind": signal_kind,
+                "start_bit": signal.start_bit,
+                "bit_width": signal.native_representation.bit_width,
+                "scale": float(signal.scale),
+                "offset": float(signal.offset),
+                "signed": "true" if signal.native_representation.signedness.name == "signed" else "false",
+                "min": float(signal.native_representation.range.min),
+                "max": float(signal.native_representation.range.max),
+            }
+        )
+    return signal_entries
+
+def codec_message_entry(bus, message_name, message):
+    checksum = None
+    if message.checksum_sig is not None:
+        checksum = {
+            "start_bit": message.checksum_sig.start_bit,
+            "bit_width": message.checksum_sig.native_representation.bit_width,
+            "crc": message.crc32(),
+        }
+    return {
+        "ident": f"{bus}_{message_name}".upper(),
+        "name": message_name,
+        "id": message.id,
+        "len": message.length_bytes,
+        "checksum": checksum,
+        "signals": codec_signal_entries(message),
+    }
+
 for node in nodes:
     for bus in node.on_buses:
         if bus not in bus_messages:
             bus_messages[bus] = []
             bus_order.append(bus)
+        if bus not in codec_bus_messages:
+            codec_bus_messages[bus] = []
         extern_unpacks.setdefault(bus, f"CANRX_{bus.upper()}_unpackMessage")
 
         seen_message_idents = {message["ident"] for message in bus_messages[bus]}
+        seen_tx_message_idents = {message["ident"] for message in tx_bus_messages.get(bus, [])}
+        seen_codec_message_idents = {message["ident"] for message in codec_bus_messages[bus]}
         for message_name, message in node.received_msgs.items():
             if bus not in message.source_buses:
                 continue
@@ -218,6 +283,7 @@ for node in nodes:
                         "static_ident": signal_static_ident,
                         "enum_lookup_name": enum_lookup_name,
                         "enum_type": enum_type,
+                        "enum_name": signal.discrete_values.name if signal.discrete_values else None,
                         "value_getter_name": value_getter_name,
                         "field_type": field_type,
                         "kind": signal_kind,
@@ -242,6 +308,73 @@ for node in nodes:
                 }
             )
             seen_message_idents.add(msg_ident)
+            if msg_ident not in seen_codec_message_idents:
+                codec_bus_messages[bus].append(codec_message_entry(bus, msg_display, message))
+                seen_codec_message_idents.add(msg_ident)
+
+        if bus not in tx_bus_messages:
+            tx_bus_messages[bus] = []
+        for message_name, message in node.messages.items():
+            if bus not in message.source_buses:
+                continue
+
+            msg_ident = f"{bus}_{message.name}".upper()
+            if msg_ident in seen_tx_message_idents:
+                continue
+
+            signal_entries = []
+            for signal in message.signal_objs.values():
+                if signal.validation_role.name != "none":
+                    continue
+
+                if signal.discrete_values:
+                    enum_type = rust_pascal(signal.discrete_values.name)
+                    discrete_enums.setdefault(
+                        signal.discrete_values.name,
+                        {
+                            "lookup_name": f"yamcan_enum_{signal.discrete_values.name}".lower(),
+                            "type_name": enum_type,
+                            "values": list(signal.discrete_values.values.items()),
+                        },
+                    )
+                    signal_kind = "SignalKind::Enum"
+                elif signal.is_boolean():
+                    enum_type = None
+                    signal_kind = "SignalKind::Boolean"
+                else:
+                    enum_type = None
+                    signal_kind = "SignalKind::Numeric"
+
+                signal_entries.append(
+                    {
+                        "name": signal.name,
+                        "enum_name": signal.discrete_values.name if signal.discrete_values else None,
+                        "enum_type": enum_type,
+                        "unit": signal.unit.name if signal.unit else "",
+                        "kind": signal_kind,
+                        "start_bit": signal.start_bit,
+                        "bit_width": signal.native_representation.bit_width,
+                        "scale": float(signal.scale),
+                        "offset": float(signal.offset),
+                        "signed": "true" if signal.native_representation.signedness.name == "signed" else "false",
+                        "min": float(signal.native_representation.range.min),
+                        "max": float(signal.native_representation.range.max),
+                    }
+                )
+
+            tx_bus_messages[bus].append(
+                {
+                    "ident": msg_ident,
+                    "name": message.name,
+                    "id": message.id,
+                    "len": message.length_bytes,
+                    "signals": signal_entries,
+                }
+            )
+            seen_tx_message_idents.add(msg_ident)
+            if msg_ident not in seen_codec_message_idents:
+                codec_bus_messages[bus].append(codec_message_entry(bus, message.name, message))
+                seen_codec_message_idents.add(msg_ident)
 %>\
 use core::ffi::c_int;
 
@@ -249,6 +382,8 @@ use crate::SignalMeasurement;
 use crate::yamcan::{
     CanData,
     DecodedCanMessage,
+    EnumValueDescriptor,
+    GeneratedCanNetwork,
     MessageDescriptor,
     MessageMetadata,
     NetworkBus,
@@ -518,6 +653,7 @@ static YAMCAN_SIGNALS: &[SignalDescriptor<Bus>] = &[
         fqid: "${bus}/${message["name"]}/${signal["name"]}",
         unit: ${'None' if signal["unit"] == '' else 'Some("' + signal["unit"] + '")'},
         kind: ${signal["kind"]},
+        enum_name: ${'Some("' + signal["enum_name"] + '")' if signal["enum_name"] else 'None'},
     },
     %endfor
   %endfor
@@ -558,5 +694,264 @@ impl DecodedCanMessage for AnyMessage {
   %endfor
 %endfor
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TxSignalDescriptor {
+    pub bus: Bus,
+    pub message_name: &'static str,
+    pub message_id: u32,
+    pub message_len: u8,
+    pub signal_name: &'static str,
+    pub unit: Option${"<"}&'static str>,
+    pub kind: SignalKind,
+    pub enum_name: Option${"<"}&'static str>,
+    pub start_bit: u8,
+    pub bit_width: u8,
+    pub scale: f64,
+    pub offset: f64,
+    pub signed: bool,
+    pub min: f64,
+    pub max: f64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ChecksumDescriptor {
+    pub start_bit: u8,
+    pub bit_width: u8,
+    pub crc: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MessageCodecDescriptor {
+    pub bus: Bus,
+    pub name: &'static str,
+    pub id: u32,
+    pub len: u8,
+    pub checksum: Option<ChecksumDescriptor>,
+}
+
+pub fn tx_message_descriptors() -> &'static [MessageDescriptor<Bus>] {
+    YAMCAN_TX_MESSAGES
+}
+
+pub fn tx_signal_descriptors() -> &'static [TxSignalDescriptor] {
+    YAMCAN_TX_SIGNALS
+}
+
+static YAMCAN_TX_MESSAGES: &[MessageDescriptor<Bus>] = &[
+%for bus in bus_order:
+  %for message in tx_bus_messages.get(bus, []):
+    MessageDescriptor {
+        bus: Bus::${rust_pascal(bus)},
+        name: "${message["name"]}",
+        id: ${message["id"]}u32,
+        len: ${message["len"]}u8,
+    },
+  %endfor
+%endfor
+];
+
+static YAMCAN_TX_SIGNALS: &[TxSignalDescriptor] = &[
+%for bus in bus_order:
+  %for message in tx_bus_messages.get(bus, []):
+    %for signal in message["signals"]:
+    TxSignalDescriptor {
+        bus: Bus::${rust_pascal(bus)},
+        message_name: "${message["name"]}",
+        message_id: ${message["id"]}u32,
+        message_len: ${message["len"]}u8,
+        signal_name: "${signal["name"]}",
+        unit: ${'None' if signal["unit"] == '' else 'Some("' + signal["unit"] + '")'},
+        kind: ${signal["kind"]},
+        enum_name: ${'Some("' + signal["enum_name"] + '")' if signal["enum_name"] else 'None'},
+        start_bit: ${signal["start_bit"]}u8,
+        bit_width: ${signal["bit_width"]}u8,
+        scale: ${signal["scale"]}f64,
+        offset: ${signal["offset"]}f64,
+        signed: ${signal["signed"]},
+        min: ${signal["min"]}f64,
+        max: ${signal["max"]}f64,
+    },
+    %endfor
+  %endfor
+%endfor
+];
+
+static YAMCAN_SIGNAL_CODECS: &[TxSignalDescriptor] = &[
+%for bus in bus_order:
+  %for message in codec_bus_messages[bus]:
+    %for signal in message["signals"]:
+    TxSignalDescriptor {
+        bus: Bus::${rust_pascal(bus)},
+        message_name: "${message["name"]}",
+        message_id: ${message["id"]}u32,
+        message_len: ${message["len"]}u8,
+        signal_name: "${signal["name"]}",
+        unit: ${'None' if signal["unit"] == '' else 'Some("' + signal["unit"] + '")'},
+        kind: ${signal["kind"]},
+        enum_name: ${'Some("' + signal["enum_name"] + '")' if signal["enum_name"] else 'None'},
+        start_bit: ${signal["start_bit"]}u8,
+        bit_width: ${signal["bit_width"]}u8,
+        scale: ${signal["scale"]}f64,
+        offset: ${signal["offset"]}f64,
+        signed: ${signal["signed"]},
+        min: ${signal["min"]}f64,
+        max: ${signal["max"]}f64,
+    },
+    %endfor
+  %endfor
+%endfor
+];
+
+static YAMCAN_MESSAGE_CODECS: &[MessageCodecDescriptor] = &[
+%for bus in bus_order:
+  %for message in codec_bus_messages[bus]:
+    MessageCodecDescriptor {
+        bus: Bus::${rust_pascal(bus)},
+        name: "${message["name"]}",
+        id: ${message["id"]}u32,
+        len: ${message["len"]}u8,
+        checksum: ${"Some(ChecksumDescriptor { start_bit: " + str(message["checksum"]["start_bit"]) + "u8, bit_width: " + str(message["checksum"]["bit_width"]) + "u8, crc: 0x" + format(message["checksum"]["crc"], "x") + "u32 })" if message["checksum"] else "None"},
+    },
+  %endfor
+%endfor
+];
+
+static YAMCAN_ENUM_VALUES: &[EnumValueDescriptor] = &[
+%for enum_name, enum_data in discrete_enums.items():
+  %for label, raw in enum_data["values"]:
+    EnumValueDescriptor {
+        enum_name: "${enum_name}",
+        label: "${label}",
+        raw: ${raw},
+    },
+  %endfor
+%endfor
+];
+
+pub fn enum_value_descriptors() -> &'static [EnumValueDescriptor] {
+    YAMCAN_ENUM_VALUES
+}
+
+fn raw_mask(width: u8) -> u64 {
+    if width >= 64 { u64::MAX } else { (1u64 << width) - 1u64 }
+}
+
+fn raw_signal_value(desc: &TxSignalDescriptor, data: [u8; 8]) -> u64 {
+    (u64::from_le_bytes(data) >> desc.start_bit) & raw_mask(desc.bit_width)
+}
+
+fn decode_signal_value(desc: &TxSignalDescriptor, data: [u8; 8]) -> f64 {
+    let raw = raw_signal_value(desc, data);
+    if desc.signed && desc.bit_width > 0 {
+        let sign_bit = 1u64 << (desc.bit_width - 1);
+        let signed = if (raw & sign_bit) != 0 {
+            (raw | !raw_mask(desc.bit_width)) as i64
+        } else {
+            raw as i64
+        };
+        signed as f64 * desc.scale + desc.offset
+    } else {
+        raw as f64 * desc.scale + desc.offset
+    }
+}
+
+fn encode_signal_value(desc: &TxSignalDescriptor, data: &mut [u8; 8], value: f64) {
+    let clamped = value.max(desc.min).min(desc.max);
+    let raw = ((clamped - desc.offset) / desc.scale) as i64;
+    write_raw_signal_value(desc.start_bit, desc.bit_width, data, raw as u64);
+}
+
+fn write_raw_signal_value(start_bit: u8, bit_width: u8, data: &mut [u8; 8], raw: u64) {
+    let raw = raw & raw_mask(bit_width);
+    let mask = raw_mask(bit_width) << start_bit;
+    let current = u64::from_le_bytes(*data) & !mask;
+    *data = (current | (raw << start_bit)).to_le_bytes();
+}
+
+fn apply_message_checksum(message: &MessageCodecDescriptor, data: &mut [u8; 8]) {
+    let Some(checksum) = message.checksum else {
+        return;
+    };
+
+    write_raw_signal_value(checksum.start_bit, checksum.bit_width, data, 0);
+    let mut calculated = checksum.crc;
+    for byte in data.iter().take(message.len as usize) {
+        calculated = calculated.wrapping_add(*byte as u32);
+    }
+    write_raw_signal_value(
+        checksum.start_bit,
+        checksum.bit_width,
+        data,
+        calculated as u64,
+    );
+}
+
+pub fn decode_transmitted_signal(
+    bus: Bus,
+    message_id: u32,
+    data: [u8; 8],
+    signal_name: &str,
+) -> Option<SignalMeasurement> {
+    let desc = YAMCAN_TX_SIGNALS
+        .iter()
+        .find(|desc| desc.bus == bus && desc.message_id == message_id && desc.signal_name == signal_name)?;
+    Some(SignalMeasurement {
+        name: desc.signal_name.to_string(),
+        value: decode_signal_value(desc, data),
+        unit: desc.unit.map(str::to_string),
+        label: None,
+    })
+}
+
+pub fn encode_transmitted_signal(
+    bus: Bus,
+    message_name: &str,
+    data: &mut [u8; 8],
+    signal_name: &str,
+    value: f64,
+) -> Option<MessageDescriptor<Bus>> {
+    let desc = YAMCAN_SIGNAL_CODECS
+        .iter()
+        .find(|desc| desc.bus == bus && desc.message_name == message_name && desc.signal_name == signal_name)?;
+    encode_signal_value(desc, data, value);
+    let message = YAMCAN_MESSAGE_CODECS
+        .iter()
+        .find(|message| message.bus == bus && message.name == message_name)?;
+    apply_message_checksum(message, data);
+    Some(MessageDescriptor {
+        bus: message.bus,
+        name: message.name,
+        id: message.id,
+        len: message.len,
+    })
+}
+
+pub struct GeneratedCanModel;
+
+impl GeneratedCanNetwork for GeneratedCanModel {
+    type Bus = Bus;
+    type TxSignalDescriptor = TxSignalDescriptor;
+
+    fn message_descriptors() -> &'static [MessageDescriptor<Self::Bus>] {
+        message_descriptors()
+    }
+
+    fn signal_descriptors() -> &'static [SignalDescriptor<Self::Bus>] {
+        signal_descriptors()
+    }
+
+    fn tx_message_descriptors() -> &'static [MessageDescriptor<Self::Bus>] {
+        tx_message_descriptors()
+    }
+
+    fn tx_signal_descriptors() -> &'static [Self::TxSignalDescriptor] {
+        tx_signal_descriptors()
+    }
+
+    fn enum_value_descriptors() -> &'static [EnumValueDescriptor] {
+        enum_value_descriptors()
     }
 }

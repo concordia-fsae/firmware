@@ -145,7 +145,7 @@ void CANRX_${bus.upper()}_unpack_${msg_name}(CANRX_${bus.upper()}_signals_S* sig
   index = f'[{offset}U]' if duplicate else ''
 %>\
 
-inline CAN_data_T* CANRX_${bus.upper()}_rawMessage_${message}(void)
+static inline CAN_data_T* CANRX_${bus.upper()}_rawMessage_${message}(void)
 {
     return &CANRX_${bus.upper()}_messages.${msg_name}${index}.raw;
 }
@@ -158,12 +158,12 @@ inline CAN_data_T* CANRX_${bus.upper()}_rawMessage_${message}(void)
   index = f'[{offset}U]' if duplicate else ''
 %>\
 
-inline bool CANRX_${bus.upper()}_rawBridgeWaiting_${message}(void)
+static inline bool CANRX_${bus.upper()}_rawBridgeWaiting_${message}(void)
 {
     return CANRX_${bus.upper()}_messages.${msg_name}${index}.new_message;
 }
 
-inline void CANRX_${bus.upper()}_setRawBridgeWaiting_${message}(bool val)
+static inline void CANRX_${bus.upper()}_setRawBridgeWaiting_${message}(bool val)
 {
     CANRX_${bus.upper()}_messages.${msg_name}${index}.new_message = val;
 }
