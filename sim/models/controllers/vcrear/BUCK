@@ -1,68 +1,23 @@
 load("//components/vc/rear:platforms.bzl", "VCREAR_PLATFORM_VARIANTS")
-load("//sim/infra:defs.bzl", "rig_bindgen", "rig_embedded_rust_model", "rig_embedded_rust_model_platform_aliases", "rig_feature_consts", "rig_model_c_support", "rig_model_python", "rig_platforms_from_variants", "rig_python_enums", "rig_python_model", "rig_runtime_srcs")
+load("//sim/infra:defs.bzl", "rig_embedded_controller_model")
 
-VCREAR_SIM_PLATFORMS = rig_platforms_from_variants(VCREAR_PLATFORM_VARIANTS)
-
-rig_python_model(
-    name = "vcrear-py",
-    out = "vcrear.py",
-    rust_source = ":rust-wrapper-src",
+rig_embedded_controller_model(
+    controller = "vcrear",
     class_name = "VcrearModel",
-    symbol_prefix = "vcrear_sim",
-    buck_target = "//sim/models/controllers/vcrear:sil-so",
-    env_var = "VCREAR_SIM_LIB",
-    enum_env_var = "VCREAR_ENUMS_PY",
-    enum_target = "//sim/models/controllers/vcrear:enums-py",
-    visibility = ["PUBLIC"],
-)
-
-rig_model_python(
-    srcs = [
+    component = "//components/vc/rear",
+    platform_variants = VCREAR_PLATFORM_VARIANTS,
+    model_target = "//sim/models/controllers/vcrear",
+    python_srcs = [
         "__init__.py",
         "fixtures.py",
         "simple.py",
         "variants.py",
-        ":vcrear-py",
-        ":enums-py",
     ],
-    visibility = ["PUBLIC"],
-)
-
-rig_model_c_support(
-    srcs = rig_runtime_srcs(["can", "core", "faults", "flash", "io", "swi", "system", "time", "timer_capture", "uart"]),
-    headers = {
-        "runtime_state.h": "//sim/infra/runtime:c/src/runtime_state.h",
-    },
-    deps = [
-        "//components/shared/code:headers",
-        "//components/shared/code/RTOS:headers",
-        "//components/vc/rear:sil-features",
-        "//components/vc/rear:sil-host-headers",
-        "//components/vc/rear:sil-yamcan-c",
+    runtime_modules = ["can", "core", "faults", "flash", "io", "swi", "system", "time", "timer_capture", "uart"],
+    extra_deps = [
         "//components/vc/shared:headers",
-        "//sim/infra/runtime:headers",
     ],
-)
-
-rig_feature_consts(
-    name = "features-rs",
-    out = "features.rs",
-    deps = [
-        "//components/vc/rear:sil-features",
-    ],
-    allowlist_vars = [
-        "APP_COMPONENT_ID",
-        "APP_VARIANT_ID",
-        "NVM_BLOCK_SIZE",
-        "NVM_FLASH_BACKED",
-        "NVM_LIB_ENABLED",
-    ],
-)
-
-rig_bindgen(
-    name = "bindings-rs",
-    out = "bindings.rs",
-    include_headers = [
+    bindgen_headers = [
         "Module.h",
         "HW_gpio_componentSpecific.h",
         "drv_inputAD_componentSpecific.h",
@@ -70,63 +25,18 @@ rig_bindgen(
         "drv_outputAD_componentSpecific.h",
         "YamcanShared.h",
     ],
-    deps = [
-        ":model-c-support",
-        "//components/shared/code:headers",
-        "//components/shared/code/RTOS:headers",
-        "//components/vc/rear:sil-features",
-        "//components/vc/rear:sil-host-headers",
-        "//components/vc/rear:sil-yamcan-c",
-        "//components/vc/shared:headers",
-        "//sim/infra/runtime:headers",
-    ],
-    allowlist_types = [
+    bindgen_types = [
         "drv_inputAD_channelAnalog_E",
         "drv_outputAD_channelDigital_E",
         "HW_GPIO_pinmux_E",
         "CAN_data_T",
         "YamcanShared",
     ],
-    allowlist_functions = [
-        "Module_Init",
-        "Module_1kHz_TSK",
-        "Module_100Hz_TSK",
-        "Module_10Hz_TSK",
-        "Module_1Hz_TSK",
-        "drv_outputAD_toggleDigitalState",
-        "YAMCAN_shared_init_static",
-    ],
-    allowlist_vars = [
-        "g_yamcan",
-    ],
-    bindgen_flags = [
-        "--no-layout-tests",
-        "--default-enum-style rust",
-    ],
-    clang_flags = [
-        "-include",
-        "BuildDefines.h",
-    ],
-)
-
-rig_python_enums(
-    name = "enums-py",
-    out = "enums.py",
-    include_headers = [
+    enum_headers = [
         "HW_gpio_componentSpecific.h",
         "HW_tim.h",
         "drv_inputAD_componentSpecific.h",
         "drv_outputAD_componentSpecific.h",
-    ],
-    deps = [
-        ":model-c-support",
-        "//components/shared/code:headers",
-        "//components/shared/code/RTOS:headers",
-        "//components/vc/rear:sil-features",
-        "//components/vc/rear:sil-host-headers",
-        "//components/vc/rear:sil-yamcan-c",
-        "//components/vc/shared:headers",
-        "//sim/infra/runtime:headers",
     ],
     c_enums = [
         "drv_inputAD_channelAnalog_E:AnalogInput:DRV_INPUTAD_ANALOG_::upper",
@@ -135,41 +45,7 @@ rig_python_enums(
         "HW_TIM_port_E:TimerPort:HW_TIM_PORT_::upper",
         "HW_TIM_channel_E:TimerChannel:HW_TIM_CHANNEL_::upper",
     ],
-    rust_sources = [
-        "//components/vc/rear:sil-yamcan[rust_faults_generated.rs]",
-    ],
-    rust_enums = [
+    enum_rust_enums = [
         "FmFault:Fault:Vcrear:Fault:camel",
     ],
-    clang_flags = [
-        "-include",
-        "BuildDefines.h",
-    ],
-    visibility = ["PUBLIC"],
-)
-
-rig_embedded_rust_model(
-    name = "sil-so",
-    crate = "vcrear_sim",
-    out = "libvcrear_sim.so",
-    link_deps = [
-        "//components/vc/rear:sil-application",
-        ":model-c-support",
-        "//components/vc/rear:sil-yamcan-c",
-    ],
-    rust_env = {
-        "VCREAR_BINDINGS_RS": ":bindings-rs",
-        "VCREAR_FEATURES_RS": ":features-rs",
-        "VCREAR_YAMCAN_DECODE_RS": "//components/vc/rear:sil-yamcan[rust_decode_generated.rs]",
-        "VCREAR_YAMCAN_MODEL_RS": "//components/vc/rear:sil-yamcan[rust_model_generated.rs]",
-        "VCREAR_YAMCAN_RS": "//components/vc/rear:sil-yamcan[yamcan.rs]",
-    },
-    visibility = ["PUBLIC"],
-)
-
-rig_embedded_rust_model_platform_aliases(
-    name = "sil-so",
-    actual = ":sil-so",
-    platforms = VCREAR_SIM_PLATFORMS,
-    visibility = ["PUBLIC"],
 )
