@@ -163,6 +163,27 @@ impl Scheduler for RTController {
 }
 
 impl RTController {
+    pub unsafe fn fast_forward_for_ns(&mut self, elapsed_ns: u64) {
+        if elapsed_ns == 0 {
+            return;
+        }
+
+        unsafe { super::ffi::rig_runtime_advance_time_ns(elapsed_ns) };
+
+        for index in 0..self.active_periodic_task_count() {
+            let task = self.callbacks.periodic_tasks[index];
+            if task.period_ns == 0 {
+                continue;
+            }
+            self.task_remainders_ns[index] =
+                self.task_remainders_ns[index].saturating_add(elapsed_ns);
+            if self.task_remainders_ns[index] >= task.period_ns {
+                unsafe { (task.task)() };
+                self.task_remainders_ns[index] %= task.period_ns;
+            }
+        }
+    }
+
     fn active_periodic_tasks(&self) -> &[PeriodicTask] {
         &self.callbacks.periodic_tasks[..self.active_periodic_task_count()]
     }

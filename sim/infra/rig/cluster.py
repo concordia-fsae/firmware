@@ -16,6 +16,7 @@ from .datapath import (
 )
 from .model import ComponentRig, ModelRig
 from .peripherals import SpiTransaction, TimerChannelEvent
+from .runtime import _RustClusterRuntime, _StandaloneRustRuntimeHost
 from .time import duration_to_ns, run_until
 
 
@@ -36,6 +37,7 @@ class ClusterDataRoutes:
         self._paths: dict[str, DataPath] = {}
         self._links: list[DataPathLink] = []
         self._route_cache: dict[str, tuple[_DataPathRoute, ...]] = {}
+        self._latest_records: dict[tuple[str, str], DataPathRecord[object]] = {}
 
     def register(self, path: DataPath) -> None:
         self._fanout(path)
@@ -87,12 +89,40 @@ class ClusterDataRoutes:
     def reset(self) -> None:
         for fanout in self._fanouts.values():
             fanout.clear()
+        self._latest_records.clear()
 
     def clear(self, path: DataPath) -> None:
         self._fanout(path).clear()
+        key = datapath_key(path)
+        self._latest_records = {
+            latest_key: record
+            for latest_key, record in self._latest_records.items()
+            if latest_key[1] != key
+        }
 
     def records(self, path: DataPath) -> tuple[DataPathRecord[object], ...]:
         return tuple(self._fanout(path).records)
+
+    def reversed_records(self, path: DataPath):
+        return reversed(self._fanout(path).records)
+
+    def latest_record(
+        self,
+        path: DataPath,
+        *,
+        source_node: str | None = None,
+    ) -> DataPathRecord[object] | None:
+        key = datapath_key(path)
+        if source_node is not None:
+            return self._latest_records.get((source_node, key))
+
+        latest = None
+        for (node, record_key), record in self._latest_records.items():
+            if record_key != key:
+                continue
+            if latest is None or record.timestamp_ns >= latest.timestamp_ns:
+                latest = record
+        return latest
 
     @property
     def paths(self) -> tuple[DataPath, ...]:
@@ -111,19 +141,51 @@ class ClusterDataRoutes:
             if not self._cluster.node_online(route.source_node):
                 continue
             while route.source.pending():
-                payload = route.source.recv()
-                if payload is None:
+                pending = route.source.pending()
+                payloads = self._recv_route_payloads(route.source, pending)
+                if not payloads:
                     break
 
-                record = DataPathRecord(
-                    route.source.node,
-                    route.source.path,
-                    payload,
-                    self._cluster.elapsed_ns,
-                )
-                fanout.records.append(record)
+                for payload in payloads:
+                    record = DataPathRecord(
+                        route.source.node,
+                        route.source.path,
+                        payload,
+                        self._cluster.elapsed_ns,
+                    )
+                    fanout.records.append(record)
+                    self._latest_records[
+                        (route.source.node, datapath_key(route.source.path))
+                    ] = record
                 for sink in route.sinks:
-                    sink.send(payload)
+                    self._send_route_payloads(sink, payloads)
+
+    @staticmethod
+    def _recv_route_payloads(
+        source: DataPathSource[object],
+        pending: int,
+    ) -> tuple[object, ...]:
+        if source.recv_many is not None:
+            return source.recv_many(pending)
+
+        payload = source.recv()
+        return () if payload is None else (payload,)
+
+    @staticmethod
+    def _send_route_payloads(
+        sink: DataPathSink[object],
+        payloads: tuple[object, ...],
+    ) -> None:
+        if sink.send_many is not None:
+            accepted = sink.send_many(payloads)
+            if accepted != len(payloads):
+                raise RuntimeError(
+                    f"datapath sink {sink.node!r} accepted {accepted} of {len(payloads)} payloads"
+                )
+            return
+
+        for payload in payloads:
+            sink.send(payload)
 
     def _routes_for_path(self, path: DataPath) -> tuple[_DataPathRoute, ...]:
         key = datapath_key(path)
@@ -154,6 +216,7 @@ class ClusterDataRoutes:
                 path=output.path,
                 pending=output.pending,
                 recv=output.recv,
+                recv_many=output.recv_many,
             )
         raise KeyError(
             f"node {link.source_node!r} has no output for datapath " f"{link.path!r}"
@@ -171,6 +234,7 @@ class ClusterDataRoutes:
                     node=link.sink_node,
                     path=input_.path,
                     send=input_.send,
+                    send_many=input_.send_many,
                 )
             )
         if not sinks:
@@ -194,9 +258,10 @@ class ClusterCanComms:
         nodes: tuple[str, ...] | list[str] | None = None,
     ) -> None:
         node_names = tuple(self._cluster.nodes) if nodes is None else tuple(nodes)
+        path = self.path(bus)
         for source_node in node_names:
-            source_bus = self._cluster.nodes[source_node].can.bus(bus)
-            path = self.path(source_bus)
+            if not self._node_has_datapath_output(source_node, path):
+                continue
             if len(node_names) == 1:
                 self._dataroutes.connect(
                     path,
@@ -205,6 +270,8 @@ class ClusterCanComms:
                 continue
             for sink_node in node_names:
                 if sink_node == source_node:
+                    continue
+                if not self._node_has_datapath_input(sink_node, path):
                     continue
                 self._dataroutes.connect(
                     path,
@@ -219,26 +286,20 @@ class ClusterCanComms:
                 raise KeyError(f"CAN node {node_name!r} is not in this rig")
 
         for source_node in node_names:
-            source = self._cluster.nodes[source_node]
-            for source_bus in source.can.buses:
-                path = self.path(source_bus)
-                if not self._node_has_datapath_output(source_node, path):
-                    continue
-                sink_buses = tuple(
+            for path in self._node_can_output_paths(source_node):
+                sink_nodes = tuple(
                     sink_node
                     for sink_node in node_names
                     if sink_node != source_node
-                    for sink_bus in self._cluster.nodes[sink_node].can.buses
-                    if sink_bus.name == source_bus.name
-                    and self._node_has_datapath_input(sink_node, path)
+                    if self._node_has_datapath_input(sink_node, path)
                 )
-                if not sink_buses:
+                if not sink_nodes:
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
                     )
                     continue
-                for sink_node in sink_buses:
+                for sink_node in sink_nodes:
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
@@ -251,12 +312,19 @@ class ClusterCanComms:
     def _node_has_datapath_input(self, node: str, path: DataPath) -> bool:
         return bool(self._cluster.nodes[node].datapaths.inputs(path))
 
+    def _node_can_output_paths(self, node: str) -> tuple[DataPath, ...]:
+        return tuple(
+            output.path
+            for output in self._cluster.nodes[node].datapaths.outputs()
+            if self._is_can_path(output.path)
+        )
+
     def connect_available_nodes(self) -> None:
         self.connect_nodes(
             tuple(
                 node_name
                 for node_name, node in self._cluster.nodes.items()
-                if node.has_can
+                if any(self._is_can_path(path) for path in node.datapaths.paths)
             )
         )
 
@@ -315,13 +383,15 @@ class ClusterCanComms:
             else message.id
         )
 
-        for routed in reversed(self.events):
+        path = self.path(bus_descriptor)
+        for record in self._dataroutes.reversed_records(path):
+            if record.source != node or not isinstance(record.payload, CanEvent):
+                continue
             if (
-                routed.node == node
-                and routed.bus.index == bus_descriptor.index
-                and routed.event.packet.id == message_id
+                record.payload.bus == bus_descriptor.index
+                and record.payload.packet.id == message_id
             ):
-                return routed.event
+                return record.payload
         return None
 
     def latest_bus_event(
@@ -330,9 +400,13 @@ class ClusterCanComms:
         bus: int | str | CanBusDescriptor,
     ) -> CanEvent | None:
         bus_descriptor = self._cluster.nodes[node].can.bus(bus)
-        for routed in reversed(self.events):
-            if routed.node == node and routed.bus.index == bus_descriptor.index:
-                return routed.event
+        record = self._dataroutes.latest_record(
+            self.path(bus_descriptor),
+            source_node=node,
+        )
+        if isinstance(record, DataPathRecord) and isinstance(record.payload, CanEvent):
+            if record.payload.bus == bus_descriptor.index:
+                return record.payload
         return None
 
 
@@ -431,6 +505,7 @@ class ClusterRig:
         self.dataroutes = ClusterDataRoutes(self)
         self.comm = ClusterComms(self, self.dataroutes)
         self.comm.connect_node_interfaces()
+        self._rust_runtime = self._create_rust_runtime()
 
     def _reject_duplicate_shared_libraries(self) -> None:
         nodes_by_library: dict[pathlib.Path, list[str]] = {}
@@ -470,6 +545,31 @@ class ClusterRig:
             self._online_nodes[name] = True
         self.elapsed_ns = 0
         self.comm.reset()
+        self._rust_runtime = self._create_rust_runtime()
+
+    def add_component(self, component: ComponentRig) -> ComponentRig:
+        return self.add_components(component)[0]
+
+    def add_components(self, *components: ComponentRig) -> tuple[ComponentRig, ...]:
+        if self.elapsed_ns != 0:
+            raise RuntimeError(
+                "components must be added before a cluster starts running"
+            )
+        if not components:
+            return ()
+
+        start_index = len(self.components)
+        self.components = (*self.components, *components)
+        for offset, component in enumerate(components):
+            name = f"__component_{start_index + offset}"
+            self._component_nodes[name] = component
+            self._rig_nodes[name] = component
+            component._cluster_rig = self
+            component._cluster_node_name = name
+            self._online_nodes[name] = True
+        self.comm.connect_node_interfaces()
+        self._rust_runtime = self._create_rust_runtime()
+        return components
 
     def has_feature(self, feature: str) -> bool:
         return feature in self.features
@@ -487,22 +587,8 @@ class ClusterRig:
         if step_ns <= 0:
             raise ValueError(f"step must be positive, got {step}")
 
-        if self._can_run_isolated_batch():
-            self._run_online_nodes(duration_ns)
-            self.elapsed_ns += duration_ns
-            self.comm.route()
-            return
-
-        remaining_ns = duration_ns
-        while remaining_ns:
-            max_delta_ns = min(step_ns, remaining_ns)
-            online_nodes = self._online_node_instances()
-            delta_ns = self._next_cluster_scheduler_step_ns(max_delta_ns, online_nodes)
-            for node in online_nodes:
-                node.run_for(delta_ns, unit="ns")
-            self.elapsed_ns += delta_ns
-            self.comm.route()
-            remaining_ns -= delta_ns
+        self._rust_runtime.run_for(duration_ns, step_ns, fast_forward=True)
+        self._sync_elapsed_from_runtime()
 
     def run_until(
         self,
@@ -527,9 +613,10 @@ class ClusterRig:
     def set_node_online(self, name: str, online: bool) -> None:
         if name not in self._rig_nodes:
             raise KeyError(f"node {name!r} is not in this rig")
+        was_online = self._online_nodes[name]
         self._online_nodes[name] = online
-        if not online:
-            self._rig_nodes[name].reset()
+        if was_online != online:
+            self._rust_runtime.set_node_online(name, online)
 
     def disable_node(self, name: str) -> None:
         self.set_node_online(name, False)
@@ -542,35 +629,35 @@ class ClusterRig:
             raise KeyError(f"node {name!r} is not in this rig")
         return self._online_nodes[name]
 
-    def _online_node_instances(self) -> tuple[object, ...]:
-        return tuple(
-            node for name, node in self._rig_nodes.items() if self._online_nodes[name]
+    def _create_rust_runtime(self) -> _RustClusterRuntime:
+        hosts = tuple(
+            node for node in self.nodes.values() if hasattr(node, "_bind_symbol")
         )
-
-    def _next_cluster_scheduler_step_ns(
-        self,
-        max_step_ns: int,
-        online_nodes: tuple[object, ...] | None = None,
-    ) -> int:
-        online_nodes = (
-            self._online_node_instances() if online_nodes is None else online_nodes
+        unsupported_nodes = tuple(
+            name
+            for name, node in self._rig_nodes.items()
+            if not hasattr(node, "rust_cluster_node_abi")
         )
-        if not online_nodes:
-            return max_step_ns
-        return min(
-            self._node_scheduler_step_ns(node, max_step_ns) for node in online_nodes
+        if unsupported_nodes:
+            raise TypeError(
+                "Rust-hosted clusters require every node/component to expose the "
+                f"Rust scheduler callback ABI; missing: {', '.join(unsupported_nodes)}"
+            )
+        host = hosts[0] if hosts else _StandaloneRustRuntimeHost()
+        runtime = _RustClusterRuntime(
+            host=host,
+            route=self._route_from_runtime,
         )
+        for name, node in self._rig_nodes.items():
+            runtime.add_node(name, node, online=self.node_online(name))
+        return runtime
 
-    def _can_run_isolated_batch(self) -> bool:
-        return len(self._online_node_instances()) == 1
+    def _route_from_runtime(self, elapsed_ns: int) -> None:
+        self.elapsed_ns = elapsed_ns
+        self.comm.route()
 
-    def _run_online_nodes(self, duration_ns: int) -> None:
-        for node in self._online_node_instances():
-            node.run_for(duration_ns, unit="ns")
-
-    @staticmethod
-    def _node_scheduler_step_ns(node: object, max_step_ns: int) -> int:
-        next_scheduler_step = getattr(node, "next_scheduler_step", None)
-        if next_scheduler_step is None:
-            return max_step_ns
-        return int(next_scheduler_step(max_step_ns, unit="ns"))
+    def _sync_elapsed_from_runtime(self) -> None:
+        self.elapsed_ns = self._rust_runtime.elapsed_ns()
+        elapsed_by_node = self._rust_runtime.node_elapsed_ns_values()
+        for name, elapsed_ns in elapsed_by_node.items():
+            self._rig_nodes[name].elapsed_ns = elapsed_ns

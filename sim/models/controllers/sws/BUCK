@@ -3,9 +3,7 @@ load("//sim/infra:defs.bzl", "rig_model_python")
 rig_model_python(
     srcs = [
         "__init__.py",
-        "fixtures.py",
-        "variants.py",
-        "//sim/models/controllers/sws:python",
+        "simple.py",
     ],
     visibility = ["PUBLIC"],
 )

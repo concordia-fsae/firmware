@@ -1,3 +1,5 @@
+load("//sim/infra:defs.bzl", "RIG_RUNTIME_RUST_ENV")
+
 export_file(
     name = "runtime-src",
     src = "rust/lib.rs",
@@ -27,5 +29,17 @@ prebuilt_cxx_library(
         header.removeprefix("c/include/"): header
         for header in glob(["c/include/**/*.h"])
     },
+    visibility = ["PUBLIC"],
+)
+
+genrule(
+    name = "runtime-so",
+    out = "librig_runtime.so",
+    cmd = " ".join([
+        "{}=$PWD/$(location {})".format(name, target)
+        for name, target in RIG_RUNTIME_RUST_ENV.items()
+    ]) +
+    " rustc --edition=2024 --crate-name rig_runtime --crate-type cdylib " +
+    "$(location :rust/cluster_lib.rs) -o $OUT -C link-arg=-lm",
     visibility = ["PUBLIC"],
 )

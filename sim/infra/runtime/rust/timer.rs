@@ -177,6 +177,21 @@ pub fn push_duty_input(event: TimerChannelEvent) -> bool {
         .push(event)
 }
 
+pub fn push_duty_inputs(events: &[TimerChannelEvent]) -> u32 {
+    let mut timer = TIMER_MODEL.lock().unwrap();
+    let mut count = 0;
+    for event in events {
+        if timer
+            .peripheral(event.timer_channel())
+            .duty_inputs
+            .push(*event)
+        {
+            count += 1;
+        }
+    }
+    count
+}
+
 pub fn latest_duty_input(port: i32, channel: i32) -> Option<f32> {
     let mut timer = TIMER_MODEL.lock().unwrap();
     timer
@@ -193,6 +208,21 @@ pub fn push_frequency_input(event: TimerChannelEvent) -> bool {
         .peripheral(event.timer_channel())
         .frequency_inputs
         .push(event)
+}
+
+pub fn push_frequency_inputs(events: &[TimerChannelEvent]) -> u32 {
+    let mut timer = TIMER_MODEL.lock().unwrap();
+    let mut count = 0;
+    for event in events {
+        if timer
+            .peripheral(event.timer_channel())
+            .frequency_inputs
+            .push(*event)
+        {
+            count += 1;
+        }
+    }
+    count
 }
 
 pub fn latest_frequency_input(port: i32, channel: i32) -> Option<f32> {
@@ -240,6 +270,22 @@ pub fn pop_duty_output(port: i32, channel: i32) -> Option<TimerChannelEvent> {
         .pop()
 }
 
+pub fn pop_duty_outputs(port: i32, channel: i32, out: &mut [TimerChannelEvent]) -> u32 {
+    let mut timer = TIMER_MODEL.lock().unwrap();
+    let output = &mut timer
+        .peripheral(TimerChannel { port, channel })
+        .duty_outputs;
+    let mut count = 0;
+    for slot in out.iter_mut() {
+        let Some(event) = output.pop() else {
+            break;
+        };
+        *slot = event;
+        count += 1;
+    }
+    count
+}
+
 pub fn duty_output_count(port: i32, channel: i32) -> u32 {
     TIMER_MODEL
         .lock()
@@ -267,6 +313,22 @@ pub fn pop_frequency_output(port: i32, channel: i32) -> Option<TimerChannelEvent
         .pop()
 }
 
+pub fn pop_frequency_outputs(port: i32, channel: i32, out: &mut [TimerChannelEvent]) -> u32 {
+    let mut timer = TIMER_MODEL.lock().unwrap();
+    let output = &mut timer
+        .peripheral(TimerChannel { port, channel })
+        .frequency_outputs;
+    let mut count = 0;
+    for slot in out.iter_mut() {
+        let Some(event) = output.pop() else {
+            break;
+        };
+        *slot = event;
+        count += 1;
+    }
+    count
+}
+
 pub fn frequency_output_count(port: i32, channel: i32) -> u32 {
     TIMER_MODEL
         .lock()
@@ -282,6 +344,18 @@ pub extern "C" fn rig_runtime_timer_push_duty_input(event: *const TimerChannelEv
         return false;
     }
     push_duty_input(unsafe { *event })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_timer_push_duty_inputs(
+    events: *const TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts(events, count as usize) };
+    push_duty_inputs(events)
 }
 
 #[unsafe(no_mangle)]
@@ -308,6 +382,18 @@ pub extern "C" fn rig_runtime_timer_push_frequency_input(event: *const TimerChan
         return false;
     }
     push_frequency_input(unsafe { *event })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_timer_push_frequency_inputs(
+    events: *const TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts(events, count as usize) };
+    push_frequency_inputs(events)
 }
 
 #[unsafe(no_mangle)]
@@ -377,6 +463,20 @@ pub extern "C" fn rig_runtime_timer_pop_duty_output(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_timer_pop_duty_outputs(
+    port: i32,
+    channel: i32,
+    events: *mut TimerChannelEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    pop_duty_outputs(port, channel, events)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_runtime_timer_duty_output_count(port: i32, channel: i32) -> u32 {
     duty_output_count(port, channel)
 }
@@ -405,6 +505,20 @@ pub extern "C" fn rig_runtime_timer_pop_frequency_output(
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_timer_pop_frequency_outputs(
+    port: i32,
+    channel: i32,
+    events: *mut TimerChannelEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    pop_frequency_outputs(port, channel, events)
 }
 
 #[unsafe(no_mangle)]

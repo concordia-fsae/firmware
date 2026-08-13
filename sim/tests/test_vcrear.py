@@ -1,5 +1,6 @@
 import pytest
 
+from sim.models.controllers.vcfront import VcfrontSimpleModel
 from sim.models.controllers.vcrear.fixtures import vcrear_cluster
 
 
@@ -8,14 +9,6 @@ def brake_light_state(vcrear):
         "VCREAR_outputState",
         "VCREAR_brakeLightState",
         bus="veh",
-    )
-
-
-def send_vcfront_brake_position(vcrear, brake_position: float) -> bool:
-    message = vcrear.can.message("VCFRONT_pedalPosition", bus="veh")
-    return vcrear.can.send(
-        message,
-        VCFRONT_brakePosition=brake_position,
     )
 
 
@@ -36,8 +29,14 @@ def test_brake_light_follows_vcfront_brake_position_can(
     vcrear = vcrear_cluster.vcrear
     BrakeLightState = vcrear.can.enums.BrakeLightState
     expected_state = BrakeLightState.ON if brake_light_on else BrakeLightState.OFF
+    vcfront = VcfrontSimpleModel(vcrear.can)
+    vcfront_pedal_position = vcfront.periodic_pedal_position(
+        period=20,
+        VCFRONT_brakePosition=brake_position,
+    )
+    vcrear_cluster.add_component(vcfront)
 
-    assert send_vcfront_brake_position(vcrear, brake_position)
+    vcfront_pedal_position.set(VCFRONT_brakePosition=brake_position)
     vcrear_cluster.run_until(
         lambda: brake_light_state(vcrear) == expected_state,
         timeout=250,
@@ -48,8 +47,12 @@ def test_brake_light_follows_vcfront_brake_position_can(
 def test_brake_light_faults_when_vcfront_pedal_position_goes_mia(vcrear_cluster):
     vcrear = vcrear_cluster.vcrear
     BrakeLightState = vcrear.can.enums.BrakeLightState
+    vcfront = VcfrontSimpleModel(vcrear.can)
+    vcrear_cluster.add_component(vcfront)
 
-    assert send_vcfront_brake_position(vcrear, 50)
+    assert vcfront.send_pedal_position(
+        VCFRONT_brakePosition=50,
+    )
     vcrear_cluster.run_until(
         lambda: brake_light_state(vcrear) == BrakeLightState.ON,
         timeout=250,

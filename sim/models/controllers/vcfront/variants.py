@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from sim.infra.rig import ClusterCatalog, ClusterSpec, NodeSpec
+from sim.infra.rig import ClusterCatalog, ClusterSpec, NodeSpec, PowerControlPath
 from sim.models.platforms import PLATFORM_VARIANTS
 
 from . import VcfrontModel
 
 
-def vcfront_node(hardware: str | None = None) -> NodeSpec:
-    return NodeSpec("vcfront", VcfrontModel, hardware=hardware)
+def vcfront_node(
+    hardware: str | None = None, *, power_input: PowerControlPath | None = None
+) -> NodeSpec:
+    return NodeSpec("vcfront", VcfrontModel, hardware=hardware, power_input=power_input)
 
 
 def vcfront_cluster_spec(hardware: str | None = None) -> ClusterSpec:

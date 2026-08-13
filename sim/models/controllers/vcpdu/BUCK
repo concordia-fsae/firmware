@@ -21,6 +21,7 @@ rig_model_python(
         "__init__.py",
         "extensions.py",
         "fixtures.py",
+        "simple.py",
         "variants.py",
         ":vcpdu-py",
         ":enums-py",
@@ -113,7 +114,6 @@ rig_bindgen(
         "Module_10Hz_TSK",
         "Module_1Hz_TSK",
         "drv_outputAD_toggleDigitalState",
-        "app_vehicleState_allowSleep",
         "YAMCAN_shared_init_static",
     ],
     allowlist_vars = [
@@ -140,6 +140,8 @@ rig_python_enums(
         "HW_tim.h",
         "drv_inputAD_componentSpecific.h",
         "drv_outputAD_componentSpecific.h",
+        "drv_tps2hb16ab.h",
+        "drv_tps2hb16ab_componentSpecific.h",
         "drv_vn9008_componentSpecific.h",
     ],
     deps = [
@@ -155,6 +157,8 @@ rig_python_enums(
         "drv_inputAD_channelAnalog_E:AnalogInput:DRV_INPUTAD_ANALOG_::upper",
         "HW_GPIO_pinmux_E:DigitalIo:HW_GPIO_::upper",
         "drv_outputAD_channelDigital_E:DigitalOutput:DRV_OUTPUTAD_::upper",
+        "drv_tps2hb16ab_E:Tps2hb16abIc:DRV_TPS2HB16AB_IC_::upper",
+        "drv_tps2hb16ab_output_E:Tps2hb16abOutput:DRV_TPS2HB16AB_OUT_::upper",
         "drv_vn9008_E:Vn9008Channel:DRV_VN9008_CHANNEL_::upper",
         "HW_spi_device_E:SpiDevice:HW_SPI_DEV_::upper",
         "HW_TIM_port_E:TimerPort:HW_TIM_PORT_::upper",

@@ -2,8 +2,16 @@ pub mod app {
     include!(env!("RIG_RUNTIME_RUST_APP_RS"));
 }
 
+pub mod asm330 {
+    include!(env!("RIG_RUNTIME_RUST_ASM330_RS"));
+}
+
 pub mod can {
     include!(env!("RIG_RUNTIME_RUST_CAN_RS"));
+}
+
+pub mod cluster {
+    include!(env!("RIG_RUNTIME_RUST_CLUSTER_RS"));
 }
 
 mod ffi {
@@ -53,7 +61,7 @@ pub mod timer {
 pub use app::AppDesc;
 pub use can::{
     CanEnumValueDescriptor, CanEvent, CanMessageDescriptor, CanNetwork, CanPacket,
-    CanSignalDescriptor,
+    CanSignalDescriptor, CanSignalValue,
 };
 pub use model::{NodeModel, NodeTarget};
 pub use module_desc::{ModuleDesc, ModuleTask};
@@ -152,6 +160,32 @@ pub extern "C" fn rig_model_can_recv_event(bus: u8, event: *mut CanEvent) -> boo
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_model_can_recv_events(
+    bus: u8,
+    events: *mut CanEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    can::recv_events(bus, events)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_can_send_many(
+    bus: u8,
+    packets: *const CanPacket,
+    count: u32,
+) -> u32 {
+    if packets.is_null() {
+        return 0;
+    }
+    let packets = unsafe { std::slice::from_raw_parts(packets, count as usize) };
+    can::send_many(bus, packets)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_can_rx_count(bus: u8) -> u32 {
     can::rx_count(bus)
 }
@@ -167,6 +201,18 @@ pub extern "C" fn rig_model_timer_send_duty(event: *const timer::TimerChannelEve
         return false;
     }
     timer::push_duty_input(unsafe { *event })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_send_duties(
+    events: *const timer::TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts(events, count as usize) };
+    timer::push_duty_inputs(events)
 }
 
 #[unsafe(no_mangle)]
@@ -188,6 +234,20 @@ pub extern "C" fn rig_model_timer_recv_duty(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_recv_duties(
+    port: i32,
+    channel: i32,
+    events: *mut timer::TimerChannelEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    timer::pop_duty_outputs(port, channel, events)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_timer_duty_output_count(port: i32, channel: i32) -> u32 {
     timer::duty_output_count(port, channel)
 }
@@ -198,6 +258,18 @@ pub extern "C" fn rig_model_timer_send_frequency(event: *const timer::TimerChann
         return false;
     }
     timer::push_frequency_input(unsafe { *event })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_send_frequencies(
+    events: *const timer::TimerChannelEvent,
+    count: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts(events, count as usize) };
+    timer::push_frequency_inputs(events)
 }
 
 #[unsafe(no_mangle)]
@@ -216,6 +288,20 @@ pub extern "C" fn rig_model_timer_recv_frequency(
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_timer_recv_frequencies(
+    port: i32,
+    channel: i32,
+    events: *mut timer::TimerChannelEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    timer::pop_frequency_outputs(port, channel, events)
 }
 
 #[unsafe(no_mangle)]
@@ -240,6 +326,18 @@ pub extern "C" fn rig_model_spi_send(transaction: *const spi::SpiTransaction) ->
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_model_spi_send_many(
+    transactions: *const spi::SpiTransaction,
+    count: u32,
+) -> u32 {
+    if transactions.is_null() {
+        return 0;
+    }
+    let transactions = unsafe { std::slice::from_raw_parts(transactions, count as usize) };
+    spi::push_inputs(transactions)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_spi_recv(device: i32, transaction: *mut spi::SpiTransaction) -> bool {
     if transaction.is_null() {
         return false;
@@ -251,6 +349,19 @@ pub extern "C" fn rig_model_spi_recv(device: i32, transaction: *mut spi::SpiTran
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_model_spi_recv_many(
+    device: i32,
+    transactions: *mut spi::SpiTransaction,
+    capacity: u32,
+) -> u32 {
+    if transactions.is_null() {
+        return 0;
+    }
+    let transactions = unsafe { std::slice::from_raw_parts_mut(transactions, capacity as usize) };
+    spi::pop_outputs(device, transactions)
 }
 
 #[unsafe(no_mangle)]
@@ -540,6 +651,30 @@ pub unsafe extern "C" fn rig_model_can_decode_signal(
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_model_can_decode_signals(
+    bus: u8,
+    packet: *const CanPacket,
+    signal_names: *const *const c_char,
+    values: *mut CanSignalValue,
+    count: u32,
+) -> u32 {
+    if packet.is_null() || signal_names.is_null() || values.is_null() {
+        return 0;
+    }
+
+    let signal_names = unsafe { std::slice::from_raw_parts(signal_names, count as usize) };
+    let mut names = Vec::with_capacity(signal_names.len());
+    for signal_name in signal_names {
+        let Some(name) = (unsafe { c_str_to_str(*signal_name) }) else {
+            return names.len() as u32;
+        };
+        names.push(name);
+    }
+    let values = unsafe { std::slice::from_raw_parts_mut(values, count as usize) };
+    can::decode_signals(bus, unsafe { &*packet }, &names, values)
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rig_model_can_encode_signal(
     bus: u8,
     message_name: *const c_char,
@@ -559,4 +694,31 @@ pub unsafe extern "C" fn rig_model_can_encode_signal(
     can::encode_signal(bus, message_name, signal_name, value, unsafe {
         &mut *packet
     })
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_model_can_encode_signals(
+    bus: u8,
+    message_name: *const c_char,
+    signal_names: *const *const c_char,
+    values: *const CanSignalValue,
+    count: u32,
+    packet: *mut CanPacket,
+) -> u32 {
+    if message_name.is_null() || signal_names.is_null() || values.is_null() || packet.is_null() {
+        return 0;
+    }
+    let Some(message_name) = (unsafe { c_str_to_str(message_name) }) else {
+        return 0;
+    };
+    let signal_names = unsafe { std::slice::from_raw_parts(signal_names, count as usize) };
+    let mut names = Vec::with_capacity(signal_names.len());
+    for signal_name in signal_names {
+        let Some(name) = (unsafe { c_str_to_str(*signal_name) }) else {
+            return names.len() as u32;
+        };
+        names.push(name);
+    }
+    let values = unsafe { std::slice::from_raw_parts(values, count as usize) };
+    can::encode_signals(bus, message_name, &names, values, unsafe { &mut *packet })
 }

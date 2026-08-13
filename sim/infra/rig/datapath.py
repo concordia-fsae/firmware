@@ -72,6 +72,11 @@ class ModelDataPathInputConnector:
 
 
 @dataclass(frozen=True)
+class ModelDataPathOutputConnector:
+    connect: Callable[[object], None]
+
+
+@dataclass(frozen=True)
 class ComponentDataPathOutput:
     path: Callable[[object], DataPath]
 
@@ -97,6 +102,7 @@ class DataPathSource(Generic[PayloadT]):
     path: DataPath
     pending: Callable[[], int]
     recv: Callable[[], PayloadT | None]
+    recv_many: Callable[[int], tuple[PayloadT, ...]] | None = None
 
 
 @dataclass(frozen=True)
@@ -104,6 +110,7 @@ class DataPathSink(Generic[PayloadT]):
     node: str
     path: DataPath
     send: Callable[[PayloadT], bool]
+    send_many: Callable[[tuple[PayloadT, ...]], int] | None = None
 
 
 @dataclass(frozen=True)
@@ -111,12 +118,14 @@ class ModelDataPathOutput(Generic[PayloadT]):
     path: DataPath
     pending: Callable[[], int]
     recv: Callable[[], PayloadT | None]
+    recv_many: Callable[[int], tuple[PayloadT, ...]] | None = None
 
 
 @dataclass(frozen=True)
 class ModelDataPathInput(Generic[PayloadT]):
     path: DataPath
     send: Callable[[PayloadT], bool]
+    send_many: Callable[[tuple[PayloadT, ...]], int] | None = None
 
 
 class FanoutDataPath(Generic[PayloadT]):
@@ -138,16 +147,18 @@ class ModelDataPaths:
         *,
         pending: Callable[[], int],
         recv: Callable[[], object | None],
+        recv_many: Callable[[int], tuple[object, ...]] | None = None,
     ) -> None:
-        self._outputs.append(ModelDataPathOutput(path, pending, recv))
+        self._outputs.append(ModelDataPathOutput(path, pending, recv, recv_many))
 
     def add_input(
         self,
         path: DataPath,
         *,
         send: Callable[[object], bool],
+        send_many: Callable[[tuple[object, ...]], int] | None = None,
     ) -> None:
-        self._inputs.append(ModelDataPathInput(path, send))
+        self._inputs.append(ModelDataPathInput(path, send, send_many))
 
     def outputs(
         self, path: DataPath | None = None

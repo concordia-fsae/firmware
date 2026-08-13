@@ -57,6 +57,15 @@ impl CanRuntime {
             .is_some()
     }
 
+    fn push_rx_many(&mut self, bus: u8, packets: &[CanPacket]) -> u32 {
+        let Some(queue) = self.rx.get_mut(bus as usize) else {
+            return 0;
+        };
+        let count = packets.len().min(u32::MAX as usize);
+        queue.extend(packets.iter().copied().take(count));
+        count as u32
+    }
+
     fn pop_rx(&mut self, bus: u8) -> Option<CanPacket> {
         self.rx.get_mut(bus as usize).and_then(VecDeque::pop_front)
     }
@@ -76,6 +85,21 @@ impl CanRuntime {
 
     fn pop_tx(&mut self, bus: u8) -> Option<CanEvent> {
         self.tx.get_mut(bus as usize).and_then(VecDeque::pop_front)
+    }
+
+    fn pop_tx_many(&mut self, bus: u8, out: &mut [CanEvent]) -> u32 {
+        let Some(queue) = self.tx.get_mut(bus as usize) else {
+            return 0;
+        };
+        let mut count = 0;
+        for slot in out.iter_mut() {
+            let Some(event) = queue.pop_front() else {
+                break;
+            };
+            *slot = event;
+            count += 1;
+        }
+        count
     }
 
     fn rx_count(&self, bus: u8) -> u32 {
@@ -127,6 +151,12 @@ pub type CanEnumValueDescriptorFn = fn(u32) -> Option<CanEnumValueDescriptor>;
 pub type CanEnumValueStringFn = fn(u32) -> Option<&'static str>;
 pub type CanDecodeSignalFn = fn(u8, &CanPacket, &str) -> Option<f64>;
 pub type CanEncodeSignalFn = fn(u8, &str, &str, f64, &mut CanPacket) -> bool;
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CanSignalValue {
+    pub value: f64,
+}
 
 #[derive(Clone, Copy)]
 pub struct CanNetwork {
@@ -188,8 +218,20 @@ pub fn send(bus: u8, packet: &CanPacket) -> bool {
     }
 }
 
+pub fn send_many(bus: u8, packets: &[CanPacket]) -> u32 {
+    let count = CAN_RUNTIME.lock().unwrap().push_rx_many(bus, packets);
+    if count > 0 {
+        unsafe { rig_runtime_can_notify_rx(bus) };
+    }
+    count
+}
+
 pub fn recv_event(bus: u8) -> Option<CanEvent> {
     CAN_RUNTIME.lock().unwrap().pop_tx(bus)
+}
+
+pub fn recv_events(bus: u8, out: &mut [CanEvent]) -> u32 {
+    CAN_RUNTIME.lock().unwrap().pop_tx_many(bus, out)
 }
 
 pub fn recv(bus: u8) -> Option<CanPacket> {
@@ -315,6 +357,26 @@ pub fn decode_signal(bus: u8, packet: &CanPacket, signal_name: &str) -> Option<f
     })
 }
 
+pub fn decode_signals(
+    bus: u8,
+    packet: &CanPacket,
+    signal_names: &[&str],
+    values: &mut [CanSignalValue],
+) -> u32 {
+    with_network(0, |network| {
+        let count = signal_names.len().min(values.len()).min(u32::MAX as usize);
+        let mut decoded = 0;
+        for (signal_name, value) in signal_names.iter().zip(values.iter_mut()).take(count) {
+            let Some(decoded_value) = (network.decode_signal)(bus, packet, signal_name) else {
+                break;
+            };
+            value.value = decoded_value;
+            decoded += 1;
+        }
+        decoded
+    })
+}
+
 pub fn encode_signal(
     bus: u8,
     message_name: &str,
@@ -324,6 +386,26 @@ pub fn encode_signal(
 ) -> bool {
     with_network(false, |network| {
         (network.encode_signal)(bus, message_name, signal_name, value, packet)
+    })
+}
+
+pub fn encode_signals(
+    bus: u8,
+    message_name: &str,
+    signal_names: &[&str],
+    values: &[CanSignalValue],
+    packet: &mut CanPacket,
+) -> u32 {
+    with_network(0, |network| {
+        let count = signal_names.len().min(values.len()).min(u32::MAX as usize);
+        let mut encoded = 0;
+        for (signal_name, value) in signal_names.iter().zip(values.iter()).take(count) {
+            if !(network.encode_signal)(bus, message_name, signal_name, value.value, packet) {
+                break;
+            }
+            encoded += 1;
+        }
+        encoded
     })
 }
 
@@ -607,6 +689,19 @@ pub extern "C" fn rig_runtime_can_push_rx(bus: u8, packet: *const CanPacket) -> 
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_can_push_rx_many(
+    bus: u8,
+    packets: *const CanPacket,
+    count: u32,
+) -> u32 {
+    if packets.is_null() {
+        return 0;
+    }
+    let packets = unsafe { std::slice::from_raw_parts(packets, count as usize) };
+    send_many(bus, packets)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_runtime_can_pop_rx(bus: u8, packet: *mut CanPacket) -> bool {
     if packet.is_null() {
         return false;
@@ -661,6 +756,19 @@ pub extern "C" fn rig_runtime_can_pop_tx_event(bus: u8, event: *mut CanEvent) ->
         }
         None => false,
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_can_pop_tx_events(
+    bus: u8,
+    events: *mut CanEvent,
+    capacity: u32,
+) -> u32 {
+    if events.is_null() {
+        return 0;
+    }
+    let events = unsafe { std::slice::from_raw_parts_mut(events, capacity as usize) };
+    recv_events(bus, events)
 }
 
 #[unsafe(no_mangle)]
