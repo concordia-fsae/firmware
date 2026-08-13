@@ -1,34 +1,35 @@
 from sim.infra.rig import TimerInterface, extend_model_class, load_generated_module
 
-from .simple import SwsSimpleModel
+from .simple import BmsbSimpleModel
 
 
 def _load_generated() -> None:
-    if "SwsModel" in globals():
+    if "BmsbModel" in globals():
         return
 
     model = load_generated_module(
-        "SWS_MODEL_PY",
-        "//sim/models/controllers/sws:sws-py",
-        "sws_generated_model",
+        "BMSB_MODEL_PY",
+        "//sim/models/controllers/bmsb:bmsb-py",
+        "bmsb_generated_model",
     )
     enums = load_generated_module(
-        "SWS_ENUMS_PY",
-        "//sim/models/controllers/sws:enums-py",
-        "sws_generated_enums",
+        "BMSB_ENUMS_PY",
+        "//sim/models/controllers/bmsb:enums-py",
+        "bmsb_generated_enums",
     )
 
     globals()["AnalogInput"] = enums.AnalogInput
     globals()["DigitalInput"] = enums.DigitalInput
     globals()["DigitalIo"] = enums.DigitalIo
     globals()["DigitalOutput"] = enums.DigitalOutput
+    globals()["Fault"] = enums.Fault
     globals()["TimerChannel"] = enums.TimerChannel
     globals()["TimerPort"] = enums.TimerPort
 
-    class SwsModel(extend_model_class(model.SwsModel)):
+    class BmsbModel(extend_model_class(model.BmsbModel)):
         timer = TimerInterface(enums.TimerPort, enums.TimerChannel)
 
-    globals()["SwsModel"] = SwsModel
+    globals()["BmsbModel"] = BmsbModel
 
 
 def __getattr__(name: str):
@@ -37,11 +38,11 @@ def __getattr__(name: str):
 
         globals()["PLATFORM_VARIANTS"] = PLATFORM_VARIANTS
         return PLATFORM_VARIANTS
-    if name == "SWS_CLUSTERS":
-        from .variants import SWS_CLUSTERS
+    if name == "BMSB_CLUSTERS":
+        from .variants import BMSB_CLUSTERS
 
-        globals()["SWS_CLUSTERS"] = SWS_CLUSTERS
-        return SWS_CLUSTERS
+        globals()["BMSB_CLUSTERS"] = BMSB_CLUSTERS
+        return BMSB_CLUSTERS
     if name in _GENERATED_EXPORTS:
         _load_generated()
         return globals()[name]
@@ -53,10 +54,11 @@ _GENERATED_EXPORTS = {
     "DigitalInput",
     "DigitalIo",
     "DigitalOutput",
+    "Fault",
     "TimerChannel",
     "TimerPort",
-    "SwsModel",
-    "SWS_CLUSTERS",
+    "BmsbModel",
+    "BMSB_CLUSTERS",
     "PLATFORM_VARIANTS",
 }
 
@@ -65,10 +67,11 @@ __all__ = [
     "DigitalInput",
     "DigitalIo",
     "DigitalOutput",
+    "Fault",
     "TimerChannel",
     "TimerPort",
     "PLATFORM_VARIANTS",
-    "SWS_CLUSTERS",
-    "SwsSimpleModel",
-    "SwsModel",
+    "BMSB_CLUSTERS",
+    "BmsbSimpleModel",
+    "BmsbModel",
 ]

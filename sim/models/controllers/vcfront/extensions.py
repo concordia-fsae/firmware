@@ -82,6 +82,12 @@ class VcfrontPytestHelpers:
             self._voltage_for_position(position_percent, self._APPS2_POINTS),
         )
 
+    def latest_torque_request(self):
+        torque = self.can.latest("VCFRONT_torqueManager", bus="veh")
+        if torque is None:
+            return None
+        return torque.VCFRONT_torqueRequest
+
     def _voltage_for_position(
         self, position_percent: float, points: tuple[tuple[float, float], ...]
     ) -> float:

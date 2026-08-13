@@ -207,7 +207,7 @@ void app_vehicleState_run100Hz(void)
             else if ((drv_inputAD_getDigitalActiveState(VEHICLESTATE_INPUTAD_RUN_BUTTON) == DRV_IO_ACTIVE) &&
                      ((VEHICLESTATE_CANRX_BRAKEPOSITION(&percentage) == CANRX_MESSAGE_VALID) &&
                       (percentage > 10.0f)) &&
-                     ((VEHICLESTATE_CANRX_CONTACTORSTATE(&contacts) == CANRX_MESSAGE_VALID) ||
+                     ((VEHICLESTATE_CANRX_CONTACTORSTATE(&contacts) == CANRX_MESSAGE_VALID) &&
                       (contacts == CAN_PRECHARGECONTACTORSTATE_HVP_CLOSED))
                      )
             {

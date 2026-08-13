@@ -4,6 +4,8 @@ load("//sim/infra:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_r
 VCFRONT_MODEL = "//sim/models/controllers/vcfront"
 VCPDU_MODEL = "//sim/models/controllers/vcpdu"
 VCREAR_MODEL = "//sim/models/controllers/vcrear"
+BMSB_MODEL = "//sim/models/controllers/bmsb"
+SWS_MODEL = "//sim/models/controllers/sws"
 
 rig_pytest(
     name = "rig_infra",
@@ -46,6 +48,12 @@ rig_pytest(
     name = "component",
     test_file = "sim/tests/test_component.py",
     env = {
+        "BMSB_ENUMS_PY": "$(location {}:enums-py)".format(BMSB_MODEL),
+        "BMSB_MODEL_PY": "$(location {}:bmsb-py)".format(BMSB_MODEL),
+        "BMSB_SIM_LIB": "$(location {}:sil-so)".format(BMSB_MODEL),
+        "SWS_ENUMS_PY": "$(location {}:enums-py)".format(SWS_MODEL),
+        "SWS_MODEL_PY": "$(location {}:sws-py)".format(SWS_MODEL),
+        "SWS_SIM_LIB": "$(location {}:sil-so)".format(SWS_MODEL),
         "VCFRONT_ENUMS_PY": "$(location {}:enums-py)".format(VCFRONT_MODEL),
         "VCFRONT_MODEL_PY": "$(location {}:vcfront-py)".format(VCFRONT_MODEL),
         "VCFRONT_SIM_LIB": "$(location {}:sil-so)".format(VCFRONT_MODEL),
@@ -57,10 +65,18 @@ rig_pytest(
         "VCREAR_SIM_LIB": "$(location {}:sil-so)".format(VCREAR_MODEL),
     } |
     rig_platform_variants_env(ALL_PLATFORMS) |
+    rig_platform_sim_lib_env("BMSB", BMSB_MODEL, ALL_PLATFORMS) |
+    rig_platform_sim_lib_env("SWS", SWS_MODEL, ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCFRONT", VCFRONT_MODEL, ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS),
     resources = [
+        "{}:enums-py".format(BMSB_MODEL),
+        "{}:bmsb-py".format(BMSB_MODEL),
+        "{}:sil-so".format(BMSB_MODEL),
+        "{}:enums-py".format(SWS_MODEL),
+        "{}:sws-py".format(SWS_MODEL),
+        "{}:sil-so".format(SWS_MODEL),
         "{}:enums-py".format(VCFRONT_MODEL),
         "{}:vcfront-py".format(VCFRONT_MODEL),
         "{}:sil-so".format(VCFRONT_MODEL),
@@ -74,6 +90,8 @@ rig_pytest(
         "//sim/models/components/asm330:python",
         "//sim/models/components/dc_load:python",
     ] +
+    rig_platform_sim_lib_resources(BMSB_MODEL, ALL_PLATFORMS) +
+    rig_platform_sim_lib_resources(SWS_MODEL, ALL_PLATFORMS) +
     rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS) +
     rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS) +
     rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),

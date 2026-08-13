@@ -1,18 +1,18 @@
-load("//components/sws:platforms.bzl", "SWS_PLATFORM_VARIANTS")
+load("//components/bms_boss:platforms.bzl", "BMSB_PLATFORM_VARIANTS")
 load("//sim/infra:defs.bzl", "rig_bindgen", "rig_embedded_rust_model", "rig_embedded_rust_model_platform_aliases", "rig_feature_consts", "rig_model_c_support", "rig_model_python", "rig_platforms_from_variants", "rig_python_enums", "rig_python_model", "rig_runtime_srcs")
 
-SWS_SIM_PLATFORMS = rig_platforms_from_variants(SWS_PLATFORM_VARIANTS)
+BMSB_SIM_PLATFORMS = rig_platforms_from_variants(BMSB_PLATFORM_VARIANTS)
 
 rig_python_model(
-    name = "sws-py",
-    out = "sws.py",
+    name = "bmsb-py",
+    out = "bmsb.py",
     rust_source = ":rust-wrapper-src",
-    class_name = "SwsModel",
-    symbol_prefix = "sws_sim",
-    buck_target = "//sim/models/controllers/sws:sil-so",
-    env_var = "SWS_SIM_LIB",
-    enum_env_var = "SWS_ENUMS_PY",
-    enum_target = "//sim/models/controllers/sws:enums-py",
+    class_name = "BmsbModel",
+    symbol_prefix = "bmsb_sim",
+    buck_target = "//sim/models/controllers/bmsb:sil-so",
+    env_var = "BMSB_SIM_LIB",
+    enum_env_var = "BMSB_ENUMS_PY",
+    enum_target = "//sim/models/controllers/bmsb:enums-py",
     visibility = ["PUBLIC"],
 )
 
@@ -22,14 +22,14 @@ rig_model_python(
         "fixtures.py",
         "simple.py",
         "variants.py",
-        ":sws-py",
+        ":bmsb-py",
         ":enums-py",
     ],
     visibility = ["PUBLIC"],
 )
 
 rig_model_c_support(
-    srcs = rig_runtime_srcs(["can", "core", "flash", "io", "swi", "system", "time", "uart"]),
+    srcs = rig_runtime_srcs(["can", "core", "faults", "flash", "i2c", "io", "swi", "system", "time", "uart"]),
     compiler_flags = [
         "-std=c11",
         "-Wall",
@@ -47,12 +47,11 @@ rig_model_c_support(
         "runtime_state.h": "//sim/infra/runtime:c/src/runtime_state.h",
     },
     deps = [
+        "//components/bms_boss:sil-features",
+        "//components/bms_boss:sil-host-headers",
+        "//components/bms_boss:sil-yamcan-c",
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//components/sws:sil-features",
-        "//components/sws:sil-host-headers",
-        "//components/sws:sil-yamcan-c",
-        "//components/vc/shared:headers",
         "//sim/infra/runtime:headers",
     ],
 )
@@ -61,7 +60,7 @@ rig_feature_consts(
     name = "features-rs",
     out = "features.rs",
     deps = [
-        "//components/sws:sil-features",
+        "//components/bms_boss:sil-features",
     ],
     allowlist_vars = [
         "APP_COMPONENT_ID",
@@ -78,6 +77,7 @@ rig_bindgen(
     include_headers = [
         "Module.h",
         "HW_gpio_componentSpecific.h",
+        "HW_tim.h",
         "drv_inputAD_componentSpecific.h",
         "drv_outputAD.h",
         "drv_outputAD_componentSpecific.h",
@@ -85,12 +85,11 @@ rig_bindgen(
     ],
     deps = [
         ":model-c-support",
+        "//components/bms_boss:sil-features",
+        "//components/bms_boss:sil-host-headers",
+        "//components/bms_boss:sil-yamcan-c",
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//components/sws:sil-features",
-        "//components/sws:sil-host-headers",
-        "//components/sws:sil-yamcan-c",
-        "//components/vc/shared:headers",
         "//sim/infra/runtime:headers",
     ],
     allowlist_types = [
@@ -98,6 +97,8 @@ rig_bindgen(
         "drv_inputAD_channelDigital_E",
         "drv_outputAD_channelDigital_E",
         "HW_GPIO_pinmux_E",
+        "HW_TIM_channel_E",
+        "HW_TIM_port_E",
         "CAN_data_T",
         "YamcanShared",
     ],
@@ -135,12 +136,11 @@ rig_python_enums(
     ],
     deps = [
         ":model-c-support",
+        "//components/bms_boss:sil-features",
+        "//components/bms_boss:sil-host-headers",
+        "//components/bms_boss:sil-yamcan-c",
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//components/sws:sil-features",
-        "//components/sws:sil-host-headers",
-        "//components/sws:sil-yamcan-c",
-        "//components/vc/shared:headers",
         "//sim/infra/runtime:headers",
     ],
     c_enums = [
@@ -150,6 +150,12 @@ rig_python_enums(
         "drv_outputAD_channelDigital_E:DigitalOutput:DRV_OUTPUTAD_DIGITAL_::upper",
         "HW_TIM_port_E:TimerPort:HW_TIM_PORT_::upper",
         "HW_TIM_channel_E:TimerChannel:HW_TIM_CHANNEL_::upper",
+    ],
+    rust_sources = [
+        "//components/bms_boss:sil-yamcan[rust_faults_generated.rs]",
+    ],
+    rust_enums = [
+        "FmFault:Fault:Bmsb:Fault:camel",
     ],
     clang_flags = [
         "-include",
@@ -161,20 +167,20 @@ rig_python_enums(
 
 rig_embedded_rust_model(
     name = "sil-so",
-    crate = "sws_sim",
-    out = "libsws_sim.so",
+    crate = "bmsb_sim",
+    out = "libbmsb_sim.so",
     link_deps = [
-        "//components/sws:sil-application",
+        "//components/bms_boss:sil-application",
         ":model-c-support",
-        "//components/sws:sil-yamcan-c",
-        "//components/sws:sil-application",
+        "//components/bms_boss:sil-yamcan-c",
+        "//components/bms_boss:sil-application",
     ],
     rust_env = {
-        "SWS_BINDINGS_RS": ":bindings-rs",
-        "SWS_FEATURES_RS": ":features-rs",
-        "SWS_YAMCAN_DECODE_RS": "//components/sws:sil-yamcan[rust_decode_generated.rs]",
-        "SWS_YAMCAN_MODEL_RS": "//components/sws:sil-yamcan[rust_model_generated.rs]",
-        "SWS_YAMCAN_RS": "//components/sws:sil-yamcan[yamcan.rs]",
+        "BMSB_BINDINGS_RS": ":bindings-rs",
+        "BMSB_FEATURES_RS": ":features-rs",
+        "BMSB_YAMCAN_DECODE_RS": "//components/bms_boss:sil-yamcan[rust_decode_generated.rs]",
+        "BMSB_YAMCAN_MODEL_RS": "//components/bms_boss:sil-yamcan[rust_model_generated.rs]",
+        "BMSB_YAMCAN_RS": "//components/bms_boss:sil-yamcan[yamcan.rs]",
     },
     visibility = ["PUBLIC"],
 )
@@ -182,6 +188,6 @@ rig_embedded_rust_model(
 rig_embedded_rust_model_platform_aliases(
     name = "sil-so",
     actual = ":sil-so",
-    platforms = SWS_SIM_PLATFORMS,
+    platforms = BMSB_SIM_PLATFORMS,
     visibility = ["PUBLIC"],
 )

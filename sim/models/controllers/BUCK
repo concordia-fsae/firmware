@@ -5,6 +5,7 @@ rig_model_python(
         "__init__.py",
         "fixtures.py",
         "variants.py",
+        "//sim/models/controllers/bmsb:python",
         "//sim/models/controllers/sws:python",
     ],
     visibility = ["PUBLIC"],
