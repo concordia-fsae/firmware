@@ -1,0 +1,10 @@
+load("//sim/infra:defs.bzl", "rig_model_python")
+
+rig_model_python(
+    srcs = [
+        "platforms.py",
+        "//sim/models/components:python",
+        "//sim/models/components/dc_load:python",
+    ],
+    visibility = ["PUBLIC"],
+)

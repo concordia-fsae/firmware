@@ -1450,7 +1450,7 @@ static void torque_periodic_100Hz(void)
     }
 
     const float32_t minTorque = (torque_data.gear == GEAR_F) ? -REGEN_MAX_TORQUE_N : ABSOLUTE_MIN_TORQUE;
-    torque_data.torque = SATURATE(minTorque, torque, ABSOLUTE_MAX_TORQUE);
+    torque_data.torque = (torque_data.state == TORQUE_ACTIVE) ? SATURATE(minTorque, torque, ABSOLUTE_MAX_TORQUE) : 0.0f;
 }
 
 /******************************************************************************

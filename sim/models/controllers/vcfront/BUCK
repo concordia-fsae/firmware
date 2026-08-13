@@ -1,0 +1,176 @@
+load("//components/vc/front:platforms.bzl", "VCFRONT_PLATFORM_VARIANTS")
+load("//sim/infra:defs.bzl", "rig_bindgen", "rig_embedded_rust_model", "rig_embedded_rust_model_platform_aliases", "rig_feature_consts", "rig_model_c_support", "rig_model_python", "rig_platforms_from_variants", "rig_python_enums", "rig_python_model", "rig_runtime_srcs")
+
+VCFRONT_SIM_PLATFORMS = rig_platforms_from_variants(VCFRONT_PLATFORM_VARIANTS)
+
+rig_python_model(
+    name = "vcfront-py",
+    out = "vcfront.py",
+    rust_source = ":rust-wrapper-src",
+    class_name = "VcfrontModel",
+    symbol_prefix = "vcfront_sim",
+    buck_target = "//sim/models/controllers/vcfront:sil-so",
+    env_var = "VCFRONT_SIM_LIB",
+    enum_env_var = "VCFRONT_ENUMS_PY",
+    enum_target = "//sim/models/controllers/vcfront:enums-py",
+    visibility = ["PUBLIC"],
+)
+
+rig_model_python(
+    srcs = [
+        "__init__.py",
+        "extensions.py",
+        "fixtures.py",
+        "variants.py",
+        ":vcfront-py",
+        ":enums-py",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rig_model_c_support(
+    srcs = rig_runtime_srcs(["core", "faults", "io", "peripherals", "time"]) + [
+    ],
+    headers = {
+        "runtime_state.h": "//sim/infra/runtime:c/src/runtime_state.h",
+    },
+    deps = [
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//components/vc/front:sil-features",
+        "//components/vc/front:sil-host-headers",
+        "//components/vc/front:sil-yamcan-c",
+        "//components/vc/shared:headers",
+        "//sim/infra/runtime:headers",
+    ],
+)
+
+rig_feature_consts(
+    name = "features-rs",
+    out = "features.rs",
+    deps = [
+        "//components/vc/front:sil-features",
+    ],
+    allowlist_vars = [
+        "APP_COMPONENT_ID",
+        "APP_VARIANT_ID",
+        "NVM_BLOCK_SIZE",
+        "NVM_FLASH_BACKED",
+        "NVM_LIB_ENABLED",
+    ],
+)
+
+rig_bindgen(
+    name = "bindings-rs",
+    out = "bindings.rs",
+    include_headers = [
+        "Module.h",
+        "HW_gpio_componentSpecific.h",
+        "drv_inputAD_componentSpecific.h",
+        "drv_outputAD.h",
+        "drv_outputAD_componentSpecific.h",
+        "YamcanShared.h",
+    ],
+    deps = [
+        ":model-c-support",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//components/vc/front:sil-features",
+        "//components/vc/front:sil-host-headers",
+        "//components/vc/front:sil-yamcan-c",
+        "//components/vc/shared:headers",
+        "//sim/infra/runtime:headers",
+    ],
+    allowlist_types = [
+        "drv_inputAD_channelAnalog_E",
+        "drv_outputAD_channelDigital_E",
+        "HW_GPIO_pinmux_E",
+        "CAN_data_T",
+        "YamcanShared",
+    ],
+    allowlist_functions = [
+        "Module_Init",
+        "Module_1kHz_TSK",
+        "Module_100Hz_TSK",
+        "Module_10Hz_TSK",
+        "Module_1Hz_TSK",
+        "drv_outputAD_toggleDigitalState",
+        "YAMCAN_shared_init_static",
+    ],
+    allowlist_vars = [
+        "g_yamcan",
+    ],
+    bindgen_flags = [
+        "--no-layout-tests",
+        "--default-enum-style rust",
+    ],
+    clang_flags = [
+        "-include",
+        "BuildDefines.h",
+    ],
+)
+
+rig_python_enums(
+    name = "enums-py",
+    out = "enums.py",
+    include_headers = [
+        "HW_gpio_componentSpecific.h",
+        "HW_tim.h",
+        "drv_inputAD_componentSpecific.h",
+        "drv_outputAD_componentSpecific.h",
+    ],
+    deps = [
+        ":model-c-support",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//components/vc/front:sil-features",
+        "//components/vc/front:sil-host-headers",
+        "//components/vc/front:sil-yamcan-c",
+        "//components/vc/shared:headers",
+        "//sim/infra/runtime:headers",
+    ],
+    c_enums = [
+        "drv_inputAD_channelAnalog_E:AnalogInput:DRV_INPUTAD_ANALOG_::upper",
+        "HW_GPIO_pinmux_E:DigitalIo:HW_GPIO_::upper",
+        "drv_outputAD_channelDigital_E:DigitalOutput:DRV_OUTPUTAD_DIGITAL_::upper",
+        "HW_TIM_port_E:TimerPort:HW_TIM_PORT_::upper",
+        "HW_TIM_channel_E:TimerChannel:HW_TIM_CHANNEL_::upper",
+    ],
+    rust_sources = [
+        "//components/vc/front:sil-yamcan[rust_faults_generated.rs]",
+    ],
+    rust_enums = [
+        "FmFault:Fault:Vcfront:Fault:camel",
+    ],
+    clang_flags = [
+        "-include",
+        "BuildDefines.h",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rig_embedded_rust_model(
+    name = "sil-so",
+    crate = "vcfront_sim",
+    out = "libvcfront_sim.so",
+    link_deps = [
+        "//components/vc/front:sil-application",
+        ":model-c-support",
+        "//components/vc/front:sil-yamcan-c",
+    ],
+    rust_env = {
+        "VCFRONT_BINDINGS_RS": ":bindings-rs",
+        "VCFRONT_FEATURES_RS": ":features-rs",
+        "VCFRONT_YAMCAN_DECODE_RS": "//components/vc/front:sil-yamcan[rust_decode_generated.rs]",
+        "VCFRONT_YAMCAN_MODEL_RS": "//components/vc/front:sil-yamcan[rust_model_generated.rs]",
+        "VCFRONT_YAMCAN_RS": "//components/vc/front:sil-yamcan[yamcan.rs]",
+    },
+    visibility = ["PUBLIC"],
+)
+
+rig_embedded_rust_model_platform_aliases(
+    name = "sil-so",
+    actual = ":sil-so",
+    platforms = VCFRONT_SIM_PLATFORMS,
+    visibility = ["PUBLIC"],
+)

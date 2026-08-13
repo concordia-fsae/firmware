@@ -66,6 +66,23 @@ static bool CANIO_rx_isBufferEmpty(void)
     return canrx.bufferEndIndex == canrx.bufferStartIndex;
 }
 
+#if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
+static bool CANIO_rx_anyFifoNotify(void)
+{
+    const uint16_t * fifoNotify = (const uint16_t*)canrx.fifoNotify;
+    const uint16_t wordCount    = (uint16_t)(CAN_BUS_COUNT * WORDS_FROM_COUNT(CAN_RX_FIFO_COUNT));
+
+    for (uint16_t word = 0U; word < wordCount; word++)
+    {
+        if (fifoNotify[word] != 0U)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+#endif // FEATURE_CANRX_SWI
+
 /**
  * CANIO_rx_1kHz_PRD
  *
@@ -86,7 +103,7 @@ static void CANIO_rx_1kHz_PRD(void)
     }
 
 #if FEATURE_IS_ENABLED(FEATURE_CANRX_SWI)
-    if (FLAG_any((uint16_t*)&canrx.fifoNotify[CAN_BUS_VEH], CAN_RX_FIFO_COUNT))
+    if (CANIO_rx_anyFifoNotify())
     {
         SWI_invoke(CANRX_swi);
     }
