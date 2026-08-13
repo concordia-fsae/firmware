@@ -105,6 +105,7 @@ static VCPDU: Mutex<NodeModel<Vcpdu>> = Mutex::new(NodeModel::new(
 ));
 
 rig_model_abi!(VCPDU);
+rig_model_fault_abi!();
 
 #[unsafe(no_mangle)]
 pub extern "C" fn vcpdu_sim_get_vn9008_cs_amps_per_volt(channel: i32) -> f32 {

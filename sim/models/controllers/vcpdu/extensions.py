@@ -46,6 +46,30 @@ class VcpduModelExtensions:
             observed.append(state)
         return state
 
+    def run_until_vehicle_state(
+        self,
+        state,
+        *,
+        timeout: int | float,
+        unit: str = "ms",
+        step: int | float = 1,
+        step_unit: str | None = None,
+        fast_forward: bool = False,
+        message: str | None = None,
+    ) -> int:
+        return self.can.run_until_signal_eq(
+            "VCPDU_vehicleState",
+            "VCPDU_vehicleState",
+            state,
+            bus="veh",
+            timeout=timeout,
+            unit=unit,
+            step=step,
+            step_unit=step_unit,
+            fast_forward=fast_forward,
+            message_on_timeout=message,
+        )
+
     def latest_hsd_duty_cycle(self, hsd_channel) -> float | None:
         signal_name = self._hsd_signal_name(
             hsd_channel,
@@ -135,7 +159,7 @@ class VcpduModelExtensions:
         cls, *, hsd_channel, analog_input
     ) -> ModelDataPathInputConnector:
         def connect(node, path) -> None:
-            node.datapaths.add_input(
+            node.add_scalar_input(
                 path,
                 send=lambda current: node.set_vn9008_current_feedback(
                     hsd_channel,

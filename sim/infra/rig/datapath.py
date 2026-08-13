@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import ctypes
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Generic, TypeVar
 
@@ -17,10 +18,25 @@ class PeripheralBinding:
     device: int | None = None
 
 
+class ScalarEvent(ctypes.Structure):
+    _fields_ = [
+        ("value", ctypes.c_float),
+        ("timestamp_ns", ctypes.c_uint64),
+    ]
+
+
 @dataclass(frozen=True)
 class DataPath:
     parts: tuple[object, ...]
     peripheral_binding: PeripheralBinding | None = None
+    key: str = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "key",
+            "datapath:" + ":".join(_datapath_part_key(part) for part in self.parts),
+        )
 
     @classmethod
     def component(cls, component: object, port: object) -> DataPath:
@@ -40,7 +56,7 @@ class DataPath:
 
 
 def datapath_key(path: DataPath) -> str:
-    return "datapath:" + ":".join(_datapath_part_key(part) for part in path.parts)
+    return path.key
 
 
 def _datapath_part_key(part: object) -> str:
@@ -140,6 +156,9 @@ class ModelDataPaths:
     def __init__(self) -> None:
         self._outputs: list[ModelDataPathOutput[object]] = []
         self._inputs: list[ModelDataPathInput[object]] = []
+        self._outputs_by_key: dict[str, list[ModelDataPathOutput[object]]] = {}
+        self._inputs_by_key: dict[str, list[ModelDataPathInput[object]]] = {}
+        self._paths_by_key: dict[str, DataPath] = {}
 
     def add_output(
         self,
@@ -149,7 +168,11 @@ class ModelDataPaths:
         recv: Callable[[], object | None],
         recv_many: Callable[[int], tuple[object, ...]] | None = None,
     ) -> None:
-        self._outputs.append(ModelDataPathOutput(path, pending, recv, recv_many))
+        output = ModelDataPathOutput(path, pending, recv, recv_many)
+        key = datapath_key(path)
+        self._outputs.append(output)
+        self._outputs_by_key.setdefault(key, []).append(output)
+        self._paths_by_key.setdefault(key, path)
 
     def add_input(
         self,
@@ -158,33 +181,26 @@ class ModelDataPaths:
         send: Callable[[object], bool],
         send_many: Callable[[tuple[object, ...]], int] | None = None,
     ) -> None:
-        self._inputs.append(ModelDataPathInput(path, send, send_many))
+        input_ = ModelDataPathInput(path, send, send_many)
+        key = datapath_key(path)
+        self._inputs.append(input_)
+        self._inputs_by_key.setdefault(key, []).append(input_)
+        self._paths_by_key.setdefault(key, path)
 
     def outputs(
         self, path: DataPath | None = None
     ) -> tuple[ModelDataPathOutput[object], ...]:
-        key = None if path is None else datapath_key(path)
-        return tuple(
-            output
-            for output in self._outputs
-            if key is None or datapath_key(output.path) == key
-        )
+        if path is None:
+            return tuple(self._outputs)
+        return tuple(self._outputs_by_key.get(datapath_key(path), ()))
 
     def inputs(
         self, path: DataPath | None = None
     ) -> tuple[ModelDataPathInput[object], ...]:
-        key = None if path is None else datapath_key(path)
-        return tuple(
-            input_
-            for input_ in self._inputs
-            if key is None or datapath_key(input_.path) == key
-        )
+        if path is None:
+            return tuple(self._inputs)
+        return tuple(self._inputs_by_key.get(datapath_key(path), ()))
 
     @property
     def paths(self) -> tuple[DataPath, ...]:
-        paths: dict[str, DataPath] = {}
-        for path in [output.path for output in self._outputs] + [
-            input_.path for input_ in self._inputs
-        ]:
-            paths.setdefault(datapath_key(path), path)
-        return tuple(paths.values())
+        return tuple(self._paths_by_key.values())

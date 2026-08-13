@@ -6,6 +6,7 @@ from sim.infra.rig import (
     DataPath,
     ModelRig,
     PeriodicDataPathProducer,
+    SchedulerContext,
     SimpleComponent,
     SimpleNodeRig,
 )
@@ -26,27 +27,34 @@ class FakeNode(ModelRig):
 
 class ScheduledComponent(ComponentRig):
     def __init__(self) -> None:
-        super().__init__(scheduler_period=250, scheduler_unit="us")
         self.scheduled_times_ns = []
+        super().__init__(
+            scheduler_period=250,
+            scheduler_unit="us",
+            scheduler_callback=self._record_scheduled_time,
+        )
 
     def reset(self) -> None:
         super().reset()
         self.scheduled_times_ns.clear()
 
-    def _run_scheduled(self) -> None:
-        self.scheduled_times_ns.append(self.elapsed_ns)
+    def _record_scheduled_time(self, context: SchedulerContext) -> None:
+        self.scheduled_times_ns.append(context.elapsed_ns)
 
 
 class TickModel(ModelRig):
     def __init__(self) -> None:
-        super().__init__(scheduler_period=1)
         self.ticks = 0
+        super().__init__(
+            scheduler_period=1,
+            scheduler_callback=self._tick,
+        )
 
     def reset(self) -> None:
         super().reset()
         self.ticks = 0
 
-    def _run_scheduled(self) -> None:
+    def _tick(self, context: SchedulerContext) -> None:
         self.ticks += 1
 
 
@@ -245,14 +253,14 @@ def test_can_node_connections_use_generated_common_bus_names_only():
     ] == [ClusterCanComms.path("nose")]
 
 
-def test_component_scheduler_coalesces_missed_periods_during_cluster_fast_forward():
+def test_component_scheduler_runs_due_periods_when_cluster_step_is_larger():
     controller = FakeNode()
     component = ScheduledComponent()
 
     cluster = ClusterRig(controller=controller, component=component)
-    cluster.run_for(1)
+    cluster.run_for(1, step=1)
 
-    assert component.scheduled_times_ns == [1_000_000]
+    assert component.scheduled_times_ns == [250_000, 500_000, 750_000, 1_000_000]
     assert cluster.elapsed_ns == 1_000_000
 
 
@@ -279,7 +287,8 @@ def test_periodic_datapath_producer_routes_model_inputs():
     cluster.run_for(250, unit="us", step=250)
 
     assert sink.received_payloads == [
-        {"timestamp_ns": 250_000},
+        {"timestamp_ns": 100_000},
+        {"timestamp_ns": 200_000},
     ]
 
 

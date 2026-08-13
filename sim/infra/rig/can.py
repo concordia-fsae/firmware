@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import ctypes
-from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from enum import IntEnum
 
-from .datapath import DataPath
-from .model import PeriodicDataPathProducer
+from .time import RunUntilTimeout, duration_to_ns
 
 
 SIGNAL_KIND_NAMES = {
@@ -151,44 +150,25 @@ class PeriodicCanMessage:
     message: CanMessageDescriptor
     period_ns: int
     signals: dict[str, float | int | IntEnum]
+    encoder: Callable[
+        [CanMessageDescriptor, Mapping[str, float | int | IntEnum]], CanPacket
+    ] = field(repr=False)
     last_emit_ns: int = 0
+    packet: CanPacket = field(init=False)
+    native_update: Callable[[CanPacket], None] | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        self._refresh_packet()
 
     def set(self, **signals: float | int | IntEnum) -> PeriodicCanMessage:
         self.signals.update(signals)
+        self._refresh_packet()
         return self
 
-
-class PeriodicCanSender(PeriodicDataPathProducer):
-    def __init__(
-        self,
-        can: CanInterface,
-        message: CanMessageDescriptor,
-        *,
-        scheduler_period: int | float = 100,
-        scheduler_unit: str = "ms",
-        **signals: float | int | IntEnum,
-    ) -> None:
-        self.can = can
-        self.message = message
-        self.signals = dict(signals)
-        super().__init__(
-            DataPath.can_bus(message.bus_name),
-            self._produce,
-            scheduler_period=scheduler_period,
-            scheduler_unit=scheduler_unit,
-        )
-
-    def set(self, **signals: float | int | IntEnum) -> PeriodicCanSender:
-        self.signals.update(signals)
-        return self
-
-    def _produce(self, producer: PeriodicDataPathProducer) -> CanEvent:
-        packet = self.can.encode(self.message, **self.signals)
-        return CanEvent.from_packet(
-            self.message.bus,
-            packet,
-            timestamp_ns=producer.elapsed_ns,
-        )
+    def _refresh_packet(self) -> None:
+        self.packet = self.encoder(self.message, self.signals)
+        if self.native_update is not None:
+            self.native_update(self.packet)
 
 
 class CanInterface:
@@ -323,10 +303,67 @@ class CanInterface:
         *,
         bus: int | str | CanBusDescriptor | None = None,
     ) -> object | None:
-        decoded = self.latest(message, bus=bus, signals=(signal,))
+        descriptor = self._tx_message_descriptor(message, bus=bus)
+        cluster = self._model._cluster_rig
+        node_name = self._model._cluster_node_name
+        if cluster is not None and node_name is not None:
+            raw_value = cluster._rust_runtime.latest_can_signal(
+                node_name,
+                descriptor.bus,
+                descriptor.id,
+                signal,
+            )
+            if raw_value is not None:
+                return self._model._coerce_decoded_can_value(signal, raw_value)
+
+        decoded = self.latest(descriptor, signals=(signal,))
         if decoded is None:
             return None
         return getattr(decoded, signal)
+
+    def run_until_signal_eq(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        *,
+        bus: int | str | CanBusDescriptor | None = None,
+        timeout: int | float,
+        unit: str = "ms",
+        step: int | float = 1,
+        step_unit: str | None = None,
+        tolerance: float = 0.0,
+        fast_forward: bool = False,
+        message_on_timeout: str | None = None,
+    ) -> int:
+        descriptor = self._tx_message_descriptor(message, bus=bus)
+        cluster = self._model._cluster_rig
+        node_name = self._model._cluster_node_name
+        if cluster is None or node_name is None:
+            raise RuntimeError("native CAN signal predicates require a clustered model")
+        timeout_ns = duration_to_ns(timeout, unit=unit)
+        step_ns = duration_to_ns(step, unit=step_unit or unit)
+        elapsed_ns = cluster._rust_runtime.run_until_can_signal_eq(
+            source_node=node_name,
+            bus=descriptor.bus,
+            message_id=descriptor.id,
+            signal_name=signal,
+            expected=float(
+                int(expected) if isinstance(expected, IntEnum) else expected
+            ),
+            tolerance=float(tolerance),
+            timeout_ns=timeout_ns,
+            step_ns=step_ns,
+            fast_forward=fast_forward,
+            route=cluster.comm.has_python_routes(),
+        )
+        cluster._sync_elapsed_from_runtime()
+        if elapsed_ns is None:
+            detail = "" if message_on_timeout is None else f": {message_on_timeout}"
+            raise RunUntilTimeout(
+                f"condition did not become true within {timeout_ns} ns{detail}"
+            )
+        return elapsed_ns
 
     def rx_count(self, bus: int | str | CanBusDescriptor) -> int:
         return self._model._can_rx_count_value(bus)
@@ -365,28 +402,6 @@ class CanInterface:
         }
         return self._model._can_encode_message_raw(
             message.bus, message.name, **raw_signals
-        )
-
-    def periodic_send(
-        self,
-        message: str | CanMessageDescriptor,
-        *,
-        bus: int | str | CanBusDescriptor | None = None,
-        period: int | float = 100,
-        unit: str = "ms",
-        **signals: float | int | IntEnum,
-    ) -> PeriodicCanSender:
-        descriptor = (
-            self.message(message, bus=bus) if isinstance(message, str) else message
-        )
-        if bus is not None and self._model._coerce_can_bus(bus) != descriptor.bus:
-            raise ValueError(f"message {descriptor.name!r} is not on bus {bus!r}")
-        return PeriodicCanSender(
-            self,
-            descriptor,
-            scheduler_period=period,
-            scheduler_unit=unit,
-            **signals,
         )
 
     def _tx_message_descriptor(

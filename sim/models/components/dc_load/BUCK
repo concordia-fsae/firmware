@@ -7,3 +7,9 @@ rig_model_python(
     ],
     visibility = ["PUBLIC"],
 )
+
+export_file(
+    name = "rust.rs",
+    src = "rust.rs",
+    visibility = ["PUBLIC"],
+)

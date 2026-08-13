@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 import ctypes
+import zlib
 from collections.abc import Callable
 from typing import TypeVar
 
-from .datapath import DataPath, ModelDataPaths
+from .datapath import DataPath, ModelDataPaths, ScalarEvent, datapath_key
 from .runtime import _RustClusterRuntime
+from .scheduler import (
+    PythonSchedulerCallbacks,
+    SchedulerContext,
+    _SchedulerCallbackContextAbi,
+)
 from .time import duration_to_ns
 
 
@@ -16,21 +22,36 @@ class ModelRig:
     """Schedulable model with datapaths that can participate in a cluster."""
 
     has_can = False
-    _ClusterRunForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
-    _ClusterFastForwardForCallback = ctypes.CFUNCTYPE(None, ctypes.c_uint64)
-    _ClusterNextStepCallback = ctypes.CFUNCTYPE(ctypes.c_uint64, ctypes.c_uint64)
+    _ClusterScheduledCallback = ctypes.CFUNCTYPE(
+        None,
+        ctypes.POINTER(_SchedulerCallbackContextAbi),
+    )
     _ClusterResetCallback = ctypes.CFUNCTYPE(None)
+    _ScalarCountCallback = ctypes.CFUNCTYPE(ctypes.c_uint32)
+    _ScalarRecvManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.POINTER(ScalarEvent),
+        ctypes.c_uint32,
+    )
+    _ScalarSendManyCallback = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.POINTER(ScalarEvent),
+        ctypes.c_uint32,
+    )
 
     def __init__(
         self,
         *,
         scheduler_period: int | float | None = None,
         scheduler_unit: str = "ms",
+        scheduler_callback: Callable[[SchedulerContext], None] | None = None,
     ) -> None:
         self.datapaths = ModelDataPaths()
         self._cluster_rig: ClusterRig | None = None
         self._cluster_node_name: str | None = None
         self.elapsed_ns = 0
+        self._scalar_route_abis: dict[str, tuple[int, int, int, int]] = {}
+        self._scalar_callbacks = []
         self._scheduler_period_ns = (
             None
             if scheduler_period is None
@@ -40,14 +61,9 @@ class ModelRig:
             raise ValueError(
                 f"scheduler period must be positive, got {scheduler_period}"
             )
-        self._cluster_run_for_callback = self._ClusterRunForCallback(
-            self._cluster_run_for
-        )
-        self._cluster_fast_forward_for_callback = self._ClusterFastForwardForCallback(
-            self._cluster_fast_forward_for
-        )
-        self._cluster_next_step_callback = self._ClusterNextStepCallback(
-            self._cluster_next_scheduler_step
+        self._scheduler_callback = scheduler_callback
+        self._cluster_scheduled_callback = self._ClusterScheduledCallback(
+            self._cluster_scheduled
         )
         self._cluster_reset_callback = self._ClusterResetCallback(self.reset)
         self._standalone_runtime: _RustClusterRuntime | None = None
@@ -59,30 +75,6 @@ class ModelRig:
     def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
         duration_ns = duration_to_ns(duration, unit=unit)
         self._runtime().run_for(duration_ns, duration_ns)
-
-    def _run_for_from_runtime(self, duration_ns: int) -> None:
-        if self._scheduler_period_ns is None:
-            self.elapsed_ns += duration_ns
-            return
-
-        remaining_ns = duration_ns
-        while remaining_ns > 0:
-            step_ns = self.next_scheduler_step(remaining_ns, unit="ns")
-            self.elapsed_ns += step_ns
-            remaining_ns -= step_ns
-            if self.elapsed_ns % self._scheduler_period_ns == 0:
-                self._run_scheduled()
-
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        if self._scheduler_period_ns is None:
-            return duration_ns
-        elapsed_in_period = self.elapsed_ns % self._scheduler_period_ns
-        remaining_period_ns = self._scheduler_period_ns - elapsed_in_period
-        return min(duration_ns, remaining_period_ns)
-
-    def _run_scheduled(self) -> None:
-        pass
 
     def configure_datapath(self, path: DataPath) -> None:
         raise ValueError(f"datapath {path!r} is not supported by {type(self).__name__}")
@@ -98,6 +90,83 @@ class ModelRig:
     def supports_datapath(self, path: DataPath) -> bool:
         return bool(self.datapaths.outputs(path))
 
+    def add_scalar_output(
+        self,
+        path: DataPath,
+        *,
+        pending: Callable[[], int],
+        recv: Callable[[], float | int | None],
+    ) -> None:
+        key = datapath_key(path)
+
+        def recv_many(events, capacity: int) -> int:
+            count = 0
+            for _ in range(int(capacity)):
+                value = recv()
+                if value is None:
+                    break
+                event = ScalarEvent()
+                event.value = float(value)
+                event.timestamp_ns = int(self.elapsed_ns)
+                events[count] = event
+                count += 1
+            return count
+
+        count_callback = self._ScalarCountCallback(lambda: int(pending()))
+        recv_callback = self._ScalarRecvManyCallback(recv_many)
+        send_callback = self._ScalarSendManyCallback(lambda _events, _count: 0)
+        self._scalar_callbacks.extend((count_callback, recv_callback, send_callback))
+        self._scalar_route_abis[key] = (
+            datapath_route_id(key),
+            self._callback_address(count_callback),
+            self._callback_address(recv_callback),
+            self._callback_address(send_callback),
+        )
+        self.datapaths.add_output(
+            path,
+            pending=pending,
+            recv=recv,
+        )
+
+    def add_scalar_input(
+        self,
+        path: DataPath,
+        *,
+        send: Callable[[float], bool],
+    ) -> None:
+        key = datapath_key(path)
+
+        def send_many(events, count: int) -> int:
+            accepted = 0
+            for index in range(int(count)):
+                if not send(float(events[index].value)):
+                    break
+                accepted += 1
+            return accepted
+
+        count_callback = self._ScalarCountCallback(lambda: 0)
+        recv_callback = self._ScalarRecvManyCallback(lambda _events, _capacity: 0)
+        send_callback = self._ScalarSendManyCallback(send_many)
+        self._scalar_callbacks.extend((count_callback, recv_callback, send_callback))
+        self._scalar_route_abis[key] = (
+            datapath_route_id(key),
+            self._callback_address(count_callback),
+            self._callback_address(recv_callback),
+            self._callback_address(send_callback),
+        )
+        self.datapaths.add_input(
+            path,
+            send=send,
+        )
+
+    def rust_datapath_route_abi(
+        self, path: DataPath
+    ) -> tuple[str, tuple[int, ...]] | None:
+        scalar_abi = self._scalar_route_abis.get(datapath_key(path))
+        if scalar_abi is not None:
+            return ("scalar", scalar_abi)
+        return None
+
     def set_online(self, online: bool) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
             raise RuntimeError(
@@ -110,35 +179,33 @@ class ModelRig:
             return True
         return self._cluster_rig.node_online(self._cluster_node_name)
 
-    def rust_cluster_node_abi(self) -> tuple[int, int, int, int]:
-        return (
-            self._callback_address(self._cluster_run_for_callback),
-            self._callback_address(self._cluster_fast_forward_for_callback),
-            self._callback_address(self._cluster_next_step_callback),
-            self._callback_address(self._cluster_reset_callback),
+    def scheduler_callbacks(self) -> PythonSchedulerCallbacks:
+        return self._python_scheduler_callbacks()
+
+    def _python_scheduler_callbacks(
+        self,
+        *,
+        period_ns: int | None = None,
+    ) -> PythonSchedulerCallbacks:
+        resolved_period_ns = (
+            self._scheduler_period_ns if period_ns is None else int(period_ns)
+        )
+        return PythonSchedulerCallbacks(
+            scheduled=self._callback_address(self._cluster_scheduled_callback)
+            if self._scheduler_callback is not None
+            else 0,
+            reset=self._callback_address(self._cluster_reset_callback),
+            period_ns=0 if resolved_period_ns is None else resolved_period_ns,
         )
 
-    def _cluster_run_for(self, duration_ns: int) -> None:
-        self._run_for_from_runtime(duration_ns)
-
-    def _cluster_fast_forward_for(self, duration_ns: int) -> None:
-        self._fast_forward_for_from_runtime(duration_ns)
-
-    def _fast_forward_for_from_runtime(self, duration_ns: int) -> None:
-        if self._scheduler_period_ns is None:
-            self.elapsed_ns += duration_ns
-            return
-
-        previous_elapsed_ns = self.elapsed_ns
-        self.elapsed_ns += duration_ns
-        if (
-            previous_elapsed_ns // self._scheduler_period_ns
-            != self.elapsed_ns // self._scheduler_period_ns
-        ):
-            self._run_scheduled()
-
-    def _cluster_next_scheduler_step(self, duration_ns: int) -> int:
-        return self.next_scheduler_step(duration_ns, unit="ns")
+    def _cluster_scheduled(
+        self,
+        context_abi,
+    ) -> None:
+        context = SchedulerContext.from_abi(context_abi.contents)
+        self.elapsed_ns = context.elapsed_ns
+        if self._scheduler_callback is not None:
+            self._scheduler_callback(context)
 
     def _runtime(self) -> _RustClusterRuntime:
         if self._standalone_runtime is None:
@@ -176,10 +243,10 @@ class PeriodicDataPathProducer(ComponentRig):
         super().__init__(
             scheduler_period=scheduler_period,
             scheduler_unit=scheduler_unit,
+            scheduler_callback=self._produce_scheduled,
         )
         self.path = path
         self._payload = payload
-        self._last_emit_ns = 0
         self._pending_payloads: list[object] = []
         self.datapaths.add_output(
             path,
@@ -190,21 +257,9 @@ class PeriodicDataPathProducer(ComponentRig):
 
     def reset(self) -> None:
         super().reset()
-        self._last_emit_ns = 0
         self._pending_payloads.clear()
 
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        return duration_to_ns(duration, unit=unit)
-
-    def _run_for_from_runtime(self, duration_ns: int) -> None:
-        self.elapsed_ns += duration_ns
-        if self._scheduler_period_ns is None:
-            return
-        if self.elapsed_ns - self._last_emit_ns >= self._scheduler_period_ns:
-            self._last_emit_ns = self.elapsed_ns
-            self._run_scheduled()
-
-    def _run_scheduled(self) -> None:
+    def _produce_scheduled(self, context: SchedulerContext) -> None:
         produced = self._payload(self) if callable(self._payload) else self._payload
         if produced is None:
             return
@@ -239,3 +294,7 @@ def extend_model_class(
         },
     )
     return extended  # type: ignore[return-value]
+
+
+def datapath_route_id(key: str) -> int:
+    return zlib.crc32(key.encode("utf-8"))

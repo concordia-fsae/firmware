@@ -14,6 +14,10 @@ pub mod cluster {
     include!(env!("RIG_RUNTIME_RUST_CLUSTER_RS"));
 }
 
+pub mod dc_load {
+    include!(env!("RIG_RUNTIME_RUST_DC_LOAD_RS"));
+}
+
 mod ffi {
     include!(env!("RIG_RUNTIME_RUST_FFI_RS"));
 }
@@ -26,7 +30,7 @@ pub mod datapath {
     include!(env!("RIG_RUNTIME_RUST_DATAPATH_RS"));
 }
 
-mod faults {
+pub mod faults {
     include!(env!("RIG_RUNTIME_RUST_FAULTS_RS"));
 }
 
@@ -48,6 +52,10 @@ pub mod nvm {
 
 pub mod rt_controller {
     include!(env!("RIG_RUNTIME_RUST_RT_CONTROLLER_RS"));
+}
+
+pub mod simple {
+    include!(env!("RIG_RUNTIME_RUST_SIMPLE_RS"));
 }
 
 pub mod spi {
@@ -112,11 +120,6 @@ pub extern "C" fn rig_model_get_digital_io(channel: i32) -> bool {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_model_get_fault(fault: i32) -> bool {
-    faults::get(fault)
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn rig_model_can_bus_count() -> u8 {
     can::bus_count()
 }
@@ -160,11 +163,7 @@ pub extern "C" fn rig_model_can_recv_event(bus: u8, event: *mut CanEvent) -> boo
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_model_can_recv_events(
-    bus: u8,
-    events: *mut CanEvent,
-    capacity: u32,
-) -> u32 {
+pub extern "C" fn rig_model_can_recv_events(bus: u8, events: *mut CanEvent, capacity: u32) -> u32 {
     if events.is_null() {
         return 0;
     }
@@ -173,11 +172,7 @@ pub extern "C" fn rig_model_can_recv_events(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_model_can_send_many(
-    bus: u8,
-    packets: *const CanPacket,
-    count: u32,
-) -> u32 {
+pub extern "C" fn rig_model_can_send_many(bus: u8, packets: *const CanPacket, count: u32) -> u32 {
     if packets.is_null() {
         return 0;
     }

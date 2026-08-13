@@ -10,6 +10,7 @@ RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/infra/runtime:rust/cluster.rs",
     "RIG_RUNTIME_RUST_CORE_RS": "//sim/infra/runtime:rust/core.rs",
     "RIG_RUNTIME_RUST_DATAPATH_RS": "//sim/infra/runtime:rust/datapath.rs",
+    "RIG_RUNTIME_RUST_DC_LOAD_RS": "//sim/models/components/dc_load:rust.rs",
     "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/infra/runtime:rust/faults.rs",
     "RIG_RUNTIME_RUST_FFI_RS": "//sim/infra/runtime:rust/ffi.rs",
     "RIG_RUNTIME_RUST_IO_RS": "//sim/infra/runtime:rust/io.rs",
@@ -17,6 +18,7 @@ RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_MODULE_DESC_RS": "//sim/infra/runtime:rust/module_desc.rs",
     "RIG_RUNTIME_RUST_NVM_RS": "//sim/infra/runtime:rust/nvm.rs",
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/infra/runtime:rust/rt_controller.rs",
+    "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/rig:rust/simple.rs",
     "RIG_RUNTIME_RUST_SPI_RS": "//sim/infra/runtime:rust/spi.rs",
     "RIG_RUNTIME_RUST_TIMER_RS": "//sim/infra/runtime:rust/timer.rs",
 }
@@ -35,12 +37,18 @@ _DEFAULT_MODEL_C_FLAGS = [
 ]
 
 _RIG_RUNTIME_MODULE_SRCS = {
+    "can": ["//sim/infra/runtime:c/src/can.c"],
     "core": ["//sim/infra/runtime:c/src/core.c"],
+    "flash": ["//sim/infra/runtime:c/src/flash.c"],
     "faults": ["//sim/infra/runtime:c/src/faults.c"],
+    "i2c": ["//sim/infra/runtime:c/src/i2c.c"],
     "io": ["//sim/infra/runtime:c/src/io.c"],
-    "peripherals": ["//sim/infra/runtime:c/src/peripherals.c"],
     "spi": ["//sim/infra/runtime:c/src/spi.c"],
+    "swi": ["//sim/infra/runtime:c/src/swi.c"],
+    "system": ["//sim/infra/runtime:c/src/system.c"],
     "time": ["//sim/infra/runtime:c/src/time.c"],
+    "timer_capture": ["//sim/infra/runtime:c/src/timer_capture.c"],
+    "uart": ["//sim/infra/runtime:c/src/uart.c"],
 }
 
 def rig_runtime_srcs(modules: list[str]):

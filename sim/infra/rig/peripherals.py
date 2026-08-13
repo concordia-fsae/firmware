@@ -233,6 +233,18 @@ class TimerPeripheralInterface:
             return self._model._timer_frequency_output_count
         raise ValueError(f"unsupported timer interface {binding.interface!r}")
 
+    def rust_route_abi(self, path: DataPath) -> tuple[int, int, int, int, int, int]:
+        binding = _peripheral_binding(path)
+        interface = 1 if binding.interface == self._TIMER_DUTY else 2
+        return (
+            interface,
+            int(binding.port if binding.port is not None else 0),
+            int(binding.channel if binding.channel is not None else 0),
+            self._model._function_address(self._count_symbol(binding)),
+            self._model._function_address(self._recv_many_symbol(binding)),
+            self._model._function_address(self._send_many_symbol(binding)),
+        )
+
 
 class SpiPeripheralInterface:
     _SPI_TRANSACTION = "spi.transaction"
@@ -309,6 +321,15 @@ class SpiPeripheralInterface:
             self._model._spi_output_count(
                 ctypes.c_int(binding.device if binding.device is not None else 0),
             )
+        )
+
+    def rust_route_abi(self, path: DataPath) -> tuple[int, int, int, int]:
+        binding = _peripheral_binding(path)
+        return (
+            int(binding.device if binding.device is not None else 0),
+            self._model._function_address(self._model._spi_output_count),
+            self._model._function_address(self._model._spi_recv_many),
+            self._model._function_address(self._model._spi_send_many),
         )
 
 

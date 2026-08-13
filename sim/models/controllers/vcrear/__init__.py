@@ -1,5 +1,4 @@
 from sim.infra.rig import TimerInterface, extend_model_class, load_generated_module
-from .extensions import VcrearPytestHelpers
 from .simple import VcrearSimpleModel
 
 
@@ -25,7 +24,7 @@ def _load_generated() -> None:
     globals()["TimerChannel"] = enums.TimerChannel
     globals()["TimerPort"] = enums.TimerPort
 
-    class VcrearModel(extend_model_class(model.VcrearModel, VcrearPytestHelpers)):
+    class VcrearModel(extend_model_class(model.VcrearModel)):
         timer = TimerInterface(enums.TimerPort, enums.TimerChannel)
 
     globals()["VcrearModel"] = VcrearModel

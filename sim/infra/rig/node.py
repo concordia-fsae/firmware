@@ -36,6 +36,7 @@ from .peripherals import (
     TimerInterface,
     TimerPeripheralInterface,
 )
+from .scheduler import RustSchedulerCallbacks
 from .time import duration_to_ns
 
 
@@ -92,17 +93,42 @@ class NodeRig(ModelRig):
         self.elapsed_ns += duration_ns
         self._fast_forward_for(ctypes.c_uint64(duration_ns))
 
-    def next_scheduler_step(self, duration: int | float, *, unit: str = "ms") -> int:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        return int(self._next_scheduler_step(ctypes.c_uint64(duration_ns)))
-
-    def rust_cluster_node_abi(self) -> tuple[int, int, int, int]:
-        return (
-            self._function_address(self._run_for),
-            self._function_address(self._fast_forward_for),
-            self._function_address(self._next_scheduler_step),
-            self._function_address(self._new),
+    def scheduler_callbacks(self) -> RustSchedulerCallbacks:
+        return RustSchedulerCallbacks(
+            run_for=self._function_address(self._run_for),
+            fast_forward_for=self._function_address(self._fast_forward_for),
+            next_step=self._function_address(self._next_scheduler_step),
+            reset=self._function_address(self._new),
         )
+
+    def rust_can_route_abi(
+        self, bus: int | str | CanBusDescriptor
+    ) -> tuple[int, int, int, int] | None:
+        if not self.has_can:
+            return None
+        bus_index = self._coerce_can_bus(bus)
+        self._require_can_bus(bus_index)
+        return (
+            bus_index,
+            self._function_address(self._can_tx_count),
+            self._function_address(self._ffi_can_recv_events),
+            self._function_address(self._can_send_many),
+        )
+
+    def rust_datapath_route_abi(
+        self, path: DataPath
+    ) -> tuple[str, tuple[int, ...]] | None:
+        model_abi = super().rust_datapath_route_abi(path)
+        if model_abi is not None:
+            return model_abi
+        try:
+            if self._timer_peripherals.supports(path):
+                return ("timer", self._timer_peripherals.rust_route_abi(path))
+            if self._spi_peripherals.supports(path):
+                return ("spi", self._spi_peripherals.rust_route_abi(path))
+        except ValueError:
+            return None
+        return None
 
     def set_analog_input(self, channel: int, voltage: float) -> None:
         self._set_analog_input(ctypes.c_int(channel), ctypes.c_float(voltage))
@@ -117,6 +143,10 @@ class NodeRig(ModelRig):
         return bool(self._get_digital_io(ctypes.c_int(channel)))
 
     def get_fault(self, fault: int) -> bool:
+        if self._get_fault is None:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} does not expose local fault state"
+            )
         return bool(self._get_fault(ctypes.c_int(fault)))
 
     def _can_bus_count_value(self) -> int:
@@ -583,7 +613,7 @@ class NodeRig(ModelRig):
             [ctypes.c_int],
             ctypes.c_bool,
         )
-        self._get_fault = self._bind_symbol(
+        self._get_fault = self._bind_optional_symbol(
             "rig_model_get_fault",
             [ctypes.c_int],
             ctypes.c_bool,
@@ -753,6 +783,17 @@ class NodeRig(ModelRig):
         symbol.argtypes = [] if argtypes is None else argtypes
         symbol.restype = restype
         return symbol
+
+    def _bind_optional_symbol(
+        self,
+        name: str,
+        argtypes: list[object] | None = None,
+        restype: object | None = None,
+    ):
+        try:
+            return self._bind_symbol(name, argtypes, restype)
+        except AttributeError:
+            return None
 
     @staticmethod
     def _function_address(symbol) -> int:
