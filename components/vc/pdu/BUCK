@@ -5,8 +5,9 @@ load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
 load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
-load("//tools/yamcan/defs.bzl", "generate_code")
+load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_code", "generate_resources")
 load("//tools/hextools/defs.bzl", "inject_crc")
+load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load(
     "//components/vehicle_platform:defs.bzl",
     "add_platform_deploy_targets",
@@ -15,15 +16,13 @@ load(
     "platform_selected_targets",
 )
 load("//components/vehicle_platform:platforms.bzl", "PLATFORMS", "platform_output_name")
+load("//components/vc/pdu:platforms.bzl", "VCPDU_PLATFORM_VARIANTS")
 
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
 APP_START_ADDR = 0x08002000
 APP_NAME = "vcpdu"
 
-platform_variants = [
-    (PLATFORMS.CFR25, 0),
-    (PLATFORMS.CFR26, 0),
-]
+platform_variants = VCPDU_PLATFORM_VARIANTS
 
 compiler_flags = [
     "-std=c11",
@@ -161,6 +160,140 @@ generate_code(
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
     ],
+)
+
+generate_resources(
+    name = "sil-yamcan",
+    network_dep = "//network:network",
+    node = APP_NAME,
+    rust_wrapper = True,
+    visibility = ["//sim/models/controllers/vcpdu/..."],
+)
+
+generate_feature_tree(
+    name = "sil-features",
+    variant_id = 0,
+    srcs = {
+        "variants.yaml": "variants.yaml",
+        "STM32F105_FeatureSels.yaml": "//components/shared:FeatureSels/STM32F105_FeatureSels.yaml",
+        "Controller_FeatureDefs.yaml": "//components/shared:FeatureDefs/Controller_FeatureDefs.yaml",
+        "APP_V1_FeatureSels.yaml": "//components/shared:FeatureSels/APP_V1_FeatureSels.yaml",
+        "Application_FeatureDefs.yaml": "//components/shared:FeatureDefs/Application_FeatureDefs.yaml",
+        "SharedApp_FeatureDefs.yaml": "//components/shared/code:SharedApp_FeatureDefs.yaml",
+        "NVM_FeatureDefs.yaml": "//components/shared:FeatureDefs/NVM_FeatureDefs.yaml",
+        "hw_FeatureDefs.yaml": "//components/shared/code:HW/hw_FeatureDefs.yaml",
+        "FeatureDefs.yaml": "FeatureDefs.yaml",
+        "FeatureSels.yaml": "FeatureSels.yaml",
+    },
+    feature_overrides = {
+        "app_variant_id": 0,
+    },
+    visibility = ["//sim/models/controllers/vcpdu/..."],
+    vcpdu_variant_id = "0U",
+)
+
+prebuilt_cxx_library(
+    name = "sil-host-headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = remap_headers(["include/HW/", "include/"]),
+    visibility = ["//sim/models/controllers/vcpdu/..."],
+)
+
+generate_c_library(
+    name = "sil-yamcan-c",
+    codegen_target = ":sil-yamcan",
+    compiler_flags = [
+        "-fshort-enums",
+    ],
+    library_deps = [
+        ":sil-features",
+        ":sil-host-headers",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//sim/infra/runtime:headers",
+    ],
+    preferred_linkage = "static",
+    visibility = ["PUBLIC"],
+)
+
+cxx_library(
+    name = "sil-application",
+    srcs = [
+        "//components/shared/code:DRV/drv_asm330.c",
+        "//components/shared/code:DRV/drv_hsd.c",
+        "//components/shared/code:DRV/drv_inputAD.c",
+        "//components/shared/code:DRV/drv_io.c",
+        "//components/shared/code:DRV/drv_mux.c",
+        "//components/shared/code:DRV/drv_outputAD.c",
+        "//components/shared/code:DRV/drv_timer.c",
+        "//components/shared/code:DRV/drv_tps20xx.c",
+        "//components/shared/code:DRV/drv_tps2hb16ab.c",
+        "//components/shared/code:DRV/drv_vn9008.c",
+        "//components/shared/code:app/CAN/CANIO-rx.c",
+        "//components/shared/code:app/CAN/CANIO-tx.c",
+        "//components/shared/code:app/app_faultManager.c",
+        "//components/shared/code:app/app_vehicleSpeed.c",
+        "//components/shared/code:app/app_vehicleState.c",
+        "//components/shared/code:libs/LIB_app.c",
+        "//components/shared/code:libs/Utility.c",
+        "//components/shared/code:libs/lib_interpolation.c",
+        "//components/shared/code:libs/lib_madgwick.c",
+        "//components/shared/code:libs/lib_nvm.c",
+        "//components/shared/code:libs/lib_simpleFilter.c",
+        "//components/shared/code/RTOS:Module.c",
+        "//embedded/libs:isotp-src[isotp.c]",
+        "//embedded/libs/uds:lib_udsServer.c",
+        "//embedded/libs:libcrc.c",
+        "src/CANIO_componentSpecific.c",
+        "src/cooling.c",
+        "src/crashSensor.c",
+        "src/imu.c",
+        "src/lib_nvm_componentSpecific.c",
+        "src/Module_componentSpecific.c",
+        "src/powerManager.c",
+        "src/uds_componentSpecific.c",
+        "src/wheelSpeed_componentSpecific.c",
+        "src/HW/drv_inputAD_componentSpecific.c",
+        "src/HW/drv_outputAD_componentSpecific.c",
+        "src/HW/drv_tps20xx_componentSpecific.c",
+        "src/HW/drv_tps2hb16ab_componentSpecific.c",
+        "src/HW/drv_vn9008_componentSpecific.c",
+    ],
+    compiler_flags = [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-include",
+        "BuildDefines.h",
+        "-include",
+        "Utility.h",
+        "-include",
+        "string.h",
+        "-Wno-unused-parameter",
+        "-Wno-missing-braces",
+        "-fshort-enums",
+    ],
+    header_namespace = "",
+    headers = {
+        "asm330lhb_reg.h": "//embedded/libs:asm330lhb[asm330lhb_reg.h]",
+        "isotp.h": "//embedded/libs:isotp-src[include/isotp.h]",
+        "isotp_config.h": "//embedded/libs:isotp-src[include/isotp_config.h]",
+        "isotp_defines.h": "//embedded/libs:isotp-src[include/isotp_defines.h]",
+        "isotp_user.h": "//embedded/libs:isotp-src[include/isotp_user.h]",
+        "lib_uds.h": "//embedded/libs/uds:lib_uds.h",
+        "libcrc.h": "//embedded/libs:libcrc.h",
+    },
+    deps = [
+        ":sil-features",
+        ":sil-host-headers",
+        ":sil-yamcan-c",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//sim/infra/runtime:headers",
+    ],
+    preferred_linkage = "static",
+    visibility = ["//sim/models/controllers/vcpdu/..."],
 )
 
 cxx_library(
