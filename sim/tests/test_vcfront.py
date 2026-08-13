@@ -94,19 +94,17 @@ def test_pedal_position_sensors_report_on_can(
 
 
 @pytest.mark.parametrize(
-    "vehicle_state,torque_command_enabled",
+    "vehicle_state",
     [
-        pytest.param("INIT", False, id="init"),
-        pytest.param("ON_GLV", False, id="on-glv"),
-        pytest.param("ON_HV", False, id="on-hv"),
-        pytest.param("TS_RUN", True, id="ts-run"),
-        pytest.param("SLEEP", False, id="sleep"),
+        pytest.param("INIT", id="init"),
+        pytest.param("ON_GLV", id="on-glv"),
+        pytest.param("ON_HV", id="on-hv"),
+        pytest.param("SLEEP", id="sleep"),
     ],
 )
-def test_torque_request_requires_ts_run_but_driver_input_follows_pedal(
+def test_torque_request_stays_zero_when_accelerator_is_pressed_outside_ts_run(
     vcfront_cluster,
     vehicle_state,
-    torque_command_enabled,
 ):
     vcfront = vcfront_cluster.vcfront
     VehicleState = vcfront.can.enums.VehicleState
@@ -128,11 +126,40 @@ def test_torque_request_requires_ts_run_but_driver_input_follows_pedal(
     assert torque is not None
     assert debug is not None
     assert debug.VCFRONT_torqueDriverInput > 0
+    assert vcfront.latest_torque_request() == 0
 
-    if torque_command_enabled:
-        assert torque.VCFRONT_torqueRequest > 0
-    else:
-        assert torque.VCFRONT_torqueRequest == 0
+
+def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
+    vcfront = vcfront_cluster.vcfront
+    VehicleState = vcfront.can.enums.VehicleState
+    vcpdu = VcpduSimpleModel(vcfront.can)
+    vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
+    vcfront_cluster.add_component(vcpdu)
+
+    vcfront.set_brake_position(0)
+    vcfront.set_accelerator_position(0)
+    vcfront_cluster.run_until(
+        lambda: vcfront.latest_torque_request() == 0,
+        timeout=500,
+        step=20,
+        message="VCFRONT torque request should start at zero in TS_RUN",
+    )
+
+    vcfront.set_accelerator_position(50)
+    vcfront_cluster.run_until(
+        lambda: _positive(vcfront.latest_torque_request()),
+        timeout=500,
+        step=20,
+        message="VCFRONT torque request should become non-zero when accelerator is pressed in TS_RUN",
+    )
+
+    vcfront.set_accelerator_position(0)
+    vcfront_cluster.run_until(
+        lambda: vcfront.latest_torque_request() == 0,
+        timeout=500,
+        step=20,
+        message="VCFRONT torque request should return to zero when accelerator is released",
+    )
 
 
 @pytest.mark.parametrize(
@@ -231,3 +258,7 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     assert status.VCFRONT_acceleratorState == AppsState.OK
     assert status.VCFRONT_acceleratorPosition == 0
     assert status.VCFRONT_bppcState == BppcState.OK
+
+
+def _positive(value):
+    return value is not None and value > 0
