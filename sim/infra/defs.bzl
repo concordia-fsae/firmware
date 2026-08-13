@@ -36,6 +36,41 @@ _DEFAULT_MODEL_C_FLAGS = [
     "-Wno-unused-parameter",
 ]
 
+_SHORT_ENUMS_FLAG = "-fshort-enums"
+
+_DEFAULT_FEATURE_CONST_ALLOWLIST = [
+    "APP_COMPONENT_ID",
+    "APP_VARIANT_ID",
+    "NVM_BLOCK_SIZE",
+    "NVM_FLASH_BACKED",
+    "NVM_LIB_ENABLED",
+]
+
+_DEFAULT_BINDGEN_FLAGS = [
+    "--no-layout-tests",
+    "--default-enum-style rust",
+]
+
+_DEFAULT_BINDGEN_FUNCTION_ALLOWLIST = [
+    "Module_Init",
+    "Module_1kHz_TSK",
+    "Module_100Hz_TSK",
+    "Module_10Hz_TSK",
+    "Module_1Hz_TSK",
+    "drv_outputAD_toggleDigitalState",
+    "YAMCAN_shared_init_static",
+]
+
+_DEFAULT_BINDGEN_VAR_ALLOWLIST = [
+    "g_yamcan",
+]
+
+_DEFAULT_CONTROLLER_DEPS = [
+    "//components/shared/code:headers",
+    "//components/shared/code/RTOS:headers",
+    "//sim/infra/runtime:headers",
+]
+
 _RIG_RUNTIME_MODULE_SRCS = {
     "can": ["//sim/infra/runtime:c/src/can.c"],
     "core": ["//sim/infra/runtime:c/src/core.c"],
@@ -319,6 +354,144 @@ def rig_embedded_rust_model_platform_aliases(
         )
         for platform in platforms
     ]
+
+def _with_short_enums(items: list[str], short_enums: bool):
+    return items + ([_SHORT_ENUMS_FLAG] if short_enums else [])
+
+def _controller_component_target(component: str, target: str):
+    return "{}:{}".format(component, target)
+
+def _controller_codegen_artifact(component: str, artifact: str):
+    return "{}:sil-yamcan[{}]".format(component, artifact)
+
+def _controller_deps(component: str, extra_deps: list[str]):
+    return _DEFAULT_CONTROLLER_DEPS + [
+        _controller_component_target(component, "sil-features"),
+        _controller_component_target(component, "sil-host-headers"),
+        _controller_component_target(component, "sil-yamcan-c"),
+    ] + extra_deps
+
+def rig_embedded_controller_model(
+        controller: str,
+        class_name: str,
+        component: str,
+        platform_variants,
+        python_srcs: list[str],
+        runtime_modules: list[str],
+        bindgen_headers: list[str],
+        bindgen_types: list[str],
+        enum_headers: list[str],
+        c_enums: list[str],
+        model_target: str,
+        extra_deps: list[str] = [],
+        bindgen_functions: list[str] | None = None,
+        bindgen_vars: list[str] | None = None,
+        enum_rust_enums: list[str] = [],
+        short_enums: bool = False,
+        rust_env_prefix: str | None = None,
+        visibility: list[str] | None = ["PUBLIC"]):
+    controller_upper = rust_env_prefix if rust_env_prefix else controller.upper()
+    controller_lower = controller.lower()
+    model_platforms = rig_platforms_from_variants(platform_variants)
+    common_deps = _controller_deps(component, extra_deps)
+    clang_flags = _with_short_enums([
+        "-include",
+        "BuildDefines.h",
+    ], short_enums)
+
+    rig_python_model(
+        name = "{}-py".format(controller_lower),
+        out = "{}.py".format(controller_lower),
+        rust_source = ":rust-wrapper-src",
+        class_name = class_name,
+        symbol_prefix = "{}_sim".format(controller_lower),
+        buck_target = "{}:sil-so".format(model_target),
+        env_var = "{}_SIM_LIB".format(controller_upper),
+        enum_env_var = "{}_ENUMS_PY".format(controller_upper),
+        enum_target = "{}:enums-py".format(model_target),
+        visibility = visibility,
+    )
+
+    rig_model_python(
+        srcs = python_srcs + [
+            ":{}-py".format(controller_lower),
+            ":enums-py",
+        ],
+        visibility = visibility,
+    )
+
+    rig_model_c_support(
+        srcs = rig_runtime_srcs(runtime_modules),
+        compiler_flags = _with_short_enums(_DEFAULT_MODEL_C_FLAGS, short_enums),
+        headers = {
+            "runtime_state.h": "//sim/infra/runtime:c/src/runtime_state.h",
+        },
+        deps = common_deps,
+    )
+
+    rig_feature_consts(
+        name = "features-rs",
+        out = "features.rs",
+        deps = [
+            _controller_component_target(component, "sil-features"),
+        ],
+        allowlist_vars = _DEFAULT_FEATURE_CONST_ALLOWLIST,
+    )
+
+    rig_bindgen(
+        name = "bindings-rs",
+        out = "bindings.rs",
+        include_headers = bindgen_headers,
+        deps = [
+            ":model-c-support",
+        ] + common_deps,
+        allowlist_types = bindgen_types,
+        allowlist_functions = bindgen_functions if bindgen_functions != None else _DEFAULT_BINDGEN_FUNCTION_ALLOWLIST,
+        allowlist_vars = bindgen_vars if bindgen_vars != None else _DEFAULT_BINDGEN_VAR_ALLOWLIST,
+        bindgen_flags = _DEFAULT_BINDGEN_FLAGS,
+        clang_flags = clang_flags,
+    )
+
+    rig_python_enums(
+        name = "enums-py",
+        out = "enums.py",
+        include_headers = enum_headers,
+        deps = [
+            ":model-c-support",
+        ] + common_deps,
+        c_enums = c_enums,
+        rust_sources = [_controller_codegen_artifact(component, "rust_faults_generated.rs")] if enum_rust_enums else [],
+        rust_enums = enum_rust_enums,
+        clang_flags = clang_flags,
+        visibility = visibility,
+    )
+
+    rig_embedded_rust_model(
+        name = "sil-so",
+        crate = "{}_sim".format(controller_lower),
+        out = "lib{}_sim.so".format(controller_lower),
+        link_deps = [
+            _controller_component_target(component, "sil-application"),
+            ":model-c-support",
+            _controller_component_target(component, "sil-yamcan-c"),
+            _controller_component_target(component, "sil-application"),
+        ],
+        rust_env = {
+            "{}_BINDINGS_RS".format(controller_upper): ":bindings-rs",
+            "{}_FEATURES_RS".format(controller_upper): ":features-rs",
+            "{}_YAMCAN_DECODE_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_decode_generated.rs"),
+            "{}_YAMCAN_MODEL_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_model_generated.rs"),
+            "{}_YAMCAN_RS".format(controller_upper): _controller_codegen_artifact(component, "yamcan.rs"),
+        },
+        visibility = visibility,
+    )
+
+    rig_embedded_rust_model_platform_aliases(
+        name = "sil-so",
+        actual = ":sil-so",
+        platforms = model_platforms,
+        visibility = visibility,
+    )
 
 def rig_platform_sim_lib_env(
         env_prefix: str,
