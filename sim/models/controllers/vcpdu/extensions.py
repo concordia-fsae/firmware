@@ -165,13 +165,18 @@ class VcpduModelExtensions:
         cls, *, hsd_channel, analog_input
     ) -> ModelDataPathInputConnector:
         def connect(node, path) -> None:
-            node.add_scalar_input(
+            amps_per_volt = float(
+                node._get_vn9008_cs_amps_per_volt(ctypes.c_int(int(hsd_channel)))
+            )
+            if amps_per_volt <= 0.0:
+                raise ValueError(
+                    f"VCPDU HSD channel {hsd_channel!r} has invalid current-sense scale"
+                )
+            node.add_scalar_sink(
                 path,
-                send=lambda current: node.set_vn9008_current_feedback(
-                    hsd_channel,
-                    analog_input,
-                    current,
-                ),
+                sink_id=int(analog_input),
+                value_scale=1.0 / amps_per_volt,
+                set_value=node._set_analog_input,
             )
 
         return ModelDataPathInputConnector(connect)

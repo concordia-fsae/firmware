@@ -382,6 +382,16 @@ class SimpleCanComponent(SimpleComponent):
         message: CanMessageDescriptor,
         packet,
     ) -> None:
+        if (
+            self._cluster_rig is not None
+            and self._cluster_node_name is not None
+            and self._cluster_rig._rust_runtime.send_native_can_source_event(
+                node=self._cluster_node_name,
+                bus=message.bus,
+                packet=packet,
+            )
+        ):
+            return
         self.emit_egress(
             self._bus_paths[message.bus_name],
             CanEvent.from_packet(message.bus, packet, timestamp_ns=self.elapsed_ns),
@@ -395,10 +405,17 @@ class SimpleCanComponent(SimpleComponent):
         if bus_descriptor.name not in self._bus_paths:
             return None
         self._register_native_periodic_messages(bus_descriptor)
+        if self._cluster_rig is not None:
+            source_tx_count, source_recv_events = (
+                self._cluster_rig._rust_runtime.noop_can_source_route_abi
+            )
+        else:
+            source_tx_count = self._callback_address(self._can_tx_count_callback)
+            source_recv_events = self._callback_address(self._can_recv_events_callback)
         return (
             bus_descriptor.index,
-            self._callback_address(self._can_tx_count_callback),
-            self._callback_address(self._can_recv_events_callback),
+            source_tx_count,
+            source_recv_events,
             self._callback_address(self._can_send_many_callback),
         )
 

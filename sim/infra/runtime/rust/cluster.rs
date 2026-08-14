@@ -27,6 +27,7 @@ pub type ClusterSpiSendManyFn = unsafe extern "C" fn(*const SpiTransaction, u32)
 pub type ClusterScalarCountFn = unsafe extern "C" fn() -> u32;
 pub type ClusterScalarRecvManyFn = unsafe extern "C" fn(*mut ScalarEvent, u32) -> u32;
 pub type ClusterScalarSendManyFn = unsafe extern "C" fn(*const ScalarEvent, u32) -> u32;
+pub type ClusterScalarSinkSetFn = unsafe extern "C" fn(i32, f32);
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -236,13 +237,46 @@ struct ClusterSpiRoute {
 }
 
 #[derive(Clone, Copy)]
+enum ClusterScalarSink {
+    SendMany(ClusterScalarSendManyFn),
+    Native {
+        sink_id: i32,
+        value_scale: f32,
+        set_value: ClusterScalarSinkSetFn,
+    },
+}
+
+impl ClusterScalarSink {
+    fn send_many(&self, events: &[ScalarEvent]) -> u32 {
+        match self {
+            Self::SendMany(send_many) => unsafe {
+                send_many(
+                    events.as_ptr(),
+                    events.len().min(u32::MAX as usize) as u32,
+                )
+            },
+            Self::Native {
+                sink_id,
+                value_scale,
+                set_value,
+            } => {
+                for event in events {
+                    unsafe { set_value(*sink_id, event.value * *value_scale) };
+                }
+                events.len().min(u32::MAX as usize) as u32
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 struct ClusterScalarRoute {
     source_node: u32,
     route_id: u32,
     source_count: ClusterScalarCountFn,
     source_recv_many: ClusterScalarRecvManyFn,
     sink_node: u32,
-    sink_send_many: ClusterScalarSendManyFn,
+    sink: ClusterScalarSink,
 }
 
 #[derive(Clone, Copy)]
@@ -283,6 +317,7 @@ struct ClusterRuntime {
     spi_routes: Vec<ClusterSpiRoute>,
     scalar_routes: Vec<ClusterScalarRoute>,
     periodic_can_sources: Vec<PeriodicCanSource>,
+    native_can_source_events: VecDeque<ClusterCanRecord>,
     dc_loads: Vec<DcLoadModel>,
     can_records: VecDeque<ClusterCanRecord>,
     timer_records: VecDeque<ClusterTimerRecord>,
@@ -299,6 +334,7 @@ impl ClusterRuntime {
         self.spi_routes.clear();
         self.scalar_routes.clear();
         self.periodic_can_sources.clear();
+        self.native_can_source_events.clear();
         self.dc_loads.clear();
         self.can_records.clear();
         self.timer_records.clear();
@@ -425,6 +461,22 @@ impl ClusterRuntime {
             return false;
         };
         source.update_packet(packet);
+        true
+    }
+
+    fn send_native_can_source_event(&mut self, node: u32, bus: u8, packet: CanPacket) -> bool {
+        if self.nodes.get(node as usize).is_none() {
+            return false;
+        }
+        self.native_can_source_events.push_back(ClusterCanRecord {
+            source_node: node,
+            bus,
+            event: CanEvent {
+                bus,
+                timestamp_ns: self.elapsed_ns,
+                packet,
+            },
+        });
         true
     }
 
@@ -627,6 +679,33 @@ impl ClusterRuntime {
         }
         for sink_node in input_pending_nodes {
             self.mark_input_pending(sink_node);
+        }
+
+        while let Some(record) = self.native_can_source_events.pop_front() {
+            if !nodes_online
+                .get(record.source_node as usize)
+                .copied()
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            for sink_route in routes.iter().filter(|route| {
+                route.source_node == record.source_node
+                    && route.source_bus == record.bus
+                    && route.sink_node.is_some()
+            }) {
+                if let (Some(sink_node), Some(sink_send_many)) =
+                    (sink_route.sink_node, sink_route.sink_send_many)
+                {
+                    let accepted = unsafe {
+                        sink_send_many(sink_route.sink_bus, &record.event.packet, 1)
+                    };
+                    if accepted > 0 {
+                        self.mark_input_pending(sink_node);
+                    }
+                }
+            }
+            self.can_records.push_back(record);
         }
 
         for route in routes.iter().copied() {
@@ -877,12 +956,7 @@ impl ClusterRuntime {
             for sink_route in routes.iter().filter(|sink_route| {
                 sink_route.source_node == route.source_node && sink_route.route_id == route.route_id
             }) {
-                let accepted = unsafe {
-                    (sink_route.sink_send_many)(
-                        events.as_ptr(),
-                        events.len().min(u32::MAX as usize) as u32,
-                    )
-                };
+                let accepted = sink_route.sink.send_many(&events);
                 if accepted > 0 {
                     self.mark_input_pending(sink_route.sink_node);
                 }
@@ -1020,6 +1094,7 @@ static CLUSTER_RUNTIME: Mutex<ClusterRuntime> = Mutex::new(ClusterRuntime {
     spi_routes: Vec::new(),
     scalar_routes: Vec::new(),
     periodic_can_sources: Vec::new(),
+    native_can_source_events: VecDeque::new(),
     dc_loads: Vec::new(),
     can_records: VecDeque::new(),
     timer_records: VecDeque::new(),
@@ -1273,7 +1348,53 @@ pub extern "C" fn rig_cluster_add_scalar_route(
             source_count,
             source_recv_many,
             sink_node,
-            sink_send_many,
+            sink: ClusterScalarSink::SendMany(sink_send_many),
+        })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_scalar_sink_route(
+    source_node: u32,
+    route_id: u32,
+    source_count: usize,
+    source_recv_many: usize,
+    sink_node: u32,
+    sink_id: i32,
+    value_scale: f32,
+    set_value: usize,
+) -> bool {
+    if !value_scale.is_finite() {
+        return false;
+    }
+    let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
+    else {
+        return false;
+    };
+    let Some(source_recv_many) =
+        (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
+    else {
+        return false;
+    };
+    let Some(set_value) =
+        (unsafe { function_pointer::<ClusterScalarSinkSetFn>(set_value) })
+    else {
+        return false;
+    };
+
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_scalar_route(ClusterScalarRoute {
+            source_node,
+            route_id,
+            source_count,
+            source_recv_many,
+            sink_node,
+            sink: ClusterScalarSink::Native {
+                sink_id,
+                value_scale,
+                set_value,
+            },
         })
 }
 
@@ -1305,6 +1426,35 @@ pub extern "C" fn rig_cluster_update_periodic_can_source(
         .lock()
         .unwrap()
         .update_periodic_can_source(handle, unsafe { *packet })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_send_native_can_source_event(
+    node: u32,
+    bus: u8,
+    packet: *const CanPacket,
+) -> bool {
+    if packet.is_null() {
+        return false;
+    }
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .send_native_can_source_event(node, bus, unsafe { *packet })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_can_tx_count(_bus: u8) -> u32 {
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_noop_can_recv_events(
+    _bus: u8,
+    _events: *mut CanEvent,
+    _capacity: u32,
+) -> u32 {
+    0
 }
 
 #[unsafe(no_mangle)]
@@ -1426,6 +1576,88 @@ pub extern "C" fn rig_cluster_run_until_can_signal_eq(
     tolerance: f64,
 ) -> u64 {
     let Some(signal_name) = (unsafe { c_str_to_str(signal_name) }) else {
+        return u64::MAX;
+    };
+    if timeout_ns == 0 || max_step_ns == 0 {
+        return if CLUSTER_RUNTIME.lock().unwrap().latest_can_signal_eq(
+            source_node,
+            bus,
+            message_id,
+            signal_name,
+            expected,
+            tolerance,
+        ) {
+            0
+        } else {
+            u64::MAX
+        };
+    }
+
+    let route = unsafe { function_pointer::<ClusterRouteFn>(route) };
+    let current_elapsed_ns = CLUSTER_RUNTIME.lock().unwrap().elapsed_ns;
+    let target_elapsed_ns = current_elapsed_ns.saturating_add(timeout_ns);
+    let mut next_route_elapsed_ns = current_elapsed_ns.saturating_add(max_step_ns);
+
+    if CLUSTER_RUNTIME.lock().unwrap().latest_can_signal_eq(
+        source_node,
+        bus,
+        message_id,
+        signal_name,
+        expected,
+        tolerance,
+    ) {
+        return 0;
+    }
+
+    loop {
+        let (delta_ns, elapsed_ns) = {
+            let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
+            if runtime.elapsed_ns >= target_elapsed_ns {
+                return u64::MAX;
+            }
+            let remaining_ns = target_elapsed_ns - runtime.elapsed_ns;
+            let delta_ns = runtime.run_next_step(remaining_ns, max_step_ns, fast_forward);
+            (delta_ns, runtime.elapsed_ns)
+        };
+
+        if delta_ns == 0 {
+            return u64::MAX;
+        }
+
+        if elapsed_ns >= next_route_elapsed_ns || elapsed_ns >= target_elapsed_ns {
+            if let Some(route) = route {
+                unsafe { route(elapsed_ns) };
+                next_route_elapsed_ns = elapsed_ns.saturating_add(max_step_ns);
+            }
+        }
+
+        if CLUSTER_RUNTIME.lock().unwrap().latest_can_signal_eq(
+            source_node,
+            bus,
+            message_id,
+            signal_name,
+            expected,
+            tolerance,
+        ) {
+            return elapsed_ns.saturating_sub(current_elapsed_ns);
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_run_until_can_signal_index_eq(
+    timeout_ns: u64,
+    max_step_ns: u64,
+    fast_forward: bool,
+    route: usize,
+    source_node: u32,
+    bus: u8,
+    message_id: u32,
+    signal_index: u32,
+    expected: f64,
+    tolerance: f64,
+) -> u64 {
+    let Some(signal_name) = can::codegen_tx_signal_name(signal_index) else {
         return u64::MAX;
     };
     if timeout_ns == 0 || max_step_ns == 0 {

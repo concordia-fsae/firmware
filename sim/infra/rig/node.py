@@ -25,8 +25,8 @@ from .can import (
     python_enum_member,
 )
 from .cluster import ClusterCanComms
-from .datapath import DataPath
-from .model import ModelRig
+from .datapath import DataPath, datapath_key
+from .model import ModelRig, datapath_route_id
 from .peripherals import (
     SpiInterface,
     SpiPeripheralInterface,
@@ -43,6 +43,9 @@ from .time import duration_to_ns
 RIG_MODEL_DATAPATH_TIMER_DUTY = 1
 RIG_MODEL_DATAPATH_TIMER_FREQUENCY = 2
 RIG_MODEL_DATAPATH_SPI_TRANSACTION = 3
+
+_CAN_METADATA_CACHE: dict[str, dict[str, object]] = {}
+_CAN_INDEX_CACHE: dict[str, dict[str, object]] = {}
 
 
 class _ModelDataPathDescriptorAbi(ctypes.Structure):
@@ -69,8 +72,9 @@ class NodeRig(ModelRig):
         self._root = pathlib.Path(__file__).resolve().parents[3]
         self.library_path = self._resolve_library_path(library_path)
         self._lib = load_shared_library(self.library_path)
-        self._can_metadata: dict[str, tuple[object, ...]] | None = None
+        self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
+        self._scalar_sink_abis: dict[str, tuple[int, int, float, int]] = {}
         self.can = CanInterface(self) if self.has_can else None
         self._timer_peripherals = TimerPeripheralInterface(self)
         self._spi_peripherals = SpiPeripheralInterface(self)
@@ -121,6 +125,9 @@ class NodeRig(ModelRig):
         model_abi = super().rust_datapath_route_abi(path)
         if model_abi is not None:
             return model_abi
+        scalar_sink_abi = self._scalar_sink_abis.get(datapath_key(path))
+        if scalar_sink_abi is not None:
+            return ("scalar_sink", scalar_sink_abi)
         try:
             if self._timer_peripherals.supports(path):
                 return ("timer", self._timer_peripherals.rust_route_abi(path))
@@ -132,6 +139,28 @@ class NodeRig(ModelRig):
 
     def set_analog_input(self, channel: int, voltage: float) -> None:
         self._set_analog_input(ctypes.c_int(channel), ctypes.c_float(voltage))
+
+    def add_scalar_sink(
+        self,
+        path: DataPath,
+        *,
+        sink_id: int,
+        value_scale: float,
+        set_value,
+    ) -> None:
+        key = datapath_key(path)
+        self._scalar_sink_abis[key] = (
+            datapath_route_id(key),
+            int(sink_id),
+            float(value_scale),
+            self._function_address(set_value),
+        )
+
+        def send(value: float | int) -> bool:
+            set_value(sink_id, float(value) * float(value_scale))
+            return True
+
+        self.datapaths.add_input(path, send=send)
 
     def get_analog_input(self, channel: int) -> float:
         return float(self._get_analog_input(ctypes.c_int(channel)))
@@ -207,6 +236,12 @@ class NodeRig(ModelRig):
     @property
     def _signals_by_message(self) -> dict[tuple[int, int, str], tuple[str, ...]]:
         return self._load_can_indexes()["signals_by_message"]  # type: ignore[return-value]
+
+    @property
+    def _can_tx_signals_by_key(
+        self,
+    ) -> dict[tuple[int, int, str, str], CanSignalDescriptor]:
+        return self._load_can_indexes()["tx_signals_by_key"]  # type: ignore[return-value]
 
     def _can_enum(self, enum_name: str) -> type[IntEnum]:
         try:
@@ -961,9 +996,14 @@ class NodeRig(ModelRig):
             ctypes.c_bool,
         )
 
-    def _load_can_metadata(self) -> dict[str, tuple[object, ...]]:
+    def _load_can_metadata(self) -> dict[str, object]:
         if self._can_metadata is not None:
             return self._can_metadata
+        cache_key = str(self.library_path)
+        cached = _CAN_METADATA_CACHE.get(cache_key)
+        if cached is not None:
+            self._can_metadata = cached
+            return cached
 
         buses = tuple(
             CanBusDescriptor(
@@ -1007,12 +1047,18 @@ class NodeRig(ModelRig):
         enum_values = self._read_can_enum_values()
         metadata["enum_values"] = enum_values
         metadata["enums"] = self._build_can_enums(enum_values)
+        _CAN_METADATA_CACHE[cache_key] = metadata
         self._can_metadata = metadata
         return metadata
 
     def _load_can_indexes(self) -> dict[str, object]:
         if self._can_indexes is not None:
             return self._can_indexes
+        cache_key = str(self.library_path)
+        cached = _CAN_INDEX_CACHE.get(cache_key)
+        if cached is not None:
+            self._can_indexes = cached
+            return cached
 
         def message_index(
             messages: tuple[CanMessageDescriptor, ...],
@@ -1054,7 +1100,17 @@ class NodeRig(ModelRig):
                 key: tuple(signal_names)
                 for key, signal_names in signals_by_message.items()
             },
+            "tx_signals_by_key": {
+                (
+                    signal.bus,
+                    signal.message_id,
+                    signal.message_name,
+                    signal.signal_name,
+                ): signal
+                for signal in self._can_tx_signals
+            },
         }
+        _CAN_INDEX_CACHE[cache_key] = self._can_indexes
         return self._can_indexes
 
     def _read_can_messages(
@@ -1099,6 +1155,7 @@ class NodeRig(ModelRig):
             enum_name = self._read_codegen_string(enum_name_fn, index)
             signals.append(
                 CanSignalDescriptor(
+                    index=int(index),
                     bus=int(descriptor.bus),
                     bus_name=buses[int(descriptor.bus)].name,
                     message_name=self._read_codegen_string(message_name_fn, index),
@@ -1159,6 +1216,21 @@ class NodeRig(ModelRig):
                 f"CAN message {message.name!r} has no generated signal metadata"
             )
         return signals
+
+    def _can_tx_signal_descriptor(
+        self,
+        message: CanMessageDescriptor,
+        signal_name: str,
+    ) -> CanSignalDescriptor:
+        try:
+            return self._can_tx_signals_by_key[
+                (message.bus, message.id, message.name, signal_name)
+            ]
+        except KeyError as exc:
+            raise KeyError(
+                f"CAN TX signal {signal_name!r} was not found on message "
+                f"{message.name!r} ({message.id:#x}) bus {message.bus_name!r}"
+            ) from exc
 
     def _coerce_decoded_can_value(self, signal_name: str, value: float) -> object:
         enum_name = self._signal_enum_names.get(signal_name)

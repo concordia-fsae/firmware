@@ -77,6 +77,7 @@ class CanMessageDescriptor:
 
 @dataclass(frozen=True)
 class CanSignalDescriptor:
+    index: int
     bus: int
     bus_name: str
     message_name: str
@@ -343,11 +344,15 @@ class CanInterface:
             raise RuntimeError("native CAN signal predicates require a clustered model")
         timeout_ns = duration_to_ns(timeout, unit=unit)
         step_ns = duration_to_ns(step, unit=step_unit or unit)
-        elapsed_ns = cluster._rust_runtime.run_until_can_signal_eq(
+        signal_descriptor = self._model._can_tx_signal_descriptor(
+            descriptor,
+            signal,
+        )
+        elapsed_ns = cluster._rust_runtime.run_until_can_signal_index_eq(
             source_node=node_name,
             bus=descriptor.bus,
             message_id=descriptor.id,
-            signal_name=signal,
+            signal_index=signal_descriptor.index,
             expected=float(
                 int(expected) if isinstance(expected, IntEnum) else expected
             ),

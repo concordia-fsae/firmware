@@ -136,6 +136,22 @@ class _RustClusterRuntime:
             ],
             ctypes.c_uint64,
         )
+        self._run_until_can_signal_index_eq = bind_symbol(
+            "rig_cluster_run_until_can_signal_index_eq",
+            [
+                ctypes.c_uint64,
+                ctypes.c_uint64,
+                ctypes.c_bool,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_uint8,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_double,
+                ctypes.c_double,
+            ],
+            ctypes.c_uint64,
+        )
         self._add_timer_route = bind_symbol(
             "rig_cluster_add_timer_route",
             [
@@ -190,6 +206,20 @@ class _RustClusterRuntime:
             ],
             ctypes.c_bool,
         )
+        self._add_scalar_sink_route = bind_symbol(
+            "rig_cluster_add_scalar_sink_route",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_int32,
+                ctypes.c_float,
+                ctypes.c_size_t,
+            ],
+            ctypes.c_bool,
+        )
         self._latest_scalar_event = bind_symbol(
             "rig_cluster_latest_scalar_event",
             [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p],
@@ -203,6 +233,11 @@ class _RustClusterRuntime:
         self._update_periodic_can_source = bind_symbol(
             "rig_cluster_update_periodic_can_source",
             [ctypes.c_uint32, ctypes.c_void_p],
+            ctypes.c_bool,
+        )
+        self._send_native_can_source_event = bind_symbol(
+            "rig_cluster_send_native_can_source_event",
+            [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_void_p],
             ctypes.c_bool,
         )
         self._add_dc_load = bind_symbol(
@@ -223,6 +258,8 @@ class _RustClusterRuntime:
         self._noop_timer_count = bind_symbol("rig_cluster_noop_timer_count")
         self._noop_timer_recv_many = bind_symbol("rig_cluster_noop_timer_recv_many")
         self._noop_timer_send_many = bind_symbol("rig_cluster_noop_timer_send_many")
+        self._noop_can_tx_count = bind_symbol("rig_cluster_noop_can_tx_count")
+        self._noop_can_recv_events = bind_symbol("rig_cluster_noop_can_recv_events")
         self._noop_scalar_count = bind_symbol("rig_cluster_noop_scalar_count")
         self._noop_scalar_recv_many = bind_symbol("rig_cluster_noop_scalar_recv_many")
         self._noop_scalar_send_many = bind_symbol("rig_cluster_noop_scalar_send_many")
@@ -399,6 +436,36 @@ class _RustClusterRuntime:
             )
         )
 
+    def add_scalar_sink_route(
+        self,
+        *,
+        source_node: str,
+        route_id: int,
+        source_count: int,
+        source_recv_many: int,
+        sink_node: str,
+        sink_id: int,
+        value_scale: float,
+        set_value: int,
+    ) -> bool:
+        try:
+            source_index = self._node_indices[source_node]
+            sink_index = self._node_indices[sink_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_scalar_sink_route(
+                ctypes.c_uint32(source_index),
+                ctypes.c_uint32(route_id),
+                ctypes.c_size_t(source_count),
+                ctypes.c_size_t(source_recv_many),
+                ctypes.c_uint32(sink_index),
+                ctypes.c_int32(sink_id),
+                ctypes.c_float(value_scale),
+                ctypes.c_size_t(set_value),
+            )
+        )
+
     def add_periodic_can_source(
         self,
         *,
@@ -426,6 +493,32 @@ class _RustClusterRuntime:
                 ctypes.c_uint32(handle),
                 ctypes.byref(packet),
             )
+        )
+
+    def send_native_can_source_event(
+        self,
+        *,
+        node: str,
+        bus: int,
+        packet,
+    ) -> bool:
+        try:
+            node_index = self._node_indices[node]
+        except KeyError:
+            return False
+        return bool(
+            self._send_native_can_source_event(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint8(bus),
+                ctypes.byref(packet),
+            )
+        )
+
+    @property
+    def noop_can_source_route_abi(self) -> tuple[int, int]:
+        return (
+            self._function_address(self._noop_can_tx_count),
+            self._function_address(self._noop_can_recv_events),
         )
 
     def add_dc_load(
@@ -601,6 +694,44 @@ class _RustClusterRuntime:
                 ctypes.c_uint8(bus),
                 ctypes.c_uint32(message_id),
                 signal_name.encode(),
+                ctypes.c_double(expected),
+                ctypes.c_double(tolerance),
+            )
+        )
+        return None if elapsed_ns == 0xFFFFFFFFFFFFFFFF else elapsed_ns
+
+    def run_until_can_signal_index_eq(
+        self,
+        *,
+        source_node: str,
+        bus: int,
+        message_id: int,
+        signal_index: int,
+        expected: float,
+        tolerance: float,
+        timeout_ns: int,
+        step_ns: int,
+        fast_forward: bool = False,
+        route: bool = True,
+    ) -> int | None:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return None
+        route_callback = (
+            ctypes.cast(self._route_callback, ctypes.c_void_p).value
+            if route and self._route is not None
+            else 0
+        )
+        elapsed_ns = int(
+            self._run_until_can_signal_index_eq(
+                ctypes.c_uint64(timeout_ns),
+                ctypes.c_uint64(step_ns),
+                ctypes.c_bool(fast_forward),
+                ctypes.c_size_t(route_callback or 0),
+                ctypes.c_uint32(index),
+                ctypes.c_uint8(bus),
+                ctypes.c_uint32(message_id),
+                ctypes.c_uint32(signal_index),
                 ctypes.c_double(expected),
                 ctypes.c_double(tolerance),
             )

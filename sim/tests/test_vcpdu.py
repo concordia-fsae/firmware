@@ -37,24 +37,32 @@ class VcpduTsRunSetup:
     brake_position: object
 
 
+@dataclass
+class VcpduSimpleSources:
+    bmsb: BmsbSimpleModel | None = None
+    sws: SwsSimpleModel | None = None
+    vcfront: VcfrontSimpleModel | None = None
+
+
 @pytest.fixture
 def vcpdu_hv_on(vcpdu_cluster):
     vcpdu = vcpdu_cluster.vcpdu
-    bmsb = BmsbSimpleModel(vcpdu.can)
-    DigitalStatus = bmsb.can.enums.DigitalStatus
+    sources = _add_vcpdu_simple_sources(vcpdu_cluster, bmsb=True)
+    assert sources.bmsb is not None
+    DigitalStatus = sources.bmsb.can.enums.DigitalStatus
     VehicleState = vcpdu.can.enums.VehicleState
 
-    tsms_status = bmsb.periodic_io_status(
+    tsms_status = sources.bmsb.periodic_io_status(
         period=10,
         BMSB_tsmsChg=DigitalStatus.OFF,
     )
-    vcpdu_cluster.add_component(bmsb)
+    vcpdu_cluster.add_component(sources.bmsb)
 
     _run_vcpdu_to_glv_on(vcpdu_cluster)
 
     tsms_status.set(BMSB_tsmsChg=DigitalStatus.ON)
-    vcpdu_cluster.run_until(
-        lambda: vcpdu.latest_vehicle_state() == VehicleState.ON_HV,
+    vcpdu.run_until_vehicle_state(
+        VehicleState.ON_HV,
         timeout=500,
         step=20,
         message="vcpdu should enter ON_HV when TSMS closes",
@@ -86,30 +94,36 @@ def test_vcpdu_exits_hv_when_tsms_opens(vcpdu_hv_on):
 @pytest.fixture
 def vcpdu_ts_run_inputs(vcpdu_cluster):
     vcpdu = vcpdu_cluster.vcpdu
-    bmsb = BmsbSimpleModel(vcpdu.can)
-    sws = SwsSimpleModel(vcpdu.can)
-    vcfront = VcfrontSimpleModel(vcpdu.can)
+    sources = _add_vcpdu_simple_sources(
+        vcpdu_cluster,
+        bmsb=True,
+        sws=True,
+        vcfront=True,
+    )
+    assert sources.bmsb is not None
+    assert sources.sws is not None
+    assert sources.vcfront is not None
     DigitalStatus = vcpdu.can.enums.DigitalStatus
     PrechargeContactorState = vcpdu.can.enums.PrechargeContactorState
     VehicleState = vcpdu.can.enums.VehicleState
 
-    tsms_status = bmsb.periodic_io_status(
+    tsms_status = sources.bmsb.periodic_io_status(
         period=10,
         BMSB_tsmsChg=DigitalStatus.OFF,
     )
-    contactor_state = bmsb.periodic_pack_contactor_state(
+    contactor_state = sources.bmsb.periodic_pack_contactor_state(
         PrechargeContactorState.HVP_CLOSED,
         period=10,
     )
-    run_request = sws.periodic_driver_request(
+    run_request = sources.sws.periodic_driver_request(
         period=10,
         SWS_requestRun=DigitalStatus.OFF,
     )
-    brake_position = vcfront.periodic_pedal_position(
+    brake_position = sources.vcfront.periodic_pedal_position(
         period=10,
         VCFRONT_brakePosition=0,
     )
-    vcpdu_cluster.add_components(bmsb, sws, vcfront)
+    vcpdu_cluster.add_components(sources.bmsb, sources.sws, sources.vcfront)
 
     _run_vcpdu_to_glv_on(vcpdu_cluster)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
@@ -300,23 +314,24 @@ def test_vcpdu_stays_in_ts_run_after_additional_driver_run_request(
 
 def _run_vcpdu_to_glv_on(vcpdu_cluster, observed: list | None = None) -> None:
     VehicleState = vcpdu_cluster.vcpdu.can.enums.VehicleState
+    vcpdu = vcpdu_cluster.vcpdu
 
-    def record_state():
-        state = vcpdu_cluster.vcpdu.latest_vehicle_state()
-        if (
-            observed is not None
-            and state is not None
-            and (not observed or observed[-1] != state)
-        ):
-            observed.append(state)
-        return state == VehicleState.ON_GLV
-
-    vcpdu_cluster.run_until(
-        record_state,
+    vcpdu.run_until_vehicle_state(
+        VehicleState.INIT,
+        timeout=500,
+        step=10,
+        message="vcpdu should report INIT while booting",
+    )
+    if observed is not None:
+        vcpdu.record_latest_vehicle_state(observed)
+    vcpdu.run_until_vehicle_state(
+        VehicleState.ON_GLV,
         timeout=500,
         step=10,
         message="vcpdu should boot to ON_GLV",
     )
+    if observed is not None:
+        vcpdu.record_latest_vehicle_state(observed)
 
 
 @pytest.mark.parametrize(
@@ -340,24 +355,29 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
     vcpdu = vcpdu_cluster.vcpdu
     observed = []
     wake_state = getattr(SleepFollowerState, wake_state_name)
+    sources = _add_vcpdu_simple_sources(vcpdu_cluster, sws=True, vcfront=True)
+    assert sources.sws is not None
+    assert sources.vcfront is not None
 
-    sws = SwsSimpleModel(vcpdu.can)
-    vcfront = VcfrontSimpleModel(vcpdu.can)
     sleepable_inputs = {
-        "sws": sws.periodic_sleepable(SleepFollowerState.OK_TO_SLEEP, period=100),
-        "vcfront": vcfront.periodic_sleepable(
+        "sws": sources.sws.periodic_sleepable(
+            SleepFollowerState.OK_TO_SLEEP,
+            period=100,
+        ),
+        "vcfront": sources.vcfront.periodic_sleepable(
             SleepFollowerState.OK_TO_SLEEP,
             period=100,
         ),
     }
-    vcpdu_cluster.add_components(sws, vcfront)
+    vcpdu_cluster.add_components(sources.sws, sources.vcfront)
 
-    vcpdu_cluster.run_until(
-        lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
+    vcpdu.run_until_vehicle_state(
+        VehicleState.ON_GLV,
         timeout=500,
         step=20,
         message="vcpdu should boot to ON_GLV before it can sleep",
     )
+    vcpdu.record_latest_vehicle_state(observed)
 
     vcpdu_cluster.run_for(100)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
@@ -373,12 +393,20 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
 
     sleepable_inputs[controller].set(**{f"{controller.upper()}_sleepable": wake_state})
     before_wake = len(observed)
-    vcpdu_cluster.run_until(
-        lambda: vcpdu.record_latest_vehicle_state(observed) == VehicleState.ON_GLV,
+    vcpdu.run_until_vehicle_state(
+        VehicleState.INIT,
+        timeout=1000,
+        step=20,
+        message=f"vcpdu should wake to INIT from {controller} {wake_state.name}",
+    )
+    vcpdu.record_latest_vehicle_state(observed)
+    vcpdu.run_until_vehicle_state(
+        VehicleState.ON_GLV,
         timeout=1000,
         step=20,
         message=f"vcpdu should wake from {controller} {wake_state.name}",
     )
+    vcpdu.record_latest_vehicle_state(observed)
 
     assert observed[before_wake:] == [
         VehicleState.INIT,
@@ -399,11 +427,12 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
 ):
     vcpdu = vcpdu_cluster.vcpdu
     DigitalStatus = vcpdu.can.enums.DigitalStatus
-    sws = SwsSimpleModel(vcpdu.can)
-    driver_request = sws.periodic_driver_request(
+    sources = _add_vcpdu_simple_sources(vcpdu_cluster, sws=True)
+    assert sources.sws is not None
+    driver_request = sources.sws.periodic_driver_request(
         period=20,
     )
-    vcpdu_cluster.add_component(sws)
+    vcpdu_cluster.add_component(sources.sws)
     request_signal = _driver_request_signal(vcpdu, hsd_channel)
 
     vcpdu_cluster.run_until(
@@ -452,9 +481,10 @@ def test_bmsb_faults_sets_safety_fault(
     imd_safety_enabled,
 ):
     vcpdu = vcpdu_cluster.vcpdu
-    bmsb = BmsbSimpleModel(vcpdu.can)
-    ShutdownCircuitStatus = bmsb.can.enums.ShutdownCircuitStatus
-    DigitalStatus = bmsb.can.enums.DigitalStatus
+    sources = _add_vcpdu_simple_sources(vcpdu_cluster, bmsb=True)
+    assert sources.bmsb is not None
+    ShutdownCircuitStatus = sources.bmsb.can.enums.ShutdownCircuitStatus
+    DigitalStatus = sources.bmsb.can.enums.DigitalStatus
     enabled_status = {
         True: DigitalStatus.ON,
         False: DigitalStatus.OFF,
@@ -464,26 +494,30 @@ def test_bmsb_faults_sets_safety_fault(
         False: ShutdownCircuitStatus.OPEN,
     }
 
-    bmsb.periodic_io_status(
+    sources.bmsb.periodic_io_status(
         period=10,
         BMSB_bmsStatusMem=enabled_status[bms_safety_enabled],
         BMSB_imdStatusMem=enabled_status[imd_safety_enabled],
     )
+    vcpdu_cluster.add_component(sources.bmsb)
 
-    vcpdu_cluster.add_component(bmsb)
-
-    def safety_status_matches_expected():
-        status = vcpdu.latest_vehicle_state_message()
-        return status is not None and (
-            status.VCPDU_bmsbSafetyStatus == expected_status[bms_safety_enabled]
-            and status.VCPDU_imdSafetyStatus == expected_status[imd_safety_enabled]
-        )
-
-    vcpdu_cluster.run_until(
-        safety_status_matches_expected,
+    vcpdu.can.run_until_signal_eq(
+        "VCPDU_vehicleState",
+        "VCPDU_bmsbSafetyStatus",
+        expected_status[bms_safety_enabled],
+        bus="veh",
         timeout=1000,
         step=20,
-        message="vcpdu should report BMSB safety status from BMSB_ioStatus",
+        message_on_timeout="vcpdu should report BMSB safety status from BMSB_ioStatus",
+    )
+    vcpdu.can.run_until_signal_eq(
+        "VCPDU_vehicleState",
+        "VCPDU_imdSafetyStatus",
+        expected_status[imd_safety_enabled],
+        bus="veh",
+        timeout=1000,
+        step=20,
+        message_on_timeout="vcpdu should report IMD safety status from BMSB_ioStatus",
     )
 
     status = vcpdu.latest_vehicle_state_message()
@@ -502,3 +536,19 @@ def _driver_request_signal(vcpdu, hsd_channel) -> str:
 
 def _positive(value: float | None) -> bool:
     return value is not None and value > 0
+
+
+def _add_vcpdu_simple_sources(
+    vcpdu_cluster,
+    *,
+    bmsb: bool = False,
+    sws: bool = False,
+    vcfront: bool = False,
+) -> VcpduSimpleSources:
+    can = vcpdu_cluster.vcpdu.can
+    sources = VcpduSimpleSources(
+        bmsb=BmsbSimpleModel(can) if bmsb else None,
+        sws=SwsSimpleModel(can) if sws else None,
+        vcfront=VcfrontSimpleModel(can) if vcfront else None,
+    )
+    return sources

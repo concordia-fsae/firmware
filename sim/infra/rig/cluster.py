@@ -63,6 +63,15 @@ class ClusterDataRoutes:
             sink_node=sink_node,
         ):
             return
+        if sink_node is not None and self._native_route_available(
+            path,
+            source_node=source_node,
+            sink_node=sink_node,
+        ):
+            raise TypeError(
+                f"datapath {path!r} between {source_node!r} and {sink_node!r} "
+                "advertises a Rust route ABI but failed to connect natively"
+            )
         if self._requires_native_route(path):
             raise TypeError(
                 f"datapath {path!r} between {source_node!r} and {sink_node!r} "
@@ -308,7 +317,9 @@ class ClusterDataRoutes:
             return False
         source_kind, source_args = source_abi
         sink_kind, sink_args = sink_abi
-        if source_kind != sink_kind:
+        if source_kind != sink_kind and not (
+            source_kind == "scalar" and sink_kind == "scalar_sink"
+        ):
             return False
 
         if source_kind == "timer":
@@ -357,23 +368,58 @@ class ClusterDataRoutes:
             )
         elif source_kind == "scalar":
             route_id, source_count, source_recv_many, _source_send_many = source_args
-            _sink_route_id, _sink_count, _sink_recv_many, sink_send_many = sink_args
-            if route_id != _sink_route_id:
-                return False
-            connected = self._cluster._rust_runtime.add_scalar_route(
-                source_node=source_node,
-                route_id=route_id,
-                source_count=source_count,
-                source_recv_many=source_recv_many,
-                sink_node=sink_node,
-                sink_send_many=sink_send_many,
-            )
+            if sink_kind == "scalar_sink":
+                (
+                    _sink_route_id,
+                    sink_id,
+                    value_scale,
+                    set_value,
+                ) = sink_args
+                if route_id != _sink_route_id:
+                    return False
+                connected = self._cluster._rust_runtime.add_scalar_sink_route(
+                    source_node=source_node,
+                    route_id=route_id,
+                    source_count=source_count,
+                    source_recv_many=source_recv_many,
+                    sink_node=sink_node,
+                    sink_id=sink_id,
+                    value_scale=value_scale,
+                    set_value=set_value,
+                )
+            else:
+                _sink_route_id, _sink_count, _sink_recv_many, sink_send_many = sink_args
+                if route_id != _sink_route_id:
+                    return False
+                connected = self._cluster._rust_runtime.add_scalar_route(
+                    source_node=source_node,
+                    route_id=route_id,
+                    source_count=source_count,
+                    source_recv_many=source_recv_many,
+                    sink_node=sink_node,
+                    sink_send_many=sink_send_many,
+                )
         else:
             connected = False
 
         if connected:
             self._native_routes.add(key)
         return connected
+
+    def _native_route_available(
+        self,
+        path: DataPath,
+        *,
+        source_node: str,
+        sink_node: str,
+    ) -> bool:
+        source = self._cluster._rig_nodes[source_node]
+        sink = self._cluster._rig_nodes[sink_node]
+        source_abi = getattr(source, "rust_datapath_route_abi", lambda _path: None)(
+            path
+        )
+        sink_abi = getattr(sink, "rust_datapath_route_abi", lambda _path: None)(path)
+        return source_abi is not None or sink_abi is not None
 
     @staticmethod
     def _requires_native_route(path: DataPath) -> bool:
@@ -436,6 +482,11 @@ class ClusterCanComms:
                 continue
             if len(node_names) == 1:
                 if not self._connect_native_source(path, source_node=source_node):
+                    if self._native_source_available(path, source_node=source_node):
+                        raise TypeError(
+                            f"CAN source {source_node!r} {path!r} advertises a Rust "
+                            "route ABI but failed to connect natively"
+                        )
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
@@ -452,6 +503,16 @@ class ClusterCanComms:
                     sink_node=sink_node,
                 ):
                     continue
+                if self._native_route_available(
+                    path,
+                    source_node=source_node,
+                    sink_node=sink_node,
+                ):
+                    raise TypeError(
+                        f"CAN route {path!r} between {source_node!r} and "
+                        f"{sink_node!r} advertises a Rust route ABI but failed "
+                        "to connect natively"
+                    )
                 self._dataroutes.connect(
                     path,
                     source_node=source_node,
@@ -474,6 +535,11 @@ class ClusterCanComms:
                 )
                 if not sink_nodes:
                     if not self._connect_native_source(path, source_node=source_node):
+                        if self._native_source_available(path, source_node=source_node):
+                            raise TypeError(
+                                f"CAN source {source_node!r} {path!r} advertises a "
+                                "Rust route ABI but failed to connect natively"
+                            )
                         self._dataroutes.connect(path, source_node=source_node)
                     continue
                 for sink_node in sink_nodes:
@@ -483,6 +549,16 @@ class ClusterCanComms:
                         sink_node=sink_node,
                     ):
                         continue
+                    if self._native_route_available(
+                        path,
+                        source_node=source_node,
+                        sink_node=sink_node,
+                    ):
+                        raise TypeError(
+                            f"CAN route {path!r} between {source_node!r} and "
+                            f"{sink_node!r} advertises a Rust route ABI but failed "
+                            "to connect natively"
+                        )
                     self._dataroutes.connect(
                         path,
                         source_node=source_node,
@@ -550,6 +626,24 @@ class ClusterCanComms:
         self._native_routes.add(key)
         return True
 
+    def _native_route_available(
+        self,
+        path: DataPath,
+        *,
+        source_node: str,
+        sink_node: str,
+    ) -> bool:
+        if not self._is_can_path(path):
+            return False
+        bus_name = str(path.parts[1])
+        source = self._cluster._rig_nodes.get(source_node)
+        sink = self._cluster._rig_nodes.get(sink_node)
+        if source is None or sink is None:
+            return False
+        source_abi = getattr(source, "rust_can_route_abi", lambda _bus: None)(bus_name)
+        sink_abi = getattr(sink, "rust_can_route_abi", lambda _bus: None)(bus_name)
+        return source_abi is not None or sink_abi is not None
+
     def _connect_native_source(
         self,
         path: DataPath,
@@ -580,6 +674,17 @@ class ClusterCanComms:
             )
         self._native_routes.add(key)
         return True
+
+    def _native_source_available(self, path: DataPath, *, source_node: str) -> bool:
+        if not self._is_can_path(path):
+            return False
+        source = self._cluster._rig_nodes.get(source_node)
+        if source is None:
+            return False
+        return (
+            getattr(source, "rust_can_route_abi", lambda _bus: None)(str(path.parts[1]))
+            is not None
+        )
 
     @property
     def events(self) -> tuple[RoutedCanEvent, ...]:
