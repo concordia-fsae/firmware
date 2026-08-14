@@ -318,7 +318,8 @@ class ClusterDataRoutes:
         source_kind, source_args = source_abi
         sink_kind, sink_args = sink_abi
         if source_kind != sink_kind and not (
-            source_kind == "scalar" and sink_kind == "scalar_sink"
+            source_kind == "scalar"
+            and sink_kind in ("scalar_sink", "dc_load_voltage_sink")
         ):
             return False
 
@@ -368,7 +369,16 @@ class ClusterDataRoutes:
             )
         elif source_kind == "scalar":
             route_id, source_count, source_recv_many, _source_send_many = source_args
-            if sink_kind == "scalar_sink":
+            if sink_kind == "dc_load_voltage_sink":
+                (_sink_route_id,) = sink_args
+                if route_id != _sink_route_id:
+                    return False
+                connected = self._cluster._rust_runtime.add_dc_load_voltage_route(
+                    source_node=source_node,
+                    route_id=route_id,
+                    sink_node=sink_node,
+                )
+            elif sink_kind == "scalar_sink":
                 (
                     _sink_route_id,
                     sink_id,

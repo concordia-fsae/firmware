@@ -435,21 +435,23 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
     vcpdu_cluster.add_component(sources.sws)
     request_signal = _driver_request_signal(vcpdu, hsd_channel)
 
-    vcpdu_cluster.run_until(
-        lambda: vcpdu.latest_hsd_duty_cycle(hsd_channel) == 0
-        and vcpdu.latest_hsd_current(hsd_channel) == 0,
+    vcpdu.run_until_hsd_output_eq(
+        hsd_channel,
+        duty_cycle=0,
+        current=0,
         timeout=500,
         step=20,
         message="VCPDU HSD load should report off before a driver request",
     )
 
     driver_request.set(**{request_signal: DigitalStatus.ON})
-    vcpdu_cluster.run_until(
-        lambda: _positive(vcpdu.latest_hsd_duty_cycle(hsd_channel))
-        and _positive(vcpdu.latest_hsd_current(hsd_channel)),
+    vcpdu.run_until_hsd_output_gt(
+        hsd_channel,
+        duty_cycle=0,
+        current=0,
         timeout=1000,
         step=20,
-        message="VCPDU HSD load should report non-zero current when requested on",
+        message="VCPDU HSD load should report non-zero duty and current when requested on",
     )
 
     driver_request.set(**{request_signal: DigitalStatus.OFF})
@@ -458,12 +460,13 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
     assert _positive(vcpdu.latest_hsd_current(hsd_channel))
 
     driver_request.set(**{request_signal: DigitalStatus.ON})
-    vcpdu_cluster.run_until(
-        lambda: vcpdu.latest_hsd_duty_cycle(hsd_channel) == 0
-        and vcpdu.latest_hsd_current(hsd_channel) == 0,
+    vcpdu.run_until_hsd_output_eq(
+        hsd_channel,
+        duty_cycle=0,
+        current=0,
         timeout=1000,
         step=20,
-        message="VCPDU HSD load should report zero current after a second driver request toggles it off",
+        message="VCPDU HSD load should report zero duty and current after a second driver request toggles it off",
     )
 
 

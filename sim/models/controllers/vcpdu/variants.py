@@ -19,8 +19,23 @@ def vcpdu_node(
     *,
     model_outputs: tuple[ModelDataPathOutputConnector | PowerControlPath, ...] = (),
 ) -> NodeSpec:
-    pump_voltage = VcpduModel.timer.duty_events(TimerPort.PWM, TimerChannel._1)
-    fan_voltage = VcpduModel.timer.duty_events(TimerPort.HP, TimerChannel._2)
+    pump_duty = VcpduModel.timer.duty_events(TimerPort.PWM, TimerChannel._1)
+    fan_duty = VcpduModel.timer.duty_events(TimerPort.HP, TimerChannel._2)
+    pump_voltage = DcLoadModel.voltage_input_channel(Vn9008Channel.PUMP)
+    fan_voltage = DcLoadModel.voltage_input_channel(Vn9008Channel.FAN)
+    configured_outputs = (
+        *model_outputs,
+        VcpduModel.vn9008_load_voltage_output(
+            hsd_channel=Vn9008Channel.PUMP,
+            timer_path=pump_duty,
+            voltage_path=pump_voltage,
+        ),
+        VcpduModel.vn9008_load_voltage_output(
+            hsd_channel=Vn9008Channel.FAN,
+            timer_path=fan_duty,
+            voltage_path=fan_voltage,
+        ),
+    )
     components = (
         Asm330Model.spec(
             spi_transactions=VcpduModel.spi.transactions(SpiDevice.IMU),
@@ -55,7 +70,7 @@ def vcpdu_node(
         VcpduModel,
         hardware=hardware,
         components=components,
-        model_outputs=model_outputs,
+        model_outputs=configured_outputs,
     )
 
 

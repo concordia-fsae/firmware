@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 
 from sim.infra.rig import (
+    ModelDataPathOutputConnector,
     ModelDataPathInputConnector,
     PowerControlEvent,
     PowerControlPath,
@@ -77,22 +78,56 @@ class VcpduModelExtensions:
         )
 
     def latest_hsd_duty_cycle(self, hsd_channel) -> float | None:
-        signal_name = self._hsd_signal_name(
-            hsd_channel,
-            pump="VCPDU_pumpDutyCycle",
-            fan="VCPDU_fanDutyCycle",
-        )
+        signal_name = self._hsd_duty_signal_name(hsd_channel)
         value = self.can.latest_signal("VCPDU_hsdDuty", signal_name, bus="veh")
         return None if value is None else float(value)
 
     def latest_hsd_current(self, hsd_channel) -> float | None:
-        signal_name = self._hsd_signal_name(
-            hsd_channel,
-            pump="VCPDU_pumpCurrent",
-            fan="VCPDU_fanCurrent",
-        )
+        signal_name = self._hsd_current_signal_name(hsd_channel)
         value = self.can.latest_signal("VCPDU_hsdCurrent1", signal_name, bus="veh")
         return None if value is None else float(value)
+
+    def run_until_hsd_output_eq(
+        self,
+        hsd_channel,
+        *,
+        duty_cycle: float,
+        current: float,
+        **kwargs,
+    ) -> int:
+        self._normalize_run_until_message(kwargs)
+        return self.can.run_until_signals_eq(
+            (
+                ("VCPDU_hsdDuty", self._hsd_duty_signal_name(hsd_channel), duty_cycle),
+                ("VCPDU_hsdCurrent1", self._hsd_current_signal_name(hsd_channel), current),
+            ),
+            bus="veh",
+            **kwargs,
+        )
+
+    def run_until_hsd_output_gt(
+        self,
+        hsd_channel,
+        *,
+        duty_cycle: float,
+        current: float,
+        **kwargs,
+    ) -> int:
+        self._normalize_run_until_message(kwargs)
+        return self.can.run_until_signals_gt(
+            (
+                ("VCPDU_hsdDuty", self._hsd_duty_signal_name(hsd_channel), duty_cycle),
+                ("VCPDU_hsdCurrent1", self._hsd_current_signal_name(hsd_channel), current),
+            ),
+            bus="veh",
+            **kwargs,
+        )
+
+    @staticmethod
+    def _normalize_run_until_message(kwargs: dict) -> None:
+        message = kwargs.pop("message", None)
+        if message is not None:
+            kwargs["message_on_timeout"] = message
 
     def set_vn9008_current_feedback(
         self, hsd_channel, analog_channel, current_amps: float
@@ -105,12 +140,46 @@ class VcpduModelExtensions:
         self.set_analog_input(analog_channel, float(current_amps) / amps_per_volt)
         return True
 
+    @classmethod
+    def vn9008_load_voltage_output(
+        cls,
+        *,
+        hsd_channel,
+        timer_path,
+        voltage_path,
+        source_voltage: float = 12.0,
+        duty_full_scale: float = 100.0,
+    ) -> ModelDataPathOutputConnector:
+        def connect(node) -> None:
+            node._hsd_signal_name(hsd_channel, pump="pump", fan="fan")
+            node.add_timer_scaled_scalar_output(
+                voltage_path,
+                timer_path=timer_path,
+                scale=float(source_voltage) / float(duty_full_scale),
+            )
+
+        return ModelDataPathOutputConnector(connect)
+
     def _hsd_signal_name(self, hsd_channel, *, pump: str, fan: str) -> str:
         if int(hsd_channel) == int(self.Vn9008Channel.PUMP):
             return pump
         if int(hsd_channel) == int(self.Vn9008Channel.FAN):
             return fan
         raise ValueError(f"unsupported VCPDU HSD channel {hsd_channel!r}")
+
+    def _hsd_duty_signal_name(self, hsd_channel) -> str:
+        return self._hsd_signal_name(
+            hsd_channel,
+            pump="VCPDU_pumpDutyCycle",
+            fan="VCPDU_fanDutyCycle",
+        )
+
+    def _hsd_current_signal_name(self, hsd_channel) -> str:
+        return self._hsd_signal_name(
+            hsd_channel,
+            pump="VCPDU_pumpCurrent",
+            fan="VCPDU_fanCurrent",
+        )
 
     @classmethod
     def tps2hb_power_control(cls, ic, output) -> PowerControlPath:

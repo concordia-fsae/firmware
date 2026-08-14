@@ -1,12 +1,10 @@
-use super::cluster::{ScalarEvent, TimerChannelEvent};
+use super::cluster::ScalarEvent;
 
 #[derive(Clone, Copy)]
 pub struct DcLoadModel {
     node: u32,
+    voltage_route_id: u32,
     current_route_id: u32,
-    timer_interface: u16,
-    timer_port: i32,
-    timer_channel: i32,
     resistance_ohms: f32,
     inductance_henrys: f32,
     capacitance_farads: f32,
@@ -23,10 +21,8 @@ pub struct DcLoadModel {
 impl DcLoadModel {
     pub fn new(
         node: u32,
+        voltage_route_id: u32,
         current_route_id: u32,
-        timer_interface: u16,
-        timer_port: i32,
-        timer_channel: i32,
         resistance_ohms: f32,
         inductance_henrys: f32,
         capacitance_farads: f32,
@@ -35,10 +31,8 @@ impl DcLoadModel {
     ) -> Self {
         Self {
             node,
+            voltage_route_id,
             current_route_id,
-            timer_interface,
-            timer_port,
-            timer_channel,
             resistance_ohms,
             inductance_henrys,
             capacitance_farads,
@@ -57,8 +51,12 @@ impl DcLoadModel {
         self.node
     }
 
-    pub fn current_route_id(&self) -> u32 {
-        self.current_route_id
+    pub fn voltage_input_key(&self) -> (u32, u32) {
+        (self.node, self.voltage_route_id)
+    }
+
+    pub fn current_output_key(&self) -> (u32, u32) {
+        (self.node, self.current_route_id)
     }
 
     pub fn reset(&mut self, elapsed_ns: u64) {
@@ -71,32 +69,15 @@ impl DcLoadModel {
         self.pending_current = false;
     }
 
-    pub fn voltage_input_matches(
-        &self,
-        node: u32,
-        timer_interface: u16,
-        timer_port: i32,
-        timer_channel: i32,
-    ) -> bool {
-        self.node == node
-            && self.timer_interface == timer_interface
-            && self.timer_port == timer_port
-            && self.timer_channel == timer_channel
-    }
-
     pub fn config_matches(
         &self,
         node: u32,
+        voltage_route_id: u32,
         current_route_id: u32,
-        timer_interface: u16,
-        timer_port: i32,
-        timer_channel: i32,
     ) -> bool {
         self.node == node
+            && self.voltage_route_id == voltage_route_id
             && self.current_route_id == current_route_id
-            && self.timer_interface == timer_interface
-            && self.timer_port == timer_port
-            && self.timer_channel == timer_channel
     }
 
     pub fn next_step_ns(&self, elapsed_ns: u64, max_step_ns: u64) -> u64 {
@@ -110,11 +91,15 @@ impl DcLoadModel {
         (self.scheduler_period_ns - elapsed_in_period).min(max_step_ns)
     }
 
-    pub fn update_voltage(&mut self, events: &[TimerChannelEvent]) {
+    pub fn update_voltage(&mut self, events: &[ScalarEvent]) {
         if let Some(event) = events.last() {
-            self.input_voltage = event.value.max(0.0);
-            self.voltage_dirty = true;
+            self.update_voltage_event(*event);
         }
+    }
+
+    pub fn update_voltage_event(&mut self, event: ScalarEvent) {
+        self.input_voltage = event.value.max(0.0);
+        self.voltage_dirty = true;
     }
 
     pub fn run_until(&mut self, elapsed_ns: u64) {

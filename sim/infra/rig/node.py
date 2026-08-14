@@ -75,6 +75,9 @@ class NodeRig(ModelRig):
         self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
         self._scalar_sink_abis: dict[str, tuple[int, int, float, int]] = {}
+        self._timer_scaled_scalar_outputs: dict[
+            str, tuple[DataPath, int, int, int, float, float]
+        ] = {}
         self.can = CanInterface(self) if self.has_can else None
         self._timer_peripherals = TimerPeripheralInterface(self)
         self._spi_peripherals = SpiPeripheralInterface(self)
@@ -128,6 +131,46 @@ class NodeRig(ModelRig):
         scalar_sink_abi = self._scalar_sink_abis.get(datapath_key(path))
         if scalar_sink_abi is not None:
             return ("scalar_sink", scalar_sink_abi)
+        native_scalar_output = self._timer_scaled_scalar_outputs.get(datapath_key(path))
+        if native_scalar_output is not None:
+            (
+                timer_path,
+                route_id,
+                timer_interface,
+                timer_port,
+                timer_channel,
+                scale,
+                offset,
+            ) = native_scalar_output
+            timer_abi = self._timer_peripherals.rust_route_abi(timer_path)
+            if self._cluster_rig is not None and self._cluster_node_name is not None:
+                if not self._cluster_rig._rust_runtime.add_timer_source(
+                    source_node=self._cluster_node_name,
+                    interface=timer_interface,
+                    port=timer_port,
+                    channel=timer_channel,
+                    source_count=timer_abi[3],
+                    source_recv_many=timer_abi[4],
+                ):
+                    raise RuntimeError("failed to register native timer source")
+                if not self._cluster_rig._rust_runtime.add_timer_scaled_scalar_source(
+                    node=self._cluster_node_name,
+                    route_id=route_id,
+                    timer_interface=timer_interface,
+                    timer_port=timer_port,
+                    timer_channel=timer_channel,
+                    scale=scale,
+                    offset=offset,
+                ):
+                    raise RuntimeError(
+                        "failed to register native timer-scaled scalar source"
+                    )
+            count_callback, recv_callback, send_callback = (
+                self._cluster_rig._rust_runtime.noop_scalar_route_abi
+                if self._cluster_rig is not None
+                else (0, 0, 0)
+            )
+            return ("scalar", (route_id, count_callback, recv_callback, send_callback))
         try:
             if self._timer_peripherals.supports(path):
                 return ("timer", self._timer_peripherals.rust_route_abi(path))
@@ -161,6 +204,39 @@ class NodeRig(ModelRig):
             return True
 
         self.datapaths.add_input(path, send=send)
+
+    def add_timer_scaled_scalar_output(
+        self,
+        path: DataPath,
+        *,
+        timer_path: DataPath,
+        scale: float,
+        offset: float = 0.0,
+    ) -> None:
+        binding = timer_path.peripheral_binding
+        if binding is None or binding.interface not in (
+            "timer.duty",
+            "timer.frequency",
+        ):
+            raise ValueError(f"datapath {timer_path!r} is not a timer channel")
+        route_id = datapath_route_id(datapath_key(path))
+        timer_interface = 1 if binding.interface == "timer.duty" else 2
+        timer_port = int(binding.port if binding.port is not None else 0)
+        timer_channel = int(binding.channel if binding.channel is not None else 0)
+        self._timer_scaled_scalar_outputs[datapath_key(path)] = (
+            timer_path,
+            route_id,
+            timer_interface,
+            timer_port,
+            timer_channel,
+            float(scale),
+            float(offset),
+        )
+        self.datapaths.add_output(
+            path,
+            pending=lambda: 0,
+            recv=lambda: None,
+        )
 
     def get_analog_input(self, channel: int) -> float:
         return float(self._get_analog_input(ctypes.c_int(channel)))
