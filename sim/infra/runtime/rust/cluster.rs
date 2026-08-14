@@ -403,6 +403,17 @@ pub(super) fn with_runtime<R>(f: impl FnOnce(&mut ClusterRuntime) -> R) -> R {
     f(&mut runtime)
 }
 
+pub fn add_periodic_scalar_source(
+    node: u32,
+    route_id: u32,
+    period_ns: u64,
+    reader: fn() -> f32,
+) -> bool {
+    with_runtime(|runtime| {
+        super::simple::add_periodic_scalar_source(runtime, node, route_id, period_ns, reader)
+    })
+}
+
 fn compare_value(value: f64, expected: f64, tolerance: f64, comparison: u8) -> bool {
     match comparison {
         COMPARE_EQ => (value - expected).abs() <= tolerance,

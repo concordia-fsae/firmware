@@ -7,6 +7,7 @@ use super::cluster::ClusterRuntime;
 use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor};
 use super::registry::RuntimeInterfaces;
 use super::scheduler;
+use super::scalar::{self, ScalarEvent};
 
 #[derive(Clone, Copy)]
 pub struct PeriodicCanSource {
@@ -78,6 +79,151 @@ impl PeriodicCanSources {
 
 static PERIODIC_CAN_SOURCES: LazyLock<Mutex<PeriodicCanSources>> =
     LazyLock::new(|| Mutex::new(PeriodicCanSources::default()));
+
+pub(super) type ScalarSourceReader = fn() -> f32;
+
+#[derive(Clone, Copy)]
+struct PeriodicScalarSource {
+    node: u32,
+    route_id: u32,
+    period_ns: u64,
+    last_emit_ns: u64,
+    reader: ScalarSourceReader,
+}
+
+impl PeriodicScalarSource {
+    fn due_at_ns(&self) -> u64 {
+        self.last_emit_ns.saturating_add(self.period_ns)
+    }
+
+    fn has_pending_event(&self, elapsed_ns: u64) -> bool {
+        elapsed_ns.saturating_sub(self.last_emit_ns) >= self.period_ns
+    }
+
+    fn emit_if_due(&mut self, elapsed_ns: u64) -> Option<ScalarEvent> {
+        if !self.has_pending_event(elapsed_ns) {
+            return None;
+        }
+        self.last_emit_ns = elapsed_ns;
+        Some(ScalarEvent {
+            value: (self.reader)(),
+            timestamp_ns: elapsed_ns,
+        })
+    }
+}
+
+#[derive(Default)]
+struct PeriodicScalarSources {
+    sources: Vec<PeriodicScalarSource>,
+}
+
+impl PeriodicScalarSources {
+    fn reset(&mut self) {
+        self.sources.clear();
+    }
+}
+
+static PERIODIC_SCALAR_SOURCES: LazyLock<Mutex<PeriodicScalarSources>> =
+    LazyLock::new(|| Mutex::new(PeriodicScalarSources::default()));
+
+pub(super) fn add_periodic_scalar_source(
+    runtime: &mut ClusterRuntime,
+    node: u32,
+    route_id: u32,
+    period_ns: u64,
+    reader: ScalarSourceReader,
+) -> bool {
+    if !runtime.node_exists(node) || route_id == 0 || period_ns == 0 {
+        return false;
+    }
+    let mut sources = PERIODIC_SCALAR_SOURCES.lock().unwrap();
+    if sources
+        .sources
+        .iter()
+        .any(|source| source.node == node && source.route_id == route_id)
+    {
+        return true;
+    }
+    let source = PeriodicScalarSource {
+        node,
+        route_id,
+        period_ns,
+        last_emit_ns: runtime.elapsed_ns,
+        reader,
+    };
+    let source_index = sources.sources.len();
+    sources.sources.push(source);
+    drop(sources);
+
+    let registered = algorithms::register_algorithm(
+        runtime,
+        DataflowAlgorithm::periodic_source(
+            node,
+            (node, 1, source_index),
+            vec![RuntimeInterfaces::scalar_edge(node, route_id)],
+            Arc::new(PeriodicScalarSourceAlgorithm { source_index }),
+            period_ns,
+            source.due_at_ns(),
+        )
+        .with_runtime_reset(reset_periodic_scalar_sources)
+        .with_scalar_source(node, route_id, source_index, take_periodic_scalar_events),
+    );
+    if !registered {
+        PERIODIC_SCALAR_SOURCES.lock().unwrap().sources.pop();
+    }
+    registered
+}
+
+fn reset_periodic_scalar_sources() {
+    PERIODIC_SCALAR_SOURCES.lock().unwrap().reset();
+}
+
+fn take_periodic_scalar_events(context: usize, elapsed_ns: u64) -> Vec<ScalarEvent> {
+    PERIODIC_SCALAR_SOURCES
+        .lock()
+        .unwrap()
+        .sources
+        .get_mut(context)
+        .and_then(|source| source.emit_if_due(elapsed_ns))
+        .into_iter()
+        .collect()
+}
+
+struct PeriodicScalarSourceAlgorithm {
+    source_index: usize,
+}
+
+impl DataflowAlgorithmExecutor for PeriodicScalarSourceAlgorithm {
+    fn polls_pending(&self) -> bool {
+        true
+    }
+
+    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+        PERIODIC_SCALAR_SOURCES
+            .lock()
+            .unwrap()
+            .sources
+            .get(self.source_index)
+            .is_some_and(|source| {
+                runtime.node_online(source.node) && source.has_pending_event(runtime.elapsed_ns)
+            })
+    }
+
+    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+        let event = take_periodic_scalar_events(self.source_index, runtime.elapsed_ns)
+            .into_iter()
+            .next();
+        let Some(event) = event else {
+            return false;
+        };
+        let sources = PERIODIC_SCALAR_SOURCES.lock().unwrap();
+        let Some(source) = sources.sources.get(self.source_index) else {
+            return false;
+        };
+        scalar::route_native_event(runtime, source.node, source.route_id, event);
+        true
+    }
+}
 
 pub(super) fn add_periodic_can_source(
     runtime: &mut ClusterRuntime,
