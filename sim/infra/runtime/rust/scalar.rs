@@ -183,22 +183,7 @@ impl InterfaceImplementation for ScalarInterface {
 }
 
 impl InterfaceCaller for ScalarInterface {
-    fn reset(&mut self) { self.reset(); }
     fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
-        self.append_algorithm_specs(specs);
-    }
-}
-
-impl InterfaceDataflow<ScalarEvent> for ScalarInterface {
-    type Endpoint = ScalarEndpoint;
-}
-
-impl ScalarInterface {
-    pub(super) fn reset(&mut self) {
-        self.reset_interface();
-    }
-
-    pub(super) fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
         for (index, group) in self.fanouts.iter().enumerate() {
             specs.push(DataflowAlgorithm::source(
                 group.source_node,
@@ -210,8 +195,14 @@ impl ScalarInterface {
                 Arc::new(ScalarFanoutAlgorithm { group_index: index }),
             ));
         }
-    }
+}
+}
 
+impl InterfaceDataflow<ScalarEvent> for ScalarInterface {
+    type Endpoint = ScalarEndpoint;
+}
+
+impl ScalarInterface {
     pub(super) fn add_state_input(&mut self, node: u32, route_id: u32) {
         let inputs = self.state_inputs.entry(node).or_default();
         if !inputs.contains(&route_id) {

@@ -132,22 +132,7 @@ impl InterfaceImplementation for CanInterface {
 }
 
 impl InterfaceCaller for CanInterface {
-    fn reset(&mut self) { self.reset(); }
     fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
-        self.append_algorithm_specs(specs);
-    }
-}
-
-impl InterfaceDataflow<CanEvent> for CanInterface {
-    type Endpoint = CanEndpoint;
-}
-
-impl CanInterface {
-    pub(super) fn reset(&mut self) {
-        self.reset_interface();
-    }
-
-    pub(super) fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
         specs.push(DataflowAlgorithm::source(
             u32::MAX,
             (u32::MAX, 0, 0),
@@ -162,8 +147,14 @@ impl CanInterface {
                 Arc::new(CanFanoutAlgorithm { group_index: index }),
             ));
         }
-    }
+}
+}
 
+impl InterfaceDataflow<CanEvent> for CanInterface {
+    type Endpoint = CanEndpoint;
+}
+
+impl CanInterface {
     pub(super) fn upsert_fanout(&mut self, route: ClusterCanRoute) {
         let endpoint = CanEndpoint::new(route.source_bus);
         let key = (route.source_node, endpoint);

@@ -134,22 +134,7 @@ impl InterfaceImplementation for SpiInterface {
 }
 
 impl InterfaceCaller for SpiInterface {
-    fn reset(&mut self) { self.reset(); }
     fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
-        self.append_algorithm_specs(specs);
-    }
-}
-
-impl InterfaceDataflow<SpiTransaction> for SpiInterface {
-    type Endpoint = SpiEndpoint;
-}
-
-impl SpiInterface {
-    pub(super) fn reset(&mut self) {
-        self.reset_interface();
-    }
-
-    pub(super) fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
         for (index, group) in self.fanouts.iter().enumerate() {
             specs.push(DataflowAlgorithm::source(
                 group.source_node,
@@ -158,8 +143,14 @@ impl SpiInterface {
                 Arc::new(SpiFanoutAlgorithm { group_index: index }),
             ));
         }
-    }
+}
+}
 
+impl InterfaceDataflow<SpiTransaction> for SpiInterface {
+    type Endpoint = SpiEndpoint;
+}
+
+impl SpiInterface {
     pub(super) fn upsert_fanout(&mut self, route: ClusterSpiRoute) {
         let endpoint = SpiEndpoint::from_device(route.device);
         let key = (route.source_node, endpoint);

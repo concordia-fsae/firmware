@@ -10,8 +10,11 @@ pub(super) trait InterfaceImplementation {
     fn reset_interface(&mut self);
 }
 
-pub(super) trait InterfaceCaller {
-    fn reset(&mut self);
+pub(super) trait InterfaceCaller: InterfaceImplementation {
+    fn reset(&mut self) {
+        self.reset_interface();
+    }
+
     fn append_algorithm_specs(
         &self,
         specs: &mut Vec<super::dataflow::DataflowAlgorithm>,

@@ -2,7 +2,7 @@ use super::can::{CanEndpoint, CanInterface};
 pub(super) use super::can::{CanEvent, CanPacket, CanSignalComparison};
 pub(super) use super::can::ClusterCanRoute;
 use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey};
-use super::interfaces::InterfaceDataflow;
+use super::interfaces::{InterfaceCaller, InterfaceDataflow};
 use super::scalar::{ScalarEndpoint, ScalarInterface, ScalarRouteResult};
 pub(super) use super::scalar::ScalarEvent;
 pub(super) use super::scalar::{ClusterScalarRoute, ClusterScalarSink};

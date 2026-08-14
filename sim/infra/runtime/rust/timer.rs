@@ -207,10 +207,40 @@ impl InterfaceImplementation for TimerInterface {
 }
 
 impl InterfaceCaller for TimerInterface {
-    fn reset(&mut self) { self.reset(); }
     fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
-        self.append_algorithm_specs(specs);
-    }
+        for (index, group) in self.fanouts.iter().enumerate() {
+            specs.push(DataflowAlgorithm::source(
+                group.source_node,
+                (group.source_node, 2, index),
+                vec![<Self as InterfaceDataflow<TimerChannelEvent>>::edge(
+                    group.source_node,
+                    TimerEndpoint::new(group.interface, group.port, group.channel),
+                )],
+                Arc::new(TimerFanoutAlgorithm { group_index: index }),
+            ));
+        }
+        for (index, source) in self.scaled_scalar_sources.iter().enumerate() {
+            let (node, interface, port, channel) = source.timer_input_key();
+            let mut inputs = vec![RuntimeInterfaces::timer_edge(
+                node, interface, port, channel,
+            )];
+            if source.scale_route_id != 0 {
+                inputs.push(RuntimeInterfaces::scalar_edge(
+                    source.node,
+                    source.scale_route_id,
+                ));
+            }
+            specs.push(DataflowAlgorithm::transform(
+                source.node,
+                (source.node, 6, index),
+                inputs,
+                vec![RuntimeInterfaces::scalar_edge(source.node, source.route_id)],
+                Arc::new(TimerScaledScalarAlgorithm {
+                    source_index: index,
+                }),
+            ));
+        }
+}
 }
 
 impl InterfaceDataflow<TimerChannelEvent> for TimerInterface {
@@ -245,45 +275,6 @@ impl InterfaceEndpoint for TimerEndpoint {
 }
 
 impl TimerInterface {
-    pub(super) fn reset(&mut self) {
-        self.reset_interface();
-    }
-
-    pub(super) fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
-        for (index, group) in self.fanouts.iter().enumerate() {
-            specs.push(DataflowAlgorithm::source(
-                group.source_node,
-                (group.source_node, 2, index),
-                vec![<Self as InterfaceDataflow<TimerChannelEvent>>::edge(
-                    group.source_node,
-                    TimerEndpoint::new(group.interface, group.port, group.channel),
-                )],
-                Arc::new(TimerFanoutAlgorithm { group_index: index }),
-            ));
-        }
-        for (index, source) in self.scaled_scalar_sources.iter().enumerate() {
-            let (node, interface, port, channel) = source.timer_input_key();
-            let mut inputs = vec![RuntimeInterfaces::timer_edge(
-                node, interface, port, channel,
-            )];
-            if source.scale_route_id != 0 {
-                inputs.push(RuntimeInterfaces::scalar_edge(
-                    source.node,
-                    source.scale_route_id,
-                ));
-            }
-            specs.push(DataflowAlgorithm::transform(
-                source.node,
-                (source.node, 6, index),
-                inputs,
-                vec![RuntimeInterfaces::scalar_edge(source.node, source.route_id)],
-                Arc::new(TimerScaledScalarAlgorithm {
-                    source_index: index,
-                }),
-            ));
-        }
-    }
-
     pub(super) fn reset_node_models(&mut self, node: u32) {
         for source in self
             .scaled_scalar_sources
