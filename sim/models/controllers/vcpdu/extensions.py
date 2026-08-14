@@ -68,7 +68,6 @@ class VcpduModelExtensions:
         unit: str = "ms",
         step: int | float = 1,
         step_unit: str | None = None,
-        fast_forward: bool = False,
         message: str | None = None,
     ) -> int:
         return self.can.run_until_signal_eq(
@@ -80,7 +79,6 @@ class VcpduModelExtensions:
             unit=unit,
             step=step,
             step_unit=step_unit,
-            fast_forward=fast_forward,
             message_on_timeout=message,
         )
 

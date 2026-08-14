@@ -10,6 +10,7 @@ from sim.infra.rig import (
     SimpleComponent,
     SimpleNodeRig,
 )
+from sim.infra.rig.runtime import _RustClusterRuntime
 
 
 class FakeNode(ModelRig):
@@ -103,6 +104,25 @@ class SharedObjectBackedFakeNode(ModelRig):
     def __init__(self, library_path) -> None:
         super().__init__()
         self.library_path = library_path
+
+
+def test_dataflow_graph_rejects_cyclic_algorithms_from_python_abi():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("node", FakeNode())
+    assert runtime.add_scalar_transform_algorithm(
+        owner_node="node",
+        sort_index=0,
+        input_route_id=2,
+        output_route_id=1,
+    )
+    assert runtime.add_scalar_transform_algorithm(
+        owner_node="node",
+        sort_index=1,
+        input_route_id=1,
+        output_route_id=2,
+    )
+
+    assert not runtime.compile_dataflow_graph()
 
 
 def test_custom_datapath_routes_between_cluster_nodes():
@@ -253,23 +273,23 @@ def test_can_node_connections_use_generated_common_bus_names_only():
     ] == [ClusterCanComms.path("nose")]
 
 
-def test_component_scheduler_runs_due_periods_when_cluster_step_is_larger():
+def test_component_scheduler_runs_once_when_due_with_larger_cluster_step():
     controller = FakeNode()
     component = ScheduledComponent()
 
     cluster = ClusterRig(controller=controller, component=component)
     cluster.run_for(1, step=1)
 
-    assert component.scheduled_times_ns == [250_000, 500_000, 750_000, 1_000_000]
+    assert component.scheduled_times_ns == [1_000_000]
     assert cluster.elapsed_ns == 1_000_000
 
 
-def test_component_scheduler_runs_all_due_periods_when_used_standalone():
+def test_component_scheduler_runs_once_when_due_standalone():
     component = ScheduledComponent()
 
     component.run_for(1)
 
-    assert component.scheduled_times_ns == [250_000, 500_000, 750_000, 1_000_000]
+    assert component.scheduled_times_ns == [1_000_000]
     assert component.elapsed_ns == 1_000_000
 
 
@@ -286,10 +306,7 @@ def test_periodic_datapath_producer_routes_model_inputs():
     cluster = ClusterRig(producer=producer, sink=sink)
     cluster.run_for(250, unit="us", step=250)
 
-    assert sink.received_payloads == [
-        {"timestamp_ns": 100_000},
-        {"timestamp_ns": 200_000},
-    ]
+    assert sink.received_payloads == [{"timestamp_ns": 250_000}]
 
 
 def test_simple_node_routes_component_ingress_to_explicit_egress_datapath():

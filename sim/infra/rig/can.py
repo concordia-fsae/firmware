@@ -351,7 +351,6 @@ class CanInterface:
         step: int | float = 1,
         step_unit: str | None = None,
         tolerance: float = 0.0,
-        fast_forward: bool = False,
         message_on_timeout: str | None = None,
     ) -> int:
         descriptor = self._tx_message_descriptor(message, bus=bus)
@@ -376,10 +375,9 @@ class CanInterface:
             tolerance=float(tolerance),
             timeout_ns=timeout_ns,
             step_ns=step_ns,
-            fast_forward=fast_forward,
             route=cluster.comm.has_python_routes(),
         )
-        cluster._sync_elapsed_from_runtime()
+        cluster._sync_elapsed_from_runtime(nodes=False)
         if elapsed_ns is None:
             detail = "" if message_on_timeout is None else f": {message_on_timeout}"
             raise RunUntilTimeout(
@@ -481,7 +479,6 @@ class CanInterface:
         step: int | float = 1,
         step_unit: str | None = None,
         tolerance: float = 0.0,
-        fast_forward: bool = False,
         message_on_timeout: str | None = None,
     ) -> int:
         descriptor = self._tx_message_descriptor(message, bus=bus)
@@ -507,10 +504,9 @@ class CanInterface:
             comparison=int(comparison),
             timeout_ns=timeout_ns,
             step_ns=step_ns,
-            fast_forward=fast_forward,
             route=cluster.comm.has_python_routes(),
         )
-        cluster._sync_elapsed_from_runtime()
+        cluster._sync_elapsed_from_runtime(nodes=False)
         if elapsed_ns is None:
             detail = "" if message_on_timeout is None else f": {message_on_timeout}"
             raise RunUntilTimeout(
@@ -532,7 +528,6 @@ class CanInterface:
         step: int | float = 1,
         step_unit: str | None = None,
         tolerance: float = 0.0,
-        fast_forward: bool = False,
         message_on_timeout: str | None = None,
     ) -> int:
         cluster = self._model._cluster_rig
@@ -566,10 +561,9 @@ class CanInterface:
             comparison_count=len(comparison_array),
             timeout_ns=timeout_ns,
             step_ns=step_ns,
-            fast_forward=fast_forward,
             route=cluster.comm.has_python_routes(),
         )
-        cluster._sync_elapsed_from_runtime()
+        cluster._sync_elapsed_from_runtime(nodes=False)
         if elapsed_ns is None:
             detail = "" if message_on_timeout is None else f": {message_on_timeout}"
             raise RunUntilTimeout(

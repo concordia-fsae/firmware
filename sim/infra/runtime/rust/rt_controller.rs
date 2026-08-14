@@ -139,31 +139,6 @@ impl Scheduler for RTController {
     }
 
     unsafe fn run_for_ns(&mut self, elapsed_ns: u64) {
-        let mut remaining_ns = elapsed_ns;
-
-        while remaining_ns > 0 {
-            let step_ns = self.next_scheduler_step_ns(remaining_ns);
-            unsafe { super::ffi::rig_runtime_advance_time_ns(step_ns) };
-            remaining_ns -= step_ns;
-
-            for index in 0..self.active_periodic_task_count() {
-                let task = self.callbacks.periodic_tasks[index];
-                if task.period_ns == 0 {
-                    continue;
-                }
-                self.task_remainders_ns[index] += step_ns;
-
-                while self.task_remainders_ns[index] >= task.period_ns {
-                    unsafe { (task.task)() };
-                    self.task_remainders_ns[index] -= task.period_ns;
-                }
-            }
-        }
-    }
-}
-
-impl RTController {
-    pub unsafe fn fast_forward_for_ns(&mut self, elapsed_ns: u64) {
         if elapsed_ns == 0 {
             return;
         }
@@ -183,28 +158,15 @@ impl RTController {
             }
         }
     }
+}
 
+impl RTController {
     fn active_periodic_tasks(&self) -> &[PeriodicTask] {
         &self.callbacks.periodic_tasks[..self.active_periodic_task_count()]
     }
 
     fn active_periodic_task_count(&self) -> usize {
         self.callbacks.periodic_tasks.len().min(MAX_PERIODIC_TASKS)
-    }
-
-    pub fn next_scheduler_step_ns(&self, max_step_ns: u64) -> u64 {
-        let mut next_ns = max_step_ns;
-        for (index, task) in self.active_periodic_tasks().iter().enumerate() {
-            if task.period_ns == 0 {
-                continue;
-            }
-            let remainder = self.task_remainders_ns[index] % task.period_ns;
-            let until_due = task.period_ns - remainder;
-            if until_due < next_ns {
-                next_ns = until_due;
-            }
-        }
-        next_ns
     }
 }
 

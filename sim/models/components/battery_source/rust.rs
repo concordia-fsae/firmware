@@ -47,6 +47,24 @@ impl BatterySourceModel {
         self.node == node && self.voltage_route_id == voltage_route_id
     }
 
+    pub fn config_equals(
+        &self,
+        node: u32,
+        voltage_route_id: u32,
+        voltage: f32,
+        internal_resistance_ohms: f32,
+        capacity_amp_hours: f32,
+    ) -> bool {
+        self.config_matches(node, voltage_route_id)
+            && self.open_circuit_voltage == voltage
+            && self.internal_resistance_ohms == internal_resistance_ohms
+            && self.capacity_amp_hours == capacity_amp_hours
+    }
+
+    pub fn has_pending_voltage(&self) -> bool {
+        self.pending_voltage
+    }
+
     pub fn take_voltage_event(&mut self, elapsed_ns: u64) -> Option<ScalarEvent> {
         if !self.pending_voltage {
             return None;

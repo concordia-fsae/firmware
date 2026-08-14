@@ -78,14 +78,6 @@ impl<Target: NodeTarget> NodeModel<Target> {
         unsafe { self.controller.run_for_ns(elapsed_ns) };
     }
 
-    pub unsafe fn fast_forward_for_ns(&mut self, elapsed_ns: u64) {
-        unsafe { self.controller.fast_forward_for_ns(elapsed_ns) };
-    }
-
-    pub fn next_scheduler_step_ns(&self, max_step_ns: u64) -> u64 {
-        self.controller.next_scheduler_step_ns(max_step_ns)
-    }
-
     pub fn controller(&mut self) -> &mut RTController {
         &mut self.controller
     }
@@ -138,18 +130,6 @@ macro_rules! rig_model_abi {
             unsafe {
                 $model.lock().unwrap().run_for_ns(elapsed_ns);
             }
-        }
-
-        #[unsafe(no_mangle)]
-        pub extern "C" fn rig_model_fast_forward_for(elapsed_ns: u64) {
-            unsafe {
-                $model.lock().unwrap().fast_forward_for_ns(elapsed_ns);
-            }
-        }
-
-        #[unsafe(no_mangle)]
-        pub extern "C" fn rig_model_next_scheduler_step(max_step_ns: u64) -> u64 {
-            $model.lock().unwrap().next_scheduler_step_ns(max_step_ns)
         }
 
         #[unsafe(no_mangle)]

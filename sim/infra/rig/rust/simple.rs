@@ -28,6 +28,18 @@ impl PeriodicCanSource {
         self.bus
     }
 
+    pub fn period_ns(&self) -> u64 {
+        self.period_ns
+    }
+
+    pub fn due_at_ns(&self) -> u64 {
+        self.last_emit_ns.saturating_add(self.period_ns)
+    }
+
+    pub fn has_pending_event(&self, elapsed_ns: u64) -> bool {
+        elapsed_ns.saturating_sub(self.last_emit_ns) >= self.period_ns
+    }
+
     pub fn update_packet(&mut self, packet: CanPacket) {
         self.packet = packet;
     }

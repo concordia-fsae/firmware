@@ -96,16 +96,9 @@ class NodeRig(ModelRig):
         self.elapsed_ns += duration_ns
         self._run_for(ctypes.c_uint64(duration_ns))
 
-    def fast_forward_for(self, duration: int | float, *, unit: str = "ms") -> None:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        self.elapsed_ns += duration_ns
-        self._fast_forward_for(ctypes.c_uint64(duration_ns))
-
     def scheduler_callbacks(self) -> RustSchedulerCallbacks:
         return RustSchedulerCallbacks(
             run_for=self._function_address(self._run_for),
-            fast_forward_for=self._function_address(self._fast_forward_for),
-            next_step=self._function_address(self._next_scheduler_step),
             reset=self._function_address(self._new),
         )
 
@@ -723,14 +716,6 @@ class NodeRig(ModelRig):
     def _configure_model_abi(self) -> None:
         self._new = self._bind_symbol("rig_model_new")
         self._run_for = self._bind_symbol("rig_model_run_for", [ctypes.c_uint64])
-        self._fast_forward_for = self._bind_symbol(
-            "rig_model_fast_forward_for", [ctypes.c_uint64]
-        )
-        self._next_scheduler_step = self._bind_symbol(
-            "rig_model_next_scheduler_step",
-            [ctypes.c_uint64],
-            ctypes.c_uint64,
-        )
         self._datapath_count = self._bind_symbol(
             "rig_model_datapath_count",
             restype=ctypes.c_uint32,

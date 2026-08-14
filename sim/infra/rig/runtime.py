@@ -51,11 +51,23 @@ class _RustClusterRuntime:
         if bind_symbol is None:
             bind_symbol = getattr(host, "_bind_symbol")
         self._reset = bind_symbol("rig_cluster_reset")
+        self._add_scalar_transform_algorithm = bind_symbol(
+            "rig_cluster_add_scalar_transform_algorithm",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+            ],
+            ctypes.c_bool,
+        )
+        self._compile_dataflow_graph = bind_symbol(
+            "rig_cluster_compile_dataflow_graph",
+            restype=ctypes.c_bool,
+        )
         self._add_node = bind_symbol(
             "rig_cluster_add_node",
             [
-                ctypes.c_size_t,
-                ctypes.c_size_t,
                 ctypes.c_size_t,
                 ctypes.c_size_t,
                 ctypes.c_bool,
@@ -84,7 +96,7 @@ class _RustClusterRuntime:
         )
         self._run_for = bind_symbol(
             "rig_cluster_run_for",
-            [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_bool, ctypes.c_size_t],
+            [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_size_t],
         )
         self._add_can_route = bind_symbol(
             "rig_cluster_add_can_route",
@@ -125,7 +137,6 @@ class _RustClusterRuntime:
             [
                 ctypes.c_uint64,
                 ctypes.c_uint64,
-                ctypes.c_bool,
                 ctypes.c_size_t,
                 ctypes.c_uint32,
                 ctypes.c_uint8,
@@ -141,7 +152,6 @@ class _RustClusterRuntime:
             [
                 ctypes.c_uint64,
                 ctypes.c_uint64,
-                ctypes.c_bool,
                 ctypes.c_size_t,
                 ctypes.c_uint32,
                 ctypes.c_uint8,
@@ -157,7 +167,6 @@ class _RustClusterRuntime:
             [
                 ctypes.c_uint64,
                 ctypes.c_uint64,
-                ctypes.c_bool,
                 ctypes.c_size_t,
                 ctypes.c_uint32,
                 ctypes.c_uint8,
@@ -174,7 +183,6 @@ class _RustClusterRuntime:
             [
                 ctypes.c_uint64,
                 ctypes.c_uint64,
-                ctypes.c_bool,
                 ctypes.c_size_t,
                 ctypes.c_uint32,
                 ctypes.c_void_p,
@@ -289,6 +297,7 @@ class _RustClusterRuntime:
                 ctypes.c_uint32,
                 ctypes.c_uint32,
                 ctypes.c_uint32,
+                ctypes.c_uint32,
             ],
             ctypes.c_bool,
         )
@@ -378,6 +387,30 @@ class _RustClusterRuntime:
         self._reset()
         self._node_indices.clear()
 
+    def add_scalar_transform_algorithm(
+        self,
+        *,
+        owner_node: str,
+        sort_index: int,
+        input_route_id: int,
+        output_route_id: int,
+    ) -> bool:
+        try:
+            node_index = self._node_indices[owner_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_scalar_transform_algorithm(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint32(sort_index),
+                ctypes.c_uint32(input_route_id),
+                ctypes.c_uint32(output_route_id),
+            )
+        )
+
+    def compile_dataflow_graph(self) -> bool:
+        return bool(self._compile_dataflow_graph())
+
     def add_node(self, name: str, node, *, online: bool = True) -> None:
         if getattr(node, "rust_runtime_model", lambda: False)():
             index = int(self._add_rust_runtime_model_node(ctypes.c_bool(online)))
@@ -400,8 +433,6 @@ class _RustClusterRuntime:
             index = int(
                 self._add_node(
                     ctypes.c_size_t(scheduler.run_for),
-                    ctypes.c_size_t(scheduler.fast_forward_for),
-                    ctypes.c_size_t(scheduler.next_step),
                     ctypes.c_size_t(scheduler.reset),
                     ctypes.c_bool(online),
                 )
@@ -590,8 +621,9 @@ class _RustClusterRuntime:
         self,
         *,
         source_node: str,
-        route_id: int,
+        source_route_id: int,
         sink_node: str,
+        sink_route_id: int,
     ) -> bool:
         try:
             source_index = self._node_indices[source_node]
@@ -601,8 +633,9 @@ class _RustClusterRuntime:
         return bool(
             self._add_dc_load_voltage_route(
                 ctypes.c_uint32(source_index),
-                ctypes.c_uint32(route_id),
+                ctypes.c_uint32(source_route_id),
                 ctypes.c_uint32(sink_index),
+                ctypes.c_uint32(sink_route_id),
             )
         )
 
@@ -806,7 +839,6 @@ class _RustClusterRuntime:
         duration_ns: int,
         step_ns: int,
         *,
-        fast_forward: bool = False,
         route: bool = True,
     ) -> None:
         route_callback = (
@@ -817,7 +849,6 @@ class _RustClusterRuntime:
         self._run_for(
             ctypes.c_uint64(duration_ns),
             ctypes.c_uint64(step_ns),
-            ctypes.c_bool(fast_forward),
             ctypes.c_size_t(route_callback or 0),
         )
 
@@ -906,7 +937,6 @@ class _RustClusterRuntime:
         tolerance: float,
         timeout_ns: int,
         step_ns: int,
-        fast_forward: bool = False,
         route: bool = True,
     ) -> int | None:
         index = self._node_indices.get(source_node)
@@ -921,7 +951,6 @@ class _RustClusterRuntime:
             self._run_until_can_signal_eq(
                 ctypes.c_uint64(timeout_ns),
                 ctypes.c_uint64(step_ns),
-                ctypes.c_bool(fast_forward),
                 ctypes.c_size_t(route_callback or 0),
                 ctypes.c_uint32(index),
                 ctypes.c_uint8(bus),
@@ -944,7 +973,6 @@ class _RustClusterRuntime:
         tolerance: float,
         timeout_ns: int,
         step_ns: int,
-        fast_forward: bool = False,
         route: bool = True,
     ) -> int | None:
         index = self._node_indices.get(source_node)
@@ -959,7 +987,6 @@ class _RustClusterRuntime:
             self._run_until_can_signal_index_eq(
                 ctypes.c_uint64(timeout_ns),
                 ctypes.c_uint64(step_ns),
-                ctypes.c_bool(fast_forward),
                 ctypes.c_size_t(route_callback or 0),
                 ctypes.c_uint32(index),
                 ctypes.c_uint8(bus),
@@ -983,7 +1010,6 @@ class _RustClusterRuntime:
         comparison: int,
         timeout_ns: int,
         step_ns: int,
-        fast_forward: bool = False,
         route: bool = True,
     ) -> int | None:
         index = self._node_indices.get(source_node)
@@ -998,7 +1024,6 @@ class _RustClusterRuntime:
             self._run_until_can_signal_index_cmp(
                 ctypes.c_uint64(timeout_ns),
                 ctypes.c_uint64(step_ns),
-                ctypes.c_bool(fast_forward),
                 ctypes.c_size_t(route_callback or 0),
                 ctypes.c_uint32(index),
                 ctypes.c_uint8(bus),
@@ -1019,7 +1044,6 @@ class _RustClusterRuntime:
         comparison_count: int,
         timeout_ns: int,
         step_ns: int,
-        fast_forward: bool = False,
         route: bool = True,
     ) -> int | None:
         index = self._node_indices.get(source_node)
@@ -1034,7 +1058,6 @@ class _RustClusterRuntime:
             self._run_until_can_signal_comparisons(
                 ctypes.c_uint64(timeout_ns),
                 ctypes.c_uint64(step_ns),
-                ctypes.c_bool(fast_forward),
                 ctypes.c_size_t(route_callback or 0),
                 ctypes.c_uint32(index),
                 ctypes.cast(comparisons, ctypes.c_void_p),
