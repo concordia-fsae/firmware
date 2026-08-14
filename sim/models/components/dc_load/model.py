@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import ctypes
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -218,22 +219,29 @@ class DcLoadModel(ComponentRig):
     def _register_native_dc_load(self) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
             return
-        if not self._cluster_rig._rust_runtime.add_dc_load(
-            node=self._cluster_node_name,
-            current_route_id=datapath_route_id(
-                datapath_key(self.current_output_channel)
-            ),
-            voltage_route_id=datapath_route_id(
-                datapath_key(self.voltage_input_channel)
-            ),
-            resistance_ohms=_native_component_value(self.load_spec.resistance_ohms),
-            inductance_henrys=_native_component_value(self.load_spec.inductance_henrys),
-            capacitance_farads=_native_component_value(
-                self.load_spec.capacitance_farads
-            ),
-            scheduler_period_ns=0
-            if self._scheduler_period_ns is None
-            else self._scheduler_period_ns,
+        register = self._bind_native_model_symbol(
+            "rig_model_register_dc_load",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_uint64,
+            ],
+        )
+        node_index = self._cluster_rig._rust_runtime.node_index(
+            self._cluster_node_name
+        )
+        if node_index is None or not register(
+            ctypes.c_uint32(node_index),
+            ctypes.c_uint32(datapath_route_id(datapath_key(self.voltage_input_channel))),
+            ctypes.c_uint32(datapath_route_id(datapath_key(self.current_output_channel))),
+            ctypes.c_float(_native_component_value(self.load_spec.resistance_ohms)),
+            ctypes.c_float(_native_component_value(self.load_spec.inductance_henrys)),
+            ctypes.c_float(_native_component_value(self.load_spec.capacitance_farads)),
+            ctypes.c_uint64(0 if self._scheduler_period_ns is None else self._scheduler_period_ns),
         ):
             raise RuntimeError("failed to register native DC load")
 

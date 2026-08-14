@@ -281,20 +281,22 @@ fn register_load(runtime: &mut ClusterRuntime, load: DcLoadModel) -> bool {
         }
         loads[index] = load;
         drop(loads);
-        return algorithms::replace_algorithm(
+        let registered = algorithms::replace_algorithm(
             runtime,
             load_algorithm(index, load, runtime.elapsed_ns),
         );
+        return registered;
     }
 
     loads.push(load);
     let context = loads.len() - 1;
     drop(loads);
 
-    algorithms::register_algorithm(
+    let registered = algorithms::register_algorithm(
         runtime,
         load_algorithm(context, load, runtime.elapsed_ns),
-    )
+    );
+    registered
 }
 
 pub(super) fn add_dc_load(
@@ -323,7 +325,7 @@ pub(super) fn add_dc_load(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_add_dc_load(
+pub extern "C" fn rig_model_register_dc_load(
     node: u32,
     voltage_route_id: u32,
     current_route_id: u32,

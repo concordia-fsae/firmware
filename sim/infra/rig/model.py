@@ -232,6 +232,22 @@ class ComponentRig(ModelRig):
             )
         self._owner = owner
 
+    def _bind_native_model_symbol(
+        self,
+        name: str,
+        argtypes: list[object],
+        restype: object = ctypes.c_bool,
+    ):
+        binder = None
+        if self._cluster_rig is not None and self._cluster_rig._rust_runtime is not None:
+            binder = self._cluster_rig._rust_runtime.bind_symbol
+        if binder is None:
+            owner = getattr(self, "_owner", None)
+            binder = getattr(owner, "_bind_symbol", None)
+        if binder is None:
+            raise RuntimeError("native model symbols require a Rust-backed owner")
+        return binder(name, argtypes, restype)
+
 
 class PeriodicDataPathProducer(ComponentRig):
     """Scheduled component that emits model-input payloads on a datapath."""
