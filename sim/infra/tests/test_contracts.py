@@ -11,6 +11,7 @@ from enum import IntEnum
 from sim.infra.rig.can import (
     CanEnumNamespace,
     CanEvent,
+    CanInterface,
     CanMessageDescriptor,
     CanPacket,
     CanSignalDescriptor,
@@ -87,6 +88,25 @@ def test_can_packet_and_event_round_trip_payload_and_timestamp():
     assert event.packet.payload == b"abc"
     with pytest.raises(ValueError):
         CanPacket.from_payload(1, bytes(9))
+
+
+def test_can_contract_exposes_first_class_messages_signals_and_enums():
+    signal = CanSignalDescriptor(
+        0, 0, "veh", "status", 0x123, "state", None, "Enum", "State"
+    )
+    message = CanMessageDescriptor(0, "veh", "status", 0x123, 2, (signal,))
+
+    class Model:
+        _can_messages = (message,)
+        _can_tx_messages = _can_messages
+        _can_signals = (signal,)
+        _can_tx_signals = _can_signals
+        _can_enums = CanEnumNamespace({"State": IntEnum("State", {"ON": 1})})
+
+    can = CanInterface(Model())
+    assert message.id == 0x123
+    assert message.signal("state") == signal
+    assert can.enums.State.ON == 1
 
 
 def test_time_conversion_and_run_until_cover_success_and_timeout():

@@ -234,10 +234,12 @@ class VcpduModelExtensions:
                 if pending_events:
                     return len(pending_events)
 
+                from . import HsdState, VehicleState
+
                 vehicle_state = node.latest_vehicle_state()
                 if (
                     vehicle_state is None
-                    or vehicle_state == node.can.enums.VehicleState.INIT
+                    or vehicle_state == VehicleState.INIT
                 ):
                     return 0
 
@@ -247,7 +249,7 @@ class VcpduModelExtensions:
                 if state is None:
                     return 0
 
-                enabled = state == node.can.enums.HsdState.ON
+                enabled = state == HsdState.ON
                 if latest_enabled is None or enabled != latest_enabled:
                     latest_enabled = enabled
                     pending_events.append(PowerControlEvent(enabled=enabled))

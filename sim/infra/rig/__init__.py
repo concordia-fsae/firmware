@@ -7,6 +7,7 @@ from .catalog import (
 )
 from .artifacts import (
     buck_output,
+    load_generated_enums,
     load_generated_module,
     load_shared_library,
     repo_root,
@@ -114,6 +115,7 @@ __all__ = [
     "PeriodicDataPathProducer",
     "PeriodicCanMessage",
     "buck_output",
+    "load_generated_enums",
     "duration_to_ns",
     "extend_model_class",
     "RoutedCanEvent",

@@ -34,6 +34,7 @@ rig_embedded_controller_model(
         "YamcanShared",
     ],
     enum_headers = [
+        "CANTypes_generated.h",
         "HW_gpio_componentSpecific.h",
         "HW_tim.h",
         "drv_inputAD_componentSpecific.h",

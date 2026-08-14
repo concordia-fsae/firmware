@@ -2,7 +2,10 @@ import pytest
 
 from sim.models.controllers.vcfront import (
     AnalogInput,
+    AppsState,
+    BppcState,
     Fault,
+    VehicleState,
 )
 from sim.models.controllers.vcfront.fixtures import vcfront_cluster
 from sim.models.controllers.vcpdu import VcpduSimpleModel
@@ -94,21 +97,19 @@ def test_pedal_position_sensors_report_on_can(
 
 
 @pytest.mark.parametrize(
-    "vehicle_state",
+    "state",
     [
-        pytest.param("INIT", id="init"),
-        pytest.param("ON_GLV", id="on-glv"),
-        pytest.param("ON_HV", id="on-hv"),
-        pytest.param("SLEEP", id="sleep"),
+        pytest.param(VehicleState.INIT, id="init"),
+        pytest.param(VehicleState.ON_GLV, id="on-glv"),
+        pytest.param(VehicleState.ON_HV, id="on-hv"),
+        pytest.param(VehicleState.SLEEP, id="sleep"),
     ],
 )
 def test_torque_request_stays_zero_when_accelerator_is_pressed_outside_ts_run(
     vcfront_cluster,
-    vehicle_state,
+    state,
 ):
     vcfront = vcfront_cluster.vcfront
-    VehicleState = vcfront.can.enums.VehicleState
-    state = getattr(VehicleState, vehicle_state)
     vcpdu = VcpduSimpleModel(vcfront.can)
     vehicle_state_periodic = vcpdu.periodic_vehicle_state(state, period=20)
     vcfront_cluster.add_component(vcpdu)
@@ -131,7 +132,6 @@ def test_torque_request_stays_zero_when_accelerator_is_pressed_outside_ts_run(
 
 def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
     vcfront = vcfront_cluster.vcfront
-    VehicleState = vcfront.can.enums.VehicleState
     vcpdu = VcpduSimpleModel(vcfront.can)
     vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
     vcfront_cluster.add_component(vcpdu)
@@ -173,7 +173,6 @@ def test_apps_disagreement_reports_error_and_recovers(
     vcfront_cluster, apps1_position, apps2_position
 ):
     vcfront = vcfront_cluster.vcfront
-    AppsState = vcfront.can.enums.AppsState
 
     vcfront.set_accelerator_position(50)
     vcfront.set_brake_position(0)
@@ -204,8 +203,6 @@ def test_apps_disagreement_reports_error_and_recovers(
 
 def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     vcfront = vcfront_cluster.vcfront
-    AppsState = vcfront.can.enums.AppsState
-    BppcState = vcfront.can.enums.BppcState
 
     vcfront.set_accelerator_position(0)
     vcfront.set_brake_position(0)

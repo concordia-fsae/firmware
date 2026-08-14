@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ctypes
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 
 from .time import RunUntilTimeout, duration_to_ns
@@ -79,6 +79,15 @@ class CanMessageDescriptor:
     name: str
     id: int
     len: int
+    signals: tuple[CanSignalDescriptor, ...] = field(
+        default_factory=tuple, compare=False, repr=False
+    )
+
+    def signal(self, name: str) -> CanSignalDescriptor:
+        for signal in self.signals:
+            if signal.signal_name == name:
+                return signal
+        raise KeyError(f"CAN signal {name!r} is not part of message {self.name!r}")
 
 
 @dataclass(frozen=True)
@@ -231,7 +240,9 @@ class CanInterface:
         bus: int | str | CanBusDescriptor | None = None,
         tx: bool = False,
     ) -> CanMessageDescriptor:
-        return self._model._can_message_descriptor(name, bus=bus, tx=tx)
+        return self._with_signals(
+            self._model._can_message_descriptor(name, bus=bus, tx=tx)
+        )
 
     def tx_message(
         self,
@@ -239,7 +250,17 @@ class CanInterface:
         *,
         bus: int | str | CanBusDescriptor | None = None,
     ) -> CanMessageDescriptor:
-        return self._model._can_tx_message_descriptor(name, bus=bus)
+        return self._with_signals(self._model._can_tx_message_descriptor(name, bus=bus))
+
+    def _with_signals(self, message: CanMessageDescriptor) -> CanMessageDescriptor:
+        signals = tuple(
+            signal
+            for signal in (*self.rx_signals, *self.tx_signals)
+            if signal.bus == message.bus
+            and signal.message_id == message.id
+            and signal.message_name == message.name
+        )
+        return replace(message, signals=signals)
 
     def send(
         self,
@@ -619,7 +640,7 @@ class CanInterface:
         if isinstance(message, CanMessageDescriptor):
             if bus is not None and self._model._coerce_can_bus(bus) != message.bus:
                 raise ValueError(f"message {message.name!r} is not on bus {bus!r}")
-            return message
+            return self._with_signals(message)
         return self.tx_message(message, bus=bus)
 
 

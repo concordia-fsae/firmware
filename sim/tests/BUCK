@@ -106,6 +106,7 @@ rig_pytest(
     name = "vcpdu_cluster",
     test_file = "sim/tests/test_vcpdu.py",
     env = {
+        "BMSB_ENUMS_PY": "$(location {}:enums-py)".format(BMSB_MODEL),
         "VCPDU_ENUMS_PY": "$(location {}:enums-py)".format(VCPDU_MODEL),
         "VCPDU_MODEL_PY": "$(location {}:vcpdu-py)".format(VCPDU_MODEL),
         "VCPDU_SIM_LIB": "$(location {}:sil-so)".format(VCPDU_MODEL),
@@ -113,6 +114,7 @@ rig_pytest(
     rig_platform_variants_env(ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS),
     resources = [
+        "{}:enums-py".format(BMSB_MODEL),
         "{}:enums-py".format(VCPDU_MODEL),
         "{}:vcpdu-py".format(VCPDU_MODEL),
         "{}:sil-so".format(VCPDU_MODEL),

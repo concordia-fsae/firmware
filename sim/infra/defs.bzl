@@ -243,6 +243,7 @@ def rig_python_enums(
         deps: list[str] = [],
         headers: dict[str, str] = {},
         c_enums: list[str] = [],
+        c_enums_auto: bool = False,
         rust_sources: list[str] = [],
         rust_enums: list[str] = [],
         clang_flags: list[str] = [],
@@ -270,6 +271,7 @@ def rig_python_enums(
               "uv run --locked --project $PROJECT python $(location //sim/infra/rig:gen-python-enums) " +
               "--c-wrapper $WRAPPER " +
               " ".join(["--c-enum '{}'".format(item) for item in c_enums]) +
+              (" --c-enums-auto" if c_enums_auto else "") +
               " " +
               " ".join(["--rust-source $(location {})".format(item) for item in rust_sources]) +
               " " +
@@ -469,6 +471,7 @@ def rig_embedded_controller_model(
             ":model-c-support",
         ] + common_deps,
         c_enums = c_enums,
+        c_enums_auto = True,
         rust_sources = [_controller_codegen_artifact(component, "rust_faults_generated.rs")] if enum_rust_enums else [],
         rust_enums = enum_rust_enums,
         clang_flags = clang_flags,

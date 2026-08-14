@@ -13,6 +13,7 @@ RUST_ENUM_RE = re.compile(r"pub\s+enum\s+(\w+)\s*\{(?P<body>.*?)\n\}", re.DOTALL
 RUST_MEMBER_RE = re.compile(r"^\s*(\w+)(?:\s*=\s*(-?\d+))?,", re.MULTILINE)
 
 
+
 def camel_to_screaming(name: str) -> str:
     words = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     words = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", words)
@@ -121,6 +122,7 @@ def main() -> None:
     parser.add_argument("--c-enum", action="append", default=[])
     parser.add_argument("--rust-source", action="append", default=[])
     parser.add_argument("--rust-enum", action="append", default=[])
+    parser.add_argument("--c-enums-auto", action="store_true")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("clang_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
@@ -131,7 +133,6 @@ def main() -> None:
 
     c_enums = parse_c_enums(args.c_wrapper, clang_args)
     rust_sources = [Path(path).read_text() for path in args.rust_source]
-
     output = [
         "from __future__ import annotations",
         "",
@@ -148,6 +149,23 @@ def main() -> None:
             emit_enum(c_enums[c_enum], python_enum, strip_prefix, strip_suffix, case)
         )
         output.extend(["", ""])
+
+    if args.c_enums_auto:
+        for c_enum, members in c_enums.items():
+            if not (c_enum.startswith("CAN_") and c_enum.endswith("_E")):
+                continue
+            enum_name = c_enum.removeprefix("CAN_").removesuffix("_E")
+            enum_name = enum_name[:1].upper() + enum_name[1:]
+            output.extend(
+                emit_enum(
+                    members,
+                    enum_name,
+                    f"CAN_{enum_name.upper()}_",
+                    "",
+                    "upper",
+                )
+            )
+            output.extend(["", ""])
 
     for spec in args.rust_enum:
         rust_enum, python_enum, strip_prefix, strip_suffix, case = enum_spec(spec)

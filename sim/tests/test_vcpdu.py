@@ -9,10 +9,17 @@ from sim.infra.rig import DataPath
 from sim.models.components.dc_load import DcLoadModel
 from sim.models.controllers.vcpdu import (
     AnalogInput,
+    PrechargeContactorState,
+    SleepFollowerState,
+    ShutdownCircuitStatus,
     TimerChannel,
     TimerPort,
+    VehicleState,
     VcpduModel,
     Vn9008Channel,
+)
+from sim.models.controllers.bmsb import (
+    DigitalStatus,
 )
 from sim.models.controllers.vcpdu.fixtures import vcpdu_cluster
 
@@ -26,7 +33,6 @@ def dc_loads(cluster):
 
 
 def test_vcpdu_boots_and_cycles_to_glv_on(vcpdu_cluster):
-    VehicleState = vcpdu_cluster.vcpdu.can.enums.VehicleState
     observed = []
 
     _run_vcpdu_to_glv_on(vcpdu_cluster, observed)
@@ -66,8 +72,6 @@ def vcpdu_hv_on(vcpdu_cluster):
     vcpdu = vcpdu_cluster.vcpdu
     sources = _add_vcpdu_simple_sources(vcpdu_cluster, bmsb=True)
     assert sources.bmsb is not None
-    DigitalStatus = sources.bmsb.can.enums.DigitalStatus
-    VehicleState = vcpdu.can.enums.VehicleState
 
     tsms_status = sources.bmsb.periodic_io_status(
         period=10,
@@ -89,7 +93,6 @@ def vcpdu_hv_on(vcpdu_cluster):
 
 def test_vcpdu_enters_hv_on_when_tsms_closes(vcpdu_hv_on):
     vcpdu = vcpdu_hv_on.vcpdu
-    VehicleState = vcpdu.can.enums.VehicleState
 
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
@@ -98,8 +101,6 @@ def test_vcpdu_exits_hv_when_tsms_opens(vcpdu_hv_on):
     vcpdu_cluster = vcpdu_hv_on.cluster
     tsms_status = vcpdu_hv_on.tsms_status
     vcpdu = vcpdu_hv_on.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    VehicleState = vcpdu.can.enums.VehicleState
 
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
@@ -120,9 +121,6 @@ def vcpdu_ts_run_inputs(vcpdu_cluster):
     assert sources.bmsb is not None
     assert sources.sws is not None
     assert sources.vcfront is not None
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    PrechargeContactorState = vcpdu.can.enums.PrechargeContactorState
-    VehicleState = vcpdu.can.enums.VehicleState
 
     tsms_status = sources.bmsb.periodic_io_status(
         period=10,
@@ -177,8 +175,6 @@ def test_vcpdu_enters_ts_run_only_when_driver_requests_run_with_brake_applied(
 ):
     setup = vcpdu_ts_run_inputs
     vcpdu = setup.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    VehicleState = vcpdu.can.enums.VehicleState
 
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
@@ -206,8 +202,6 @@ def test_vcpdu_enters_ts_run_only_when_driver_requests_run_with_brake_applied(
 def test_vcpdu_exits_ts_run_when_tsms_opens(vcpdu_ts_run_inputs):
     setup = vcpdu_ts_run_inputs
     vcpdu = setup.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    VehicleState = vcpdu.can.enums.VehicleState
 
     setup.brake_position.set(VCFRONT_brakePosition=12)
     setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
@@ -230,9 +224,6 @@ def test_vcpdu_exits_ts_run_when_tsms_opens(vcpdu_ts_run_inputs):
 def test_vcpdu_enters_ts_run_only_after_contactors_close(vcpdu_ts_run_inputs):
     setup = vcpdu_ts_run_inputs
     vcpdu = setup.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    PrechargeContactorState = vcpdu.can.enums.PrechargeContactorState
-    VehicleState = vcpdu.can.enums.VehicleState
 
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
@@ -257,29 +248,29 @@ def test_vcpdu_enters_ts_run_only_after_contactors_close(vcpdu_ts_run_inputs):
 
 
 @pytest.mark.parametrize(
-    "contactor_state_name",
+    "contactor_state",
     [
-        pytest.param("SNA", id="sna"),
-        pytest.param("OPEN", id="open"),
-        pytest.param("PRECHARGE_CLOSED", id="precharge-closed"),
-        pytest.param("PRECHARGE_HVP_CLOSED", id="precharge-hvp-closed"),
+        pytest.param(PrechargeContactorState.SNA, id="sna"),
+        pytest.param(PrechargeContactorState.OPEN, id="open"),
+        pytest.param(PrechargeContactorState.PRECHARGE_CLOSED, id="precharge-closed"),
+        pytest.param(
+            PrechargeContactorState.PRECHARGE_HVP_CLOSED,
+            id="precharge-hvp-closed",
+        ),
     ],
 )
 def test_vcpdu_does_not_cycle_from_hv_on_to_ts_run_without_hvp_contactors_closed(
     vcpdu_ts_run_inputs,
-    contactor_state_name,
+    contactor_state,
 ):
     setup = vcpdu_ts_run_inputs
     vcpdu = setup.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    PrechargeContactorState = vcpdu.can.enums.PrechargeContactorState
-    VehicleState = vcpdu.can.enums.VehicleState
     observed = []
 
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
     setup.contactor_state.set(
-        BMSB_packContactorState=getattr(PrechargeContactorState, contactor_state_name),
+        BMSB_packContactorState=contactor_state,
     )
     setup.brake_position.set(VCFRONT_brakePosition=12)
     setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
@@ -305,8 +296,6 @@ def test_vcpdu_stays_in_ts_run_after_additional_driver_run_request(
 ):
     setup = vcpdu_ts_run_inputs
     vcpdu = setup.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
-    VehicleState = vcpdu.can.enums.VehicleState
 
     setup.brake_position.set(VCFRONT_brakePosition=12)
     setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
@@ -330,7 +319,6 @@ def test_vcpdu_stays_in_ts_run_after_additional_driver_run_request(
 
 
 def _run_vcpdu_to_glv_on(vcpdu_cluster, observed: list | None = None) -> None:
-    VehicleState = vcpdu_cluster.vcpdu.can.enums.VehicleState
     vcpdu = vcpdu_cluster.vcpdu
 
     vcpdu.run_until_vehicle_state(
@@ -352,26 +340,25 @@ def _run_vcpdu_to_glv_on(vcpdu_cluster, observed: list | None = None) -> None:
 
 
 @pytest.mark.parametrize(
-    ("controller", "wake_state_name"),
+    ("controller", "wake_state"),
     [
-        pytest.param("sws", "SNA", id="sws-sna"),
-        pytest.param("sws", "NOK_TO_SLEEP", id="sws-nok-to-sleep"),
-        pytest.param("sws", "ALARM", id="sws-alarm"),
-        pytest.param("vcfront", "SNA", id="vcfront-sna"),
-        pytest.param("vcfront", "NOK_TO_SLEEP", id="vcfront-nok-to-sleep"),
-        pytest.param("vcfront", "ALARM", id="vcfront-alarm"),
+        pytest.param("sws", SleepFollowerState.SNA, id="sws-sna"),
+        pytest.param("sws", SleepFollowerState.NOK_TO_SLEEP, id="sws-nok-to-sleep"),
+        pytest.param("sws", SleepFollowerState.ALARM, id="sws-alarm"),
+        pytest.param("vcfront", SleepFollowerState.SNA, id="vcfront-sna"),
+        pytest.param(
+            "vcfront", SleepFollowerState.NOK_TO_SLEEP, id="vcfront-nok-to-sleep"
+        ),
+        pytest.param("vcfront", SleepFollowerState.ALARM, id="vcfront-alarm"),
     ],
 )
 def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
     vcpdu_cluster,
     controller,
-    wake_state_name,
+    wake_state,
 ):
-    VehicleState = vcpdu_cluster.vcpdu.can.enums.VehicleState
-    SleepFollowerState = vcpdu_cluster.vcpdu.can.enums.SleepFollowerState
     vcpdu = vcpdu_cluster.vcpdu
     observed = []
-    wake_state = getattr(SleepFollowerState, wake_state_name)
     sources = _add_vcpdu_simple_sources(vcpdu_cluster, sws=True, vcfront=True)
     assert sources.sws is not None
     assert sources.vcfront is not None
@@ -442,7 +429,6 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
     hsd_channel,
 ):
     vcpdu = vcpdu_cluster.vcpdu
-    DigitalStatus = vcpdu.can.enums.DigitalStatus
     sources = _add_vcpdu_simple_sources(vcpdu_cluster, sws=True)
     assert sources.sws is not None
     driver_request = sources.sws.periodic_driver_request(
@@ -502,8 +488,6 @@ def test_bmsb_faults_sets_safety_fault(
     vcpdu = vcpdu_cluster.vcpdu
     sources = _add_vcpdu_simple_sources(vcpdu_cluster, bmsb=True)
     assert sources.bmsb is not None
-    ShutdownCircuitStatus = sources.bmsb.can.enums.ShutdownCircuitStatus
-    DigitalStatus = sources.bmsb.can.enums.DigitalStatus
     enabled_status = {
         True: DigitalStatus.ON,
         False: DigitalStatus.OFF,
