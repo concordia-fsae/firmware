@@ -6,7 +6,7 @@ from sim.infra.rig import (
 )
 
 from .extensions import BmsbModelExtensions
-from .simple import BmsbSimpleModel
+from .simple import BmsbDrivetrainSimpleModel, BmsbSimpleModel
 
 
 def _load_generated() -> None:
@@ -92,5 +92,6 @@ __all__ = [
     "PLATFORM_VARIANTS",
     "BMSB_CLUSTERS",
     "BmsbSimpleModel",
+    "BmsbDrivetrainSimpleModel",
     "BmsbModel",
 ]

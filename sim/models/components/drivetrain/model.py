@@ -79,6 +79,7 @@ class DrivetrainModel(ComponentRig):
         mechanical_torque_output_channel: DataPath,
         current_draw_output_channel: DataPath,
         drivetrain_spec: DrivetrainSpec,
+        bindings: tuple[ComponentDataPathBinding, ...] = (),
     ) -> ComponentSpec:
         return ComponentSpec(
             cls,
@@ -89,6 +90,7 @@ class DrivetrainModel(ComponentRig):
                 "current_draw_output_channel": current_draw_output_channel,
                 "drivetrain_spec": drivetrain_spec,
             },
+            bindings=bindings,
         )
 
     def __init__(
@@ -113,6 +115,10 @@ class DrivetrainModel(ComponentRig):
         self.datapaths.add_input(torque_request_input_channel, send=lambda _value: True)
         for path in (mechanical_torque_output_channel, current_draw_output_channel):
             self.datapaths.add_output(path, pending=lambda: 0, recv=lambda: None)
+
+    def reset(self) -> None:
+        super().reset()
+        self._native_registered = False
 
     def rust_runtime_model(self) -> bool:
         return self._cluster_rig is not None

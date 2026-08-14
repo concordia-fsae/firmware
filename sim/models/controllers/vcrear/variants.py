@@ -1,15 +1,40 @@
 from __future__ import annotations
 
-from sim.infra.rig import ClusterCatalog, ClusterSpec, NodeSpec, PowerControlPath
+from sim.infra.rig import (
+    ClusterCatalog,
+    ClusterSpec,
+    ComponentSpec,
+    NodeSpec,
+    PowerControlPath,
+)
 from sim.models.platforms import PLATFORM_VARIANTS
 
 from . import VcrearModel
 
 
 def vcrear_node(
-    hardware: str | None = None, *, power_input: PowerControlPath | None = None
+    hardware: str | None = None,
+    *,
+    power_input: PowerControlPath | None = None,
+    drivetrain_output: object | None = None,
 ) -> NodeSpec:
-    return NodeSpec("vcrear", VcrearModel, hardware=hardware, power_input=power_input)
+    components = ()
+    if drivetrain_output is not None:
+        from .drivetrain import VcrearDrivetrainCommand
+
+        components = (
+            ComponentSpec(
+                VcrearDrivetrainCommand,
+                parameters={"output_channel": drivetrain_output},
+            ),
+        )
+    return NodeSpec(
+        "vcrear",
+        VcrearModel,
+        hardware=hardware,
+        power_input=power_input,
+        components=components,
+    )
 
 
 def vcrear_cluster_spec(hardware: str | None = None) -> ClusterSpec:
