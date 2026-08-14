@@ -1,4 +1,6 @@
 import ctypes
+import multiprocessing as mp
+from enum import Enum, auto
 
 from sim.infra.rig import (
     CanBusDescriptor,
@@ -6,112 +8,45 @@ from sim.infra.rig import (
     CanPacket,
     ClusterCanComms,
     ClusterRig,
-    ComponentRig,
     DataPath,
-    ModelRig,
     PeriodicDataPathProducer,
-    SchedulerContext,
     SimpleComponent,
     SimpleNodeRig,
     SpiTransaction,
 )
 from sim.infra.rig.runtime import _RustClusterRuntime, _StandaloneRustRuntimeHost
+from sim.models.test import (
+    BatchObservedModel,
+    FakeNode,
+    InputTriggeredScalarSink,
+    PythonConsumer,
+    PythonOwner,
+    ScalarSourceModel,
+    ScheduledComponent,
+    SharedObjectBackedFakeNode,
+    TickModel,
+)
 
 
-class FakeNode(ModelRig):
-    def __init__(self) -> None:
-        super().__init__()
-        self.run_count = 0
-        self.reset_count = 0
-
-    def reset(self) -> None:
-        self.reset_count += 1
-
-    def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
-        self.run_count += duration
-
-
-class ScheduledComponent(ComponentRig):
-    def __init__(self) -> None:
-        self.scheduled_times_ns = []
-        super().__init__(
-            scheduler_period=250,
-            scheduler_unit="us",
-            scheduler_callback=self._record_scheduled_time,
-        )
-
-    def reset(self) -> None:
-        super().reset()
-        self.scheduled_times_ns.clear()
-
-    def _record_scheduled_time(self, context: SchedulerContext) -> None:
-        self.scheduled_times_ns.append(context.elapsed_ns)
+class _RigInfraPath(Enum):
+    SENSOR_DEBUG = auto()
+    PRIMARY = auto()
+    ETHERNET = auto()
+    ETH0 = auto()
+    TX = auto()
+    BATCHED = auto()
+    STREAM = auto()
+    PERIODIC = auto()
+    INPUT = auto()
+    SIMPLE = auto()
+    INGRESS = auto()
+    EGRESS = auto()
+    PYTHON = auto()
+    SCALAR = auto()
+    INPUT_TRIGGER = auto()
 
 
-class TickModel(ModelRig):
-    def __init__(self) -> None:
-        self.ticks = 0
-        super().__init__(
-            scheduler_period=1,
-            scheduler_callback=self._tick,
-        )
-
-    def reset(self) -> None:
-        super().reset()
-        self.ticks = 0
-
-    def _tick(self, context: SchedulerContext) -> None:
-        self.ticks += 1
-
-
-class BatchObservedModel(TickModel):
-    def __init__(self) -> None:
-        super().__init__()
-        self.run_durations_ns = []
-
-    def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
-        super().run_for(duration, unit=unit)
-        self.run_durations_ns.append(int(duration))
-
-
-class PythonOwner(ModelRig):
-    def __init__(self, path: DataPath) -> None:
-        super().__init__()
-        self.path = path
-        self.pending_payloads = []
-
-    def supports_datapath(self, path: DataPath) -> bool:
-        return path == self.path
-
-    def configure_datapath(self, path: DataPath) -> None:
-        if self.datapaths.outputs(path):
-            return
-        self.datapaths.add_output(
-            path,
-            pending=lambda: len(self.pending_payloads),
-            recv=lambda: self.pending_payloads.pop(0)
-            if self.pending_payloads
-            else None,
-        )
-
-
-class PythonConsumer(ComponentRig):
-    def __init__(self, path: DataPath) -> None:
-        super().__init__()
-        self.received_payloads = []
-        self.datapaths.add_input(
-            path,
-            send=lambda payload: not self.received_payloads.append(payload),
-        )
-
-
-class SharedObjectBackedFakeNode(ModelRig):
-    def __init__(self, library_path) -> None:
-        super().__init__()
-        self.library_path = library_path
-
-
-class NativeCanNetworkHarness:
+class NativeCanInterfaceHarness:
     _TxCount = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_uint8)
     _RecvEvents = ctypes.CFUNCTYPE(
         ctypes.c_uint32,
@@ -156,7 +91,7 @@ class NativeCanNetworkHarness:
         return int(count)
 
 
-class NativeSpiNetworkHarness:
+class NativeSpiInterfaceHarness:
     _Count = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_int32)
     _RecvMany = ctypes.CFUNCTYPE(
         ctypes.c_uint32,
@@ -178,7 +113,9 @@ class NativeSpiNetworkHarness:
         self.send_many = self._SendMany(self._send_many)
 
     def queue(self, transaction: SpiTransaction) -> None:
-        self.pending_by_device.setdefault(int(transaction.device), []).append(transaction)
+        self.pending_by_device.setdefault(int(transaction.device), []).append(
+            transaction
+        )
 
     def _count(self, device: int) -> int:
         return len(self.pending_by_device.get(int(device), ()))
@@ -316,6 +253,64 @@ def test_dataflow_graph_rejects_cyclic_algorithms_from_python_abi():
     assert not runtime.compile_dataflow_graph()
 
 
+def _run_native_feedback_dataflow_once(result_queue) -> None:
+    runtime = _RustClusterRuntime()
+    runtime.add_node("battery", FakeNode())
+    runtime.add_node("load", FakeNode())
+    assert runtime.add_battery_source(
+        node="battery",
+        voltage_route_id=10,
+        voltage=12.0,
+        internal_resistance_ohms=0.01,
+        capacity_amp_hours=1.0,
+    )
+    assert runtime.add_dc_load(
+        node="load",
+        voltage_route_id=11,
+        current_route_id=12,
+        resistance_ohms=1.0,
+        inductance_henrys=0.0,
+        capacitance_farads=0.0,
+        scheduler_period_ns=0,
+    )
+    source_count, source_recv_many, _ = runtime.noop_scalar_route_abi
+    assert runtime.add_scalar_input_route(
+        source_node="battery",
+        source_route_id=10,
+        source_count=source_count,
+        source_recv_many=source_recv_many,
+        sink_node="load",
+        sink_route_id=11,
+    )
+    assert runtime.add_scalar_state_route(
+        source_node="load",
+        route_id=12,
+        source_count=source_count,
+        source_recv_many=source_recv_many,
+        sink_node="battery",
+        sink_route_id=13,
+    )
+
+    runtime.run_for(1, 1, route=False)
+    result_queue.put(runtime.elapsed_ns())
+
+
+def test_native_dataflow_feedback_chain_terminates_from_python_abi():
+    context = mp.get_context("spawn")
+    result_queue = context.Queue()
+    process = context.Process(
+        target=_run_native_feedback_dataflow_once,
+        args=(result_queue,),
+    )
+    process.start()
+    process.join(timeout=5)
+    if process.is_alive():
+        process.terminate()
+        process.join(timeout=1)
+    assert process.exitcode == 0
+    assert result_queue.get(timeout=1) == 1
+
+
 def test_custom_datapath_routes_between_cluster_nodes():
     source = FakeNode()
     sink = FakeNode()
@@ -325,7 +320,7 @@ def test_custom_datapath_routes_between_cluster_nodes():
         {"sample": 1, "value": 12.5},
         {"sample": 2, "value": 37.0},
     ]
-    debug_path = DataPath(("sensor-debug", "primary"))
+    debug_path = DataPath.named(_RigInfraPath.SENSOR_DEBUG, _RigInfraPath.PRIMARY)
 
     source.datapaths.add_output(
         debug_path,
@@ -360,7 +355,11 @@ def test_custom_datapath_routes_explicitly_between_paths():
     sink = FakeNode()
     received_payloads = []
     pending_payloads = ["packet"]
-    ethernet_tx = DataPath(("ethernet", "eth0", "tx"))
+    ethernet_tx = DataPath.named(
+        _RigInfraPath.ETHERNET,
+        _RigInfraPath.ETH0,
+        _RigInfraPath.TX,
+    )
 
     source.datapaths.add_output(
         ethernet_tx,
@@ -385,7 +384,7 @@ def test_custom_datapath_routes_batches_when_supported():
     received_batches = []
     recv_many_calls = []
     send_many_calls = []
-    batched_path = DataPath(("batched", "stream"))
+    batched_path = DataPath.named(_RigInfraPath.BATCHED, _RigInfraPath.STREAM)
 
     def recv_many(count: int):
         recv_many_calls.append(count)
@@ -438,15 +437,15 @@ def test_can_node_connections_use_generated_common_bus_names_only():
         source.datapaths.add_output(
             ClusterCanComms.path(bus),
             pending=lambda bus=bus: len(source_payloads[bus]),
-            recv=lambda bus=bus: source_payloads[bus].pop(0)
-            if source_payloads[bus]
-            else None,
+            recv=lambda bus=bus: (
+                source_payloads[bus].pop(0) if source_payloads[bus] else None
+            ),
         )
     for bus in (CanBusDescriptor(0, "veh"),):
         sink.datapaths.add_input(
             ClusterCanComms.path(bus),
-            send=lambda payload, bus=bus: not received_payloads.append(
-                (bus.name, payload)
+            send=lambda payload, bus=bus: (
+                not received_payloads.append((bus.name, payload))
             ),
         )
 
@@ -456,20 +455,20 @@ def test_can_node_connections_use_generated_common_bus_names_only():
     assert received_payloads == [("veh", "veh-packet")]
     assert [
         record.path
-        for record in cluster.dataroutes.records(ClusterCanComms.path("veh"))
-    ] == [ClusterCanComms.path("veh")]
+        for record in cluster.dataroutes.records(ClusterCanComms.path(veh))
+    ] == [ClusterCanComms.path(veh)]
     assert [
         record.path
-        for record in cluster.dataroutes.records(ClusterCanComms.path("nose"))
-    ] == [ClusterCanComms.path("nose")]
+        for record in cluster.dataroutes.records(ClusterCanComms.path(nose))
+    ] == [ClusterCanComms.path(nose)]
 
 
-def test_rust_can_network_fans_out_and_records_latest_message():
+def test_rust_can_interface_fans_out_and_records_latest_message():
     runtime = _RustClusterRuntime()
     runtime.add_node("source", FakeNode())
     runtime.add_node("sink", FakeNode())
-    source = NativeCanNetworkHarness()
-    sink = NativeCanNetworkHarness()
+    source = NativeCanInterfaceHarness()
+    sink = NativeCanInterfaceHarness()
     packet = CanPacket.from_payload(0x123, b"\x11\x22\x33")
     source.queue(0, packet, timestamp_ns=10)
 
@@ -495,10 +494,10 @@ def test_rust_can_network_fans_out_and_records_latest_message():
     assert latest_on_bus.packet.id == 0x123
 
 
-def test_rust_can_network_records_source_only_events_without_sink():
+def test_rust_can_interface_records_source_only_events_without_sink():
     runtime = _RustClusterRuntime()
     runtime.add_node("source", FakeNode())
-    source = NativeCanNetworkHarness()
+    source = NativeCanInterfaceHarness()
     source.queue(1, CanPacket.from_payload(0x456, b"\xaa"))
 
     assert runtime.add_can_route(
@@ -514,12 +513,12 @@ def test_rust_can_network_records_source_only_events_without_sink():
     assert latest.packet.payload == b"\xaa"
 
 
-def test_rust_can_network_rejects_invalid_routes_and_gates_offline_sources():
+def test_rust_can_interface_rejects_invalid_routes_and_gates_offline_sources():
     runtime = _RustClusterRuntime()
     runtime.add_node("source", FakeNode())
     runtime.add_node("sink", FakeNode())
-    source = NativeCanNetworkHarness()
-    sink = NativeCanNetworkHarness()
+    source = NativeCanInterfaceHarness()
+    sink = NativeCanInterfaceHarness()
     source.queue(0, CanPacket.from_payload(0x321, b"\x01"))
 
     assert not runtime.add_can_route(
@@ -576,12 +575,12 @@ def test_rust_can_network_rejects_invalid_routes_and_gates_offline_sources():
     assert [packet.payload for packet in sink.received_by_bus[0]] == [b"\x01"]
 
 
-def test_rust_spi_network_fans_out_by_device_immediately():
+def test_rust_spi_interface_fans_out_by_device_immediately():
     runtime = _RustClusterRuntime()
     runtime.add_node("source", FakeNode())
     runtime.add_node("sink", FakeNode())
-    source = NativeSpiNetworkHarness()
-    sink = NativeSpiNetworkHarness()
+    source = NativeSpiInterfaceHarness()
+    sink = NativeSpiInterfaceHarness()
     source.queue(
         SpiTransaction.from_payload(
             7,
@@ -606,12 +605,12 @@ def test_rust_spi_network_fans_out_by_device_immediately():
     ]
 
 
-def test_rust_spi_network_rejects_invalid_routes_and_gates_offline_sources():
+def test_rust_spi_interface_rejects_invalid_routes_and_gates_offline_sources():
     runtime = _RustClusterRuntime()
     runtime.add_node("source", FakeNode())
     runtime.add_node("sink", FakeNode())
-    source = NativeSpiNetworkHarness()
-    sink = NativeSpiNetworkHarness()
+    source = NativeSpiInterfaceHarness()
+    sink = NativeSpiInterfaceHarness()
     source.queue(SpiTransaction.from_payload(2, tx_payload=b"\x01"))
 
     assert not runtime.add_spi_route(
@@ -734,7 +733,7 @@ def test_component_scheduler_runs_once_when_due_standalone():
 
 
 def test_periodic_datapath_producer_routes_model_inputs():
-    path = DataPath(("periodic", "input"))
+    path = DataPath.named(_RigInfraPath.PERIODIC, _RigInfraPath.INPUT)
     sink = PythonConsumer(path)
     producer = PeriodicDataPathProducer(
         path,
@@ -750,8 +749,8 @@ def test_periodic_datapath_producer_routes_model_inputs():
 
 
 def test_simple_node_routes_component_ingress_to_explicit_egress_datapath():
-    ingress_path = DataPath(("simple", "ingress"))
-    egress_path = DataPath(("simple", "egress"))
+    ingress_path = DataPath.named(_RigInfraPath.SIMPLE, _RigInfraPath.INGRESS)
+    egress_path = DataPath.named(_RigInfraPath.SIMPLE, _RigInfraPath.EGRESS)
     source_component = SimpleComponent()
     transformer_component = SimpleComponent()
     sink = PythonConsumer(egress_path)
@@ -832,7 +831,7 @@ def test_cluster_rejects_duplicate_rust_backed_shared_object_instances(tmp_path)
 
 
 def test_python_model_owner_configures_outputs_for_component_inputs():
-    path = DataPath(("python", "stream"))
+    path = DataPath.named(_RigInfraPath.PYTHON, _RigInfraPath.STREAM)
     owner = PythonOwner(path)
     component = PythonConsumer(path)
 
@@ -843,3 +842,21 @@ def test_python_model_owner_configures_outputs_for_component_inputs():
     cluster.run_for(1)
 
     assert component.received_payloads == ["payload"]
+
+
+def test_python_input_scheduled_model_runs_from_rust_dataflow_input():
+    path = DataPath.named(_RigInfraPath.SCALAR, _RigInfraPath.INPUT_TRIGGER)
+    source = ScalarSourceModel(path)
+    sink = InputTriggeredScalarSink(path)
+    cluster = ClusterRig(source=source, sink=sink)
+    cluster.dataroutes.connect_available_paths()
+
+    cluster.run_for(1)
+    assert sink.values == []
+    assert sink.scheduled_times_ns == []
+
+    source.values.append(12.5)
+    cluster.run_for(1)
+
+    assert sink.values == [12.5]
+    assert sink.scheduled_times_ns == [2_000_000]
