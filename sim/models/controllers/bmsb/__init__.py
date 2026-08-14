@@ -5,6 +5,7 @@ from sim.infra.rig import (
     load_generated_module,
 )
 
+from .extensions import BmsbModelExtensions
 from .simple import BmsbSimpleModel
 
 
@@ -27,7 +28,9 @@ def _load_generated() -> None:
     globals()["TimerChannel"] = enums.TimerChannel
     globals()["TimerPort"] = enums.TimerPort
 
-    class BmsbModel(extend_model_class(model.BmsbModel)):
+    class BmsbModel(extend_model_class(model.BmsbModel, BmsbModelExtensions)):
+        AnalogInput = enums.AnalogInput
+        DigitalInput = enums.DigitalInput
         timer = TimerInterface(enums.TimerPort, enums.TimerChannel)
 
     globals()["BmsbModel"] = BmsbModel
