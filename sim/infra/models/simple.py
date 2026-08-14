@@ -4,16 +4,16 @@ import ctypes
 from collections.abc import Callable
 from enum import IntEnum
 
-from .can import (
+from ..rig.can import (
     CanEvent,
     CanInterface,
     CanMessageDescriptor,
     CanPacket,
     PeriodicCanMessage,
 )
-from .datapath import DataPath, DataPathKey, datapath_key
-from .model import ComponentRig, ModelRig
-from .time import duration_to_ns
+from ..rig.datapath import DataPath, DataPathKey, datapath_key
+from ..rig.model import ComponentRig, ModelRig
+from ..rig.time import duration_to_ns
 
 
 SimpleDataPathHandler = Callable[[object], None]

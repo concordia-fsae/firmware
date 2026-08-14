@@ -10,10 +10,9 @@ from sim.infra.rig import (
     ClusterRig,
     DataPath,
     PeriodicDataPathProducer,
-    SimpleComponent,
-    SimpleNodeRig,
     SpiTransaction,
 )
+from sim.infra.models import SimpleComponent, SimpleNodeRig
 from sim.infra.rig.runtime import _RustClusterRuntime, _StandaloneRustRuntimeHost
 from sim.models.test import (
     BatchObservedModel,

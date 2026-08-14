@@ -5,9 +5,8 @@ from enum import IntEnum
 from sim.infra.rig import (
     CanInterface,
     PeriodicCanMessage,
-    SimpleCanComponent,
-    SimpleNodeRig,
 )
+from sim.infra.models import SimpleCanComponent, SimpleNodeRig
 
 
 class VcfrontSimpleModel(SimpleNodeRig):

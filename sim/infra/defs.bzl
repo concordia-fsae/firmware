@@ -26,7 +26,7 @@ RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/infra/runtime:rust/rt_controller.rs",
     "RIG_RUNTIME_RUST_SCALAR_RS": "//sim/infra/runtime:rust/scalar.rs",
     "RIG_RUNTIME_RUST_SCHEDULER_RS": "//sim/infra/runtime:rust/scheduler.rs",
-    "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/rig:rust/simple.rs",
+    "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/models:rust/simple.rs",
     "RIG_RUNTIME_RUST_SPI_RS": "//sim/infra/runtime:rust/spi.rs",
     "RIG_RUNTIME_RUST_TIMER_RS": "//sim/infra/runtime:rust/timer.rs",
 }

@@ -1,0 +1,14 @@
+filegroup(
+    name = "models",
+    srcs = [
+        "__init__.py",
+        "simple.py",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "rust/simple.rs",
+    src = "rust/simple.rs",
+    visibility = ["PUBLIC"],
+)

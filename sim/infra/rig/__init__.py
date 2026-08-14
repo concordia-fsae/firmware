@@ -68,7 +68,6 @@ from .power import PowerControlEvent, PowerControlPath, PowerInterface
 from .scalar import ScalarEvent
 from .spi import SpiInterface, SpiTransaction
 from .timer import TimerCaptureEvent, TimerChannelEvent, TimerInterface
-from .simple import SimpleCanComponent, SimpleComponent, SimpleNodeRig
 from .time import RunUntilTimeout, duration_to_ns, run_until
 
 
@@ -124,9 +123,6 @@ __all__ = [
     "TimerCaptureEvent",
     "TimerChannelEvent",
     "TimerInterface",
-    "SimpleCanComponent",
-    "SimpleComponent",
-    "SimpleNodeRig",
     "load_generated_module",
     "load_shared_library",
     "repo_root",

@@ -17,17 +17,10 @@ filegroup(
         "pytest.py",
         "runtime.py",
         "scalar.py",
-        "simple.py",
         "spi.py",
         "timer.py",
         "time.py",
     ],
-    visibility = ["PUBLIC"],
-)
-
-export_file(
-    name = "rust/simple.rs",
-    src = "rust/simple.rs",
     visibility = ["PUBLIC"],
 )
 
