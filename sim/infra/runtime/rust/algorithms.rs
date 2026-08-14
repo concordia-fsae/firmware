@@ -175,7 +175,7 @@ fn register_algorithm_lifecycle(
     runtime: &mut ClusterRuntime,
     algorithm: &DataflowAlgorithm,
 ) -> bool {
-    let lifecycle = algorithm.lifecycle;
+    let lifecycle = &algorithm.lifecycle;
     if let Some(reset) = lifecycle.runtime_reset {
         register_runtime_reset(runtime, reset);
     }
@@ -184,12 +184,12 @@ fn register_algorithm_lifecycle(
             return false;
         }
     }
-    if let Some((node, route_id, context, take)) = lifecycle.scalar_source {
+    for &(node, route_id, context, take) in &lifecycle.scalar_sources {
         if !register_native_scalar_source(runtime, node, route_id, context, take) {
             return false;
         }
     }
-    if let Some((node, route_id, context, receive)) = lifecycle.scalar_input {
+    for &(node, route_id, context, receive) in &lifecycle.scalar_inputs {
         if !register_native_scalar_input(runtime, node, route_id, context, receive) {
             return false;
         }

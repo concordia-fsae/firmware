@@ -13,12 +13,12 @@ pub(super) type NodeResetFn = fn(usize, u64);
 pub(super) type NativeScalarTakeFn = fn(usize, u64) -> Vec<ScalarEvent>;
 pub(super) type NativeScalarReceiveFn = fn(usize, ScalarEvent) -> bool;
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Default)]
 pub(super) struct DataflowAlgorithmLifecycle {
     pub(super) runtime_reset: Option<RuntimeResetFn>,
     pub(super) node_reset: Option<(u32, usize, NodeResetFn)>,
-    pub(super) scalar_source: Option<(u32, u32, usize, NativeScalarTakeFn)>,
-    pub(super) scalar_input: Option<(u32, u32, usize, NativeScalarReceiveFn)>,
+    pub(super) scalar_sources: Vec<(u32, u32, usize, NativeScalarTakeFn)>,
+    pub(super) scalar_inputs: Vec<(u32, u32, usize, NativeScalarReceiveFn)>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -224,7 +224,7 @@ impl DataflowAlgorithm {
         context: usize,
         take: NativeScalarTakeFn,
     ) -> Self {
-        self.lifecycle.scalar_source = Some((node, route_id, context, take));
+        self.lifecycle.scalar_sources.push((node, route_id, context, take));
         self
     }
 
@@ -235,7 +235,7 @@ impl DataflowAlgorithm {
         context: usize,
         receive: NativeScalarReceiveFn,
     ) -> Self {
-        self.lifecycle.scalar_input = Some((node, route_id, context, receive));
+        self.lifecycle.scalar_inputs.push((node, route_id, context, receive));
         self
     }
 }
