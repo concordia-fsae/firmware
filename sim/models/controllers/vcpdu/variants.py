@@ -8,6 +8,7 @@ from sim.infra.rig import (
     PowerControlPath,
 )
 from sim.models.components.asm330 import Asm330Model
+from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
 from sim.models.platforms import PLATFORM_VARIANTS
 
@@ -21,6 +22,7 @@ def vcpdu_node(
 ) -> NodeSpec:
     pump_duty = VcpduModel.timer.duty_events(TimerPort.PWM, TimerChannel._1)
     fan_duty = VcpduModel.timer.duty_events(TimerPort.HP, TimerChannel._2)
+    bus_voltage = VcpduModel.bus_voltage_path()
     pump_voltage = DcLoadModel.voltage_input_channel(Vn9008Channel.PUMP)
     fan_voltage = DcLoadModel.voltage_input_channel(Vn9008Channel.FAN)
     configured_outputs = (
@@ -28,15 +30,26 @@ def vcpdu_node(
         VcpduModel.vn9008_load_voltage_output(
             hsd_channel=Vn9008Channel.PUMP,
             timer_path=pump_duty,
+            bus_voltage_path=bus_voltage,
             voltage_path=pump_voltage,
         ),
         VcpduModel.vn9008_load_voltage_output(
             hsd_channel=Vn9008Channel.FAN,
             timer_path=fan_duty,
+            bus_voltage_path=bus_voltage,
             voltage_path=fan_voltage,
         ),
     )
     components = (
+        BatterySourceModel.spec(
+            voltage_output_channel=bus_voltage,
+            source_spec=BatterySourceSpec(voltage=12.0),
+            bindings=(
+                BatterySourceModel.voltage_output.bind_to(
+                    VcpduModel.bus_voltage_input(),
+                ),
+            ),
+        ),
         Asm330Model.spec(
             spi_transactions=VcpduModel.spi.transactions(SpiDevice.IMU),
         ),

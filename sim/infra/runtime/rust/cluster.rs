@@ -5,6 +5,7 @@ use std::os::raw::c_char;
 use std::sync::{LazyLock, Mutex};
 
 use super::can;
+use super::battery_source::BatterySourceModel;
 use super::dc_load::DcLoadModel;
 use super::simple::PeriodicCanSource;
 
@@ -100,6 +101,7 @@ struct TimerScaledScalarSource {
     timer_interface: u16,
     timer_port: i32,
     timer_channel: i32,
+    scale_route_id: u32,
     scale: f32,
     offset: f32,
     output_value: f32,
@@ -113,6 +115,7 @@ impl TimerScaledScalarSource {
         timer_interface: u16,
         timer_port: i32,
         timer_channel: i32,
+        scale_route_id: u32,
         scale: f32,
         offset: f32,
     ) -> Self {
@@ -122,6 +125,7 @@ impl TimerScaledScalarSource {
             timer_interface,
             timer_port,
             timer_channel,
+            scale_route_id,
             scale,
             offset,
             output_value: 0.0,
@@ -149,12 +153,14 @@ impl TimerScaledScalarSource {
         timer_interface: u16,
         timer_port: i32,
         timer_channel: i32,
+        scale_route_id: u32,
     ) -> bool {
         self.node == node
             && self.route_id == route_id
             && self.timer_interface == timer_interface
             && self.timer_port == timer_port
             && self.timer_channel == timer_channel
+            && self.scale_route_id == scale_route_id
     }
 
     fn reset(&mut self) {
@@ -170,13 +176,13 @@ impl TimerScaledScalarSource {
         self.pending_value = true;
     }
 
-    fn take_scalar_event(&mut self, elapsed_ns: u64) -> Option<ScalarEvent> {
+    fn take_scalar_event(&mut self, elapsed_ns: u64, scale_value: f32) -> Option<ScalarEvent> {
         if !self.pending_value {
             return None;
         }
         self.pending_value = false;
         Some(ScalarEvent {
-            value: self.output_value,
+            value: self.output_value * scale_value,
             timestamp_ns: elapsed_ns,
         })
     }
@@ -390,6 +396,9 @@ struct ClusterSpiRouteGroup {
 #[derive(Clone, Copy)]
 enum ClusterScalarSink {
     SendMany(ClusterScalarSendManyFn),
+    State {
+        route_id: u32,
+    },
     Native {
         sink_id: i32,
         value_scale: f32,
@@ -406,6 +415,7 @@ impl ClusterScalarSink {
                     events.len().min(u32::MAX as usize) as u32,
                 )
             },
+            Self::State { .. } => events.len().min(u32::MAX as usize) as u32,
             Self::Native {
                 sink_id,
                 value_scale,
@@ -485,8 +495,11 @@ struct ClusterRuntime {
     spi_route_groups: Vec<ClusterSpiRouteGroup>,
     scalar_route_group_indexes: HashMap<(u32, u32), usize>,
     scalar_route_groups: Vec<ClusterScalarRouteGroup>,
+    scalar_states: HashMap<(u32, u32), f32>,
     periodic_can_sources: Vec<PeriodicCanSource>,
     native_can_source_events: VecDeque<ClusterCanRecord>,
+    battery_sources: Vec<BatterySourceModel>,
+    battery_voltage_indexes: HashMap<(u32, u32), Vec<usize>>,
     timer_scaled_scalar_sources: Vec<TimerScaledScalarSource>,
     timer_scaled_scalar_timer_indexes: HashMap<(u32, u16, i32, i32), Vec<usize>>,
     dc_load_voltage_route_indexes: HashMap<(u32, u32), Vec<usize>>,
@@ -511,8 +524,11 @@ impl ClusterRuntime {
         self.spi_route_groups.clear();
         self.scalar_route_group_indexes.clear();
         self.scalar_route_groups.clear();
+        self.scalar_states.clear();
         self.periodic_can_sources.clear();
         self.native_can_source_events.clear();
+        self.battery_sources.clear();
+        self.battery_voltage_indexes.clear();
         self.timer_scaled_scalar_sources.clear();
         self.timer_scaled_scalar_timer_indexes.clear();
         self.dc_load_voltage_route_indexes.clear();
@@ -649,6 +665,50 @@ impl ClusterRuntime {
             return false;
         }
         self.upsert_scalar_route_group(route);
+        true
+    }
+
+    fn add_scalar_state_sink(&mut self, node: u32, route_id: u32, initial_value: f32) -> bool {
+        if self.nodes.get(node as usize).is_none() || !initial_value.is_finite() {
+            return false;
+        }
+        self.scalar_states.insert((node, route_id), initial_value);
+        true
+    }
+
+    fn add_scalar_state_route(
+        &mut self,
+        source_node: u32,
+        route_id: u32,
+        source_count: ClusterScalarCountFn,
+        source_recv_many: ClusterScalarRecvManyFn,
+        sink_node: u32,
+        sink_route_id: u32,
+    ) -> bool {
+        if !self.add_scalar_route(ClusterScalarRoute {
+            source_node,
+            route_id,
+            source_count,
+            source_recv_many,
+            sink_node,
+            sink: ClusterScalarSink::State {
+                route_id: sink_route_id,
+            },
+        }) {
+            return false;
+        }
+
+        let events = self.native_scalar_events(source_node, route_id);
+        if let Some(event) = events.last() {
+            self.scalar_states
+                .insert((sink_node, sink_route_id), event.value);
+        }
+        self.scalar_records
+            .extend(events.into_iter().map(|event| ClusterScalarRecord {
+                source_node,
+                route_id,
+                event,
+            }));
         true
     }
 
@@ -814,6 +874,36 @@ impl ClusterRuntime {
         true
     }
 
+    fn add_battery_source(
+        &mut self,
+        node: u32,
+        voltage_route_id: u32,
+        voltage: f32,
+        internal_resistance_ohms: f32,
+        capacity_amp_hours: f32,
+    ) -> bool {
+        if self.nodes.get(node as usize).is_none()
+            || !voltage.is_finite()
+            || voltage < 0.0
+            || !internal_resistance_ohms.is_finite()
+            || internal_resistance_ohms < 0.0
+            || capacity_amp_hours <= 0.0
+        {
+            return false;
+        }
+        self.battery_sources
+            .retain(|source| !source.config_matches(node, voltage_route_id));
+        self.battery_sources.push(BatterySourceModel::new(
+            node,
+            voltage_route_id,
+            voltage,
+            internal_resistance_ohms,
+            capacity_amp_hours,
+        ));
+        self.rebuild_battery_source_indexes();
+        true
+    }
+
     fn add_timer_scaled_scalar_source(
         &mut self,
         node: u32,
@@ -821,6 +911,7 @@ impl ClusterRuntime {
         timer_interface: u16,
         timer_port: i32,
         timer_channel: i32,
+        scale_route_id: u32,
         scale: f32,
         offset: f32,
     ) -> bool {
@@ -828,7 +919,14 @@ impl ClusterRuntime {
             return false;
         }
         self.timer_scaled_scalar_sources.retain(|source| {
-            !source.config_matches(node, route_id, timer_interface, timer_port, timer_channel)
+            !source.config_matches(
+                node,
+                route_id,
+                timer_interface,
+                timer_port,
+                timer_channel,
+                scale_route_id,
+            )
         });
         self.timer_scaled_scalar_sources
             .push(TimerScaledScalarSource::new(
@@ -837,6 +935,7 @@ impl ClusterRuntime {
                 timer_interface,
                 timer_port,
                 timer_channel,
+                scale_route_id,
                 scale,
                 offset,
             ));
@@ -895,6 +994,16 @@ impl ClusterRuntime {
         }
     }
 
+    fn rebuild_battery_source_indexes(&mut self) {
+        self.battery_voltage_indexes.clear();
+        for (index, source) in self.battery_sources.iter().enumerate() {
+            self.battery_voltage_indexes
+                .entry(source.voltage_output_key())
+                .or_default()
+                .push(index);
+        }
+    }
+
     fn set_node_online(&mut self, node_index: u32, online: bool) -> bool {
         let elapsed_ns = self.elapsed_ns;
         let reset_runtime_models;
@@ -942,6 +1051,13 @@ impl ClusterRuntime {
     fn reset_rust_runtime_node_models(&mut self, node: u32, elapsed_ns: u64) {
         for source in self
             .timer_scaled_scalar_sources
+            .iter_mut()
+            .filter(|source| source.node() == node)
+        {
+            source.reset();
+        }
+        for source in self
+            .battery_sources
             .iter_mut()
             .filter(|source| source.node() == node)
         {
@@ -1001,6 +1117,7 @@ impl ClusterRuntime {
         self.elapsed_ns = self.elapsed_ns.saturating_add(delta_ns);
         self.run_due_python_nodes(fast_forward);
         self.route_can();
+        self.route_scalar_state_inputs();
         self.route_timer();
         self.run_dc_loads();
         self.route_spi();
@@ -1223,10 +1340,22 @@ impl ClusterRuntime {
             else {
                 continue;
             };
+            let Some(source_view) = self.timer_scaled_scalar_sources.get(index) else {
+                continue;
+            };
+            let route_id = source_view.route_id;
+            let scale_route_id = source_view.scale_route_id;
+            let scale_value = if scale_route_id == 0 {
+                1.0
+            } else {
+                *self
+                    .scalar_states
+                    .get(&(sink_node, scale_route_id))
+                    .unwrap_or(&0.0)
+            };
             if let Some(source) = self.timer_scaled_scalar_sources.get_mut(index) {
                 source.update_timer(events);
-                let route_id = source.route_id;
-                if let Some(event) = source.take_scalar_event(self.elapsed_ns) {
+                if let Some(event) = source.take_scalar_event(self.elapsed_ns, scale_value) {
                     self.update_dc_load_voltage_routes(sink_node, route_id, event);
                     self.scalar_records.push_back(ClusterScalarRecord {
                         source_node: sink_node,
@@ -1325,10 +1454,18 @@ impl ClusterRuntime {
         }
     }
 
-    fn route_scalar(&mut self) {
+    fn route_scalar_state_inputs(&mut self) {
         let mut input_pending_nodes = Vec::new();
 
         for group_index in 0..self.scalar_route_groups.len() {
+            let has_state_sink = self.scalar_route_groups[group_index]
+                .sinks
+                .iter()
+                .any(|sink| matches!(sink.sink, ClusterScalarSink::State { .. }));
+            if !has_state_sink {
+                continue;
+            }
+
             let source_node = self.scalar_route_groups[group_index].source_node;
             let route_id = self.scalar_route_groups[group_index].route_id;
             let source_count = self.scalar_route_groups[group_index].source_count;
@@ -1360,7 +1497,80 @@ impl ClusterRuntime {
             let sink_count = self.scalar_route_groups[group_index].sinks.len();
             for sink_index in 0..sink_count {
                 let sink = self.scalar_route_groups[group_index].sinks[sink_index];
-                let accepted = sink.sink.send_many(&events);
+                let ClusterScalarSink::State { route_id } = sink.sink else {
+                    continue;
+                };
+                if let Some(event) = events.last() {
+                    self.scalar_states
+                        .insert((sink.sink_node, route_id), event.value);
+                }
+                input_pending_nodes.push(sink.sink_node);
+            }
+
+            self.scalar_records
+                .extend(events.into_iter().map(|event| ClusterScalarRecord {
+                    source_node,
+                    route_id,
+                    event,
+                }));
+        }
+        for sink_node in input_pending_nodes {
+            self.mark_input_pending(sink_node);
+        }
+    }
+
+    fn route_scalar(&mut self) {
+        let mut input_pending_nodes = Vec::new();
+
+        for group_index in 0..self.scalar_route_groups.len() {
+            let only_state_sinks = self.scalar_route_groups[group_index]
+                .sinks
+                .iter()
+                .all(|sink| matches!(sink.sink, ClusterScalarSink::State { .. }));
+            if only_state_sinks {
+                continue;
+            }
+            let source_node = self.scalar_route_groups[group_index].source_node;
+            let route_id = self.scalar_route_groups[group_index].route_id;
+            let source_count = self.scalar_route_groups[group_index].source_count;
+            let source_recv_many = self.scalar_route_groups[group_index].source_recv_many;
+
+            let Some(source) = self.nodes.get(source_node as usize) else {
+                continue;
+            };
+            if !source.online {
+                continue;
+            }
+
+            let mut events = self.native_scalar_events(source_node, route_id);
+            if events.is_empty() {
+                let pending = unsafe { source_count() };
+                if pending == 0 {
+                    continue;
+                }
+
+                events = vec![ScalarEvent::default(); pending as usize];
+                let count = unsafe { source_recv_many(events.as_mut_ptr(), pending) };
+                let count = count.min(pending) as usize;
+                if count == 0 {
+                    continue;
+                }
+                events.truncate(count);
+            }
+
+            let sink_count = self.scalar_route_groups[group_index].sinks.len();
+            for sink_index in 0..sink_count {
+                let sink = self.scalar_route_groups[group_index].sinks[sink_index];
+                let accepted = match sink.sink {
+                    ClusterScalarSink::State { route_id } => {
+                        if let Some(event) = events.last() {
+                            self.scalar_states
+                                .insert((sink.sink_node, route_id), event.value);
+                        }
+                        events.len().min(u32::MAX as usize) as u32
+                    }
+                    _ => sink.sink.send_many(&events),
+                };
                 if accepted > 0 {
                     input_pending_nodes.push(sink.sink_node);
                 }
@@ -1384,6 +1594,15 @@ impl ClusterRuntime {
             for index in indexes.iter().copied() {
                 if let Some(load) = self.dc_loads.get_mut(index) {
                     if let Some(event) = load.take_current_event(self.elapsed_ns) {
+                        events.push(event);
+                    }
+                }
+            }
+        }
+        if let Some(indexes) = self.battery_voltage_indexes.get(&(source_node, route_id)) {
+            for index in indexes.iter().copied() {
+                if let Some(source) = self.battery_sources.get_mut(index) {
+                    if let Some(event) = source.take_voltage_event(self.elapsed_ns) {
                         events.push(event);
                     }
                 }
@@ -1873,6 +2092,50 @@ pub extern "C" fn rig_cluster_add_scalar_sink_route(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_scalar_state_sink(
+    node: u32,
+    route_id: u32,
+    initial_value: f32,
+) -> bool {
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_scalar_state_sink(node, route_id, initial_value)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_scalar_state_route(
+    source_node: u32,
+    route_id: u32,
+    source_count: usize,
+    source_recv_many: usize,
+    sink_node: u32,
+    sink_route_id: u32,
+) -> bool {
+    let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
+    else {
+        return false;
+    };
+    let Some(source_recv_many) =
+        (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
+    else {
+        return false;
+    };
+
+    CLUSTER_RUNTIME
+        .lock()
+        .unwrap()
+        .add_scalar_state_route(
+            source_node,
+            route_id,
+            source_count,
+            source_recv_many,
+            sink_node,
+            sink_route_id,
+        )
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_add_dc_load_voltage_route(
     source_node: u32,
     route_id: u32,
@@ -1891,6 +2154,7 @@ pub extern "C" fn rig_cluster_add_timer_scaled_scalar_source(
     timer_interface: u16,
     timer_port: i32,
     timer_channel: i32,
+    scale_route_id: u32,
     scale: f32,
     offset: f32,
 ) -> bool {
@@ -1900,6 +2164,7 @@ pub extern "C" fn rig_cluster_add_timer_scaled_scalar_source(
         timer_interface,
         timer_port,
         timer_channel,
+        scale_route_id,
         scale,
         offset,
     )
@@ -1982,6 +2247,23 @@ pub extern "C" fn rig_cluster_add_dc_load(
         inductance_henrys,
         capacitance_farads,
         scheduler_period_ns,
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_battery_source(
+    node: u32,
+    voltage_route_id: u32,
+    voltage: f32,
+    internal_resistance_ohms: f32,
+    capacity_amp_hours: f32,
+) -> bool {
+    CLUSTER_RUNTIME.lock().unwrap().add_battery_source(
+        node,
+        voltage_route_id,
+        voltage,
+        internal_resistance_ohms,
+        capacity_amp_hours,
     )
 }
 

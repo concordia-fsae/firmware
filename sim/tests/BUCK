@@ -29,6 +29,7 @@ rig_pytest(
         "{}:sil-so".format(VCPDU_MODEL),
         "//sim/models/components:python",
         "//sim/models/components/asm330:python",
+        "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
     ] + rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
@@ -40,6 +41,16 @@ rig_pytest(
     resources = [
         "//sim/models/components:python",
         "//sim/models/components/dc_load:python",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rig_pytest(
+    name = "battery_source",
+    test_file = "sim/tests/test_battery_source.py",
+    resources = [
+        "//sim/models/components:python",
+        "//sim/models/components/battery_source:python",
     ],
     visibility = ["PUBLIC"],
 )
@@ -88,6 +99,7 @@ rig_pytest(
         "{}:sil-so".format(VCREAR_MODEL),
         "//sim/models/components:python",
         "//sim/models/components/asm330:python",
+        "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
     ] +
     rig_platform_sim_lib_resources(BMSB_MODEL, ALL_PLATFORMS) +
@@ -132,6 +144,7 @@ rig_pytest(
         "{}:sil-so".format(VCPDU_MODEL),
         "//sim/models/components:python",
         "//sim/models/components/asm330:python",
+        "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
     ] + rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
@@ -183,6 +196,7 @@ rig_pytest(
         "//sim/models/vehicle:python",
         "//sim/models/components:python",
         "//sim/models/components/asm330:python",
+        "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
         "{}:enums-py".format(VCREAR_MODEL),
         "{}:vcrear-py".format(VCREAR_MODEL),

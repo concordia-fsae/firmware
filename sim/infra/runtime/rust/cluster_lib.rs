@@ -14,6 +14,10 @@ pub mod can {
     include!(env!("RIG_RUNTIME_RUST_CAN_RS"));
 }
 
+pub mod battery_source {
+    include!(env!("RIG_RUNTIME_RUST_BATTERY_SOURCE_RS"));
+}
+
 pub mod dc_load {
     include!(env!("RIG_RUNTIME_RUST_DC_LOAD_RS"));
 }

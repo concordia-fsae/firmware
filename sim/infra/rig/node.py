@@ -75,8 +75,9 @@ class NodeRig(ModelRig):
         self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
         self._scalar_sink_abis: dict[str, tuple[int, int, float, int]] = {}
+        self._scalar_state_sink_abis: dict[str, tuple[int, float]] = {}
         self._timer_scaled_scalar_outputs: dict[
-            str, tuple[DataPath, int, int, int, float, float]
+            str, tuple[DataPath, int, int, int, int, float, float]
         ] = {}
         self.can = CanInterface(self) if self.has_can else None
         self._timer_peripherals = TimerPeripheralInterface(self)
@@ -131,6 +132,17 @@ class NodeRig(ModelRig):
         scalar_sink_abi = self._scalar_sink_abis.get(datapath_key(path))
         if scalar_sink_abi is not None:
             return ("scalar_sink", scalar_sink_abi)
+        scalar_state_sink_abi = self._scalar_state_sink_abis.get(datapath_key(path))
+        if scalar_state_sink_abi is not None:
+            if self._cluster_rig is not None and self._cluster_node_name is not None:
+                route_id, initial_value = scalar_state_sink_abi
+                if not self._cluster_rig._rust_runtime.add_scalar_state_sink(
+                    node=self._cluster_node_name,
+                    route_id=route_id,
+                    initial_value=initial_value,
+                ):
+                    raise RuntimeError("failed to register native scalar state sink")
+            return ("scalar_state_sink", scalar_state_sink_abi)
         native_scalar_output = self._timer_scaled_scalar_outputs.get(datapath_key(path))
         if native_scalar_output is not None:
             (
@@ -139,6 +151,7 @@ class NodeRig(ModelRig):
                 timer_interface,
                 timer_port,
                 timer_channel,
+                scale_route_id,
                 scale,
                 offset,
             ) = native_scalar_output
@@ -159,6 +172,7 @@ class NodeRig(ModelRig):
                     timer_interface=timer_interface,
                     timer_port=timer_port,
                     timer_channel=timer_channel,
+                    scale_route_id=scale_route_id,
                     scale=scale,
                     offset=offset,
                 ):
@@ -205,11 +219,25 @@ class NodeRig(ModelRig):
 
         self.datapaths.add_input(path, send=send)
 
+    def add_scalar_state_sink(
+        self,
+        path: DataPath,
+        *,
+        initial_value: float = 0.0,
+    ) -> None:
+        key = datapath_key(path)
+        self._scalar_state_sink_abis[key] = (
+            datapath_route_id(key),
+            float(initial_value),
+        )
+        self.datapaths.add_input(path, send=lambda _value: True)
+
     def add_timer_scaled_scalar_output(
         self,
         path: DataPath,
         *,
         timer_path: DataPath,
+        scale_path: DataPath | None = None,
         scale: float,
         offset: float = 0.0,
     ) -> None:
@@ -223,12 +251,18 @@ class NodeRig(ModelRig):
         timer_interface = 1 if binding.interface == "timer.duty" else 2
         timer_port = int(binding.port if binding.port is not None else 0)
         timer_channel = int(binding.channel if binding.channel is not None else 0)
+        scale_route_id = (
+            0
+            if scale_path is None
+            else datapath_route_id(datapath_key(scale_path))
+        )
         self._timer_scaled_scalar_outputs[datapath_key(path)] = (
             timer_path,
             route_id,
             timer_interface,
             timer_port,
             timer_channel,
+            scale_route_id,
             float(scale),
             float(offset),
         )

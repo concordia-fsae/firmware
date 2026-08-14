@@ -116,7 +116,7 @@ class ClusterDataRoutes:
                     )
 
     def _route(self, path: DataPath | None = None) -> None:
-        paths = (path,) if path is not None else self.paths
+        paths = (path,) if path is not None else self._ordered_paths()
         for path_name in paths:
             self._route_path(path_name)
 
@@ -180,6 +180,57 @@ class ClusterDataRoutes:
     @property
     def paths(self) -> tuple[DataPath, ...]:
         return tuple(self._paths.values())
+
+    def _ordered_paths(self) -> tuple[DataPath, ...]:
+        paths = self.paths
+        source_nodes_by_key: dict[str, set[str]] = {}
+        sink_nodes_by_key: dict[str, set[str]] = {}
+        for path in paths:
+            key = datapath_key(path)
+            for node_name, node in self._cluster._rig_nodes.items():
+                if node.datapaths.outputs(path):
+                    source_nodes_by_key.setdefault(key, set()).add(node_name)
+                if node.datapaths.inputs(path):
+                    sink_nodes_by_key.setdefault(key, set()).add(node_name)
+
+        path_by_key = {datapath_key(path): path for path in paths}
+        dependencies: dict[str, set[str]] = {key: set() for key in path_by_key}
+        dependents: dict[str, set[str]] = {key: set() for key in path_by_key}
+        for before_key, sink_nodes in sink_nodes_by_key.items():
+            for after_key, source_nodes in source_nodes_by_key.items():
+                if before_key == after_key or sink_nodes.isdisjoint(source_nodes):
+                    continue
+                dependencies[after_key].add(before_key)
+                dependents[before_key].add(after_key)
+
+        ready = [
+            key
+            for key in path_by_key
+            if not dependencies[key]
+        ]
+        queued = set(ready)
+        ordered: list[str] = []
+        while ready:
+            key = ready.pop(0)
+            queued.discard(key)
+            if key in ordered:
+                continue
+            ordered.append(key)
+            for dependent in sorted(dependents[key]):
+                dependencies[dependent].discard(key)
+                if (
+                    not dependencies[dependent]
+                    and dependent not in ordered
+                    and dependent not in queued
+                ):
+                    ready.append(dependent)
+                    queued.add(dependent)
+
+        if len(ordered) != len(path_by_key):
+            cyclic = ", ".join(sorted(key for key, deps in dependencies.items() if deps))
+            raise ValueError(f"datapath route graph contains a cycle: {cyclic}")
+
+        return tuple(path_by_key[key] for key in ordered)
 
     def _fanout(self, path: DataPath) -> FanoutDataPath[object]:
         key = datapath_key(path)
@@ -319,7 +370,11 @@ class ClusterDataRoutes:
         sink_kind, sink_args = sink_abi
         if source_kind != sink_kind and not (
             source_kind == "scalar"
-            and sink_kind in ("scalar_sink", "dc_load_voltage_sink")
+            and sink_kind in (
+                "scalar_sink",
+                "scalar_state_sink",
+                "dc_load_voltage_sink",
+            )
         ):
             return False
 
@@ -377,6 +432,16 @@ class ClusterDataRoutes:
                     source_node=source_node,
                     route_id=route_id,
                     sink_node=sink_node,
+                )
+            elif sink_kind == "scalar_state_sink":
+                _sink_route_id, _initial_value = sink_args
+                connected = self._cluster._rust_runtime.add_scalar_state_route(
+                    source_node=source_node,
+                    route_id=route_id,
+                    source_count=source_count,
+                    source_recv_many=source_recv_many,
+                    sink_node=sink_node,
+                    sink_route_id=_sink_route_id,
                 )
             elif sink_kind == "scalar_sink":
                 (

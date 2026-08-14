@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import ctypes
 
+from enum import Enum, auto
+
 from sim.infra.rig import (
+    DataPath,
     ModelDataPathOutputConnector,
     ModelDataPathInputConnector,
     PowerControlEvent,
     PowerControlPath,
     PowerInterface,
 )
+
+
+class VcpduPowerInput(Enum):
+    BUS_VOLTAGE = auto()
 
 
 class VcpduModelExtensions:
@@ -141,13 +148,27 @@ class VcpduModelExtensions:
         return True
 
     @classmethod
+    def bus_voltage_input(cls) -> ModelDataPathInputConnector:
+        def connect(node, path) -> None:
+            node.add_scalar_state_sink(
+                path,
+                initial_value=0.0,
+            )
+
+        return ModelDataPathInputConnector(connect)
+
+    @classmethod
+    def bus_voltage_path(cls) -> DataPath:
+        return DataPath.component(cls, VcpduPowerInput.BUS_VOLTAGE)
+
+    @classmethod
     def vn9008_load_voltage_output(
         cls,
         *,
         hsd_channel,
         timer_path,
+        bus_voltage_path,
         voltage_path,
-        source_voltage: float = 12.0,
         duty_full_scale: float = 100.0,
     ) -> ModelDataPathOutputConnector:
         def connect(node) -> None:
@@ -155,7 +176,8 @@ class VcpduModelExtensions:
             node.add_timer_scaled_scalar_output(
                 voltage_path,
                 timer_path=timer_path,
-                scale=float(source_voltage) / float(duty_full_scale),
+                scale_path=bus_voltage_path,
+                scale=1.0 / float(duty_full_scale),
             )
 
         return ModelDataPathOutputConnector(connect)

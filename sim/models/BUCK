@@ -4,6 +4,7 @@ rig_model_python(
     srcs = [
         "platforms.py",
         "//sim/models/components:python",
+        "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
     ],
     visibility = ["PUBLIC"],

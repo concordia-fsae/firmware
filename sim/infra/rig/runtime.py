@@ -262,6 +262,27 @@ class _RustClusterRuntime:
             ],
             ctypes.c_bool,
         )
+        self._add_scalar_state_route = bind_symbol(
+            "rig_cluster_add_scalar_state_route",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+            ],
+            ctypes.c_bool,
+        )
+        self._add_scalar_state_sink = bind_symbol(
+            "rig_cluster_add_scalar_state_sink",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_float,
+            ],
+            ctypes.c_bool,
+        )
         self._add_dc_load_voltage_route = bind_symbol(
             "rig_cluster_add_dc_load_voltage_route",
             [
@@ -284,6 +305,18 @@ class _RustClusterRuntime:
                 ctypes.c_uint16,
                 ctypes.c_int32,
                 ctypes.c_int32,
+                ctypes.c_uint32,
+                ctypes.c_float,
+                ctypes.c_float,
+            ],
+            ctypes.c_bool,
+        )
+        self._add_battery_source = bind_symbol(
+            "rig_cluster_add_battery_source",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_float,
                 ctypes.c_float,
                 ctypes.c_float,
             ],
@@ -573,6 +606,51 @@ class _RustClusterRuntime:
             )
         )
 
+    def add_scalar_state_route(
+        self,
+        *,
+        source_node: str,
+        route_id: int,
+        source_count: int,
+        source_recv_many: int,
+        sink_node: str,
+        sink_route_id: int,
+    ) -> bool:
+        try:
+            source_index = self._node_indices[source_node]
+            sink_index = self._node_indices[sink_node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_scalar_state_route(
+                ctypes.c_uint32(source_index),
+                ctypes.c_uint32(route_id),
+                ctypes.c_size_t(source_count),
+                ctypes.c_size_t(source_recv_many),
+                ctypes.c_uint32(sink_index),
+                ctypes.c_uint32(sink_route_id),
+            )
+        )
+
+    def add_scalar_state_sink(
+        self,
+        *,
+        node: str,
+        route_id: int,
+        initial_value: float,
+    ) -> bool:
+        try:
+            node_index = self._node_indices[node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_scalar_state_sink(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint32(route_id),
+                ctypes.c_float(initial_value),
+            )
+        )
+
     def add_periodic_can_source(
         self,
         *,
@@ -602,6 +680,7 @@ class _RustClusterRuntime:
         timer_interface: int,
         timer_port: int,
         timer_channel: int,
+        scale_route_id: int,
         scale: float,
         offset: float,
     ) -> bool:
@@ -616,8 +695,32 @@ class _RustClusterRuntime:
                 ctypes.c_uint16(timer_interface),
                 ctypes.c_int32(timer_port),
                 ctypes.c_int32(timer_channel),
+                ctypes.c_uint32(scale_route_id),
                 ctypes.c_float(scale),
                 ctypes.c_float(offset),
+            )
+        )
+
+    def add_battery_source(
+        self,
+        *,
+        node: str,
+        voltage_route_id: int,
+        voltage: float,
+        internal_resistance_ohms: float,
+        capacity_amp_hours: float,
+    ) -> bool:
+        try:
+            node_index = self._node_indices[node]
+        except KeyError:
+            return False
+        return bool(
+            self._add_battery_source(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint32(voltage_route_id),
+                ctypes.c_float(voltage),
+                ctypes.c_float(internal_resistance_ohms),
+                ctypes.c_float(capacity_amp_hours),
             )
         )
 
