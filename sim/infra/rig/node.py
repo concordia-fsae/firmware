@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import os
 import pathlib
+from collections.abc import Callable
 from enum import IntEnum
 
 from .artifacts import buck_output, load_shared_library
@@ -80,7 +81,7 @@ class NodeRig(ModelRig):
         self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
         self._scalar_sink_abis: dict[DataPathKey, tuple[int, int, float, int]] = {}
-        self._scalar_state_sink_abis: dict[DataPathKey, tuple[int, float]] = {}
+        self._scalar_state_sink_abis: dict[DataPathKey, tuple[int, float, int | None, float, int | None]] = {}
         self._timer_scaled_scalar_outputs: dict[
             DataPathKey, tuple[DataPath, int, int, int, int, float, float]
         ] = {}
@@ -133,7 +134,7 @@ class NodeRig(ModelRig):
         scalar_state_sink_abi = self._scalar_state_sink_abis.get(datapath_key(path))
         if scalar_state_sink_abi is not None:
             if self._cluster_rig is not None and self._cluster_node_name is not None:
-                route_id, initial_value = scalar_state_sink_abi
+                route_id, initial_value, sink_id, value_scale, set_value = scalar_state_sink_abi
                 if not self._cluster_rig._rust_runtime.add_scalar_state_sink(
                     node=self._cluster_node_name,
                     route_id=route_id,
@@ -227,11 +228,17 @@ class NodeRig(ModelRig):
         path: DataPath,
         *,
         initial_value: float = 0.0,
+        sink_id: int | None = None,
+        value_scale: float = 1.0,
+        set_value: Callable[[int, float], None] | None = None,
     ) -> None:
         key = datapath_key(path)
         self._scalar_state_sink_abis[key] = (
             datapath_route_id(key),
             float(initial_value),
+            None if sink_id is None else int(sink_id),
+            float(value_scale),
+            None if set_value is None else self._function_address(set_value),
         )
         self.datapaths.add_input(path, send=lambda _value: True)
 

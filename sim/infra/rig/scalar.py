@@ -32,7 +32,7 @@ class ScalarRouteEndpoint:
         if isinstance(sink, ScalarInputRouteEndpoint):
             return runtime.add_scalar_input_route(source_node=source_node, source_route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_route_id=sink.route_id)
         if isinstance(sink, ScalarStateSinkRouteEndpoint):
-            return runtime.add_scalar_state_route(source_node=source_node, route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_route_id=sink.route_id)
+            return runtime.add_scalar_state_route(source_node=source_node, route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_route_id=sink.route_id, sink_id=sink.sink_id, value_scale=sink.value_scale, set_value=sink.set_value)
         if isinstance(sink, ScalarSinkRouteEndpoint):
             return self.route_id == sink.route_id and runtime.add_scalar_sink_route(source_node=source_node, route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_id=sink.sink_id, value_scale=sink.value_scale, set_value=sink.set_value)
         if isinstance(sink, ScalarRouteEndpoint):
@@ -59,6 +59,9 @@ class ScalarSinkRouteEndpoint:
 class ScalarStateSinkRouteEndpoint:
     route_id: int
     initial_value: float
+    sink_id: int | None = None
+    value_scale: float = 1.0
+    set_value: int | None = None
 
     @property
     def scalar_source_route_id(self) -> None:

@@ -27,6 +27,9 @@ pub(super) enum ClusterScalarSink {
     SendMany(ClusterScalarSendManyFn),
     State {
         route_id: u32,
+        sink_id: i32,
+        value_scale: f32,
+        set_value: Option<ClusterScalarSinkSetFn>,
     },
     Native {
         sink_id: i32,
@@ -45,11 +48,14 @@ impl ClusterScalarSink {
         match (*self, other) {
             (Self::SendMany(_), Self::SendMany(_)) => true,
             (
-                Self::State { route_id },
+                Self::State { route_id, sink_id, value_scale, .. },
                 Self::State {
                     route_id: other_route_id,
+                    sink_id: other_sink_id,
+                    value_scale: other_value_scale,
+                    ..
                 },
-            ) => route_id == other_route_id,
+            ) => route_id == other_route_id && sink_id == other_sink_id && value_scale == other_value_scale,
             (
                 Self::Native {
                     sink_id,
@@ -303,9 +309,17 @@ impl ScalarInterface {
             let accepted = match sink.sink {
                 ClusterScalarSink::State {
                     route_id: sink_route_id,
+                    set_value,
+                    sink_id,
+                    value_scale,
                 } => {
                     self.states
                         .insert((sink.sink_node, sink_route_id), event.value);
+                    if sink_id >= 0 {
+                        if let Some(set_value) = set_value {
+                            unsafe { set_value(sink_id, event.value * value_scale) };
+                        }
+                    }
                     result
                         .ready_states
                         .push((sink.sink_node, sink_route_id, event.value));

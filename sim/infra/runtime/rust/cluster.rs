@@ -118,6 +118,9 @@ impl ClusterRuntime {
         source_recv_many: ClusterScalarRecvManyFn,
         sink_node: u32,
         sink_route_id: u32,
+        sink_id: i32,
+        value_scale: f32,
+        set_value: Option<ClusterScalarSinkSetFn>,
     ) -> bool {
         self.add_scalar_state_input(sink_node, sink_route_id);
         if !self.register_route(InterfaceRoute::Scalar(ClusterScalarRoute {
@@ -128,6 +131,9 @@ impl ClusterRuntime {
             sink_node,
             sink: ClusterScalarSink::State {
                 route_id: sink_route_id,
+                sink_id,
+                value_scale,
+                set_value,
             },
         })) {
             return false;
@@ -764,10 +770,22 @@ pub extern "C" fn rig_cluster_add_scalar_state_route(
     source_recv_many: usize,
     sink_node: u32,
     sink_route_id: u32,
+    sink_id: i32,
+    value_scale: f32,
+    set_value: usize,
 ) -> bool {
     let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
     else {
         return false;
+    };
+    let set_value = if set_value == 0 {
+        None
+    } else {
+        let Some(set_value) = (unsafe { function_pointer::<ClusterScalarSinkSetFn>(set_value) })
+        else {
+            return false;
+        };
+        Some(set_value)
     };
     let Some(source_recv_many) =
         (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
@@ -782,6 +800,9 @@ pub extern "C" fn rig_cluster_add_scalar_state_route(
         source_recv_many,
         sink_node,
         sink_route_id,
+        sink_id,
+        value_scale,
+        set_value,
     )
 }
 

@@ -50,6 +50,7 @@ class _RustClusterRuntime:
         bind_symbol = getattr(host, "bind_symbol", None)
         if bind_symbol is None:
             bind_symbol = getattr(host, "_bind_symbol")
+        self._host_bind_symbol = bind_symbol
         self._reset = bind_symbol("rig_cluster_reset")
         self._add_scalar_transform_algorithm = bind_symbol(
             "rig_cluster_add_scalar_transform_algorithm",
@@ -274,6 +275,9 @@ class _RustClusterRuntime:
                 ctypes.c_size_t,
                 ctypes.c_uint32,
                 ctypes.c_uint32,
+                ctypes.c_int32,
+                ctypes.c_float,
+                ctypes.c_size_t,
             ],
             ctypes.c_bool,
         )
@@ -317,17 +321,6 @@ class _RustClusterRuntime:
             ],
             ctypes.c_bool,
         )
-        self._add_battery_source = bind_symbol(
-            "rig_cluster_add_battery_source",
-            [
-                ctypes.c_uint32,
-                ctypes.c_uint32,
-                ctypes.c_float,
-                ctypes.c_float,
-                ctypes.c_float,
-            ],
-            ctypes.c_bool,
-        )
         self._add_periodic_can_source = bind_symbol(
             "rig_cluster_add_periodic_can_source",
             [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint64, ctypes.c_void_p],
@@ -341,19 +334,6 @@ class _RustClusterRuntime:
         self._send_native_can_source_event = bind_symbol(
             "rig_cluster_send_native_can_source_event",
             [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_void_p],
-            ctypes.c_bool,
-        )
-        self._add_dc_load = bind_symbol(
-            "rig_cluster_add_dc_load",
-            [
-                ctypes.c_uint32,
-                ctypes.c_uint32,
-                ctypes.c_uint32,
-                ctypes.c_float,
-                ctypes.c_float,
-                ctypes.c_float,
-                ctypes.c_uint64,
-            ],
             ctypes.c_bool,
         )
         self._noop_timer_count = bind_symbol("rig_cluster_noop_timer_count")
@@ -373,6 +353,7 @@ class _RustClusterRuntime:
             [ctypes.c_uint32],
             ctypes.c_uint64,
         )
+
         self._node_elapsed_ns_many = bind_symbol(
             "rig_cluster_node_elapsed_ns_many",
             [ctypes.POINTER(ctypes.c_uint64), ctypes.c_uint32],
@@ -383,6 +364,14 @@ class _RustClusterRuntime:
     def reset(self) -> None:
         self._reset()
         self._node_indices.clear()
+
+    def bind_symbol(
+        self,
+        name: str,
+        argtypes: list[object] | None = None,
+        restype: object | None = None,
+    ):
+        return self._host_bind_symbol(name, argtypes, restype)
 
     def add_scalar_transform_algorithm(
         self,
@@ -649,6 +638,9 @@ class _RustClusterRuntime:
         source_recv_many: int,
         sink_node: str,
         sink_route_id: int,
+        sink_id: int | None = None,
+        value_scale: float = 1.0,
+        set_value: int | None = None,
     ) -> bool:
         try:
             source_index = self._node_indices[source_node]
@@ -663,6 +655,9 @@ class _RustClusterRuntime:
                 ctypes.c_size_t(source_recv_many),
                 ctypes.c_uint32(sink_index),
                 ctypes.c_uint32(sink_route_id),
+                ctypes.c_int32(-1 if sink_id is None else sink_id),
+                ctypes.c_float(value_scale),
+                ctypes.c_size_t(0 if set_value is None else set_value),
             )
         )
 
@@ -735,29 +730,6 @@ class _RustClusterRuntime:
             )
         )
 
-    def add_battery_source(
-        self,
-        *,
-        node: str,
-        voltage_route_id: int,
-        voltage: float,
-        internal_resistance_ohms: float,
-        capacity_amp_hours: float,
-    ) -> bool:
-        try:
-            node_index = self._node_indices[node]
-        except KeyError:
-            return False
-        return bool(
-            self._add_battery_source(
-                ctypes.c_uint32(node_index),
-                ctypes.c_uint32(voltage_route_id),
-                ctypes.c_float(voltage),
-                ctypes.c_float(internal_resistance_ohms),
-                ctypes.c_float(capacity_amp_hours),
-            )
-        )
-
     def update_periodic_can_source(self, handle: int, packet) -> bool:
         return bool(
             self._update_periodic_can_source(
@@ -792,32 +764,11 @@ class _RustClusterRuntime:
             self._function_address(self._noop_can_recv_events),
         )
 
-    def add_dc_load(
-        self,
-        *,
-        node: str,
-        voltage_route_id: int,
-        current_route_id: int,
-        resistance_ohms: float,
-        inductance_henrys: float,
-        capacitance_farads: float,
-        scheduler_period_ns: int,
-    ) -> bool:
+    def node_index(self, node: str) -> int | None:
         try:
-            node_index = self._node_indices[node]
+            return self._node_indices[node]
         except KeyError:
-            return False
-        return bool(
-            self._add_dc_load(
-                ctypes.c_uint32(node_index),
-                ctypes.c_uint32(voltage_route_id),
-                ctypes.c_uint32(current_route_id),
-                ctypes.c_float(resistance_ohms),
-                ctypes.c_float(inductance_henrys),
-                ctypes.c_float(capacitance_farads),
-                ctypes.c_uint64(scheduler_period_ns),
-            )
-        )
+            return None
 
     @property
     def noop_timer_route_abi(self) -> tuple[int, int, int]:
