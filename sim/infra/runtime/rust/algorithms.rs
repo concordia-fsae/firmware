@@ -252,3 +252,91 @@ pub(super) fn register_native_scalar_input(
     });
     true
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::dataflow::{
+        DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdge,
+    };
+
+    fn runtime_reset() {}
+
+    fn take_events(_context: usize, elapsed_ns: u64) -> Vec<ScalarEvent> {
+        vec![ScalarEvent {
+            value: 2.5,
+            timestamp_ns: elapsed_ns,
+        }]
+    }
+
+    fn receive_event(_context: usize, _event: ScalarEvent) -> bool {
+        true
+    }
+
+    unsafe extern "C" fn run_node(_elapsed_ns: u64) {}
+
+    unsafe extern "C" fn reset_node() {}
+
+    #[test]
+    fn lifecycle_registration_deduplicates_owned_callbacks() {
+        let mut runtime = ClusterRuntime::default();
+        runtime
+            .nodes
+            .push(super::super::node::ClusterNode::external(run_node, reset_node, true));
+        runtime.scheduler.mark_dirty();
+        let node = 0;
+        let algorithm = DataflowAlgorithm::source(
+            node,
+            (0, 0, 0),
+            vec![DataflowEdge::<ScalarEvent>::new(
+                node,
+                DataflowChannel::default(),
+            ).key()],
+            std::sync::Arc::new(TestExecutor),
+        )
+        .with_runtime_reset(runtime_reset)
+        .with_scalar_source(node, 4, 11, take_events)
+        .with_scalar_input(node, 5, 12, receive_event);
+
+        assert!(register_algorithm(&mut runtime, algorithm.clone()));
+        assert!(register_algorithm(&mut runtime, algorithm));
+        assert_eq!(runtime.algorithms.runtime_resets.len(), 1);
+        assert_eq!(runtime.algorithms.native_scalar_sources.len(), 1);
+        assert_eq!(runtime.algorithms.native_scalar_inputs.len(), 1);
+        assert_eq!(runtime.algorithms.take_native_scalar_events(node, 4, 7)[0].timestamp_ns, 7);
+        assert!(runtime.algorithms.native_scalar_input(node, 5).is_some());
+    }
+
+    #[test]
+    fn replacement_keeps_one_algorithm_for_each_sort_key() {
+        let mut runtime = ClusterRuntime::default();
+        let first = DataflowAlgorithm::source(
+            u32::MAX,
+            (1, 2, 3),
+            Vec::new(),
+            std::sync::Arc::new(TestExecutor),
+        );
+        let second = DataflowAlgorithm::periodic_source(
+            u32::MAX,
+            (1, 2, 3),
+            Vec::new(),
+            std::sync::Arc::new(TestExecutor),
+            10,
+            10,
+        );
+        assert!(register_algorithm(&mut runtime, first));
+        assert!(replace_algorithm(&mut runtime, second));
+        let mut specs = Vec::new();
+        runtime.algorithms.append_algorithm_specs(&mut specs);
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].period_ns, 10);
+    }
+
+    struct TestExecutor;
+
+    impl DataflowAlgorithmExecutor for TestExecutor {
+        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+            true
+        }
+    }
+}

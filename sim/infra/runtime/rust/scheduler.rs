@@ -11,6 +11,28 @@ pub struct SchedulerCallbackContext {
     pub delta_ns: u64,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn callback_context_defaults_to_zero() {
+        assert_eq!(SchedulerCallbackContext::default().elapsed_ns, 0);
+        assert_eq!(SchedulerCallbackContext::default().delta_ns, 0);
+    }
+
+    #[test]
+    fn empty_runtime_advances_by_the_requested_bounded_step() {
+        let mut runtime = ClusterRuntime::default();
+
+        assert_eq!(run_next_step(&mut runtime, 10, 3), 3);
+        assert_eq!(runtime.elapsed_ns, 3);
+        assert_eq!(run_next_step(&mut runtime, 2, 5), 2);
+        assert_eq!(runtime.elapsed_ns, 5);
+        assert_eq!(run_next_step(&mut runtime, 0, 5), 0);
+    }
+}
+
 #[derive(Default)]
 pub(super) struct ClusterScheduler {
     graph: DataflowGraph,

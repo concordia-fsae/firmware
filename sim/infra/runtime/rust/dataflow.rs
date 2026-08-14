@@ -240,6 +240,143 @@ impl DataflowAlgorithm {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+
+    struct TestExecutor;
+
+    impl DataflowAlgorithmExecutor for TestExecutor {
+        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn edge_keys_include_node_type_and_channel() {
+        let channel = DataflowChannel {
+            interface: 1,
+            port: 2,
+            channel: 3,
+        };
+        let first = DataflowEdge::<ScalarEvent>::new(4, channel).key();
+        let second = DataflowEdge::<ScalarEvent>::new(4, channel).key();
+        let other_node = DataflowEdge::<ScalarEvent>::new(5, channel).key();
+
+        assert_eq!(first, second);
+        assert_ne!(first, other_node);
+    }
+
+    #[test]
+    fn algorithm_constructors_preserve_shapes_and_schedule() {
+        let input = DataflowEdge::<ScalarEvent>::new(
+            1,
+            DataflowChannel {
+                interface: 0,
+                port: 0,
+                channel: 1,
+            },
+        )
+        .key();
+        let output = DataflowEdge::<ScalarEvent>::new(
+            1,
+            DataflowChannel {
+                interface: 0,
+                port: 0,
+                channel: 2,
+            },
+        )
+        .key();
+        let algorithm = DataflowAlgorithm::periodic_transform(
+            1,
+            (1, 2, 3),
+            vec![input],
+            vec![output],
+            Arc::new(TestExecutor),
+            100,
+            200,
+        );
+
+        assert_eq!(algorithm.owner_node, 1);
+        assert_eq!(algorithm.sort_key, (1, 2, 3));
+        assert_eq!(algorithm.inputs, vec![input]);
+        assert_eq!(algorithm.outputs, vec![output]);
+        assert_eq!(algorithm.period_ns, 100);
+        assert_eq!(algorithm.next_due_ns, 200);
+        assert!(!algorithm.executor.polls_pending());
+    }
+
+    struct OrderedExecutor {
+        name: &'static str,
+        order: Arc<Mutex<Vec<&'static str>>>,
+    }
+
+    impl DataflowAlgorithmExecutor for OrderedExecutor {
+        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+            self.order.lock().unwrap().push(self.name);
+            true
+        }
+    }
+
+    #[test]
+    fn ready_sequential_graph_executes_every_stage_once_in_dependency_order() {
+        let order = Arc::new(Mutex::new(Vec::new()));
+        let channel = |channel| {
+            DataflowEdge::<ScalarEvent>::new(
+                u32::MAX,
+                DataflowChannel {
+                    interface: 0,
+                    port: 0,
+                    channel,
+                },
+            )
+            .key()
+        };
+        let source_output = channel(1);
+        let transform_output = channel(2);
+        let executor = |name| {
+            Arc::new(OrderedExecutor {
+                name,
+                order: Arc::clone(&order),
+            }) as Arc<dyn DataflowAlgorithmExecutor>
+        };
+
+        let mut graph = DataflowGraph {
+            algorithm_specs: vec![
+                DataflowAlgorithm::source(u32::MAX, (0, 0, 0), vec![source_output], executor("source")),
+                DataflowAlgorithm::transform(
+                    u32::MAX,
+                    (0, 0, 1),
+                    vec![source_output],
+                    vec![transform_output],
+                    executor("transform"),
+                ),
+                DataflowAlgorithm::transform(
+                    u32::MAX,
+                    (0, 0, 2),
+                    vec![transform_output],
+                    Vec::new(),
+                    executor("sink"),
+                ),
+            ],
+            ..Default::default()
+        };
+        let mut runtime = ClusterRuntime::default();
+        graph.rebuild(0, &runtime);
+
+        // A source becomes ready from its model-owned event ingress. The queue
+        // must then propagate readiness through each dependent stage.
+        graph.enqueue_if_ready(0);
+        let mut ran_algorithms = vec![0; graph.algorithms.len()];
+        graph.run_queue(&mut runtime, &mut ran_algorithms, 1);
+
+        assert_eq!(*order.lock().unwrap(), vec!["source", "transform", "sink"]);
+        assert!(graph.queue.is_empty());
+        assert!(ran_algorithms.iter().all(|generation| *generation == 1));
+    }
+}
+
 struct PythonNodeAlgorithm {
     node: u32,
     input_triggered: bool,

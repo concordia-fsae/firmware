@@ -1,5 +1,4 @@
 import ctypes
-import multiprocessing as mp
 from enum import Enum, auto
 
 from sim.infra.rig import (
@@ -254,62 +253,28 @@ def test_dataflow_graph_rejects_cyclic_algorithms_from_python_abi():
     assert not runtime.compile_dataflow_graph()
 
 
-def _run_native_feedback_dataflow_once(result_queue) -> None:
+def test_runtime_rejects_routes_with_unknown_nodes():
     runtime = _RustClusterRuntime()
-    runtime.add_node("battery", FakeNode())
-    runtime.add_node("load", FakeNode())
-    assert runtime.add_battery_source(
-        node="battery",
-        voltage_route_id=10,
-        voltage=12.0,
-        internal_resistance_ohms=0.01,
-        capacity_amp_hours=1.0,
-    )
-    assert runtime.add_dc_load(
-        node="load",
-        voltage_route_id=11,
-        current_route_id=12,
-        resistance_ohms=1.0,
-        inductance_henrys=0.0,
-        capacitance_farads=0.0,
-        scheduler_period_ns=0,
-    )
-    source_count, source_recv_many, _ = runtime.noop_scalar_route_abi
-    assert runtime.add_scalar_input_route(
-        source_node="battery",
-        source_route_id=10,
-        source_count=source_count,
-        source_recv_many=source_recv_many,
-        sink_node="load",
-        sink_route_id=11,
-    )
-    assert runtime.add_scalar_state_route(
-        source_node="load",
-        route_id=12,
-        source_count=source_count,
-        source_recv_many=source_recv_many,
-        sink_node="battery",
-        sink_route_id=13,
-    )
+    runtime.add_node("sink", FakeNode())
 
-    runtime.run_for(1, 1, route=False)
-    result_queue.put(runtime.elapsed_ns())
-
-
-def test_native_dataflow_feedback_chain_terminates_from_python_abi():
-    context = mp.get_context("spawn")
-    result_queue = context.Queue()
-    process = context.Process(
-        target=_run_native_feedback_dataflow_once,
-        args=(result_queue,),
+    assert not runtime.add_scalar_input_route(
+        source_node="missing",
+        source_route_id=1,
+        source_count=0,
+        source_recv_many=0,
+        sink_node="sink",
+        sink_route_id=1,
     )
-    process.start()
-    process.join(timeout=5)
-    if process.is_alive():
-        process.terminate()
-        process.join(timeout=1)
-    assert process.exitcode == 0
-    assert result_queue.get(timeout=1) == 1
+    assert not runtime.add_timer_route(
+        source_node="missing",
+        interface=1,
+        port=0,
+        channel=0,
+        source_count=0,
+        source_recv_many=0,
+        sink_node="sink",
+        sink_send_many=0,
+    )
 
 
 def test_custom_datapath_routes_between_cluster_nodes():

@@ -1,5 +1,18 @@
 load("//sim/infra:defs.bzl", "RIG_RUNTIME_RUST_ENV")
 
+rust_test(
+    name = "runtime_unit",
+    crate = "rig_runtime",
+    crate_root = "rust/cluster_lib.rs",
+    edition = "2024",
+    srcs = glob(["rust/*.rs"]),
+    env = {
+        name: "$(location {})".format(target)
+        for name, target in RIG_RUNTIME_RUST_ENV.items()
+    },
+    visibility = ["PUBLIC"],
+)
+
 export_file(
     name = "runtime-src",
     src = "rust/lib.rs",
