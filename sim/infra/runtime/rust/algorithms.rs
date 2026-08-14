@@ -1,13 +1,10 @@
 use std::collections::HashSet;
 
 use super::cluster::ClusterRuntime;
-use super::dataflow::DataflowAlgorithm;
+use super::dataflow::{
+    DataflowAlgorithm, NativeScalarReceiveFn, NativeScalarTakeFn, NodeResetFn, RuntimeResetFn,
+};
 use super::scalar::ScalarEvent;
-
-type RuntimeResetFn = fn();
-type NodeResetFn = fn(usize, u64);
-type NativeScalarTakeFn = fn(usize, u64) -> Vec<ScalarEvent>;
-pub(super) type NativeScalarReceiveFn = fn(usize, ScalarEvent) -> bool;
 
 #[derive(Clone, Copy)]
 struct NodeReset {
@@ -148,6 +145,9 @@ pub(super) fn register_algorithm(
     if algorithm.owner_node != u32::MAX && !runtime.node_exists(algorithm.owner_node) {
         return false;
     }
+    if !register_algorithm_lifecycle(runtime, &algorithm) {
+        return false;
+    }
     runtime.algorithms.algorithms.push(algorithm);
     runtime.scheduler.mark_dirty();
     true
@@ -160,11 +160,40 @@ pub(super) fn replace_algorithm(
     if algorithm.owner_node != u32::MAX && !runtime.node_exists(algorithm.owner_node) {
         return false;
     }
+    if !register_algorithm_lifecycle(runtime, &algorithm) {
+        return false;
+    }
     runtime.algorithms.algorithms.retain(|existing| {
         existing.owner_node != algorithm.owner_node || existing.sort_key != algorithm.sort_key
     });
     runtime.algorithms.algorithms.push(algorithm);
     runtime.scheduler.mark_dirty();
+    true
+}
+
+fn register_algorithm_lifecycle(
+    runtime: &mut ClusterRuntime,
+    algorithm: &DataflowAlgorithm,
+) -> bool {
+    let lifecycle = algorithm.lifecycle;
+    if let Some(reset) = lifecycle.runtime_reset {
+        register_runtime_reset(runtime, reset);
+    }
+    if let Some((node, context, reset)) = lifecycle.node_reset {
+        if !register_node_reset(runtime, node, context, reset) {
+            return false;
+        }
+    }
+    if let Some((node, route_id, context, take)) = lifecycle.scalar_source {
+        if !register_native_scalar_source(runtime, node, route_id, context, take) {
+            return false;
+        }
+    }
+    if let Some((node, route_id, context, receive)) = lifecycle.scalar_input {
+        if !register_native_scalar_input(runtime, node, route_id, context, receive) {
+            return false;
+        }
+    }
     true
 }
 

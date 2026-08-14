@@ -217,9 +217,6 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
     let route_id = source.voltage_output_key().1;
     drop(sources);
 
-    algorithms::register_runtime_reset(runtime, reset_runtime);
-    algorithms::register_node_reset(runtime, node, context, reset_source);
-    algorithms::register_native_scalar_source(runtime, node, route_id, context, take_source_events);
     algorithms::register_algorithm(
         runtime,
         DataflowAlgorithm::source(
@@ -229,7 +226,10 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
             Arc::new(BatterySourceAlgorithm {
                 source_index: context,
             }),
-        ),
+        )
+        .with_runtime_reset(reset_runtime)
+        .with_node_reset(node, context, reset_source)
+        .with_scalar_source(node, route_id, context, take_source_events),
     )
 }
 

@@ -89,7 +89,6 @@ pub(super) fn add_periodic_can_source(
     if !runtime.node_exists(node) || period_ns == 0 {
         return u32::MAX;
     }
-    algorithms::register_runtime_reset(runtime, reset_periodic_can_sources);
     let mut sources = PERIODIC_CAN_SOURCES.lock().unwrap();
     let handle = sources.sources.len();
     sources
@@ -109,7 +108,8 @@ pub(super) fn add_periodic_can_source(
             }),
             source.period_ns(),
             source.due_at_ns(),
-        ),
+        )
+        .with_runtime_reset(reset_periodic_can_sources),
     ) {
         PERIODIC_CAN_SOURCES.lock().unwrap().sources.pop();
         return u32::MAX;

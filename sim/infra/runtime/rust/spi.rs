@@ -5,7 +5,7 @@ use super::cluster::{
     ClusterRuntime, ClusterSpiCountFn, ClusterSpiRecvManyFn, ClusterSpiSendManyFn,
 };
 use super::dataflow::{
-    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdgeKey,
+    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel,
     DataflowEvent,
 };
 use super::datapath::{DataPath, DataPathEvent};

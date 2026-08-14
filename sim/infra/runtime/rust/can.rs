@@ -4,7 +4,7 @@ use std::sync::{LazyLock, Mutex};
 
 use super::cluster::{ClusterCanRecvEventsFn, ClusterCanSendManyFn, ClusterCanTxCountFn, ClusterRuntime};
 use super::dataflow::{
-    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdgeKey,
+    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel,
     DataflowEvent,
 };
 use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};

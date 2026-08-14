@@ -214,6 +214,10 @@ fn load_algorithm(context: usize, load: DcLoadModel, elapsed_ns: u64) -> Dataflo
         period_ns,
         elapsed_ns.saturating_add(period_ns),
     )
+    .with_runtime_reset(reset_runtime)
+    .with_node_reset(node, context, reset_load)
+    .with_scalar_source(node, current_route_id, context, take_load_events)
+    .with_scalar_input(node, load.voltage_route_id, context, receive_load_voltage)
 }
 
 struct DcLoadAlgorithm {
@@ -285,27 +289,12 @@ fn register_load(runtime: &mut ClusterRuntime, load: DcLoadModel) -> bool {
 
     loads.push(load);
     let context = loads.len() - 1;
-    let node = load.node();
-    let current_route_id = load.current_output_key().1;
     drop(loads);
 
-    algorithms::register_runtime_reset(runtime, reset_runtime);
-    algorithms::register_node_reset(runtime, node, context, reset_load);
-    algorithms::register_native_scalar_source(
+    algorithms::register_algorithm(
         runtime,
-        node,
-        current_route_id,
-        context,
-        take_load_events,
-    );
-    algorithms::register_native_scalar_input(
-        runtime,
-        node,
-        load.voltage_route_id,
-        context,
-        receive_load_voltage,
-    );
-    algorithms::register_algorithm(runtime, load_algorithm(context, load, runtime.elapsed_ns))
+        load_algorithm(context, load, runtime.elapsed_ns),
+    )
 }
 
 pub(super) fn add_dc_load(

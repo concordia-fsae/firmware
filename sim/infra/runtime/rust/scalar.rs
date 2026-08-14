@@ -5,10 +5,9 @@ use super::cluster::{
     ClusterRuntime, ClusterScalarCountFn, ClusterScalarRecvManyFn, ClusterScalarSendManyFn,
     ClusterScalarSinkSetFn,
 };
-use super::algorithms::NativeScalarReceiveFn;
 use super::dataflow::{
-    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdgeKey,
-    DataflowEvent,
+    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel,
+    DataflowEvent, NativeScalarReceiveFn,
 };
 use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};
 use super::registry::RuntimeInterfaces;

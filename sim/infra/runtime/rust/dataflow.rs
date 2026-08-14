@@ -4,8 +4,22 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use super::cluster::ClusterRuntime;
+use super::scalar::ScalarEvent;
 
 pub(super) trait DataflowEvent: Copy + Send + Sync + 'static {}
+
+pub(super) type RuntimeResetFn = fn();
+pub(super) type NodeResetFn = fn(usize, u64);
+pub(super) type NativeScalarTakeFn = fn(usize, u64) -> Vec<ScalarEvent>;
+pub(super) type NativeScalarReceiveFn = fn(usize, ScalarEvent) -> bool;
+
+#[derive(Clone, Copy, Default)]
+pub(super) struct DataflowAlgorithmLifecycle {
+    pub(super) runtime_reset: Option<RuntimeResetFn>,
+    pub(super) node_reset: Option<(u32, usize, NodeResetFn)>,
+    pub(super) scalar_source: Option<(u32, u32, usize, NativeScalarTakeFn)>,
+    pub(super) scalar_input: Option<(u32, u32, usize, NativeScalarReceiveFn)>,
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(super) struct DataflowChannel {
@@ -69,6 +83,7 @@ pub(super) struct DataflowAlgorithm {
     pub(super) executor: Arc<dyn DataflowAlgorithmExecutor>,
     pub(super) period_ns: u64,
     pub(super) next_due_ns: u64,
+    pub(super) lifecycle: DataflowAlgorithmLifecycle,
 }
 
 impl DataflowAlgorithm {
@@ -86,6 +101,7 @@ impl DataflowAlgorithm {
             executor,
             period_ns: 0,
             next_due_ns: 0,
+            lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
 
@@ -105,6 +121,7 @@ impl DataflowAlgorithm {
             executor,
             period_ns,
             next_due_ns,
+            lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
 
@@ -123,6 +140,7 @@ impl DataflowAlgorithm {
             executor,
             period_ns: 0,
             next_due_ns: 0,
+            lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
 
@@ -143,6 +161,7 @@ impl DataflowAlgorithm {
             executor,
             period_ns,
             next_due_ns,
+            lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
 
@@ -163,6 +182,7 @@ impl DataflowAlgorithm {
             }),
             period_ns,
             next_due_ns,
+            lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
 
@@ -178,7 +198,45 @@ impl DataflowAlgorithm {
             }),
             period_ns: 0,
             next_due_ns: 0,
+            lifecycle: DataflowAlgorithmLifecycle::default(),
         }
+    }
+
+    pub(super) fn with_runtime_reset(mut self, reset: RuntimeResetFn) -> Self {
+        self.lifecycle.runtime_reset = Some(reset);
+        self
+    }
+
+    pub(super) fn with_node_reset(
+        mut self,
+        node: u32,
+        context: usize,
+        reset: NodeResetFn,
+    ) -> Self {
+        self.lifecycle.node_reset = Some((node, context, reset));
+        self
+    }
+
+    pub(super) fn with_scalar_source(
+        mut self,
+        node: u32,
+        route_id: u32,
+        context: usize,
+        take: NativeScalarTakeFn,
+    ) -> Self {
+        self.lifecycle.scalar_source = Some((node, route_id, context, take));
+        self
+    }
+
+    pub(super) fn with_scalar_input(
+        mut self,
+        node: u32,
+        route_id: u32,
+        context: usize,
+        receive: NativeScalarReceiveFn,
+    ) -> Self {
+        self.lifecycle.scalar_input = Some((node, route_id, context, receive));
+        self
     }
 }
 
