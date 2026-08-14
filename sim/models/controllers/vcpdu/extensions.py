@@ -167,6 +167,9 @@ class VcpduModelExtensions:
             node.add_scalar_state_sink(
                 path,
                 initial_value=0.0,
+                sink_id=int(node.AnalogInput.UVL_BATT),
+                value_scale=1.0 / 6.62,
+                set_value=node._set_analog_input,
             )
 
         return ModelDataPathInputConnector(connect)

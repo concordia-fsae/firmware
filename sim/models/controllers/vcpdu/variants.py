@@ -56,6 +56,10 @@ def vcpdu_node(
             source_spec=BatterySourceSpec(
                 voltage=12.0,
                 internal_resistance_ohms=0.01,
+                rc1_resistance_ohms=0.02,
+                rc1_capacitance_farads=1.0,
+                rc2_resistance_ohms=0.03,
+                rc2_capacitance_farads=10.0,
             ),
             current_drain_channels=(pump_current, fan_current),
             bindings=(

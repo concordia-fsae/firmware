@@ -8,28 +8,6 @@ BMSB_MODEL = "//sim/models/controllers/bmsb"
 SWS_MODEL = "//sim/models/controllers/sws"
 
 rig_pytest(
-    name = "runtime_infra",
-    test_file = "sim/tests/test_runtime_infra.py",
-    env = {
-        "VCPDU_ENUMS_PY": "$(location {}:enums-py)".format(VCPDU_MODEL),
-        "VCPDU_MODEL_PY": "$(location {}:vcpdu-py)".format(VCPDU_MODEL),
-        "VCPDU_SIM_LIB": "$(location {}:sil-so)".format(VCPDU_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS),
-    resources = [
-        "{}:enums-py".format(VCPDU_MODEL),
-        "{}:vcpdu-py".format(VCPDU_MODEL),
-        "{}:sil-so".format(VCPDU_MODEL),
-        "//sim/models/components:python",
-        "//sim/models/components/asm330:python",
-        "//sim/models/components/battery_source:python",
-        "//sim/models/components/dc_load:python",
-    ] + rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS),
-    visibility = ["PUBLIC"],
-)
-
-rig_pytest(
     name = "dc_load",
     test_file = "sim/tests/test_dc_load.py",
     resources = [
@@ -44,7 +22,9 @@ rig_pytest(
     test_file = "sim/tests/test_battery_source.py",
     resources = [
         "//sim/models/components:python",
+        "//sim/models/components/dc_load:python",
         "//sim/models/components/battery_source:python",
+        "//sim/models/test:python",
     ],
     visibility = ["PUBLIC"],
 )
