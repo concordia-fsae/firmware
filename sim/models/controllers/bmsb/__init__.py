@@ -25,6 +25,7 @@ def _load_generated() -> None:
     globals()["DigitalIo"] = enums.DigitalIo
     globals()["DigitalOutput"] = enums.DigitalOutput
     globals()["Fault"] = enums.Fault
+    globals()["PrechargeContactorState"] = enums.PrechargeContactorState
     globals()["TimerChannel"] = enums.TimerChannel
     globals()["TimerPort"] = enums.TimerPort
 
@@ -71,6 +72,7 @@ _GENERATED_EXPORTS = {
     "DigitalIo",
     "DigitalOutput",
     "Fault",
+    "PrechargeContactorState",
     "TimerChannel",
     "TimerPort",
     "BmsbModel",
@@ -84,6 +86,7 @@ __all__ = [
     "DigitalIo",
     "DigitalOutput",
     "Fault",
+    "PrechargeContactorState",
     "TimerChannel",
     "TimerPort",
     "PLATFORM_VARIANTS",
