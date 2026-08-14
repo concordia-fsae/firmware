@@ -12,7 +12,7 @@ def test_bmsb_hvdc_load_reports_voltage_sag_and_current(bmsb_cluster):
         for component in bmsb_cluster.components
         if isinstance(component, BatterySourceModel)
     )
-    voltage_path = battery.voltage_output_channel
+    voltage_path = battery.terminal_voltage_output_channel
     current_path = DcLoadModel.current_output_channel("bmsb-load")
     load = DcLoadModel(
         voltage_input_channel=voltage_path,

@@ -11,7 +11,7 @@ from . import BmsbModel, BmsbModelExtensions
 def bmsb_node(
     hardware: str | None = None, *, power_input: PowerControlPath | None = None
 ) -> NodeSpec:
-    battery_voltage = BatterySourceModel.voltage_output_channel("bmsb-pack")
+    battery_voltage = BatterySourceModel.terminal_voltage_output_channel("bmsb-pack")
     load_current = DcLoadModel.current_output_channel("bmsb-load")
     return NodeSpec(
         "bmsb",
@@ -20,14 +20,14 @@ def bmsb_node(
         power_input=power_input,
         components=(
             BatterySourceModel.spec(
-                voltage_output_channel=battery_voltage,
+                terminal_voltage_output_channel=battery_voltage,
                 source_spec=BatterySourceSpec(
                     voltage=350.0,
                     internal_resistance_ohms=0.05,
                 ),
                 current_drain_channels=(load_current,),
                 bindings=(
-                    BatterySourceModel.voltage_output.bind_to(
+                    BatterySourceModel.terminal_voltage_output.bind_to(
                         BmsbModelExtensions.pack_voltage_input()
                     ),
                 ),

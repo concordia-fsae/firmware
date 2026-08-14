@@ -52,7 +52,7 @@ def vcpdu_node(
     )
     components = (
         BatterySourceModel.spec(
-            voltage_output_channel=bus_voltage,
+            terminal_voltage_output_channel=bus_voltage,
             source_spec=BatterySourceSpec(
                 voltage=12.0,
                 internal_resistance_ohms=0.01,
@@ -63,7 +63,7 @@ def vcpdu_node(
             ),
             current_drain_channels=(pump_current, fan_current),
             bindings=(
-                BatterySourceModel.voltage_output.bind_to(
+                BatterySourceModel.terminal_voltage_output.bind_to(
                     VcpduModel.bus_voltage_input(),
                 ),
             ),
