@@ -33,6 +33,8 @@ def vcpdu_node(
     bus_voltage = VcpduModel.bus_voltage_path()
     pump_voltage = DcLoadModel.voltage_input_channel(Vn9008Channel.PUMP)
     fan_voltage = DcLoadModel.voltage_input_channel(Vn9008Channel.FAN)
+    pump_current = DcLoadModel.current_output_channel(Vn9008Channel.PUMP)
+    fan_current = DcLoadModel.current_output_channel(Vn9008Channel.FAN)
     configured_outputs = (
         *model_outputs,
         VcpduModel.vn9008_load_voltage_output(
@@ -51,7 +53,11 @@ def vcpdu_node(
     components = (
         BatterySourceModel.spec(
             voltage_output_channel=bus_voltage,
-            source_spec=BatterySourceSpec(voltage=12.0),
+            source_spec=BatterySourceSpec(
+                voltage=12.0,
+                internal_resistance_ohms=0.01,
+            ),
+            current_drain_channels=(pump_current, fan_current),
             bindings=(
                 BatterySourceModel.voltage_output.bind_to(
                     VcpduModel.bus_voltage_input(),
@@ -64,6 +70,7 @@ def vcpdu_node(
         ),
         DcLoadModel.spec(
             voltage_input_channel=pump_voltage,
+            current_output_channel=pump_current,
             load_spec=DcLoadSpec(resistance_ohms=2.0),
             bindings=(
                 DcLoadModel.current_output.bind_to(
@@ -76,6 +83,7 @@ def vcpdu_node(
         ),
         DcLoadModel.spec(
             voltage_input_channel=fan_voltage,
+            current_output_channel=fan_current,
             load_spec=DcLoadSpec(resistance_ohms=1.0),
             bindings=(
                 DcLoadModel.current_output.bind_to(

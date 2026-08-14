@@ -286,11 +286,13 @@ class _RustClusterRuntime:
             ],
             ctypes.c_bool,
         )
-        self._add_dc_load_voltage_route = bind_symbol(
-            "rig_cluster_add_dc_load_voltage_route",
+        self._add_scalar_input_route = bind_symbol(
+            "rig_cluster_add_scalar_input_route",
             [
                 ctypes.c_uint32,
                 ctypes.c_uint32,
+                ctypes.c_size_t,
+                ctypes.c_size_t,
                 ctypes.c_uint32,
                 ctypes.c_uint32,
             ],
@@ -612,11 +614,13 @@ class _RustClusterRuntime:
             )
         )
 
-    def add_dc_load_voltage_route(
+    def add_scalar_input_route(
         self,
         *,
         source_node: str,
         source_route_id: int,
+        source_count: int,
+        source_recv_many: int,
         sink_node: str,
         sink_route_id: int,
     ) -> bool:
@@ -626,9 +630,11 @@ class _RustClusterRuntime:
         except KeyError:
             return False
         return bool(
-            self._add_dc_load_voltage_route(
+            self._add_scalar_input_route(
                 ctypes.c_uint32(source_index),
                 ctypes.c_uint32(source_route_id),
+                ctypes.c_size_t(source_count),
+                ctypes.c_size_t(source_recv_many),
                 ctypes.c_uint32(sink_index),
                 ctypes.c_uint32(sink_route_id),
             )

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 
 class RunUntilTimeout(AssertionError):
-    pass
+    """Raised when a simulation predicate does not settle before its deadline."""
+
+    __slots__ = ()
 
 
 def duration_to_ns(duration: int | float, *, unit: str = "ms") -> int:

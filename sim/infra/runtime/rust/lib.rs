@@ -34,6 +34,10 @@ pub mod datapath {
     include!(env!("RIG_RUNTIME_RUST_DATAPATH_RS"));
 }
 
+mod dataflow {
+    include!(env!("RIG_RUNTIME_RUST_DATAFLOW_RS"));
+}
+
 pub mod faults {
     include!(env!("RIG_RUNTIME_RUST_FAULTS_RS"));
 }
@@ -50,8 +54,20 @@ pub mod module_desc {
     include!(env!("RIG_RUNTIME_RUST_MODULE_DESC_RS"));
 }
 
-mod networks {
-    include!(env!("RIG_RUNTIME_RUST_NETWORKS_RS"));
+mod interfaces {
+    include!(env!("RIG_RUNTIME_RUST_INTERFACES_RS"));
+}
+
+mod registry {
+    include!(env!("RIG_RUNTIME_RUST_REGISTRY_RS"));
+}
+
+mod node {
+    include!(env!("RIG_RUNTIME_RUST_NODE_RS"));
+}
+
+mod algorithms {
+    include!(env!("RIG_RUNTIME_RUST_ALGORITHMS_RS"));
 }
 
 pub mod nvm {
@@ -60,6 +76,14 @@ pub mod nvm {
 
 pub mod rt_controller {
     include!(env!("RIG_RUNTIME_RUST_RT_CONTROLLER_RS"));
+}
+
+mod scalar {
+    include!(env!("RIG_RUNTIME_RUST_SCALAR_RS"));
+}
+
+mod scheduler {
+    include!(env!("RIG_RUNTIME_RUST_SCHEDULER_RS"));
 }
 
 pub mod simple {

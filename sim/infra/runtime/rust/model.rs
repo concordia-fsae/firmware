@@ -1,5 +1,6 @@
 use super::rt_controller::RTController;
 use super::rt_controller::Scheduler;
+use super::interfaces::ModelPeripheralRuntime;
 
 pub const RIG_MODEL_DATAPATH_TIMER_DUTY: u16 = 1;
 pub const RIG_MODEL_DATAPATH_TIMER_FREQUENCY: u16 = 2;
@@ -66,11 +67,9 @@ impl<Target: NodeTarget> NodeModel<Target> {
     }
 
     pub unsafe fn reset(&mut self) {
-        super::spi::reset();
-        super::timer::reset();
+        unsafe { self.controller.reset_peripherals() };
         self.configure_runtime_datapaths();
         self.controller.reset_runtime();
-        super::spi::reset_chip_selects();
         unsafe { self.target.reset_node(&mut self.controller) };
         unsafe { self.controller.reset() };
     }
@@ -95,23 +94,17 @@ impl<Target: NodeTarget> NodeModel<Target> {
         self.target.datapath_descriptor(index)
     }
 
-    fn configure_runtime_datapaths(&self) {
+    fn configure_runtime_datapaths(&mut self) {
         for index in 0..self.target.datapath_count() {
             let Some(descriptor) = self.target.datapath_descriptor(index) else {
                 continue;
             };
-            match descriptor.interface {
-                RIG_MODEL_DATAPATH_TIMER_DUTY => {
-                    super::timer::configure_channel(descriptor.port, descriptor.channel);
-                }
-                RIG_MODEL_DATAPATH_TIMER_FREQUENCY => {
-                    super::timer::configure_channel(descriptor.port, descriptor.channel);
-                }
-                RIG_MODEL_DATAPATH_SPI_TRANSACTION => {
-                    super::spi::configure_device(descriptor.device);
-                }
-                _ => {}
-            }
+            self.controller.configure_datapath(
+                descriptor.interface,
+                descriptor.port,
+                descriptor.channel,
+                descriptor.device,
+            );
         }
     }
 }

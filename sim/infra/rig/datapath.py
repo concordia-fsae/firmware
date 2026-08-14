@@ -1,50 +1,64 @@
 from __future__ import annotations
 
-import ctypes
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum, auto
+from functools import cache
+from itertools import count
 from typing import Generic, TypeVar
 
 
 PayloadT = TypeVar("PayloadT")
 
 
+class PeripheralInterface(IntEnum):
+    TIMER_DUTY = 1
+    TIMER_FREQUENCY = 2
+    SPI_TRANSACTION = 3
+
+
+class _DataPathNamespace(Enum):
+    CAN = auto()
+    NAMED = auto()
+
+
+@dataclass(frozen=True)
+class DataPathKey:
+    value: int
+
+
 @dataclass(frozen=True)
 class PeripheralBinding:
-    interface: str
+    interface: PeripheralInterface
     channel: int | None = None
     port: int | None = None
     device: int | None = None
 
 
-class ScalarEvent(ctypes.Structure):
-    _fields_ = [
-        ("value", ctypes.c_float),
-        ("timestamp_ns", ctypes.c_uint64),
-    ]
+_DATAPATH_IDS = count(1)
 
 
-@dataclass(frozen=True)
+def _next_datapath_key() -> DataPathKey:
+    return DataPathKey(next(_DATAPATH_IDS))
+
+
+@dataclass(frozen=True, eq=False)
 class DataPath:
     parts: tuple[object, ...]
     peripheral_binding: PeripheralBinding | None = None
-    key: str = field(init=False, repr=False, compare=False)
-
-    def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "key",
-            "datapath:" + ":".join(_datapath_part_key(part) for part in self.parts),
-        )
+    key: DataPathKey = field(default_factory=_next_datapath_key, repr=False)
 
     @classmethod
     def component(cls, component: object, port: object) -> DataPath:
-        return cls((component, port))
+        return _component_datapath(component, port)
+
+    @classmethod
+    def named(cls, *parts: object) -> DataPath:
+        return cls((_DataPathNamespace.NAMED, *parts))
 
     @classmethod
     def can_bus(cls, bus: object) -> DataPath:
-        return cls(("can", bus))
+        return _can_datapath(bus)
 
     @classmethod
     def peripheral(
@@ -55,16 +69,34 @@ class DataPath:
         return cls(parts, binding)
 
 
-def datapath_key(path: DataPath) -> str:
+def datapath_key(path: DataPath) -> DataPathKey:
     return path.key
 
 
-def _datapath_part_key(part: object) -> str:
-    if isinstance(part, Enum):
-        return f"{type(part).__module__}.{type(part).__qualname__}.{part.name}"
-    if isinstance(part, type):
-        return f"{part.__module__}.{part.__qualname__}"
-    return str(part)
+def is_can_datapath(path: DataPath) -> bool:
+    return len(path.parts) == 2 and path.parts[0] == _DataPathNamespace.CAN
+
+
+def can_datapath_bus(path: DataPath) -> object:
+    if not is_can_datapath(path):
+        raise ValueError(f"datapath {path!r} is not a CAN bus datapath")
+    return path.parts[1]
+
+
+def require_peripheral_binding(path: DataPath) -> PeripheralBinding:
+    if path.peripheral_binding is None:
+        raise ValueError(f"datapath {path!r} is not backed by a controller peripheral")
+    return path.peripheral_binding
+
+
+@cache
+def _component_datapath(component: object, port: object) -> DataPath:
+    return DataPath((component, port))
+
+
+@cache
+def _can_datapath(bus: object) -> DataPath:
+    return DataPath((_DataPathNamespace.CAN, bus))
 
 
 @dataclass(frozen=True)
@@ -156,9 +188,9 @@ class ModelDataPaths:
     def __init__(self) -> None:
         self._outputs: list[ModelDataPathOutput[object]] = []
         self._inputs: list[ModelDataPathInput[object]] = []
-        self._outputs_by_key: dict[str, list[ModelDataPathOutput[object]]] = {}
-        self._inputs_by_key: dict[str, list[ModelDataPathInput[object]]] = {}
-        self._paths_by_key: dict[str, DataPath] = {}
+        self._outputs_by_key: dict[DataPathKey, list[ModelDataPathOutput[object]]] = {}
+        self._inputs_by_key: dict[DataPathKey, list[ModelDataPathInput[object]]] = {}
+        self._paths_by_key: dict[DataPathKey, DataPath] = {}
 
     def add_output(
         self,

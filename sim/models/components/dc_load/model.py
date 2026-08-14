@@ -13,7 +13,12 @@ from sim.infra.rig import (
     SchedulerContext,
 )
 from sim.infra.rig.datapath import datapath_key
+from sim.infra.rig.dataflow import NativeRouteEndpoint
 from sim.infra.rig.model import datapath_route_id
+from sim.infra.rig.scalar import (
+    ScalarInputRouteEndpoint,
+    ScalarRouteEndpoint,
+)
 
 
 class DcLoadPort(Enum):
@@ -58,10 +63,15 @@ class DcLoadModel(ComponentRig):
         return DataPath.component(cls, (DcLoadPort.VOLTAGE_INPUT, channel))
 
     @classmethod
+    def current_output_channel(cls, channel: object) -> DataPath:
+        return DataPath.component(cls, (DcLoadPort.CURRENT_OUTPUT, channel))
+
+    @classmethod
     def spec(
         cls,
         *,
         voltage_input_channel: DataPath,
+        current_output_channel: DataPath | None = None,
         load_spec: DcLoadSpec,
         scheduler_period: int | float | None = None,
         scheduler_unit: str = "ms",
@@ -71,6 +81,7 @@ class DcLoadModel(ComponentRig):
             cls,
             parameters={
                 "voltage_input_channel": voltage_input_channel,
+                "current_output_channel": current_output_channel,
                 "load_spec": load_spec,
                 "scheduler_period": scheduler_period,
                 "scheduler_unit": scheduler_unit,
@@ -184,12 +195,12 @@ class DcLoadModel(ComponentRig):
 
     def rust_datapath_route_abi(
         self, path: DataPath
-    ) -> tuple[str, tuple[int, ...]] | None:
+    ) -> NativeRouteEndpoint | None:
         self._register_native_dc_load()
         if path == self.voltage_input_channel:
-            return ("dc_load_voltage_sink", self._voltage_sink_route_abi(path))
+            return ScalarInputRouteEndpoint(*self._voltage_sink_route_abi(path))
         if path == self.current_output_channel:
-            return ("scalar", self._scalar_source_route_abi(path))
+            return ScalarRouteEndpoint(*self._scalar_source_route_abi(path))
         return None
 
     def _voltage_sink_route_abi(self, path: DataPath) -> tuple[int]:
@@ -212,7 +223,9 @@ class DcLoadModel(ComponentRig):
             current_route_id=datapath_route_id(
                 datapath_key(self.current_output_channel)
             ),
-            voltage_route_id=datapath_route_id(datapath_key(self.voltage_input_channel)),
+            voltage_route_id=datapath_route_id(
+                datapath_key(self.voltage_input_channel)
+            ),
             resistance_ohms=_native_component_value(self.load_spec.resistance_ohms),
             inductance_henrys=_native_component_value(self.load_spec.inductance_henrys),
             capacitance_farads=_native_component_value(

@@ -69,6 +69,27 @@ pub struct RTController {
     task_remainders_ns: [u64; MAX_PERIODIC_TASKS],
 }
 
+impl super::interfaces::ModelPeripheralRuntime for RTController {
+    unsafe fn reset_peripherals(&mut self) {
+        super::spi::reset();
+        super::timer::reset();
+        super::spi::reset_chip_selects();
+    }
+
+    fn configure_datapath(&mut self, interface: u16, port: i32, channel: i32, device: i32) {
+        match interface {
+            super::model::RIG_MODEL_DATAPATH_TIMER_DUTY
+            | super::model::RIG_MODEL_DATAPATH_TIMER_FREQUENCY => {
+                super::timer::configure_channel(port, channel);
+            }
+            super::model::RIG_MODEL_DATAPATH_SPI_TRANSACTION => {
+                super::spi::configure_device(device);
+            }
+            _ => {}
+        }
+    }
+}
+
 impl RTController {
     pub const fn new(callbacks: TaskCallbacks) -> Self {
         Self {
@@ -161,10 +182,6 @@ impl Scheduler for RTController {
 }
 
 impl RTController {
-    fn active_periodic_tasks(&self) -> &[PeriodicTask] {
-        &self.callbacks.periodic_tasks[..self.active_periodic_task_count()]
-    }
-
     fn active_periodic_task_count(&self) -> usize {
         self.callbacks.periodic_tasks.len().min(MAX_PERIODIC_TASKS)
     }

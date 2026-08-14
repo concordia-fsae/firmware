@@ -12,11 +12,17 @@ from sim.infra.rig import (
     DataPath,
 )
 from sim.infra.rig.datapath import datapath_key
+from sim.infra.rig.dataflow import NativeRouteEndpoint
 from sim.infra.rig.model import datapath_route_id
+from sim.infra.rig.scalar import (
+    ScalarRouteEndpoint,
+    ScalarStateSinkRouteEndpoint,
+)
 
 
 class BatterySourcePort(Enum):
     VOLTAGE_OUTPUT = auto()
+    CURRENT_DRAIN_INPUT = auto()
 
 
 @dataclass(frozen=True)
@@ -27,7 +33,9 @@ class BatterySourceSpec:
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.voltage) or self.voltage < 0.0:
-            raise ValueError(f"battery voltage must be finite and non-negative, got {self.voltage}")
+            raise ValueError(
+                f"battery voltage must be finite and non-negative, got {self.voltage}"
+            )
         if (
             not math.isfinite(self.internal_resistance_ohms)
             or self.internal_resistance_ohms < 0.0
@@ -57,6 +65,7 @@ class BatterySourceModel(ComponentRig):
         *,
         voltage_output_channel: DataPath,
         source_spec: BatterySourceSpec,
+        current_drain_channels: tuple[DataPath, ...] = (),
         bindings: tuple[ComponentDataPathBinding, ...] = (),
     ) -> ComponentSpec:
         return ComponentSpec(
@@ -64,6 +73,7 @@ class BatterySourceModel(ComponentRig):
             parameters={
                 "voltage_output_channel": voltage_output_channel,
                 "source_spec": source_spec,
+                "current_drain_channels": current_drain_channels,
             },
             bindings=bindings,
         )
@@ -73,16 +83,20 @@ class BatterySourceModel(ComponentRig):
         *,
         voltage_output_channel: DataPath,
         source_spec: BatterySourceSpec,
+        current_drain_channels: tuple[DataPath, ...] = (),
     ) -> None:
         super().__init__()
         self.voltage_output_channel = voltage_output_channel
         self.source_spec = source_spec
+        self.current_drain_channels = tuple(current_drain_channels)
         self._voltage = float(source_spec.voltage)
         self.datapaths.add_output(
             self.voltage_output_channel,
             pending=lambda: 0,
             recv=lambda: None,
         )
+        for channel in self.current_drain_channels:
+            self.datapaths.add_input(channel, send=lambda _value: True)
 
     @property
     def voltage(self) -> float:
@@ -104,10 +118,12 @@ class BatterySourceModel(ComponentRig):
 
     def rust_datapath_route_abi(
         self, path: DataPath
-    ) -> tuple[str, tuple[int, ...]] | None:
+    ) -> NativeRouteEndpoint | None:
         self._register_native_battery_source()
         if path == self.voltage_output_channel:
-            return ("scalar", self._scalar_source_route_abi(path))
+            return ScalarRouteEndpoint(*self._scalar_source_route_abi(path))
+        if path in self.current_drain_channels:
+            return ScalarStateSinkRouteEndpoint(*self._current_drain_route_abi(path))
         return None
 
     def _scalar_source_route_abi(self, path: DataPath) -> tuple[int, int, int, int]:
@@ -119,12 +135,17 @@ class BatterySourceModel(ComponentRig):
         route_id = datapath_route_id(datapath_key(path))
         return (route_id, count_callback, recv_callback, send_callback)
 
+    def _current_drain_route_abi(self, path: DataPath) -> tuple[int, float]:
+        return (datapath_route_id(datapath_key(path)), 0.0)
+
     def _register_native_battery_source(self) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
             return
         if not self._cluster_rig._rust_runtime.add_battery_source(
             node=self._cluster_node_name,
-            voltage_route_id=datapath_route_id(datapath_key(self.voltage_output_channel)),
+            voltage_route_id=datapath_route_id(
+                datapath_key(self.voltage_output_channel)
+            ),
             voltage=float(self.source_spec.voltage),
             internal_resistance_ohms=float(self.source_spec.internal_resistance_ohms),
             capacity_amp_hours=float(self.source_spec.capacity_amp_hours),

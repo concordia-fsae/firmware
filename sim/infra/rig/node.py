@@ -25,18 +25,23 @@ from .can import (
     python_enum_member,
 )
 from .cluster import ClusterCanComms
-from .datapath import DataPath, datapath_key
+from .datapath import DataPath, DataPathKey, PeripheralInterface, datapath_key
+from .dataflow import NativeRouteEndpoint
 from .model import ModelRig, datapath_route_id
-from .peripherals import (
-    SpiInterface,
-    SpiPeripheralInterface,
-    SpiTransaction,
+from .scalar import (
+    ScalarRouteEndpoint,
+    ScalarSinkRouteEndpoint,
+    ScalarStateSinkRouteEndpoint,
+)
+from .scheduler import RustSchedulerCallbacks
+from .spi import SpiInterface, SpiPeripheralInterface, SpiTransaction, SpiRouteEndpoint
+from .timer import (
     TimerCaptureEvent,
     TimerChannelEvent,
     TimerInterface,
     TimerPeripheralInterface,
+    TimerRouteEndpoint,
 )
-from .scheduler import RustSchedulerCallbacks
 from .time import duration_to_ns
 
 
@@ -74,10 +79,10 @@ class NodeRig(ModelRig):
         self._lib = load_shared_library(self.library_path)
         self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
-        self._scalar_sink_abis: dict[str, tuple[int, int, float, int]] = {}
-        self._scalar_state_sink_abis: dict[str, tuple[int, float]] = {}
+        self._scalar_sink_abis: dict[DataPathKey, tuple[int, int, float, int]] = {}
+        self._scalar_state_sink_abis: dict[DataPathKey, tuple[int, float]] = {}
         self._timer_scaled_scalar_outputs: dict[
-            str, tuple[DataPath, int, int, int, int, float, float]
+            DataPathKey, tuple[DataPath, int, int, int, int, float, float]
         ] = {}
         self.can = CanInterface(self) if self.has_can else None
         self._timer_peripherals = TimerPeripheralInterface(self)
@@ -118,13 +123,13 @@ class NodeRig(ModelRig):
 
     def rust_datapath_route_abi(
         self, path: DataPath
-    ) -> tuple[str, tuple[int, ...]] | None:
+    ) -> NativeRouteEndpoint | None:
         model_abi = super().rust_datapath_route_abi(path)
         if model_abi is not None:
             return model_abi
         scalar_sink_abi = self._scalar_sink_abis.get(datapath_key(path))
         if scalar_sink_abi is not None:
-            return ("scalar_sink", scalar_sink_abi)
+            return ScalarSinkRouteEndpoint(*scalar_sink_abi)
         scalar_state_sink_abi = self._scalar_state_sink_abis.get(datapath_key(path))
         if scalar_state_sink_abi is not None:
             if self._cluster_rig is not None and self._cluster_node_name is not None:
@@ -135,7 +140,7 @@ class NodeRig(ModelRig):
                     initial_value=initial_value,
                 ):
                     raise RuntimeError("failed to register native scalar state sink")
-            return ("scalar_state_sink", scalar_state_sink_abi)
+            return ScalarStateSinkRouteEndpoint(*scalar_state_sink_abi)
         native_scalar_output = self._timer_scaled_scalar_outputs.get(datapath_key(path))
         if native_scalar_output is not None:
             (
@@ -155,8 +160,8 @@ class NodeRig(ModelRig):
                     interface=timer_interface,
                     port=timer_port,
                     channel=timer_channel,
-                    source_count=timer_abi[3],
-                    source_recv_many=timer_abi[4],
+                    source_count=timer_abi.count,
+                    source_recv_many=timer_abi.recv_many,
                 ):
                     raise RuntimeError("failed to register native timer source")
                 if not self._cluster_rig._rust_runtime.add_timer_scaled_scalar_source(
@@ -177,12 +182,17 @@ class NodeRig(ModelRig):
                 if self._cluster_rig is not None
                 else (0, 0, 0)
             )
-            return ("scalar", (route_id, count_callback, recv_callback, send_callback))
+            return ScalarRouteEndpoint(
+                route_id,
+                count_callback,
+                recv_callback,
+                send_callback,
+            )
         try:
             if self._timer_peripherals.supports(path):
-                return ("timer", self._timer_peripherals.rust_route_abi(path))
+                return self._timer_peripherals.rust_route_abi(path)
             if self._spi_peripherals.supports(path):
-                return ("spi", self._spi_peripherals.rust_route_abi(path))
+                return self._spi_peripherals.rust_route_abi(path)
         except ValueError:
             return None
         return None
@@ -236,12 +246,12 @@ class NodeRig(ModelRig):
     ) -> None:
         binding = timer_path.peripheral_binding
         if binding is None or binding.interface not in (
-            "timer.duty",
-            "timer.frequency",
+            PeripheralInterface.TIMER_DUTY,
+            PeripheralInterface.TIMER_FREQUENCY,
         ):
             raise ValueError(f"datapath {timer_path!r} is not a timer channel")
         route_id = datapath_route_id(datapath_key(path))
-        timer_interface = 1 if binding.interface == "timer.duty" else 2
+        timer_interface = int(binding.interface)
         timer_port = int(binding.port if binding.port is not None else 0)
         timer_channel = int(binding.channel if binding.channel is not None else 0)
         scale_route_id = (

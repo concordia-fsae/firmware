@@ -11,7 +11,7 @@ from .can import (
     CanPacket,
     PeriodicCanMessage,
 )
-from .datapath import DataPath, datapath_key
+from .datapath import DataPath, DataPathKey, datapath_key
 from .model import ComponentRig, ModelRig
 from .time import duration_to_ns
 
@@ -32,10 +32,10 @@ class SimpleComponent(ComponentRig):
             scheduler_period=scheduler_period,
             scheduler_unit=scheduler_unit,
         )
-        self._ingress_events: dict[str, list[object]] = {}
-        self._ingress_paths: dict[str, DataPath] = {}
-        self._egress_events: dict[str, list[object]] = {}
-        self._egress_paths: dict[str, DataPath] = {}
+        self._ingress_events: dict[DataPathKey, list[object]] = {}
+        self._ingress_paths: dict[DataPathKey, DataPath] = {}
+        self._egress_events: dict[DataPathKey, list[object]] = {}
+        self._egress_paths: dict[DataPathKey, DataPath] = {}
 
     @property
     def ingress_datapaths(self) -> tuple[DataPath, ...]:
@@ -145,7 +145,7 @@ class SimpleComponent(ComponentRig):
 
     @staticmethod
     def _events_for(
-        events_by_path: dict[str, list[object]],
+        events_by_path: dict[DataPathKey, list[object]],
         path: DataPath,
         direction: str,
     ) -> list[object]:
@@ -264,7 +264,7 @@ class SimpleCanComponent(SimpleComponent):
         super().__init__()
         self._encoder = encoder
         self._buses = tuple(encoder.bus(bus) for bus in buses)
-        self._bus_paths = {bus.name: DataPath.can_bus(bus.name) for bus in self._buses}
+        self._bus_paths = {bus.name: DataPath.can_bus(bus) for bus in self._buses}
         self.can = _SimpleCanInterface(self)
         self._periodic_messages: list[PeriodicCanMessage] = []
         self._native_periodic_handles: dict[int, int] = {}
@@ -297,7 +297,7 @@ class SimpleCanComponent(SimpleComponent):
         **signals: float | int | IntEnum,
     ) -> PeriodicCanMessage:
         descriptor = self._message_descriptor(message, bus=bus)
-        if DataPath.can_bus(descriptor.bus_name) not in self.egress_datapaths:
+        if DataPath.can_bus(self._encoder.bus(descriptor.bus)) not in self.egress_datapaths:
             raise ValueError(
                 f"simple CAN model is not configured for bus {descriptor.bus_name!r}"
             )

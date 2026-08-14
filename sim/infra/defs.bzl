@@ -9,17 +9,23 @@ RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_BATTERY_SOURCE_RS": "//sim/models/components/battery_source:rust.rs",
     "RIG_RUNTIME_RUST_CAN_RS": "//sim/infra/runtime:rust/can.rs",
     "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/infra/runtime:rust/cluster.rs",
+    "RIG_RUNTIME_RUST_ALGORITHMS_RS": "//sim/infra/runtime:rust/algorithms.rs",
     "RIG_RUNTIME_RUST_CORE_RS": "//sim/infra/runtime:rust/core.rs",
     "RIG_RUNTIME_RUST_DATAPATH_RS": "//sim/infra/runtime:rust/datapath.rs",
+    "RIG_RUNTIME_RUST_DATAFLOW_RS": "//sim/infra/runtime:rust/dataflow.rs",
     "RIG_RUNTIME_RUST_DC_LOAD_RS": "//sim/models/components/dc_load:rust.rs",
     "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/infra/runtime:rust/faults.rs",
     "RIG_RUNTIME_RUST_FFI_RS": "//sim/infra/runtime:rust/ffi.rs",
     "RIG_RUNTIME_RUST_IO_RS": "//sim/infra/runtime:rust/io.rs",
     "RIG_RUNTIME_RUST_MODEL_RS": "//sim/infra/runtime:rust/model.rs",
     "RIG_RUNTIME_RUST_MODULE_DESC_RS": "//sim/infra/runtime:rust/module_desc.rs",
-    "RIG_RUNTIME_RUST_NETWORKS_RS": "//sim/infra/runtime:rust/networks.rs",
+    "RIG_RUNTIME_RUST_INTERFACES_RS": "//sim/infra/runtime:rust/interfaces.rs",
+    "RIG_RUNTIME_RUST_REGISTRY_RS": "//sim/infra/runtime:rust/registry.rs",
+    "RIG_RUNTIME_RUST_NODE_RS": "//sim/infra/runtime:rust/node.rs",
     "RIG_RUNTIME_RUST_NVM_RS": "//sim/infra/runtime:rust/nvm.rs",
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/infra/runtime:rust/rt_controller.rs",
+    "RIG_RUNTIME_RUST_SCALAR_RS": "//sim/infra/runtime:rust/scalar.rs",
+    "RIG_RUNTIME_RUST_SCHEDULER_RS": "//sim/infra/runtime:rust/scheduler.rs",
     "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/rig:rust/simple.rs",
     "RIG_RUNTIME_RUST_SPI_RS": "//sim/infra/runtime:rust/spi.rs",
     "RIG_RUNTIME_RUST_TIMER_RS": "//sim/infra/runtime:rust/timer.rs",
@@ -326,6 +332,7 @@ def rig_embedded_rust_model(
               " " +
               "rustc --edition=2024 --crate-name {} --crate-type cdylib ".format(crate) +
               "$(location :{}) ".format(src_target_name) +
+              "-C opt-level=3 " +
               "-o $OUT " +
               _rust_link_args(link_deps, extra_link_args if extra_link_args else ["-lm"]),
         visibility = visibility,

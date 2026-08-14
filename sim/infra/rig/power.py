@@ -2,13 +2,21 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from .datapath import DataPath
+from .dataflow import DataflowEvent
+
+
+class PowerDataPath(Enum):
+    POWER = auto()
+    CONTROL = auto()
 
 
 @dataclass(frozen=True)
-class PowerControlEvent:
+class PowerControlEvent(DataflowEvent):
     enabled: bool
+    timestamp_ns: int = 0
 
 
 @dataclass(frozen=True)
@@ -20,7 +28,7 @@ class PowerControlPath:
 class PowerInterface:
     @staticmethod
     def _control_datapath(source: object) -> DataPath:
-        return DataPath(("power", source, "control"))
+        return DataPath.named(PowerDataPath.POWER, source, PowerDataPath.CONTROL)
 
     @staticmethod
     def connect_node_input(node: object, path: PowerControlPath) -> None:
