@@ -17,6 +17,7 @@ RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_IO_RS": "//sim/infra/runtime:rust/io.rs",
     "RIG_RUNTIME_RUST_MODEL_RS": "//sim/infra/runtime:rust/model.rs",
     "RIG_RUNTIME_RUST_MODULE_DESC_RS": "//sim/infra/runtime:rust/module_desc.rs",
+    "RIG_RUNTIME_RUST_NETWORKS_RS": "//sim/infra/runtime:rust/networks.rs",
     "RIG_RUNTIME_RUST_NVM_RS": "//sim/infra/runtime:rust/nvm.rs",
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/infra/runtime:rust/rt_controller.rs",
     "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/rig:rust/simple.rs",

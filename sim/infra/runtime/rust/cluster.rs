@@ -9,6 +9,10 @@ use std::sync::{LazyLock, Mutex};
 use super::battery_source::BatterySourceModel;
 use super::can;
 use super::dc_load::DcLoadModel;
+use super::networks::{
+    CanEndpoint, CanNetwork, ClusterCanRecord, ClusterCanRoute, ClusterSpiRoute, NetworkDataflow,
+    RuntimeNetworks, SpiEndpoint, SpiNetwork,
+};
 use super::simple::PeriodicCanSource;
 
 pub type ClusterNodeRunForFn = unsafe extern "C" fn(u64);
@@ -352,32 +356,6 @@ impl ClusterNode {
 }
 
 #[derive(Clone, Copy)]
-struct ClusterCanRoute {
-    source_node: u32,
-    source_bus: u8,
-    source_tx_count: ClusterCanTxCountFn,
-    source_recv_events: ClusterCanRecvEventsFn,
-    sink_node: Option<u32>,
-    sink_bus: u8,
-    sink_send_many: Option<ClusterCanSendManyFn>,
-}
-
-#[derive(Clone, Copy)]
-struct ClusterCanSink {
-    sink_node: u32,
-    sink_bus: u8,
-    sink_send_many: ClusterCanSendManyFn,
-}
-
-struct ClusterCanRouteGroup {
-    source_node: u32,
-    source_bus: u8,
-    source_tx_count: ClusterCanTxCountFn,
-    source_recv_events: ClusterCanRecvEventsFn,
-    sinks: Vec<ClusterCanSink>,
-}
-
-#[derive(Clone, Copy)]
 struct ClusterTimerRoute {
     source_node: u32,
     interface: u16,
@@ -395,7 +373,7 @@ struct ClusterTimerSink {
     sink_send_many: ClusterTimerSendManyFn,
 }
 
-struct ClusterTimerRouteGroup {
+struct TimerDataflowFanout {
     source_node: u32,
     interface: u16,
     port: i32,
@@ -403,30 +381,6 @@ struct ClusterTimerRouteGroup {
     source_count: ClusterTimerCountFn,
     source_recv_many: ClusterTimerRecvManyFn,
     sinks: Vec<ClusterTimerSink>,
-}
-
-#[derive(Clone, Copy)]
-struct ClusterSpiRoute {
-    source_node: u32,
-    device: i32,
-    source_count: ClusterSpiCountFn,
-    source_recv_many: ClusterSpiRecvManyFn,
-    sink_node: u32,
-    sink_send_many: ClusterSpiSendManyFn,
-}
-
-#[derive(Clone, Copy)]
-struct ClusterSpiSink {
-    sink_node: u32,
-    sink_send_many: ClusterSpiSendManyFn,
-}
-
-struct ClusterSpiRouteGroup {
-    source_node: u32,
-    device: i32,
-    source_count: ClusterSpiCountFn,
-    source_recv_many: ClusterSpiRecvManyFn,
-    sinks: Vec<ClusterSpiSink>,
 }
 
 #[derive(Clone, Copy)]
@@ -504,7 +458,7 @@ struct ClusterScalarSinkRoute {
     sink: ClusterScalarSink,
 }
 
-struct ClusterScalarRouteGroup {
+struct ScalarDataflowFanout {
     source_node: u32,
     route_id: u32,
     source_count: ClusterScalarCountFn,
@@ -513,27 +467,27 @@ struct ClusterScalarRouteGroup {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
-struct DataflowChannel {
-    interface: i32,
-    port: i32,
-    channel: i32,
+pub(super) struct DataflowChannel {
+    pub(super) interface: i32,
+    pub(super) port: i32,
+    pub(super) channel: i32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-struct DataflowEdgeKey {
+pub(super) struct DataflowEdgeKey {
     node: u32,
     data_type: TypeId,
     channel: DataflowChannel,
 }
 
 #[derive(Clone, Copy, Debug)]
-struct DataflowEdge<T: 'static> {
+pub(super) struct DataflowEdge<T: 'static> {
     key: DataflowEdgeKey,
     _data: PhantomData<fn() -> T>,
 }
 
 impl<T: 'static> DataflowEdge<T> {
-    fn new(node: u32, channel: DataflowChannel) -> Self {
+    pub(super) fn new(node: u32, channel: DataflowChannel) -> Self {
         Self {
             key: DataflowEdgeKey {
                 node,
@@ -544,7 +498,7 @@ impl<T: 'static> DataflowEdge<T> {
         }
     }
 
-    fn key(self) -> DataflowEdgeKey {
+    pub(super) fn key(self) -> DataflowEdgeKey {
         self.key
     }
 }
@@ -573,25 +527,11 @@ fn timer_edge(node: u32, interface: u16, port: i32, channel: i32) -> DataflowEdg
 }
 
 fn can_edge(node: u32, bus: u8) -> DataflowEdgeKey {
-    DataflowEdge::<CanEvent>::new(
-        node,
-        DataflowChannel {
-            interface: bus as i32,
-            ..Default::default()
-        },
-    )
-    .key()
+    CanNetwork::edge(node, CanEndpoint::new(bus))
 }
 
 fn spi_edge(node: u32, device: i32) -> DataflowEdgeKey {
-    DataflowEdge::<SpiTransaction>::new(
-        node,
-        DataflowChannel {
-            interface: device,
-            ..Default::default()
-        },
-    )
-    .key()
+    SpiNetwork::edge(node, SpiEndpoint::from_device(device))
 }
 
 type DataflowRunFn = fn(&mut ClusterRuntime, usize) -> bool;
@@ -701,26 +641,12 @@ impl DataflowAlgorithm {
 }
 
 #[derive(Clone, Copy)]
-struct ClusterCanRecord {
-    source_node: u32,
-    bus: u8,
-    event: CanEvent,
-}
-
-#[derive(Clone, Copy)]
 struct ClusterTimerRecord {
     source_node: u32,
     interface: u16,
     port: i32,
     channel: i32,
     event: TimerChannelEvent,
-}
-
-#[derive(Clone, Copy)]
-struct ClusterSpiRecord {
-    source_node: u32,
-    device: i32,
-    transaction: SpiTransaction,
 }
 
 #[derive(Clone, Copy)]
@@ -731,27 +657,56 @@ struct ClusterScalarRecord {
 }
 
 #[derive(Default)]
-struct ClusterRuntime {
-    nodes: Vec<ClusterNode>,
-    can_route_group_indexes: HashMap<(u32, u8), usize>,
-    can_route_groups: Vec<ClusterCanRouteGroup>,
-    timer_route_group_indexes: HashMap<(u32, u16, i32, i32), usize>,
-    timer_route_groups: Vec<ClusterTimerRouteGroup>,
-    spi_route_group_indexes: HashMap<(u32, i32), usize>,
-    spi_route_groups: Vec<ClusterSpiRouteGroup>,
-    scalar_route_group_indexes: HashMap<(u32, u32), usize>,
-    scalar_route_groups: Vec<ClusterScalarRouteGroup>,
+struct RuntimeDataflows {
+    timer_fanout_indexes: HashMap<(u32, u16, i32, i32), usize>,
+    timer_fanouts: Vec<TimerDataflowFanout>,
+    scalar_fanout_indexes: HashMap<(u32, u32), usize>,
+    scalar_fanouts: Vec<ScalarDataflowFanout>,
     scalar_state_route_count: usize,
     scalar_states: HashMap<(u32, u32), f32>,
+    timer_records: VecDeque<ClusterTimerRecord>,
+    scalar_records: VecDeque<ClusterScalarRecord>,
+}
+
+impl RuntimeDataflows {
+    fn reset(&mut self) {
+        self.timer_fanout_indexes.clear();
+        self.timer_fanouts.clear();
+        self.scalar_fanout_indexes.clear();
+        self.scalar_fanouts.clear();
+        self.scalar_state_route_count = 0;
+        self.scalar_states.clear();
+        self.timer_records.clear();
+        self.scalar_records.clear();
+    }
+}
+
+#[derive(Default)]
+struct RuntimeComponents {
     periodic_can_sources: Vec<PeriodicCanSource>,
-    native_can_source_events: VecDeque<ClusterCanRecord>,
     battery_sources: Vec<BatterySourceModel>,
     battery_voltage_indexes: HashMap<(u32, u32), Vec<usize>>,
     timer_scaled_scalar_sources: Vec<TimerScaledScalarSource>,
     timer_scaled_scalar_timer_indexes: HashMap<(u32, u16, i32, i32), Vec<usize>>,
     dc_loads: Vec<DcLoadModel>,
     dc_load_current_indexes: HashMap<(u32, u32), Vec<usize>>,
-    dataflow_dirty: bool,
+}
+
+impl RuntimeComponents {
+    fn reset(&mut self) {
+        self.periodic_can_sources.clear();
+        self.battery_sources.clear();
+        self.battery_voltage_indexes.clear();
+        self.timer_scaled_scalar_sources.clear();
+        self.timer_scaled_scalar_timer_indexes.clear();
+        self.dc_loads.clear();
+        self.dc_load_current_indexes.clear();
+    }
+}
+
+#[derive(Default)]
+struct DataflowGraph {
+    dirty: bool,
     dataflow_algorithm_specs: Vec<DataflowAlgorithm>,
     dataflow_algorithms: Vec<DataflowAlgorithm>,
     dataflow_edge_dependents: HashMap<DataflowEdgeKey, Vec<usize>>,
@@ -762,35 +717,11 @@ struct ClusterRuntime {
     dataflow_algorithm_available_inputs: Vec<HashSet<DataflowEdgeKey>>,
     dataflow_ready_edges: HashSet<DataflowEdgeKey>,
     configured_dataflow_algorithms: Vec<DataflowAlgorithm>,
-    can_records: VecDeque<ClusterCanRecord>,
-    timer_records: VecDeque<ClusterTimerRecord>,
-    spi_records: VecDeque<ClusterSpiRecord>,
-    scalar_records: VecDeque<ClusterScalarRecord>,
-    elapsed_ns: u64,
 }
 
-impl ClusterRuntime {
+impl DataflowGraph {
     fn reset(&mut self) {
-        self.nodes.clear();
-        self.can_route_group_indexes.clear();
-        self.can_route_groups.clear();
-        self.timer_route_group_indexes.clear();
-        self.timer_route_groups.clear();
-        self.spi_route_group_indexes.clear();
-        self.spi_route_groups.clear();
-        self.scalar_route_group_indexes.clear();
-        self.scalar_route_groups.clear();
-        self.scalar_state_route_count = 0;
-        self.scalar_states.clear();
-        self.periodic_can_sources.clear();
-        self.native_can_source_events.clear();
-        self.battery_sources.clear();
-        self.battery_voltage_indexes.clear();
-        self.timer_scaled_scalar_sources.clear();
-        self.timer_scaled_scalar_timer_indexes.clear();
-        self.dc_loads.clear();
-        self.dc_load_current_indexes.clear();
-        self.dataflow_dirty = false;
+        self.dirty = false;
         self.dataflow_algorithm_specs.clear();
         self.dataflow_algorithms.clear();
         self.dataflow_edge_dependents.clear();
@@ -801,10 +732,26 @@ impl ClusterRuntime {
         self.dataflow_algorithm_available_inputs.clear();
         self.dataflow_ready_edges.clear();
         self.configured_dataflow_algorithms.clear();
-        self.can_records.clear();
-        self.timer_records.clear();
-        self.spi_records.clear();
-        self.scalar_records.clear();
+    }
+}
+
+#[derive(Default)]
+struct ClusterRuntime {
+    nodes: Vec<ClusterNode>,
+    dataflows: RuntimeDataflows,
+    networks: RuntimeNetworks,
+    components: RuntimeComponents,
+    graph: DataflowGraph,
+    elapsed_ns: u64,
+}
+
+impl ClusterRuntime {
+    fn reset(&mut self) {
+        self.nodes.clear();
+        self.dataflows.reset();
+        self.networks.reset();
+        self.components.reset();
+        self.graph.reset();
         self.elapsed_ns = 0;
     }
 
@@ -866,8 +813,8 @@ impl ClusterRuntime {
         if route.sink_node.is_some() != route.sink_send_many.is_some() {
             return false;
         }
-        self.upsert_can_route_group(route);
-        self.dataflow_dirty = true;
+        self.networks.can.upsert_fanout(route);
+        self.graph.dirty = true;
         true
     }
 
@@ -877,8 +824,8 @@ impl ClusterRuntime {
         {
             return false;
         }
-        self.upsert_timer_route_group(route);
-        self.dataflow_dirty = true;
+        self.upsert_timer_fanout(route);
+        self.graph.dirty = true;
         true
     }
 
@@ -895,10 +842,11 @@ impl ClusterRuntime {
             return false;
         }
         let key = (source_node, interface, port, channel);
-        self.timer_route_group_indexes
+        self.dataflows
+            .timer_fanout_indexes
             .entry(key)
             .or_insert_with(|| {
-                self.timer_route_groups.push(ClusterTimerRouteGroup {
+                self.dataflows.timer_fanouts.push(TimerDataflowFanout {
                     source_node,
                     interface,
                     port,
@@ -907,9 +855,9 @@ impl ClusterRuntime {
                     source_recv_many,
                     sinks: Vec::new(),
                 });
-                self.timer_route_groups.len() - 1
+                self.dataflows.timer_fanouts.len() - 1
             });
-        self.dataflow_dirty = true;
+        self.graph.dirty = true;
         true
     }
 
@@ -919,8 +867,8 @@ impl ClusterRuntime {
         {
             return false;
         }
-        self.upsert_spi_route_group(route);
-        self.dataflow_dirty = true;
+        self.networks.spi.upsert_fanout(route);
+        self.graph.dirty = true;
         true
     }
 
@@ -938,10 +886,10 @@ impl ClusterRuntime {
                 route.sink,
             )
         {
-            self.scalar_state_route_count += 1;
+            self.dataflows.scalar_state_route_count += 1;
         }
-        self.upsert_scalar_route_group(route);
-        self.dataflow_dirty = true;
+        self.upsert_scalar_fanout(route);
+        self.graph.dirty = true;
         true
     }
 
@@ -949,8 +897,11 @@ impl ClusterRuntime {
         if self.nodes.get(node as usize).is_none() || !initial_value.is_finite() {
             return false;
         }
-        self.scalar_states.insert((node, route_id), initial_value);
-        self.dataflow_ready_edges
+        self.dataflows
+            .scalar_states
+            .insert((node, route_id), initial_value);
+        self.graph
+            .dataflow_ready_edges
             .insert(scalar_edge(node, route_id));
         true
     }
@@ -967,7 +918,8 @@ impl ClusterRuntime {
         if self.native_scalar_source_registered(source_node, route_id) {
             let events = self.native_scalar_events(source_node, route_id);
             if let Some(event) = events.last() {
-                self.scalar_states
+                self.dataflows
+                    .scalar_states
                     .insert((sink_node, sink_route_id), event.value);
                 self.update_timer_scaled_scalar_scale(sink_node, sink_route_id, event.value);
                 self.record_scalar_event(
@@ -978,13 +930,14 @@ impl ClusterRuntime {
                         timestamp_ns: self.elapsed_ns,
                     },
                 );
-                self.dataflow_ready_edges
+                self.graph
+                    .dataflow_ready_edges
                     .insert(scalar_edge(sink_node, sink_route_id));
             }
             for event in events {
                 self.record_scalar_event(source_node, route_id, event);
             }
-            self.dataflow_dirty = true;
+            self.graph.dirty = true;
             return true;
         }
 
@@ -1003,7 +956,8 @@ impl ClusterRuntime {
 
         let events = self.native_scalar_events(source_node, route_id);
         if let Some(event) = events.last() {
-            self.scalar_states
+            self.dataflows
+                .scalar_states
                 .insert((sink_node, sink_route_id), event.value);
             self.update_timer_scaled_scalar_scale(sink_node, sink_route_id, event.value);
             self.record_scalar_event(
@@ -1014,20 +968,23 @@ impl ClusterRuntime {
                     timestamp_ns: self.elapsed_ns,
                 },
             );
-            self.dataflow_ready_edges
+            self.graph
+                .dataflow_ready_edges
                 .insert(scalar_edge(sink_node, sink_route_id));
         }
         for event in events {
             self.record_scalar_event(source_node, route_id, event);
         }
-        self.dataflow_dirty = true;
+        self.graph.dirty = true;
         true
     }
 
     fn native_scalar_source_registered(&self, source_node: u32, route_id: u32) -> bool {
-        self.dc_load_current_indexes
+        self.components
+            .dc_load_current_indexes
             .contains_key(&(source_node, route_id))
             || self
+                .components
                 .battery_voltage_indexes
                 .contains_key(&(source_node, route_id))
     }
@@ -1040,49 +997,20 @@ impl ClusterRuntime {
         sink: ClusterScalarSink,
     ) -> bool {
         let Some(group_index) = self
-            .scalar_route_group_indexes
+            .dataflows
+            .scalar_fanout_indexes
             .get(&(source_node, route_id))
             .copied()
         else {
             return false;
         };
-        self.scalar_route_groups[group_index]
+        self.dataflows.scalar_fanouts[group_index]
             .sinks
             .iter()
             .any(|existing| existing.sink_node == sink_node && existing.sink.same_target(sink))
     }
 
-    fn upsert_can_route_group(&mut self, route: ClusterCanRoute) {
-        let key = (route.source_node, route.source_bus);
-        let group_index = *self.can_route_group_indexes.entry(key).or_insert_with(|| {
-            self.can_route_groups.push(ClusterCanRouteGroup {
-                source_node: route.source_node,
-                source_bus: route.source_bus,
-                source_tx_count: route.source_tx_count,
-                source_recv_events: route.source_recv_events,
-                sinks: Vec::new(),
-            });
-            self.can_route_groups.len() - 1
-        });
-        if let (Some(sink_node), Some(sink_send_many)) = (route.sink_node, route.sink_send_many) {
-            if self.can_route_groups[group_index]
-                .sinks
-                .iter()
-                .any(|sink| sink.sink_node == sink_node && sink.sink_bus == route.sink_bus)
-            {
-                return;
-            }
-            self.can_route_groups[group_index]
-                .sinks
-                .push(ClusterCanSink {
-                    sink_node,
-                    sink_bus: route.sink_bus,
-                    sink_send_many,
-                });
-        }
-    }
-
-    fn upsert_timer_route_group(&mut self, route: ClusterTimerRoute) {
+    fn upsert_timer_fanout(&mut self, route: ClusterTimerRoute) {
         let key = (
             route.source_node,
             route.interface,
@@ -1090,10 +1018,11 @@ impl ClusterRuntime {
             route.channel,
         );
         let group_index = *self
-            .timer_route_group_indexes
+            .dataflows
+            .timer_fanout_indexes
             .entry(key)
             .or_insert_with(|| {
-                self.timer_route_groups.push(ClusterTimerRouteGroup {
+                self.dataflows.timer_fanouts.push(TimerDataflowFanout {
                     source_node: route.source_node,
                     interface: route.interface,
                     port: route.port,
@@ -1102,16 +1031,16 @@ impl ClusterRuntime {
                     source_recv_many: route.source_recv_many,
                     sinks: Vec::new(),
                 });
-                self.timer_route_groups.len() - 1
+                self.dataflows.timer_fanouts.len() - 1
             });
-        if self.timer_route_groups[group_index]
+        if self.dataflows.timer_fanouts[group_index]
             .sinks
             .iter()
             .any(|sink| sink.sink_node == route.sink_node)
         {
             return;
         }
-        self.timer_route_groups[group_index]
+        self.dataflows.timer_fanouts[group_index]
             .sinks
             .push(ClusterTimerSink {
                 sink_node: route.sink_node,
@@ -1119,47 +1048,21 @@ impl ClusterRuntime {
             });
     }
 
-    fn upsert_spi_route_group(&mut self, route: ClusterSpiRoute) {
-        let key = (route.source_node, route.device);
-        let group_index = *self.spi_route_group_indexes.entry(key).or_insert_with(|| {
-            self.spi_route_groups.push(ClusterSpiRouteGroup {
-                source_node: route.source_node,
-                device: route.device,
-                source_count: route.source_count,
-                source_recv_many: route.source_recv_many,
-                sinks: Vec::new(),
-            });
-            self.spi_route_groups.len() - 1
-        });
-        if self.spi_route_groups[group_index]
-            .sinks
-            .iter()
-            .any(|sink| sink.sink_node == route.sink_node)
-        {
-            return;
-        }
-        self.spi_route_groups[group_index]
-            .sinks
-            .push(ClusterSpiSink {
-                sink_node: route.sink_node,
-                sink_send_many: route.sink_send_many,
-            });
-    }
-
-    fn upsert_scalar_route_group(&mut self, route: ClusterScalarRoute) {
+    fn upsert_scalar_fanout(&mut self, route: ClusterScalarRoute) {
         let key = (route.source_node, route.route_id);
         let group_index = *self
-            .scalar_route_group_indexes
+            .dataflows
+            .scalar_fanout_indexes
             .entry(key)
             .or_insert_with(|| {
-                self.scalar_route_groups.push(ClusterScalarRouteGroup {
+                self.dataflows.scalar_fanouts.push(ScalarDataflowFanout {
                     source_node: route.source_node,
                     route_id: route.route_id,
                     source_count: route.source_count,
                     source_recv_many: route.source_recv_many,
                     sinks: Vec::new(),
                 });
-                self.scalar_route_groups.len() - 1
+                self.dataflows.scalar_fanouts.len() - 1
             });
         if self.scalar_route_exists(
             route.source_node,
@@ -1169,7 +1072,7 @@ impl ClusterRuntime {
         ) {
             return;
         }
-        self.scalar_route_groups[group_index]
+        self.dataflows.scalar_fanouts[group_index]
             .sinks
             .push(ClusterScalarSinkRoute {
                 sink_node: route.sink_node,
@@ -1187,14 +1090,19 @@ impl ClusterRuntime {
         if self.nodes.get(node as usize).is_none() || period_ns == 0 {
             return u32::MAX;
         }
-        self.periodic_can_sources
+        self.components
+            .periodic_can_sources
             .push(PeriodicCanSource::new(node, bus, period_ns, packet));
-        self.dataflow_dirty = true;
-        (self.periodic_can_sources.len() - 1) as u32
+        self.graph.dirty = true;
+        (self.components.periodic_can_sources.len() - 1) as u32
     }
 
     fn update_periodic_can_source(&mut self, handle: u32, packet: CanPacket) -> bool {
-        let Some(source) = self.periodic_can_sources.get_mut(handle as usize) else {
+        let Some(source) = self
+            .components
+            .periodic_can_sources
+            .get_mut(handle as usize)
+        else {
             return false;
         };
         source.update_packet(packet);
@@ -1205,15 +1113,18 @@ impl ClusterRuntime {
         if self.nodes.get(node as usize).is_none() {
             return false;
         }
-        self.native_can_source_events.push_back(ClusterCanRecord {
-            source_node: node,
-            bus,
-            event: CanEvent {
+        self.networks
+            .can
+            .native_source_events
+            .push_back(ClusterCanRecord {
+                source_node: node,
                 bus,
-                timestamp_ns: self.elapsed_ns,
-                packet,
-            },
-        });
+                event: CanEvent {
+                    bus,
+                    timestamp_ns: self.elapsed_ns,
+                    packet,
+                },
+            });
         true
     }
 
@@ -1230,7 +1141,7 @@ impl ClusterRuntime {
         if self.nodes.get(node as usize).is_none() {
             return false;
         }
-        if self.dc_loads.iter().any(|load| {
+        if self.components.dc_loads.iter().any(|load| {
             load.config_equals(
                 node,
                 current_route_id,
@@ -1242,9 +1153,10 @@ impl ClusterRuntime {
         }) {
             return true;
         }
-        self.dc_loads
+        self.components
+            .dc_loads
             .retain(|load| !load.output_matches(node, current_route_id));
-        self.dc_loads.push(DcLoadModel::new(
+        self.components.dc_loads.push(DcLoadModel::new(
             node,
             voltage_route_id,
             current_route_id,
@@ -1255,7 +1167,7 @@ impl ClusterRuntime {
             self.elapsed_ns,
         ));
         self.rebuild_dc_load_indexes();
-        self.dataflow_dirty = true;
+        self.graph.dirty = true;
         true
     }
 
@@ -1276,7 +1188,7 @@ impl ClusterRuntime {
         {
             return false;
         }
-        if self.battery_sources.iter().any(|source| {
+        if self.components.battery_sources.iter().any(|source| {
             source.config_equals(
                 node,
                 voltage_route_id,
@@ -1287,17 +1199,20 @@ impl ClusterRuntime {
         }) {
             return true;
         }
-        self.battery_sources
+        self.components
+            .battery_sources
             .retain(|source| !source.config_matches(node, voltage_route_id));
-        self.battery_sources.push(BatterySourceModel::new(
-            node,
-            voltage_route_id,
-            voltage,
-            internal_resistance_ohms,
-            capacity_amp_hours,
-        ));
+        self.components
+            .battery_sources
+            .push(BatterySourceModel::new(
+                node,
+                voltage_route_id,
+                voltage,
+                internal_resistance_ohms,
+                capacity_amp_hours,
+            ));
         self.rebuild_battery_source_indexes();
-        self.dataflow_dirty = true;
+        self.graph.dirty = true;
         true
     }
 
@@ -1319,27 +1234,35 @@ impl ClusterRuntime {
             1.0
         } else {
             *self
+                .dataflows
                 .scalar_states
                 .get(&(node, scale_route_id))
                 .unwrap_or(&0.0)
         };
-        if self.timer_scaled_scalar_sources.iter().any(|source| {
-            source.config_equals(
-                node,
-                route_id,
-                timer_interface,
-                timer_port,
-                timer_channel,
-                scale_route_id,
-                scale,
-                offset,
-            )
-        }) {
+        if self
+            .components
+            .timer_scaled_scalar_sources
+            .iter()
+            .any(|source| {
+                source.config_equals(
+                    node,
+                    route_id,
+                    timer_interface,
+                    timer_port,
+                    timer_channel,
+                    scale_route_id,
+                    scale,
+                    offset,
+                )
+            })
+        {
             return true;
         }
-        self.timer_scaled_scalar_sources
+        self.components
+            .timer_scaled_scalar_sources
             .retain(|source| !source.output_matches(node, route_id));
-        self.timer_scaled_scalar_sources
+        self.components
+            .timer_scaled_scalar_sources
             .push(TimerScaledScalarSource::new(
                 node,
                 route_id,
@@ -1352,7 +1275,7 @@ impl ClusterRuntime {
                 offset,
             ));
         self.rebuild_timer_scaled_scalar_indexes();
-        self.dataflow_dirty = true;
+        self.graph.dirty = true;
         true
     }
 
@@ -1363,6 +1286,7 @@ impl ClusterRuntime {
         scale_value: f32,
     ) {
         for source in self
+            .components
             .timer_scaled_scalar_sources
             .iter_mut()
             .filter(|source| source.node() == node)
@@ -1385,7 +1309,7 @@ impl ClusterRuntime {
         }
         let mut matched = false;
         let mut changed = false;
-        for load in self.dc_loads.iter_mut() {
+        for load in self.components.dc_loads.iter_mut() {
             if load.configured_voltage_input_matches(sink_node, sink_route_id) {
                 matched = true;
                 if load.voltage_input_key() != (source_node, source_route_id) {
@@ -1401,14 +1325,20 @@ impl ClusterRuntime {
             return true;
         }
         self.rebuild_dc_load_indexes();
-        self.dataflow_dirty = true;
+        self.graph.dirty = true;
         true
     }
 
     fn rebuild_timer_scaled_scalar_indexes(&mut self) {
-        self.timer_scaled_scalar_timer_indexes.clear();
-        for (index, source) in self.timer_scaled_scalar_sources.iter().enumerate() {
-            self.timer_scaled_scalar_timer_indexes
+        self.components.timer_scaled_scalar_timer_indexes.clear();
+        for (index, source) in self
+            .components
+            .timer_scaled_scalar_sources
+            .iter()
+            .enumerate()
+        {
+            self.components
+                .timer_scaled_scalar_timer_indexes
                 .entry(source.timer_input_key())
                 .or_default()
                 .push(index);
@@ -1416,9 +1346,10 @@ impl ClusterRuntime {
     }
 
     fn rebuild_dc_load_indexes(&mut self) {
-        self.dc_load_current_indexes.clear();
-        for (index, load) in self.dc_loads.iter().enumerate() {
-            self.dc_load_current_indexes
+        self.components.dc_load_current_indexes.clear();
+        for (index, load) in self.components.dc_loads.iter().enumerate() {
+            self.components
+                .dc_load_current_indexes
                 .entry(load.current_output_key())
                 .or_default()
                 .push(index);
@@ -1426,9 +1357,10 @@ impl ClusterRuntime {
     }
 
     fn rebuild_battery_source_indexes(&mut self) {
-        self.battery_voltage_indexes.clear();
-        for (index, source) in self.battery_sources.iter().enumerate() {
-            self.battery_voltage_indexes
+        self.components.battery_voltage_indexes.clear();
+        for (index, source) in self.components.battery_sources.iter().enumerate() {
+            self.components
+                .battery_voltage_indexes
                 .entry(source.voltage_output_key())
                 .or_default()
                 .push(index);
@@ -1475,13 +1407,14 @@ impl ClusterRuntime {
         node.online = online;
         if reset_runtime_models {
             self.reset_rust_runtime_node_models(node_index, elapsed_ns);
-            self.dataflow_dirty = true;
+            self.graph.dirty = true;
         }
         true
     }
 
     fn reset_rust_runtime_node_models(&mut self, node: u32, elapsed_ns: u64) {
         for source in self
+            .components
             .timer_scaled_scalar_sources
             .iter_mut()
             .filter(|source| source.node() == node)
@@ -1489,13 +1422,19 @@ impl ClusterRuntime {
             source.reset();
         }
         for source in self
+            .components
             .battery_sources
             .iter_mut()
             .filter(|source| source.node() == node)
         {
             source.reset();
         }
-        for load in self.dc_loads.iter_mut().filter(|load| load.node() == node) {
+        for load in self
+            .components
+            .dc_loads
+            .iter_mut()
+            .filter(|load| load.node() == node)
+        {
             load.reset(elapsed_ns);
         }
     }
@@ -1537,11 +1476,7 @@ impl ClusterRuntime {
     }
 
     fn record_can_event(&mut self, source_node: u32, bus: u8, event: CanEvent) {
-        self.can_records.push_back(ClusterCanRecord {
-            source_node,
-            bus,
-            event,
-        });
+        self.networks.can.record(source_node, bus, event);
     }
 
     fn record_timer_event(
@@ -1552,7 +1487,7 @@ impl ClusterRuntime {
         channel: i32,
         event: TimerChannelEvent,
     ) {
-        self.timer_records.push_back(ClusterTimerRecord {
+        self.dataflows.timer_records.push_back(ClusterTimerRecord {
             source_node,
             interface,
             port,
@@ -1561,39 +1496,28 @@ impl ClusterRuntime {
         });
     }
 
-    fn record_spi_transaction(
-        &mut self,
-        source_node: u32,
-        device: i32,
-        transaction: SpiTransaction,
-    ) {
-        self.spi_records.push_back(ClusterSpiRecord {
-            source_node,
-            device,
-            transaction,
-        });
-    }
-
     fn record_scalar_event(&mut self, source_node: u32, route_id: u32, event: ScalarEvent) {
-        self.scalar_records.push_back(ClusterScalarRecord {
-            source_node,
-            route_id,
-            event,
-        });
+        self.dataflows
+            .scalar_records
+            .push_back(ClusterScalarRecord {
+                source_node,
+                route_id,
+                event,
+            });
     }
 
     fn ensure_dataflow_graph(&mut self) {
-        if !self.dataflow_dirty {
+        if !self.graph.dirty {
             return;
         }
         self.rebuild_dataflow_graph();
-        self.dataflow_dirty = false;
+        self.graph.dirty = false;
     }
 
     fn compile_dataflow_graph(&mut self) -> bool {
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             self.rebuild_dataflow_graph();
-            self.dataflow_dirty = false;
+            self.graph.dirty = false;
         }))
         .is_ok()
     }
@@ -1604,14 +1528,15 @@ impl ClusterRuntime {
         {
             return false;
         }
-        self.configured_dataflow_algorithms.push(algorithm);
-        self.dataflow_dirty = true;
+        self.graph.configured_dataflow_algorithms.push(algorithm);
+        self.graph.dirty = true;
         true
     }
 
     fn rebuild_dataflow_algorithm_specs(&mut self) {
-        self.dataflow_algorithm_specs.clear();
-        self.dataflow_algorithm_specs
+        self.graph.dataflow_algorithm_specs.clear();
+        self.graph
+            .dataflow_algorithm_specs
             .push(DataflowAlgorithm::source(
                 u32::MAX,
                 (u32::MAX, 0, 0),
@@ -1620,8 +1545,9 @@ impl ClusterRuntime {
                 dataflow_native_can_source_pending,
                 dataflow_run_native_can_sources,
             ));
-        for (index, source) in self.periodic_can_sources.iter().enumerate() {
-            self.dataflow_algorithm_specs
+        for (index, source) in self.components.periodic_can_sources.iter().enumerate() {
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::periodic_source(
                     source.node(),
                     (source.node(), 0, index),
@@ -1633,19 +1559,21 @@ impl ClusterRuntime {
                     source.due_at_ns(),
                 ));
         }
-        for (index, group) in self.can_route_groups.iter().enumerate() {
-            self.dataflow_algorithm_specs
+        for (index, group) in self.networks.can.fanouts.iter().enumerate() {
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::source(
                     group.source_node,
                     (group.source_node, 1, index),
-                    vec![can_edge(group.source_node, group.source_bus)],
+                    vec![can_edge(group.source_node, group.endpoint.bus())],
                     index,
-                    dataflow_can_route_group_pending,
-                    dataflow_run_can_route_group,
+                    dataflow_can_fanout_pending,
+                    dataflow_run_can_fanout,
                 ));
         }
-        for (index, group) in self.timer_route_groups.iter().enumerate() {
-            self.dataflow_algorithm_specs
+        for (index, group) in self.dataflows.timer_fanouts.iter().enumerate() {
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::source(
                     group.source_node,
                     (group.source_node, 2, index),
@@ -1656,34 +1584,37 @@ impl ClusterRuntime {
                         group.channel,
                     )],
                     index,
-                    dataflow_timer_route_group_pending,
-                    dataflow_run_timer_route_group,
+                    dataflow_timer_fanout_pending,
+                    dataflow_run_timer_fanout,
                 ));
         }
-        for (index, group) in self.spi_route_groups.iter().enumerate() {
-            self.dataflow_algorithm_specs
+        for (index, group) in self.networks.spi.fanouts.iter().enumerate() {
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::source(
                     group.source_node,
                     (group.source_node, 3, index),
-                    vec![spi_edge(group.source_node, group.device)],
+                    vec![spi_edge(group.source_node, group.endpoint.device())],
                     index,
-                    dataflow_spi_route_group_pending,
-                    dataflow_run_spi_route_group,
+                    dataflow_spi_fanout_pending,
+                    dataflow_run_spi_fanout,
                 ));
         }
-        for (index, group) in self.scalar_route_groups.iter().enumerate() {
-            self.dataflow_algorithm_specs
+        for (index, group) in self.dataflows.scalar_fanouts.iter().enumerate() {
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::source(
                     group.source_node,
                     (group.source_node, 4, index),
                     vec![scalar_edge(group.source_node, group.route_id)],
                     index,
-                    dataflow_scalar_route_group_pending,
-                    dataflow_run_scalar_route_group,
+                    dataflow_scalar_fanout_pending,
+                    dataflow_run_scalar_fanout,
                 ));
         }
-        for (index, source) in self.battery_sources.iter().enumerate() {
-            self.dataflow_algorithm_specs
+        for (index, source) in self.components.battery_sources.iter().enumerate() {
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::source(
                     source.node(),
                     (source.node(), 5, index),
@@ -1693,13 +1624,19 @@ impl ClusterRuntime {
                     dataflow_run_battery_source,
                 ));
         }
-        for (index, source) in self.timer_scaled_scalar_sources.iter().enumerate() {
+        for (index, source) in self
+            .components
+            .timer_scaled_scalar_sources
+            .iter()
+            .enumerate()
+        {
             let (node, interface, port, channel) = source.timer_input_key();
             let mut inputs = vec![timer_edge(node, interface, port, channel)];
             if source.scale_route_id != 0 {
                 inputs.push(scalar_edge(source.node(), source.scale_route_id));
             }
-            self.dataflow_algorithm_specs
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::transform(
                     source.node(),
                     (source.node(), 6, index),
@@ -1709,9 +1646,10 @@ impl ClusterRuntime {
                     dataflow_run_timer_scaled_scalar,
                 ));
         }
-        for (index, load) in self.dc_loads.iter().enumerate() {
+        for (index, load) in self.components.dc_loads.iter().enumerate() {
             let period_ns = load.scheduler_period_ns();
-            self.dataflow_algorithm_specs
+            self.graph
+                .dataflow_algorithm_specs
                 .push(DataflowAlgorithm::periodic_transform(
                     load.node(),
                     (load.node(), 7, index),
@@ -1729,56 +1667,63 @@ impl ClusterRuntime {
                     self.elapsed_ns.saturating_add(period_ns),
                 ));
         }
-        self.dataflow_algorithm_specs
-            .extend(self.configured_dataflow_algorithms.iter().cloned());
+        self.graph
+            .dataflow_algorithm_specs
+            .extend(self.graph.configured_dataflow_algorithms.iter().cloned());
     }
 
     fn rebuild_dataflow_graph(&mut self) {
         self.rebuild_dataflow_algorithm_specs();
-        self.dataflow_algorithms = self.ordered_dataflow_algorithms(&self.dataflow_algorithm_specs);
-        self.dataflow_edge_dependents.clear();
-        self.dataflow_algorithm_schedules_by_owner = vec![Vec::new(); self.nodes.len()];
-        self.dataflow_polled_algorithms.clear();
-        self.dataflow_algorithm_queue.clear();
-        self.dataflow_algorithm_pending = vec![false; self.dataflow_algorithms.len()];
-        self.dataflow_algorithm_available_inputs =
-            vec![HashSet::new(); self.dataflow_algorithms.len()];
+        self.graph.dataflow_algorithms =
+            self.ordered_dataflow_algorithms(&self.graph.dataflow_algorithm_specs);
+        self.graph.dataflow_edge_dependents.clear();
+        self.graph.dataflow_algorithm_schedules_by_owner = vec![Vec::new(); self.nodes.len()];
+        self.graph.dataflow_polled_algorithms.clear();
+        self.graph.dataflow_algorithm_queue.clear();
+        self.graph.dataflow_algorithm_pending = vec![false; self.graph.dataflow_algorithms.len()];
+        self.graph.dataflow_algorithm_available_inputs =
+            vec![HashSet::new(); self.graph.dataflow_algorithms.len()];
 
-        for index in 0..self.dataflow_algorithms.len() {
-            if self.dataflow_algorithms[index].pending.is_some()
-                && (self.dataflow_algorithms[index].inputs.is_empty()
-                    || self.dataflow_algorithms[index].outputs.is_empty())
+        for index in 0..self.graph.dataflow_algorithms.len() {
+            if self.graph.dataflow_algorithms[index].pending.is_some()
+                && (self.graph.dataflow_algorithms[index].inputs.is_empty()
+                    || self.graph.dataflow_algorithms[index].outputs.is_empty())
             {
-                self.dataflow_polled_algorithms.push(index);
+                self.graph.dataflow_polled_algorithms.push(index);
             }
-            if self.dataflow_algorithms[index].period_ns != 0 {
-                let owner_node = self.dataflow_algorithms[index].owner_node as usize;
+            if self.graph.dataflow_algorithms[index].period_ns != 0 {
+                let owner_node = self.graph.dataflow_algorithms[index].owner_node as usize;
                 if let Some(schedules) = self
+                    .graph
                     .dataflow_algorithm_schedules_by_owner
                     .get_mut(owner_node)
                 {
                     schedules.push(index);
                 }
             }
-            let inputs = self.dataflow_algorithms[index].inputs.clone();
+            let inputs = self.graph.dataflow_algorithms[index].inputs.clone();
             for input in inputs {
                 if self.dataflow_edge_available(input) {
-                    if let Some(available) = self.dataflow_algorithm_available_inputs.get_mut(index)
+                    if let Some(available) = self
+                        .graph
+                        .dataflow_algorithm_available_inputs
+                        .get_mut(index)
                     {
                         available.insert(input);
                     }
                 }
-                self.dataflow_edge_dependents
+                self.graph
+                    .dataflow_edge_dependents
                     .entry(input)
                     .or_default()
                     .push(index);
             }
         }
-        for indexes in self.dataflow_edge_dependents.values_mut() {
-            indexes.sort_by_key(|index| self.dataflow_algorithms[*index].sort_key);
+        for indexes in self.graph.dataflow_edge_dependents.values_mut() {
+            indexes.sort_by_key(|index| self.graph.dataflow_algorithms[*index].sort_key);
             indexes.dedup();
         }
-        for index in 0..self.dataflow_algorithms.len() {
+        for index in 0..self.graph.dataflow_algorithms.len() {
             if self.dataflow_algorithm_pending_state(index) {
                 self.enqueue_dataflow_algorithm_if_ready(index);
             }
@@ -1786,13 +1731,13 @@ impl ClusterRuntime {
     }
 
     fn dataflow_algorithm_inputs_ready(&self, index: usize) -> bool {
-        let Some(algorithm) = self.dataflow_algorithms.get(index) else {
+        let Some(algorithm) = self.graph.dataflow_algorithms.get(index) else {
             return false;
         };
         if algorithm.inputs.is_empty() {
             return true;
         }
-        let Some(available) = self.dataflow_algorithm_available_inputs.get(index) else {
+        let Some(available) = self.graph.dataflow_algorithm_available_inputs.get(index) else {
             return false;
         };
         algorithm
@@ -1802,11 +1747,11 @@ impl ClusterRuntime {
     }
 
     fn dataflow_edge_available(&self, edge: DataflowEdgeKey) -> bool {
-        self.dataflow_ready_edges.contains(&edge)
+        self.graph.dataflow_ready_edges.contains(&edge)
     }
 
     fn dataflow_algorithm_pending_state(&self, index: usize) -> bool {
-        let Some(algorithm) = self.dataflow_algorithms.get(index) else {
+        let Some(algorithm) = self.graph.dataflow_algorithms.get(index) else {
             return false;
         };
         algorithm
@@ -1816,8 +1761,8 @@ impl ClusterRuntime {
     }
 
     fn enqueue_pending_dataflow_algorithms(&mut self) {
-        for position in 0..self.dataflow_polled_algorithms.len() {
-            let index = self.dataflow_polled_algorithms[position];
+        for position in 0..self.graph.dataflow_polled_algorithms.len() {
+            let index = self.graph.dataflow_polled_algorithms[position];
             if self.dataflow_algorithm_pending_state(index) {
                 self.enqueue_dataflow_algorithm_if_ready(index);
             }
@@ -1888,19 +1833,20 @@ impl ClusterRuntime {
     }
 
     fn enqueue_dataflow_algorithm(&mut self, index: usize) {
-        if index >= self.dataflow_algorithms.len() {
+        if index >= self.graph.dataflow_algorithms.len() {
             return;
         }
         if !self
+            .graph
             .dataflow_algorithm_pending
             .get(index)
             .copied()
             .unwrap_or(false)
         {
-            if let Some(pending) = self.dataflow_algorithm_pending.get_mut(index) {
+            if let Some(pending) = self.graph.dataflow_algorithm_pending.get_mut(index) {
                 *pending = true;
             }
-            self.dataflow_algorithm_queue.push_back(index);
+            self.graph.dataflow_algorithm_queue.push_back(index);
         }
     }
 
@@ -1911,13 +1857,13 @@ impl ClusterRuntime {
     }
 
     fn run_due_dataflow_algorithms(&mut self) {
-        for node_index in 0..self.dataflow_algorithm_schedules_by_owner.len() {
+        for node_index in 0..self.graph.dataflow_algorithm_schedules_by_owner.len() {
             if !self.node_online(node_index as u32) {
                 continue;
             }
-            for position in 0..self.dataflow_algorithm_schedules_by_owner[node_index].len() {
-                let index = self.dataflow_algorithm_schedules_by_owner[node_index][position];
-                let Some(algorithm) = self.dataflow_algorithms.get(index) else {
+            for position in 0..self.graph.dataflow_algorithm_schedules_by_owner[node_index].len() {
+                let index = self.graph.dataflow_algorithm_schedules_by_owner[node_index][position];
+                let Some(algorithm) = self.graph.dataflow_algorithms.get(index) else {
                     continue;
                 };
                 if algorithm.period_ns == 0 || algorithm.next_due_ns > self.elapsed_ns {
@@ -1925,7 +1871,7 @@ impl ClusterRuntime {
                 }
                 let period_ns = algorithm.period_ns;
                 self.enqueue_dataflow_algorithm_if_ready(index);
-                if let Some(algorithm) = self.dataflow_algorithms.get_mut(index) {
+                if let Some(algorithm) = self.graph.dataflow_algorithms.get_mut(index) {
                     while algorithm.next_due_ns <= self.elapsed_ns {
                         algorithm.next_due_ns = algorithm.next_due_ns.saturating_add(period_ns);
                     }
@@ -1935,15 +1881,15 @@ impl ClusterRuntime {
     }
 
     fn run_dataflow_algorithm_queue(&mut self) {
-        while let Some(index) = self.dataflow_algorithm_queue.pop_front() {
-            let Some(pending) = self.dataflow_algorithm_pending.get_mut(index) else {
+        while let Some(index) = self.graph.dataflow_algorithm_queue.pop_front() {
+            let Some(pending) = self.graph.dataflow_algorithm_pending.get_mut(index) else {
                 continue;
             };
             if !*pending {
                 continue;
             }
             *pending = false;
-            let Some(algorithm) = self.dataflow_algorithms.get(index) else {
+            let Some(algorithm) = self.graph.dataflow_algorithms.get(index) else {
                 continue;
             };
             let owner_node = algorithm.owner_node;
@@ -1963,11 +1909,15 @@ impl ClusterRuntime {
 
     fn mark_dataflow_edge_ready(&mut self, key: DataflowEdgeKey) {
         self.ensure_dataflow_graph();
-        let Some(indexes) = self.dataflow_edge_dependents.get(&key).cloned() else {
+        let Some(indexes) = self.graph.dataflow_edge_dependents.get(&key).cloned() else {
             return;
         };
         for index in indexes {
-            if let Some(available) = self.dataflow_algorithm_available_inputs.get_mut(index) {
+            if let Some(available) = self
+                .graph
+                .dataflow_algorithm_available_inputs
+                .get_mut(index)
+            {
                 available.insert(key);
             }
             self.enqueue_dataflow_algorithm_if_ready(index);
@@ -2004,7 +1954,7 @@ impl ClusterRuntime {
     }
 
     fn run_periodic_can_source(&mut self, source_index: usize) -> bool {
-        let Some(source) = self.periodic_can_sources.get(source_index) else {
+        let Some(source) = self.components.periodic_can_sources.get(source_index) else {
             return false;
         };
         let source_node = source.node();
@@ -2012,25 +1962,31 @@ impl ClusterRuntime {
         if !self.node_online(source_node) {
             return false;
         }
-        let Some(event) = self.periodic_can_sources[source_index].emit_if_due(self.elapsed_ns)
+        let Some(event) =
+            self.components.periodic_can_sources[source_index].emit_if_due(self.elapsed_ns)
         else {
             return false;
         };
 
         let mut input_pending_nodes = Vec::new();
         if let Some(group_index) = self
-            .can_route_group_indexes
-            .get(&(source_node, source_bus))
+            .networks
+            .can
+            .fanout_indexes
+            .get(&(source_node, CanEndpoint::new(source_bus)))
             .copied()
         {
-            for sink in &self.can_route_groups[group_index].sinks {
+            let record_index = self.networks.can.fanouts[group_index].record_index;
+            for sink in &self.networks.can.fanouts[group_index].sinks {
                 let accepted = unsafe { (sink.sink_send_many)(sink.sink_bus, &event.packet, 1) };
                 if accepted > 0 {
                     input_pending_nodes.push(sink.sink_node);
                 }
             }
+            self.networks.can.record_at(record_index, event);
+        } else {
+            self.record_can_event(source_node, source_bus, event);
         }
-        self.record_can_event(source_node, source_bus, event);
         for sink_node in input_pending_nodes {
             self.mark_input_pending(sink_node);
         }
@@ -2040,25 +1996,30 @@ impl ClusterRuntime {
     fn run_native_can_sources(&mut self) -> bool {
         let mut routed = false;
         let mut input_pending_nodes = Vec::new();
-        while let Some(record) = self.native_can_source_events.pop_front() {
+        while let Some(record) = self.networks.can.native_source_events.pop_front() {
             if !self.node_online(record.source_node) {
                 continue;
             }
             routed = true;
             if let Some(group_index) = self
-                .can_route_group_indexes
-                .get(&(record.source_node, record.bus))
+                .networks
+                .can
+                .fanout_indexes
+                .get(&(record.source_node, CanEndpoint::new(record.bus)))
                 .copied()
             {
-                for sink in &self.can_route_groups[group_index].sinks {
+                let record_index = self.networks.can.fanouts[group_index].record_index;
+                for sink in &self.networks.can.fanouts[group_index].sinks {
                     let accepted =
                         unsafe { (sink.sink_send_many)(sink.sink_bus, &record.event.packet, 1) };
                     if accepted > 0 {
                         input_pending_nodes.push(sink.sink_node);
                     }
                 }
+                self.networks.can.record_at(record_index, record.event);
+            } else {
+                self.record_can_event(record.source_node, record.bus, record.event);
             }
-            self.record_can_event(record.source_node, record.bus, record.event);
         }
         for sink_node in input_pending_nodes {
             self.mark_input_pending(sink_node);
@@ -2066,12 +2027,13 @@ impl ClusterRuntime {
         routed
     }
 
-    fn run_can_route_group(&mut self, group_index: usize) -> bool {
-        let Some(group) = self.can_route_groups.get(group_index) else {
+    fn run_can_fanout(&mut self, group_index: usize) -> bool {
+        let Some(group) = self.networks.can.fanouts.get(group_index) else {
             return false;
         };
         let source_node = group.source_node;
-        let source_bus = group.source_bus;
+        let source_bus = group.endpoint.bus();
+        let record_index = group.record_index;
         let source_tx_count = group.source_tx_count;
         let source_recv_events = group.source_recv_events;
         let sink_count = group.sinks.len();
@@ -2097,7 +2059,7 @@ impl ClusterRuntime {
         let mut input_pending_nodes = Vec::new();
         if !packets.is_empty() {
             for sink_index in 0..sink_count {
-                let sink = self.can_route_groups[group_index].sinks[sink_index];
+                let sink = self.networks.can.fanouts[group_index].sinks[sink_index];
                 let accepted = unsafe {
                     (sink.sink_send_many)(
                         sink.sink_bus,
@@ -2112,7 +2074,7 @@ impl ClusterRuntime {
         }
 
         for event in events {
-            self.record_can_event(source_node, source_bus, event);
+            self.networks.can.record_at(record_index, event);
         }
         for sink_node in input_pending_nodes {
             self.mark_input_pending(sink_node);
@@ -2120,8 +2082,8 @@ impl ClusterRuntime {
         true
     }
 
-    fn run_timer_route_group(&mut self, group_index: usize) -> bool {
-        let Some(group) = self.timer_route_groups.get(group_index) else {
+    fn run_timer_fanout(&mut self, group_index: usize) -> bool {
+        let Some(group) = self.dataflows.timer_fanouts.get(group_index) else {
             return false;
         };
         let source_node = group.source_node;
@@ -2150,9 +2112,9 @@ impl ClusterRuntime {
         self.update_timer_scaled_scalar_source(source_node, interface, port, channel, &events);
 
         let mut input_pending_nodes = Vec::new();
-        let sink_count = self.timer_route_groups[group_index].sinks.len();
+        let sink_count = self.dataflows.timer_fanouts[group_index].sinks.len();
         for sink_index in 0..sink_count {
-            let sink = self.timer_route_groups[group_index].sinks[sink_index];
+            let sink = self.dataflows.timer_fanouts[group_index].sinks[sink_index];
             let accepted = unsafe {
                 (sink.sink_send_many)(events.as_ptr(), events.len().min(u32::MAX as usize) as u32)
             };
@@ -2180,12 +2142,14 @@ impl ClusterRuntime {
     ) {
         let key = (sink_node, interface, port, channel);
         let index_count = self
+            .components
             .timer_scaled_scalar_timer_indexes
             .get(&key)
             .map(|indexes| indexes.len())
             .unwrap_or(0);
         for index_position in 0..index_count {
             let Some(index) = self
+                .components
                 .timer_scaled_scalar_timer_indexes
                 .get(&key)
                 .and_then(|indexes| indexes.get(index_position))
@@ -2193,7 +2157,7 @@ impl ClusterRuntime {
             else {
                 continue;
             };
-            if let Some(source) = self.timer_scaled_scalar_sources.get_mut(index) {
+            if let Some(source) = self.components.timer_scaled_scalar_sources.get_mut(index) {
                 source.update_timer(events);
             }
         }
@@ -2208,19 +2172,21 @@ impl ClusterRuntime {
 
     fn update_scalar_state_sinks(&mut self, source_node: u32, route_id: u32, event: ScalarEvent) {
         let Some(group_index) = self
-            .scalar_route_group_indexes
+            .dataflows
+            .scalar_fanout_indexes
             .get(&(source_node, route_id))
             .copied()
         else {
             return;
         };
-        let sink_count = self.scalar_route_groups[group_index].sinks.len();
+        let sink_count = self.dataflows.scalar_fanouts[group_index].sinks.len();
         for sink_index in 0..sink_count {
-            let sink = self.scalar_route_groups[group_index].sinks[sink_index];
+            let sink = self.dataflows.scalar_fanouts[group_index].sinks[sink_index];
             let ClusterScalarSink::State { route_id } = sink.sink else {
                 continue;
             };
-            self.scalar_states
+            self.dataflows
+                .scalar_states
                 .insert((sink.sink_node, route_id), event.value);
             self.update_timer_scaled_scalar_scale(sink.sink_node, route_id, event.value);
             self.mark_dataflow_edge_ready(scalar_edge(sink.sink_node, route_id));
@@ -2230,15 +2196,16 @@ impl ClusterRuntime {
 
     fn update_scalar_sinks(&mut self, source_node: u32, route_id: u32, event: ScalarEvent) {
         let Some(group_index) = self
-            .scalar_route_group_indexes
+            .dataflows
+            .scalar_fanout_indexes
             .get(&(source_node, route_id))
             .copied()
         else {
             return;
         };
-        let sink_count = self.scalar_route_groups[group_index].sinks.len();
+        let sink_count = self.dataflows.scalar_fanouts[group_index].sinks.len();
         for sink_index in 0..sink_count {
-            let sink = self.scalar_route_groups[group_index].sinks[sink_index];
+            let sink = self.dataflows.scalar_fanouts[group_index].sinks[sink_index];
             if matches!(sink.sink, ClusterScalarSink::State { .. }) {
                 continue;
             }
@@ -2249,12 +2216,12 @@ impl ClusterRuntime {
         }
     }
 
-    fn run_spi_route_group(&mut self, group_index: usize) -> bool {
-        let Some(group) = self.spi_route_groups.get(group_index) else {
+    fn run_spi_fanout(&mut self, group_index: usize) -> bool {
+        let Some(group) = self.networks.spi.fanouts.get(group_index) else {
             return false;
         };
         let source_node = group.source_node;
-        let device = group.device;
+        let device = group.endpoint.device();
         let source_count = group.source_count;
         let source_recv_many = group.source_recv_many;
 
@@ -2276,9 +2243,9 @@ impl ClusterRuntime {
         transactions.truncate(count);
 
         let mut input_pending_nodes = Vec::new();
-        let sink_count = self.spi_route_groups[group_index].sinks.len();
+        let sink_count = self.networks.spi.fanouts[group_index].sinks.len();
         for sink_index in 0..sink_count {
-            let sink = self.spi_route_groups[group_index].sinks[sink_index];
+            let sink = self.networks.spi.fanouts[group_index].sinks[sink_index];
             let accepted = unsafe {
                 (sink.sink_send_many)(
                     transactions.as_ptr(),
@@ -2290,17 +2257,14 @@ impl ClusterRuntime {
             }
         }
 
-        for transaction in transactions {
-            self.record_spi_transaction(source_node, device, transaction);
-        }
         for sink_node in input_pending_nodes {
             self.mark_input_pending(sink_node);
         }
         true
     }
 
-    fn run_scalar_route_group(&mut self, group_index: usize) -> bool {
-        let Some(group) = self.scalar_route_groups.get(group_index) else {
+    fn run_scalar_fanout(&mut self, group_index: usize) -> bool {
+        let Some(group) = self.dataflows.scalar_fanouts.get(group_index) else {
             return false;
         };
         let source_node = group.source_node;
@@ -2327,13 +2291,14 @@ impl ClusterRuntime {
         events.truncate(count);
 
         let mut input_pending_nodes = Vec::new();
-        let sink_count = self.scalar_route_groups[group_index].sinks.len();
+        let sink_count = self.dataflows.scalar_fanouts[group_index].sinks.len();
         for sink_index in 0..sink_count {
-            let sink = self.scalar_route_groups[group_index].sinks[sink_index];
+            let sink = self.dataflows.scalar_fanouts[group_index].sinks[sink_index];
             let accepted = match sink.sink {
                 ClusterScalarSink::State { route_id } => {
                     if let Some(event) = events.last() {
-                        self.scalar_states
+                        self.dataflows
+                            .scalar_states
                             .insert((sink.sink_node, route_id), event.value);
                         self.update_timer_scaled_scalar_scale(
                             sink.sink_node,
@@ -2361,9 +2326,14 @@ impl ClusterRuntime {
     }
 
     fn native_scalar_pending(&self, source_node: u32, route_id: u32) -> bool {
-        if let Some(indexes) = self.dc_load_current_indexes.get(&(source_node, route_id)) {
+        if let Some(indexes) = self
+            .components
+            .dc_load_current_indexes
+            .get(&(source_node, route_id))
+        {
             if indexes.iter().copied().any(|index| {
-                self.dc_loads
+                self.components
+                    .dc_loads
                     .get(index)
                     .map(|load| load.has_pending_current())
                     .unwrap_or(false)
@@ -2371,9 +2341,14 @@ impl ClusterRuntime {
                 return true;
             }
         }
-        if let Some(indexes) = self.battery_voltage_indexes.get(&(source_node, route_id)) {
+        if let Some(indexes) = self
+            .components
+            .battery_voltage_indexes
+            .get(&(source_node, route_id))
+        {
             if indexes.iter().copied().any(|index| {
-                self.battery_sources
+                self.components
+                    .battery_sources
                     .get(index)
                     .map(|source| source.has_pending_voltage())
                     .unwrap_or(false)
@@ -2386,18 +2361,26 @@ impl ClusterRuntime {
 
     fn native_scalar_events(&mut self, source_node: u32, route_id: u32) -> Vec<ScalarEvent> {
         let mut events = Vec::new();
-        if let Some(indexes) = self.dc_load_current_indexes.get(&(source_node, route_id)) {
+        if let Some(indexes) = self
+            .components
+            .dc_load_current_indexes
+            .get(&(source_node, route_id))
+        {
             for index in indexes.iter().copied() {
-                if let Some(load) = self.dc_loads.get_mut(index) {
+                if let Some(load) = self.components.dc_loads.get_mut(index) {
                     if let Some(event) = load.take_current_event(self.elapsed_ns) {
                         events.push(event);
                     }
                 }
             }
         }
-        if let Some(indexes) = self.battery_voltage_indexes.get(&(source_node, route_id)) {
+        if let Some(indexes) = self
+            .components
+            .battery_voltage_indexes
+            .get(&(source_node, route_id))
+        {
             for index in indexes.iter().copied() {
-                if let Some(source) = self.battery_sources.get_mut(index) {
+                if let Some(source) = self.components.battery_sources.get_mut(index) {
                     if let Some(event) = source.take_voltage_event(self.elapsed_ns) {
                         events.push(event);
                     }
@@ -2423,23 +2406,13 @@ impl ClusterRuntime {
     }
 
     fn latest_can_message(&self, source_node: u32, bus: u8, message_id: u32) -> Option<CanEvent> {
-        self.can_records
-            .iter()
-            .rev()
-            .find(|record| {
-                record.source_node == source_node
-                    && record.bus == bus
-                    && record.event.packet.id == message_id
-            })
-            .map(|record| record.event)
+        self.networks
+            .can
+            .latest_message(source_node, bus, message_id)
     }
 
     fn latest_can_bus_event(&self, source_node: u32, bus: u8) -> Option<CanEvent> {
-        self.can_records
-            .iter()
-            .rev()
-            .find(|record| record.source_node == source_node && record.bus == bus)
-            .map(|record| record.event)
+        self.networks.can.latest_bus_event(source_node, bus)
     }
 
     fn latest_can_signal(
@@ -2517,7 +2490,8 @@ impl ClusterRuntime {
         port: i32,
         channel: i32,
     ) -> Option<TimerChannelEvent> {
-        self.timer_records
+        self.dataflows
+            .timer_records
             .iter()
             .rev()
             .find(|record| {
@@ -2529,16 +2503,9 @@ impl ClusterRuntime {
             .map(|record| record.event)
     }
 
-    fn latest_spi_transaction(&self, source_node: u32, device: i32) -> Option<SpiTransaction> {
-        self.spi_records
-            .iter()
-            .rev()
-            .find(|record| record.source_node == source_node && record.device == device)
-            .map(|record| record.transaction)
-    }
-
     fn latest_scalar_event(&self, source_node: u32, route_id: u32) -> Option<ScalarEvent> {
-        self.scalar_records
+        self.dataflows
+            .scalar_records
             .iter()
             .rev()
             .find(|record| record.source_node == source_node && record.route_id == route_id)
@@ -2547,7 +2514,7 @@ impl ClusterRuntime {
 }
 
 fn dataflow_run_battery_source(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    let Some(source) = runtime.battery_sources.get_mut(context) else {
+    let Some(source) = runtime.components.battery_sources.get_mut(context) else {
         return false;
     };
     let source_node = source.node();
@@ -2565,7 +2532,7 @@ fn dataflow_run_periodic_can_source(runtime: &mut ClusterRuntime, context: usize
 }
 
 fn dataflow_periodic_can_source_pending(runtime: &ClusterRuntime, context: usize) -> bool {
-    let Some(source) = runtime.periodic_can_sources.get(context) else {
+    let Some(source) = runtime.components.periodic_can_sources.get(context) else {
         return false;
     };
     runtime.node_online(source.node()) && source.has_pending_event(runtime.elapsed_ns)
@@ -2577,52 +2544,55 @@ fn dataflow_run_native_can_sources(runtime: &mut ClusterRuntime, _context: usize
 
 fn dataflow_native_can_source_pending(runtime: &ClusterRuntime, _context: usize) -> bool {
     runtime
-        .native_can_source_events
+        .networks
+        .can
+        .native_source_events
         .iter()
         .any(|record| runtime.node_online(record.source_node))
 }
 
-fn dataflow_run_can_route_group(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    runtime.run_can_route_group(context)
+fn dataflow_run_can_fanout(runtime: &mut ClusterRuntime, context: usize) -> bool {
+    runtime.run_can_fanout(context)
 }
 
-fn dataflow_can_route_group_pending(runtime: &ClusterRuntime, context: usize) -> bool {
-    let Some(group) = runtime.can_route_groups.get(context) else {
+fn dataflow_can_fanout_pending(runtime: &ClusterRuntime, context: usize) -> bool {
+    let Some(group) = runtime.networks.can.fanouts.get(context) else {
         return false;
     };
     runtime.node_online(group.source_node)
-        && unsafe { (group.source_tx_count)(group.source_bus) } != 0
+        && unsafe { (group.source_tx_count)(group.endpoint.bus()) } != 0
 }
 
-fn dataflow_run_timer_route_group(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    runtime.run_timer_route_group(context)
+fn dataflow_run_timer_fanout(runtime: &mut ClusterRuntime, context: usize) -> bool {
+    runtime.run_timer_fanout(context)
 }
 
-fn dataflow_timer_route_group_pending(runtime: &ClusterRuntime, context: usize) -> bool {
-    let Some(group) = runtime.timer_route_groups.get(context) else {
+fn dataflow_timer_fanout_pending(runtime: &ClusterRuntime, context: usize) -> bool {
+    let Some(group) = runtime.dataflows.timer_fanouts.get(context) else {
         return false;
     };
     runtime.node_online(group.source_node)
         && unsafe { (group.source_count)(group.port, group.channel) } != 0
 }
 
-fn dataflow_run_spi_route_group(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    runtime.run_spi_route_group(context)
+fn dataflow_run_spi_fanout(runtime: &mut ClusterRuntime, context: usize) -> bool {
+    runtime.run_spi_fanout(context)
 }
 
-fn dataflow_spi_route_group_pending(runtime: &ClusterRuntime, context: usize) -> bool {
-    let Some(group) = runtime.spi_route_groups.get(context) else {
+fn dataflow_spi_fanout_pending(runtime: &ClusterRuntime, context: usize) -> bool {
+    let Some(group) = runtime.networks.spi.fanouts.get(context) else {
         return false;
     };
-    runtime.node_online(group.source_node) && unsafe { (group.source_count)(group.device) } != 0
+    runtime.node_online(group.source_node)
+        && unsafe { (group.source_count)(group.endpoint.device()) } != 0
 }
 
-fn dataflow_run_scalar_route_group(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    runtime.run_scalar_route_group(context)
+fn dataflow_run_scalar_fanout(runtime: &mut ClusterRuntime, context: usize) -> bool {
+    runtime.run_scalar_fanout(context)
 }
 
-fn dataflow_scalar_route_group_pending(runtime: &ClusterRuntime, context: usize) -> bool {
-    let Some(group) = runtime.scalar_route_groups.get(context) else {
+fn dataflow_scalar_fanout_pending(runtime: &ClusterRuntime, context: usize) -> bool {
+    let Some(group) = runtime.dataflows.scalar_fanouts.get(context) else {
         return false;
     };
     runtime.node_online(group.source_node)
@@ -2632,6 +2602,7 @@ fn dataflow_scalar_route_group_pending(runtime: &ClusterRuntime, context: usize)
 
 fn dataflow_battery_source_pending(runtime: &ClusterRuntime, context: usize) -> bool {
     runtime
+        .components
         .battery_sources
         .get(context)
         .map(|source| source.has_pending_voltage())
@@ -2639,7 +2610,11 @@ fn dataflow_battery_source_pending(runtime: &ClusterRuntime, context: usize) -> 
 }
 
 fn dataflow_run_timer_scaled_scalar(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    let Some(source) = runtime.timer_scaled_scalar_sources.get_mut(context) else {
+    let Some(source) = runtime
+        .components
+        .timer_scaled_scalar_sources
+        .get_mut(context)
+    else {
         return false;
     };
     let source_node = source.node();
@@ -2653,14 +2628,14 @@ fn dataflow_run_timer_scaled_scalar(runtime: &mut ClusterRuntime, context: usize
 }
 
 fn dataflow_run_dc_load(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    let Some(load) = runtime.dc_loads.get(context) else {
+    let Some(load) = runtime.components.dc_loads.get(context) else {
         return false;
     };
     let source_node = load.node();
     let route_id = load.current_output_key().1;
     let voltage_input_key = load.voltage_input_key();
     let voltage_event = runtime.latest_scalar_event(voltage_input_key.0, voltage_input_key.1);
-    let Some(load) = runtime.dc_loads.get_mut(context) else {
+    let Some(load) = runtime.components.dc_loads.get_mut(context) else {
         return false;
     };
     if let Some(event) = voltage_event {
@@ -3751,26 +3726,6 @@ pub extern "C" fn rig_cluster_latest_timer_event(
         return false;
     };
     unsafe { *out = event };
-    true
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_latest_spi_transaction(
-    source_node: u32,
-    device: i32,
-    out: *mut SpiTransaction,
-) -> bool {
-    if out.is_null() {
-        return false;
-    }
-    let Some(transaction) = CLUSTER_RUNTIME
-        .lock()
-        .unwrap()
-        .latest_spi_transaction(source_node, device)
-    else {
-        return false;
-    };
-    unsafe { *out = transaction };
     true
 }
 

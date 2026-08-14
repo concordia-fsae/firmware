@@ -50,6 +50,10 @@ pub mod module_desc {
     include!(env!("RIG_RUNTIME_RUST_MODULE_DESC_RS"));
 }
 
+mod networks {
+    include!(env!("RIG_RUNTIME_RUST_NETWORKS_RS"));
+}
+
 pub mod nvm {
     include!(env!("RIG_RUNTIME_RUST_NVM_RS"));
 }

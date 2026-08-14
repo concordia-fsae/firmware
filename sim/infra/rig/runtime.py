@@ -239,11 +239,6 @@ class _RustClusterRuntime:
             ],
             ctypes.c_bool,
         )
-        self._latest_spi_transaction = bind_symbol(
-            "rig_cluster_latest_spi_transaction",
-            [ctypes.c_uint32, ctypes.c_int32, ctypes.c_void_p],
-            ctypes.c_bool,
-        )
         self._add_scalar_route = bind_symbol(
             "rig_cluster_add_scalar_route",
             [
@@ -1079,20 +1074,6 @@ class _RustClusterRuntime:
                 ctypes.c_int32(port),
                 ctypes.c_int32(channel),
                 ctypes.byref(event),
-            )
-        )
-
-    def latest_spi_transaction(
-        self, source_node: str, device: int, transaction
-    ) -> bool:
-        index = self._node_indices.get(source_node)
-        if index is None:
-            return False
-        return bool(
-            self._latest_spi_transaction(
-                ctypes.c_uint32(index),
-                ctypes.c_int32(device),
-                ctypes.byref(transaction),
             )
         )
 

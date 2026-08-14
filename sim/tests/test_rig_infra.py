@@ -1,5 +1,9 @@
+import ctypes
+
 from sim.infra.rig import (
     CanBusDescriptor,
+    CanEvent,
+    CanPacket,
     ClusterCanComms,
     ClusterRig,
     ComponentRig,
@@ -9,6 +13,7 @@ from sim.infra.rig import (
     SchedulerContext,
     SimpleComponent,
     SimpleNodeRig,
+    SpiTransaction,
 )
 from sim.infra.rig.runtime import _RustClusterRuntime
 
@@ -104,6 +109,103 @@ class SharedObjectBackedFakeNode(ModelRig):
     def __init__(self, library_path) -> None:
         super().__init__()
         self.library_path = library_path
+
+
+class NativeCanNetworkHarness:
+    _TxCount = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_uint8)
+    _RecvEvents = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.c_uint8,
+        ctypes.POINTER(CanEvent),
+        ctypes.c_uint32,
+    )
+    _SendMany = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.c_uint8,
+        ctypes.POINTER(CanPacket),
+        ctypes.c_uint32,
+    )
+
+    def __init__(self) -> None:
+        self.pending_by_bus = {}
+        self.received_by_bus = {}
+        self.tx_count = self._TxCount(self._tx_count)
+        self.recv_events = self._RecvEvents(self._recv_events)
+        self.send_many = self._SendMany(self._send_many)
+
+    def queue(self, bus: int, packet: CanPacket, *, timestamp_ns: int = 0) -> None:
+        self.pending_by_bus.setdefault(int(bus), []).append(
+            CanEvent.from_packet(bus, packet, timestamp_ns=timestamp_ns)
+        )
+
+    def _tx_count(self, bus: int) -> int:
+        return len(self.pending_by_bus.get(int(bus), ()))
+
+    def _recv_events(self, bus: int, events, capacity: int) -> int:
+        pending = self.pending_by_bus.get(int(bus), [])
+        count = min(len(pending), int(capacity))
+        for index in range(count):
+            events[index] = pending.pop(0)
+        return count
+
+    def _send_many(self, bus: int, packets, count: int) -> int:
+        received = self.received_by_bus.setdefault(int(bus), [])
+        for index in range(int(count)):
+            packet = packets[index]
+            received.append(CanPacket.from_payload(packet.id, packet.payload))
+        return int(count)
+
+
+class NativeSpiNetworkHarness:
+    _Count = ctypes.CFUNCTYPE(ctypes.c_uint32, ctypes.c_int32)
+    _RecvMany = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.c_int32,
+        ctypes.POINTER(SpiTransaction),
+        ctypes.c_uint32,
+    )
+    _SendMany = ctypes.CFUNCTYPE(
+        ctypes.c_uint32,
+        ctypes.POINTER(SpiTransaction),
+        ctypes.c_uint32,
+    )
+
+    def __init__(self) -> None:
+        self.pending_by_device = {}
+        self.received = []
+        self.count = self._Count(self._count)
+        self.recv_many = self._RecvMany(self._recv_many)
+        self.send_many = self._SendMany(self._send_many)
+
+    def queue(self, transaction: SpiTransaction) -> None:
+        self.pending_by_device.setdefault(int(transaction.device), []).append(transaction)
+
+    def _count(self, device: int) -> int:
+        return len(self.pending_by_device.get(int(device), ()))
+
+    def _recv_many(self, device: int, transactions, capacity: int) -> int:
+        pending = self.pending_by_device.get(int(device), [])
+        count = min(len(pending), int(capacity))
+        for index in range(count):
+            transactions[index] = pending.pop(0)
+        return count
+
+    def _send_many(self, transactions, count: int) -> int:
+        for index in range(int(count)):
+            transaction = transactions[index]
+            self.received.append(
+                SpiTransaction.from_payload(
+                    transaction.device,
+                    tx_payload=transaction.tx_payload,
+                    rx_payload=transaction.rx_payload,
+                    timestamp_ns=transaction.timestamp_ns,
+                )
+            )
+        return int(count)
+
+
+def _function_address(function) -> int:
+    return _RustClusterRuntime._function_address(function)
 
 
 def test_dataflow_graph_rejects_cyclic_algorithms_from_python_abi():
@@ -271,6 +373,198 @@ def test_can_node_connections_use_generated_common_bus_names_only():
         record.path
         for record in cluster.dataroutes.records(ClusterCanComms.path("nose"))
     ] == [ClusterCanComms.path("nose")]
+
+
+def test_rust_can_network_fans_out_and_records_latest_message():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    runtime.add_node("sink", FakeNode())
+    source = NativeCanNetworkHarness()
+    sink = NativeCanNetworkHarness()
+    packet = CanPacket.from_payload(0x123, b"\x11\x22\x33")
+    source.queue(0, packet, timestamp_ns=10)
+
+    assert runtime.add_can_route(
+        source_node="source",
+        source_bus=0,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+        sink_node="sink",
+        sink_bus=0,
+        sink_send_many=_function_address(sink.send_many),
+    )
+    runtime.run_for(1_000_000, 1_000_000)
+
+    assert [packet.payload for packet in sink.received_by_bus[0]] == [b"\x11\x22\x33"]
+    latest = CanEvent()
+    assert runtime.latest_can_message("source", 0, 0x123, latest)
+    assert latest.packet.id == 0x123
+    assert latest.packet.payload == b"\x11\x22\x33"
+    assert latest.timestamp_ns == 10
+    latest_on_bus = CanEvent()
+    assert runtime.latest_can_bus_event("source", 0, latest_on_bus)
+    assert latest_on_bus.packet.id == 0x123
+
+
+def test_rust_can_network_records_source_only_events_without_sink():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    source = NativeCanNetworkHarness()
+    source.queue(1, CanPacket.from_payload(0x456, b"\xaa"))
+
+    assert runtime.add_can_route(
+        source_node="source",
+        source_bus=1,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+    )
+    runtime.run_for(1_000_000, 1_000_000)
+
+    latest = CanEvent()
+    assert runtime.latest_can_message("source", 1, 0x456, latest)
+    assert latest.packet.payload == b"\xaa"
+
+
+def test_rust_can_network_rejects_invalid_routes_and_gates_offline_sources():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    runtime.add_node("sink", FakeNode())
+    source = NativeCanNetworkHarness()
+    sink = NativeCanNetworkHarness()
+    source.queue(0, CanPacket.from_payload(0x321, b"\x01"))
+
+    assert not runtime.add_can_route(
+        source_node="missing",
+        source_bus=0,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+        sink_node="sink",
+        sink_bus=0,
+        sink_send_many=_function_address(sink.send_many),
+    )
+    assert not runtime.add_can_route(
+        source_node="source",
+        source_bus=0,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+        sink_node="missing",
+        sink_bus=0,
+        sink_send_many=_function_address(sink.send_many),
+    )
+    assert not runtime.add_can_route(
+        source_node="source",
+        source_bus=0,
+        source_tx_count=0,
+        source_recv_events=_function_address(source.recv_events),
+        sink_node="sink",
+        sink_bus=0,
+        sink_send_many=_function_address(sink.send_many),
+    )
+    assert not runtime.add_can_route(
+        source_node="source",
+        source_bus=0,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+        sink_send_many=_function_address(sink.send_many),
+    )
+
+    assert runtime.add_can_route(
+        source_node="source",
+        source_bus=0,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+        sink_node="sink",
+        sink_bus=0,
+        sink_send_many=_function_address(sink.send_many),
+    )
+    runtime.set_node_online("source", False)
+    runtime.run_for(1_000_000, 1_000_000)
+    assert sink.received_by_bus == {}
+    assert not runtime.latest_can_message("source", 0, 0x321, CanEvent())
+
+    runtime.set_node_online("source", True)
+    runtime.run_for(1_000_000, 1_000_000)
+    assert [packet.payload for packet in sink.received_by_bus[0]] == [b"\x01"]
+
+
+def test_rust_spi_network_fans_out_by_device_immediately():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    runtime.add_node("sink", FakeNode())
+    source = NativeSpiNetworkHarness()
+    sink = NativeSpiNetworkHarness()
+    source.queue(
+        SpiTransaction.from_payload(
+            7,
+            tx_payload=b"\x9a\xbc",
+            rx_payload=b"\x55",
+            timestamp_ns=123,
+        )
+    )
+
+    assert runtime.add_spi_route(
+        source_node="source",
+        device=7,
+        source_count=_function_address(source.count),
+        source_recv_many=_function_address(source.recv_many),
+        sink_node="sink",
+        sink_send_many=_function_address(sink.send_many),
+    )
+    runtime.run_for(1_000_000, 1_000_000)
+
+    assert [(tx.device, tx.tx_payload, tx.rx_payload) for tx in sink.received] == [
+        (7, b"\x9a\xbc", b"\x55")
+    ]
+
+
+def test_rust_spi_network_rejects_invalid_routes_and_gates_offline_sources():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    runtime.add_node("sink", FakeNode())
+    source = NativeSpiNetworkHarness()
+    sink = NativeSpiNetworkHarness()
+    source.queue(SpiTransaction.from_payload(2, tx_payload=b"\x01"))
+
+    assert not runtime.add_spi_route(
+        source_node="missing",
+        device=2,
+        source_count=_function_address(source.count),
+        source_recv_many=_function_address(source.recv_many),
+        sink_node="sink",
+        sink_send_many=_function_address(sink.send_many),
+    )
+    assert not runtime.add_spi_route(
+        source_node="source",
+        device=2,
+        source_count=_function_address(source.count),
+        source_recv_many=_function_address(source.recv_many),
+        sink_node="missing",
+        sink_send_many=_function_address(sink.send_many),
+    )
+    assert not runtime.add_spi_route(
+        source_node="source",
+        device=2,
+        source_count=0,
+        source_recv_many=_function_address(source.recv_many),
+        sink_node="sink",
+        sink_send_many=_function_address(sink.send_many),
+    )
+
+    assert runtime.add_spi_route(
+        source_node="source",
+        device=2,
+        source_count=_function_address(source.count),
+        source_recv_many=_function_address(source.recv_many),
+        sink_node="sink",
+        sink_send_many=_function_address(sink.send_many),
+    )
+    runtime.set_node_online("source", False)
+    runtime.run_for(1_000_000, 1_000_000)
+    assert sink.received == []
+
+    runtime.set_node_online("source", True)
+    runtime.run_for(1_000_000, 1_000_000)
+    assert [(tx.device, tx.tx_payload) for tx in sink.received] == [(2, b"\x01")]
 
 
 def test_component_scheduler_runs_once_when_due_with_larger_cluster_step():

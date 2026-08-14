@@ -933,27 +933,8 @@ class ClusterTimerComms(_TypedClusterComms[TimerChannelEvent]):
 
 
 class ClusterSpiComms(_TypedClusterComms[SpiTransaction]):
-    def __init__(self, cluster: ClusterRig, dataroutes: ClusterDataRoutes) -> None:
-        self._cluster = cluster
+    def __init__(self, dataroutes: ClusterDataRoutes) -> None:
         super().__init__(dataroutes, SpiTransaction)
-
-    def latest_event(
-        self,
-        path: DataPath,
-        *,
-        node: str | None = None,
-    ) -> SpiTransaction | None:
-        if node is not None and path.peripheral_binding is not None:
-            binding = path.peripheral_binding
-            if binding.interface == "spi.transaction":
-                transaction = SpiTransaction()
-                if self._cluster._rust_runtime.latest_spi_transaction(
-                    node,
-                    int(binding.device if binding.device is not None else 0),
-                    transaction,
-                ):
-                    return transaction
-        return super().latest_event(path, node=node)
 
 
 class ClusterComms:
@@ -961,7 +942,7 @@ class ClusterComms:
         self._dataroutes = dataroutes
         self.can = ClusterCanComms(cluster, dataroutes)
         self.timer = ClusterTimerComms(cluster, dataroutes)
-        self.spi = ClusterSpiComms(cluster, dataroutes)
+        self.spi = ClusterSpiComms(dataroutes)
 
     def _route(self) -> None:
         self._dataroutes._route()

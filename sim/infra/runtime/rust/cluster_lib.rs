@@ -26,6 +26,10 @@ pub mod simple {
     include!(env!("RIG_RUNTIME_RUST_SIMPLE_RS"));
 }
 
+mod networks {
+    include!(env!("RIG_RUNTIME_RUST_NETWORKS_RS"));
+}
+
 pub mod cluster {
     include!(env!("RIG_RUNTIME_RUST_CLUSTER_RS"));
 }
