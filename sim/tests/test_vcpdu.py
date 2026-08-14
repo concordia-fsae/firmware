@@ -1,5 +1,6 @@
-import pytest
 from dataclasses import dataclass
+
+import pytest
 
 from sim.models.controllers.sws import SwsSimpleModel
 from sim.models.controllers.vcfront import VcfrontSimpleModel

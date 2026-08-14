@@ -20,6 +20,8 @@ class VcpduPowerInput(Enum):
 
 class VcpduModelExtensions:
     AnalogInput = None
+    DigitalIo = None
+    SpiDevice = None
     Tps2hb16abIc = None
     Tps2hb16abOutput = None
     Vn9008Channel = None
@@ -28,6 +30,8 @@ class VcpduModelExtensions:
         super()._configure_abi()
         if (
             self.AnalogInput is None
+            or self.DigitalIo is None
+            or self.SpiDevice is None
             or self.Tps2hb16abIc is None
             or self.Tps2hb16abOutput is None
             or self.Vn9008Channel is None
@@ -39,6 +43,18 @@ class VcpduModelExtensions:
             "get_vn9008_cs_amps_per_volt",
             [ctypes.c_int],
             ctypes.c_float,
+        )
+        self._configure_spi_chip_select = self._bind_symbol(
+            "rig_runtime_spi_configure_device_chip_select",
+            [ctypes.c_int, ctypes.c_int],
+        )
+        self._configure_spi_chip_select(
+            ctypes.c_int(int(self.SpiDevice.IMU)),
+            ctypes.c_int(int(self.DigitalIo.SPI_NCS_IMU)),
+        )
+        self._configure_spi_chip_select(
+            ctypes.c_int(int(self.SpiDevice.SD)),
+            ctypes.c_int(int(self.DigitalIo.SPI_NCS_SD)),
         )
 
     def latest_vehicle_state(self):

@@ -35,6 +35,8 @@ def _load_generated() -> None:
     globals()["Tps2hb16abOutput"] = enums.Tps2hb16abOutput
     globals()["Vn9008Channel"] = enums.Vn9008Channel
     VcpduModelExtensions.AnalogInput = enums.AnalogInput
+    VcpduModelExtensions.DigitalIo = enums.DigitalIo
+    VcpduModelExtensions.SpiDevice = enums.SpiDevice
     VcpduModelExtensions.Tps2hb16abIc = enums.Tps2hb16abIc
     VcpduModelExtensions.Tps2hb16abOutput = enums.Tps2hb16abOutput
     VcpduModelExtensions.Vn9008Channel = enums.Vn9008Channel

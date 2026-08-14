@@ -1,6 +1,7 @@
 use std::sync::{LazyLock, Mutex};
 
 use super::datapath::{DataPath, DataPathEvent};
+use super::io;
 
 pub const RIG_SPI_TRANSACTION_MAX_BYTES: usize = 256;
 
@@ -10,7 +11,8 @@ pub struct SpiDevice {
     pub device: i32,
 }
 
-pub type SpiResponseFn = fn(SpiTransaction) -> Option<SpiTransaction>;
+pub type SpiResponseFn =
+    unsafe extern "C" fn(transaction: *const SpiTransaction, response: *mut SpiTransaction) -> bool;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -55,6 +57,7 @@ impl DataPathEvent for SpiTransaction {
 #[derive(Debug)]
 struct SpiPeripheral {
     device: SpiDevice,
+    chip_select_pin: Option<i32>,
     inputs: DataPath<SpiTransaction>,
     outputs: DataPath<SpiTransaction>,
     responder: Option<SpiResponseFn>,
@@ -64,6 +67,7 @@ impl SpiPeripheral {
     fn new(device: SpiDevice) -> Self {
         Self {
             device,
+            chip_select_pin: None,
             inputs: DataPath::new(device),
             outputs: DataPath::new(device),
             responder: None,
@@ -73,19 +77,26 @@ impl SpiPeripheral {
     fn reset(&mut self) {
         self.inputs.clear();
         self.outputs.clear();
+        if let Some(chip_select_pin) = self.chip_select_pin {
+            io::set_digital(chip_select_pin, true);
+        }
     }
 
     fn push_response_for(&mut self, transaction: SpiTransaction) {
-        if transaction.rx_len == 0 || self.inputs.count() > 0 {
+        if transaction.rx_len == 0
+            || self.inputs.count() > 0
+            || self.device != transaction.spi_device()
+        {
             return;
         }
 
         let Some(responder) = self.responder else {
             return;
         };
-        let Some(response) = responder(transaction) else {
+        let mut response = SpiTransaction::default();
+        if !unsafe { responder(&transaction, &mut response) } {
             return;
-        };
+        }
         let _ = self.inputs.push(response);
     }
 }
@@ -102,6 +113,14 @@ impl SpiModel {
         }
     }
 
+    fn reset_chip_selects(&self) {
+        for peripheral in &self.peripherals {
+            if let Some(chip_select_pin) = peripheral.chip_select_pin {
+                io::set_digital(chip_select_pin, true);
+            }
+        }
+    }
+
     fn peripheral(&mut self, device: SpiDevice) -> &mut SpiPeripheral {
         if let Some(index) = self
             .peripherals
@@ -114,6 +133,23 @@ impl SpiModel {
         self.peripherals.push(SpiPeripheral::new(device));
         self.peripherals.last_mut().unwrap()
     }
+
+    fn selected_device(&self) -> Result<Option<SpiDevice>, ()> {
+        let mut selected = None;
+        for peripheral in &self.peripherals {
+            let Some(chip_select_pin) = peripheral.chip_select_pin else {
+                continue;
+            };
+            if io::get_digital(chip_select_pin) {
+                continue;
+            }
+            if selected.is_some() {
+                return Err(());
+            }
+            selected = Some(peripheral.device);
+        }
+        Ok(selected)
+    }
 }
 
 static SPI_MODEL: LazyLock<Mutex<SpiModel>> = LazyLock::new(|| Mutex::new(SpiModel::default()));
@@ -122,8 +158,43 @@ pub fn reset() {
     SPI_MODEL.lock().unwrap().reset();
 }
 
+pub fn reset_chip_selects() {
+    SPI_MODEL.lock().unwrap().reset_chip_selects();
+}
+
 pub fn configure_device(device: i32) {
     SPI_MODEL.lock().unwrap().peripheral(SpiDevice { device });
+}
+
+pub fn configure_device_chip_select(device: i32, chip_select_pin: i32) {
+    let mut spi = SPI_MODEL.lock().unwrap();
+    spi.peripheral(SpiDevice { device }).chip_select_pin = Some(chip_select_pin);
+    io::set_digital(chip_select_pin, true);
+}
+
+pub fn lock_device(device: i32) -> bool {
+    let mut spi = SPI_MODEL.lock().unwrap();
+    match spi.selected_device() {
+        Ok(Some(selected_device)) if selected_device.device != device => return false,
+        Err(()) => return false,
+        _ => {}
+    }
+    let peripheral = spi.peripheral(SpiDevice { device });
+    let Some(chip_select_pin) = peripheral.chip_select_pin else {
+        return false;
+    };
+    io::set_digital(chip_select_pin, false);
+    true
+}
+
+pub fn release_device(device: i32) -> bool {
+    let mut spi = SPI_MODEL.lock().unwrap();
+    let peripheral = spi.peripheral(SpiDevice { device });
+    let Some(chip_select_pin) = peripheral.chip_select_pin else {
+        return false;
+    };
+    io::set_digital(chip_select_pin, true);
+    true
 }
 
 pub fn configure_responder(device: i32, responder: Option<SpiResponseFn>) {
@@ -166,6 +237,12 @@ pub fn pop_input(device: i32) -> Option<SpiTransaction> {
 
 pub fn push_output(transaction: SpiTransaction) -> bool {
     let mut spi = SPI_MODEL.lock().unwrap();
+    let Ok(selected_device) = spi.selected_device() else {
+        return false;
+    };
+    if selected_device != Some(transaction.spi_device()) {
+        return spi.peripheral(transaction.spi_device()).outputs.push(transaction);
+    }
     let peripheral = spi.peripheral(transaction.spi_device());
     peripheral.push_response_for(transaction);
     peripheral.outputs.push(transaction)
@@ -209,6 +286,32 @@ pub extern "C" fn rig_runtime_spi_push_input(transaction: *const SpiTransaction)
         return false;
     }
     push_input(unsafe { *transaction })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_spi_configure_device_chip_select(
+    device: i32,
+    chip_select_pin: i32,
+) {
+    configure_device_chip_select(device, chip_select_pin);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_spi_configure_responder(
+    device: i32,
+    responder: Option<SpiResponseFn>,
+) {
+    configure_responder(device, responder);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_spi_lock_device(device: i32) -> bool {
+    lock_device(device)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_runtime_spi_release_device(device: i32) -> bool {
+    release_device(device)
 }
 
 #[unsafe(no_mangle)]

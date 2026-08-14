@@ -70,6 +70,7 @@ impl<Target: NodeTarget> NodeModel<Target> {
         super::timer::reset();
         self.configure_runtime_datapaths();
         self.controller.reset_runtime();
+        super::spi::reset_chip_selects();
         unsafe { self.target.reset_node(&mut self.controller) };
         unsafe { self.controller.reset() };
     }

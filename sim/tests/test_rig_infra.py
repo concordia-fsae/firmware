@@ -15,7 +15,7 @@ from sim.infra.rig import (
     SimpleNodeRig,
     SpiTransaction,
 )
-from sim.infra.rig.runtime import _RustClusterRuntime
+from sim.infra.rig.runtime import _RustClusterRuntime, _StandaloneRustRuntimeHost
 
 
 class FakeNode(ModelRig):
@@ -202,6 +202,95 @@ class NativeSpiNetworkHarness:
                 )
             )
         return int(count)
+
+
+class MockSpiDevice:
+    Responder = ctypes.CFUNCTYPE(
+        ctypes.c_bool,
+        ctypes.POINTER(SpiTransaction),
+        ctypes.POINTER(SpiTransaction),
+    )
+
+    def __init__(self, *, response_payload: bytes) -> None:
+        self.response_payload = bytes(response_payload)
+        self.responder = self.Responder(self._respond)
+
+    def _respond(self, transaction, response) -> bool:
+        request = transaction.contents
+        if request.rx_len == 0:
+            return False
+        payload = self.response_payload[: request.rx_len]
+        next_response = SpiTransaction.from_payload(
+            request.device,
+            rx_payload=payload,
+            timestamp_ns=request.timestamp_ns,
+        )
+        response[0] = next_response
+        return True
+
+
+class MockSpiControllerDevice:
+    def __init__(self) -> None:
+        self.host = _StandaloneRustRuntimeHost()
+        self.configure_chip_select = self.host.bind_symbol(
+            "rig_runtime_spi_configure_device_chip_select",
+            [ctypes.c_int, ctypes.c_int],
+        )
+        self.configure_responder = self.host.bind_symbol(
+            "rig_runtime_spi_configure_responder",
+            [ctypes.c_int, MockSpiDevice.Responder],
+        )
+        self.lock_device = self.host.bind_symbol(
+            "rig_runtime_spi_lock_device",
+            [ctypes.c_int],
+            ctypes.c_bool,
+        )
+        self.release_device = self.host.bind_symbol(
+            "rig_runtime_spi_release_device",
+            [ctypes.c_int],
+            ctypes.c_bool,
+        )
+        self.set_digital_io = self.host.bind_symbol(
+            "rig_model_set_digital_io",
+            [ctypes.c_int, ctypes.c_bool],
+        )
+        self.push_output = self.host.bind_symbol(
+            "rig_runtime_spi_push_output",
+            [ctypes.POINTER(SpiTransaction)],
+            ctypes.c_bool,
+        )
+        self.pop_input = self.host.bind_symbol(
+            "rig_runtime_spi_pop_input",
+            [ctypes.c_int, ctypes.POINTER(SpiTransaction)],
+            ctypes.c_bool,
+        )
+
+    def configure_device(self, *, device: int, chip_select: int, responder) -> None:
+        self.configure_chip_select(ctypes.c_int(device), ctypes.c_int(chip_select))
+        self.configure_responder(ctypes.c_int(device), responder)
+
+    def set_chip_select(self, chip_select: int, active: bool) -> None:
+        self.set_digital_io(ctypes.c_int(chip_select), ctypes.c_bool(not active))
+
+    def transmit_receive(
+        self,
+        *,
+        device: int,
+        tx_payload: bytes = b"\x00",
+        rx_len: int = 1,
+    ) -> tuple[bool, bytes | None]:
+        transaction = SpiTransaction.from_payload(
+            device,
+            tx_payload=tx_payload,
+            rx_payload=bytes(rx_len),
+        )
+        if not self.push_output(ctypes.byref(transaction)):
+            return False, None
+
+        response = SpiTransaction()
+        if self.pop_input(ctypes.c_int(device), ctypes.byref(response)):
+            return True, response.rx_payload
+        return True, bytes([0xFF]) * rx_len
 
 
 def _function_address(function) -> int:
@@ -565,6 +654,63 @@ def test_rust_spi_network_rejects_invalid_routes_and_gates_offline_sources():
     runtime.set_node_online("source", True)
     runtime.run_for(1_000_000, 1_000_000)
     assert [(tx.device, tx.tx_payload) for tx in sink.received] == [(2, b"\x01")]
+
+
+def test_runtime_spi_chip_select_gates_mock_device_response():
+    controller = MockSpiControllerDevice()
+    mock_device = MockSpiDevice(response_payload=b"\xa5")
+    device = 107
+    chip_select = 1007
+    controller.configure_device(
+        device=device,
+        chip_select=chip_select,
+        responder=mock_device.responder,
+    )
+
+    ok, payload = controller.transmit_receive(device=device)
+    assert ok
+    assert payload == b"\xff"
+
+    assert controller.lock_device(ctypes.c_int(device))
+    ok, payload = controller.transmit_receive(device=device)
+    assert ok
+    assert payload == b"\xa5"
+    assert controller.release_device(ctypes.c_int(device))
+
+    ok, payload = controller.transmit_receive(device=device)
+    assert ok
+    assert payload == b"\xff"
+
+
+def test_runtime_spi_chip_select_rejects_unconfigured_and_multi_selected_devices():
+    controller = MockSpiControllerDevice()
+    first_device = 117
+    first_chip_select = 1017
+    second_device = 118
+    second_chip_select = 1018
+    first_mock = MockSpiDevice(response_payload=b"\x11")
+    second_mock = MockSpiDevice(response_payload=b"\x22")
+    controller.configure_device(
+        device=first_device,
+        chip_select=first_chip_select,
+        responder=first_mock.responder,
+    )
+    controller.configure_device(
+        device=second_device,
+        chip_select=second_chip_select,
+        responder=second_mock.responder,
+    )
+
+    assert not controller.lock_device(ctypes.c_int(9999))
+    assert controller.lock_device(ctypes.c_int(first_device))
+    assert not controller.lock_device(ctypes.c_int(second_device))
+    assert controller.release_device(ctypes.c_int(first_device))
+
+    controller.set_chip_select(first_chip_select, active=True)
+    controller.set_chip_select(second_chip_select, active=True)
+    ok, payload = controller.transmit_receive(device=first_device)
+    assert not ok
+    assert payload is None
 
 
 def test_component_scheduler_runs_once_when_due_with_larger_cluster_step():

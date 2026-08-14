@@ -12,7 +12,15 @@ from sim.models.components.battery_source import BatterySourceModel, BatterySour
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
 from sim.models.platforms import PLATFORM_VARIANTS
 
-from . import AnalogInput, SpiDevice, TimerChannel, TimerPort, VcpduModel, Vn9008Channel
+from . import (
+    AnalogInput,
+    DigitalIo,
+    SpiDevice,
+    TimerChannel,
+    TimerPort,
+    VcpduModel,
+    Vn9008Channel,
+)
 
 
 def vcpdu_node(
@@ -52,6 +60,7 @@ def vcpdu_node(
         ),
         Asm330Model.spec(
             spi_transactions=VcpduModel.spi.transactions(SpiDevice.IMU),
+            chip_select=DigitalIo.SPI_NCS_IMU,
         ),
         DcLoadModel.spec(
             voltage_input_channel=pump_voltage,
