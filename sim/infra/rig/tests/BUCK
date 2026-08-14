@@ -1,0 +1,10 @@
+load("//sim/infra:defs.bzl", "rig_pytest")
+
+rig_pytest(
+    name = "rig_infra",
+    test_file = "sim/infra/rig/tests/test_rig_infra.py",
+    resources = [
+        "//sim/models/test:python",
+    ],
+    visibility = ["PUBLIC"],
+)

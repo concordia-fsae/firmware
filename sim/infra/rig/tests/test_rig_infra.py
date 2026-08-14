@@ -127,6 +127,8 @@ class NativeSpiInterfaceHarness:
         return count
 
     def _send_many(self, transactions, count: int) -> int:
+        if not transactions or count <= 0:
+            return 0
         for index in range(int(count)):
             transaction = transactions[index]
             self.received.append(
