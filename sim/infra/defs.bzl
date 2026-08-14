@@ -556,6 +556,7 @@ def rig_pytest(
             "pytest",
             "-p",
             "no:cacheprovider",
+            "--color=yes",
             "-vv",
         ] +
         (["--durations=10"] if debug else []) +
