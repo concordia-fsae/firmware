@@ -223,7 +223,11 @@ impl ClusterRuntime {
         if !self.node_exists(wake.source_node) {
             return false;
         }
-        self.interfaces.can.register_signal_wake(wake, callback)
+        let registered = self.interfaces.can.register_signal_wake(wake, callback);
+        if registered {
+            self.scheduler.mark_dirty();
+        }
+        registered
     }
 
     fn begin_can_signal_wait(
@@ -231,8 +235,11 @@ impl ClusterRuntime {
         source_node: u32,
         comparisons: &[CanSignalComparison],
     ) -> usize {
-        self.interfaces
-            .begin_can_signal_wait(source_node, comparisons)
+        let wait_id = self
+            .interfaces
+            .begin_can_signal_wait(source_node, comparisons);
+        self.scheduler.mark_dirty();
+        wait_id
     }
 
     fn can_signal_wait_matched(&self, wait_id: usize) -> bool {
@@ -241,6 +248,7 @@ impl ClusterRuntime {
 
     fn cancel_can_signal_wait(&mut self, wait_id: usize) {
         self.interfaces.cancel_can_signal_wait(wait_id);
+        self.scheduler.mark_dirty();
     }
 
     fn set_node_online(&mut self, node_index: u32, online: bool) -> bool {

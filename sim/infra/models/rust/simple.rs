@@ -194,10 +194,6 @@ struct PeriodicScalarSourceAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for PeriodicScalarSourceAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, runtime: &ClusterRuntime) -> bool {
         PERIODIC_SCALAR_SOURCES
             .lock()
@@ -285,10 +281,6 @@ struct PeriodicCanSourceAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for PeriodicCanSourceAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, runtime: &ClusterRuntime) -> bool {
         let sources = PERIODIC_CAN_SOURCES.lock().unwrap();
         let Some(source) = sources.sources.get(self.source_index) else {
@@ -312,12 +304,15 @@ impl DataflowAlgorithmExecutor for PeriodicCanSourceAlgorithm {
         };
         drop(sources);
 
-        let input_pending_nodes =
+        let result =
             runtime
                 .interfaces
                 .can
                 .route_event(source_node, source_bus, event);
-        for sink_node in input_pending_nodes {
+        for edge in result.ready_edges {
+            scheduler::mark_dataflow_edge_ready(runtime, edge);
+        }
+        for sink_node in result.input_pending_nodes {
             scheduler::mark_input_pending(runtime, sink_node);
         }
         true

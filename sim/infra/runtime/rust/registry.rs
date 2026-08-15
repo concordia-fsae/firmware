@@ -2,7 +2,7 @@ use super::can::{CanEndpoint, CanInterface};
 pub(super) use super::can::{
     CanEvent, CanPacket, CanSignalComparison, CanSignalWake, CanSignalWakeCallback,
 };
-pub(super) use super::can::ClusterCanRoute;
+pub(super) use super::can::{CanRouteResult, ClusterCanRoute};
 use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey};
 use super::interfaces::{InterfaceCaller, InterfaceDataflow};
 use super::scalar::{ScalarEndpoint, ScalarInterface, ScalarRouteResult};
@@ -123,7 +123,7 @@ impl RuntimeInterfaces {
 
     pub(super) fn can_route_event(
         &mut self, source_node: u32, bus: u8, event: CanEvent,
-    ) -> Vec<u32> {
+    ) -> CanRouteResult {
         self.can.route_event(source_node, bus, event)
     }
 

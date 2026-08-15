@@ -230,7 +230,7 @@ impl InterfaceCaller for TimerInterface {
                     source.scale_route_id,
                 ));
             }
-            specs.push(DataflowAlgorithm::transform(
+            specs.push(DataflowAlgorithm::event_transform(
                 source.node,
                 (source.node, 6, index),
                 inputs,
@@ -528,10 +528,6 @@ struct TimerFanoutAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for TimerFanoutAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, runtime: &ClusterRuntime) -> bool {
         runtime
             .interfaces

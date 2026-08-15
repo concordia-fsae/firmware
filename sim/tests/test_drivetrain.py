@@ -53,6 +53,31 @@ def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):
     )
 
 
+def test_drivetrain_keeps_feedback_periodic_without_periodic_compute():
+    _, torque, current, voltage_feedback = _run_drivetrain(
+        voltage=350.0,
+        torque=100.0,
+        spec=DrivetrainSpec(
+            max_torque_nm=200.0,
+            torque_constant_nm_per_amp=1.0,
+            scheduler_period_ms=5.0,
+        ),
+    )
+
+    # Feedback is a periodic CAN-facing contract.  The native state update is
+    # separately input-triggered, so unchanged inputs must not suppress the
+    # periodic torque/current/voltage feedback publications.
+    assert len(torque) == 4
+    assert len(current) == 4
+    assert len(voltage_feedback) == 4
+    # Initial ingress events reach the event transform before the first
+    # periodic feedback tick.  Publication cadence remains periodic while the
+    # computed value is event-triggered.
+    assert torque == pytest.approx([100.0, 100.0, 100.0, 100.0])
+    assert current == pytest.approx([100.0, 100.0, 100.0, 100.0])
+    assert voltage_feedback == pytest.approx([350.0, 340.0, 340.0, 340.0], abs=0.1)
+
+
 def test_drivetrain_converts_terminal_voltage_and_torque_to_current_and_mechanical_torque():
     battery, torque, current, voltage_feedback = _run_drivetrain(
         voltage=350.0,
@@ -80,9 +105,9 @@ def test_drivetrain_preserves_torque_direction_and_limits_power():
         ),
     )
 
-    assert torque[-1] == pytest.approx(-52.78, abs=0.01)
-    assert current[-1] == pytest.approx(52.78, abs=0.01)
-    assert battery.voltage == pytest.approx(94.72, abs=0.02)
+    assert torque[-1] == pytest.approx(-52.63158, abs=0.01)
+    assert current[-1] == pytest.approx(52.63158, abs=0.01)
+    assert battery.voltage == pytest.approx(94.73684, abs=0.02)
 
 
 @pytest.mark.parametrize(

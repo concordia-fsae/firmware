@@ -42,10 +42,6 @@ mod tests {
     }
 
     impl DataflowAlgorithmExecutor for PendingExecutor {
-        fn polls_pending(&self) -> bool {
-            true
-        }
-
         fn pending(&self, _runtime: &ClusterRuntime) -> bool {
             self.pending.load(Ordering::Relaxed)
         }
@@ -63,10 +59,6 @@ mod tests {
     }
 
     impl DataflowAlgorithmExecutor for RearmingPythonExecutor {
-        fn polls_pending(&self) -> bool {
-            true
-        }
-
         fn pending(&self, _runtime: &ClusterRuntime) -> bool {
             self.pending.load(Ordering::Relaxed)
         }
@@ -335,7 +327,15 @@ fn run_dataflow_graph(runtime: &mut ClusterRuntime) {
     let mut graph = mem::take(&mut runtime.scheduler.graph);
     let mut ran_algorithms = mem::take(&mut runtime.scheduler.ran_algorithms);
     graph.run_ready_algorithms(runtime, &mut ran_algorithms, generation);
+    let mut propagation_passes = 0usize;
     loop {
+        propagation_passes += 1;
+        assert!(
+            propagation_passes <= graph.algorithms.len().saturating_add(1),
+            "dataflow scheduler did not converge in one step ({} algorithms, queue length {})",
+            graph.algorithms.len(),
+            graph.queue.len(),
+        );
         let ready_edges = mem::take(&mut runtime.scheduler.deferred_ready_edges);
         let input_pending_nodes = mem::take(&mut runtime.scheduler.deferred_input_pending_nodes);
         for edge in ready_edges {

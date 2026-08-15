@@ -194,10 +194,6 @@ struct BatterySourceAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for BatterySourceAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, _runtime: &ClusterRuntime) -> bool {
         BATTERY_SOURCES
             .lock()
@@ -283,15 +279,15 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
     drop(sources);
 
     let algorithm = DataflowAlgorithm::periodic_source(
-            node,
-            (node, 5, context),
-            vec![RuntimeInterfaces::scalar_edge(node, route_id)],
-            Arc::new(BatterySourceAlgorithm {
-                source_index: context,
-            }),
-            BATTERY_UPDATE_PERIOD_NS,
-            runtime.elapsed_ns.saturating_add(BATTERY_UPDATE_PERIOD_NS),
-        )
+        node,
+        (node, 5, context),
+        vec![RuntimeInterfaces::scalar_edge(node, route_id)],
+        Arc::new(BatterySourceAlgorithm {
+            source_index: context,
+        }),
+        BATTERY_UPDATE_PERIOD_NS,
+        runtime.elapsed_ns,
+    )
         .with_runtime_reset(reset_runtime)
         .with_node_reset(node, context, reset_source)
         .with_scalar_source(node, route_id, context, take_source_events);

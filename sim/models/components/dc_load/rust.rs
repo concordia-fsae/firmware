@@ -200,24 +200,34 @@ fn load_algorithm(context: usize, load: DcLoadModel, elapsed_ns: u64) -> Dataflo
     let current_route_id = load.current_output_key().1;
     let voltage_input_key = load.voltage_input_key();
     let period_ns = load.scheduler_period_ns();
-    DataflowAlgorithm::periodic_transform(
-        node,
-        (node, 7, context),
-        vec![RuntimeInterfaces::scalar_edge(
-            voltage_input_key.0,
-            voltage_input_key.1,
-        )],
-        vec![RuntimeInterfaces::scalar_edge(node, current_route_id)],
-        Arc::new(DcLoadAlgorithm {
-            load_index: context,
-        }),
-        period_ns,
-        elapsed_ns.saturating_add(period_ns),
-    )
-    .with_runtime_reset(reset_runtime)
-    .with_node_reset(node, context, reset_load)
-    .with_scalar_source(node, current_route_id, context, take_load_events)
-    .with_scalar_input(node, load.voltage_route_id, context, receive_load_voltage)
+    let inputs = vec![RuntimeInterfaces::scalar_edge(
+        voltage_input_key.0,
+        voltage_input_key.1,
+    )];
+    let outputs = vec![RuntimeInterfaces::scalar_edge(node, current_route_id)];
+    let executor = Arc::new(DcLoadAlgorithm {
+        load_index: context,
+    });
+    let algorithm = if period_ns == 0 {
+        // A load without a scheduler period is explicitly event-driven: a
+        // voltage edge is the only trigger needed to produce its current.
+        DataflowAlgorithm::event_transform(node, (node, 7, context), inputs, outputs, executor)
+    } else {
+        DataflowAlgorithm::periodic_transform(
+            node,
+            (node, 7, context),
+            inputs,
+            outputs,
+            executor,
+            period_ns,
+            elapsed_ns.saturating_add(period_ns),
+        )
+    };
+    algorithm
+        .with_runtime_reset(reset_runtime)
+        .with_node_reset(node, context, reset_load)
+        .with_scalar_source(node, current_route_id, context, take_load_events)
+        .with_scalar_input(node, load.voltage_route_id, context, receive_load_voltage)
 }
 
 struct DcLoadAlgorithm {
@@ -225,10 +235,6 @@ struct DcLoadAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for DcLoadAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, _runtime: &ClusterRuntime) -> bool {
         DC_LOADS
             .lock()

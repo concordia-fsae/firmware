@@ -242,10 +242,6 @@ struct SpiFanoutAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for SpiFanoutAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, runtime: &ClusterRuntime) -> bool {
         runtime
             .interfaces
