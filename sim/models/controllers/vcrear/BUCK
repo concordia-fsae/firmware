@@ -10,7 +10,6 @@ rig_embedded_controller_model(
     python_srcs = [
         "__init__.py",
         "fixtures.py",
-        "drivetrain.py",
         "simple.py",
         "variants.py",
     ],

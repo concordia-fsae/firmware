@@ -1,3 +1,3 @@
-from .model import DrivetrainModel, DrivetrainSpec
+from .model import DrivetrainCanCommand, DrivetrainModel, DrivetrainSpec
 
-__all__ = ["DrivetrainModel", "DrivetrainSpec"]
+__all__ = ["DrivetrainCanCommand", "DrivetrainModel", "DrivetrainSpec"]

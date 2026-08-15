@@ -19,6 +19,7 @@ def bmsb_node(
     load_current = DcLoadModel.current_output_channel("bmsb-load")
     drivetrain_current = DrivetrainModel.current_draw_output_channel("vehicle")
     drivetrain_torque = DrivetrainModel.torque_request_input_channel("vehicle")
+    drivetrain_bus_voltage = DrivetrainModel.bus_voltage_output_channel("vehicle")
     drivetrain_torque_output = DrivetrainModel.mechanical_torque_output_channel(
         "vehicle"
     )
@@ -36,9 +37,11 @@ def bmsb_node(
             ),
             current_drain_channels=current_drains,
             bindings=(
-                BatterySourceModel.terminal_voltage_output.bind_to(
-                    BmsbModelExtensions.pack_voltage_input()
-                ),
+                *(() if include_drivetrain else (
+                    BatterySourceModel.terminal_voltage_output.bind_to(
+                        BmsbModelExtensions.pack_voltage_input()
+                    ),
+                )),
             ),
         ),
     ]
@@ -46,6 +49,7 @@ def bmsb_node(
         components.append(
             DrivetrainModel.spec(
                 terminal_voltage_input_channel=battery_voltage,
+                bus_voltage_output_channel=drivetrain_bus_voltage,
                 torque_request_input_channel=drivetrain_torque,
                 mechanical_torque_output_channel=drivetrain_torque_output,
                 current_draw_output_channel=drivetrain_current,
@@ -56,6 +60,9 @@ def bmsb_node(
                 bindings=(
                     DrivetrainModel.current_draw_output.bind_to(
                         BmsbModelExtensions.pack_current_input()
+                    ),
+                    DrivetrainModel.bus_voltage_output.bind_to(
+                        BmsbModelExtensions.pack_voltage_input()
                     ),
                 ),
             )

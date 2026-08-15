@@ -35,6 +35,7 @@ struct Drivetrain {
     node: u32,
     voltage_route_id: u32,
     torque_request_route_id: u32,
+    bus_voltage_output_route_id: Option<u32>,
     torque_output_route_id: u32,
     current_output_route_id: u32,
     max_torque_nm: f32,
@@ -50,6 +51,7 @@ struct Drivetrain {
     torque_dirty: bool,
     pending_torque: bool,
     pending_current: bool,
+    pending_voltage: bool,
 }
 
 impl Drivetrain {
@@ -62,11 +64,13 @@ impl Drivetrain {
         self.torque_dirty = false;
         self.pending_torque = false;
         self.pending_current = false;
+        self.pending_voltage = false;
     }
 
     fn update_voltage(&mut self, event: ScalarEvent) {
         self.voltage = event.value.max(0.0);
         self.voltage_dirty = true;
+        self.pending_voltage = true;
     }
 
     fn update_torque_request(&mut self, event: ScalarEvent) {
@@ -102,6 +106,17 @@ impl Drivetrain {
         *pending = false;
         Some(ScalarEvent {
             value: if torque { self.mechanical_torque } else { self.current_draw },
+            timestamp_ns: elapsed_ns,
+        })
+    }
+
+    fn take_voltage_output(&mut self, elapsed_ns: u64) -> Option<ScalarEvent> {
+        if !self.pending_voltage {
+            return None;
+        }
+        self.pending_voltage = false;
+        Some(ScalarEvent {
+            value: self.voltage,
             timestamp_ns: elapsed_ns,
         })
     }
@@ -256,12 +271,18 @@ impl DataflowAlgorithmExecutor for DrivetrainAlgorithm {
         let node = drivetrain.node;
         let torque_route = drivetrain.torque_output_route_id;
         let current_route = drivetrain.current_output_route_id;
+        let voltage_route = drivetrain.bus_voltage_output_route_id;
         let torque = drivetrain.take_output(true, runtime.elapsed_ns);
         let current = drivetrain.take_output(false, runtime.elapsed_ns);
+        let voltage = voltage_route
+            .and_then(|_| drivetrain.take_voltage_output(runtime.elapsed_ns));
         drop(drivetrains);
         if let Some(event) = torque { scalar::route_native_event(runtime, node, torque_route, event); }
         if let Some(event) = current { scalar::route_native_event(runtime, node, current_route, event); }
-        torque.is_some() || current.is_some()
+        if let (Some(route), Some(event)) = (voltage_route, voltage) {
+            scalar::route_native_event(runtime, node, route, event);
+        }
+        torque.is_some() || current.is_some() || voltage.is_some()
     }
 }
 
@@ -271,6 +292,13 @@ fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
     let index = drivetrains.len();
     drivetrains.push(drivetrain);
     drop(drivetrains);
+    let mut output_edges = vec![
+        RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_output_route_id),
+        RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.current_output_route_id),
+    ];
+    if let Some(route_id) = drivetrain.bus_voltage_output_route_id {
+        output_edges.push(RuntimeInterfaces::scalar_edge(drivetrain.node, route_id));
+    }
     let algorithm = DataflowAlgorithm::periodic_transform(
         drivetrain.node,
         (drivetrain.node, 9, index),
@@ -278,10 +306,7 @@ fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
             RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.voltage_route_id),
             RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_request_route_id),
         ],
-        vec![
-            RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_output_route_id),
-            RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.current_output_route_id),
-        ],
+        output_edges,
         Arc::new(DrivetrainAlgorithm { index }),
         drivetrain.period_ns,
         runtime.elapsed_ns.saturating_add(drivetrain.period_ns),
@@ -302,6 +327,7 @@ fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
 pub extern "C" fn rig_model_register_drivetrain(
     node: u32, voltage_route_id: u32, torque_request_route_id: u32,
     torque_output_route_id: u32, current_output_route_id: u32,
+    bus_voltage_output_route_id: u32, has_bus_voltage_output: u8,
     max_torque_nm: f32, torque_constant_nm_per_amp: f32, efficiency: f32,
     max_power_w: f32, period_ns: u64,
 ) -> bool {
@@ -311,10 +337,13 @@ pub extern "C" fn rig_model_register_drivetrain(
         || max_power_w.is_nan() || max_power_w <= 0.0 || period_ns == 0 { return false; }
     cluster::with_runtime(|runtime| register(runtime, Drivetrain {
         node, voltage_route_id, torque_request_route_id, torque_output_route_id,
+        bus_voltage_output_route_id: (has_bus_voltage_output != 0)
+            .then_some(bus_voltage_output_route_id),
         current_output_route_id, max_torque_nm, torque_constant_nm_per_amp,
         efficiency, max_power_w, period_ns, voltage: 0.0, torque_request: 0.0,
         mechanical_torque: 0.0, current_draw: 0.0, voltage_dirty: false,
         torque_dirty: false, pending_torque: false, pending_current: false,
+        pending_voltage: false,
     }))
 }
 

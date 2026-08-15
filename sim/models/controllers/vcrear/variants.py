@@ -3,10 +3,10 @@ from __future__ import annotations
 from sim.infra.rig import (
     ClusterCatalog,
     ClusterSpec,
-    ComponentSpec,
     NodeSpec,
     PowerControlPath,
 )
+from sim.models.components.drivetrain import DrivetrainModel
 from sim.models.platforms import PLATFORM_VARIANTS
 
 from . import VcrearModel
@@ -18,16 +18,13 @@ def vcrear_node(
     power_input: PowerControlPath | None = None,
     drivetrain_output: object | None = None,
 ) -> NodeSpec:
-    components = ()
-    if drivetrain_output is not None:
-        from .drivetrain import VcrearDrivetrainCommand
-
-        components = (
-            ComponentSpec(
-                VcrearDrivetrainCommand,
-                parameters={"output_channel": drivetrain_output},
-            ),
-        )
+    components = (
+        DrivetrainModel.can_command_spec(
+            output_channel=drivetrain_output,
+            message_name="VCREAR_mcCommand",
+            signal_name="VCREAR_torqueCommand",
+        ),
+    ) if drivetrain_output is not None else ()
     return NodeSpec(
         "vcrear",
         VcrearModel,
