@@ -4,8 +4,10 @@ use std::os::raw::c_char;
 use std::sync::{LazyLock, Mutex};
 
 use super::algorithms::RuntimeAlgorithms;
+use super::dataflow::DataflowWait;
 use super::registry::{
-    CanEvent, CanPacket, CanSignalComparison, CanSignalWake, CanSignalWakeCallback,
+    CanEvent, CanPacket, CanSignalComparison, CanSignalDecoderFn, CanSignalWake,
+    CanSignalWakeCallback,
     ClusterCanRoute, ClusterScalarRoute, ClusterScalarSink, ClusterSpiRoute,
     ClusterTimerRoute, InterfaceRoute, RuntimeInterface, RuntimeInterfaces, ScalarEvent,
     SpiTransaction, TimerChannelEvent,
@@ -234,20 +236,30 @@ impl ClusterRuntime {
         &mut self,
         source_node: u32,
         comparisons: &[CanSignalComparison],
-    ) -> usize {
-        let wait_id = self
+        decoder: CanSignalDecoderFn,
+    ) -> DataflowWait {
+        let wait = self.scheduler.begin_dataflow_wait();
+        let matched = self
             .interfaces
-            .begin_can_signal_wait(source_node, comparisons);
+            .begin_can_signal_wait(source_node, comparisons, decoder, wait);
+        if matched {
+            self.scheduler.complete_dataflow_wait(wait);
+        }
         self.scheduler.mark_dirty();
-        wait_id
+        wait
     }
 
-    fn can_signal_wait_matched(&self, wait_id: usize) -> bool {
-        self.interfaces.can_signal_wait_matched(wait_id)
+    pub(super) fn begin_dataflow_wait(&mut self) -> DataflowWait {
+        self.scheduler.begin_dataflow_wait()
     }
 
-    fn cancel_can_signal_wait(&mut self, wait_id: usize) {
-        self.interfaces.cancel_can_signal_wait(wait_id);
+    pub(super) fn dataflow_wait_matched(&self, wait: DataflowWait) -> bool {
+        self.scheduler.dataflow_wait_matched(wait)
+    }
+
+    pub(super) fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
+        self.interfaces.cancel_dataflow_wait(wait);
+        self.scheduler.cancel_dataflow_wait(wait);
         self.scheduler.mark_dirty();
     }
 
@@ -976,36 +988,38 @@ pub extern "C" fn rig_cluster_run_for(duration_ns: u64, max_step_ns: u64, route:
     }
 }
 
-fn run_until_can_signal_edge(
+fn begin_can_signal_wait(
+    source_node: u32,
+    comparisons: &[CanSignalComparison],
+    decoder: usize,
+) -> u64 {
+    if comparisons.is_empty() || decoder == 0 {
+        return u64::MAX;
+    }
+    let decoder = unsafe { std::mem::transmute::<usize, CanSignalDecoderFn>(decoder) };
+    let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
+    runtime
+        .begin_can_signal_wait(source_node, comparisons, decoder)
+        .0
+}
+
+fn run_until_dataflow_wait(
     timeout_ns: u64,
     max_step_ns: u64,
     route: usize,
-    source_node: u32,
-    comparisons: &[CanSignalComparison],
+    wait: DataflowWait,
 ) -> u64 {
-    if comparisons.is_empty() {
-        return u64::MAX;
-    }
-
     let route = unsafe { function_pointer::<ClusterRouteFn>(route) };
-    let (current_elapsed_ns, wait_id, matched) = {
-        let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
-        let wait_id = runtime.begin_can_signal_wait(source_node, comparisons);
-        let matched = runtime.can_signal_wait_matched(wait_id);
-        (runtime.elapsed_ns, wait_id, matched)
+    let (current_elapsed_ns, matched) = {
+        let runtime = CLUSTER_RUNTIME.lock().unwrap();
+        (runtime.elapsed_ns, runtime.dataflow_wait_matched(wait))
     };
     if matched {
-        CLUSTER_RUNTIME
-            .lock()
-            .unwrap()
-            .cancel_can_signal_wait(wait_id);
+        CLUSTER_RUNTIME.lock().unwrap().cancel_dataflow_wait(wait);
         return 0;
     }
     if timeout_ns == 0 || max_step_ns == 0 {
-        CLUSTER_RUNTIME
-            .lock()
-            .unwrap()
-            .cancel_can_signal_wait(wait_id);
+        CLUSTER_RUNTIME.lock().unwrap().cancel_dataflow_wait(wait);
         return u64::MAX;
     }
 
@@ -1015,28 +1029,22 @@ fn run_until_can_signal_edge(
         let (delta_ns, elapsed_ns, matched) = {
             let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
             if runtime.elapsed_ns >= target_elapsed_ns {
-                runtime.cancel_can_signal_wait(wait_id);
+                runtime.cancel_dataflow_wait(wait);
                 return u64::MAX;
             }
             let remaining_ns = target_elapsed_ns - runtime.elapsed_ns;
             let delta_ns = scheduler::run_next_step(&mut runtime, remaining_ns, max_step_ns);
             let elapsed_ns = runtime.elapsed_ns;
-            let matched = runtime.can_signal_wait_matched(wait_id);
+            let matched = runtime.dataflow_wait_matched(wait);
             (delta_ns, elapsed_ns, matched)
         };
 
         if delta_ns == 0 {
-            CLUSTER_RUNTIME
-                .lock()
-                .unwrap()
-                .cancel_can_signal_wait(wait_id);
+            CLUSTER_RUNTIME.lock().unwrap().cancel_dataflow_wait(wait);
             return u64::MAX;
         }
         if matched {
-            CLUSTER_RUNTIME
-                .lock()
-                .unwrap()
-                .cancel_can_signal_wait(wait_id);
+            CLUSTER_RUNTIME.lock().unwrap().cancel_dataflow_wait(wait);
             return elapsed_ns.saturating_sub(current_elapsed_ns);
         }
 
@@ -1044,15 +1052,8 @@ fn run_until_can_signal_edge(
             if elapsed_ns >= next_route_elapsed_ns || elapsed_ns >= target_elapsed_ns {
                 unsafe { route(elapsed_ns) };
                 next_route_elapsed_ns = elapsed_ns.saturating_add(max_step_ns);
-                if CLUSTER_RUNTIME
-                    .lock()
-                    .unwrap()
-                    .can_signal_wait_matched(wait_id)
-                {
-                    CLUSTER_RUNTIME
-                        .lock()
-                        .unwrap()
-                        .cancel_can_signal_wait(wait_id);
+                if CLUSTER_RUNTIME.lock().unwrap().dataflow_wait_matched(wait) {
+                    CLUSTER_RUNTIME.lock().unwrap().cancel_dataflow_wait(wait);
                     return elapsed_ns.saturating_sub(current_elapsed_ns);
                 }
             }
@@ -1061,76 +1062,45 @@ fn run_until_can_signal_edge(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_run_until_can_signal_index_eq(
-    timeout_ns: u64,
-    max_step_ns: u64,
-    route: usize,
-    source_node: u32,
-    bus: u8,
-    message_id: u32,
-    signal_index: u32,
-    expected: f64,
-    tolerance: f64,
-) -> u64 {
-    run_until_can_signal_edge(
-        timeout_ns,
-        max_step_ns,
-        route,
-        source_node,
-        &[CanSignalComparison {
-            bus,
-            message_id,
-            signal_index,
-            expected,
-            tolerance,
-            comparison: 0,
-        }],
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_run_until_can_signal_index_cmp(
-    timeout_ns: u64,
-    max_step_ns: u64,
-    route: usize,
-    source_node: u32,
-    bus: u8,
-    message_id: u32,
-    signal_index: u32,
-    expected: f64,
-    tolerance: f64,
-    comparison: u8,
-) -> u64 {
-    run_until_can_signal_edge(
-        timeout_ns,
-        max_step_ns,
-        route,
-        source_node,
-        &[CanSignalComparison {
-            bus,
-            message_id,
-            signal_index,
-            expected,
-            tolerance,
-            comparison,
-        }],
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rig_cluster_run_until_can_signal_comparisons(
-    timeout_ns: u64,
-    max_step_ns: u64,
-    route: usize,
+pub extern "C" fn rig_cluster_begin_can_signal_wait(
     source_node: u32,
     comparisons: *const CanSignalComparison,
     comparison_count: u32,
+    decoder: usize,
 ) -> u64 {
     if comparisons.is_null() {
         return u64::MAX;
     }
     let comparisons = unsafe { std::slice::from_raw_parts(comparisons, comparison_count as usize) };
-    run_until_can_signal_edge(timeout_ns, max_step_ns, route, source_node, comparisons)
+    begin_can_signal_wait(source_node, comparisons, decoder)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_run_until_dataflow_wait(
+    timeout_ns: u64,
+    max_step_ns: u64,
+    route: usize,
+    wait_id: u64,
+) -> u64 {
+    if wait_id == u64::MAX {
+        return u64::MAX;
+    }
+    run_until_dataflow_wait(
+        timeout_ns,
+        max_step_ns,
+        route,
+        DataflowWait(wait_id),
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_cancel_dataflow_wait(wait_id: u64) {
+    if wait_id != u64::MAX {
+        CLUSTER_RUNTIME
+            .lock()
+            .unwrap()
+            .cancel_dataflow_wait(DataflowWait(wait_id));
+    }
 }
 
 #[unsafe(no_mangle)]

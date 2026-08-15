@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::mem;
 
 use super::cluster::ClusterRuntime;
-use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey, DataflowGraph};
+use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey, DataflowGraph, DataflowWait};
 use super::registry::RuntimeInterface;
 
 #[repr(C)]
@@ -79,6 +80,19 @@ mod tests {
     fn callback_context_defaults_to_zero() {
         assert_eq!(SchedulerCallbackContext::default().elapsed_ns, 0);
         assert_eq!(SchedulerCallbackContext::default().delta_ns, 0);
+    }
+
+    #[test]
+    fn dataflow_wait_is_completed_and_cancelled_by_the_scheduler() {
+        let mut runtime = ClusterRuntime::default();
+        let wait = runtime.begin_dataflow_wait();
+
+        assert!(!runtime.dataflow_wait_matched(wait));
+        complete_dataflow_wait(&mut runtime, wait);
+        assert!(runtime.dataflow_wait_matched(wait));
+
+        runtime.cancel_dataflow_wait(wait);
+        assert!(!runtime.dataflow_wait_matched(wait));
     }
 
     #[test]
@@ -161,6 +175,8 @@ pub(super) struct ClusterScheduler {
     deferred_input_pending_nodes: Vec<u32>,
     ran_algorithms: Vec<u64>,
     run_generation: u64,
+    next_wait_id: u64,
+    waits: HashMap<DataflowWait, bool>,
 }
 
 impl ClusterScheduler {
@@ -170,6 +186,8 @@ impl ClusterScheduler {
         self.deferred_input_pending_nodes.clear();
         self.ran_algorithms.clear();
         self.run_generation = 0;
+        self.next_wait_id = 0;
+        self.waits.clear();
     }
 
     pub(super) fn mark_dirty(&mut self) {
@@ -178,6 +196,27 @@ impl ClusterScheduler {
 
     pub(super) fn add_initial_ready_edge(&mut self, key: DataflowEdgeKey) {
         self.graph.ready_edges.insert(key);
+    }
+
+    pub(super) fn begin_dataflow_wait(&mut self) -> DataflowWait {
+        self.next_wait_id = self.next_wait_id.wrapping_add(1).max(1);
+        let wait = DataflowWait(self.next_wait_id);
+        assert!(self.waits.insert(wait, false).is_none());
+        wait
+    }
+
+    pub(super) fn complete_dataflow_wait(&mut self, wait: DataflowWait) {
+        if let Some(matched) = self.waits.get_mut(&wait) {
+            *matched = true;
+        }
+    }
+
+    pub(super) fn dataflow_wait_matched(&self, wait: DataflowWait) -> bool {
+        self.waits.get(&wait).copied().unwrap_or(false)
+    }
+
+    pub(super) fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
+        self.waits.remove(&wait);
     }
 
     fn begin_run(&mut self, algorithm_count: usize) -> u64 {
@@ -190,6 +229,10 @@ impl ClusterScheduler {
         }
         self.run_generation
     }
+}
+
+pub(super) fn complete_dataflow_wait(runtime: &mut ClusterRuntime, wait: DataflowWait) {
+    runtime.scheduler.complete_dataflow_wait(wait);
 }
 
 pub(super) fn compile_dataflow_graph(runtime: &mut ClusterRuntime) -> bool {

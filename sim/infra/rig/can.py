@@ -19,6 +19,7 @@ _COMPARE_GT = 1
 _COMPARE_GE = 2
 _COMPARE_LT = 3
 _COMPARE_LE = 4
+_CAN_SIGNAL_NAME_CAPACITY = 128
 
 
 class CanPacket(ctypes.Structure):
@@ -230,6 +231,7 @@ class CanSignalComparison(ctypes.Structure):
         ("bus", ctypes.c_uint8),
         ("message_id", ctypes.c_uint32),
         ("signal_index", ctypes.c_uint32),
+        ("signal_name", ctypes.c_char * _CAN_SIGNAL_NAME_CAPACITY),
         ("expected", ctypes.c_double),
         ("tolerance", ctypes.c_double),
         ("comparison", ctypes.c_uint8),
@@ -609,19 +611,32 @@ class CanInterface:
         timeout_ns = duration_to_ns(timeout, unit=unit)
         step_ns = duration_to_ns(step, unit=step_unit or unit)
         signal_descriptor = wake.signal
-        elapsed_ns = cluster._rust_runtime.run_until_can_signal_index_cmp(
+        comparison_kind = comparison
+        comparison = CanSignalComparison()
+        comparison.bus = descriptor.bus
+        comparison.message_id = descriptor.id
+        comparison.signal_index = signal_descriptor.index
+        self._set_comparison_signal_name(comparison, signal)
+        comparison.expected = float(
+            int(expected) if isinstance(expected, IntEnum) else expected
+        )
+        comparison.tolerance = float(tolerance)
+        comparison.comparison = int(comparison_kind)
+        comparison_array = (CanSignalComparison * 1)(comparison)
+        wait = cluster._rust_runtime.begin_can_signal_wait(
             source_node=node_name,
-            bus=descriptor.bus,
-            message_id=descriptor.id,
-            signal_index=signal_descriptor.index,
-            expected=float(
-                int(expected) if isinstance(expected, IntEnum) else expected
-            ),
-            tolerance=float(tolerance),
-            comparison=int(comparison),
-            timeout_ns=timeout_ns,
-            step_ns=step_ns,
-            route=cluster.comm.has_python_routes(),
+            comparisons=comparison_array,
+            comparison_count=1,
+            decoder=self._model._function_address(self._model._decode_can_signal),
+        )
+        elapsed_ns = (
+            None
+            if wait is None
+            else wait.wait(
+                timeout_ns=timeout_ns,
+                step_ns=step_ns,
+                route=cluster.comm.has_python_routes(),
+            )
         )
         cluster._sync_elapsed_from_runtime(nodes=False)
         if elapsed_ns is None:
@@ -663,6 +678,7 @@ class CanInterface:
             comparison_array[index].bus = descriptor.bus
             comparison_array[index].message_id = descriptor.id
             comparison_array[index].signal_index = signal_descriptor.index
+            self._set_comparison_signal_name(comparison_array[index], signal)
             comparison_array[index].expected = float(
                 int(expected) if isinstance(expected, IntEnum) else expected
             )
@@ -671,13 +687,20 @@ class CanInterface:
 
         timeout_ns = duration_to_ns(timeout, unit=unit)
         step_ns = duration_to_ns(step, unit=step_unit or unit)
-        elapsed_ns = cluster._rust_runtime.run_until_can_signal_comparisons(
+        wait = cluster._rust_runtime.begin_can_signal_wait(
             source_node=node_name,
             comparisons=comparison_array,
             comparison_count=len(comparison_array),
-            timeout_ns=timeout_ns,
-            step_ns=step_ns,
-            route=cluster.comm.has_python_routes(),
+            decoder=self._model._function_address(self._model._decode_can_signal),
+        )
+        elapsed_ns = (
+            None
+            if wait is None
+            else wait.wait(
+                timeout_ns=timeout_ns,
+                step_ns=step_ns,
+                route=cluster.comm.has_python_routes(),
+            )
         )
         cluster._sync_elapsed_from_runtime(nodes=False)
         if elapsed_ns is None:
@@ -686,6 +709,15 @@ class CanInterface:
                 f"condition did not become true within {timeout_ns} ns{detail}"
             )
         return elapsed_ns
+
+    @staticmethod
+    def _set_comparison_signal_name(comparison: CanSignalComparison, signal: str) -> None:
+        encoded = signal.encode()
+        if len(encoded) >= _CAN_SIGNAL_NAME_CAPACITY:
+            raise ValueError(
+                f"CAN signal name is too long for the native wait ABI: {signal!r}"
+            )
+        comparison.signal_name = encoded
 
     def rx_count(self, bus: int | str | CanBusDescriptor) -> int:
         return self._model._can_rx_count_value(bus)

@@ -1,11 +1,13 @@
 use std::collections::{HashMap, VecDeque};
+use std::ffi::CString;
+use std::os::raw::c_char;
 use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
 use super::cluster::{ClusterCanRecvEventsFn, ClusterCanSendManyFn, ClusterCanTxCountFn, ClusterRuntime};
 use super::dataflow::{
     DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdge,
-    DataflowEdgeKey, DataflowEvent,
+    DataflowEdgeKey, DataflowEvent, DataflowWait,
 };
 use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};
 use super::scheduler;
@@ -46,12 +48,19 @@ pub struct CanSignalWake {
 }
 
 pub type CanSignalWakeCallback = unsafe extern "C" fn(*const CanEvent);
+pub type CanSignalDecoderFn = unsafe extern "C" fn(
+    u8,
+    *const CanPacket,
+    *const c_char,
+    *mut f64,
+) -> bool;
 
 enum CanSignalWakeConsumer {
     Callback(CanSignalWakeCallback),
     Wait {
         comparisons: Vec<CanSignalComparison>,
-        matched: bool,
+        decoder: CanSignalDecoderFn,
+        wait: Option<DataflowWait>,
     },
 }
 
@@ -84,14 +93,29 @@ impl CanSignalWakeRegistration {
 impl DataflowEvent for CanEvent {}
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CanSignalComparison {
     pub bus: u8,
     pub message_id: u32,
     pub signal_index: u32,
+    pub signal_name: [u8; 128],
     pub expected: f64,
     pub tolerance: f64,
     pub comparison: u8,
+}
+
+impl Default for CanSignalComparison {
+    fn default() -> Self {
+        Self {
+            bus: 0,
+            message_id: 0,
+            signal_index: 0,
+            signal_name: [0; 128],
+            expected: 0.0,
+            tolerance: 0.0,
+            comparison: 0,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -184,8 +208,8 @@ impl InterfaceImplementation for CanInterface {
             registration.last_timestamp_ns.fill(0);
             registration.initialized.fill(false);
             registration.pending_events.clear();
-            if let CanSignalWakeConsumer::Wait { matched, .. } = &mut registration.consumer {
-                *matched = false;
+            if let CanSignalWakeConsumer::Wait { wait, .. } = &mut registration.consumer {
+                *wait = None;
             }
         }
     }
@@ -335,7 +359,9 @@ impl CanInterface {
         &mut self,
         source_node: u32,
         comparisons: &[CanSignalComparison],
-    ) -> usize {
+        decoder: CanSignalDecoderFn,
+        wait: DataflowWait,
+    ) -> bool {
         let wakes: Vec<_> = comparisons
             .iter()
             .map(|comparison| CanSignalWake {
@@ -345,7 +371,7 @@ impl CanInterface {
                 signal_index: comparison.signal_index,
             })
             .collect();
-        let matched = self.signal_comparisons_match(source_node, comparisons);
+        let matched = self.signal_comparisons_match(source_node, comparisons, decoder);
         self.signal_wakes.push(CanSignalWakeRegistration {
             last_timestamp_ns: vec![0; wakes.len()],
             initialized: vec![false; wakes.len()],
@@ -353,70 +379,70 @@ impl CanInterface {
             pending_events: VecDeque::new(),
             consumer: CanSignalWakeConsumer::Wait {
                 comparisons: comparisons.to_vec(),
-                matched,
+                decoder,
+                wait: Some(wait),
             },
         });
-        self.signal_wakes.len() - 1
+        matched
     }
 
-    pub(super) fn signal_wait_matched(&self, wait_id: usize) -> bool {
-        self.signal_wakes.get(wait_id).is_some_and(|registration| {
+    pub(super) fn cancel_signal_wait(&mut self, wait: DataflowWait) {
+        let Some(wait_id) = self.signal_wakes.iter().position(|registration| {
             matches!(
                 &registration.consumer,
-                CanSignalWakeConsumer::Wait { matched: true, .. }
+                CanSignalWakeConsumer::Wait {
+                    wait: Some(candidate),
+                    ..
+                } if *candidate == wait
             )
-        })
-    }
-
-    pub(super) fn cancel_signal_wait(&mut self, wait_id: usize) {
+        }) else {
+            return;
+        };
         if wait_id + 1 == self.signal_wakes.len() {
             self.signal_wakes.pop();
         } else if let Some(registration) = self.signal_wakes.get_mut(wait_id) {
-            if let CanSignalWakeConsumer::Wait { matched, .. } = &mut registration.consumer {
-                *matched = true;
+            if let CanSignalWakeConsumer::Wait { wait, .. } = &mut registration.consumer {
+                *wait = None;
             }
         }
     }
 
-    pub(super) fn signal_wake_pending(&self, registration_index: usize) -> bool {
-        self.signal_wakes
-            .get(registration_index)
-            .is_some_and(|registration| !registration.pending_events.is_empty())
-    }
-
-    pub(super) fn run_signal_wake(&mut self, registration_index: usize) {
+    pub(super) fn run_signal_wake(
+        &mut self,
+        registration_index: usize,
+    ) -> Option<DataflowWait> {
         let Some(registration) = self.signal_wakes.get_mut(registration_index) else {
-            return;
+            return None;
         };
         let events = std::mem::take(&mut registration.pending_events);
         let (callback, wait) = match &registration.consumer {
             CanSignalWakeConsumer::Callback(callback) => (Some(*callback), None),
-            CanSignalWakeConsumer::Wait { comparisons, .. } => {
-                (None, Some((registration.source_node(), comparisons.clone())))
-            }
+            CanSignalWakeConsumer::Wait {
+                comparisons,
+                decoder,
+                wait,
+            } => wait
+                .map(|wait| (None, Some((registration.source_node(), comparisons.clone(), *decoder, wait))))
+                .unwrap_or((None, None)),
         };
         if let Some(callback) = callback {
             for event in events {
                 unsafe { callback(&event) };
             }
         }
-        if let Some((source_node, comparisons)) = wait {
-            if self.signal_comparisons_match(source_node, &comparisons) {
-                if let Some(CanSignalWakeRegistration {
-                    consumer: CanSignalWakeConsumer::Wait { matched, .. },
-                    ..
-                }) = self.signal_wakes.get_mut(registration_index)
-                {
-                    *matched = true;
-                }
+        if let Some((source_node, comparisons, decoder, wait)) = wait {
+            if self.signal_comparisons_match(source_node, &comparisons, decoder) {
+                return Some(wait);
             }
         }
+        None
     }
 
     fn signal_comparisons_match(
         &self,
         source_node: u32,
         comparisons: &[CanSignalComparison],
+        decoder: CanSignalDecoderFn,
     ) -> bool {
         comparisons.iter().all(|comparison| {
             let Some(event) =
@@ -424,10 +450,11 @@ impl CanInterface {
             else {
                 return false;
             };
-            let Some(signal_name) = codegen_tx_signal_name(comparison.signal_index) else {
+            let Some(signal_name) = comparison_signal_name(comparison) else {
                 return false;
             };
-            let Some(value) = decode_signal(comparison.bus, &event.packet, signal_name) else {
+            let Some(value) = decode_signal_with(decoder, comparison.bus, &event.packet, signal_name)
+            else {
                 return false;
             };
             compare_signal_value(
@@ -583,6 +610,36 @@ impl CanInterface {
     }
 }
 
+fn decode_signal_with(
+        decoder: CanSignalDecoderFn,
+    bus: u8,
+    packet: &CanPacket,
+    signal_name: &str,
+) -> Option<f64> {
+    let signal_name = CString::new(signal_name).ok()?;
+    let mut value = 0.0;
+    if unsafe {
+        decoder(
+            bus,
+            packet as *const CanPacket,
+            signal_name.as_ptr(),
+            &mut value,
+        )
+    } {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+fn comparison_signal_name(comparison: &CanSignalComparison) -> Option<&str> {
+    let length = comparison
+        .signal_name
+        .iter()
+        .position(|byte| *byte == 0)?;
+    std::str::from_utf8(&comparison.signal_name[..length]).ok()
+}
+
 fn compare_signal_value(value: f64, expected: f64, tolerance: f64, comparison: u8) -> bool {
     match comparison {
         0 => (value - expected).abs() <= tolerance,
@@ -619,10 +676,13 @@ struct CanSignalWakeAlgorithm {
 
 impl DataflowAlgorithmExecutor for CanSignalWakeAlgorithm {
     fn run(&self, runtime: &mut ClusterRuntime) -> bool {
-        runtime
+        let wait = runtime
             .interfaces
             .can
             .run_signal_wake(self.registration_index);
+        if let Some(wait) = wait {
+            scheduler::complete_dataflow_wait(runtime, wait);
+        }
         false
     }
 }
@@ -1480,13 +1540,13 @@ mod tests {
         };
         interface.record(2, 1, make_event(1, 0x123));
         interface.record(3, 1, make_event(1, 0x123));
-        assert!(interface.signal_wake_pending(0));
+        assert!(!interface.signal_wakes[0].pending_events.is_empty());
         interface.run_signal_wake(0);
         assert_eq!(WAKE_COUNT.load(Ordering::Relaxed), 1);
         assert_eq!(LAST_WAKE_TIMESTAMP.load(Ordering::Relaxed), 1);
 
         interface.record(3, 1, make_event(1, 0x123));
-        assert!(!interface.signal_wake_pending(0));
+        assert!(interface.signal_wakes[0].pending_events.is_empty());
         assert_eq!(WAKE_COUNT.load(Ordering::Relaxed), 1);
         interface.record(3, 1, make_event(2, 0x123));
         interface.run_signal_wake(0);
