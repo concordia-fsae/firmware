@@ -69,6 +69,7 @@ class TimerCaptureEvent(ctypes.Structure):
 class TimerPeripheralInterface:
     _TIMER_DUTY = PeripheralInterface.TIMER_DUTY
     _TIMER_FREQUENCY = PeripheralInterface.TIMER_FREQUENCY
+    _TIMER_CAPTURE = PeripheralInterface.TIMER_CAPTURE
 
     def __init__(self, model: NodeRig) -> None:
         self._model = model
@@ -89,6 +90,17 @@ class TimerPeripheralInterface:
             PeripheralInterface.TIMER_FREQUENCY,
             port,
             channel,
+        )
+
+    @classmethod
+    def timer_capture_events(cls, channel: object) -> DataPath:
+        return DataPath.peripheral(
+            cls._TIMER_CAPTURE,
+            channel,
+            binding=PeripheralBinding(
+                cls._TIMER_CAPTURE,
+                channel=int(channel),
+            ),
         )
 
     @classmethod
@@ -113,7 +125,11 @@ class TimerPeripheralInterface:
     @classmethod
     def supports(cls, path: DataPath) -> bool:
         binding = require_peripheral_binding(path)
-        return binding.interface in (cls._TIMER_DUTY, cls._TIMER_FREQUENCY)
+        return binding.interface in (
+            cls._TIMER_DUTY,
+            cls._TIMER_FREQUENCY,
+            cls._TIMER_CAPTURE,
+        )
 
     def send(
         self,
@@ -124,6 +140,13 @@ class TimerPeripheralInterface:
         timestamp_ns: int = 0,
     ) -> bool:
         binding = require_peripheral_binding(path)
+        if binding.interface == self._TIMER_CAPTURE:
+            event = TimerCaptureEvent()
+            event.channel = int(binding.channel if binding.channel is not None else channel)
+            event.value = float(value)
+            event.timestamp_ns = int(timestamp_ns)
+            return bool(self._model._timer_send_capture(event))
+
         event = TimerChannelEvent()
         event.port = int(binding.port if binding.port is not None else 0)
         event.channel = int(binding.channel if binding.channel is not None else channel)
@@ -132,6 +155,14 @@ class TimerPeripheralInterface:
         return self._send_event(binding, event)
 
     def send_payload(self, path: DataPath, payload: object) -> bool:
+        if require_peripheral_binding(path).interface == self._TIMER_CAPTURE:
+            if not isinstance(payload, TimerCaptureEvent):
+                raise TypeError(
+                    "timer capture datapaths require TimerCaptureEvent payloads, "
+                    f"got {type(payload).__name__}"
+                )
+            return bool(self._model._timer_send_capture(payload))
+
         if not isinstance(payload, TimerChannelEvent):
             raise TypeError(
                 f"timer datapaths require TimerChannelEvent payloads, got {type(payload).__name__}"
@@ -142,6 +173,8 @@ class TimerPeripheralInterface:
         if not payloads:
             return 0
         binding = require_peripheral_binding(path)
+        if binding.interface == self._TIMER_CAPTURE:
+            raise ValueError("timer capture datapaths do not support batch sends")
         events = (TimerChannelEvent * len(payloads))()
         for index, payload in enumerate(payloads):
             if not isinstance(payload, TimerChannelEvent):
@@ -206,7 +239,7 @@ class TimerPeripheralInterface:
             return self._model._timer_send_duties
         if binding.interface == self._TIMER_FREQUENCY:
             return self._model._timer_send_frequencies
-        raise ValueError(f"unsupported timer interface {binding.interface!r}")
+        raise ValueError("timer capture datapaths do not support batch sends")
 
     def _recv_symbol(self, binding: PeripheralBinding):
         if binding.interface == self._TIMER_DUTY:
@@ -231,6 +264,8 @@ class TimerPeripheralInterface:
 
     def rust_route_abi(self, path: DataPath) -> TimerRouteEndpoint:
         binding = require_peripheral_binding(path)
+        if binding.interface == self._TIMER_CAPTURE:
+            raise ValueError("timer capture datapaths cannot be routed between nodes")
         return TimerRouteEndpoint(
             interface=int(binding.interface),
             port=int(binding.port if binding.port is not None else 0),
@@ -257,6 +292,10 @@ class TimerInterface:
     def frequency_events(self, port: object, channel: object) -> DataPath:
         port, channel = self._coerce(port, channel)
         return TimerPeripheralInterface.timer_frequency_events(port, channel)
+
+    def capture_events(self, channel: object) -> DataPath:
+        channel = self._coerce_enum(self._channel_enum, channel, "timer channel")
+        return TimerPeripheralInterface.timer_capture_events(channel)
 
     def _coerce(
         self, port: object, channel: object

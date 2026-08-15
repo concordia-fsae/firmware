@@ -40,6 +40,7 @@ from sim.infra.rig.power import PowerControlEvent, PowerControlPath, PowerInterf
 from sim.infra.rig.spi import SpiInterface, SpiPeripheralInterface, SpiTransaction
 from sim.infra.rig.time import RunUntilTimeout, duration_to_ns, run_until
 from sim.infra.rig.timer import (
+    TimerCaptureEvent,
     TimerChannelEvent,
     TimerInterface,
     TimerPeripheralInterface,
@@ -288,6 +289,10 @@ class _PeripheralModel:
         self.sent_timer.append(pointer._obj)
         return True
 
+    def _timer_send_capture(self, event):
+        self.sent_timer.append(event)
+        return True
+
     _timer_send_frequency = _timer_send_duty
 
     def _timer_send_duties(self, events, count):
@@ -388,6 +393,13 @@ def test_timer_interface_coerces_channels_and_exercises_batch_io():
         interface.frequency_events(1, 2).peripheral_binding.interface
         == PeripheralInterface.TIMER_FREQUENCY
     )
+    capture_path = interface.capture_events(2)
+    assert capture_path.peripheral_binding.interface == PeripheralInterface.TIMER_CAPTURE
+    assert peripheral.send(capture_path, value=0.0, timestamp_ns=7)
+    capture = TimerCaptureEvent(channel=2, value=0.0, timestamp_ns=8)
+    assert peripheral.send_payload(capture_path, capture)
+    with pytest.raises(ValueError, match="batch sends"):
+        peripheral.send_payloads(capture_path, (capture,))
     with pytest.raises(ValueError, match="valid timer channel"):
         interface.duty_events(1, 99)
     with pytest.raises(TypeError, match="TimerChannelEvent"):

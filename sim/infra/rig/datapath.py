@@ -15,6 +15,7 @@ class PeripheralInterface(IntEnum):
     TIMER_DUTY = 1
     TIMER_FREQUENCY = 2
     SPI_TRANSACTION = 3
+    TIMER_CAPTURE = 4
 
 
 class _DataPathNamespace(Enum):
