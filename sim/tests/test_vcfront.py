@@ -4,11 +4,14 @@ from sim.models.controllers.vcfront import (
     AnalogInput,
     AppsState,
     BppcState,
+    DigitalStatus,
     Fault,
+    TimerChannel,
     VehicleState,
 )
 from sim.models.controllers.vcfront.fixtures import vcfront_cluster
 from sim.models.controllers.vcpdu import VcpduSimpleModel
+from sim.models.controllers.sws import SwsSimpleModel
 
 
 @pytest.mark.parametrize(
@@ -161,6 +164,47 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
         message="VCFRONT torque request should return to zero when accelerator is released",
     )
 
+
+def test_zero_vehicle_and_wheel_speed_preserves_torque_request_in_ts_run(
+    vcfront_cluster,
+):
+    vcfront = vcfront_cluster.vcfront
+    vcpdu = VcpduSimpleModel(vcfront.can)
+    vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
+    sws = SwsSimpleModel(vcfront.can)
+    driver_request = sws.periodic_driver_request(
+        period=20,
+        SWS_requestRaceMode=DigitalStatus.OFF,
+        SWS_requestTractionControl=DigitalStatus.ON,
+    )
+    vcfront_cluster.add_component(vcpdu)
+    vcfront_cluster.add_component(sws)
+
+    vcfront.set_brake_position(0)
+    vcfront.set_accelerator_position(0)
+    vcfront_cluster.run_until(
+        lambda: vcfront.latest_torque_request() == 0,
+        timeout=500,
+        step=20,
+        message="VCFRONT torque request should start at zero in TS_RUN",
+    )
+    vcfront.set_brake_position(100)
+    vcfront_cluster.run_for(100)
+    driver_request.set(SWS_requestRaceMode=DigitalStatus.ON)
+    vcfront_cluster.run_for(100)
+    vcfront.set_brake_position(0)
+    for channel in (TimerChannel._1, TimerChannel._2):
+        vcfront._timer_peripherals.send(
+            vcfront.timer.capture_events(channel),
+            value=0.0,
+        )
+    vcfront.set_accelerator_position(50)
+    vcfront_cluster.run_for(200)
+
+    debug = vcfront.can.latest("VCFRONT_tractionControlDebug", bus="veh")
+    assert debug is not None
+    assert debug.VCFRONT_torqueDriverInput > 0
+    assert vcfront.latest_torque_request() > 0
 
 @pytest.mark.parametrize(
     "apps1_position,apps2_position",
