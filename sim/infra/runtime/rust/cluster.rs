@@ -62,7 +62,7 @@ impl ClusterRuntime {
         (self.nodes.len() - 1) as u32
     }
 
-    fn add_rust_runtime_model_node(&mut self, online: bool) -> u32 {
+    pub(super) fn add_rust_runtime_model_node(&mut self, online: bool) -> u32 {
         self.nodes.push(ClusterNode::rust_runtime_model(online));
         self.scheduler.mark_dirty();
         (self.nodes.len() - 1) as u32

@@ -550,7 +550,7 @@ impl DataflowGraph {
         ran_algorithms: &mut [u64],
         generation: u64,
     ) {
-        self.enqueue_pending_algorithms(runtime);
+        self.enqueue_pending_algorithms(runtime, ran_algorithms, generation);
         self.run_due_algorithms(runtime);
         self.run_queue(runtime, ran_algorithms, generation);
     }
@@ -626,9 +626,17 @@ impl DataflowGraph {
             && algorithm.period_ns == 0
     }
 
-    fn enqueue_pending_algorithms(&mut self, runtime: &ClusterRuntime) {
+    pub(super) fn enqueue_pending_algorithms(
+        &mut self,
+        runtime: &ClusterRuntime,
+        ran_algorithms: &[u64],
+        generation: u64,
+    ) {
         for position in 0..self.polled_algorithms.len() {
             let index = self.polled_algorithms[position];
+            if ran_algorithms.get(index).copied() == Some(generation) {
+                continue;
+            }
             if self.pending_state(runtime, index) {
                 self.enqueue_if_ready(index);
             }
@@ -691,12 +699,12 @@ impl DataflowGraph {
                 continue;
             }
             *pending = false;
-            if ran_algorithms.get(index).copied() == Some(generation) {
-                continue;
-            }
             let Some(algorithm) = self.algorithms.get(index) else {
                 continue;
             };
+            if ran_algorithms.get(index).copied() == Some(generation) {
+                continue;
+            }
             ran_algorithms[index] = generation;
             let owner_node = algorithm.owner_node;
             if owner_node != u32::MAX && !runtime.node_online(owner_node) {
