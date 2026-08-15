@@ -201,6 +201,9 @@ class PeriodicCanMessage:
 class CanInterface:
     def __init__(self, model: NodeRig) -> None:
         self._model = model
+        self._messages_with_signals: dict[
+            tuple[int, int, str], CanMessageDescriptor
+        ] = {}
 
     @property
     def buses(self) -> tuple[CanBusDescriptor, ...]:
@@ -253,6 +256,11 @@ class CanInterface:
         return self._with_signals(self._model._can_tx_message_descriptor(name, bus=bus))
 
     def _with_signals(self, message: CanMessageDescriptor) -> CanMessageDescriptor:
+        key = (message.bus, message.id, message.name)
+        cached = self._messages_with_signals.get(key)
+        if cached is not None:
+            return cached
+
         signals = tuple(
             signal
             for signal in (*self.rx_signals, *self.tx_signals)
@@ -260,7 +268,9 @@ class CanInterface:
             and signal.message_id == message.id
             and signal.message_name == message.name
         )
-        return replace(message, signals=signals)
+        result = replace(message, signals=signals)
+        self._messages_with_signals[key] = result
+        return result
 
     def send(
         self,
