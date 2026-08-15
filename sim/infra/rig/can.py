@@ -66,6 +66,12 @@ class CanEvent(ctypes.Structure):
         return event
 
 
+_CanSignalWakeCallback = ctypes.CFUNCTYPE(
+    None,
+    ctypes.POINTER(CanEvent),
+)
+
+
 @dataclass(frozen=True)
 class CanBusDescriptor:
     index: int
@@ -102,6 +108,87 @@ class CanSignalDescriptor:
     kind: str
     enum_name: str | None
 
+
+class _CanSignalWakeAbi(ctypes.Structure):
+    _fields_ = [
+        ("source_node", ctypes.c_uint32),
+        ("bus", ctypes.c_uint8),
+        ("message_id", ctypes.c_uint32),
+        ("signal_index", ctypes.c_uint32),
+    ]
+
+
+@dataclass
+class CanSignalWake:
+    """A reusable wake source for a signal carried by a CAN message."""
+
+    interface: CanInterface
+    message: CanMessageDescriptor
+    signal: CanSignalDescriptor
+    _abi: _CanSignalWakeAbi = field(init=False, repr=False)
+    _callbacks: list[Callable[[CanEvent], None]] = field(
+        default_factory=list, init=False, repr=False
+    )
+    _native_callbacks: list[object] = field(
+        default_factory=list, init=False, repr=False
+    )
+    _registered_runtime: object | None = field(default=None, init=False, repr=False)
+    _registered_callback_addresses: set[int] = field(
+        default_factory=set, init=False, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        self._abi = _CanSignalWakeAbi(
+            0,
+            self.message.bus,
+            self.message.id,
+            self.signal.index,
+        )
+
+    def on_receive(self, callback: Callable[[CanEvent], None]) -> CanSignalWake:
+        """Invoke ``callback`` from the Rust CAN edge when this signal's frame arrives."""
+        self._callbacks.append(callback)
+        native_callback = _CanSignalWakeCallback(
+            lambda event: callback(event.contents)
+        )
+        self._native_callbacks.append(native_callback)
+        self._register_callback(native_callback)
+        return self
+
+    def _register_callback(self, callback, runtime=None) -> None:
+        cluster = self.interface._model._cluster_rig
+        node_name = self.interface._model._cluster_node_name
+        if cluster is None or node_name is None:
+            return
+        runtime = runtime or cluster._rust_runtime
+        if runtime is None:
+            return
+        self._abi.source_node = runtime._node_indices[node_name]
+        if runtime is self._registered_runtime:
+            callback_address = ctypes.cast(callback, ctypes.c_void_p).value or 0
+            if callback_address in self._registered_callback_addresses:
+                return
+        else:
+            self._registered_runtime = runtime
+            self._registered_callback_addresses.clear()
+        callback_address = ctypes.cast(callback, ctypes.c_void_p).value or 0
+        if runtime.register_can_signal_wake(self._abi, callback_address):
+            self._registered_callback_addresses.add(callback_address)
+
+    def _register_cluster_callbacks(self, runtime) -> None:
+        for callback in self._native_callbacks:
+            self._register_callback(callback, runtime)
+
+    @property
+    def signal_name(self) -> str:
+        return self.signal.signal_name
+
+    def latest(self) -> object | None:
+        return self.interface.latest_signal(
+            self.message,
+            self.signal_name,
+            bus=self.message.bus,
+        )
 
 @dataclass(frozen=True)
 class CanEnumValueDescriptor:
@@ -204,6 +291,7 @@ class CanInterface:
         self._messages_with_signals: dict[
             tuple[int, int, str], CanMessageDescriptor
         ] = {}
+        self._signal_wakes: list[CanSignalWake] = []
 
     @property
     def buses(self) -> tuple[CanBusDescriptor, ...]:
@@ -254,6 +342,22 @@ class CanInterface:
         bus: int | str | CanBusDescriptor | None = None,
     ) -> CanMessageDescriptor:
         return self._with_signals(self._model._can_tx_message_descriptor(name, bus=bus))
+
+    def signal_wake(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        *,
+        bus: int | str | CanBusDescriptor | None = None,
+    ) -> CanSignalWake:
+        descriptor = self._tx_message_descriptor(message, bus=bus)
+        wake = CanSignalWake(self, descriptor, descriptor.signal(signal))
+        self._signal_wakes.append(wake)
+        return wake
+
+    def _register_cluster_wakes(self, runtime) -> None:
+        for wake in self._signal_wakes:
+            wake._register_cluster_callbacks(runtime)
 
     def _with_signals(self, message: CanMessageDescriptor) -> CanMessageDescriptor:
         key = (message.bus, message.id, message.name)
@@ -384,37 +488,19 @@ class CanInterface:
         tolerance: float = 0.0,
         message_on_timeout: str | None = None,
     ) -> int:
-        descriptor = self._tx_message_descriptor(message, bus=bus)
-        cluster = self._model._cluster_rig
-        node_name = self._model._cluster_node_name
-        if cluster is None or node_name is None:
-            raise RuntimeError("native CAN signal predicates require a clustered model")
-        timeout_ns = duration_to_ns(timeout, unit=unit)
-        step_ns = duration_to_ns(step, unit=step_unit or unit)
-        signal_descriptor = self._model._can_tx_signal_descriptor(
-            descriptor,
+        return self._run_until_signal_cmp(
+            message,
             signal,
+            expected,
+            comparison=0,
+            bus=bus,
+            timeout=timeout,
+            unit=unit,
+            step=step,
+            step_unit=step_unit,
+            tolerance=tolerance,
+            message_on_timeout=message_on_timeout,
         )
-        elapsed_ns = cluster._rust_runtime.run_until_can_signal_index_eq(
-            source_node=node_name,
-            bus=descriptor.bus,
-            message_id=descriptor.id,
-            signal_index=signal_descriptor.index,
-            expected=float(
-                int(expected) if isinstance(expected, IntEnum) else expected
-            ),
-            tolerance=float(tolerance),
-            timeout_ns=timeout_ns,
-            step_ns=step_ns,
-            route=cluster.comm.has_python_routes(),
-        )
-        cluster._sync_elapsed_from_runtime(nodes=False)
-        if elapsed_ns is None:
-            detail = "" if message_on_timeout is None else f": {message_on_timeout}"
-            raise RunUntilTimeout(
-                f"condition did not become true within {timeout_ns} ns{detail}"
-            )
-        return elapsed_ns
 
     def run_until_signal_gt(
         self,
@@ -514,17 +600,15 @@ class CanInterface:
         tolerance: float = 0.0,
         message_on_timeout: str | None = None,
     ) -> int:
-        descriptor = self._tx_message_descriptor(message, bus=bus)
+        wake = self.signal_wake(message, signal, bus=bus)
+        descriptor = wake.message
         cluster = self._model._cluster_rig
         node_name = self._model._cluster_node_name
         if cluster is None or node_name is None:
             raise RuntimeError("native CAN signal predicates require a clustered model")
         timeout_ns = duration_to_ns(timeout, unit=unit)
         step_ns = duration_to_ns(step, unit=step_unit or unit)
-        signal_descriptor = self._model._can_tx_signal_descriptor(
-            descriptor,
-            signal,
-        )
+        signal_descriptor = wake.signal
         elapsed_ns = cluster._rust_runtime.run_until_can_signal_index_cmp(
             source_node=node_name,
             bus=descriptor.bus,

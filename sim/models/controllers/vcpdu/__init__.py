@@ -6,7 +6,6 @@ from sim.infra.rig import (
     load_generated_module,
 )
 
-from .extensions import VcpduModelExtensions
 from .simple import VcpduSimpleModel
 
 
@@ -20,6 +19,7 @@ def _load_generated() -> None:
         "vcpdu_generated_model",
     )
     enums = _load_generated_enums()
+    from .extensions import VcpduModelExtensions
 
     globals()["AnalogInput"] = enums.AnalogInput
     globals()["DigitalIo"] = enums.DigitalIo
@@ -79,6 +79,7 @@ _GENERATED_EXPORTS = {
     "DigitalIo",
     "DigitalOutput",
     "Fault",
+    "HsdState",
     "SpiDevice",
     "TimerChannel",
     "TimerPort",
@@ -95,6 +96,7 @@ __all__ = [
     "DigitalIo",
     "DigitalOutput",
     "Fault",
+    "HsdState",
     "SpiDevice",
     "TimerChannel",
     "TimerPort",

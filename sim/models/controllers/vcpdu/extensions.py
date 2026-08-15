@@ -13,6 +13,8 @@ from sim.infra.rig import (
     PowerInterface,
 )
 
+from . import HsdState
+
 
 class VcpduPowerInput(Enum):
     BUS_VOLTAGE = auto()
@@ -237,27 +239,31 @@ class VcpduModelExtensions:
             latest_enabled = None
             pending_events = []
 
-            def pending() -> int:
+            hsd_state_wake = node.can.signal_wake(
+                "VCPDU_hsdState",
+                hsd_state_signal,
+                bus="veh",
+            )
+
+            def on_hsd_state(event) -> None:
                 nonlocal latest_enabled
-                if pending_events:
-                    return len(pending_events)
-
-                from . import HsdState, VehicleState
-
-                vehicle_state = node.latest_vehicle_state()
-                if vehicle_state is None or vehicle_state == VehicleState.INIT:
-                    return 0
-
-                state = node.can.latest_signal(
-                    "VCPDU_hsdState", hsd_state_signal, bus="veh"
+                state = getattr(
+                    node.can.decode(hsd_state_wake.message, event),
+                    hsd_state_signal,
                 )
-                if state is None:
-                    return 0
-
                 enabled = state == HsdState.ON
                 if latest_enabled is None or enabled != latest_enabled:
                     latest_enabled = enabled
-                    pending_events.append(PowerControlEvent(enabled=enabled))
+                    pending_events.append(
+                        PowerControlEvent(
+                            enabled=enabled,
+                            timestamp_ns=int(event.timestamp_ns),
+                        )
+                    )
+
+            hsd_state_wake.on_receive(on_hsd_state)
+
+            def pending() -> int:
                 return len(pending_events)
 
             def recv():

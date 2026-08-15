@@ -110,6 +110,10 @@ class NodeRig(ModelRig):
             reset=self._function_address(self._new),
         )
 
+    def register_cluster_wakes(self, runtime) -> None:
+        if self.can is not None:
+            self.can._register_cluster_wakes(runtime)
+
     def rust_can_route_abi(
         self, bus: int | str | CanBusDescriptor
     ) -> tuple[int, int, int, int] | None:

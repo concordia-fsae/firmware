@@ -1,5 +1,7 @@
 use super::can::{CanEndpoint, CanInterface};
-pub(super) use super::can::{CanEvent, CanPacket, CanSignalComparison};
+pub(super) use super::can::{
+    CanEvent, CanPacket, CanSignalComparison, CanSignalWake, CanSignalWakeCallback,
+};
 pub(super) use super::can::ClusterCanRoute;
 use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey};
 use super::interfaces::{InterfaceCaller, InterfaceDataflow};
@@ -125,6 +127,22 @@ impl RuntimeInterfaces {
         self.can.route_event(source_node, bus, event)
     }
 
+    pub(super) fn begin_can_signal_wait(
+        &mut self,
+        source_node: u32,
+        comparisons: &[CanSignalComparison],
+    ) -> usize {
+        self.can.begin_signal_wait(source_node, comparisons)
+    }
+
+    pub(super) fn can_signal_wait_matched(&self, wait_id: usize) -> bool {
+        self.can.signal_wait_matched(wait_id)
+    }
+
+    pub(super) fn cancel_can_signal_wait(&mut self, wait_id: usize) {
+        self.can.cancel_signal_wait(wait_id);
+    }
+
     pub(super) fn timer_fanout_pending(
         &self, group_index: usize, source_online: impl FnMut(u32) -> bool,
     ) -> bool {
@@ -221,10 +239,6 @@ impl RuntimeInterfaces {
         &self, bus: u8, packet: &CanPacket, signal_name: &str,
     ) -> Option<f64> {
         super::can::decode_signal(bus, packet, signal_name)
-    }
-
-    pub(super) fn tx_signal_name(signal_index: u32) -> Option<&'static str> {
-        super::can::codegen_tx_signal_name(signal_index)
     }
 
     pub(super) fn scalar_edge(node: u32, route_id: u32) -> DataflowEdgeKey {

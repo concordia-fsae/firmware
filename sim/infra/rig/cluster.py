@@ -1110,6 +1110,10 @@ class ClusterRig:
         try:
             for name, node in self._rig_nodes.items():
                 runtime.add_node(name, node, online=self.node_online(name))
+            for node in self._rig_nodes.values():
+                getattr(
+                    node, "register_cluster_wakes", lambda _runtime: None
+                )(runtime)
         finally:
             self._building_rust_runtime = None
 
