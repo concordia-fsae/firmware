@@ -43,6 +43,7 @@ class DataflowRoutes:
         self._fanouts: dict[DataPathKey, FanoutDataPath[object]] = {}
         self._paths: dict[DataPathKey, DataPath] = {}
         self._links: list[DataPathLink] = []
+        self._route_cache: dict[DataPathKey, tuple[_Route, ...]] = {}
         self._latest_records: dict[tuple[str, DataPathKey], DataPathRecord[object]] = {}
         self._ordered_paths_cache: tuple[DataPath, ...] | None = None
 
@@ -66,6 +67,7 @@ class DataflowRoutes:
         link = DataPathLink(path, source_node, sink_node)
         if link not in self._links:
             self._links.append(link)
+            self._route_cache.clear()
             self._ordered_paths_cache = None
         self._fanout(path)
 
@@ -109,6 +111,7 @@ class DataflowRoutes:
         for fanout in self._fanouts.values():
             fanout.clear()
         self._latest_records.clear()
+        self._route_cache.clear()
 
     def clear(self, path: DataPath) -> None:
         self._fanout(path).clear()
@@ -176,6 +179,9 @@ class DataflowRoutes:
     def _routes_for_path(self, path: DataPath) -> tuple[_Route, ...]:
         links_by_source: dict[str, list[DataPathLink]] = {}
         path_key = datapath_key(path)
+        if path_key in self._route_cache:
+            return self._route_cache[path_key]
+
         for link in self._links:
             if datapath_key(link.path) == path_key:
                 links_by_source.setdefault(link.source_node, []).append(link)
@@ -221,7 +227,8 @@ class DataflowRoutes:
                     tuple(sinks),
                 )
             )
-        return tuple(routes)
+        self._route_cache[path_key] = tuple(routes)
+        return self._route_cache[path_key]
 
     @staticmethod
     def _single_payload(payload: object | None) -> tuple[object, ...]:

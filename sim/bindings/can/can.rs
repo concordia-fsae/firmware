@@ -256,6 +256,11 @@ impl InterfaceDataflow<CanEvent> for CanInterface {
 }
 
 impl CanInterface {
+    #[cfg(test)]
+    pub(super) fn signal_wake_count(&self) -> usize {
+        self.signal_wakes.len()
+    }
+
     pub(super) fn upsert_fanout(&mut self, route: ClusterCanRoute) {
         let endpoint = CanEndpoint::new(route.source_bus);
         let key = (route.source_node, endpoint);

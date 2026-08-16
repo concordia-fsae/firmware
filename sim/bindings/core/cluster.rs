@@ -41,6 +41,10 @@ impl RigBackend for FirmwareBackend {
         self.scalar.reset_interface();
     }
 
+    fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
+        self.interfaces.cancel_dataflow_wait(wait);
+    }
+
     fn reset_node(&mut self, node: u32) {
         self.interfaces.reset_node_interfaces(node);
     }
@@ -998,4 +1002,37 @@ pub extern "C" fn rig_cluster_latest_scalar_event(
     };
     unsafe { *out = event };
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    unsafe extern "C" fn run_for(_elapsed_ns: u64) {}
+    unsafe extern "C" fn reset() {}
+    unsafe extern "C" fn decode(
+        _bus: u8,
+        _packet: *const CanPacket,
+        _signal_name: *const c_char,
+        _value: *mut f64,
+    ) -> bool {
+        false
+    }
+
+    #[test]
+    fn canceling_a_can_wait_removes_its_backend_ingress_registration() {
+        let mut runtime = RigRuntime::<FirmwareBackend>::default();
+        runtime.add_node(run_for, reset, true);
+
+        let wait = runtime.begin_can_signal_wait(
+            0,
+            &[CanSignalComparison::default()],
+            decode,
+        );
+        assert_eq!(runtime.backend().interfaces.can.signal_wake_count(), 1);
+
+        runtime.cancel_dataflow_wait(wait);
+
+        assert_eq!(runtime.backend().interfaces.can.signal_wake_count(), 0);
+    }
 }

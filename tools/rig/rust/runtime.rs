@@ -25,6 +25,13 @@ pub(crate) use super::dataflow;
 pub trait RigBackend: Default {
     fn reset(&mut self) {}
     fn reset_node(&mut self, _node: u32) {}
+    /// Notify the backend when a generic dataflow wait is canceled.
+    ///
+    /// Backends may own ingress registrations associated with a wait.  The
+    /// default keeps the standalone runtime backend-neutral while allowing a
+    /// backend to release those registrations at the same lifecycle point as
+    /// the scheduler.
+    fn cancel_dataflow_wait(&mut self, _wait: DataflowWait) {}
     fn append_algorithm_specs(&self, _specs: &mut Vec<DataflowAlgorithm>) {}
     fn scalar_state_ready(&mut self, _node: u32, _route_id: u32, _value: f32) {}
     fn scalar_interface(&self) -> &ScalarInterface;
@@ -180,6 +187,7 @@ impl<B: RigBackend + 'static> RigRuntime<B> {
     }
 
     pub fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
+        self.backend.cancel_dataflow_wait(wait);
         self.scheduler.cancel_dataflow_wait(wait);
     }
 
@@ -546,11 +554,16 @@ mod tests {
     struct TestBackend {
         scalar: ScalarInterface,
         reset_count: usize,
+        canceled_wait: Option<DataflowWait>,
     }
 
     impl RigBackend for TestBackend {
         fn reset(&mut self) {
             self.reset_count += 1;
+        }
+
+        fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
+            self.canceled_wait = Some(wait);
         }
 
         fn scalar_interface(&self) -> &ScalarInterface {
@@ -613,5 +626,16 @@ mod tests {
             runtime.scalar_interface(),
             &runtime.backend().scalar,
         ));
+    }
+
+    #[test]
+    fn canceling_a_wait_notifies_the_backend_lifecycle_hook() {
+        let mut runtime = RigRuntime::<TestBackend>::default();
+        let wait = runtime.begin_dataflow_wait();
+
+        runtime.cancel_dataflow_wait(wait);
+
+        assert_eq!(runtime.backend().canceled_wait, Some(wait));
+        assert!(!runtime.dataflow_wait_matched(wait));
     }
 }

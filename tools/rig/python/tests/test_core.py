@@ -205,6 +205,51 @@ def test_cluster_rig_routes_batched_datapaths_and_records_each_event():
     ]
 
 
+def test_python_route_cache_reuses_topology_and_invalidates_on_new_link():
+    path = DataPath.named("generic", "cached")
+    source = SimpleComponent()
+    sink = SimpleComponent()
+    second_sink = SimpleComponent()
+    source.add_egress_datapath(path)
+    sink.add_ingress_datapath(path)
+    second_sink.add_ingress_datapath(path)
+
+    cluster = ClusterRig(
+        components=(source, sink, second_sink),
+        connect=False,
+    )
+    cluster.dataroutes.connect(
+        path,
+        source_node="__component_0",
+        sink_node="__component_1",
+    )
+
+    first_routes = cluster.dataroutes._routes_for_path(path)
+    assert cluster.dataroutes._routes_for_path(path) is first_routes
+
+    # Re-registering an existing edge must preserve the cached topology.
+    cluster.dataroutes.connect(
+        path,
+        source_node="__component_0",
+        sink_node="__component_1",
+    )
+    assert cluster.dataroutes._routes_for_path(path) is first_routes
+
+    # Adding a real edge changes fanout topology and must invalidate it.
+    cluster.dataroutes.connect(
+        path,
+        source_node="__component_0",
+        sink_node="__component_2",
+    )
+    second_routes = cluster.dataroutes._routes_for_path(path)
+    assert second_routes is not first_routes
+    assert {
+        sink.node
+        for route in second_routes
+        for sink in route.sinks
+    } == {"__component_1", "__component_2"}
+
+
 def test_cluster_rig_rejects_untyped_elements_at_the_boundary():
     with pytest.raises(TypeError, match="RigElement contract"):
         ClusterRig(node=object())
