@@ -3,8 +3,9 @@ use std::sync::{LazyLock, Mutex};
 
 use super::algorithms;
 use super::can::{CanEvent, CanPacket};
-use super::cluster::ClusterRuntime;
-use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor};
+use super::cluster::FirmwareBackend;
+use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowRuntime};
+use super::runtime::RigRuntime;
 use super::registry::RuntimeInterfaces;
 use super::scheduler;
 use super::scalar::{self, ScalarEvent};
@@ -127,7 +128,7 @@ static PERIODIC_SCALAR_SOURCES: LazyLock<Mutex<PeriodicScalarSources>> =
     LazyLock::new(|| Mutex::new(PeriodicScalarSources::default()));
 
 pub(super) fn add_periodic_scalar_source(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut RigRuntime<FirmwareBackend>,
     node: u32,
     route_id: u32,
     period_ns: u64,
@@ -160,7 +161,7 @@ pub(super) fn add_periodic_scalar_source(
         DataflowAlgorithm::periodic_source(
             node,
             (node, 1, source_index),
-            vec![RuntimeInterfaces::scalar_edge(node, route_id)],
+            vec![scalar::edge(node, route_id)],
             Arc::new(PeriodicScalarSourceAlgorithm { source_index }),
             period_ns,
             source.due_at_ns(),
@@ -194,7 +195,11 @@ struct PeriodicScalarSourceAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for PeriodicScalarSourceAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("periodic scalar source requires the firmware runtime backend");
         PERIODIC_SCALAR_SOURCES
             .lock()
             .unwrap()
@@ -205,7 +210,11 @@ impl DataflowAlgorithmExecutor for PeriodicScalarSourceAlgorithm {
             })
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("periodic scalar source requires the firmware runtime backend");
         let event = take_periodic_scalar_events(self.source_index, runtime.elapsed_ns)
             .into_iter()
             .next();
@@ -222,7 +231,7 @@ impl DataflowAlgorithmExecutor for PeriodicScalarSourceAlgorithm {
 }
 
 pub(super) fn add_periodic_can_source(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut RigRuntime<FirmwareBackend>,
     node: u32,
     bus: u8,
     period_ns: u64,
@@ -260,7 +269,7 @@ pub(super) fn add_periodic_can_source(
 }
 
 pub(super) fn update_periodic_can_source(
-    _runtime: &mut ClusterRuntime,
+    _runtime: &mut RigRuntime<FirmwareBackend>,
     handle: u32,
     packet: CanPacket,
 ) -> bool {
@@ -281,7 +290,11 @@ struct PeriodicCanSourceAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for PeriodicCanSourceAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("periodic CAN source requires the firmware runtime backend");
         let sources = PERIODIC_CAN_SOURCES.lock().unwrap();
         let Some(source) = sources.sources.get(self.source_index) else {
             return false;
@@ -289,7 +302,11 @@ impl DataflowAlgorithmExecutor for PeriodicCanSourceAlgorithm {
         runtime.node_online(source.node()) && source.has_pending_event(runtime.elapsed_ns)
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("periodic CAN source requires the firmware runtime backend");
         let mut sources = PERIODIC_CAN_SOURCES.lock().unwrap();
         let Some(source) = sources.sources.get_mut(self.source_index) else {
             return false;

@@ -45,21 +45,7 @@ rust_test(
     crate = "rig_core",
     crate_root = "rust/lib.rs",
     edition = "2024",
-    # Keep the standalone Rig target's closure explicit.  The remaining Rust
-    # files are exported as integration inputs for firmware bindings, but are
-    # never linked into this independent core target.
-    srcs = [
-        "rust/lib.rs",
-        "rust/datapath.rs",
-        "rust/model.rs",
-        "rust/model_abi.rs",
-        "rust/node_abi.rs",
-        "rust/rig.rs",
-    ],
-    env = {
-        "RIG_CORE_RUST_DATAPATH_RS": "$(location :rust/datapath.rs)",
-        "RIG_CORE_RUST_MODEL_RS": "$(location :rust/model.rs)",
-    },
+    srcs = glob(["rust/*.rs"]),
     visibility = ["PUBLIC"],
 )
 

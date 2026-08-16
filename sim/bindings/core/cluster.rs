@@ -3,21 +3,21 @@ use std::mem;
 use std::os::raw::c_char;
 use std::sync::{LazyLock, Mutex};
 
-use super::algorithms::RuntimeAlgorithms;
-use super::dataflow::DataflowWait;
+use super::dataflow::{DataflowAlgorithm, DataflowWait};
 use super::registry::{
     CanEvent, CanPacket, CanSignalComparison, CanSignalDecoderFn, CanSignalWake,
     CanSignalWakeCallback,
-    ClusterCanRoute, ClusterScalarRoute, ClusterScalarSink, ClusterSpiRoute,
-    ClusterTimerRoute, InterfaceRoute, RuntimeInterface, RuntimeInterfaces, ScalarEvent,
+    ClusterCanRoute, ClusterSpiRoute,
+    ClusterTimerRoute, InterfaceRoute, RuntimeInterface, RuntimeInterfaces,
     SpiTransaction, TimerChannelEvent,
 };
-use super::node::{ClusterNode, ClusterNodeScheduler};
-use super::scheduler::{self, ClusterScheduler, SchedulerCallbackContext};
+use super::interfaces::{InterfaceCaller, InterfaceImplementation};
+use super::runtime::{RigBackend, RigRuntime};
+use super::node::{RigNodeResetFn, RigNodeRunForFn, RigPythonScheduledFn};
+use super::scheduler;
+use super::scalar::{self, ScalarCountFn, ScalarRecvManyFn, ScalarRoute, ScalarSendManyFn,
+    ScalarSink, ScalarSinkSetFn, ScalarEvent};
 
-pub type ClusterNodeRunForFn = unsafe extern "C" fn(u64);
-pub type ClusterNodeResetFn = unsafe extern "C" fn();
-pub type ClusterPythonScheduledFn = unsafe extern "C" fn(*const SchedulerCallbackContext);
 pub type ClusterRouteFn = unsafe extern "C" fn(u64);
 pub type ClusterCanTxCountFn = unsafe extern "C" fn(u8) -> u32;
 pub type ClusterCanRecvEventsFn = unsafe extern "C" fn(u8, *mut CanEvent, u32) -> u32;
@@ -29,60 +29,41 @@ pub type ClusterTimerSendManyFn = unsafe extern "C" fn(*const TimerChannelEvent,
 pub type ClusterSpiCountFn = unsafe extern "C" fn(i32) -> u32;
 pub type ClusterSpiRecvManyFn = unsafe extern "C" fn(i32, *mut SpiTransaction, u32) -> u32;
 pub type ClusterSpiSendManyFn = unsafe extern "C" fn(*const SpiTransaction, u32) -> u32;
-pub type ClusterScalarCountFn = unsafe extern "C" fn() -> u32;
-pub type ClusterScalarRecvManyFn = unsafe extern "C" fn(*mut ScalarEvent, u32) -> u32;
-pub type ClusterScalarSendManyFn = unsafe extern "C" fn(*const ScalarEvent, u32) -> u32;
-pub type ClusterScalarSinkSetFn = unsafe extern "C" fn(i32, f32);
-
 #[derive(Default)]
-pub(super) struct ClusterRuntime {
-    pub(super) nodes: Vec<ClusterNode>,
+pub(super) struct FirmwareBackend {
     pub(super) interfaces: RuntimeInterfaces,
-    pub(super) algorithms: RuntimeAlgorithms,
-    pub(super) scheduler: ClusterScheduler,
-    pub(super) elapsed_ns: u64,
+    pub(super) scalar: scalar::ScalarInterface,
 }
 
-impl ClusterRuntime {
+impl RigBackend for FirmwareBackend {
     fn reset(&mut self) {
-        self.nodes.clear();
         self.interfaces.reset();
-        self.algorithms.reset();
-        self.scheduler.reset();
-        self.elapsed_ns = 0;
+        self.scalar.reset_interface();
     }
 
-    fn add_node(
-        &mut self,
-        run_for: ClusterNodeRunForFn,
-        reset: ClusterNodeResetFn,
-        online: bool,
-    ) -> u32 {
-        self.nodes
-            .push(ClusterNode::external(run_for, reset, online));
-        self.scheduler.mark_dirty();
-        (self.nodes.len() - 1) as u32
+    fn reset_node(&mut self, node: u32) {
+        self.interfaces.reset_node_interfaces(node);
     }
 
-    pub(super) fn add_rust_runtime_model_node(&mut self, online: bool) -> u32 {
-        self.nodes.push(ClusterNode::rust_runtime_model(online));
-        self.scheduler.mark_dirty();
-        (self.nodes.len() - 1) as u32
+    fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
+        self.interfaces.append_algorithm_specs(specs);
+        self.scalar.append_algorithm_specs(specs);
     }
 
-    fn add_python_node(
-        &mut self,
-        scheduled: Option<ClusterPythonScheduledFn>,
-        reset: ClusterNodeResetFn,
-        period_ns: u64,
-        online: bool,
-    ) -> u32 {
-        self.nodes
-            .push(ClusterNode::python(scheduled, reset, period_ns, online));
-        self.scheduler.mark_dirty();
-        (self.nodes.len() - 1) as u32
+    fn scalar_state_ready(&mut self, node: u32, route_id: u32, value: f32) {
+        self.interfaces.timer.update_scaled_scalar_scale(node, route_id, value);
     }
 
+    fn scalar_interface(&self) -> &scalar::ScalarInterface {
+        &self.scalar
+    }
+
+    fn scalar_interface_mut(&mut self) -> &mut scalar::ScalarInterface {
+        &mut self.scalar
+    }
+}
+
+impl RigRuntime<FirmwareBackend> {
     fn register_route(&mut self, route: InterfaceRoute) -> bool {
         let (source_node, sink_node) = route.nodes();
         if self.nodes.get(source_node as usize).is_none()
@@ -95,125 +76,13 @@ impl ClusterRuntime {
         true
     }
 
-    fn add_scalar_state_sink(&mut self, node: u32, route_id: u32, initial_value: f32) -> bool {
-        if self.nodes.get(node as usize).is_none() || !initial_value.is_finite() {
-            return false;
-        }
-        self.add_scalar_state_input(node, route_id);
-        self.interfaces.set_scalar_state(node, route_id, initial_value);
-        self.scheduler
-            .add_initial_ready_edge(RuntimeInterfaces::scalar_edge(node, route_id));
-        true
-    }
-
-    fn add_scalar_state_route(
-        &mut self,
-        source_node: u32,
-        route_id: u32,
-        source_count: ClusterScalarCountFn,
-        source_recv_many: ClusterScalarRecvManyFn,
-        sink_node: u32,
-        sink_route_id: u32,
-        sink_id: i32,
-        value_scale: f32,
-        set_value: Option<ClusterScalarSinkSetFn>,
-    ) -> bool {
-        self.add_scalar_state_input(sink_node, sink_route_id);
-        if !self.register_route(InterfaceRoute::Scalar(ClusterScalarRoute {
-            source_node,
-            route_id,
-            source_count,
-            source_recv_many,
-            sink_node,
-            sink: ClusterScalarSink::State {
-                route_id: sink_route_id,
-                sink_id,
-                value_scale,
-                set_value,
-            },
-        })) {
-            return false;
-        }
-
-        let events =
-            self.algorithms
-                .take_native_scalar_events(source_node, route_id, self.elapsed_ns);
-        if let Some(event) = events.last() {
-            self.interfaces.set_scalar_state(sink_node, sink_route_id, event.value);
-            self.interfaces
-                .update_scaled_scalar_scale(sink_node, sink_route_id, event.value);
-            self.interfaces.record_scalar(
-                sink_node,
-                sink_route_id,
-                ScalarEvent {
-                    value: event.value,
-                    timestamp_ns: self.elapsed_ns,
-                },
-            );
-            self.scheduler
-                .add_initial_ready_edge(RuntimeInterfaces::scalar_edge(sink_node, sink_route_id));
-        }
-        for event in events {
-            self.interfaces.record_scalar(source_node, route_id, event);
-        }
-        self.scheduler.mark_dirty();
-        true
-    }
-
-    fn add_scalar_input_route(
-        &mut self,
-        source_node: u32,
-        route_id: u32,
-        source_count: ClusterScalarCountFn,
-        source_recv_many: ClusterScalarRecvManyFn,
-        sink_node: u32,
-        sink_route_id: u32,
-    ) -> bool {
-        let Some((context, receive)) = self
-            .algorithms
-            .native_scalar_input(sink_node, sink_route_id)
-        else {
-            return false;
-        };
-        self.register_route(InterfaceRoute::Scalar(ClusterScalarRoute {
-            source_node,
-            route_id,
-            source_count,
-            source_recv_many,
-            sink_node,
-            sink: ClusterScalarSink::Algorithm {
-                context,
-                route_id: sink_route_id,
-                receive,
-            },
-        }))
-    }
-
-    fn add_scalar_state_input(&mut self, node: u32, route_id: u32) {
-        self.interfaces.add_scalar_state_input(node, route_id);
-    }
-
-    pub(super) fn scalar_state_input_values(&self, node: u32) -> Vec<(u32, f32)> {
-        self.interfaces.scalar_state_input_values(node)
-    }
-
-    fn scalar_route_exists(
-        &self,
-        source_node: u32,
-        route_id: u32,
-        sink_node: u32,
-        sink: ClusterScalarSink,
-    ) -> bool {
-        self.interfaces
-            .scalar_route_exists(source_node, route_id, sink_node, sink)
-    }
-
     fn send_native_can_source_event(&mut self, node: u32, bus: u8, packet: CanPacket) -> bool {
         if !self.node_exists(node) {
             return false;
         }
+        let elapsed_ns = self.elapsed_ns;
         self.interfaces
-            .send_native_can_source_event(node, bus, self.elapsed_ns, packet);
+            .send_native_can_source_event(node, bus, elapsed_ns, packet);
         true
     }
 
@@ -249,97 +118,6 @@ impl ClusterRuntime {
         wait
     }
 
-    pub(super) fn begin_dataflow_wait(&mut self) -> DataflowWait {
-        self.scheduler.begin_dataflow_wait()
-    }
-
-    pub(super) fn dataflow_wait_matched(&self, wait: DataflowWait) -> bool {
-        self.scheduler.dataflow_wait_matched(wait)
-    }
-
-    pub(super) fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
-        self.interfaces.cancel_dataflow_wait(wait);
-        self.scheduler.cancel_dataflow_wait(wait);
-        self.scheduler.mark_dirty();
-    }
-
-    fn set_node_online(&mut self, node_index: u32, online: bool) -> bool {
-        let elapsed_ns = self.elapsed_ns;
-        let reset_runtime_models;
-        let Some(node) = self.nodes.get_mut(node_index as usize) else {
-            return false;
-        };
-        if node.online && !online {
-            if let Some(reset) = node.reset {
-                unsafe { reset() };
-            }
-            node.elapsed_ns = 0;
-            reset_runtime_models = matches!(node.scheduler, ClusterNodeScheduler::RustRuntimeModel);
-            if let ClusterNodeScheduler::Python { input_pending, .. } = &mut node.scheduler {
-                *input_pending = false;
-            }
-        } else {
-            reset_runtime_models = false;
-        }
-        if !node.online && online {
-            if let ClusterNodeScheduler::Python { input_pending, .. } = &mut node.scheduler {
-                *input_pending = false;
-            }
-        }
-        node.online = online;
-        if reset_runtime_models {
-            self.algorithms.reset_node_models(node_index, elapsed_ns);
-            self.interfaces.reset_node_interfaces(node_index);
-        }
-        self.scheduler.mark_dirty();
-        true
-    }
-
-    pub(super) fn node_online(&self, node: u32) -> bool {
-        self.nodes
-            .get(node as usize)
-            .map(|node| node.online)
-            .unwrap_or(false)
-    }
-
-    pub(super) fn node_exists(&self, node: u32) -> bool {
-        self.nodes.get(node as usize).is_some()
-    }
-
-    pub(super) fn run_python_node_algorithm(&mut self, node: u32) {
-        let elapsed_ns = self.elapsed_ns;
-        let Some(node) = self.nodes.get_mut(node as usize) else {
-            return;
-        };
-        node.run_python_algorithm(elapsed_ns);
-    }
-
-    pub(super) fn python_node_input_pending(&self, node: u32) -> bool {
-        self.nodes
-            .get(node as usize)
-            .map(ClusterNode::python_input_pending)
-            .unwrap_or(false)
-    }
-
-    fn node_elapsed_ns(&self, node: u32) -> u64 {
-        self.nodes
-            .get(node as usize)
-            .map(|node| node.elapsed_ns)
-            .unwrap_or(0)
-    }
-
-    pub(super) fn online_nodes(&self) -> Vec<bool> {
-        self.nodes.iter().map(|node| node.online).collect()
-    }
-
-    fn node_elapsed_ns_many(&self, out: &mut [u64]) -> u32 {
-        let count = self.nodes.len().min(out.len()).min(u32::MAX as usize);
-        for (slot, node) in out.iter_mut().zip(self.nodes.iter()).take(count) {
-            *slot = node.elapsed_ns;
-        }
-        count as u32
-    }
-
     pub(crate) fn latest_can_message(
         &self,
         source_node: u32,
@@ -348,10 +126,6 @@ impl ClusterRuntime {
     ) -> Option<CanEvent> {
         self.interfaces
             .latest_can_message(source_node, bus, message_id)
-    }
-
-    pub(crate) fn elapsed_ns(&self) -> u64 {
-        self.elapsed_ns
     }
 
     fn latest_can_bus_event(&self, source_node: u32, bus: u8) -> Option<CanEvent> {
@@ -385,19 +159,12 @@ impl ClusterRuntime {
             .latest_timer_event(source_node, interface, port, channel)
     }
 
-    pub(super) fn latest_scalar_event(
-        &self,
-        source_node: u32,
-        route_id: u32,
-    ) -> Option<ScalarEvent> {
-        self.interfaces.scalar_latest(source_node, route_id)
-    }
 }
 
-static CLUSTER_RUNTIME: LazyLock<Mutex<ClusterRuntime>> =
-    LazyLock::new(|| Mutex::new(ClusterRuntime::default()));
+static CLUSTER_RUNTIME: LazyLock<Mutex<RigRuntime<FirmwareBackend>>> =
+    LazyLock::new(|| Mutex::new(RigRuntime::<FirmwareBackend>::default()));
 
-pub(super) fn with_runtime<R>(f: impl FnOnce(&mut ClusterRuntime) -> R) -> R {
+pub(super) fn with_runtime<R>(f: impl FnOnce(&mut RigRuntime<FirmwareBackend>) -> R) -> R {
     let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
     f(&mut runtime)
 }
@@ -441,8 +208,8 @@ pub extern "C" fn rig_cluster_add_scalar_transform_algorithm(
 ) -> bool {
     let mut runtime = CLUSTER_RUNTIME.lock().unwrap();
     scheduler::add_dataflow_algorithm(
-        &mut runtime,
-        RuntimeInterfaces::scalar_transform_algorithm(
+        &mut *runtime,
+        scalar::test_scalar_transform_algorithm(
             owner_node,
             sort_index,
             input_route_id,
@@ -453,15 +220,15 @@ pub extern "C" fn rig_cluster_add_scalar_transform_algorithm(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_compile_dataflow_graph() -> bool {
-    scheduler::compile_dataflow_graph(&mut CLUSTER_RUNTIME.lock().unwrap())
+    scheduler::compile_dataflow_graph(&mut *CLUSTER_RUNTIME.lock().unwrap())
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_cluster_add_node(run_for: usize, reset: usize, online: bool) -> u32 {
-    let Some(run_for) = (unsafe { function_pointer::<ClusterNodeRunForFn>(run_for) }) else {
+    let Some(run_for) = (unsafe { function_pointer::<RigNodeRunForFn>(run_for) }) else {
         return u32::MAX;
     };
-    let Some(reset) = (unsafe { function_pointer::<ClusterNodeResetFn>(reset) }) else {
+    let Some(reset) = (unsafe { function_pointer::<RigNodeResetFn>(reset) }) else {
         return u32::MAX;
     };
 
@@ -478,8 +245,8 @@ pub extern "C" fn rig_cluster_add_python_node(
     period_ns: u64,
     online: bool,
 ) -> u32 {
-    let scheduled = unsafe { function_pointer::<ClusterPythonScheduledFn>(scheduled) };
-    let Some(reset) = (unsafe { function_pointer::<ClusterNodeResetFn>(reset) }) else {
+    let scheduled = unsafe { function_pointer::<RigPythonScheduledFn>(scheduled) };
+    let Some(reset) = (unsafe { function_pointer::<RigNodeResetFn>(reset) }) else {
         return u32::MAX;
     };
 
@@ -677,17 +444,17 @@ pub extern "C" fn rig_cluster_add_scalar_route(
     sink_node: u32,
     sink_send_many: usize,
 ) -> bool {
-    let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
+    let Some(source_count) = (unsafe { function_pointer::<ScalarCountFn>(source_count) })
     else {
         return false;
     };
     let Some(source_recv_many) =
-        (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
+        (unsafe { function_pointer::<ScalarRecvManyFn>(source_recv_many) })
     else {
         return false;
     };
     let Some(sink_send_many) =
-        (unsafe { function_pointer::<ClusterScalarSendManyFn>(sink_send_many) })
+        (unsafe { function_pointer::<ScalarSendManyFn>(sink_send_many) })
     else {
         return false;
     };
@@ -695,14 +462,14 @@ pub extern "C" fn rig_cluster_add_scalar_route(
     CLUSTER_RUNTIME
         .lock()
         .unwrap()
-        .register_route(InterfaceRoute::Scalar(ClusterScalarRoute {
+        .register_scalar_route(ScalarRoute {
             source_node,
             route_id,
             source_count,
             source_recv_many,
             sink_node,
-            sink: ClusterScalarSink::SendMany(sink_send_many),
-        }))
+            sink: ScalarSink::SendMany(sink_send_many),
+        })
 }
 
 #[unsafe(no_mangle)]
@@ -719,34 +486,34 @@ pub extern "C" fn rig_cluster_add_scalar_sink_route(
     if !value_scale.is_finite() {
         return false;
     }
-    let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
+    let Some(source_count) = (unsafe { function_pointer::<ScalarCountFn>(source_count) })
     else {
         return false;
     };
     let Some(source_recv_many) =
-        (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
+        (unsafe { function_pointer::<ScalarRecvManyFn>(source_recv_many) })
     else {
         return false;
     };
-    let Some(set_value) = (unsafe { function_pointer::<ClusterScalarSinkSetFn>(set_value) }) else {
+    let Some(set_value) = (unsafe { function_pointer::<ScalarSinkSetFn>(set_value) }) else {
         return false;
     };
 
     CLUSTER_RUNTIME
         .lock()
         .unwrap()
-        .register_route(InterfaceRoute::Scalar(ClusterScalarRoute {
+        .register_scalar_route(ScalarRoute {
             source_node,
             route_id,
             source_count,
             source_recv_many,
             sink_node,
-            sink: ClusterScalarSink::Native {
+            sink: ScalarSink::Native {
                 sink_id,
                 value_scale,
                 set_value,
             },
-        }))
+        })
 }
 
 #[unsafe(no_mangle)]
@@ -773,21 +540,21 @@ pub extern "C" fn rig_cluster_add_scalar_state_route(
     value_scale: f32,
     set_value: usize,
 ) -> bool {
-    let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
+    let Some(source_count) = (unsafe { function_pointer::<ScalarCountFn>(source_count) })
     else {
         return false;
     };
     let set_value = if set_value == 0 {
         None
     } else {
-        let Some(set_value) = (unsafe { function_pointer::<ClusterScalarSinkSetFn>(set_value) })
+        let Some(set_value) = (unsafe { function_pointer::<ScalarSinkSetFn>(set_value) })
         else {
             return false;
         };
         Some(set_value)
     };
     let Some(source_recv_many) =
-        (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
+        (unsafe { function_pointer::<ScalarRecvManyFn>(source_recv_many) })
     else {
         return false;
     };
@@ -814,12 +581,12 @@ pub extern "C" fn rig_cluster_add_scalar_input_route(
     sink_node: u32,
     sink_route_id: u32,
 ) -> bool {
-    let Some(source_count) = (unsafe { function_pointer::<ClusterScalarCountFn>(source_count) })
+    let Some(source_count) = (unsafe { function_pointer::<ScalarCountFn>(source_count) })
     else {
         return false;
     };
     let Some(source_recv_many) =
-        (unsafe { function_pointer::<ClusterScalarRecvManyFn>(source_recv_many) })
+        (unsafe { function_pointer::<ScalarRecvManyFn>(source_recv_many) })
     else {
         return false;
     };
@@ -971,7 +738,7 @@ pub extern "C" fn rig_cluster_run_for(duration_ns: u64, max_step_ns: u64, route:
                 return;
             }
             let remaining_ns = target_elapsed_ns - runtime.elapsed_ns;
-            let delta_ns = scheduler::run_next_step(&mut runtime, remaining_ns, max_step_ns);
+            let delta_ns = scheduler::run_next_step(&mut *runtime, remaining_ns, max_step_ns);
             (delta_ns, runtime.elapsed_ns)
         };
 
@@ -1033,7 +800,7 @@ fn run_until_dataflow_wait(
                 return u64::MAX;
             }
             let remaining_ns = target_elapsed_ns - runtime.elapsed_ns;
-            let delta_ns = scheduler::run_next_step(&mut runtime, remaining_ns, max_step_ns);
+            let delta_ns = scheduler::run_next_step(&mut *runtime, remaining_ns, max_step_ns);
             let elapsed_ns = runtime.elapsed_ns;
             let matched = runtime.dataflow_wait_matched(wait);
             (delta_ns, elapsed_ns, matched)

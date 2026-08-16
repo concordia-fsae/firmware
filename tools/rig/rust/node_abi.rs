@@ -22,9 +22,7 @@ pub trait ModelDataPathProvider {
     }
 }
 
-pub fn datapath_count<Target, Runtime>(
-    model: &mut super::model::NodeModel<Target, Runtime>,
-) -> u32
+pub fn datapath_count<Target, Runtime>(model: &mut super::model::NodeModel<Target, Runtime>) -> u32
 where
     Runtime: super::model::ModelRuntime,
     Target: super::model::NodeTarget<Runtime> + ModelDataPathProvider,

@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use super::cluster::ClusterRuntime;
+use super::dataflow::ScalarEvent;
 use super::dataflow::{
-    DataflowAlgorithm, NativeScalarReceiveFn, NativeScalarTakeFn, NodeResetFn, RuntimeResetFn,
+    DataflowAlgorithm, DataflowRuntime, NativeScalarReceiveFn, NativeScalarTakeFn, NodeResetFn,
+    RuntimeResetFn,
 };
-use super::scalar::ScalarEvent;
 
 #[derive(Clone, Copy)]
 struct NodeReset {
@@ -30,7 +30,7 @@ struct NativeScalarInput {
 }
 
 #[derive(Default)]
-pub(super) struct RuntimeAlgorithms {
+pub struct RuntimeAlgorithms {
     algorithms: Vec<DataflowAlgorithm>,
     native_scalar_sources: Vec<NativeScalarSource>,
     native_scalar_inputs: Vec<NativeScalarInput>,
@@ -39,7 +39,7 @@ pub(super) struct RuntimeAlgorithms {
 }
 
 impl RuntimeAlgorithms {
-    pub(super) fn reset(&mut self) {
+    pub fn reset(&mut self) {
         for reset in &self.runtime_resets {
             reset();
         }
@@ -50,24 +50,18 @@ impl RuntimeAlgorithms {
         self.runtime_resets.clear();
     }
 
-    pub(super) fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
+    pub fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
         specs.extend(self.algorithms.iter().cloned());
     }
 
-    pub(super) fn native_scalar_source_registered(&self, source_node: u32, route_id: u32) -> bool {
-        self.native_scalar_sources
-            .iter()
-            .any(|source| source.node == source_node && source.route_id == route_id)
-    }
-
-    pub(super) fn native_scalar_source_keys(&self) -> HashSet<(u32, u32)> {
+    pub fn native_scalar_source_keys(&self) -> HashSet<(u32, u32)> {
         self.native_scalar_sources
             .iter()
             .map(|source| (source.node, source.route_id))
             .collect()
     }
 
-    pub(super) fn take_native_scalar_events(
+    pub fn take_native_scalar_events(
         &mut self,
         source_node: u32,
         route_id: u32,
@@ -84,13 +78,13 @@ impl RuntimeAlgorithms {
         events
     }
 
-    pub(super) fn reset_node_models(&self, node: u32, elapsed_ns: u64) {
+    pub fn reset_node_models(&self, node: u32, elapsed_ns: u64) {
         for reset in self.node_resets.iter().filter(|reset| reset.node == node) {
             (reset.reset)(reset.context, elapsed_ns);
         }
     }
 
-    pub(super) fn native_scalar_input(
+    pub fn native_scalar_input(
         &self,
         node: u32,
         route_id: u32,
@@ -102,20 +96,20 @@ impl RuntimeAlgorithms {
     }
 }
 
-pub(super) fn register_runtime_reset(runtime: &mut ClusterRuntime, reset: RuntimeResetFn) {
+pub(super) fn register_runtime_reset(runtime: &mut dyn DataflowRuntime, reset: RuntimeResetFn) {
     if runtime
-        .algorithms
+        .runtime_algorithms()
         .runtime_resets
         .iter()
         .any(|existing| *existing as usize == reset as usize)
     {
         return;
     }
-    runtime.algorithms.runtime_resets.push(reset);
+    runtime.runtime_algorithms_mut().runtime_resets.push(reset);
 }
 
 pub(super) fn register_node_reset(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut dyn DataflowRuntime,
     node: u32,
     context: usize,
     reset: NodeResetFn,
@@ -123,23 +117,31 @@ pub(super) fn register_node_reset(
     if !runtime.node_exists(node) {
         return false;
     }
-    if runtime.algorithms.node_resets.iter().any(|existing| {
-        existing.node == node
-            && existing.context == context
-            && existing.reset as usize == reset as usize
-    }) {
+    if runtime
+        .runtime_algorithms()
+        .node_resets
+        .iter()
+        .any(|existing| {
+            existing.node == node
+                && existing.context == context
+                && existing.reset as usize == reset as usize
+        })
+    {
         return true;
     }
-    runtime.algorithms.node_resets.push(NodeReset {
-        node,
-        context,
-        reset,
-    });
+    runtime
+        .runtime_algorithms_mut()
+        .node_resets
+        .push(NodeReset {
+            node,
+            context,
+            reset,
+        });
     true
 }
 
 pub(super) fn register_algorithm(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut dyn DataflowRuntime,
     algorithm: DataflowAlgorithm,
 ) -> bool {
     if algorithm.owner_node != u32::MAX && !runtime.node_exists(algorithm.owner_node) {
@@ -148,31 +150,31 @@ pub(super) fn register_algorithm(
     if !register_algorithm_lifecycle(runtime, &algorithm) {
         return false;
     }
-    runtime.algorithms.algorithms.push(algorithm);
-    runtime.scheduler.mark_dirty();
+    runtime.runtime_algorithms_mut().algorithms.push(algorithm);
+    runtime.mark_scheduler_dirty();
     true
 }
 
-pub(super) fn replace_algorithm(
-    runtime: &mut ClusterRuntime,
-    algorithm: DataflowAlgorithm,
-) -> bool {
+pub fn replace_algorithm(runtime: &mut dyn DataflowRuntime, algorithm: DataflowAlgorithm) -> bool {
     if algorithm.owner_node != u32::MAX && !runtime.node_exists(algorithm.owner_node) {
         return false;
     }
     if !register_algorithm_lifecycle(runtime, &algorithm) {
         return false;
     }
-    runtime.algorithms.algorithms.retain(|existing| {
-        existing.owner_node != algorithm.owner_node || existing.sort_key != algorithm.sort_key
-    });
-    runtime.algorithms.algorithms.push(algorithm);
-    runtime.scheduler.mark_dirty();
+    runtime
+        .runtime_algorithms_mut()
+        .algorithms
+        .retain(|existing| {
+            existing.owner_node != algorithm.owner_node || existing.sort_key != algorithm.sort_key
+        });
+    runtime.runtime_algorithms_mut().algorithms.push(algorithm);
+    runtime.mark_scheduler_dirty();
     true
 }
 
 fn register_algorithm_lifecycle(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut dyn DataflowRuntime,
     algorithm: &DataflowAlgorithm,
 ) -> bool {
     let lifecycle = &algorithm.lifecycle;
@@ -198,7 +200,7 @@ fn register_algorithm_lifecycle(
 }
 
 pub(super) fn register_native_scalar_source(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut dyn DataflowRuntime,
     node: u32,
     route_id: u32,
     context: usize,
@@ -208,7 +210,7 @@ pub(super) fn register_native_scalar_source(
         return false;
     }
     if runtime
-        .algorithms
+        .runtime_algorithms()
         .native_scalar_sources
         .iter()
         .any(|source| {
@@ -218,7 +220,7 @@ pub(super) fn register_native_scalar_source(
         return true;
     }
     runtime
-        .algorithms
+        .runtime_algorithms_mut()
         .native_scalar_sources
         .push(NativeScalarSource {
             node,
@@ -230,7 +232,7 @@ pub(super) fn register_native_scalar_source(
 }
 
 pub(super) fn register_native_scalar_input(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut dyn DataflowRuntime,
     node: u32,
     route_id: u32,
     context: usize,
@@ -239,26 +241,34 @@ pub(super) fn register_native_scalar_input(
     if !runtime.node_exists(node) {
         return false;
     }
-    if runtime.algorithms.native_scalar_inputs.iter().any(|input| {
-        input.node == node && input.route_id == route_id && input.context == context
-    }) {
+    if runtime
+        .runtime_algorithms()
+        .native_scalar_inputs
+        .iter()
+        .any(|input| input.node == node && input.route_id == route_id && input.context == context)
+    {
         return true;
     }
-    runtime.algorithms.native_scalar_inputs.push(NativeScalarInput {
-        node,
-        route_id,
-        context,
-        receive,
-    });
+    runtime
+        .runtime_algorithms_mut()
+        .native_scalar_inputs
+        .push(NativeScalarInput {
+            node,
+            route_id,
+            context,
+            receive,
+        });
     true
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::dataflow::{
         DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdge,
+        DataflowRuntime,
     };
+    use super::super::runtime::{NoBackend, RigRuntime};
+    use super::*;
 
     fn runtime_reset() {}
 
@@ -279,19 +289,13 @@ mod tests {
 
     #[test]
     fn lifecycle_registration_deduplicates_owned_callbacks() {
-        let mut runtime = ClusterRuntime::default();
-        runtime
-            .nodes
-            .push(super::super::node::ClusterNode::external(run_node, reset_node, true));
-        runtime.scheduler.mark_dirty();
+        let mut runtime = RigRuntime::<NoBackend>::default();
+        runtime.add_node(run_node, reset_node, true);
         let node = 0;
         let algorithm = DataflowAlgorithm::source(
             node,
             (0, 0, 0),
-            vec![DataflowEdge::<ScalarEvent>::new(
-                node,
-                DataflowChannel::default(),
-            ).key()],
+            vec![DataflowEdge::<ScalarEvent>::new(node, DataflowChannel::default()).key()],
             std::sync::Arc::new(TestExecutor),
         )
         .with_runtime_reset(runtime_reset)
@@ -300,16 +304,27 @@ mod tests {
 
         assert!(register_algorithm(&mut runtime, algorithm.clone()));
         assert!(register_algorithm(&mut runtime, algorithm));
-        assert_eq!(runtime.algorithms.runtime_resets.len(), 1);
-        assert_eq!(runtime.algorithms.native_scalar_sources.len(), 1);
-        assert_eq!(runtime.algorithms.native_scalar_inputs.len(), 1);
-        assert_eq!(runtime.algorithms.take_native_scalar_events(node, 4, 7)[0].timestamp_ns, 7);
-        assert!(runtime.algorithms.native_scalar_input(node, 5).is_some());
+        assert_eq!(runtime.runtime_algorithms().runtime_resets.len(), 1);
+        assert_eq!(runtime.runtime_algorithms().native_scalar_sources.len(), 1);
+        assert_eq!(runtime.runtime_algorithms().native_scalar_inputs.len(), 1);
+        assert_eq!(
+            runtime
+                .runtime_algorithms_mut()
+                .take_native_scalar_events(node, 4, 7)[0]
+                .timestamp_ns,
+            7
+        );
+        assert!(
+            runtime
+                .runtime_algorithms()
+                .native_scalar_input(node, 5)
+                .is_some()
+        );
     }
 
     #[test]
     fn replacement_keeps_one_algorithm_for_each_sort_key() {
-        let mut runtime = ClusterRuntime::default();
+        let mut runtime = RigRuntime::<NoBackend>::default();
         let first = DataflowAlgorithm::source(
             u32::MAX,
             (1, 2, 3),
@@ -327,7 +342,9 @@ mod tests {
         assert!(register_algorithm(&mut runtime, first));
         assert!(replace_algorithm(&mut runtime, second));
         let mut specs = Vec::new();
-        runtime.algorithms.append_algorithm_specs(&mut specs);
+        runtime
+            .runtime_algorithms()
+            .append_algorithm_specs(&mut specs);
         assert_eq!(specs.len(), 1);
         assert_eq!(
             specs[0].schedule,
@@ -341,7 +358,7 @@ mod tests {
     struct TestExecutor;
 
     impl DataflowAlgorithmExecutor for TestExecutor {
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             true
         }
     }

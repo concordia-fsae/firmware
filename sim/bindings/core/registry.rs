@@ -6,9 +6,7 @@ pub(super) use super::can::{
 pub(super) use super::can::{CanRouteResult, ClusterCanRoute};
 use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey, DataflowWait};
 use super::interfaces::{InterfaceCaller, InterfaceDataflow};
-use super::scalar::{ScalarEndpoint, ScalarInterface, ScalarRouteResult};
 pub(super) use super::scalar::ScalarEvent;
-pub(super) use super::scalar::{ClusterScalarRoute, ClusterScalarSink};
 use super::spi::SpiEndpoint;
 use super::spi::SpiInterface;
 pub(super) use super::spi::SpiTransaction;
@@ -21,7 +19,6 @@ pub(super) enum InterfaceRoute {
     Can(ClusterCanRoute),
     Timer(ClusterTimerRoute),
     Spi(ClusterSpiRoute),
-    Scalar(ClusterScalarRoute),
 }
 
 impl InterfaceRoute {
@@ -33,7 +30,6 @@ impl InterfaceRoute {
                 (route.sink_node != u32::MAX).then_some(route.sink_node),
             ),
             Self::Spi(route) => (route.source_node, Some(route.sink_node)),
-            Self::Scalar(route) => (route.source_node, Some(route.sink_node)),
         }
     }
 }
@@ -49,7 +45,6 @@ pub(super) struct RuntimeInterfaces {
     pub(super) can: CanInterface,
     pub(super) spi: SpiInterface,
     pub(super) timer: TimerInterface,
-    pub(super) scalar: ScalarInterface,
 }
 
 impl RuntimeInterface for RuntimeInterfaces {
@@ -57,7 +52,6 @@ impl RuntimeInterface for RuntimeInterfaces {
         self.can.reset();
         self.spi.reset();
         self.timer.reset();
-        self.scalar.reset();
     }
 
     fn register_route(&mut self, route: InterfaceRoute) {
@@ -65,19 +59,6 @@ impl RuntimeInterface for RuntimeInterfaces {
             InterfaceRoute::Can(route) => self.can.upsert_fanout(route),
             InterfaceRoute::Timer(route) => self.timer.upsert_fanout(route),
             InterfaceRoute::Spi(route) => self.spi.upsert_fanout(route),
-            InterfaceRoute::Scalar(route) => {
-                if matches!(route.sink, ClusterScalarSink::State { .. })
-                    && !self.scalar.route_exists(
-                        route.source_node,
-                        route.route_id,
-                        route.sink_node,
-                        route.sink,
-                    )
-                {
-                    self.scalar.state_route_count += 1;
-                }
-                self.scalar.upsert_fanout(route);
-            }
         }
     }
 
@@ -85,33 +66,10 @@ impl RuntimeInterface for RuntimeInterfaces {
         self.can.append_algorithm_specs(specs);
         self.timer.append_algorithm_specs(specs);
         self.spi.append_algorithm_specs(specs);
-        self.scalar.append_algorithm_specs(specs);
     }
 }
 
 impl RuntimeInterfaces {
-    pub(super) fn set_scalar_state(&mut self, node: u32, route_id: u32, value: f32) {
-        self.scalar.states.insert((node, route_id), value);
-    }
-
-    pub(super) fn scalar_state(&self, node: u32, route_id: u32) -> f32 {
-        *self.scalar.states.get(&(node, route_id)).unwrap_or(&0.0)
-    }
-
-    pub(super) fn scalar_fanout_pending(
-        &self, group_index: usize, source_online: impl FnMut(u32) -> bool,
-        skip_native_source: impl FnMut(u32, u32) -> bool,
-    ) -> bool {
-        self.scalar.fanout_pending(group_index, source_online, skip_native_source)
-    }
-
-    pub(super) fn scalar_route_fanout(
-        &mut self, group_index: usize, source_online: impl FnMut(u32) -> bool,
-        skip_native_source: impl FnMut(u32, u32) -> bool,
-    ) -> Option<ScalarRouteResult> {
-        self.scalar.route_fanout(group_index, source_online, skip_native_source)
-    }
-
     pub(super) fn can_native_source_pending(
         &self, source_online: impl FnMut(u32) -> bool,
     ) -> bool {
@@ -183,28 +141,6 @@ impl RuntimeInterfaces {
         self.timer.update_scaled_scalar_scale(node, route_id, value);
     }
 
-    pub(super) fn scalar_route_exists(
-        &self, source_node: u32, route_id: u32, sink_node: u32, sink: ClusterScalarSink,
-    ) -> bool {
-        self.scalar.route_exists(source_node, route_id, sink_node, sink)
-    }
-
-    pub(super) fn add_scalar_state_input(&mut self, node: u32, route_id: u32) {
-        self.scalar.add_state_input(node, route_id);
-    }
-
-    pub(super) fn scalar_state_input_values(&self, node: u32) -> Vec<(u32, f32)> {
-        self.scalar.state_input_values(node)
-    }
-
-    pub(super) fn record_scalar(&mut self, node: u32, route_id: u32, event: ScalarEvent) {
-        self.scalar.record(node, route_id, event);
-    }
-
-    pub(super) fn scalar_latest(&self, source_node: u32, route_id: u32) -> Option<ScalarEvent> {
-        self.scalar.latest(source_node, route_id)
-    }
-
     pub(super) fn reset_node_interfaces(&mut self, node: u32) {
         self.timer.reset_node_models(node);
     }
@@ -241,13 +177,6 @@ impl RuntimeInterfaces {
         super::can::decode_signal(bus, packet, signal_name)
     }
 
-    pub(super) fn scalar_edge(node: u32, route_id: u32) -> DataflowEdgeKey {
-        <ScalarInterface as InterfaceDataflow<ScalarEvent>>::edge(
-            node,
-            ScalarEndpoint::new(route_id),
-        )
-    }
-
     pub(super) fn timer_edge(
         node: u32, interface: u16, port: i32, channel: i32,
     ) -> DataflowEdgeKey {
@@ -268,11 +197,4 @@ impl RuntimeInterfaces {
         <CanInterface as InterfaceDataflow<CanEvent>>::edge(node, CanEndpoint::new(bus))
     }
 
-    pub(super) fn scalar_transform_algorithm(
-        owner_node: u32, sort_index: u32, input_route_id: u32, output_route_id: u32,
-    ) -> DataflowAlgorithm {
-        super::scalar::test_scalar_transform_algorithm(
-            owner_node, sort_index, input_route_id, output_route_id,
-        )
-    }
 }

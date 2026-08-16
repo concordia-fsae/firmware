@@ -2,9 +2,9 @@ use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
 use super::algorithms;
-use super::cluster::{self, ClusterRuntime};
-use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor};
-use super::registry::RuntimeInterfaces;
+use super::cluster::{self, FirmwareBackend};
+use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowRuntime};
+use super::runtime::RigRuntime;
 use super::scalar::{self, ScalarEvent};
 
 static DC_LOADS: LazyLock<Mutex<Vec<DcLoadModel>>> = LazyLock::new(|| Mutex::new(Vec::new()));
@@ -200,11 +200,11 @@ fn load_algorithm(context: usize, load: DcLoadModel, elapsed_ns: u64) -> Dataflo
     let current_route_id = load.current_output_key().1;
     let voltage_input_key = load.voltage_input_key();
     let period_ns = load.scheduler_period_ns();
-    let inputs = vec![RuntimeInterfaces::scalar_edge(
+    let inputs = vec![scalar::edge(
         voltage_input_key.0,
         voltage_input_key.1,
     )];
-    let outputs = vec![RuntimeInterfaces::scalar_edge(node, current_route_id)];
+    let outputs = vec![scalar::edge(node, current_route_id)];
     let executor = Arc::new(DcLoadAlgorithm {
         load_index: context,
     });
@@ -235,7 +235,7 @@ struct DcLoadAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for DcLoadAlgorithm {
-    fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
         DC_LOADS
             .lock()
             .unwrap()
@@ -243,12 +243,16 @@ impl DataflowAlgorithmExecutor for DcLoadAlgorithm {
             .is_some_and(DcLoadModel::has_voltage_update)
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("dc load requires the firmware runtime backend");
         run_dc_load(runtime, self.load_index)
     }
 }
 
-fn run_dc_load(runtime: &mut ClusterRuntime, context: usize) -> bool {
+fn run_dc_load(runtime: &mut RigRuntime<FirmwareBackend>, context: usize) -> bool {
     let mut loads = DC_LOADS.lock().unwrap();
     let Some(load) = loads.get_mut(context) else {
         return false;
@@ -266,7 +270,7 @@ fn run_dc_load(runtime: &mut ClusterRuntime, context: usize) -> bool {
     false
 }
 
-fn register_load(runtime: &mut ClusterRuntime, load: DcLoadModel) -> bool {
+fn register_load(runtime: &mut RigRuntime<FirmwareBackend>, load: DcLoadModel) -> bool {
     if !runtime.node_exists(load.node()) {
         return false;
     }
@@ -287,9 +291,10 @@ fn register_load(runtime: &mut ClusterRuntime, load: DcLoadModel) -> bool {
         }
         loads[index] = load;
         drop(loads);
+        let elapsed_ns = runtime.elapsed_ns;
         let registered = algorithms::replace_algorithm(
             runtime,
-            load_algorithm(index, load, runtime.elapsed_ns),
+            load_algorithm(index, load, elapsed_ns),
         );
         return registered;
     }
@@ -298,15 +303,16 @@ fn register_load(runtime: &mut ClusterRuntime, load: DcLoadModel) -> bool {
     let context = loads.len() - 1;
     drop(loads);
 
+    let elapsed_ns = runtime.elapsed_ns;
     let registered = algorithms::register_algorithm(
         runtime,
-        load_algorithm(context, load, runtime.elapsed_ns),
+        load_algorithm(context, load, elapsed_ns),
     );
     registered
 }
 
 pub(super) fn add_dc_load(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut RigRuntime<FirmwareBackend>,
     node: u32,
     voltage_route_id: u32,
     current_route_id: u32,

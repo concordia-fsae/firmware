@@ -10,7 +10,7 @@ pub mod datapath {
     include!(env!("RIG_RUNTIME_RUST_DATAPATH_RS"));
 }
 
-mod dataflow {
+pub mod dataflow {
     include!(env!("RIG_RUNTIME_RUST_DATAFLOW_RS"));
 }
 
@@ -20,6 +20,10 @@ pub mod model {
 
 pub mod rig {
     include!(env!("RIG_RUNTIME_RUST_RIG_RS"));
+}
+
+pub mod runtime {
+    include!(env!("RIG_RUNTIME_RUST_RUNTIME_RS"));
 }
 
 pub mod model_abi {

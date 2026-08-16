@@ -13,6 +13,7 @@ RIG_RUST_RUNTIME_ENV = {
     "RIG_RUNTIME_RUST_NODE_RS": "//tools/rig:rust/node.rs",
     "RIG_RUNTIME_RUST_NODE_ABI_RS": "//tools/rig:rust/node_abi.rs",
     "RIG_RUNTIME_RUST_RIG_RS": "//tools/rig:rust/rig.rs",
+    "RIG_RUNTIME_RUST_RUNTIME_RS": "//tools/rig:rust/runtime.rs",
     "RIG_RUNTIME_RUST_SCHEDULER_RS": "//tools/rig:rust/scheduler.rs",
     "RIG_RUNTIME_RUST_SCALAR_RS": "//tools/rig:rust/scalar.rs",
 }

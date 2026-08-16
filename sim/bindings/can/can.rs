@@ -4,12 +4,15 @@ use std::os::raw::c_char;
 use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
-use super::cluster::{ClusterCanRecvEventsFn, ClusterCanSendManyFn, ClusterCanTxCountFn, ClusterRuntime};
+use super::cluster::{
+    ClusterCanRecvEventsFn, ClusterCanSendManyFn, ClusterCanTxCountFn, FirmwareBackend,
+};
 use super::dataflow::{
     DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdge,
-    DataflowEdgeKey, DataflowEvent, DataflowWait,
+    DataflowEdgeKey, DataflowEvent, DataflowRuntime, DataflowWait,
 };
 use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};
+use super::runtime::RigRuntime;
 use super::scheduler;
 
 unsafe extern "C" {
@@ -656,7 +659,11 @@ struct CanFanoutAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for CanFanoutAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("CAN fanout requires the firmware runtime backend");
         runtime
             .interfaces
             .can
@@ -665,7 +672,11 @@ impl DataflowAlgorithmExecutor for CanFanoutAlgorithm {
             })
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("CAN fanout requires the firmware runtime backend");
         run_can_fanout(runtime, self.group_index)
     }
 }
@@ -675,7 +686,11 @@ struct CanSignalWakeAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for CanSignalWakeAlgorithm {
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("CAN signal wake requires the firmware runtime backend");
         let wait = runtime
             .interfaces
             .can
@@ -687,7 +702,7 @@ impl DataflowAlgorithmExecutor for CanSignalWakeAlgorithm {
     }
 }
 
-fn run_can_fanout(runtime: &mut ClusterRuntime, group_index: usize) -> bool {
+fn run_can_fanout(runtime: &mut RigRuntime<FirmwareBackend>, group_index: usize) -> bool {
     let online_nodes = runtime.online_nodes();
     let Some(result) = runtime
         .interfaces
@@ -708,13 +723,21 @@ fn run_can_fanout(runtime: &mut ClusterRuntime, group_index: usize) -> bool {
 struct NativeCanSourceAlgorithm;
 
 impl DataflowAlgorithmExecutor for NativeCanSourceAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("native CAN source requires the firmware runtime backend");
         runtime
             .interfaces
             .can_native_source_pending(|source_node| runtime.node_online(source_node))
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("native CAN source requires the firmware runtime backend");
         let mut routed = false;
         let mut input_pending_nodes = Vec::new();
         let mut ready_edges = Vec::new();

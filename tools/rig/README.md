@@ -1,6 +1,6 @@
 # Rig
 
-Rig is the reusable simulation library used by firmware models.
+Rig is a reusable simulation library for models, components, and controllers.
 
 The project has one ownership root and two implementation languages:
 
@@ -16,27 +16,26 @@ The project has one ownership root and two implementation languages:
   events, dataflow compilation, scheduler execution, waits, and elapsed time.
   A repository binding subclasses `RustClusterRuntime` only to add its own
   peripheral ABI; it does not duplicate these generic operations.
-- `rust/lib.rs` is the standalone Rust core target. The remaining Rust
-  modules (`algorithms.rs`, `dataflow.rs`, `datapath.rs`, `interfaces.rs`,
-  `model.rs`, `model_abi.rs`, `node.rs`, `node_abi.rs`, `rig.rs`, `scalar.rs`,
-  and `scheduler.rs`) are Rig-owned backend-composition modules. They depend
-  only on contracts supplied by a consuming backend and are linked by that
-  backend's Rust assembly target.
-- `rust::Rig<T>` is the reusable Rust ownership boundary. `T` implements
+- `rust/lib.rs` is the standalone Rust crate. `rust::RigRuntime<B>` owns the
+  generic nodes, dataflow graph, scheduler, waits, scalar interface, and
+  simulation clock. `B: RigBackend` is the only extension point for a
+  consuming backend to contribute additional dataflow algorithms.
+- `rust::Rig<T>` is the reusable element ownership boundary. `T` implements
   `rust::RigElement`; the container owns element identity, online gating,
   reset, and elapsed time.
 
-Firmware-specific adapters, generated bindings, and model implementations stay
-under `sim/bindings` and `sim/models`. They consume Rig; Rig does not import
-them. `sim/bindings/core/firmware_cluster.py` specializes `ClusterRig` with
-`FirmwareRuntime`, which owns only the firmware CAN, SPI, timer, and composite
-peripheral ABI. The generic model lifecycle ABI and opaque datapath descriptor
-contract live in `model_abi.rs` and `node_abi.rs`; firmware bindings only assign
-their own symbols and interface-ID meaning. CAN, SPI, timer, power, and other
-peripheral interfaces are backend bindings, not Rig concepts.
+A consuming application supplies its own adapters, generated bindings, and model
+implementations. Those adapters consume Rig; Rig does not import them. A backend
+may specialize `RustClusterRuntime` to own its peripheral ABI while retaining
+Rig's generic node, dataflow, scheduler, wait, wake, scalar, and lifecycle
+contracts. The model lifecycle ABI and opaque datapath descriptor contract live
+in `model_abi.rs` and `node_abi.rs`; a backend only assigns its own symbols and
+interface-ID meaning. CAN, SPI, timer, power, and other peripheral interfaces
+are backend bindings, not Rig concepts.
 
 Build and test the standalone Rust core with:
 
 ```text
 buckle test //tools/rig:core_unit
+cargo test --manifest-path tools/rig/Cargo.toml
 ```

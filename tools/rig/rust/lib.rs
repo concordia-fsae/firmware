@@ -1,25 +1,44 @@
 //! Standalone Rig core. Firmware bindings and model implementations are
 //! composed by the consuming simulation backend, never by this crate.
 
-pub mod datapath {
-    include!(env!("RIG_CORE_RUST_DATAPATH_RS"));
-}
+pub mod algorithms;
+pub mod dataflow;
+pub mod datapath;
+pub mod interfaces;
+pub mod node;
+pub mod runtime;
+pub mod scalar;
+pub mod scheduler;
 
-pub mod model {
-    include!(env!("RIG_CORE_RUST_MODEL_RS"));
-}
+pub mod model;
 
 pub mod model_abi;
 pub mod node_abi;
 
 pub mod rig;
 
+pub use dataflow::{
+    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel, DataflowEdge, DataflowEdgeKey,
+    DataflowEvent, DataflowRuntime, DataflowSchedule, DataflowWait, ScalarEvent,
+};
+pub use datapath::{DataPath, DataPathEvent};
+pub use interfaces::{
+    InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation,
+};
+pub use model::{ModelRuntime, NodeModel, NodeTarget};
+pub use node::{RigNode, RigNodeResetFn, RigNodeRunForFn, RigNodeScheduler, RigPythonScheduledFn};
 pub use rig::{Rig, RigElement};
+pub use runtime::{NoBackend, RigBackend, RigRuntime};
+pub use scalar::{
+    ScalarCountFn, ScalarEndpoint, ScalarInterface, ScalarRecvManyFn, ScalarRoute,
+    ScalarSendManyFn, ScalarSink, ScalarSinkSetFn,
+};
+pub use scheduler::{RigScheduler, SchedulerCallbackContext};
 
 #[cfg(test)]
 mod tests {
-    use super::model::{ModelRuntime, NodeModel, NodeTarget};
     use super::datapath::{DataPath, DataPathEvent};
+    use super::model::{ModelRuntime, NodeModel, NodeTarget};
 
     #[derive(Clone, Copy, Debug, PartialEq)]
     struct Event(u8);

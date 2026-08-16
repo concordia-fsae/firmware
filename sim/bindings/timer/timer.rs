@@ -2,15 +2,16 @@ use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
 use super::cluster::{
-    ClusterRuntime, ClusterTimerCountFn, ClusterTimerRecvManyFn, ClusterTimerSendManyFn,
+    ClusterTimerCountFn, ClusterTimerRecvManyFn, ClusterTimerSendManyFn, FirmwareBackend,
 };
 use super::scalar::ScalarEvent;
 use super::dataflow::{
     DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel,
-    DataflowEvent,
+    DataflowEvent, DataflowRuntime,
 };
 use super::datapath::{DataPath, DataPathEvent};
 use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};
+use super::runtime::RigRuntime;
 use super::registry::RuntimeInterfaces;
 use super::scalar;
 use super::scheduler;
@@ -225,7 +226,7 @@ impl InterfaceCaller for TimerInterface {
                 node, interface, port, channel,
             )];
             if source.scale_route_id != 0 {
-                inputs.push(RuntimeInterfaces::scalar_edge(
+                inputs.push(scalar::edge(
                     source.node,
                     source.scale_route_id,
                 ));
@@ -234,7 +235,7 @@ impl InterfaceCaller for TimerInterface {
                 source.node,
                 (source.node, 6, index),
                 inputs,
-                vec![RuntimeInterfaces::scalar_edge(source.node, source.route_id)],
+                vec![scalar::edge(source.node, source.route_id)],
                 Arc::new(TimerScaledScalarAlgorithm {
                     source_index: index,
                 }),
@@ -528,7 +529,11 @@ struct TimerFanoutAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for TimerFanoutAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("timer fanout requires the firmware runtime backend");
         runtime
             .interfaces
             .timer_fanout_pending(self.group_index, |source_node| {
@@ -536,12 +541,16 @@ impl DataflowAlgorithmExecutor for TimerFanoutAlgorithm {
             })
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("timer fanout requires the firmware runtime backend");
         run_timer_fanout(runtime, self.group_index)
     }
 }
 
-fn run_timer_fanout(runtime: &mut ClusterRuntime, group_index: usize) -> bool {
+fn run_timer_fanout(runtime: &mut RigRuntime<FirmwareBackend>, group_index: usize) -> bool {
     let online_nodes = runtime.online_nodes();
     let Some(result) = runtime
         .interfaces
@@ -561,15 +570,20 @@ struct TimerScaledScalarAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for TimerScaledScalarAlgorithm {
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("scaled timer scalar requires the firmware runtime backend");
         run_timer_scaled_scalar(runtime, self.source_index)
     }
 }
 
-fn run_timer_scaled_scalar(runtime: &mut ClusterRuntime, source_index: usize) -> bool {
+fn run_timer_scaled_scalar(runtime: &mut RigRuntime<FirmwareBackend>, source_index: usize) -> bool {
+    let elapsed_ns = runtime.elapsed_ns;
     let Some((source_node, route_id, event)) = runtime
         .interfaces
-        .take_scaled_scalar_event(source_index, runtime.elapsed_ns)
+        .take_scaled_scalar_event(source_index, elapsed_ns)
     else {
         return false;
     };
@@ -578,7 +592,7 @@ fn run_timer_scaled_scalar(runtime: &mut ClusterRuntime, source_index: usize) ->
 }
 
 pub(super) fn add_scaled_scalar_source(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut RigRuntime<FirmwareBackend>,
     node: u32,
     route_id: u32,
     timer_interface: u16,
@@ -594,7 +608,7 @@ pub(super) fn add_scaled_scalar_source(
     let scale_value = if scale_route_id == 0 {
         1.0
     } else {
-        runtime.interfaces.scalar_state(node, scale_route_id)
+        runtime.scalar_interface().state_value(node, scale_route_id)
     };
     runtime.interfaces.add_scaled_scalar_source(
         node,

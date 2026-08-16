@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::mem;
 
-use super::cluster::ClusterRuntime;
-use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey, DataflowGraph, DataflowWait};
-use super::registry::RuntimeInterface;
+use super::dataflow::{
+    DataflowAlgorithm, DataflowEdgeKey, DataflowGraph, DataflowRuntime, DataflowWait,
+};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -15,12 +15,13 @@ pub struct SchedulerCallbackContext {
 #[cfg(test)]
 mod tests {
     use std::sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     };
 
-    use super::*;
     use super::super::dataflow::DataflowAlgorithmExecutor;
+    use super::super::runtime::{NoBackend, RigRuntime};
+    use super::*;
 
     struct TriggerExecutor {
         pending: Arc<AtomicBool>,
@@ -31,7 +32,7 @@ mod tests {
             true
         }
 
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             self.pending.store(true, Ordering::Relaxed);
             false
         }
@@ -43,11 +44,11 @@ mod tests {
     }
 
     impl DataflowAlgorithmExecutor for PendingExecutor {
-        fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+        fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
             self.pending.load(Ordering::Relaxed)
         }
 
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             self.runs.fetch_add(1, Ordering::Relaxed);
             self.pending.store(false, Ordering::Relaxed);
             false
@@ -60,7 +61,7 @@ mod tests {
     }
 
     impl DataflowAlgorithmExecutor for RearmingPythonExecutor {
-        fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+        fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
             self.pending.load(Ordering::Relaxed)
         }
 
@@ -68,7 +69,7 @@ mod tests {
             true
         }
 
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             self.runs.fetch_add(1, Ordering::Relaxed);
             // A buggy or re-entrant callback may leave its pending bit set.
             // The scheduler must still honor its once-per-generation guard.
@@ -84,7 +85,7 @@ mod tests {
 
     #[test]
     fn dataflow_wait_is_completed_and_cancelled_by_the_scheduler() {
-        let mut runtime = ClusterRuntime::default();
+        let mut runtime = RigRuntime::<NoBackend>::default();
         let wait = runtime.begin_dataflow_wait();
 
         assert!(!runtime.dataflow_wait_matched(wait));
@@ -97,18 +98,18 @@ mod tests {
 
     #[test]
     fn empty_runtime_advances_by_the_requested_bounded_step() {
-        let mut runtime = ClusterRuntime::default();
+        let mut runtime = RigRuntime::<NoBackend>::default();
 
         assert_eq!(run_next_step(&mut runtime, 10, 3), 3);
-        assert_eq!(runtime.elapsed_ns, 3);
+        assert_eq!(runtime.elapsed_ns(), 3);
         assert_eq!(run_next_step(&mut runtime, 2, 5), 2);
-        assert_eq!(runtime.elapsed_ns, 5);
+        assert_eq!(runtime.elapsed_ns(), 5);
         assert_eq!(run_next_step(&mut runtime, 0, 5), 0);
     }
 
     #[test]
     fn pending_algorithm_is_polled_after_an_algorithm_runs_in_the_same_step() {
-        let mut runtime = ClusterRuntime::default();
+        let mut runtime = RigRuntime::<NoBackend>::default();
         runtime.add_rust_runtime_model_node(true);
 
         let pending = Arc::new(AtomicBool::new(false));
@@ -145,7 +146,7 @@ mod tests {
 
     #[test]
     fn rearming_python_algorithm_does_not_spin_scheduler() {
-        let mut runtime = ClusterRuntime::default();
+        let mut runtime = RigRuntime::<NoBackend>::default();
         runtime.add_rust_runtime_model_node(true);
 
         let pending = Arc::new(AtomicBool::new(true));
@@ -169,7 +170,7 @@ mod tests {
 }
 
 #[derive(Default)]
-pub(super) struct ClusterScheduler {
+pub struct RigScheduler {
     graph: DataflowGraph,
     deferred_ready_edges: Vec<DataflowEdgeKey>,
     deferred_input_pending_nodes: Vec<u32>,
@@ -179,8 +180,8 @@ pub(super) struct ClusterScheduler {
     waits: HashMap<DataflowWait, bool>,
 }
 
-impl ClusterScheduler {
-    pub(super) fn reset(&mut self) {
+impl RigScheduler {
+    pub fn reset(&mut self) {
         self.graph.reset();
         self.deferred_ready_edges.clear();
         self.deferred_input_pending_nodes.clear();
@@ -190,11 +191,11 @@ impl ClusterScheduler {
         self.waits.clear();
     }
 
-    pub(super) fn mark_dirty(&mut self) {
+    pub fn mark_dirty(&mut self) {
         self.graph.dirty = true;
     }
 
-    pub(super) fn add_initial_ready_edge(&mut self, key: DataflowEdgeKey) {
+    pub fn add_initial_ready_edge(&mut self, key: DataflowEdgeKey) {
         self.graph.ready_edges.insert(key);
     }
 
@@ -205,7 +206,7 @@ impl ClusterScheduler {
         wait
     }
 
-    pub(super) fn complete_dataflow_wait(&mut self, wait: DataflowWait) {
+    pub fn complete_dataflow_wait(&mut self, wait: DataflowWait) {
         if let Some(matched) = self.waits.get_mut(&wait) {
             *matched = true;
         }
@@ -231,38 +232,36 @@ impl ClusterScheduler {
     }
 }
 
-pub(super) fn complete_dataflow_wait(runtime: &mut ClusterRuntime, wait: DataflowWait) {
-    runtime.scheduler.complete_dataflow_wait(wait);
+pub fn complete_dataflow_wait(runtime: &mut dyn DataflowRuntime, wait: DataflowWait) {
+    runtime.scheduler_mut().complete_dataflow_wait(wait);
 }
 
-pub(super) fn compile_dataflow_graph(runtime: &mut ClusterRuntime) -> bool {
+pub fn compile_dataflow_graph(runtime: &mut dyn DataflowRuntime) -> bool {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         rebuild_dataflow_graph(runtime);
-        runtime.scheduler.graph.dirty = false;
+        runtime.scheduler_mut().graph.dirty = false;
     }))
     .is_ok()
 }
 
-pub(super) fn add_dataflow_algorithm(
-    runtime: &mut ClusterRuntime,
+pub fn add_dataflow_algorithm(
+    runtime: &mut dyn DataflowRuntime,
     algorithm: DataflowAlgorithm,
 ) -> bool {
-    if algorithm.owner_node != u32::MAX
-        && runtime.nodes.get(algorithm.owner_node as usize).is_none()
-    {
+    if algorithm.owner_node != u32::MAX && !runtime.node_exists(algorithm.owner_node) {
         return false;
     }
     runtime
-        .scheduler
+        .scheduler_mut()
         .graph
         .configured_algorithms
         .push(algorithm);
-    runtime.scheduler.mark_dirty();
+    runtime.scheduler_mut().mark_dirty();
     true
 }
 
 pub(super) fn run_next_step(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut dyn DataflowRuntime,
     remaining_ns: u64,
     max_step_ns: u64,
 ) -> u64 {
@@ -277,98 +276,83 @@ pub(super) fn run_next_step(
         return 0;
     }
 
-    for node in runtime
-        .nodes
-        .iter_mut()
-        .filter(|node| node.online && node.needs_run_step())
-    {
-        node.run_for(delta_ns);
-    }
-
-    runtime.elapsed_ns = runtime.elapsed_ns.saturating_add(delta_ns);
+    runtime.run_external_nodes(delta_ns);
+    runtime.advance_time(delta_ns);
     run_dataflow_graph(runtime);
     delta_ns
 }
 
-pub(super) fn mark_dataflow_edge_ready(runtime: &mut ClusterRuntime, key: DataflowEdgeKey) {
+pub(super) fn mark_dataflow_edge_ready(runtime: &mut dyn DataflowRuntime, key: DataflowEdgeKey) {
     ensure_dataflow_graph(runtime);
-    if runtime.scheduler.graph.algorithms.is_empty() {
-        runtime.scheduler.deferred_ready_edges.push(key);
+    if runtime.scheduler().graph.algorithms.is_empty() {
+        runtime.scheduler_mut().deferred_ready_edges.push(key);
         return;
     }
-    runtime.scheduler.graph.mark_edge_ready(key);
+    runtime.scheduler_mut().graph.mark_edge_ready(key);
 }
 
-pub(super) fn mark_input_pending(runtime: &mut ClusterRuntime, node: u32) {
-    let Some(cluster_node) = runtime.nodes.get_mut(node as usize) else {
-        return;
-    };
-    cluster_node.mark_input_pending();
-    if runtime.scheduler.graph.algorithms.is_empty() {
-        runtime.scheduler.deferred_input_pending_nodes.push(node);
+pub(super) fn mark_input_pending(runtime: &mut dyn DataflowRuntime, node: u32) {
+    if !runtime.node_exists(node) {
         return;
     }
-    runtime.scheduler.graph.mark_owner_input_pending(node);
+    runtime.mark_node_input_pending(node);
+    if runtime.scheduler().graph.algorithms.is_empty() {
+        runtime
+            .scheduler_mut()
+            .deferred_input_pending_nodes
+            .push(node);
+        return;
+    }
+    runtime.scheduler_mut().graph.mark_owner_input_pending(node);
 }
 
-fn ensure_dataflow_graph(runtime: &mut ClusterRuntime) {
-    if !runtime.scheduler.graph.dirty {
+fn ensure_dataflow_graph(runtime: &mut dyn DataflowRuntime) {
+    if !runtime.scheduler().graph.dirty {
         return;
     }
     rebuild_dataflow_graph(runtime);
-    runtime.scheduler.graph.dirty = false;
+    runtime.scheduler_mut().graph.dirty = false;
 }
 
-fn rebuild_algorithm_specs(runtime: &mut ClusterRuntime) {
-    runtime.scheduler.graph.algorithm_specs.clear();
-    for (index, node) in runtime.nodes.iter().enumerate() {
+fn rebuild_algorithm_specs(runtime: &mut dyn DataflowRuntime) {
+    let mut specs = Vec::new();
+    for index in 0..runtime.node_count() {
         let node_index = index as u32;
-        if let Some(period_ns) = node.python_period_ns() {
-            runtime
-                .scheduler
-                .graph
-                .algorithm_specs
-                .push(DataflowAlgorithm::python_periodic_node(
-                    node_index,
-                    (node_index, 0, 0),
-                    period_ns,
-                    runtime.elapsed_ns.saturating_add(period_ns),
-                ));
+        if let Some(period_ns) = runtime.python_period_ns(node_index) {
+            specs.push(DataflowAlgorithm::python_periodic_node(
+                node_index,
+                (node_index, 0, 0),
+                period_ns,
+                runtime.elapsed_ns().saturating_add(period_ns),
+            ));
         }
-        if node.has_python_input_callback() {
-            runtime
-                .scheduler
-                .graph
-                .algorithm_specs
-                .push(DataflowAlgorithm::python_input_node(
-                    node_index,
-                    (node_index, 0, 1),
-                ));
+        if runtime.has_python_input_callback(node_index) {
+            specs.push(DataflowAlgorithm::python_input_node(
+                node_index,
+                (node_index, 0, 1),
+            ));
         }
     }
+    runtime.append_backend_algorithm_specs(&mut specs);
     runtime
-        .interfaces
-        .append_algorithm_specs(&mut runtime.scheduler.graph.algorithm_specs);
-    runtime
-        .algorithms
-        .append_algorithm_specs(&mut runtime.scheduler.graph.algorithm_specs);
-    let configured = runtime.scheduler.graph.configured_algorithms.clone();
-    runtime.scheduler.graph.algorithm_specs.extend(configured);
+        .runtime_algorithms()
+        .append_algorithm_specs(&mut specs);
+    specs.extend(runtime.scheduler().graph.configured_algorithms.clone());
+    runtime.scheduler_mut().graph.algorithm_specs = specs;
 }
 
-fn rebuild_dataflow_graph(runtime: &mut ClusterRuntime) {
+fn rebuild_dataflow_graph(runtime: &mut dyn DataflowRuntime) {
     rebuild_algorithm_specs(runtime);
-    let mut graph = mem::take(&mut runtime.scheduler.graph);
-    graph.rebuild(runtime.nodes.len(), runtime);
-    runtime.scheduler.graph = graph;
+    let mut graph = mem::take(&mut runtime.scheduler_mut().graph);
+    graph.rebuild(runtime.node_count(), runtime);
+    runtime.scheduler_mut().graph = graph;
 }
 
-fn run_dataflow_graph(runtime: &mut ClusterRuntime) {
-    let generation = runtime
-        .scheduler
-        .begin_run(runtime.scheduler.graph.algorithms.len());
-    let mut graph = mem::take(&mut runtime.scheduler.graph);
-    let mut ran_algorithms = mem::take(&mut runtime.scheduler.ran_algorithms);
+fn run_dataflow_graph(runtime: &mut dyn DataflowRuntime) {
+    let algorithm_count = runtime.scheduler().graph.algorithms.len();
+    let generation = runtime.scheduler_mut().begin_run(algorithm_count);
+    let mut graph = mem::take(&mut runtime.scheduler_mut().graph);
+    let mut ran_algorithms = mem::take(&mut runtime.scheduler_mut().ran_algorithms);
     graph.run_ready_algorithms(runtime, &mut ran_algorithms, generation);
     let mut propagation_passes = 0usize;
     loop {
@@ -379,8 +363,9 @@ fn run_dataflow_graph(runtime: &mut ClusterRuntime) {
             graph.algorithms.len(),
             graph.queue.len(),
         );
-        let ready_edges = mem::take(&mut runtime.scheduler.deferred_ready_edges);
-        let input_pending_nodes = mem::take(&mut runtime.scheduler.deferred_input_pending_nodes);
+        let ready_edges = mem::take(&mut runtime.scheduler_mut().deferred_ready_edges);
+        let input_pending_nodes =
+            mem::take(&mut runtime.scheduler_mut().deferred_input_pending_nodes);
         for edge in ready_edges {
             graph.mark_edge_ready(edge);
         }
@@ -397,6 +382,6 @@ fn run_dataflow_graph(runtime: &mut ClusterRuntime) {
         }
         graph.run_queued_algorithms(runtime, &mut ran_algorithms, generation);
     }
-    runtime.scheduler.ran_algorithms = ran_algorithms;
-    runtime.scheduler.graph = graph;
+    runtime.scheduler_mut().ran_algorithms = ran_algorithms;
+    runtime.scheduler_mut().graph = graph;
 }

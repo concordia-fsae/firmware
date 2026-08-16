@@ -1,20 +1,66 @@
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use super::cluster::ClusterRuntime;
-use super::scalar::ScalarEvent;
+use super::algorithms::RuntimeAlgorithms;
 
-pub(super) trait DataflowEvent: Copy + Send + Sync + 'static {}
+/// Events carried by a Rig dataflow edge.
+pub trait DataflowEvent: Copy + Send + Sync + 'static {}
 
-pub(super) type RuntimeResetFn = fn();
-pub(super) type NodeResetFn = fn(usize, u64);
-pub(super) type NativeScalarTakeFn = fn(usize, u64) -> Vec<ScalarEvent>;
-pub(super) type NativeScalarReceiveFn = fn(usize, ScalarEvent) -> bool;
+/// The generic event used by scalar dataflow bindings.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct ScalarEvent {
+    pub value: f32,
+    pub timestamp_ns: u64,
+}
+
+impl DataflowEvent for ScalarEvent {}
+
+/// Runtime capabilities required by the generic scheduler.
+///
+/// A backend implements this trait to provide node lifecycle and time
+/// behavior.  It does not expose or name any peripheral, firmware, or model
+/// type, so the same scheduler can run in a standalone Rig process.
+pub trait DataflowRuntime {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn scheduler(&self) -> &super::scheduler::RigScheduler;
+    fn scheduler_mut(&mut self) -> &mut super::scheduler::RigScheduler;
+    fn node_count(&self) -> usize;
+    fn node_exists(&self, node: u32) -> bool;
+    fn node_online(&self, node: u32) -> bool;
+    fn python_node_input_pending(&self, node: u32) -> bool;
+    fn run_python_node_algorithm(&mut self, node: u32);
+    fn mark_node_input_pending(&mut self, node: u32);
+    fn run_external_nodes(&mut self, delta_ns: u64);
+    fn advance_time(&mut self, delta_ns: u64);
+    fn elapsed_ns(&self) -> u64;
+    fn python_period_ns(&self, node: u32) -> Option<u64>;
+    fn has_python_input_callback(&self, node: u32) -> bool;
+    fn append_backend_algorithm_specs(&self, _specs: &mut Vec<DataflowAlgorithm>) {}
+    fn runtime_algorithms(&self) -> &RuntimeAlgorithms;
+    fn runtime_algorithms_mut(&mut self) -> &mut RuntimeAlgorithms;
+    fn mark_scheduler_dirty(&mut self);
+    fn scalar_source_pending(&self, _group_index: usize) -> bool {
+        false
+    }
+    fn run_scalar_fanout(&mut self, _group_index: usize) -> bool {
+        false
+    }
+    fn mark_scalar_edge_ready(&mut self, _node: u32, _route_id: u32) {}
+    fn mark_scalar_input_pending(&mut self, _node: u32) {}
+    fn route_scalar_event(&mut self, _source_node: u32, _route_id: u32, _event: ScalarEvent) {}
+}
+
+pub type RuntimeResetFn = fn();
+pub type NodeResetFn = fn(usize, u64);
+pub type NativeScalarTakeFn = fn(usize, u64) -> Vec<ScalarEvent>;
+pub type NativeScalarReceiveFn = fn(usize, ScalarEvent) -> bool;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum DataflowSchedule {
+pub enum DataflowSchedule {
     Polling,
     Event,
     Periodic { period_ns: u64, next_due_ns: u64 },
@@ -32,7 +78,7 @@ fn periodic_schedule(period_ns: u64, next_due_ns: u64) -> DataflowSchedule {
 }
 
 #[derive(Clone, Default)]
-pub(super) struct DataflowAlgorithmLifecycle {
+pub struct DataflowAlgorithmLifecycle {
     pub(super) runtime_reset: Option<RuntimeResetFn>,
     pub(super) node_reset: Option<(u32, usize, NodeResetFn)>,
     pub(super) scalar_sources: Vec<(u32, u32, usize, NativeScalarTakeFn)>,
@@ -40,17 +86,17 @@ pub(super) struct DataflowAlgorithmLifecycle {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub(super) struct DataflowChannel {
-    pub(super) interface: i32,
-    pub(super) port: i32,
-    pub(super) channel: i32,
+pub struct DataflowChannel {
+    pub interface: i32,
+    pub port: i32,
+    pub channel: i32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(super) struct DataflowEdgeKey {
-    pub(super) node: u32,
+pub struct DataflowEdgeKey {
+    pub node: u32,
     data_type: TypeId,
-    pub(super) channel: DataflowChannel,
+    pub channel: DataflowChannel,
 }
 
 /// A scheduler-owned subscription to an ingress edge or event queue.
@@ -58,16 +104,16 @@ pub(super) struct DataflowEdgeKey {
 /// A backend may create the subscription for any ingress source, but the
 /// scheduler owns its completion state and the operation that waits on it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub(super) struct DataflowWait(pub(super) u64);
+pub struct DataflowWait(pub u64);
 
 #[derive(Clone, Copy, Debug)]
-pub(super) struct DataflowEdge<T: 'static> {
+pub struct DataflowEdge<T: 'static> {
     key: DataflowEdgeKey,
     _data: PhantomData<fn() -> T>,
 }
 
 impl<T: 'static> DataflowEdge<T> {
-    pub(super) fn new(node: u32, channel: DataflowChannel) -> Self {
+    pub fn new(node: u32, channel: DataflowChannel) -> Self {
         Self {
             key: DataflowEdgeKey {
                 node,
@@ -78,13 +124,13 @@ impl<T: 'static> DataflowEdge<T> {
         }
     }
 
-    pub(super) fn key(self) -> DataflowEdgeKey {
+    pub fn key(self) -> DataflowEdgeKey {
         self.key
     }
 }
 
-pub(super) trait DataflowAlgorithmExecutor: Send + Sync {
-    fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+pub trait DataflowAlgorithmExecutor: Send + Sync {
+    fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
         false
     }
 
@@ -92,22 +138,22 @@ pub(super) trait DataflowAlgorithmExecutor: Send + Sync {
         false
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool;
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool;
 }
 
 #[derive(Clone)]
-pub(super) struct DataflowAlgorithm {
-    pub(super) owner_node: u32,
-    pub(super) sort_key: (u32, u32, usize),
-    pub(super) inputs: Vec<DataflowEdgeKey>,
-    pub(super) outputs: Vec<DataflowEdgeKey>,
-    pub(super) executor: Arc<dyn DataflowAlgorithmExecutor>,
-    pub(super) schedule: DataflowSchedule,
-    pub(super) lifecycle: DataflowAlgorithmLifecycle,
+pub struct DataflowAlgorithm {
+    pub owner_node: u32,
+    pub sort_key: (u32, u32, usize),
+    pub inputs: Vec<DataflowEdgeKey>,
+    pub outputs: Vec<DataflowEdgeKey>,
+    pub executor: Arc<dyn DataflowAlgorithmExecutor>,
+    pub schedule: DataflowSchedule,
+    pub lifecycle: DataflowAlgorithmLifecycle,
 }
 
 impl DataflowAlgorithm {
-    pub(super) fn source(
+    pub fn source(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         outputs: Vec<DataflowEdgeKey>,
@@ -124,7 +170,7 @@ impl DataflowAlgorithm {
         }
     }
 
-    pub(super) fn periodic_source(
+    pub fn periodic_source(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         outputs: Vec<DataflowEdgeKey>,
@@ -143,7 +189,7 @@ impl DataflowAlgorithm {
         }
     }
 
-    pub(super) fn event_transform(
+    pub fn event_transform(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         inputs: Vec<DataflowEdgeKey>,
@@ -161,7 +207,7 @@ impl DataflowAlgorithm {
         }
     }
 
-    pub(super) fn event_sink(
+    pub fn event_sink(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         inputs: Vec<DataflowEdgeKey>,
@@ -170,7 +216,7 @@ impl DataflowAlgorithm {
         Self::event_transform(owner_node, sort_key, inputs, Vec::new(), executor)
     }
 
-    pub(super) fn periodic_transform(
+    pub fn periodic_transform(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         inputs: Vec<DataflowEdgeKey>,
@@ -190,7 +236,7 @@ impl DataflowAlgorithm {
         }
     }
 
-    pub(super) fn python_periodic_node(
+    pub fn python_periodic_node(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         period_ns: u64,
@@ -210,7 +256,7 @@ impl DataflowAlgorithm {
         }
     }
 
-    pub(super) fn python_input_node(owner_node: u32, sort_key: (u32, u32, usize)) -> Self {
+    pub fn python_input_node(owner_node: u32, sort_key: (u32, u32, usize)) -> Self {
         Self {
             owner_node,
             sort_key,
@@ -225,40 +271,39 @@ impl DataflowAlgorithm {
         }
     }
 
-    pub(super) fn with_runtime_reset(mut self, reset: RuntimeResetFn) -> Self {
+    pub fn with_runtime_reset(mut self, reset: RuntimeResetFn) -> Self {
         self.lifecycle.runtime_reset = Some(reset);
         self
     }
 
-    pub(super) fn with_node_reset(
-        mut self,
-        node: u32,
-        context: usize,
-        reset: NodeResetFn,
-    ) -> Self {
+    pub fn with_node_reset(mut self, node: u32, context: usize, reset: NodeResetFn) -> Self {
         self.lifecycle.node_reset = Some((node, context, reset));
         self
     }
 
-    pub(super) fn with_scalar_source(
+    pub fn with_scalar_source(
         mut self,
         node: u32,
         route_id: u32,
         context: usize,
         take: NativeScalarTakeFn,
     ) -> Self {
-        self.lifecycle.scalar_sources.push((node, route_id, context, take));
+        self.lifecycle
+            .scalar_sources
+            .push((node, route_id, context, take));
         self
     }
 
-    pub(super) fn with_scalar_input(
+    pub fn with_scalar_input(
         mut self,
         node: u32,
         route_id: u32,
         context: usize,
         receive: NativeScalarReceiveFn,
     ) -> Self {
-        self.lifecycle.scalar_inputs.push((node, route_id, context, receive));
+        self.lifecycle
+            .scalar_inputs
+            .push((node, route_id, context, receive));
         self
     }
 }
@@ -267,14 +312,68 @@ impl DataflowAlgorithm {
 mod tests {
     use super::*;
     use std::sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc, Mutex,
+        atomic::{AtomicUsize, Ordering},
     };
+
+    #[derive(Default)]
+    struct TestRuntime {
+        algorithms: RuntimeAlgorithms,
+    }
+
+    impl DataflowRuntime for TestRuntime {
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+        fn as_any_mut(&mut self) -> &mut dyn Any {
+            self
+        }
+        fn scheduler(&self) -> &super::super::scheduler::RigScheduler {
+            panic!("test runtime scheduler is not used")
+        }
+
+        fn scheduler_mut(&mut self) -> &mut super::super::scheduler::RigScheduler {
+            panic!("test runtime scheduler is not used")
+        }
+
+        fn node_count(&self) -> usize {
+            0
+        }
+        fn node_exists(&self, _node: u32) -> bool {
+            false
+        }
+        fn node_online(&self, _node: u32) -> bool {
+            false
+        }
+        fn python_node_input_pending(&self, _node: u32) -> bool {
+            false
+        }
+        fn run_python_node_algorithm(&mut self, _node: u32) {}
+        fn mark_node_input_pending(&mut self, _node: u32) {}
+        fn run_external_nodes(&mut self, _delta_ns: u64) {}
+        fn advance_time(&mut self, _delta_ns: u64) {}
+        fn elapsed_ns(&self) -> u64 {
+            0
+        }
+        fn python_period_ns(&self, _node: u32) -> Option<u64> {
+            None
+        }
+        fn has_python_input_callback(&self, _node: u32) -> bool {
+            false
+        }
+        fn runtime_algorithms(&self) -> &RuntimeAlgorithms {
+            &self.algorithms
+        }
+        fn runtime_algorithms_mut(&mut self) -> &mut RuntimeAlgorithms {
+            &mut self.algorithms
+        }
+        fn mark_scheduler_dirty(&mut self) {}
+    }
 
     struct TestExecutor;
 
     impl DataflowAlgorithmExecutor for TestExecutor {
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             true
         }
     }
@@ -284,11 +383,11 @@ mod tests {
     }
 
     impl DataflowAlgorithmExecutor for PendingTransformExecutor {
-        fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+        fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
             true
         }
 
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             self.runs.fetch_add(1, Ordering::Relaxed);
             false
         }
@@ -413,7 +512,7 @@ mod tests {
             ready_edges: std::collections::HashSet::from([input]),
             ..Default::default()
         };
-        let runtime = ClusterRuntime::default();
+        let runtime = TestRuntime::default();
         graph.rebuild(1, &runtime);
         let mut runtime = runtime;
         let mut ran_algorithms = vec![0; graph.algorithms.len()];
@@ -430,7 +529,7 @@ mod tests {
     }
 
     impl DataflowAlgorithmExecutor for OrderedExecutor {
-        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+        fn run(&self, _runtime: &mut dyn DataflowRuntime) -> bool {
             self.order.lock().unwrap().push(self.name);
             true
         }
@@ -461,7 +560,12 @@ mod tests {
 
         let mut graph = DataflowGraph {
             algorithm_specs: vec![
-                DataflowAlgorithm::source(u32::MAX, (0, 0, 0), vec![source_output], executor("source")),
+                DataflowAlgorithm::source(
+                    u32::MAX,
+                    (0, 0, 0),
+                    vec![source_output],
+                    executor("source"),
+                ),
                 DataflowAlgorithm::event_transform(
                     u32::MAX,
                     (0, 0, 1),
@@ -478,7 +582,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let mut runtime = ClusterRuntime::default();
+        let mut runtime = TestRuntime::default();
         graph.rebuild(0, &runtime);
 
         // A source becomes ready from its model-owned event ingress. The queue
@@ -499,7 +603,7 @@ struct PythonNodeAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for PythonNodeAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
         self.input_triggered && runtime.python_node_input_pending(self.node)
     }
 
@@ -507,7 +611,7 @@ impl DataflowAlgorithmExecutor for PythonNodeAlgorithm {
         true
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
         runtime.run_python_node_algorithm(self.node);
         false
     }
@@ -606,7 +710,7 @@ impl DataflowGraph {
         ordered
     }
 
-    pub(super) fn rebuild(&mut self, node_count: usize, runtime: &ClusterRuntime) {
+    pub(super) fn rebuild(&mut self, node_count: usize, runtime: &dyn DataflowRuntime) {
         self.algorithms = Self::ordered_algorithms(&self.algorithm_specs);
         self.edge_dependents.clear();
         self.schedules_by_owner = vec![Vec::new(); node_count];
@@ -620,7 +724,10 @@ impl DataflowGraph {
             if self.algorithms[index].schedule == DataflowSchedule::Polling {
                 self.polled_algorithms.push(index);
             }
-            if matches!(self.algorithms[index].schedule, DataflowSchedule::Periodic { .. }) {
+            if matches!(
+                self.algorithms[index].schedule,
+                DataflowSchedule::Periodic { .. }
+            ) {
                 let owner_node = self.algorithms[index].owner_node as usize;
                 if let Some(schedules) = self.schedules_by_owner.get_mut(owner_node) {
                     schedules.push(index);
@@ -663,7 +770,7 @@ impl DataflowGraph {
 
     pub(super) fn run_ready_algorithms(
         &mut self,
-        runtime: &mut ClusterRuntime,
+        runtime: &mut dyn DataflowRuntime,
         ran_algorithms: &mut [u64],
         generation: u64,
     ) {
@@ -674,7 +781,7 @@ impl DataflowGraph {
 
     pub(super) fn run_queued_algorithms(
         &mut self,
-        runtime: &mut ClusterRuntime,
+        runtime: &mut dyn DataflowRuntime,
         ran_algorithms: &mut [u64],
         generation: u64,
     ) {
@@ -727,7 +834,7 @@ impl DataflowGraph {
         self.ready_edges.contains(&edge)
     }
 
-    fn pending_state(&self, runtime: &ClusterRuntime, index: usize) -> bool {
+    fn pending_state(&self, runtime: &dyn DataflowRuntime, index: usize) -> bool {
         let Some(algorithm) = self.algorithms.get(index) else {
             return false;
         };
@@ -745,7 +852,7 @@ impl DataflowGraph {
 
     pub(super) fn enqueue_pending_algorithms(
         &mut self,
-        runtime: &ClusterRuntime,
+        runtime: &dyn DataflowRuntime,
         ran_algorithms: &[u64],
         generation: u64,
     ) {
@@ -778,7 +885,7 @@ impl DataflowGraph {
         }
     }
 
-    fn run_due_algorithms(&mut self, runtime: &ClusterRuntime) {
+    fn run_due_algorithms(&mut self, runtime: &dyn DataflowRuntime) {
         for node_index in 0..self.schedules_by_owner.len() {
             if !runtime.node_online(node_index as u32) {
                 continue;
@@ -791,22 +898,22 @@ impl DataflowGraph {
                 let DataflowSchedule::Periodic {
                     period_ns,
                     next_due_ns,
-                } = algorithm.schedule else {
+                } = algorithm.schedule
+                else {
                     continue;
                 };
                 assert!(
                     period_ns != 0,
                     "periodic dataflow algorithms require a positive period"
                 );
-                if next_due_ns > runtime.elapsed_ns {
+                if next_due_ns > runtime.elapsed_ns() {
                     continue;
                 }
                 self.enqueue_if_ready(index);
                 if let Some(algorithm) = self.algorithms.get_mut(index) {
-                    if let DataflowSchedule::Periodic { next_due_ns, .. } =
-                        &mut algorithm.schedule
+                    if let DataflowSchedule::Periodic { next_due_ns, .. } = &mut algorithm.schedule
                     {
-                        while *next_due_ns <= runtime.elapsed_ns {
+                        while *next_due_ns <= runtime.elapsed_ns() {
                             *next_due_ns = next_due_ns.saturating_add(period_ns);
                         }
                     }
@@ -817,7 +924,7 @@ impl DataflowGraph {
 
     fn run_queue(
         &mut self,
-        runtime: &mut ClusterRuntime,
+        runtime: &mut dyn DataflowRuntime,
         ran_algorithms: &mut [u64],
         generation: u64,
     ) {

@@ -1,15 +1,14 @@
 use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
-use super::cluster::{
-    ClusterRuntime, ClusterSpiCountFn, ClusterSpiRecvManyFn, ClusterSpiSendManyFn,
-};
+use super::cluster::{ClusterSpiCountFn, ClusterSpiRecvManyFn, ClusterSpiSendManyFn, FirmwareBackend};
 use super::dataflow::{
     DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel,
-    DataflowEvent,
+    DataflowEvent, DataflowRuntime,
 };
 use super::datapath::{DataPath, DataPathEvent};
 use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};
+use super::runtime::RigRuntime;
 use super::io;
 use super::scheduler;
 
@@ -242,7 +241,11 @@ struct SpiFanoutAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for SpiFanoutAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("SPI fanout requires the firmware runtime backend");
         runtime
             .interfaces
             .spi
@@ -251,12 +254,16 @@ impl DataflowAlgorithmExecutor for SpiFanoutAlgorithm {
             })
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("SPI fanout requires the firmware runtime backend");
         run_spi_fanout(runtime, self.group_index)
     }
 }
 
-fn run_spi_fanout(runtime: &mut ClusterRuntime, group_index: usize) -> bool {
+fn run_spi_fanout(runtime: &mut RigRuntime<FirmwareBackend>, group_index: usize) -> bool {
     let online_nodes = runtime.online_nodes();
     let input_pending_nodes = runtime
         .interfaces
