@@ -66,6 +66,7 @@ class DataflowRoutes:
             self._require_node(sink_node)
         link = DataPathLink(path, source_node, sink_node)
         if link not in self._links:
+            self._ensure_node_graph_is_acyclic((*self._links, link))
             self._links.append(link)
             self._route_cache.clear()
             self._ordered_paths_cache = None
@@ -312,6 +313,41 @@ class DataflowRoutes:
     def _require_node(self, name: str) -> None:
         if name not in self._cluster._rig_nodes:
             raise KeyError(f"node {name!r} is not in this rig")
+
+    @staticmethod
+    def _ensure_node_graph_is_acyclic(links: tuple[DataPathLink, ...]) -> None:
+        """Reject feedback edges before Python routing can spin forever.
+
+        Rust dataflow compilation already rejects cyclic algorithm graphs. The
+        portable Python edge engine needs the same invariant at its topology
+        boundary, including the otherwise easy-to-miss self-loop case.
+        """
+        edges: dict[str, set[str]] = {}
+        for link in links:
+            if link.sink_node is None:
+                continue
+            edges.setdefault(link.source_node, set()).add(link.sink_node)
+            edges.setdefault(link.sink_node, set())
+
+        visiting: set[str] = set()
+        visited: set[str] = set()
+
+        def visit(node: str) -> None:
+            if node in visiting:
+                raise ValueError(
+                    "datapath route graph contains a cycle involving "
+                    f"node {node!r}"
+                )
+            if node in visited:
+                return
+            visiting.add(node)
+            for dependent in sorted(edges[node]):
+                visit(dependent)
+            visiting.remove(node)
+            visited.add(node)
+
+        for node in sorted(edges):
+            visit(node)
 
 
 class Rig(Generic[NodeT]):

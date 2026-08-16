@@ -149,7 +149,12 @@ class SimpleComponent(ComponentRig):
 
 
 class SimpleNodeRig(ModelRig):
-    """Python-only node composed from arbitrary generic components."""
+    """Node composed from Python components with optional native route ABIs.
+
+    Components without a native endpoint use the portable Python route engine.
+    Components that expose a typed Rig endpoint are forwarded to the enclosing
+    backend so the route can remain native when both ends support it.
+    """
 
     def __init__(self, *components: ComponentRig) -> None:
         super().__init__()
@@ -174,6 +179,39 @@ class SimpleNodeRig(ModelRig):
         super().reset()
         for component in self.components:
             component.reset()
+
+    def attach_to(self, rig, name: str) -> None:
+        super().attach_to(rig, name)
+        for component in self.components:
+            component.attach_to(rig, name)
+            configure_owner = getattr(component, "configure_owner", None)
+            if configure_owner is not None:
+                configure_owner(self)
+
+    def detach_from(self) -> None:
+        super().detach_from()
+        for component in self.components:
+            component.detach_from()
+
+    def rust_datapath_route_abi(self, path: DataPath):
+        endpoints = []
+        for component in self.components:
+            if not (
+                component.datapaths.inputs(path)
+                or component.datapaths.outputs(path)
+            ):
+                continue
+            endpoint = getattr(component, "rust_datapath_route_abi", lambda _path: None)(
+                path
+            )
+            if endpoint is not None:
+                endpoints.append(endpoint)
+        if len(endpoints) > 1:
+            raise ValueError(
+                f"simple node has multiple native endpoints for datapath {path!r}; "
+                "compose that route explicitly"
+            )
+        return endpoints[0] if endpoints else None
 
     def _bind_component_datapaths(self, component: ComponentRig) -> None:
         for input_ in component.datapaths.inputs():

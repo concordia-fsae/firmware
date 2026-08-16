@@ -8,6 +8,7 @@ pub mod interfaces;
 pub mod node;
 pub mod runtime;
 pub mod scalar;
+pub mod scalar_source;
 pub mod scheduler;
 
 pub mod model;

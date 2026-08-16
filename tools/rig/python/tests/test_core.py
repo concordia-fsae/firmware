@@ -23,7 +23,7 @@ from rig import (
     duration_to_ns,
     run_until,
 )
-from rig.simple import SimpleComponent
+from rig.simple import SimpleComponent, SimpleNodeRig
 from rig.time import RunUntilTimeout
 
 
@@ -205,6 +205,18 @@ def test_cluster_rig_routes_batched_datapaths_and_records_each_event():
     ]
 
 
+def test_simple_node_forwards_native_component_route_abi():
+    path = DataPath.named("generic", "native")
+    component = SimpleComponent()
+    component.add_scalar_output(path, pending=lambda: 0, recv=lambda: None)
+    node = SimpleNodeRig(component)
+
+    assert (
+        node.rust_datapath_route_abi(path)
+        == component.rust_datapath_route_abi(path)
+    )
+
+
 def test_python_route_cache_reuses_topology_and_invalidates_on_new_link():
     path = DataPath.named("generic", "cached")
     source = SimpleComponent()
@@ -248,6 +260,21 @@ def test_python_route_cache_reuses_topology_and_invalidates_on_new_link():
         for route in second_routes
         for sink in route.sinks
     } == {"__component_1", "__component_2"}
+
+
+def test_python_routes_reject_same_path_feedback_edges():
+    path = DataPath.named("generic", "feedback")
+    node = SimpleComponent()
+    node.add_egress_datapath(path)
+    node.add_ingress_datapath(path)
+    cluster = ClusterRig(node=node, connect=False)
+
+    with pytest.raises(ValueError, match="route graph contains a cycle"):
+        cluster.dataroutes.connect(
+            path,
+            source_node="node",
+            sink_node="node",
+        )
 
 
 def test_cluster_rig_rejects_untyped_elements_at_the_boundary():

@@ -62,6 +62,9 @@ class RustClusterRuntime(RigRuntime):
         route: Callable[[int], None] | None = None,
     ) -> None:
         self._node_indices: dict[str, int] = {}
+        # Rust stores callback addresses, so the Python node objects must stay
+        # alive for as long as their Rust cluster nodes can invoke them.
+        self._node_owners: dict[str, object] = {}
         self._route = route
         self._route_callback = self._RouteCallback(self._route_callback_fn)
         host = host or RustRuntimeHost()
@@ -200,6 +203,7 @@ class RustClusterRuntime(RigRuntime):
     def reset(self) -> None:
         self._reset()
         self._node_indices.clear()
+        self._node_owners.clear()
 
     def add_scalar_transform_algorithm(
         self,
@@ -255,6 +259,7 @@ class RustClusterRuntime(RigRuntime):
         if index == 0xFFFFFFFF:
             raise RuntimeError(f"failed to register Rust cluster node {name!r}")
         self._node_indices[name] = index
+        self._node_owners[name] = node
 
     def _node_pair(self, source_node: str, sink_node: str) -> tuple[int, int] | None:
         source_index = self._node_indices.get(source_node)

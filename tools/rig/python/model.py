@@ -229,6 +229,8 @@ class ModelRig:
         self,
         context_abi,
     ) -> None:
+        if not context_abi:
+            return
         context = SchedulerContext.from_abi(context_abi.contents)
         self.elapsed_ns = context.elapsed_ns
         if self._scheduler_callback is not None:

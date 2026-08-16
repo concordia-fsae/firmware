@@ -16,6 +16,7 @@ RIG_RUST_RUNTIME_ENV = {
     "RIG_RUNTIME_RUST_RUNTIME_RS": "//tools/rig:rust/runtime.rs",
     "RIG_RUNTIME_RUST_SCHEDULER_RS": "//tools/rig:rust/scheduler.rs",
     "RIG_RUNTIME_RUST_SCALAR_RS": "//tools/rig:rust/scalar.rs",
+    "RIG_RUNTIME_RUST_SCALAR_SOURCE_RS": "//tools/rig:rust/scalar_source.rs",
 }
 
 
