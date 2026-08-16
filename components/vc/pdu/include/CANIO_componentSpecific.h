@@ -35,6 +35,11 @@
  *                              D E F I N E S
  ******************************************************************************/
 
+#define DRV_HSD_STATE_IS_FAULTED(s)  \
+        ((s) != DRV_HSD_STATE_OFF && \
+         (s) != DRV_HSD_STATE_ON &&  \
+         (s) != DRV_HSD_STATE_INIT)
+
 #define CANIO_UDS_BUFFER_LENGTH                          8U
 #define CANIO_getTimeMs()                                (HW_TIM_getTimeMS())
 #define CANIO_getDutyPercent(duty)                       (((duty) <= 0.0f) ? 0.0f : (((duty) >= 1.0f) ? 100.0f : ((duty) * 100.0f)))
@@ -128,6 +133,29 @@
 #define set_pitch(m, b, n, s)                            set(m, b, n, s, imu_getGyroRef()->rotX)
 #define set_angleRoll(m, b, n, s)                        set(m, b, n, s, imu_getVehicleAngleRef()->rotX)
 #define set_anglePitch(m, b, n, s)                       set(m, b, n, s, imu_getVehicleAngleRef()->rotY)
+
+#define set_anyHsdFault(m, b, n, s)                      set(m, b, n, s,                                                                                                  \
+                                                             (DRV_HSD_STATE_IS_FAULTED(drv_vn9008_getState(DRV_VN9008_CHANNEL_PUMP)) ||                                   \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_vn9008_getState(DRV_VN9008_CHANNEL_FAN)) ||                                    \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_1)) || \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS1_SHUTDOWN, DRV_TPS2HB16AB_OUT_2)) || \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_1)) ||    \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS2_ACCUM, DRV_TPS2HB16AB_OUT_2)) ||    \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_1)) ||   \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS3_SENSOR, DRV_TPS2HB16AB_OUT_2)) ||   \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_1)) ||       \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VC1_VC2, DRV_TPS2HB16AB_OUT_2)) ||       \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_1)) ||       \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_MC_VCU3, DRV_TPS2HB16AB_OUT_2)) ||       \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_1)) ||   \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_HVE_COCKPIT, DRV_TPS2HB16AB_OUT_2)) ||   \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_1)) ||    \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_SPARE_BMS4, DRV_TPS2HB16AB_OUT_2)) ||    \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_1)) ||     \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_VCU1_VCU2, DRV_TPS2HB16AB_OUT_2)) ||     \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_1)) ||     \
+                                                              DRV_HSD_STATE_IS_FAULTED(drv_tps2hb16ab_getState(DRV_TPS2HB16AB_IC_BMS5_BMS6, DRV_TPS2HB16AB_OUT_2)))       \
+    ? CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 
 #if FEATURE_IS_ENABLED(NVM_LIB_ENABLED)
 # define set_nvmBootCycles(m, b, n, s)                   set(m, b, n, s, (uint16_t)lib_nvm_getTotalCycles())

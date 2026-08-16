@@ -151,6 +151,9 @@ signals:
     description: "Current state of BMSW6 HSD"
     discreteValues: hsdState
 
+  anyHsdFault:
+    description: "current state of all HSD"
+    discreteValues: digitalStatus
   glvVoltage:
     unit: 'V'
     description: GLV Battery Voltage
