@@ -8,5 +8,6 @@ dependencies = ["clang==18.1.8", "pytest>=8"]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.setuptools]
+packages = ["rig"]
+package-dir = {rig = "python"}

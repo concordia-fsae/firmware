@@ -2,27 +2,28 @@ from __future__ import annotations
 
 import ctypes
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Generic, TypeVar
 
-from .datapath import DataPath, DataPathKey, ModelDataPaths, datapath_key
-from .dataflow import NativeRouteEndpoint
-from .runtime import _RustClusterRuntime
-from .scalar import ScalarEvent, ScalarRouteEndpoint
-from .scheduler import (
+from .contracts import Cluster
+from rig.datapath import DataPath, DataPathKey, ModelDataPaths, datapath_key
+from rig.dataflow import NativeRouteEndpoint
+from .node_config import NodeConfig, SchedulerConfig
+from rig.scalar import ScalarEvent, ScalarRouteEndpoint
+from rig.scheduler import (
     PythonSchedulerCallbacks,
     SchedulerContext,
     _SchedulerCallbackContextAbi,
 )
-from .time import duration_to_ns
+from rig.time import duration_to_ns
 
 
 ModelClass = TypeVar("ModelClass", bound=type)
+OwnerT = TypeVar("OwnerT", bound="ModelRig")
 
 
 class ModelRig:
     """Schedulable model with datapaths that can participate in a cluster."""
 
-    has_can = False
     _ClusterScheduledCallback = ctypes.CFUNCTYPE(
         None,
         ctypes.POINTER(_SchedulerCallbackContextAbi),
@@ -43,39 +44,66 @@ class ModelRig:
     def __init__(
         self,
         *,
+        configuration: NodeConfig | None = None,
         scheduler_period: int | float | None = None,
         scheduler_unit: str = "ms",
         scheduler_callback: Callable[[SchedulerContext], None] | None = None,
     ) -> None:
+        if configuration is not None and (
+            scheduler_period is not None or scheduler_callback is not None
+        ):
+            raise ValueError(
+                "pass scheduler settings through configuration or legacy scheduler arguments, not both"
+            )
+        if configuration is None:
+            configuration = NodeConfig(
+                scheduler=SchedulerConfig(
+                    period_ns=(
+                        None
+                        if scheduler_period is None
+                        else duration_to_ns(scheduler_period, unit=scheduler_unit)
+                    ),
+                    callback=scheduler_callback,
+                )
+            )
+        self.configuration = configuration
         self.datapaths = ModelDataPaths()
-        self._cluster_rig: ClusterRig | None = None
+        self._cluster_rig: Cluster | None = None
         self._cluster_node_name: str | None = None
         self.elapsed_ns = 0
         self._scalar_route_abis: dict[DataPathKey, tuple[int, int, int, int]] = {}
         self._scalar_callbacks = []
-        self._scheduler_period_ns = (
-            None
-            if scheduler_period is None
-            else duration_to_ns(scheduler_period, unit=scheduler_unit)
-        )
-        if self._scheduler_period_ns is not None and self._scheduler_period_ns <= 0:
-            raise ValueError(
-                f"scheduler period must be positive, got {scheduler_period}"
-            )
-        self._scheduler_callback = scheduler_callback
+        self._scheduler_period_ns = configuration.scheduler.period_ns
+        self._scheduler_callback = configuration.scheduler.callback
         self._cluster_scheduled_callback = self._ClusterScheduledCallback(
             self._cluster_scheduled
         )
         self._cluster_reset_callback = self._ClusterResetCallback(self.reset)
-        self._standalone_runtime: _RustClusterRuntime | None = None
+
+    def attach_to(self, rig: Cluster, name: str) -> None:
+        self._cluster_rig = rig
+        self._cluster_node_name = name
+
+    def detach_from(self) -> None:
+        self._cluster_rig = None
+        self._cluster_node_name = None
 
     def reset(self) -> None:
         self.elapsed_ns = 0
-        self._standalone_runtime = None
 
     def run_for(self, duration: int | float, *, unit: str = "ms") -> None:
         duration_ns = duration_to_ns(duration, unit=unit)
-        self._runtime().run_for(duration_ns, duration_ns)
+        if duration_ns < 0:
+            raise ValueError(f"duration must not be negative, got {duration}")
+        previous_ns = self.elapsed_ns
+        self.elapsed_ns += duration_ns
+        if self._scheduler_callback is not None:
+            self._scheduler_callback(
+                SchedulerContext(
+                    elapsed_ns=self.elapsed_ns,
+                    delta_ns=self.elapsed_ns - previous_ns,
+                )
+            )
 
     def configure_datapath(self, path: DataPath) -> None:
         raise ValueError(f"datapath {path!r} is not supported by {type(self).__name__}")
@@ -206,12 +234,6 @@ class ModelRig:
         if self._scheduler_callback is not None:
             self._scheduler_callback(context)
 
-    def _runtime(self) -> _RustClusterRuntime:
-        if self._standalone_runtime is None:
-            self._standalone_runtime = _RustClusterRuntime()
-            self._standalone_runtime.add_node("__standalone__", self)
-        return self._standalone_runtime
-
     @staticmethod
     def _callback_address(callback) -> int:
         value = ctypes.cast(callback, ctypes.c_void_p).value
@@ -220,15 +242,24 @@ class ModelRig:
         return int(value)
 
 
-class ComponentRig(ModelRig):
+class ComponentRig(ModelRig, Generic[OwnerT]):
     """Pure Python model that can run standalone or inside a cluster."""
 
-    def configure_owner(self, owner: object) -> None:
+    def configure_owner(self, owner: OwnerT) -> None:
         if not isinstance(owner, ModelRig):
             raise TypeError(
                 f"component owner must implement ModelRig, got {type(owner).__name__}"
             )
         self._owner = owner
+
+    @property
+    def owner(self) -> OwnerT:
+        try:
+            return self._owner
+        except AttributeError as exc:
+            raise RuntimeError(
+                f"{type(self).__name__} is not attached to a Rig node"
+            ) from exc
 
     def _bind_native_model_symbol(
         self,

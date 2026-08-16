@@ -11,7 +11,21 @@ from collections.abc import MutableMapping
 
 
 def repo_root() -> pathlib.Path:
-    return pathlib.Path(__file__).resolve().parents[3]
+    """Return the workspace root or packaged Rig project root.
+
+    Source checkouts place Rig at ``<workspace>/tools/rig/python``. Buck's
+    Python test project copies it into a standalone directory containing
+    ``pyproject.toml`` and ``python/`` instead. Detect both layouts by their
+    markers rather than relying on a fixed path depth.
+    """
+    source_path = pathlib.Path(__file__).resolve()
+    for parent in source_path.parents:
+        if (parent / "tools" / "rig" / "BUCK").is_file():
+            return parent
+    for parent in source_path.parents:
+        if (parent / "pyproject.toml").is_file() and (parent / "python").is_dir():
+            return parent
+    return source_path.parents[3]
 
 
 def buck_output(target: str, root: pathlib.Path | None = None) -> pathlib.Path:
@@ -67,12 +81,12 @@ def load_generated_enums(
     module_name: str,
     namespace: MutableMapping[str, object],
 ) -> types.ModuleType:
-    cached = namespace.get("_CAN_ENUMS")
+    cached = namespace.get("_GENERATED_ENUMS")
     if isinstance(cached, types.ModuleType):
         return cached
     module = load_generated_module(env_var, target, module_name)
     for name, value in vars(module).items():
         if isinstance(value, type) and hasattr(value, "__members__"):
             namespace[name] = value
-    namespace["_CAN_ENUMS"] = module
+    namespace["_GENERATED_ENUMS"] = module
     return module

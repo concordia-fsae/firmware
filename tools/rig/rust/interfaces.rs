@@ -28,8 +28,3 @@ pub(super) trait InterfaceDataflow<T: DataflowEvent>: InterfaceImplementation {
         DataflowEdge::<T>::new(node, endpoint.dataflow_channel()).key()
     }
 }
-
-pub(super) trait ModelPeripheralRuntime {
-    unsafe fn reset_peripherals(&mut self);
-    fn configure_datapath(&mut self, interface: u16, port: i32, channel: i32, device: i32);
-}

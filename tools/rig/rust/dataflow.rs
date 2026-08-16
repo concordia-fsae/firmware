@@ -55,7 +55,7 @@ pub(super) struct DataflowEdgeKey {
 
 /// A scheduler-owned subscription to an ingress edge or event queue.
 ///
-/// Producers such as CAN, SPI, and timers may create the subscription, but the
+/// A backend may create the subscription for any ingress source, but the
 /// scheduler owns its completion state and the operation that waits on it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) struct DataflowWait(pub(super) u64);

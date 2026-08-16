@@ -121,7 +121,8 @@ def main() -> None:
     parser.add_argument("--c-enum", action="append", default=[])
     parser.add_argument("--rust-source", action="append", default=[])
     parser.add_argument("--rust-enum", action="append", default=[])
-    parser.add_argument("--c-enums-auto", action="store_true")
+    parser.add_argument("--c-enums-auto-prefix")
+    parser.add_argument("--c-enums-auto-suffix")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("clang_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
@@ -149,17 +150,26 @@ def main() -> None:
         )
         output.extend(["", ""])
 
-    if args.c_enums_auto:
+    if args.c_enums_auto_prefix is not None or args.c_enums_auto_suffix is not None:
+        if args.c_enums_auto_prefix is None or args.c_enums_auto_suffix is None:
+            raise ValueError(
+                "automatic C enum generation requires both a prefix and suffix"
+            )
         for c_enum, members in c_enums.items():
-            if not (c_enum.startswith("CAN_") and c_enum.endswith("_E")):
+            if not (
+                c_enum.startswith(args.c_enums_auto_prefix)
+                and c_enum.endswith(args.c_enums_auto_suffix)
+            ):
                 continue
-            enum_name = c_enum.removeprefix("CAN_").removesuffix("_E")
+            enum_name = c_enum.removeprefix(args.c_enums_auto_prefix).removesuffix(
+                args.c_enums_auto_suffix
+            )
             enum_name = enum_name[:1].upper() + enum_name[1:]
             output.extend(
                 emit_enum(
                     members,
                     enum_name,
-                    f"CAN_{enum_name.upper()}_",
+                    f"{args.c_enums_auto_prefix}{enum_name.upper()}_",
                     "",
                     "upper",
                 )
