@@ -4,11 +4,11 @@ import multiprocessing as mp
 
 import pytest
 
-from sim.bindings.core.firmware_cluster import FirmwareClusterRig
+from sim.bindings.firmware.runtime import FirmwareClusterRig
 from rig import DataPath, ModelRig
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
-from sim.models.test import FakeNode
+from rig.model_fixtures import FakeNode
 
 
 class ScalarSink(ModelRig):

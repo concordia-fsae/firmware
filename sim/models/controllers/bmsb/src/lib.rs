@@ -1,5 +1,6 @@
 mod rig_runtime {
     include!(env!("RIG_RUNTIME_RS"));
+    include!(env!("BMSB_MODEL_MODULES_RS"));
 }
 
 mod bindings {

@@ -13,7 +13,7 @@ rig_embedded_controller_model(
         "simple.py",
         "variants.py",
     ],
-    runtime_modules = ["can", "core", "flash", "io", "swi", "system", "time", "uart"],
+    runtime_modules = ["can", "runtime", "flash", "io", "swi", "system", "time", "timer", "uart"],
     extra_deps = [
         "//components/vc/shared:headers",
     ],

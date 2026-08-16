@@ -2,11 +2,11 @@ import math
 
 import pytest
 
-from sim.bindings.core.firmware_cluster import FirmwareClusterRig
+from sim.bindings.firmware.runtime import FirmwareClusterRig
 from rig import DataPath
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.drivetrain import DrivetrainModel, DrivetrainSpec
-from sim.models.test import InputTriggeredScalarSink, ScalarSourceModel
+from rig.model_fixtures import InputTriggeredScalarSink, ScalarSourceModel
 
 
 def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):

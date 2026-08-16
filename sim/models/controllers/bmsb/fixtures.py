@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.bindings.core.firmware_cluster import FirmwareClusterRig
+from sim.bindings.firmware.runtime import FirmwareClusterRig
 from sim.models.pytest import cluster_rig_fixture
 
 from . import DigitalIo

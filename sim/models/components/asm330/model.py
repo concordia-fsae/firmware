@@ -23,13 +23,13 @@ class Asm330Model(ComponentRig):
         self.chip_select = int(chip_select)
 
     def configure_owner(self, owner: object) -> None:
-        from sim.bindings.core.peripheral import require_peripheral_binding
+        from sim.bindings.firmware.runtime import require_peripheral_binding
 
         binding = require_peripheral_binding(self.spi_transactions)
         if binding is None or binding.device is None:
             raise ValueError("ASM330 model must bind to a SPI transaction datapath")
         bind_zero_model = owner.bind_symbol(
-            "rig_runtime_asm330_bind_zero_model",
+            "rig_model_asm330_bind_zero_model",
             [ctypes.c_int, ctypes.c_int],
         )
         bind_zero_model(ctypes.c_int(binding.device), ctypes.c_int(self.chip_select))

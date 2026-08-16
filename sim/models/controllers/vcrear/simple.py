@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.bindings.can import CanInterface, CanNodeRig, SimpleCanComponent
+from sim.bindings.firmware.can import CanInterface, CanNodeRig, SimpleCanComponent
 
 
 class VcrearSimpleModel(CanNodeRig):

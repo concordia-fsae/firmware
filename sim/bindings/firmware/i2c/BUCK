@@ -1,0 +1,14 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+prebuilt_cxx_library(
+    name = "headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = {
+        file: file
+        for file in glob(["*.h"])
+    },
+    visibility = ["PUBLIC"],
+)
+
+export_file(name = "i2c.c", src = "i2c.c", visibility = ["PUBLIC"])

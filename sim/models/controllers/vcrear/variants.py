@@ -5,7 +5,7 @@ from sim.models.catalog import (
     ClusterSpec,
     NodeSpec,
 )
-from sim.bindings.power import PowerControlPath
+from sim.bindings.firmware.power import PowerControlPath
 from sim.models.components.drivetrain import DrivetrainModel
 from sim.models.platforms import PLATFORM_VARIANTS
 

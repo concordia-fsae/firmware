@@ -3,28 +3,20 @@ load("//components/vehicle_platform:platforms.bzl", "platform_output_name", "pla
 load("//tools/rig:defs.bzl", "RIG_RUST_RUNTIME_ENV", "rig_model_python")
 
 RIG_RUNTIME_ENV = "RIG_RUNTIME_RS"
-RIG_RUNTIME_SRC = "//sim/bindings/core:runtime-src"
+RIG_RUNTIME_SRC = "//sim/bindings/firmware/runtime:runtime-src"
 RIG_RUNTIME_RUST_ENV = RIG_RUST_RUNTIME_ENV | {
-    "RIG_RUNTIME_RUST_APP_RS": "//sim/bindings/core:app.rs",
-    "RIG_RUNTIME_RUST_ASM330_RS": "//sim/models/components/asm330:rust.rs",
-    "RIG_RUNTIME_RUST_BATTERY_SOURCE_RS": "//sim/models/components/battery_source:rust.rs",
-    "RIG_RUNTIME_RUST_CAN_RS": "//sim/bindings/can:can.rs",
-    "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/bindings/core:cluster.rs",
-    "RIG_RUNTIME_RUST_CORE_RS": "//sim/bindings/core:core.rs",
-    "RIG_RUNTIME_RUST_DC_LOAD_RS": "//sim/models/components/dc_load:rust.rs",
-    "RIG_RUNTIME_RUST_DRIVETRAIN_RS": "//sim/models/components/drivetrain:rust.rs",
-    "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/bindings/faults:faults.rs",
-    "RIG_RUNTIME_RUST_FFI_RS": "//sim/bindings/core:ffi_bindings.rs",
+    "RIG_RUNTIME_RUST_CAN_RS": "//sim/bindings/firmware/can:can.rs",
+    "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/bindings/firmware/runtime:cluster.rs",
+    "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/bindings/firmware/faults:faults.rs",
     "RIG_RUNTIME_RUST_INTERFACES_RS": "//tools/rig:rust/interfaces.rs",
-    "RIG_RUNTIME_RUST_MODULES_RS": "//sim/bindings/core:runtime_common.rs",
-    "RIG_RUNTIME_RUST_IO_RS": "//sim/bindings/io:io.rs",
-    "RIG_RUNTIME_RUST_MODULE_DESC_RS": "//sim/bindings/module_desc:module_desc.rs",
-    "RIG_RUNTIME_RUST_NVM_RS": "//sim/bindings/nvm:nvm.rs",
-    "RIG_RUNTIME_RUST_REGISTRY_RS": "//sim/bindings/core:registry.rs",
-    "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/bindings/rt_controller:rt_controller.rs",
-    "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/bindings/simple:simple.rs",
-    "RIG_RUNTIME_RUST_SPI_RS": "//sim/bindings/spi:spi.rs",
-    "RIG_RUNTIME_RUST_TIMER_RS": "//sim/bindings/timer:timer.rs",
+    "RIG_RUNTIME_RUST_MODULES_RS": "//sim/bindings/firmware/runtime:runtime_common.rs",
+    "RIG_RUNTIME_RUST_IO_RS": "//sim/bindings/firmware/io:io.rs",
+    "RIG_RUNTIME_RUST_IO_HOST_RS": "//sim/bindings/firmware/io:host.rs",
+    "RIG_RUNTIME_RUST_NVM_RS": "//sim/bindings/firmware/nvm:nvm.rs",
+    "RIG_RUNTIME_RUST_REGISTRY_RS": "//sim/bindings/firmware/runtime:registry.rs",
+    "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/bindings/firmware/runtime:rt_controller.rs",
+    "RIG_RUNTIME_RUST_SPI_RS": "//sim/bindings/firmware/spi:spi.rs",
+    "RIG_RUNTIME_RUST_TIMER_RS": "//sim/bindings/firmware/timer:timer.rs",
 }
 
 _DEFAULT_MODEL_C_FLAGS = [
@@ -72,23 +64,31 @@ _DEFAULT_BINDGEN_VAR_ALLOWLIST = [
 _DEFAULT_CONTROLLER_DEPS = [
     "//components/shared/code:headers",
     "//components/shared/code/RTOS:headers",
-    "//sim/bindings/core:headers",
-    "//sim/bindings/spi:headers",
+    "//sim/bindings/firmware/runtime:headers",
+    "//sim/bindings/firmware/can:headers",
+    "//sim/bindings/firmware/faults:headers",
+    "//sim/bindings/firmware/flash:headers",
+    "//sim/bindings/firmware/i2c:headers",
+    "//sim/bindings/firmware/io:headers",
+    "//sim/bindings/firmware/spi:headers",
+    "//sim/bindings/firmware/timer:headers",
+    "//sim/bindings/firmware/uart:headers",
 ]
 
 _RIG_RUNTIME_MODULE_SRCS = {
-    "can": ["//sim/bindings/can:can.c"],
-    "core": ["//sim/bindings/core:core.c"],
-    "flash": ["//sim/bindings/flash:flash.c"],
-    "faults": ["//sim/bindings/faults:faults.c"],
-    "i2c": ["//sim/bindings/i2c:i2c.c"],
-    "io": ["//sim/bindings/io:io.c"],
-    "spi": ["//sim/bindings/spi:spi.c"],
-    "swi": ["//sim/bindings/swi:swi.c"],
-    "system": ["//sim/bindings/system:system.c"],
-    "time": ["//sim/bindings/time:time.c"],
-    "timer_capture": ["//sim/bindings/timer:timer_capture.c"],
-    "uart": ["//sim/bindings/uart:uart.c"],
+    "can": ["//sim/bindings/firmware/can:can.c"],
+    "runtime": ["//sim/bindings/firmware/runtime:runtime.c"],
+    "flash": ["//sim/bindings/firmware/flash:flash.c"],
+    "faults": ["//sim/bindings/firmware/faults:faults.c"],
+    "i2c": ["//sim/bindings/firmware/i2c:i2c.c"],
+    "io": ["//sim/bindings/firmware/io:io.c"],
+    "spi": ["//sim/bindings/firmware/spi:spi.c"],
+    "swi": ["//sim/bindings/firmware/runtime:swi.c"],
+    "system": ["//sim/bindings/firmware/runtime:system.c"],
+    "time": ["//sim/bindings/firmware/runtime:time.c"],
+    "timer": ["//sim/bindings/firmware/timer:timer.c"],
+    "timer_capture": ["//sim/bindings/firmware/timer:timer_capture.c"],
+    "uart": ["//sim/bindings/firmware/uart:uart.c"],
 }
 
 def rig_runtime_srcs(modules: list[str]):
@@ -124,13 +124,17 @@ def rig_model_c_support(
     )
 
 def _rust_link_args(link_deps: list[str], extra_link_args: list[str]):
-    return " ".join([
+    link_args = ["-C link-arg=-Wl,--start-group"]
+    link_args += [
         "-C link-arg=$(location {})".format(dep)
         for dep in link_deps
-    ] + [
+    ]
+    link_args += ["-C link-arg=-Wl,--end-group"]
+    link_args += [
         "-C link-arg={}".format(arg)
         for arg in extra_link_args
-    ])
+    ]
+    return " ".join(link_args)
 
 def _rust_genrule_env(rust_env: dict[str, str]):
     return " ".join([
@@ -287,7 +291,7 @@ def rig_python_model(
     __rules__["genrule"](
         name = name,
         out = out,
-        cmd = "python3 $(location //sim/bindings/core:gen-python-model) " +
+        cmd = "python3 $(location //sim/bindings/firmware/runtime:gen-python-model) " +
               "--rust-source $(location {}) ".format(rust_source) +
               "--out $OUT " +
               "--class-name '{}' ".format(class_name) +
@@ -388,6 +392,7 @@ def rig_embedded_controller_model(
         bindgen_functions: list[str] | None = None,
         bindgen_vars: list[str] | None = None,
         enum_rust_enums: list[str] = [],
+        model_rust_modules: dict[str, str] = {},
         short_enums: bool = False,
         rust_env_prefix: str | None = None,
         visibility: list[str] | None = ["PUBLIC"]):
@@ -399,6 +404,24 @@ def rig_embedded_controller_model(
         "-include",
         "BuildDefines.h",
     ], short_enums)
+
+    model_rust_env = {}
+    if model_rust_modules:
+        model_module_lines = [": > $OUT;"]
+        for module, target in model_rust_modules.items():
+            env_name = "{}_MODEL_{}_RS".format(controller_upper, module.upper())
+            model_rust_env[env_name] = target
+            model_module_lines += [
+                "printf '%s\\n' 'pub mod {} {{' >> $OUT;".format(module),
+                "printf '%s\\n' '    include!(env!(\"{}\"));' >> $OUT;".format(env_name),
+                "printf '%s\\n' '}' >> $OUT;",
+            ]
+        __rules__["genrule"](
+            name = "model-modules-rs",
+            out = "model_modules.rs",
+            cmd = " ".join(model_module_lines),
+        )
+        model_rust_env["{}_MODEL_MODULES_RS".format(controller_upper)] = ":model-modules-rs"
 
     rig_python_model(
         name = "{}-py".format(controller_lower),
@@ -425,7 +448,7 @@ def rig_embedded_controller_model(
         srcs = rig_runtime_srcs(runtime_modules),
         compiler_flags = _with_short_enums(_DEFAULT_MODEL_C_FLAGS, short_enums),
         headers = {
-            "runtime_state.h": "//sim/bindings/core:runtime_state.h",
+            "runtime_state.h": "//sim/bindings/firmware/runtime:runtime_state.h",
         },
         deps = common_deps,
     )
@@ -476,7 +499,6 @@ def rig_embedded_controller_model(
             _controller_component_target(component, "sil-application"),
             ":model-c-support",
             _controller_component_target(component, "sil-yamcan-c"),
-            _controller_component_target(component, "sil-application"),
         ],
         rust_env = {
             "{}_BINDINGS_RS".format(controller_upper): ":bindings-rs",
@@ -484,7 +506,7 @@ def rig_embedded_controller_model(
             "{}_YAMCAN_DECODE_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_decode_generated.rs"),
             "{}_YAMCAN_MODEL_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_model_generated.rs"),
             "{}_YAMCAN_RS".format(controller_upper): _controller_codegen_artifact(component, "yamcan.rs"),
-        },
+        } | model_rust_env,
         visibility = visibility,
     )
 
@@ -555,7 +577,7 @@ def rig_pytest(
         env = {
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONPATH": "tools/rig/python:.",
-            "RIG_RUNTIME_LIB": "$(location //sim/bindings/core:runtime-so)",
+            "RIG_RUNTIME_LIB": "$(location //sim/bindings/firmware/runtime:runtime-so)",
             "PIP_INDEX_URL": "https://pypi.org/simple",
             "UV_DEFAULT_INDEX": "https://pypi.org/simple",
             "UV_INDEX_URL": "https://pypi.org/simple",
@@ -566,7 +588,7 @@ def rig_pytest(
         } | env,
         resources = [
             "//tools/rig:uv-project",
-            "//sim/bindings/core:runtime-so",
+            "//sim/bindings/firmware/runtime:runtime-so",
         ] + resources,
         test = ":" + uv_runner_name,
         visibility = visibility,

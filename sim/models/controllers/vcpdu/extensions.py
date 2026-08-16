@@ -4,7 +4,7 @@ import ctypes
 
 from enum import Enum, auto
 
-from sim.bindings.power import PowerControlEvent, PowerControlPath, PowerInterface
+from sim.bindings.firmware.power import PowerControlEvent, PowerControlPath, PowerInterface
 from rig import DataPath, ModelDataPathInputConnector, ModelDataPathOutputConnector
 
 from . import HsdState

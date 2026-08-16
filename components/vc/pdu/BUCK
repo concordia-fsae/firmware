@@ -161,8 +161,8 @@ add_platform_sil_bundle_targets(
     yamcan_deps = [
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//sim/bindings/core:headers",
-        "//sim/bindings/spi:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/spi:headers",
     ],
     app_srcs = [
         "//components/shared/code:DRV/drv_asm330.c",
@@ -231,8 +231,8 @@ add_platform_sil_bundle_targets(
     app_deps = [
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//sim/bindings/core:headers",
-        "//sim/bindings/spi:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/spi:headers",
     ],
 )
 

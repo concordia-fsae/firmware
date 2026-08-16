@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sim.models.catalog import ClusterCatalog, ClusterSpec, NodeSpec
-from sim.bindings.power import PowerControlPath
+from sim.bindings.firmware.power import PowerControlPath
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.dc_load import DcLoadModel
 from sim.models.components.drivetrain import DrivetrainModel, DrivetrainSpec

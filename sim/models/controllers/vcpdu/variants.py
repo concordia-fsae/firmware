@@ -5,7 +5,7 @@ from sim.models.catalog import (
     ClusterSpec,
     NodeSpec,
 )
-from sim.bindings.power import PowerControlPath
+from sim.bindings.firmware.power import PowerControlPath
 from rig import ModelDataPathOutputConnector
 from sim.models.components.asm330 import Asm330Model
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec

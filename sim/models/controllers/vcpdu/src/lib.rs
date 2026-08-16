@@ -1,5 +1,6 @@
 mod rig_runtime {
     include!(env!("RIG_RUNTIME_RS"));
+    include!(env!("VCPDU_MODEL_MODULES_RS"));
 }
 
 mod bindings {

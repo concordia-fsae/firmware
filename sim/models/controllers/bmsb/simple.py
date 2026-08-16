@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 
-from sim.bindings.can import CanInterface, CanNodeRig, PeriodicCanMessage, SimpleCanComponent
+from sim.bindings.firmware.can import CanInterface, CanNodeRig, PeriodicCanMessage, SimpleCanComponent
 
 
 class BmsbSimpleModel(CanNodeRig):

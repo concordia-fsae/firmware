@@ -17,7 +17,7 @@ pub fn bind_zero_model(device: i32, chip_select_pin: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_runtime_asm330_bind_zero_model(device: i32, chip_select_pin: i32) {
+pub extern "C" fn rig_model_asm330_bind_zero_model(device: i32, chip_select_pin: i32) {
     bind_zero_model(device, chip_select_pin);
 }
 

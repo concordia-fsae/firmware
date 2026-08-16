@@ -11,10 +11,9 @@ from rig.datapath import (
     DataPathLink,
     ModelDataPathOutputConnector,
 )
-from sim.bindings.core.firmware_cluster import FirmwareClusterRig
-from sim.bindings.core.firmware_node import FirmwareNodeRig
+from sim.bindings.firmware.runtime import FirmwareClusterRig, FirmwareNodeRig
 from rig.model import ComponentRig
-from sim.bindings.power.power import PowerControlPath, PowerInterface
+from sim.bindings.firmware.power.power import PowerControlPath, PowerInterface
 
 
 class ClusterSpecFactory(Protocol):

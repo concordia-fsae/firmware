@@ -5,7 +5,7 @@ from collections.abc import Callable
 import pytest
 
 from .catalog import ClusterCatalog
-from sim.bindings.core.firmware_cluster import FirmwareClusterRig
+from sim.bindings.firmware.runtime import FirmwareClusterRig
 
 
 def cluster_rig_fixture(

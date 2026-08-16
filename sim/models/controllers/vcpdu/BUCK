@@ -14,7 +14,7 @@ rig_embedded_controller_model(
         "simple.py",
         "variants.py",
     ],
-    runtime_modules = ["can", "core", "faults", "flash", "io", "spi", "swi", "system", "time", "timer_capture", "uart"],
+    runtime_modules = ["can", "runtime", "faults", "flash", "io", "spi", "swi", "system", "time", "timer", "timer_capture", "uart"],
     bindgen_headers = [
         "Module.h",
         "HW_gpio_componentSpecific.h",
@@ -67,5 +67,10 @@ rig_embedded_controller_model(
     enum_rust_enums = [
         "FmFault:Fault:Vcpdu:Fault:camel",
     ],
+    model_rust_modules = {
+        "asm330": "//sim/models/components/asm330:rust.rs",
+        "battery_source": "//sim/models/components/battery_source:rust.rs",
+        "dc_load": "//sim/models/components/dc_load:rust.rs",
+    },
     short_enums = True,
 )

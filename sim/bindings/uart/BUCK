@@ -1,3 +1,0 @@
-filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
-
-export_file(name = "uart.c", src = "uart.c", visibility = ["PUBLIC"])

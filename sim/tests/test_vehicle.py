@@ -11,7 +11,7 @@ from sim.models.controllers.bmsw import BmswSimpleCluster
 from sim.models.controllers.vcpdu import SleepFollowerState, VehicleState
 from sim.models.controllers.sws import SwsSimpleModel
 from sim.models.controllers.vcfront import VcfrontSimpleModel
-from sim.models.test import InputTriggeredScalarSink
+from rig.model_fixtures import InputTriggeredScalarSink
 from sim.models.vehicle.fixtures import vehicle_cluster
 
 
