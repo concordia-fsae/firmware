@@ -1,5 +1,21 @@
 # Concordia FSAE Firmware Repo
 
+This repository contains the embedded firmware, host-side drive software, CAN
+network definitions, and simulation tooling for the Concordia FSAE vehicle.
+
+The repository's reusable simulation framework and CAN code generator are
+documented separately:
+
+- [Rig](tools/rig/README.md) is the firmware-independent Python/Rust
+  simulation and scheduling library.
+- [Yamcan](tools/yamcan/README.md) validates the YAML CAN network definition
+  and generates the C, Rust, DBC, statistics, and manifest artifacts consumed
+  by firmware and host applications.
+- [Simulation bindings](sim/bindings/README.md) adapt Rig to this firmware's
+  peripherals and generated ABIs.
+- [Simulation models](sim/models/README.md) implement the component,
+  controller, and vehicle behavior exercised by the simulation tests.
+
 # Documenting the Code
 
 `README.md` _should_ be stored in each component folder.
@@ -90,7 +106,27 @@ See: https://github.com/benbrittain/buckle
 1. Run software locally with `buckle run //$TARGET_PATH:$TARGET_NAME`
    - Software must be compatible with your host system
 
-### 3. Formatting
+### 3. Simulation and CAN Tooling
+
+The main simulation and network checks are available through Buck:
+
+```bash
+# Run the standalone Rig tests and every simulation test target.
+buckle test //tools/rig/... //sim/...
+
+# Build the validated CAN network cache and common network artifacts.
+buckle build //network:network
+buckle build //network:dbc --out dbc/
+buckle build //network:stats --out stats/
+buckle build //network:manifest-uds --out manifest-uds.yaml
+```
+
+Firmware and drive-stack targets use the macros in
+[`tools/yamcan/defs.bzl`](tools/yamcan/defs.bzl) to generate node-specific CAN
+code. The generated files are build outputs; edit the YAML definitions under
+`network/definition/` instead of generated artifacts.
+
+### 4. Formatting
 
 This repository uses `pre-commit` for formatting checks. The configured formatters are:
 
