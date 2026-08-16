@@ -2,7 +2,8 @@ import math
 
 import pytest
 
-from sim.infra.rig import ClusterRig, DataPath
+from sim.bindings.core.firmware_cluster import FirmwareClusterRig
+from rig import DataPath
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.drivetrain import DrivetrainModel, DrivetrainSpec
 from sim.models.test import InputTriggeredScalarSink, ScalarSourceModel
@@ -36,7 +37,7 @@ def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):
     torque_sink = InputTriggeredScalarSink(mechanical_torque_path)
     current_sink = InputTriggeredScalarSink(current_path)
     voltage_feedback_sink = InputTriggeredScalarSink(voltage_feedback_path)
-    cluster = ClusterRig(
+    cluster = FirmwareClusterRig(
         battery=battery,
         request=torque_source,
         drivetrain=drivetrain,

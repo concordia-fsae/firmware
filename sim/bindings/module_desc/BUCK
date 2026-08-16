@@ -1,0 +1,3 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+export_file(name = "module_desc.rs", src = "module_desc.rs", visibility = ["PUBLIC"])

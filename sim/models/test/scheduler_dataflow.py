@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.infra.rig import ComponentRig, DataPath, ModelRig, SchedulerContext
+from rig import ComponentRig, DataPath, ModelRig, SchedulerContext
 
 
 class FakeNode(ModelRig):

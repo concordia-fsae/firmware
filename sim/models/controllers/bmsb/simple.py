@@ -2,14 +2,10 @@ from __future__ import annotations
 
 from enum import IntEnum
 
-from sim.infra.rig import (
-    CanInterface,
-    PeriodicCanMessage,
-)
-from sim.infra.models import SimpleCanComponent, SimpleNodeRig
+from sim.bindings.can import CanInterface, CanNodeRig, PeriodicCanMessage, SimpleCanComponent
 
 
-class BmsbSimpleModel(SimpleNodeRig):
+class BmsbSimpleModel(CanNodeRig):
     """Python-only BMSB CAN source for tests that do not need BMSB firmware."""
 
     def __init__(self, can: CanInterface, *, buses: tuple[str, ...] = ("veh",)):
@@ -97,7 +93,7 @@ class BmsbSimpleModel(SimpleNodeRig):
         )
 
 
-class BmsbDrivetrainSimpleModel(SimpleNodeRig):
+class BmsbDrivetrainSimpleModel(CanNodeRig):
     """PM100 CAN feedback source driven by the simulated drivetrain voltage."""
 
     def __init__(

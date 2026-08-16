@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from sim.infra.rig import (
+from sim.models.catalog import (
     ClusterCatalog,
     ClusterSpec,
-    ModelDataPathOutputConnector,
     NodeSpec,
-    PowerControlPath,
 )
+from sim.bindings.power import PowerControlPath
+from rig import ModelDataPathOutputConnector
 from sim.models.components.asm330 import Asm330Model
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec

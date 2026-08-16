@@ -1,0 +1,3 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+export_file(name = "system.c", src = "system.c", visibility = ["PUBLIC"])

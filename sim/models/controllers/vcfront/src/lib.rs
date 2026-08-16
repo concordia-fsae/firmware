@@ -39,6 +39,7 @@ use bindings::drv_inputAD_channelAnalog_E::{
 };
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
 use rig_runtime::nvm::ControllerNvm;
+use rig_runtime::node_abi::ModelDataPathProvider;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -89,7 +90,7 @@ impl Vcfront {
     }
 }
 
-impl NodeTarget for Vcfront {
+impl NodeTarget<RTController> for Vcfront {
     unsafe fn reset_node(&mut self, controller: &mut RTController) {
         self.nvm.reset();
         rig_runtime::can::configure_network(VCFRONT_CAN_NETWORK);
@@ -100,12 +101,14 @@ impl NodeTarget for Vcfront {
     }
 }
 
-static VCFRONT: Mutex<NodeModel<Vcfront>> = Mutex::new(NodeModel::new(
+impl ModelDataPathProvider for Vcfront {}
+
+static VCFRONT: Mutex<NodeModel<Vcfront, RTController>> = Mutex::new(NodeModel::new(
     RTController::new_embedded_module(),
     Vcfront::new(),
 ));
 
-rig_model_abi!(VCFRONT);
+rig_model_abi!(VCFRONT, rig_runtime::node_abi);
 rig_model_fault_abi!();
 
 rig_yamcan_network!(

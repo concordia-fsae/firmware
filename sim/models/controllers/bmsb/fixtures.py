@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from sim.infra.rig import ClusterRig, cluster_rig_fixture
+from sim.bindings.core.firmware_cluster import FirmwareClusterRig
+from sim.models.pytest import cluster_rig_fixture
 
 from . import DigitalIo
 from .variants import BMSB_CLUSTERS
 
 
-def _configure_bmsb(rig: ClusterRig) -> None:
+def _configure_bmsb(rig: FirmwareClusterRig) -> None:
     for input_ in (
         DigitalIo.VPACK_DIAG,
         DigitalIo.TSMS_CHG,

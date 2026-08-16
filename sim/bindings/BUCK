@@ -1,0 +1,5 @@
+filegroup(
+    name = "bindings",
+    srcs = glob(["*/*"]),
+    visibility = ["PUBLIC"],
+)

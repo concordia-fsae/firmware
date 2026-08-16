@@ -1,5 +1,5 @@
 load("//components/bms_boss:platforms.bzl", "BMSB_PLATFORM_VARIANTS")
-load("//sim/infra:defs.bzl", "rig_embedded_controller_model")
+load("//sim/bindings:defs.bzl", "rig_embedded_controller_model")
 
 rig_embedded_controller_model(
     controller = "bmsb",

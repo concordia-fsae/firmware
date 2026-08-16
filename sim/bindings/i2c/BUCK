@@ -1,0 +1,3 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+export_file(name = "i2c.c", src = "i2c.c", visibility = ["PUBLIC"])

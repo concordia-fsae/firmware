@@ -5,18 +5,18 @@ import ctypes
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from sim.infra.rig import (
+from sim.models.catalog import ComponentSpec
+from rig import (
     ComponentDataPathBinding,
     ComponentDataPathOutput,
-    ComponentSpec,
     ComponentRig,
     DataPath,
     SchedulerContext,
 )
-from sim.infra.rig.datapath import datapath_key
-from sim.infra.rig.dataflow import NativeRouteEndpoint
-from sim.infra.rig.model import datapath_route_id
-from sim.infra.rig.scalar import (
+from rig.datapath import datapath_key
+from rig.dataflow import NativeRouteEndpoint
+from rig.model import datapath_route_id
+from rig.scalar import (
     ScalarInputRouteEndpoint,
     ScalarRouteEndpoint,
 )
@@ -194,7 +194,9 @@ class DcLoadModel(ComponentRig):
             and not _component_present(self.load_spec.capacitance_farads)
         )
 
-    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
+    def rust_datapath_route_abi(
+        self, path: DataPath
+    ) -> NativeRouteEndpoint | None:
         self._register_native_dc_load()
         if path == self.voltage_input_channel:
             return ScalarInputRouteEndpoint(*self._voltage_sink_route_abi(path))
@@ -207,7 +209,7 @@ class DcLoadModel(ComponentRig):
 
     def _scalar_source_route_abi(self, path: DataPath) -> tuple[int, int, int, int]:
         count_callback, recv_callback, send_callback = (
-            self._cluster_rig._rust_runtime.noop_scalar_route_abi
+            self._cluster_rig.runtime.noop_scalar_route_abi
             if self._cluster_rig is not None
             else (0, 0, 0)
         )
@@ -229,21 +231,17 @@ class DcLoadModel(ComponentRig):
                 ctypes.c_uint64,
             ],
         )
-        node_index = self._cluster_rig._rust_runtime.node_index(self._cluster_node_name)
+        node_index = self._cluster_rig.runtime.node_index(
+            self._cluster_node_name
+        )
         if node_index is None or not register(
             ctypes.c_uint32(node_index),
-            ctypes.c_uint32(
-                datapath_route_id(datapath_key(self.voltage_input_channel))
-            ),
-            ctypes.c_uint32(
-                datapath_route_id(datapath_key(self.current_output_channel))
-            ),
+            ctypes.c_uint32(datapath_route_id(datapath_key(self.voltage_input_channel))),
+            ctypes.c_uint32(datapath_route_id(datapath_key(self.current_output_channel))),
             ctypes.c_float(_native_component_value(self.load_spec.resistance_ohms)),
             ctypes.c_float(_native_component_value(self.load_spec.inductance_henrys)),
             ctypes.c_float(_native_component_value(self.load_spec.capacitance_farads)),
-            ctypes.c_uint64(
-                0 if self._scheduler_period_ns is None else self._scheduler_period_ns
-            ),
+            ctypes.c_uint64(0 if self._scheduler_period_ns is None else self._scheduler_period_ns),
         ):
             raise RuntimeError("failed to register native DC load")
 

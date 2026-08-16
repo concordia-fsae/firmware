@@ -1,9 +1,5 @@
-from sim.infra.rig import (
-    TimerInterface,
-    extend_model_class,
-    load_generated_enums,
-    load_generated_module,
-)
+from sim.bindings.timer import TimerInterface
+from rig import extend_model_class, load_generated_enums, load_generated_module
 
 from .extensions import BmsbModelExtensions
 from .simple import BmsbDrivetrainSimpleModel, BmsbSimpleModel

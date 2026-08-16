@@ -2,14 +2,10 @@ from __future__ import annotations
 
 from enum import IntEnum
 
-from sim.infra.rig import (
-    CanInterface,
-    PeriodicCanMessage,
-)
-from sim.infra.models import SimpleCanComponent, SimpleNodeRig
+from sim.bindings.can import CanInterface, CanNodeRig, PeriodicCanMessage, SimpleCanComponent
 
 
-class VcpduSimpleModel(SimpleNodeRig):
+class VcpduSimpleModel(CanNodeRig):
     """Python-only VCPDU CAN source for tests that do not need VCPDU firmware."""
 
     def __init__(self, can: CanInterface, *, buses: tuple[str, ...] = ("veh",)):

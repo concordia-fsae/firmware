@@ -1,0 +1,3 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+export_file(name = "swi.c", src = "swi.c", visibility = ["PUBLIC"])

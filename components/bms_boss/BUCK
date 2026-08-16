@@ -179,7 +179,8 @@ add_platform_sil_bundle_targets(
     yamcan_deps = [
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//sim/infra/runtime:headers",
+        "//sim/bindings/core:headers",
+        "//sim/bindings/spi:headers",
     ],
     app_srcs = [
         "//components/shared/code:DRV/drv_hih.c",
@@ -242,7 +243,8 @@ add_platform_sil_bundle_targets(
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
         "//embedded/libs/cells:cells",
-        "//sim/infra/runtime:headers",
+        "//sim/bindings/core:headers",
+        "//sim/bindings/spi:headers",
     ],
 )
 

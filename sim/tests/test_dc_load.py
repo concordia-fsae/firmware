@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from sim.infra.rig import DataPath
+from rig import DataPath
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
 
 

@@ -1,5 +1,5 @@
 load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS")
-load("//sim/infra:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
+load("//sim/bindings:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
 
 VCFRONT_MODEL = "//sim/models/controllers/vcfront"
 VCPDU_MODEL = "//sim/models/controllers/vcpdu"

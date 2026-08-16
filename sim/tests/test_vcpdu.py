@@ -5,7 +5,7 @@ import pytest
 from sim.models.controllers.sws import SwsSimpleModel
 from sim.models.controllers.vcfront import VcfrontSimpleModel
 from sim.models.controllers.bmsb import BmsbSimpleModel
-from sim.infra.rig import DataPath
+from rig import DataPath
 from sim.models.components.dc_load import DcLoadModel
 from sim.models.controllers.vcpdu import (
     AnalogInput,

@@ -1,0 +1,6 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+[
+    export_file(name = file, src = file, visibility = ["PUBLIC"])
+    for file in glob(["*"])
+]

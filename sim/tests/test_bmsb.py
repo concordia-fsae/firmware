@@ -2,7 +2,7 @@ import pytest
 
 from sim.models.components.battery_source import BatterySourceModel
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
-from sim.infra.models import SimpleCanComponent
+from sim.bindings.can.simple import SimpleCanComponent
 from sim.models.controllers.bmsb import (
     AnalogInput,
     DigitalIo,

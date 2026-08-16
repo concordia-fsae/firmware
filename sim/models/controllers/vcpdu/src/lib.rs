@@ -39,6 +39,7 @@ use bindings::drv_inputAD_channelAnalog_E::{
 };
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
 use rig_runtime::nvm::ControllerNvm;
+use rig_runtime::node_abi::ModelDataPathProvider;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -89,7 +90,7 @@ impl Vcpdu {
     }
 }
 
-impl NodeTarget for Vcpdu {
+impl NodeTarget<RTController> for Vcpdu {
     unsafe fn reset_node(&mut self, controller: &mut RTController) {
         self.nvm.reset();
         rig_runtime::can::configure_network(VCPDU_CAN_NETWORK);
@@ -99,12 +100,14 @@ impl NodeTarget for Vcpdu {
     }
 }
 
-static VCPDU: Mutex<NodeModel<Vcpdu>> = Mutex::new(NodeModel::new(
+impl ModelDataPathProvider for Vcpdu {}
+
+static VCPDU: Mutex<NodeModel<Vcpdu, RTController>> = Mutex::new(NodeModel::new(
     RTController::new_embedded_module(),
     Vcpdu::new(),
 ));
 
-rig_model_abi!(VCPDU);
+rig_model_abi!(VCPDU, rig_runtime::node_abi);
 rig_model_fault_abi!();
 
 #[unsafe(no_mangle)]

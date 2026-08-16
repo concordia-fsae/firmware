@@ -1,0 +1,3 @@
+filegroup(name = "binding", srcs = glob(["*"]), visibility = ["PUBLIC"])
+
+export_file(name = "rt_controller.rs", src = "rt_controller.rs", visibility = ["PUBLIC"])
