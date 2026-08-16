@@ -35,6 +35,10 @@ mod rust_decode_generated {
 }
 
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
+use bindings::HW_GPIO_pinmux_E::{
+    HW_GPIO_DIN1, HW_GPIO_DIN2, HW_GPIO_DIN3, HW_GPIO_DIN4, HW_GPIO_DIN5, HW_GPIO_DIN6,
+    HW_GPIO_DIN7, HW_GPIO_DIN8,
+};
 use rig_runtime::nvm::ControllerNvm;
 use rig_runtime::node_abi::ModelDataPathProvider;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
@@ -43,6 +47,26 @@ use std::sync::Mutex;
 const SWS_APP_START: u32 = 0x0800_2000;
 const SWS_APP_END: u32 = 0x0801_0000;
 const SWS_APP_CRC_LOCATION: u32 = 0x0800_FFF0;
+
+// The firmware's SWS inputs are active-low GPIOs. Resetting them here keeps
+// the Rust-hosted model deterministic and makes the physical driver-input
+// boundary explicit: Python tests set logical buttons through the generic IO
+// ABI, while the embedded firmware remains responsible for debounce and CAN
+// request generation.
+fn release_driver_inputs(controller: &RTController) {
+    for pin in [
+        HW_GPIO_DIN1,
+        HW_GPIO_DIN2,
+        HW_GPIO_DIN3,
+        HW_GPIO_DIN4,
+        HW_GPIO_DIN5,
+        HW_GPIO_DIN6,
+        HW_GPIO_DIN7,
+        HW_GPIO_DIN8,
+    ] {
+        controller.set_digital(pin as i32, true);
+    }
+}
 
 rig_rt_controller_nvm_storage!(ControllerNvm<
     { features::NVM_BLOCK_SIZE as usize },
@@ -88,8 +112,9 @@ impl Sws {
 }
 
 impl NodeTarget<RTController> for Sws {
-    unsafe fn reset_node(&mut self, _controller: &mut RTController) {
+    unsafe fn reset_node(&mut self, controller: &mut RTController) {
         self.nvm.reset();
+        release_driver_inputs(controller);
         rig_runtime::can::configure_network(SWS_CAN_NETWORK);
         unsafe { bindings::YAMCAN_shared_init_static() };
     }

@@ -153,7 +153,10 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
         lambda: _positive(vcfront.latest_torque_request()),
         timeout=500,
         step=10,
-        message="VCFRONT torque request should become non-zero when accelerator is pressed in TS_RUN",
+        message=(
+            "VCFRONT torque request should become non-zero when accelerator is "
+            "pressed in TS_RUN"
+        ),
     )
 
     vcfront.set_accelerator_position(0)
@@ -161,8 +164,39 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
         lambda: vcfront.latest_torque_request() == 0,
         timeout=500,
         step=10,
-        message="VCFRONT torque request should return to zero when accelerator is released",
+        message="VCFRONT torque request should return to zero when accelerator is "
+        "released",
     )
+
+
+@pytest.mark.parametrize(
+    "brake_position,expected_gear",
+    [
+        pytest.param(0, "FORWARD", id="brake-released"),
+        pytest.param(50, "REVERSE", id="brake-pressed"),
+    ],
+)
+def test_reverse_requires_brake_pedal(
+    vcfront_cluster, brake_position, expected_gear
+):
+    vcfront = vcfront_cluster.vcfront
+    vcpdu = VcpduSimpleModel(vcfront.can)
+    vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
+    sws = SwsSimpleModel(vcfront.can)
+    sws.periodic_driver_request(
+        period=20,
+        SWS_requestReverse=DigitalStatus.ON,
+    )
+    vcfront_cluster.add_component(vcpdu)
+    vcfront_cluster.add_component(sws)
+
+    vcfront.set_accelerator_position(0)
+    vcfront.set_brake_position(brake_position)
+    vcfront_cluster.run_for(200, step=10)
+
+    torque_manager = vcfront.can.latest("VCFRONT_torqueManager", bus="veh")
+    assert torque_manager is not None
+    assert torque_manager.VCFRONT_gear.name == expected_gear
 
 
 def test_zero_vehicle_and_wheel_speed_preserves_torque_request_in_ts_run(
