@@ -1,9 +1,124 @@
-load("//tools/rig:defs.bzl", "rig_model_python")
+load("//components/vehicle_platform:platforms.bzl", "PLATFORMS")
+load("//sim/bindings:defs.bzl", "rig_embedded_controller_model", "rig_python_enums")
 
-rig_model_python(
-    srcs = [
+export_file(
+    name = "host.c",
+    src = "host.c",
+    visibility = ["//components/bms_worker/..."],
+)
+
+export_file(
+    name = "bmsw_input_ad.c",
+    src = "bmsw_input_ad.c",
+    visibility = ["//components/bms_worker/..."],
+)
+
+export_file(
+    name = "bmsw_i2c.c",
+    src = "bmsw_i2c.c",
+    visibility = ["//components/bms_worker/..."],
+)
+
+rig_embedded_controller_model(
+    controller = "bmsw",
+    class_name = "BmswModel",
+    component = "//components/bms_worker",
+    platform_variants = [
+        (PLATFORMS.CFR25, 0),
+        (PLATFORMS.CFR26, 1),
+    ],
+    model_target = "//sim/models/controllers/bmsw",
+    python_srcs = [
         "__init__.py",
+        "extensions.py",
+        "segment.py",
         "simple.py",
+        "variants.py",
+    ],
+    runtime_modules = [
+        "can",
+        "runtime",
+        "faults",
+        "flash",
+        "i2c",
+        "io",
+        "spi",
+        "swi",
+        "system",
+        "time",
+        "timer",
+        "uart",
+    ],
+    bindgen_headers = [
+        "Module.h",
+        "HW_gpio_componentSpecific.h",
+        "HW_MAX14921.h",
+        "HW_spi_componentSpecific.h",
+        "drv_inputAD_componentSpecific.h",
+        "YamcanShared.h",
+    ],
+    bindgen_types = [
+        "drv_inputAD_channelAnalog_E",
+        "drv_inputAD_channelDigital_E",
+        "HW_GPIO_pinmux_E",
+        "HW_spi_device_E",
+        "CAN_data_T",
+        "YamcanShared",
+    ],
+    enum_headers = [
+        "CANTypes_generated.h",
+        "HW_gpio_componentSpecific.h",
+        "HW_MAX14921.h",
+        "drv_inputAD_componentSpecific.h",
+    ],
+    c_enums = [
+        "drv_inputAD_channelAnalog_E:AnalogInput:DRV_INPUTAD_ANALOG_::upper",
+        "drv_inputAD_channelDigital_E:DigitalInput:DRV_INPUTAD_DIGITAL_::upper",
+        "HW_GPIO_pinmux_E:DigitalIo:HW_GPIO_::upper",
+        "MAX_productID_E:MaxProductId:MAX_PN_::upper",
+        "MAX_analogOutput_E:MaxAnalogOutput:MAX_::upper",
+        "MAX_selectedCell_E:MaxSelectedCell:MAX_CELL::upper",
+        "MAX_selectedTemp_E:MaxSelectedTemp:MAX_T::upper",
+    ],
+    enum_rust_enums = [
+        "FmFault:Fault:Bmsw:Fault:camel",
+    ],
+    bindgen_functions = [
+        "Module_Init",
+        "Module_1kHz_TSK",
+        "Module_100Hz_TSK",
+        "Module_10Hz_TSK",
+        "Module_1Hz_TSK",
+        "YAMCAN_shared_init_static",
+    ],
+    model_rust_modules = {},
+    short_enums = True,
+    visibility = ["PUBLIC"],
+)
+
+rig_python_enums(
+    name = "enums-py-cfr26",
+    out = "enums_cfr26.py",
+    include_headers = ["drv_inputAD_componentSpecific.h"],
+    deps = [
+        "//components/bms_worker:feature-tree-cfr26",
+        "//components/bms_worker:sil-yamcan-c",
+        "//components/bms_worker:sil-host-headers",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/can:headers",
+        "//sim/bindings/firmware/io:headers",
+    ],
+    c_enums = [
+        "drv_inputAD_channelAnalog_E:AnalogInput:DRV_INPUTAD_ANALOG_::upper",
+    ],
+    clang_flags = [
+        "-DBMSW_VARIANT_ID=1",
+        "-DBMSW_NODE_ID=0",
+        "-include",
+        "BuildDefines.h",
+        "-fshort-enums",
     ],
     visibility = ["PUBLIC"],
 )

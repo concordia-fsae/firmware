@@ -20,7 +20,7 @@ load(
     "platform_constraint_label",
     "platform_output_name",
 )
-load("//tools/yamcan/defs.bzl", "generate_code")
+load("//tools/yamcan/defs.bzl", "generate_c_library", "generate_code", "generate_resources")
 load("//tools/feature-tree/defs.bzl", "generate_feature_tree")
 load("//tools/hextools/defs.bzl", "inject_crc")
 
@@ -33,6 +33,129 @@ platform_variants = [
     (PLATFORMS.CFR26, 1, 8),
 ]
 max_node_count = max([node_count for _platform, _variant_id, node_count in platform_variants])
+
+# Host-side firmware bundle used by the standalone Rig BMSW model.  The
+# embedded target below remains the source of truth for production firmware;
+# this bundle compiles the same application sources against Rig's peripheral
+# bindings so the native model exercises the real controller logic.
+prebuilt_cxx_library(
+    name = "sil-host-headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = remap_headers(["include/", "HW/include/"]),
+    visibility = ["//sim/models/controllers/bmsw/..."],
+)
+
+prebuilt_cxx_library(
+    name = "sil-features",
+    header_only = True,
+    header_namespace = "",
+    exported_deps = select({
+        platform_constraint_label(platform): [feature_tree_target(platform, 0)]
+        for platform, _variant_id, _node_count in platform_variants
+    } | {
+        "DEFAULT": [feature_tree_target(platform_variants[0][0], 0)],
+    }),
+    visibility = ["//sim/models/controllers/bmsw/..."],
+)
+
+generate_resources(
+    name = "sil-yamcan",
+    network_dep = "//network:network",
+    node = "bmsw_0",
+    rust_wrapper = True,
+    visibility = ["//sim/models/controllers/bmsw/..."],
+)
+
+generate_c_library(
+    name = "sil-yamcan-c",
+    codegen_target = ":sil-yamcan",
+    compiler_flags = ["-fshort-enums"],
+    library_deps = [
+        ":sil-features",
+        ":sil-host-headers",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/io:headers",
+        "//sim/bindings/firmware/spi:headers",
+    ],
+    preferred_linkage = "static",
+    visibility = ["//sim/models/controllers/bmsw/..."],
+)
+
+cxx_library(
+    name = "sil-application",
+    srcs = [
+        "//components/shared/code:DRV/drv_cooling.c",
+        "//components/shared/code:DRV/drv_io.c",
+        "//components/shared/code:DRV/drv_mux.c",
+        "//components/shared/code:DRV/drv_outputAD.c",
+        "//components/shared/code:DRV/drv_sht40.c",
+        "//components/shared/code:DRV/drv_tempSensors.c",
+        "//components/shared/code:DRV/drv_timer.c",
+        "//components/shared/code:app/CAN/CANIO-rx.c",
+        "//components/shared/code:app/CAN/CANIO-tx.c",
+        "//components/shared/code:app/app_faultManager.c",
+        "//components/shared/code:libs/LIB_app.c",
+        "//components/shared/code:libs/lib_interpolation.c",
+        "//components/shared/code:libs/lib_simpleFilter.c",
+        "//components/shared/code:libs/lib_thermistors.c",
+        "//components/shared/code:libs/Utility.c",
+        "//components/shared/code/RTOS:Module.c",
+        "//embedded/libs:isotp-src[isotp.c]",
+        "//embedded/libs/uds:lib_udsServer.c",
+        "HW/HW_MAX14921.c",
+        "//sim/models/controllers/bmsw:bmsw_input_ad.c",
+        "HW/drv_outputAD_componentSpecific.c",
+        "HW/drv_tempSensors_componentSpecific.c",
+        "//sim/models/controllers/bmsw:host.c",
+        "//sim/models/controllers/bmsw:bmsw_i2c.c",
+        "src/BatteryMonitoring.c",
+        "src/CANIO_componentSpecific.c",
+        "src/Environment.c",
+        "src/Module_componentSpecific.c",
+        "src/cooling.c",
+        "src/uds_componentSpecific.c",
+    ],
+    compiler_flags = [
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-include",
+        "BuildDefines.h",
+        "-include",
+        "Utility.h",
+        "-include",
+        "string.h",
+        "-Wno-unused-parameter",
+        "-Wno-missing-prototypes",
+        "-Wno-unused-function",
+        "-Wno-conversion",
+        "-fshort-enums",
+    ],
+    header_namespace = "",
+    headers = {
+        "BuildDefines.h": "HW/include/BuildDefines.h",
+        "isotp.h": "//embedded/libs:isotp-src[include/isotp.h]",
+        "isotp_config.h": "//embedded/libs:isotp-src[include/isotp_config.h]",
+        "isotp_defines.h": "//embedded/libs:isotp-src[include/isotp_defines.h]",
+        "isotp_user.h": "//embedded/libs:isotp-src[include/isotp_user.h]",
+        "lib_uds.h": "//embedded/libs/uds:lib_uds.h",
+    } | remap_headers(["include/", "HW/include/"]),
+    deps = [
+        ":sil-features",
+        ":sil-host-headers",
+        ":sil-yamcan-c",
+        "//components/shared/code:headers",
+        "//components/shared/code/RTOS:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/io:headers",
+        "//sim/bindings/firmware/spi:headers",
+    ],
+    preferred_linkage = "static",
+    visibility = ["//sim/models/controllers/bmsw/..."],
+)
 
 constraint_setting(
     name = "node",
@@ -491,6 +614,7 @@ generate_stripped_asms(
     alias(
         name = "feature-tree-{}".format(platform_output_name(platform_name)),
         actual = feature_tree_target(platform_name, 0),
+        visibility = ["PUBLIC"],
     )
     for platform_name, _variant_id, _node_count in platform_variants
 ]
@@ -498,6 +622,7 @@ generate_stripped_asms(
     alias(
         name = "feature-tree-{}-codegen".format(platform_output_name(platform_name)),
         actual = feature_tree_target(platform_name, 0) + "-codegen",
+        visibility = ["PUBLIC"],
     )
     for platform_name, _variant_id, _node_count in platform_variants
 ]
