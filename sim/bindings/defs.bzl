@@ -583,7 +583,7 @@ def rig_pytest(
     __rules__["genrule"](
         name = uv_runner_name,
         out = "uv-runner",
-        cmd = "printf '%s\n' '#!/usr/bin/env bash' 'project=$1' 'shift' 'exec uv run --frozen --project \"$project\" \"$@\"' > $OUT && chmod +x $OUT",
+        cmd = "printf '%s\n' '#!/usr/bin/env bash' 'project=$1' 'shift' 'platforms=${SIM_PLATFORM_VARIANTS:-}' 'if [[ \"$platforms\" == *,* ]]; then' '  status=0' '  IFS=, read -ra variants <<< \"$platforms\"' '  for variant in \"${variants[@]}\"; do' '    SIM_PLATFORM_VARIANTS=\"$variant\" uv run --frozen --project \"$project\" \"$@\" || status=$?' '  done' '  exit \"$status\"' 'fi' 'exec uv run --frozen --project \"$project\" \"$@\"' > $OUT && chmod +x $OUT",
         executable = True,
     )
 
