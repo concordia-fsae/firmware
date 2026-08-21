@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from sim.models.catalog import ClusterCatalog, ClusterSpec
 from sim.models.controllers.bmsb.variants import bmsb_node
+from sim.models.controllers.bmsw.simple import BMSW_WORKER_COUNT_BY_PLATFORM
+from sim.models.controllers.bmsw.variants import bmsw_node
 from sim.models.controllers.vcfront.variants import vcfront_node
 from sim.models.controllers.vcpdu import Tps2hb16abIc, Tps2hb16abOutput, VcpduModel
 from sim.models.controllers.vcpdu.variants import vcpdu_node
@@ -23,6 +25,13 @@ def vehicle_cluster_spec(hardware: str) -> ClusterSpec:
         hardware=hardware,
         nodes=(
             bmsb_node(hardware, include_drivetrain=True),
+            # Vehicle tests explicitly model the complete production BMSW
+            # topology. Focused BMSW tests use bmsw_cluster_spec's one-node
+            # default instead.
+            *(
+                bmsw_node(hardware, node_id)
+                for node_id in range(BMSW_WORKER_COUNT_BY_PLATFORM[hardware])
+            ),
             sws_node(hardware),
             vcfront_node(hardware, power_input=vcfront_power),
             vcpdu_node(

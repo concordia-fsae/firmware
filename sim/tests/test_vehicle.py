@@ -6,7 +6,6 @@ from sim.models.controllers.bmsb import (
     DigitalIo,
     PrechargeContactorState,
 )
-from sim.models.controllers.bmsw import BmswSimpleCluster
 from sim.models.controllers.vcpdu import SleepFollowerState, VehicleState
 from sim.models.controllers.sws import SwsRequest
 from sim.models.controllers.vcfront import VcfrontSimpleModel
@@ -32,10 +31,6 @@ def _add_vehicle_test_inputs(vehicle_cluster):
         DrivetrainModel.mechanical_torque_output_channel("vehicle")
     )
     vehicle_cluster.add_components(
-        BmswSimpleCluster.for_platform(
-            bmsb.can,
-            vehicle_cluster.hardware,
-        ).model,
         torque_sink,
         BmsbDrivetrainSimpleModel(
             bmsb.can,

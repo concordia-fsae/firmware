@@ -1,5 +1,6 @@
-load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS")
-load("//sim/bindings:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
+load("//components/bms_worker:defs.bzl", "BMSW_NODE_COUNT_BY_PLATFORM")
+load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS", "platform_output_name")
+load("//sim/bindings:defs.bzl", "rig_platform_node_sim_lib_env", "rig_platform_node_sim_lib_resources", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
 
 VCFRONT_MODEL = "//sim/models/controllers/vcfront"
 VCPDU_MODEL = "//sim/models/controllers/vcpdu"
@@ -7,6 +8,12 @@ VCREAR_MODEL = "//sim/models/controllers/vcrear"
 BMSB_MODEL = "//sim/models/controllers/bmsb"
 BMSW_MODEL = "//sim/models/controllers/bmsw"
 SWS_MODEL = "//sim/models/controllers/sws"
+
+BMSW_PLATFORM_NODES = [
+    (platform, node)
+    for platform in ALL_PLATFORMS
+    for node in range(BMSW_NODE_COUNT_BY_PLATFORM[platform_output_name(platform)])
+]
 
 rig_pytest(
     name = "dc_load",
@@ -84,13 +91,14 @@ rig_pytest(
         "BMSW_SIM_LIB": "$(location {}:sil-so)".format(BMSW_MODEL),
     } |
     rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("BMSW", BMSW_MODEL, ALL_PLATFORMS),
+    rig_platform_sim_lib_env("BMSW", BMSW_MODEL, ALL_PLATFORMS) |
+    rig_platform_node_sim_lib_env("BMSW", BMSW_MODEL, BMSW_PLATFORM_NODES),
     resources = [
         "{}:enums-py".format(BMSW_MODEL),
         "{}:enums-py-cfr26".format(BMSW_MODEL),
         "{}:bmsw-py".format(BMSW_MODEL),
         "{}:sil-so".format(BMSW_MODEL),
-    ] + rig_platform_sim_lib_resources(BMSW_MODEL, ALL_PLATFORMS),
+    ] + rig_platform_sim_lib_resources(BMSW_MODEL, ALL_PLATFORMS) + rig_platform_node_sim_lib_resources(BMSW_MODEL, BMSW_PLATFORM_NODES),
     visibility = ["PUBLIC"],
 )
 
@@ -234,6 +242,10 @@ rig_pytest(
         "BMSB_ENUMS_PY": "$(location {}:enums-py)".format(BMSB_MODEL),
         "BMSB_MODEL_PY": "$(location {}:bmsb-py)".format(BMSB_MODEL),
         "BMSB_SIM_LIB": "$(location {}:sil-so)".format(BMSB_MODEL),
+        "BMSW_ENUMS_PY": "$(location {}:enums-py)".format(BMSW_MODEL),
+        "BMSW_CFR26_ENUMS_PY": "$(location {}:enums-py-cfr26)".format(BMSW_MODEL),
+        "BMSW_MODEL_PY": "$(location {}:bmsw-py)".format(BMSW_MODEL),
+        "BMSW_SIM_LIB": "$(location {}:sil-so)".format(BMSW_MODEL),
         "SWS_ENUMS_PY": "$(location {}:enums-py)".format(SWS_MODEL),
         "SWS_MODEL_PY": "$(location {}:sws-py)".format(SWS_MODEL),
         "SWS_SIM_LIB": "$(location {}:sil-so)".format(SWS_MODEL),
@@ -252,7 +264,9 @@ rig_pytest(
     rig_platform_sim_lib_env("SWS", SWS_MODEL, ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCFRONT", VCFRONT_MODEL, ALL_PLATFORMS) |
     rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS),
+    rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS) |
+    rig_platform_sim_lib_env("BMSW", BMSW_MODEL, ALL_PLATFORMS) |
+    rig_platform_node_sim_lib_env("BMSW", BMSW_MODEL, BMSW_PLATFORM_NODES),
     resources = [
         "{}:enums-py".format(BMSB_MODEL),
         "{}:bmsb-py".format(BMSB_MODEL),
@@ -266,6 +280,9 @@ rig_pytest(
         "{}:enums-py".format(VCPDU_MODEL),
         "{}:vcpdu-py".format(VCPDU_MODEL),
         "{}:sil-so".format(VCPDU_MODEL),
+        "{}:enums-py".format(BMSW_MODEL),
+        "{}:enums-py-cfr26".format(BMSW_MODEL),
+        "{}:bmsw-py".format(BMSW_MODEL),
         "//sim/models/vehicle:python",
         "//sim/models/components:python",
         "//sim/models/components/asm330:python",
@@ -281,6 +298,8 @@ rig_pytest(
     rig_platform_sim_lib_resources(SWS_MODEL, ALL_PLATFORMS) +
     rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS) +
     rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS) +
+    rig_platform_sim_lib_resources(BMSW_MODEL, ALL_PLATFORMS) +
+    rig_platform_node_sim_lib_resources(BMSW_MODEL, BMSW_PLATFORM_NODES) +
     rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
 )

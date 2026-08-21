@@ -46,13 +46,11 @@ class BmswModelExtensions:
     @classmethod
     def segment_voltage_input(cls, *, platform: str) -> ModelDataPathInputConnector:
         def connect(node, path: DataPath) -> None:
-            # The firmware multiplies the sampled MAX pack output by two in
-            # the ADC path before BatteryMonitoring applies its 16x scale.
             analog_input = cls._analog_input_enum(node, platform)
             node.add_scalar_sink(
                 path,
                 sink_id=int(analog_input.SEGMENT),
-                value_scale=0.5,
+                value_scale=1.0,
                 set_value=node._set_analog_input,
             )
 

@@ -1,4 +1,5 @@
-load("//components/vehicle_platform:platforms.bzl", "PLATFORMS")
+load("//components/vehicle_platform:platforms.bzl", "PLATFORMS", "platform_output_name")
+load("//components/bms_worker:defs.bzl", "BMSW_NODE_COUNT_BY_PLATFORM", "configured_platform_name")
 load("//sim/bindings:defs.bzl", "rig_embedded_controller_model", "rig_python_enums")
 
 export_file(
@@ -95,6 +96,26 @@ rig_embedded_controller_model(
     short_enums = True,
     visibility = ["PUBLIC"],
 )
+
+# The component build has a separate feature tree, YamCan network, and
+# firmware image for every worker node.  Expose those configured builds as
+# model-library aliases so each Rig node loads the matching firmware image
+# instead of silently reusing node 0.
+[
+    native.configured_alias(
+        name = "sil-so-{}-node-{}".format(platform_output_name(platform), node),
+        actual = ":sil-so",
+        platform = "//components/bms_worker:{}".format(
+            configured_platform_name(platform, node)
+        ),
+        visibility = ["PUBLIC"],
+    )
+    for platform, node_count in [
+        (PLATFORMS.CFR25, BMSW_NODE_COUNT_BY_PLATFORM["cfr25"]),
+        (PLATFORMS.CFR26, BMSW_NODE_COUNT_BY_PLATFORM["cfr26"]),
+    ]
+    for node in range(node_count)
+]
 
 rig_python_enums(
     name = "enums-py-cfr26",

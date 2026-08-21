@@ -9,25 +9,29 @@ from sim.models.pytest import cluster_rig_fixture
 bmsw_cluster = cluster_rig_fixture(BMSW_CLUSTERS)
 
 
-def _faults(bmsw):
-    faults = bmsw.can.latest("BMSW0_faults", bus="veh")
+def _faults(bmsw, node_id: int):
+    faults = bmsw.can.latest(f"BMSW{node_id}_faults", bus="veh")
     assert faults is not None
     return faults
 
 
 def test_bmsw_nominal_segment_has_no_battery_faults(bmsw_cluster):
-    bmsw = bmsw_cluster.bmsw
     bmsw_cluster.run_for(5000)
 
-    faults = _faults(bmsw)
-    assert faults.BMSW0_analogRef5vHwError == 0
-    assert faults.BMSW0_packVoltageHwError == 0
-    assert faults.BMSW0_insufficientThermistors == 0
-    assert faults.BMSW0_thermistorDisconnected == 0
-    assert faults.BMSW0_cellDisconnected == 0
-    assert faults.BMSW0_cellUndervoltage == 0
-    assert faults.BMSW0_cellOvervoltage == 0
-    assert faults.BMSW0_cellOvertemp == 0
+    assert set(bmsw_cluster.nodes) == {"bmsw0"}
+    for node_id, bmsw in enumerate(bmsw_cluster.nodes.values()):
+        faults = _faults(bmsw, node_id)
+        for signal in (
+            "analogRef5vHwError",
+            "packVoltageHwError",
+            "insufficientThermistors",
+            "thermistorDisconnected",
+            "cellDisconnected",
+            "cellUndervoltage",
+            "cellOvervoltage",
+            "cellOvertemp",
+        ):
+            assert getattr(faults, f"BMSW{node_id}_{signal}") == 0
 
 
 @pytest.mark.parametrize(
@@ -47,7 +51,7 @@ def test_bmsw_identifies_sensor_faults(
     signal: str,
     duration_ms: int,
 ):
-    bmsw = bmsw_cluster.bmsw
+    bmsw = bmsw_cluster.bmsw0
     segment = bmsw_cluster.components[0]
     if input_name == "cell":
         segment.set_cell_voltage(0, value)
@@ -56,5 +60,5 @@ def test_bmsw_identifies_sensor_faults(
 
     bmsw_cluster.run_for(duration_ms, step=100)
 
-    faults = _faults(bmsw)
+    faults = _faults(bmsw, 0)
     assert getattr(faults, f"BMSW0_{signal}") == 1

@@ -43,6 +43,7 @@ use std::sync::Mutex;
 const BMSW_APP_START: u32 = 0x0800_2000;
 const BMSW_APP_END: u32 = 0x0802_0000;
 const BMSW_APP_CRC_LOCATION: u32 = 0x0801_FFF0;
+const BMSW_SEGMENT_COUNT: f32 = if features::APP_VARIANT_ID == 0 { 6.0 } else { 8.0 };
 
 fn reverse_byte(mut value: u8) -> u8 {
     value = (value & 0xF0) >> 4 | (value & 0x0F) << 4;
@@ -145,7 +146,7 @@ impl NodeTarget<RTController> for Bmsw {
         }
         controller.set_analog_input(
             bindings::drv_inputAD_channelAnalog_E::DRV_INPUTAD_ANALOG_SEGMENT as i32,
-            25.9,
+            350.0 / BMSW_SEGMENT_COUNT / 16.0,
         );
     }
 }

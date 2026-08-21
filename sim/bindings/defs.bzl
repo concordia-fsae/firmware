@@ -534,6 +534,35 @@ def rig_platform_sim_lib_resources(
         for platform in platforms
     ]
 
+def rig_platform_node_sim_lib_env(
+        env_prefix: str,
+        model_target: str,
+        platform_nodes) -> dict[str, str]:
+    return {
+        "{}{}_{}_SIM_LIB".format(
+            env_prefix,
+            node,
+            platform_output_name(platform).upper(),
+        ): "$(location {}:sil-so-{}-node-{})".format(
+            model_target,
+            platform_output_name(platform),
+            node,
+        )
+        for platform, node in platform_nodes
+    }
+
+def rig_platform_node_sim_lib_resources(
+        model_target: str,
+        platform_nodes) -> list[str]:
+    return [
+        "{}:sil-so-{}-node-{}".format(
+            model_target,
+            platform_output_name(platform),
+            node,
+        )
+        for platform, node in platform_nodes
+    ]
+
 def rig_platform_variants_env(platforms) -> dict[str, str]:
     return {
         "SIM_PLATFORM_VARIANTS": ",".join([

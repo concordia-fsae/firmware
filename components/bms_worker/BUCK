@@ -7,6 +7,7 @@ load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load(
     "//components/bms_worker:defs.bzl",
+    "BMSW_NODE_COUNT_BY_PLATFORM",
     "all_nodes_target_name",
     "configured_platform_name",
     "feature_tree_codegen_srcs",
@@ -29,8 +30,8 @@ APP_START_ADDR = 0x08002000
 APP_NAME = "bmsw"
 platform_variants = [
     # (platform, variant_id, node_count)
-    (PLATFORMS.CFR25, 0, 6),
-    (PLATFORMS.CFR26, 1, 8),
+    (PLATFORMS.CFR25, 0, BMSW_NODE_COUNT_BY_PLATFORM["cfr25"]),
+    (PLATFORMS.CFR26, 1, BMSW_NODE_COUNT_BY_PLATFORM["cfr26"]),
 ]
 max_node_count = max([node_count for _platform, _variant_id, node_count in platform_variants])
 
@@ -50,20 +51,29 @@ prebuilt_cxx_library(
     name = "sil-features",
     header_only = True,
     header_namespace = "",
-    exported_deps = select({
-        platform_constraint_label(platform): [feature_tree_target(platform, 0)]
-        for platform, _variant_id, _node_count in platform_variants
-    } | {
-        "DEFAULT": [feature_tree_target(platform_variants[0][0], 0)],
-    }),
+    exported_deps = feature_tree_targets(platform_variants),
     visibility = ["//sim/models/controllers/bmsw/..."],
 )
 
-generate_resources(
+[
+    generate_resources(
+        name = "sil-yamcan-node-{}".format(node),
+        network_dep = "//network:network",
+        node = "bmsw_{}".format(node),
+        rust_wrapper = True,
+        visibility = ["//sim/models/controllers/bmsw/..."],
+    )
+    for node in range(max_node_count)
+]
+
+alias(
     name = "sil-yamcan",
-    network_dep = "//network:network",
-    node = "bmsw_0",
-    rust_wrapper = True,
+    actual = select({
+        ":node-{}".format(node): ":sil-yamcan-node-{}".format(node)
+        for node in range(max_node_count)
+    } | {
+        "DEFAULT": ":sil-yamcan-node-0",
+    }),
     visibility = ["//sim/models/controllers/bmsw/..."],
 )
 
@@ -175,6 +185,7 @@ constraint_setting(
             platform_constraint_label(platform_name),
             ":node-{}".format(node),
         ],
+        visibility = ["PUBLIC"],
     )
     for platform_name, _variant_id, node_count in platform_variants
     for node in range(node_count)

@@ -36,9 +36,11 @@ class BmsSegmentModel(ComponentRig):
         cell_voltages: tuple[float, ...] | list[float] | None = None,
         temperatures_c: tuple[float, ...] | list[float] | None = None,
         segment_voltage: float | None = None,
+        node_id: int = 0,
         scheduler_period: int | float = 1,
     ) -> None:
         self.platform = platform.lower()
+        self.node_id = node_id
         if self.platform not in {"cfr25", "cfr26"}:
             raise ValueError(f"unsupported BMS segment platform {platform!r}")
         self.series_cells = 14 if self.platform == "cfr25" else 11
@@ -56,18 +58,20 @@ class BmsSegmentModel(ComponentRig):
         self._segment_voltage = (
             float(segment_voltage)
             if segment_voltage is not None
-            else sum(self._cell_voltages)
+            else 350.0 / (6 if self.platform == "cfr25" else 8)
         )
         self._queues: dict[DataPath, deque[float]] = {}
         self.cell_voltage_outputs = tuple(
-            self.cell_voltage_output_channel(index)
+            self.cell_voltage_output_channel(index, node_id=node_id)
             for index in range(self.series_cells)
         )
         self.thermistor_voltage_outputs = tuple(
-            self.thermistor_voltage_output_channel(index)
+            self.thermistor_voltage_output_channel(index, node_id=node_id)
             for index in range(self.thermistor_count)
         )
-        self.segment_voltage_output = self.segment_voltage_output_channel()
+        self.segment_voltage_output = self.segment_voltage_output_channel(
+            node_id=node_id
+        )
         super().__init__(
             scheduler_period=scheduler_period,
             scheduler_callback=self._sample,
@@ -77,15 +81,21 @@ class BmsSegmentModel(ComponentRig):
         self._add_output(self.segment_voltage_output)
 
     @classmethod
-    def cell_voltage_output(cls, index: int) -> ComponentDataPathOutput:
+    def cell_voltage_output(
+        cls, index: int, *, node_id: int = 0
+    ) -> ComponentDataPathOutput:
         return ComponentDataPathOutput(
-            lambda component: component.cell_voltage_outputs[index]
+            lambda _component: cls.cell_voltage_output_channel(index, node_id=node_id)
         )
 
     @classmethod
-    def thermistor_voltage_output(cls, index: int) -> ComponentDataPathOutput:
+    def thermistor_voltage_output(
+        cls, index: int, *, node_id: int = 0
+    ) -> ComponentDataPathOutput:
         return ComponentDataPathOutput(
-            lambda component: component.thermistor_voltage_outputs[index]
+            lambda _component: cls.thermistor_voltage_output_channel(
+                index, node_id=node_id
+            )
         )
 
     segment_voltage_output = ComponentDataPathOutput(
@@ -101,6 +111,7 @@ class BmsSegmentModel(ComponentRig):
         cell_voltages: tuple[float, ...] | list[float] | None = None,
         temperatures_c: tuple[float, ...] | list[float] | None = None,
         segment_voltage: float | None = None,
+        node_id: int = 0,
         scheduler_period: int | float = 1,
     ) -> ComponentSpec:
         return ComponentSpec(
@@ -110,22 +121,29 @@ class BmsSegmentModel(ComponentRig):
                 "cell_voltages": cell_voltages,
                 "temperatures_c": temperatures_c,
                 "segment_voltage": segment_voltage,
+                "node_id": node_id,
                 "scheduler_period": scheduler_period,
             },
             bindings=bindings,
         )
 
     @classmethod
-    def cell_voltage_output_channel(cls, index: int) -> DataPath:
-        return DataPath.component(cls, (BmsSegmentPort.CELL_VOLTAGE, index))
+    def cell_voltage_output_channel(cls, index: int, *, node_id: int = 0) -> DataPath:
+        return DataPath.component(
+            cls, (node_id, BmsSegmentPort.CELL_VOLTAGE, index)
+        )
 
     @classmethod
-    def thermistor_voltage_output_channel(cls, index: int) -> DataPath:
-        return DataPath.component(cls, (BmsSegmentPort.THERMISTOR_VOLTAGE, index))
+    def thermistor_voltage_output_channel(
+        cls, index: int, *, node_id: int = 0
+    ) -> DataPath:
+        return DataPath.component(
+            cls, (node_id, BmsSegmentPort.THERMISTOR_VOLTAGE, index)
+        )
 
     @classmethod
-    def segment_voltage_output_channel(cls) -> DataPath:
-        return DataPath.component(cls, BmsSegmentPort.SEGMENT_VOLTAGE)
+    def segment_voltage_output_channel(cls, *, node_id: int = 0) -> DataPath:
+        return DataPath.component(cls, (node_id, BmsSegmentPort.SEGMENT_VOLTAGE))
 
     @property
     def cell_voltages(self) -> tuple[float, ...]:
@@ -174,7 +192,9 @@ class BmsSegmentModel(ComponentRig):
             self.thermistor_voltage_outputs, self._temperatures_c
         ):
             self._queues[path].append(self._thermistor_voltage(temperature))
-        self._queues[self.segment_voltage_output].append(self._segment_voltage / 2.0)
+        # BMSW's firmware multiplies this ADC input by sixteen when it
+        # reconstructs the segment pack voltage.
+        self._queues[self.segment_voltage_output].append(self._segment_voltage / 16.0)
 
     def _thermistor_voltage(self, temperature_c: float) -> float:
         # Both production variants use a 10 kOhm pull-up and 10 kOhm at 25 C.
