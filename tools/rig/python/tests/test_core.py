@@ -77,6 +77,7 @@ def test_rust_runtime_is_a_first_class_rig_api():
     assert RustRuntimeHost.__module__ == "rig.runtime"
     assert RigRuntime.__module__ == "rig.contracts"
     assert hasattr(RustClusterRuntime, "add_scalar_route")
+    assert hasattr(RustClusterRuntime, "publish_scalar_source_bank_events")
     assert hasattr(RustClusterRuntime, "run_until_dataflow_wait")
 
 

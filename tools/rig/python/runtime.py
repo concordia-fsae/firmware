@@ -168,6 +168,28 @@ class RustClusterRuntime(RigRuntime):
             [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_void_p],
             ctypes.c_bool,
         )
+        self._add_scalar_source_bank_route = bind_symbol(
+            "rig_cluster_add_scalar_source_bank_route",
+            [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint64, ctypes.c_float],
+            ctypes.c_bool,
+        )
+        self._set_scalar_source_bank_value = bind_symbol(
+            "rig_cluster_set_scalar_source_bank_value",
+            [ctypes.c_uint32, ctypes.c_uint32, ctypes.c_float],
+            ctypes.c_bool,
+        )
+        self._publish_scalar_source_bank_events = bind_symbol(
+            "rig_cluster_publish_scalar_source_bank_events",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint64,
+                ctypes.c_uint64,
+                ctypes.POINTER(ctypes.c_uint32),
+                ctypes.POINTER(ctypes.c_float),
+                ctypes.c_uint32,
+            ],
+            ctypes.c_bool,
+        )
         self._run_until_dataflow_wait = bind_symbol(
             "rig_cluster_run_until_dataflow_wait",
             [ctypes.c_uint64, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_uint64],
@@ -393,6 +415,83 @@ class RustClusterRuntime(RigRuntime):
                 ctypes.c_uint32(node_index),
                 ctypes.c_uint32(route_id),
                 ctypes.c_float(initial_value),
+            )
+        )
+
+    def add_scalar_source_bank_route(
+        self,
+        *,
+        node: str,
+        route_id: int,
+        period_ns: int,
+        initial_value: float,
+    ) -> bool:
+        """Configure one route in a Rust-owned scalar source bank.
+
+        The source bank owns the configured value, event queue, timestamps,
+        and native routing. A model may publish a complete timestamped bank
+        sample through :meth:`publish_scalar_source_bank_events`.
+        """
+        node_index = self._node_indices.get(node)
+        if node_index is None:
+            return False
+        return bool(
+            self._add_scalar_source_bank_route(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint32(route_id),
+                ctypes.c_uint64(period_ns),
+                ctypes.c_float(initial_value),
+            )
+        )
+
+    def set_scalar_source_bank_value(
+        self,
+        *,
+        node: str,
+        route_id: int,
+        value: float,
+    ) -> bool:
+        """Update a configured native scalar source's next published value."""
+        node_index = self._node_indices.get(node)
+        if node_index is None:
+            return False
+        return bool(
+            self._set_scalar_source_bank_value(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint32(route_id),
+                ctypes.c_float(value),
+            )
+        )
+
+    def publish_scalar_source_bank_events(
+        self,
+        *,
+        node: str,
+        period_ns: int,
+        timestamp_ns: int,
+        route_ids: tuple[int, ...],
+        values: tuple[float, ...],
+    ) -> bool:
+        """Publish one timestamped sample for every route in a source bank.
+
+        This ABI is reentrant and deliberately does not acquire the cluster
+        runtime lock, so a Python scheduler callback can publish a complete
+        sample while Rust owns the scheduler lock. Rust then owns the queued
+        events, timestamps, and native route propagation.
+        """
+        node_index = self._node_indices.get(node)
+        if node_index is None or not route_ids or len(route_ids) != len(values):
+            return False
+        route_array = (ctypes.c_uint32 * len(route_ids))(*route_ids)
+        value_array = (ctypes.c_float * len(values))(*values)
+        return bool(
+            self._publish_scalar_source_bank_events(
+                ctypes.c_uint32(node_index),
+                ctypes.c_uint64(period_ns),
+                ctypes.c_uint64(timestamp_ns),
+                route_array,
+                value_array,
+                ctypes.c_uint32(len(values)),
             )
         )
 
