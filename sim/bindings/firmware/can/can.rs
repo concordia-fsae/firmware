@@ -558,6 +558,8 @@ struct CanSignalWakeRegistration {
     consumer: CanSignalWakeConsumer,
 }
 
+type CanSignalWakeKey = (u32, u8, u32);
+
 impl CanSignalWakeRegistration {
     fn source_node(&self) -> u32 {
         self.wakes.first().map(|wake| wake.source_node).unwrap_or(u32::MAX)
@@ -681,6 +683,7 @@ pub(super) struct CanInterface {
     record_indexes: HashMap<(u32, CanEndpoint), usize>,
     records: Vec<CanRecordStream>,
     signal_wakes: Vec<CanSignalWakeRegistration>,
+    signal_wake_indexes: HashMap<CanSignalWakeKey, Vec<usize>>,
 }
 
 impl InterfaceImplementation for CanInterface {
@@ -690,6 +693,7 @@ impl InterfaceImplementation for CanInterface {
         self.native_source_events.clear();
         self.record_indexes.clear();
         self.records.clear();
+        self.signal_wake_indexes.clear();
         for registration in &mut self.signal_wakes {
             registration.last_timestamp_ns.fill(0);
             registration.initialized.fill(false);
@@ -697,6 +701,9 @@ impl InterfaceImplementation for CanInterface {
             if let CanSignalWakeConsumer::Wait { wait, .. } = &mut registration.consumer {
                 *wait = None;
             }
+        }
+        for registration_index in 0..self.signal_wakes.len() {
+            self.index_signal_wake_registration(registration_index);
         }
     }
 }
@@ -742,6 +749,56 @@ impl CanInterface {
     #[cfg(test)]
     pub(super) fn signal_wake_count(&self) -> usize {
         self.signal_wakes.len()
+    }
+
+    #[cfg(test)]
+    fn indexed_signal_wake_count(&self, source_node: u32, bus: u8, message_id: u32) -> usize {
+        self.signal_wake_indexes
+            .get(&(source_node, bus, message_id))
+            .map_or(0, Vec::len)
+    }
+
+    fn index_signal_wake_registration(&mut self, registration_index: usize) {
+        let Some(registration) = self.signal_wakes.get(registration_index) else {
+            return;
+        };
+        if matches!(
+            &registration.consumer,
+            CanSignalWakeConsumer::Wait { wait: None, .. }
+        ) {
+            return;
+        }
+        let keys: Vec<_> = registration
+            .wakes
+            .iter()
+            .map(|wake| (wake.source_node, wake.bus, wake.message_id))
+            .collect();
+        for key in keys {
+            let registrations = self.signal_wake_indexes.entry(key).or_default();
+            if !registrations.contains(&registration_index) {
+                registrations.push(registration_index);
+            }
+        }
+    }
+
+    fn remove_signal_wake_registration_from_index(&mut self, registration_index: usize) {
+        let Some(registration) = self.signal_wakes.get(registration_index) else {
+            return;
+        };
+        let keys: Vec<_> = registration
+            .wakes
+            .iter()
+            .map(|wake| (wake.source_node, wake.bus, wake.message_id))
+            .collect();
+        for key in keys {
+            let Some(registrations) = self.signal_wake_indexes.get_mut(&key) else {
+                continue;
+            };
+            registrations.retain(|index| *index != registration_index);
+            if registrations.is_empty() {
+                self.signal_wake_indexes.remove(&key);
+            }
+        }
     }
 
     pub(super) fn upsert_fanout(&mut self, route: ClusterCanRoute) {
@@ -796,15 +853,18 @@ impl CanInterface {
         self.records[stream_index].records.push_back(event);
         let source_node = self.records[stream_index].source_node;
         let mut ready_edges = Vec::new();
-        for registration_index in 0..self.signal_wakes.len() {
+        let Some(registration_indexes) =
+            self.signal_wake_indexes
+                .get(&(source_node, event.bus, event.packet.id))
+        else {
+            return ready_edges;
+        };
+        for &registration_index in registration_indexes {
             let registration = &mut self.signal_wakes[registration_index];
             let mut triggered = false;
             for (wake_index, wake) in registration.wakes.iter().enumerate() {
-                if wake.source_node != source_node
-                    || wake.bus != event.bus
-                    || wake.message_id != event.packet.id
-                    || (registration.initialized[wake_index]
-                        && event.timestamp_ns <= registration.last_timestamp_ns[wake_index])
+                if (registration.initialized[wake_index]
+                    && event.timestamp_ns <= registration.last_timestamp_ns[wake_index])
                 {
                     continue;
                 }
@@ -843,6 +903,7 @@ impl CanInterface {
             pending_events: VecDeque::new(),
             consumer: CanSignalWakeConsumer::Callback(callback),
         });
+        self.index_signal_wake_registration(self.signal_wakes.len() - 1);
         true
     }
 
@@ -874,6 +935,7 @@ impl CanInterface {
                 wait: Some(wait),
             },
         });
+        self.index_signal_wake_registration(self.signal_wakes.len() - 1);
         matched
     }
 
@@ -890,11 +952,13 @@ impl CanInterface {
             return;
         };
         if wait_id + 1 == self.signal_wakes.len() {
+            self.remove_signal_wake_registration_from_index(wait_id);
             self.signal_wakes.pop();
         } else if let Some(registration) = self.signal_wakes.get_mut(wait_id) {
             if let CanSignalWakeConsumer::Wait { wait, .. } = &mut registration.consumer {
                 *wait = None;
             }
+            self.remove_signal_wake_registration_from_index(wait_id);
         }
     }
 
@@ -2443,6 +2507,34 @@ mod tests {
         assert_eq!(LAST_WAKE_TIMESTAMP.load(Ordering::Relaxed), 2);
     }
 
+    #[test]
+    fn signal_wake_dispatch_indexes_only_matching_can_messages() {
+        let mut interface = CanInterface::default();
+        let wake = |message_id| CanSignalWake {
+            source_node: 3,
+            bus: 1,
+            message_id,
+            signal_index: 7,
+        };
+
+        assert!(interface.register_signal_wake(wake(0x123), record_wake));
+        assert!(interface.register_signal_wake(wake(0x456), record_wake));
+        assert_eq!(interface.indexed_signal_wake_count(3, 1, 0x123), 1);
+        assert_eq!(interface.indexed_signal_wake_count(3, 1, 0x456), 1);
+        assert_eq!(interface.indexed_signal_wake_count(3, 1, 0x789), 0);
+
+        let event = CanEvent {
+            bus: 1,
+            timestamp_ns: 1,
+            packet: CanPacket::new(0x123, [0; 8], 0),
+        };
+        let ready_edges = interface.record(3, 1, event);
+
+        assert_eq!(ready_edges.len(), 1);
+        assert!(!interface.signal_wakes[0].pending_events.is_empty());
+        assert!(interface.signal_wakes[1].pending_events.is_empty());
+    }
+
     unsafe extern "C" fn wait_node_run_for(_elapsed_ns: u64) {}
     unsafe extern "C" fn wait_node_reset() {}
     unsafe extern "C" fn wait_decode(
@@ -2470,5 +2562,13 @@ mod tests {
         runtime.cancel_dataflow_wait(wait);
 
         assert_eq!(runtime.backend().interfaces.can.signal_wake_count(), 0);
+        assert_eq!(
+            runtime
+                .backend()
+                .interfaces
+                .can
+                .indexed_signal_wake_count(0, 0, 0),
+            0
+        );
     }
 }
