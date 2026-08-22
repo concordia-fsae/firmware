@@ -91,7 +91,9 @@ class BatterySourceModel(ComponentRig):
 
     @classmethod
     def contactor_state_input_channel(cls, channel: object) -> DataPath:
-        return DataPath.component(cls, (BatterySourcePort.CONTACTOR_STATE_INPUT, channel))
+        return DataPath.component(
+            cls, (BatterySourcePort.CONTACTOR_STATE_INPUT, channel)
+        )
 
     @classmethod
     def spec(
@@ -159,9 +161,7 @@ class BatterySourceModel(ComponentRig):
     def rust_runtime_model(self) -> bool:
         return self._cluster_rig is not None
 
-    def rust_datapath_route_abi(
-        self, path: DataPath
-    ) -> NativeRouteEndpoint | None:
+    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         self._register_native_battery_source()
         if path == self.terminal_voltage_output_channel:
             return ScalarRouteEndpoint(*self._scalar_source_route_abi(path))
@@ -201,9 +201,7 @@ class BatterySourceModel(ComponentRig):
                 ctypes.c_float,
             ],
         )
-        node_index = self._cluster_rig.runtime.node_index(
-            self._cluster_node_name
-        )
+        node_index = self._cluster_rig.runtime.node_index(self._cluster_node_name)
         if node_index is None or not register(
             ctypes.c_uint32(node_index),
             ctypes.c_uint32(
@@ -212,9 +210,7 @@ class BatterySourceModel(ComponentRig):
             ctypes.c_uint32(
                 0
                 if self.contactor_state_input_channel is None
-                else datapath_route_id(
-                    datapath_key(self.contactor_state_input_channel)
-                )
+                else datapath_route_id(datapath_key(self.contactor_state_input_channel))
             ),
             ctypes.c_float(self.source_spec.voltage),
             ctypes.c_float(self.source_spec.internal_resistance_ohms),

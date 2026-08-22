@@ -41,6 +41,7 @@ class DataPath(Generic[PayloadT]):
     def named(cls, *parts: object) -> DataPath[PayloadT]:
         return cls((_DataPathNamespace.NAMED, *parts))
 
+
 def datapath_key(path: DataPath) -> DataPathKey:
     return path.key
 

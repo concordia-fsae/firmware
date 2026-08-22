@@ -10,4 +10,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["rig"]
-package-dir = {rig = "python"}
+package-dir = { rig = "python" }

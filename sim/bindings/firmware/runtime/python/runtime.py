@@ -148,10 +148,16 @@ class FirmwareRuntime(RustClusterRuntime):
             ctypes.c_bool,
         )
         self._noop_timer_count = self.bind_symbol("rig_cluster_noop_timer_count")
-        self._noop_timer_recv_many = self.bind_symbol("rig_cluster_noop_timer_recv_many")
-        self._noop_timer_send_many = self.bind_symbol("rig_cluster_noop_timer_send_many")
+        self._noop_timer_recv_many = self.bind_symbol(
+            "rig_cluster_noop_timer_recv_many"
+        )
+        self._noop_timer_send_many = self.bind_symbol(
+            "rig_cluster_noop_timer_send_many"
+        )
         self._noop_can_tx_count = self.bind_symbol("rig_cluster_noop_can_tx_count")
-        self._noop_can_recv_events = self.bind_symbol("rig_cluster_noop_can_recv_events")
+        self._noop_can_recv_events = self.bind_symbol(
+            "rig_cluster_noop_can_recv_events"
+        )
 
     def add_can_route(
         self,

@@ -80,8 +80,7 @@ class DataflowRoutes:
                 sink_nodes = tuple(
                     sink_node
                     for sink_node, sink in self._cluster._rig_nodes.items()
-                    if sink_node != source_node
-                    and sink.datapaths.inputs(output.path)
+                    if sink_node != source_node and sink.datapaths.inputs(output.path)
                 )
                 if sink_nodes:
                     for sink_node in sink_nodes:
@@ -172,7 +171,9 @@ class DataflowRoutes:
                         self._cluster.elapsed_ns,
                     )
                     fanout.records.append(record)
-                    self._latest_records[(route.source_node, datapath_key(path))] = record
+                    self._latest_records[(route.source_node, datapath_key(path))] = (
+                        record
+                    )
                 for sink in route.sinks:
                     self._send(sink, payloads)
         return progressed
@@ -302,9 +303,7 @@ class DataflowRoutes:
                     queued.add(dependent)
 
         if len(ordered) != len(path_by_key):
-            cyclic = ", ".join(
-                repr(key) for key, deps in dependencies.items() if deps
-            )
+            cyclic = ", ".join(repr(key) for key, deps in dependencies.items() if deps)
             raise ValueError(f"datapath route graph contains a cycle: {cyclic}")
 
         self._ordered_paths_cache = tuple(path_by_key[key] for key in ordered)
@@ -335,8 +334,7 @@ class DataflowRoutes:
         def visit(node: str) -> None:
             if node in visiting:
                 raise ValueError(
-                    "datapath route graph contains a cycle involving "
-                    f"node {node!r}"
+                    "datapath route graph contains a cycle involving " f"node {node!r}"
                 )
             if node in visited:
                 return
@@ -484,7 +482,9 @@ class ClusterRig(Rig[NodeT], Generic[NodeT]):
 
     def add_components(self, *components: ComponentRig) -> tuple[ComponentRig, ...]:
         if self.elapsed_ns != 0:
-            raise RuntimeError("components must be added before a cluster starts running")
+            raise RuntimeError(
+                "components must be added before a cluster starts running"
+            )
         self._require_elements(components)
         start_index = len(self.components)
         self.components = (*self.components, *components)

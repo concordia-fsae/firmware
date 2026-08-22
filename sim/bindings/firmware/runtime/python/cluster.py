@@ -64,11 +64,15 @@ class ClusterDataRoutes(DataflowRoutes):
                 f"datapath {path!r} between {source_node!r} and {sink_node!r} "
                 "advertises a Rust route ABI but failed to connect natively"
             )
-        if sink_node is None and getattr(
-            self._cluster._rig_nodes[source_node],
-            "rust_datapath_route_abi",
-            lambda _path: None,
-        )(path) is not None:
+        if (
+            sink_node is None
+            and getattr(
+                self._cluster._rig_nodes[source_node],
+                "rust_datapath_route_abi",
+                lambda _path: None,
+            )(path)
+            is not None
+        ):
             self._fanout(path)
             return
         if self._requires_native_route(path):
@@ -198,7 +202,9 @@ class ClusterDataRoutes(DataflowRoutes):
 class ClusterCanComms:
     PATH = "can"
 
-    def __init__(self, cluster: FirmwareClusterRig, dataroutes: ClusterDataRoutes) -> None:
+    def __init__(
+        self, cluster: FirmwareClusterRig, dataroutes: ClusterDataRoutes
+    ) -> None:
         self._cluster = cluster
         self._dataroutes = dataroutes
         self._native_routes: set[tuple[DataPathKey, str, str]] = set()
@@ -549,7 +555,9 @@ class _TypedClusterComms(Generic[PayloadT]):
 
 
 class ClusterTimerComms(_TypedClusterComms[TimerChannelEvent]):
-    def __init__(self, cluster: FirmwareClusterRig, dataroutes: ClusterDataRoutes) -> None:
+    def __init__(
+        self, cluster: FirmwareClusterRig, dataroutes: ClusterDataRoutes
+    ) -> None:
         self._cluster = cluster
         super().__init__(dataroutes, TimerChannelEvent)
 
@@ -601,7 +609,9 @@ class ClusterSpiComms(_TypedClusterComms[SpiTransaction]):
 
 
 class ClusterComms:
-    def __init__(self, cluster: FirmwareClusterRig, dataroutes: ClusterDataRoutes) -> None:
+    def __init__(
+        self, cluster: FirmwareClusterRig, dataroutes: ClusterDataRoutes
+    ) -> None:
         self._dataroutes = dataroutes
         self.can = ClusterCanComms(cluster, dataroutes)
         self.timer = ClusterTimerComms(cluster, dataroutes)
@@ -638,7 +648,9 @@ class FirmwareClusterRig(ClusterRig):
         **nodes: ModelRig,
     ) -> None:
         if not nodes and not components:
-            raise ValueError("FirmwareClusterRig requires at least one node or component")
+            raise ValueError(
+                "FirmwareClusterRig requires at least one node or component"
+            )
         self._reject_duplicate_shared_libraries(nodes)
         super().__init__(
             configuration=configuration,

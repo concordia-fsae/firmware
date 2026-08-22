@@ -59,7 +59,12 @@ def test_model_datapath_descriptor_has_a_stable_c_layout():
 
     assert ctypes.sizeof(ModelDataPathDescriptor) == 16
     assert ctypes.alignment(ModelDataPathDescriptor) == 4
-    assert (descriptor.interface, descriptor.port, descriptor.channel, descriptor.device) == (
+    assert (
+        descriptor.interface,
+        descriptor.port,
+        descriptor.channel,
+        descriptor.device,
+    ) == (
         7,
         1,
         2,
@@ -134,12 +139,15 @@ def test_core_time_helpers_cover_success_and_timeout():
         duration_to_ns(1, unit="minutes")
 
     elapsed = []
-    assert run_until(
-        lambda delta: elapsed.append(delta),
-        lambda: sum(elapsed) >= 5,
-        timeout_ns=10,
-        step_ns=3,
-    ) == 6
+    assert (
+        run_until(
+            lambda delta: elapsed.append(delta),
+            lambda: sum(elapsed) >= 5,
+            timeout_ns=10,
+            step_ns=3,
+        )
+        == 6
+    )
     with pytest.raises(RunUntilTimeout, match="deadline"):
         run_until(lambda _delta: None, lambda: False, timeout_ns=2, message="deadline")
 
@@ -211,10 +219,7 @@ def test_simple_node_forwards_native_component_route_abi():
     component.add_scalar_output(path, pending=lambda: 0, recv=lambda: None)
     node = SimpleNodeRig(component)
 
-    assert (
-        node.rust_datapath_route_abi(path)
-        == component.rust_datapath_route_abi(path)
-    )
+    assert node.rust_datapath_route_abi(path) == component.rust_datapath_route_abi(path)
 
 
 def test_python_route_cache_reuses_topology_and_invalidates_on_new_link():
@@ -255,11 +260,10 @@ def test_python_route_cache_reuses_topology_and_invalidates_on_new_link():
     )
     second_routes = cluster.dataroutes._routes_for_path(path)
     assert second_routes is not first_routes
-    assert {
-        sink.node
-        for route in second_routes
-        for sink in route.sinks
-    } == {"__component_1", "__component_2"}
+    assert {sink.node for route in second_routes for sink in route.sinks} == {
+        "__component_1",
+        "__component_2",
+    }
 
 
 def test_python_routes_reject_same_path_feedback_edges():

@@ -197,13 +197,12 @@ class SimpleNodeRig(ModelRig):
         endpoints = []
         for component in self.components:
             if not (
-                component.datapaths.inputs(path)
-                or component.datapaths.outputs(path)
+                component.datapaths.inputs(path) or component.datapaths.outputs(path)
             ):
                 continue
-            endpoint = getattr(component, "rust_datapath_route_abi", lambda _path: None)(
-                path
-            )
+            endpoint = getattr(
+                component, "rust_datapath_route_abi", lambda _path: None
+            )(path)
             if endpoint is not None:
                 endpoints.append(endpoint)
         if len(endpoints) > 1:

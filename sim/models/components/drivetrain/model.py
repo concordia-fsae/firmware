@@ -74,22 +74,22 @@ class DrivetrainCanCommand(ComponentRig):
                     ctypes.c_uint64,
                 ],
             )
-            output_node = self._cluster_rig.runtime.node_index(
-                self._cluster_node_name
-            )
-            can_node = self._cluster_rig.runtime.node_index(
-                owner._cluster_node_name
-            )
+            output_node = self._cluster_rig.runtime.node_index(self._cluster_node_name)
+            can_node = self._cluster_rig.runtime.node_index(owner._cluster_node_name)
             period_ns = round(self.scheduler_period_ms * 1_000_000)
-            if output_node is None or can_node is None or not register(
-                output_node,
-                can_node,
-                datapath_route_id(datapath_key(path)),
-                message.bus,
-                message.id,
-                self.signal_name.encode(),
-                ctypes.c_size_t(owner._function_address(owner._decode_can_signal)),
-                ctypes.c_uint64(period_ns),
+            if (
+                output_node is None
+                or can_node is None
+                or not register(
+                    output_node,
+                    can_node,
+                    datapath_route_id(datapath_key(path)),
+                    message.bus,
+                    message.id,
+                    self.signal_name.encode(),
+                    ctypes.c_size_t(owner._function_address(owner._decode_can_signal)),
+                    ctypes.c_uint64(period_ns),
+                )
             ):
                 raise RuntimeError("failed to register drivetrain CAN command")
             self._native_registered = True
@@ -110,13 +110,17 @@ class DrivetrainSpec:
     def __post_init__(self) -> None:
         if self.max_torque_nm <= 0.0 or not math.isfinite(self.max_torque_nm):
             raise ValueError("max_torque_nm must be finite and positive")
-        if self.torque_constant_nm_per_amp <= 0.0 or not math.isfinite(self.torque_constant_nm_per_amp):
+        if self.torque_constant_nm_per_amp <= 0.0 or not math.isfinite(
+            self.torque_constant_nm_per_amp
+        ):
             raise ValueError("torque_constant_nm_per_amp must be finite and positive")
         if not 0.0 < self.efficiency <= 1.0 or not math.isfinite(self.efficiency):
             raise ValueError("efficiency must be finite and in (0, 1]")
         if self.max_power_w <= 0.0 or math.isnan(self.max_power_w):
             raise ValueError("max_power_w must be positive")
-        if self.scheduler_period_ms <= 0.0 or not math.isfinite(self.scheduler_period_ms):
+        if self.scheduler_period_ms <= 0.0 or not math.isfinite(
+            self.scheduler_period_ms
+        ):
             raise ValueError("scheduler_period_ms must be finite and positive")
 
 
@@ -145,7 +149,9 @@ class DrivetrainModel(ComponentRig):
 
     @classmethod
     def mechanical_torque_output_channel(cls, channel: object) -> DataPath:
-        return DataPath.component(cls, (DrivetrainPort.MECHANICAL_TORQUE_OUTPUT, channel))
+        return DataPath.component(
+            cls, (DrivetrainPort.MECHANICAL_TORQUE_OUTPUT, channel)
+        )
 
     @classmethod
     def current_draw_output_channel(cls, channel: object) -> DataPath:
@@ -215,7 +221,9 @@ class DrivetrainModel(ComponentRig):
         self.current_draw_output_channel = current_draw_output_channel
         self.drivetrain_spec = drivetrain_spec
         self._native_registered = False
-        self.datapaths.add_input(terminal_voltage_input_channel, send=lambda _value: True)
+        self.datapaths.add_input(
+            terminal_voltage_input_channel, send=lambda _value: True
+        )
         self.datapaths.add_input(torque_request_input_channel, send=lambda _value: True)
         if bus_voltage_output_channel is not None:
             self.datapaths.add_output(
@@ -233,7 +241,10 @@ class DrivetrainModel(ComponentRig):
 
     def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         self._register_native_drivetrain()
-        if path in (self.terminal_voltage_input_channel, self.torque_request_input_channel):
+        if path in (
+            self.terminal_voltage_input_channel,
+            self.torque_request_input_channel,
+        ):
             return ScalarInputRouteEndpoint(datapath_route_id(datapath_key(path)))
         if path in (
             self.mechanical_torque_output_channel,
@@ -241,7 +252,9 @@ class DrivetrainModel(ComponentRig):
             self.bus_voltage_output_channel,
         ):
             count, recv, send = self._cluster_rig.runtime.noop_scalar_route_abi
-            return ScalarRouteEndpoint(datapath_route_id(datapath_key(path)), count, recv, send)
+            return ScalarRouteEndpoint(
+                datapath_route_id(datapath_key(path)), count, recv, send
+            )
         return None
 
     def _register_native_drivetrain(self) -> None:
@@ -269,10 +282,18 @@ class DrivetrainModel(ComponentRig):
         node = self._cluster_rig.runtime.node_index(self._cluster_node_name)
         if node is None or not register(
             ctypes.c_uint32(node),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.terminal_voltage_input_channel))),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.torque_request_input_channel))),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.mechanical_torque_output_channel))),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.current_draw_output_channel))),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.terminal_voltage_input_channel))
+            ),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.torque_request_input_channel))
+            ),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.mechanical_torque_output_channel))
+            ),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.current_draw_output_channel))
+            ),
             ctypes.c_uint32(
                 datapath_route_id(datapath_key(self.bus_voltage_output_channel))
                 if self.bus_voltage_output_channel is not None
@@ -283,7 +304,9 @@ class DrivetrainModel(ComponentRig):
             ctypes.c_float(self.drivetrain_spec.torque_constant_nm_per_amp),
             ctypes.c_float(self.drivetrain_spec.efficiency),
             ctypes.c_float(self.drivetrain_spec.max_power_w),
-            ctypes.c_uint64(round(self.drivetrain_spec.scheduler_period_ms * 1_000_000)),
+            ctypes.c_uint64(
+                round(self.drivetrain_spec.scheduler_period_ms * 1_000_000)
+            ),
         ):
             raise RuntimeError("failed to register native drivetrain")
         self._native_registered = True

@@ -50,10 +50,13 @@ def __getattr__(name: str) -> Any:
     try:
         module_name, attribute_name = _EXPORTS[name]
     except KeyError as error:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from error
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from error
     value = getattr(import_module(f"{__name__}.{module_name}"), attribute_name)
     globals()[name] = value
     return value
+
 
 __all__ = [
     "ClusterCanComms",

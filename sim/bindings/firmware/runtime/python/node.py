@@ -38,7 +38,12 @@ from rig.scalar import (
     ScalarStateSinkRouteEndpoint,
 )
 from rig.scheduler import RustSchedulerCallbacks
-from sim.bindings.firmware.spi.spi import SpiInterface, SpiPeripheralInterface, SpiTransaction, SpiRouteEndpoint
+from sim.bindings.firmware.spi.spi import (
+    SpiInterface,
+    SpiPeripheralInterface,
+    SpiTransaction,
+    SpiRouteEndpoint,
+)
 from sim.bindings.firmware.timer.timer import (
     TimerCaptureEvent,
     TimerChannelEvent,
@@ -51,6 +56,7 @@ from rig.time import duration_to_ns
 
 _CAN_METADATA_CACHE: dict[str, dict[str, object]] = {}
 _CAN_INDEX_CACHE: dict[str, dict[str, object]] = {}
+
 
 class FirmwareNodeRig(ModelRig):
     """ctypes-backed fixture for a Buck-built simulated node."""
@@ -75,7 +81,9 @@ class FirmwareNodeRig(ModelRig):
         self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
         self._scalar_sink_abis: dict[DataPathKey, tuple[int, int, float, int]] = {}
-        self._scalar_state_sink_abis: dict[DataPathKey, tuple[int, float, int | None, float, int | None]] = {}
+        self._scalar_state_sink_abis: dict[
+            DataPathKey, tuple[int, float, int | None, float, int | None]
+        ] = {}
         self._timer_scaled_scalar_outputs: dict[
             DataPathKey, tuple[DataPath, int, int, int, int, float, float]
         ] = {}
@@ -120,9 +128,7 @@ class FirmwareNodeRig(ModelRig):
             self._function_address(self._can_send_many),
         )
 
-    def rust_datapath_route_abi(
-        self, path: DataPath
-    ) -> NativeRouteEndpoint | None:
+    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         model_abi = super().rust_datapath_route_abi(path)
         if model_abi is not None:
             return model_abi
@@ -132,7 +138,9 @@ class FirmwareNodeRig(ModelRig):
         scalar_state_sink_abi = self._scalar_state_sink_abis.get(datapath_key(path))
         if scalar_state_sink_abi is not None:
             if self._cluster_rig is not None and self._cluster_node_name is not None:
-                route_id, initial_value, sink_id, value_scale, set_value = scalar_state_sink_abi
+                route_id, initial_value, sink_id, value_scale, set_value = (
+                    scalar_state_sink_abi
+                )
                 if not self._cluster_rig.runtime.add_scalar_state_sink(
                     node=self._cluster_node_name,
                     route_id=route_id,
@@ -260,9 +268,7 @@ class FirmwareNodeRig(ModelRig):
         timer_port = int(binding.port if binding.port is not None else 0)
         timer_channel = int(binding.channel if binding.channel is not None else 0)
         scale_route_id = (
-            0
-            if scale_path is None
-            else datapath_route_id(datapath_key(scale_path))
+            0 if scale_path is None else datapath_route_id(datapath_key(scale_path))
         )
         self._timer_scaled_scalar_outputs[datapath_key(path)] = (
             timer_path,

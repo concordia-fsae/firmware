@@ -45,8 +45,16 @@ from rig.scalar import (
     ScalarSinkRouteEndpoint,
     ScalarStateSinkRouteEndpoint,
 )
-from sim.bindings.firmware.power.power import PowerControlEvent, PowerControlPath, PowerInterface
-from sim.bindings.firmware.spi.spi import SpiInterface, SpiPeripheralInterface, SpiTransaction
+from sim.bindings.firmware.power.power import (
+    PowerControlEvent,
+    PowerControlPath,
+    PowerInterface,
+)
+from sim.bindings.firmware.spi.spi import (
+    SpiInterface,
+    SpiPeripheralInterface,
+    SpiTransaction,
+)
 from sim.bindings.firmware.timer.timer import (
     TimerCaptureEvent,
     TimerChannelEvent,
@@ -382,7 +390,9 @@ def test_spi_interface_coerces_devices_and_exercises_batch_io():
     path = interface.transactions(3)
     peripheral = SpiPeripheralInterface(model)
     assert peripheral.supports(path)
-    transaction = SpiTransaction.from_payload(3, tx_payload=[1, 2], rx_payload=b"r", timestamp_ns=9)
+    transaction = SpiTransaction.from_payload(
+        3, tx_payload=[1, 2], rx_payload=b"r", timestamp_ns=9
+    )
     assert transaction.tx_payload == b"\x01\x02"
     assert transaction.rx_payload == b"r"
     assert peripheral.send_payload(path, transaction)
@@ -411,9 +421,15 @@ def test_timer_interface_coerces_channels_and_exercises_batch_io():
     assert peripheral.recv_many(path, 2)[0].value == pytest.approx(0.5)
     assert peripheral.recv_many(path, 0) == ()
     assert peripheral.output_count(path) == 3
-    assert require_peripheral_binding(interface.frequency_events(1, 2)).interface == PeripheralInterface.TIMER_FREQUENCY
+    assert (
+        require_peripheral_binding(interface.frequency_events(1, 2)).interface
+        == PeripheralInterface.TIMER_FREQUENCY
+    )
     capture_path = interface.capture_events(2)
-    assert require_peripheral_binding(capture_path).interface == PeripheralInterface.TIMER_CAPTURE
+    assert (
+        require_peripheral_binding(capture_path).interface
+        == PeripheralInterface.TIMER_CAPTURE
+    )
     assert peripheral.send(capture_path, value=0.0, timestamp_ns=7)
     capture = TimerCaptureEvent(channel=2, value=0.0, timestamp_ns=8)
     assert peripheral.send_payload(capture_path, capture)

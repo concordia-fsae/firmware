@@ -38,7 +38,9 @@ def test_generic_configuration_and_scheduler_abi_are_typed():
     scheduler = SchedulerConfig(period_ns=100, callback=lambda _context: None)
     dataflow = DataflowConfig(inputs=(path,), outputs=(path,))
     node = NodeConfig(scheduler=scheduler, dataflow=dataflow, interfaces=(interface,))
-    cluster = ClusterConfig(scheduler=scheduler, dataflow=dataflow, interfaces=(interface,))
+    cluster = ClusterConfig(
+        scheduler=scheduler, dataflow=dataflow, interfaces=(interface,)
+    )
 
     assert node.interfaces == (interface,)
     assert cluster.interfaces == (interface,)
@@ -128,8 +130,12 @@ def test_datapath_collections_and_component_binding_preserve_identity():
     assert data_paths.paths == (path, other)
 
     bound = []
-    output = ComponentDataPathOutput(lambda component: DataPath.component(component, "out"))
-    sink = ModelDataPathInputConnector(lambda owner, bound_path: bound.append((owner, bound_path)))
+    output = ComponentDataPathOutput(
+        lambda component: DataPath.component(component, "out")
+    )
+    sink = ModelDataPathInputConnector(
+        lambda owner, bound_path: bound.append((owner, bound_path))
+    )
     output.bind_to(sink).bind("owner", "component")
     assert bound == [("owner", DataPath.component("component", "out"))]
     assert sent == []
@@ -152,7 +158,9 @@ def test_periodic_producer_handles_tuple_none_and_reset():
     assert duration_to_ns(1, unit="ms") == 1_000_000
 
 
-def test_model_extension_and_artifact_loading_are_backend_neutral(tmp_path, monkeypatch):
+def test_model_extension_and_artifact_loading_are_backend_neutral(
+    tmp_path, monkeypatch
+):
     class Base:
         pass
 
@@ -170,7 +178,9 @@ def test_model_extension_and_artifact_loading_are_backend_neutral(tmp_path, monk
         "from enum import Enum\nclass State(Enum):\n    READY = 1\nvalue = 7\n"
     )
     monkeypatch.setenv("RIG_TEST_GENERATED", str(generated))
-    module = load_generated_module("RIG_TEST_GENERATED", "//test:generated", "rig_test_generated")
+    module = load_generated_module(
+        "RIG_TEST_GENERATED", "//test:generated", "rig_test_generated"
+    )
     assert module.value == 7
     namespace = {}
     enums = load_generated_enums(
@@ -178,9 +188,12 @@ def test_model_extension_and_artifact_loading_are_backend_neutral(tmp_path, monk
     )
     assert enums.State.READY.value == 1
     assert namespace["State"].READY.value == 1
-    assert load_generated_enums(
-        "RIG_TEST_GENERATED", "//test:generated", "rig_test_generated", namespace
-    ) is enums
+    assert (
+        load_generated_enums(
+            "RIG_TEST_GENERATED", "//test:generated", "rig_test_generated", namespace
+        )
+        is enums
+    )
 
     monkeypatch.delenv("RIG_TEST_GENERATED")
     with pytest.raises(RuntimeError, match="RIG_TEST_GENERATED"):
