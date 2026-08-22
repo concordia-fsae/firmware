@@ -20,6 +20,7 @@
 #include "BMS.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
+#include "drv_userInput.h"
 #include "ENV.h"
 #include "FeatureDefines_generated.h"
 #include "HW_adc.h"
@@ -78,7 +79,7 @@ CAN_prechargeContactorState_E CANIO_tx_getContactorState(void);
 #define set_minCellVoltage(m, b, n, s)                 set(m, b, n, s, BMS.voltages.min);
 #define set_targetBalancingVoltage(m, b, n, s)         set(m, b, n, s, BMS.balancing ? (BMS.charging_paused ? BMS.voltages.min : (BMS.voltages.min + BMS.voltages.max) / 2) : 4.5f)
 #define set_packTemperature(m, b, n, s)                set(m, b, n, s, ENV.board.ambient_temp)
-#define set_tsmsChg(m, b, n, s)                        set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_TSMS_CHG) == DRV_IO_ACTIVE) ? \
+#define set_tsmsChg(m, b, n, s)                        set(m, b, n, s, drv_userInput_buttonPressed(USERINPUT_SWITCH_TSMS) ? \
                                                            CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)
 #define set_okHS(m, b, n, s)                           set(m, b, n, s, (drv_inputAD_getDigitalActiveState(DRV_INPUTAD_DIGITAL_OK_HS) == DRV_IO_ACTIVE) ? \
                                                            CAN_DIGITALSTATUS_ON : CAN_DIGITALSTATUS_OFF)

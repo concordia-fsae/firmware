@@ -1,0 +1,9 @@
+load("//sim/infra:defs.bzl", "rig_model_python")
+
+rig_model_python(
+    srcs = [
+        "__init__.py",
+        "simple.py",
+    ],
+    visibility = ["PUBLIC"],
+)

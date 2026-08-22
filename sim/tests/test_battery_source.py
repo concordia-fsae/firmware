@@ -132,9 +132,9 @@ def test_battery_source_spec_rejects_invalid_values(kwargs):
 
 
 def test_battery_source_routes_nominal_voltage_from_native_model():
-    path = BatterySourceModel.voltage_output_channel(object())
+    path = BatterySourceModel.terminal_voltage_output_channel(object())
     battery = BatterySourceModel(
-        voltage_output_channel=path,
+        terminal_voltage_output_channel=path,
         source_spec=BatterySourceSpec(voltage=12.0),
     )
     sink = ScalarSink(path)
@@ -150,10 +150,10 @@ def test_battery_source_routes_nominal_voltage_from_native_model():
 
 
 def test_battery_source_voltage_sags_under_resistive_load():
-    voltage_path = BatterySourceModel.voltage_output_channel(object())
+    voltage_path = BatterySourceModel.terminal_voltage_output_channel(object())
     current_path = DcLoadModel.current_output_channel(object())
     battery = BatterySourceModel(
-        voltage_output_channel=voltage_path,
+        terminal_voltage_output_channel=voltage_path,
         source_spec=BatterySourceSpec(
             voltage=12.0,
             internal_resistance_ohms=0.01,
@@ -177,10 +177,10 @@ def test_battery_source_voltage_sags_under_resistive_load():
 
 
 def test_battery_source_two_rc_branches_settle_at_100_hz():
-    voltage_path = BatterySourceModel.voltage_output_channel(object())
+    voltage_path = BatterySourceModel.terminal_voltage_output_channel(object())
     current_path = DcLoadModel.current_output_channel(object())
     battery = BatterySourceModel(
-        voltage_output_channel=voltage_path,
+        terminal_voltage_output_channel=voltage_path,
         source_spec=BatterySourceSpec(
             voltage=12.0,
             rc1_resistance_ohms=0.1,

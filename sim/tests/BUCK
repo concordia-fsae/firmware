@@ -18,6 +18,18 @@ rig_pytest(
 )
 
 rig_pytest(
+    name = "drivetrain",
+    test_file = "sim/tests/test_drivetrain.py",
+    resources = [
+        "//sim/models/components:python",
+        "//sim/models/components/battery_source:python",
+        "//sim/models/components/drivetrain:python",
+        "//sim/models/test:python",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rig_pytest(
     name = "battery_source",
     test_file = "sim/tests/test_battery_source.py",
     resources = [
@@ -26,6 +38,28 @@ rig_pytest(
         "//sim/models/components/battery_source:python",
         "//sim/models/test:python",
     ],
+    visibility = ["PUBLIC"],
+)
+
+rig_pytest(
+    name = "bmsb",
+    test_file = "sim/tests/test_bmsb.py",
+    env = {
+        "BMSB_ENUMS_PY": "$(location {}:enums-py)".format(BMSB_MODEL),
+        "BMSB_MODEL_PY": "$(location {}:bmsb-py)".format(BMSB_MODEL),
+        "BMSB_SIM_LIB": "$(location {}:sil-so)".format(BMSB_MODEL),
+    } |
+    rig_platform_variants_env(ALL_PLATFORMS) |
+    rig_platform_sim_lib_env("BMSB", BMSB_MODEL, ALL_PLATFORMS),
+    resources = [
+        "{}:enums-py".format(BMSB_MODEL),
+        "{}:bmsb-py".format(BMSB_MODEL),
+        "{}:sil-so".format(BMSB_MODEL),
+        "//sim/models/components:python",
+        "//sim/models/components/battery_source:python",
+        "//sim/models/components/dc_load:python",
+        "//sim/models/controllers/bmsw:python",
+    ] + rig_platform_sim_lib_resources(BMSB_MODEL, ALL_PLATFORMS),
     visibility = ["PUBLIC"],
 )
 

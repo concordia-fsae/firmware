@@ -9,7 +9,7 @@
 
 #include "drv_userInput.h"
 
-#define DEBOUNCE_MS    50
+#define DEBOUNCE_MS    25
 
 /******************************************************************************
  *                           P U B L I C  V A R S

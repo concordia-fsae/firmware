@@ -9,6 +9,7 @@ rig_embedded_controller_model(
     model_target = "//sim/models/controllers/bmsb",
     python_srcs = [
         "__init__.py",
+        "extensions.py",
         "fixtures.py",
         "simple.py",
         "variants.py",

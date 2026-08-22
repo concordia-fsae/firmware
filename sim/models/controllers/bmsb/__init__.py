@@ -5,6 +5,7 @@ from sim.infra.rig import (
     load_generated_module,
 )
 
+from .extensions import BmsbModelExtensions
 from .simple import BmsbSimpleModel
 
 
@@ -24,10 +25,13 @@ def _load_generated() -> None:
     globals()["DigitalIo"] = enums.DigitalIo
     globals()["DigitalOutput"] = enums.DigitalOutput
     globals()["Fault"] = enums.Fault
+    globals()["PrechargeContactorState"] = enums.PrechargeContactorState
     globals()["TimerChannel"] = enums.TimerChannel
     globals()["TimerPort"] = enums.TimerPort
 
-    class BmsbModel(extend_model_class(model.BmsbModel)):
+    class BmsbModel(extend_model_class(model.BmsbModel, BmsbModelExtensions)):
+        AnalogInput = enums.AnalogInput
+        DigitalInput = enums.DigitalInput
         timer = TimerInterface(enums.TimerPort, enums.TimerChannel)
 
     globals()["BmsbModel"] = BmsbModel
@@ -68,6 +72,7 @@ _GENERATED_EXPORTS = {
     "DigitalIo",
     "DigitalOutput",
     "Fault",
+    "PrechargeContactorState",
     "TimerChannel",
     "TimerPort",
     "BmsbModel",
@@ -81,6 +86,7 @@ __all__ = [
     "DigitalIo",
     "DigitalOutput",
     "Fault",
+    "PrechargeContactorState",
     "TimerChannel",
     "TimerPort",
     "PLATFORM_VARIANTS",

@@ -16,6 +16,7 @@ static BATTERY_SOURCES: LazyLock<Mutex<Vec<BatterySourceModel>>> =
 pub struct BatterySourceModel {
     node: u32,
     voltage_route_id: u32,
+    contactor_state_route_id: u32,
     open_circuit_voltage: f32,
     internal_resistance_ohms: f32,
     capacity_amp_hours: f32,
@@ -35,6 +36,7 @@ impl BatterySourceModel {
     pub fn new(
         node: u32,
         voltage_route_id: u32,
+        contactor_state_route_id: u32,
         voltage: f32,
         internal_resistance_ohms: f32,
         capacity_amp_hours: f32,
@@ -46,6 +48,7 @@ impl BatterySourceModel {
         Self {
             node,
             voltage_route_id,
+            contactor_state_route_id,
             open_circuit_voltage: voltage,
             internal_resistance_ohms,
             capacity_amp_hours,
@@ -87,6 +90,7 @@ impl BatterySourceModel {
         &self,
         node: u32,
         voltage_route_id: u32,
+        contactor_state_route_id: u32,
         voltage: f32,
         internal_resistance_ohms: f32,
         capacity_amp_hours: f32,
@@ -97,6 +101,7 @@ impl BatterySourceModel {
     ) -> bool {
         self.config_matches(node, voltage_route_id)
             && self.open_circuit_voltage == voltage
+            && self.contactor_state_route_id == contactor_state_route_id
             && self.internal_resistance_ohms == internal_resistance_ohms
             && self.capacity_amp_hours == capacity_amp_hours
             && self.rc1_resistance_ohms == rc1_resistance_ohms
@@ -105,13 +110,13 @@ impl BatterySourceModel {
             && self.rc2_capacitance_farads == rc2_capacitance_farads
     }
 
-    pub fn take_voltage_event(&mut self, elapsed_ns: u64) -> Option<ScalarEvent> {
+    pub fn take_voltage_event(&mut self, elapsed_ns: u64, enabled: bool) -> Option<ScalarEvent> {
         if !self.pending_voltage {
             return None;
         }
         self.pending_voltage = false;
         Some(ScalarEvent {
-            value: self.output_voltage.max(0.0),
+            value: if enabled { self.output_voltage.max(0.0) } else { 0.0 },
             timestamp_ns: elapsed_ns,
         })
     }
@@ -179,7 +184,7 @@ fn take_source_events(context: usize, elapsed_ns: u64) -> Vec<ScalarEvent> {
         .lock()
         .unwrap()
         .get_mut(context)
-        .and_then(|source| source.take_voltage_event(elapsed_ns))
+        .and_then(|source| source.take_voltage_event(elapsed_ns, true))
         .into_iter()
         .collect()
 }
@@ -207,15 +212,23 @@ impl DataflowAlgorithmExecutor for BatterySourceAlgorithm {
 }
 
 fn run_battery_source(runtime: &mut ClusterRuntime, context: usize) -> bool {
-    let current_amps = {
+    let (current_amps, enabled) = {
         let Some(source) = BATTERY_SOURCES.lock().unwrap().get(context).copied() else {
             return false;
         };
-        runtime
+        let enabled = source.contactor_state_route_id == 0
+            || runtime
+                .scalar_state_input_values(source.node())
+                .into_iter()
+                .find(|(route_id, _)| *route_id == source.contactor_state_route_id)
+                .is_some_and(|(_, state)| state > 0.5);
+        let current = runtime
             .scalar_state_input_values(source.node())
             .into_iter()
+            .filter(|(route_id, _)| *route_id != source.contactor_state_route_id)
             .map(|(_, current)| current.max(0.0))
-            .sum()
+            .sum();
+        (if enabled { current } else { 0.0 }, enabled)
     };
 
     let mut sources = BATTERY_SOURCES.lock().unwrap();
@@ -225,7 +238,7 @@ fn run_battery_source(runtime: &mut ClusterRuntime, context: usize) -> bool {
     source.update_load_current(current_amps, runtime.elapsed_ns);
     let source_node = source.node();
     let route_id = source.voltage_output_key().1;
-    let event = source.take_voltage_event(runtime.elapsed_ns);
+    let event = source.take_voltage_event(runtime.elapsed_ns, enabled);
     drop(sources);
 
     if let Some(event) = event {
@@ -247,6 +260,7 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
         if sources[index].config_equals(
             source.node(),
             source.voltage_output_key().1,
+            source.contactor_state_route_id,
             source.open_circuit_voltage,
             source.internal_resistance_ohms,
             source.capacity_amp_hours,
@@ -268,9 +282,7 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
     let route_id = source.voltage_output_key().1;
     drop(sources);
 
-    algorithms::register_algorithm(
-        runtime,
-        DataflowAlgorithm::periodic_source(
+    let algorithm = DataflowAlgorithm::periodic_source(
             node,
             (node, 5, context),
             vec![RuntimeInterfaces::scalar_edge(node, route_id)],
@@ -282,14 +294,15 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
         )
         .with_runtime_reset(reset_runtime)
         .with_node_reset(node, context, reset_source)
-        .with_scalar_source(node, route_id, context, take_source_events),
-    )
+        .with_scalar_source(node, route_id, context, take_source_events);
+    algorithms::register_algorithm(runtime, algorithm)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rig_model_register_battery_source(
     node: u32,
     voltage_route_id: u32,
+    contactor_state_route_id: u32,
     voltage: f32,
     internal_resistance_ohms: f32,
     capacity_amp_hours: f32,
@@ -320,6 +333,7 @@ pub extern "C" fn rig_model_register_battery_source(
             BatterySourceModel::new(
                 node,
                 voltage_route_id,
+                contactor_state_route_id,
                 voltage,
                 internal_resistance_ohms,
                 capacity_amp_hours,

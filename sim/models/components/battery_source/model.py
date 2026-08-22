@@ -22,8 +22,9 @@ from sim.infra.rig.scalar import (
 
 
 class BatterySourcePort(Enum):
-    VOLTAGE_OUTPUT = auto()
+    TERMINAL_VOLTAGE_OUTPUT = auto()
     CURRENT_DRAIN_INPUT = auto()
+    CONTACTOR_STATE_INPUT = auto()
 
 
 @dataclass(frozen=True)
@@ -78,19 +79,28 @@ class BatterySourceSpec:
 
 
 class BatterySourceModel(ComponentRig):
-    voltage_output = ComponentDataPathOutput(
-        lambda component: component.voltage_output_channel,
+    terminal_voltage_output = ComponentDataPathOutput(
+        lambda component: component.terminal_voltage_output_channel,
     )
 
     @classmethod
-    def voltage_output_channel(cls, channel: object) -> DataPath:
-        return DataPath.component(cls, (BatterySourcePort.VOLTAGE_OUTPUT, channel))
+    def terminal_voltage_output_channel(cls, channel: object) -> DataPath:
+        return DataPath.component(
+            cls, (BatterySourcePort.TERMINAL_VOLTAGE_OUTPUT, channel)
+        )
+
+    @classmethod
+    def contactor_state_input_channel(cls, channel: object) -> DataPath:
+        return DataPath.component(
+            cls, (BatterySourcePort.CONTACTOR_STATE_INPUT, channel)
+        )
 
     @classmethod
     def spec(
         cls,
         *,
-        voltage_output_channel: DataPath,
+        terminal_voltage_output_channel: DataPath,
+        contactor_state_input_channel: DataPath | None = None,
         source_spec: BatterySourceSpec,
         current_drain_channels: tuple[DataPath, ...] = (),
         bindings: tuple[ComponentDataPathBinding, ...] = (),
@@ -98,7 +108,8 @@ class BatterySourceModel(ComponentRig):
         return ComponentSpec(
             cls,
             parameters={
-                "voltage_output_channel": voltage_output_channel,
+                "terminal_voltage_output_channel": terminal_voltage_output_channel,
+                "contactor_state_input_channel": contactor_state_input_channel,
                 "source_spec": source_spec,
                 "current_drain_channels": current_drain_channels,
             },
@@ -108,28 +119,35 @@ class BatterySourceModel(ComponentRig):
     def __init__(
         self,
         *,
-        voltage_output_channel: DataPath,
+        terminal_voltage_output_channel: DataPath,
+        contactor_state_input_channel: DataPath | None = None,
         source_spec: BatterySourceSpec,
         current_drain_channels: tuple[DataPath, ...] = (),
     ) -> None:
         super().__init__()
-        self.voltage_output_channel = voltage_output_channel
+        self.terminal_voltage_output_channel = terminal_voltage_output_channel
+        self.contactor_state_input_channel = contactor_state_input_channel
         self.source_spec = source_spec
         self.current_drain_channels = tuple(current_drain_channels)
         self._voltage = float(source_spec.voltage)
         self.datapaths.add_output(
-            self.voltage_output_channel,
+            self.terminal_voltage_output_channel,
             pending=lambda: 0,
             recv=lambda: None,
         )
         for channel in self.current_drain_channels:
             self.datapaths.add_input(channel, send=lambda _value: True)
+        if self.contactor_state_input_channel is not None:
+            self.datapaths.add_input(
+                self.contactor_state_input_channel,
+                send=lambda _value: True,
+            )
 
     @property
     def voltage(self) -> float:
         if self._cluster_rig is not None and self._cluster_node_name is not None:
             record = self._cluster_rig.dataroutes.latest_record(
-                self.voltage_output_channel,
+                self.terminal_voltage_output_channel,
                 source_node=self._cluster_node_name,
             )
             if record is not None:
@@ -145,9 +163,11 @@ class BatterySourceModel(ComponentRig):
 
     def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         self._register_native_battery_source()
-        if path == self.voltage_output_channel:
+        if path == self.terminal_voltage_output_channel:
             return ScalarRouteEndpoint(*self._scalar_source_route_abi(path))
         if path in self.current_drain_channels:
+            return ScalarStateSinkRouteEndpoint(*self._current_drain_route_abi(path))
+        if path == self.contactor_state_input_channel:
             return ScalarStateSinkRouteEndpoint(*self._current_drain_route_abi(path))
         return None
 
@@ -171,6 +191,7 @@ class BatterySourceModel(ComponentRig):
             [
                 ctypes.c_uint32,
                 ctypes.c_uint32,
+                ctypes.c_uint32,
                 ctypes.c_float,
                 ctypes.c_float,
                 ctypes.c_float,
@@ -184,7 +205,12 @@ class BatterySourceModel(ComponentRig):
         if node_index is None or not register(
             ctypes.c_uint32(node_index),
             ctypes.c_uint32(
-                datapath_route_id(datapath_key(self.voltage_output_channel))
+                datapath_route_id(datapath_key(self.terminal_voltage_output_channel))
+            ),
+            ctypes.c_uint32(
+                0
+                if self.contactor_state_input_channel is None
+                else datapath_route_id(datapath_key(self.contactor_state_input_channel))
             ),
             ctypes.c_float(self.source_spec.voltage),
             ctypes.c_float(self.source_spec.internal_resistance_ohms),

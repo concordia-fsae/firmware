@@ -68,7 +68,7 @@ class VcpduSimpleSources:
 
 
 @pytest.fixture
-def vcpdu_hv_on(vcpdu_cluster):
+def vcpdu_hv_on_inputs(vcpdu_cluster):
     vcpdu = vcpdu_cluster.vcpdu
     sources = _add_vcpdu_simple_sources(vcpdu_cluster, bmsb=True)
     assert sources.bmsb is not None
@@ -81,14 +81,35 @@ def vcpdu_hv_on(vcpdu_cluster):
 
     _run_vcpdu_to_glv_on(vcpdu_cluster)
 
-    tsms_status.set(BMSB_tsmsChg=DigitalStatus.ON)
+    return VcpduHvOnSetup(vcpdu_cluster, vcpdu, tsms_status)
+
+
+@pytest.fixture
+def vcpdu_hv_on(vcpdu_hv_on_inputs):
+    vcpdu_hv_on_inputs.tsms_status.set(BMSB_tsmsChg=DigitalStatus.ON)
+    vcpdu = vcpdu_hv_on_inputs.vcpdu
+
     vcpdu.run_until_vehicle_state(
         VehicleState.ON_HV,
         timeout=500,
         step=20,
         message="vcpdu should enter ON_HV when TSMS closes",
     )
-    return VcpduHvOnSetup(vcpdu_cluster, vcpdu, tsms_status)
+    return vcpdu_hv_on_inputs
+
+
+def test_vcpdu_enters_hv_on_after_tsms_is_set(vcpdu_hv_on_inputs):
+    setup = vcpdu_hv_on_inputs
+
+    assert setup.vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
+
+    setup.tsms_status.set(BMSB_tsmsChg=DigitalStatus.ON)
+    setup.vcpdu.run_until_vehicle_state(
+        VehicleState.ON_HV,
+        timeout=500,
+        step=20,
+        message="vcpdu should enter ON_HV after TSMS is set",
+    )
 
 
 def test_vcpdu_enters_hv_on_when_tsms_closes(vcpdu_hv_on):
