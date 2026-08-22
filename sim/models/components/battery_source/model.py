@@ -91,7 +91,9 @@ class BatterySourceModel(ComponentRig):
 
     @classmethod
     def contactor_state_input_channel(cls, channel: object) -> DataPath:
-        return DataPath.component(cls, (BatterySourcePort.CONTACTOR_STATE_INPUT, channel))
+        return DataPath.component(
+            cls, (BatterySourcePort.CONTACTOR_STATE_INPUT, channel)
+        )
 
     @classmethod
     def spec(
@@ -206,9 +208,7 @@ class BatterySourceModel(ComponentRig):
             ctypes.c_uint32(
                 0
                 if self.contactor_state_input_channel is None
-                else datapath_route_id(
-                    datapath_key(self.contactor_state_input_channel)
-                )
+                else datapath_route_id(datapath_key(self.contactor_state_input_channel))
             ),
             ctypes.c_float(self.source_spec.voltage),
             ctypes.c_float(self.source_spec.internal_resistance_ohms),
