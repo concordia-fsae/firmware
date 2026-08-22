@@ -25,6 +25,7 @@ def _load_generated() -> None:
     )
     for name in ("AnalogInput", "DigitalInput", "DigitalIo", "Fault"):
         globals()[name] = getattr(enums, name)
+
     class BmswModel(extend_model_class(model.BmswModel, BmswModelExtensions)):
         AnalogInput = enums.AnalogInput
         DigitalInput = enums.DigitalInput
@@ -43,6 +44,7 @@ def __getattr__(name: str):
         _load_generated()
         return globals()[name]
     raise AttributeError(name)
+
 
 __all__ = [
     "BMSW_WORKER_COUNT_BY_PLATFORM",

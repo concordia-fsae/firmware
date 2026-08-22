@@ -142,9 +142,7 @@ class BmsSegmentModel(ComponentRig):
 
     @classmethod
     def cell_voltage_output_channel(cls, index: int, *, node_id: int = 0) -> DataPath:
-        return DataPath.component(
-            cls, (node_id, BmsSegmentPort.CELL_VOLTAGE, index)
-        )
+        return DataPath.component(cls, (node_id, BmsSegmentPort.CELL_VOLTAGE, index))
 
     @classmethod
     def thermistor_voltage_output_channel(
@@ -174,9 +172,7 @@ class BmsSegmentModel(ComponentRig):
         values = list(self._cell_voltages)
         values[index] = self._finite(voltage, "cell voltage")
         self._cell_voltages = tuple(values)
-        self._update_output(
-            self.cell_voltage_outputs[index], values[index]
-        )
+        self._update_output(self.cell_voltage_outputs[index], values[index])
 
     def set_temperature(self, index: int, temperature_c: float) -> None:
         values = list(self._temperatures_c)
@@ -279,8 +275,7 @@ class BmsSegmentModel(ComponentRig):
         # Both production variants use a 10 kOhm pull-up and 10 kOhm at 25 C.
         b_parameter = 3380.0 if self.platform == "cfr25" else 3435.0
         resistance = 10_000.0 * math.exp(
-            b_parameter
-            * (1.0 / (temperature_c + 273.15) - 1.0 / (25.0 + 273.15))
+            b_parameter * (1.0 / (temperature_c + 273.15) - 1.0 / (25.0 + 273.15))
         )
         return 3.0 * resistance / (10_000.0 + resistance)
 
@@ -292,9 +287,7 @@ class BmsSegmentModel(ComponentRig):
         return value
 
     @classmethod
-    def _validate_values(
-        cls, values, expected: int, label: str
-    ) -> tuple[float, ...]:
+    def _validate_values(cls, values, expected: int, label: str) -> tuple[float, ...]:
         values = tuple(cls._finite(value, label) for value in values)
         if len(values) != expected:
             raise ValueError(f"{label} must contain {expected} values")

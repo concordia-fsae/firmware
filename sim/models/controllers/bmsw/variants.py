@@ -34,9 +34,7 @@ def bmsw_node(hardware: str, node_id: int = 0) -> NodeSpec:
             *tuple(
                 BmsSegmentModel.thermistor_voltage_output(
                     index, node_id=node_id
-                ).bind_to(
-                    BmswModel.thermistor_voltage_input(index, platform=hardware)
-                )
+                ).bind_to(BmswModel.thermistor_voltage_input(index, platform=hardware))
                 for index in range(thermistors)
             ),
             BmsSegmentModel.segment_voltage_output.bind_to(
@@ -67,10 +65,7 @@ def bmsw_cluster_spec(
     return ClusterSpec(
         name=f"{hardware}-bmsw-cluster",
         hardware=hardware,
-        nodes=tuple(
-            bmsw_node(hardware, node_id)
-            for node_id in node_ids
-        ),
+        nodes=tuple(bmsw_node(hardware, node_id) for node_id in node_ids),
     )
 
 

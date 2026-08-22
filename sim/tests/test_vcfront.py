@@ -176,9 +176,7 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
         pytest.param(50, "REVERSE", id="brake-pressed"),
     ],
 )
-def test_reverse_requires_brake_pedal(
-    vcfront_cluster, brake_position, expected_gear
-):
+def test_reverse_requires_brake_pedal(vcfront_cluster, brake_position, expected_gear):
     vcfront = vcfront_cluster.vcfront
     vcpdu = VcpduSimpleModel(vcfront.can)
     vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
