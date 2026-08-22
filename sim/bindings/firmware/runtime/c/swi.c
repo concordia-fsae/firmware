@@ -1,6 +1,10 @@
 #include "runtime_state.h"
 #include "swi.h"
 
+void RTOS_SWI_Init(void)
+{
+}
+
 RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler)
 {
     if ((priority >= RTOS_SWI_PRI_COUNT) || (rig_runtime_swi_count[priority] >= RTOS_SWI_MAX_PER_PRI))
