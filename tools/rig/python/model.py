@@ -270,14 +270,11 @@ class ComponentRig(ModelRig, Generic[OwnerT]):
         restype: object = ctypes.c_bool,
     ):
         binder = None
-        if (
-            self._cluster_rig is not None
-            and self._cluster_rig._rust_runtime is not None
-        ):
-            binder = self._cluster_rig._rust_runtime.bind_symbol
+        if self._cluster_rig is not None and self._cluster_rig.runtime is not None:
+            binder = self._cluster_rig.runtime.bind_symbol
         if binder is None:
             owner = getattr(self, "_owner", None)
-            binder = getattr(owner, "_bind_symbol", None)
+            binder = getattr(owner, "bind_symbol", None)
         if binder is None:
             raise RuntimeError("native model symbols require a Rust-backed owner")
         return binder(name, argtypes, restype)
