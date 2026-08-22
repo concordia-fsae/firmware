@@ -149,9 +149,7 @@ class CanSignalWake:
     def on_receive(self, callback: Callable[[CanEvent], None]) -> CanSignalWake:
         """Invoke ``callback`` from the Rust CAN edge when this signal's frame arrives."""
         self._callbacks.append(callback)
-        native_callback = _CanSignalWakeCallback(
-            lambda event: callback(event.contents)
-        )
+        native_callback = _CanSignalWakeCallback(lambda event: callback(event.contents))
         self._native_callbacks.append(native_callback)
         self._register_callback(native_callback)
         return self
@@ -190,6 +188,7 @@ class CanSignalWake:
             self.signal_name,
             bus=self.message.bus,
         )
+
 
 @dataclass(frozen=True)
 class CanEnumValueDescriptor:
@@ -711,7 +710,9 @@ class CanInterface:
         return elapsed_ns
 
     @staticmethod
-    def _set_comparison_signal_name(comparison: CanSignalComparison, signal: str) -> None:
+    def _set_comparison_signal_name(
+        comparison: CanSignalComparison, signal: str
+    ) -> None:
         encoded = signal.encode()
         if len(encoded) >= _CAN_SIGNAL_NAME_CAPACITY:
             raise ValueError(

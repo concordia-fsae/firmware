@@ -47,9 +47,7 @@ class ClusterDataRoutes:
         self._links: list[DataPathLink] = []
         self._route_cache: dict[DataPathKey, tuple[_DataPathRoute, ...]] = {}
         self._ordered_paths_cache: tuple[DataPath, ...] | None = None
-        self._latest_records: dict[
-            tuple[str, DataPathKey], DataPathRecord[object]
-        ] = {}
+        self._latest_records: dict[tuple[str, DataPathKey], DataPathRecord[object]] = {}
         self._native_routes: set[tuple[DataPathKey, str, str]] = set()
         self._native_route_abi_cache: dict[
             tuple[str, DataPathKey], NativeRouteEndpoint | None
@@ -1111,9 +1109,7 @@ class ClusterRig:
             for name, node in self._rig_nodes.items():
                 runtime.add_node(name, node, online=self.node_online(name))
             for node in self._rig_nodes.values():
-                getattr(
-                    node, "register_cluster_wakes", lambda _runtime: None
-                )(runtime)
+                getattr(node, "register_cluster_wakes", lambda _runtime: None)(runtime)
         finally:
             self._building_rust_runtime = None
 
