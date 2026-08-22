@@ -329,7 +329,13 @@ mod tests {
         let mut specs = Vec::new();
         runtime.algorithms.append_algorithm_specs(&mut specs);
         assert_eq!(specs.len(), 1);
-        assert_eq!(specs[0].period_ns, 10);
+        assert_eq!(
+            specs[0].schedule,
+            super::super::dataflow::DataflowSchedule::Periodic {
+                period_ns: 10,
+                next_due_ns: 10,
+            }
+        );
     }
 
     struct TestExecutor;

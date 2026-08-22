@@ -19,6 +19,7 @@ from .can import (
     CanInterface,
     CanMessageDescriptor,
     CanPacket,
+    CanSignalWake,
     CanSignalDescriptor,
     DecodedCanMessage,
     PeriodicCanMessage,
@@ -34,7 +35,7 @@ from .datapath import (
     ModelDataPathOutputConnector,
     ModelDataPaths,
 )
-from .dataflow import DataflowEvent
+from .dataflow import DataflowEvent, DataflowWait
 from .contracts import (
     Algorithm,
     Component,
@@ -85,6 +86,7 @@ __all__ = [
     "CanInterface",
     "CanMessageDescriptor",
     "CanPacket",
+    "CanSignalWake",
     "CanSignalDescriptor",
     "ClusterCanComms",
     "ClusterComms",
@@ -106,6 +108,7 @@ __all__ = [
     "Component",
     "Dataflow",
     "DataflowEvent",
+    "DataflowWait",
     "Edge",
     "Interface",
     "Node",

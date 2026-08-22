@@ -46,6 +46,7 @@ class ClusterDataRoutes:
         self._paths: dict[DataPathKey, DataPath] = {}
         self._links: list[DataPathLink] = []
         self._route_cache: dict[DataPathKey, tuple[_DataPathRoute, ...]] = {}
+        self._ordered_paths_cache: tuple[DataPath, ...] | None = None
         self._latest_records: dict[tuple[str, DataPathKey], DataPathRecord[object]] = {}
         self._native_routes: set[tuple[DataPathKey, str, str]] = set()
         self._native_route_abi_cache: dict[
@@ -94,6 +95,7 @@ class ClusterDataRoutes:
         if link not in self._links:
             self._links.append(link)
             self._route_cache.clear()
+            self._ordered_paths_cache = None
         self._fanout(path)
 
     def connect_available_paths(self, *, exclude=None) -> None:
@@ -193,6 +195,9 @@ class ClusterDataRoutes:
         return tuple(self._paths.values())
 
     def _ordered_paths(self) -> tuple[DataPath, ...]:
+        if self._ordered_paths_cache is not None:
+            return self._ordered_paths_cache
+
         paths = self.paths
         source_nodes_by_key: dict[DataPathKey, set[str]] = {}
         sink_nodes_by_key: dict[DataPathKey, set[str]] = {}
@@ -241,11 +246,14 @@ class ClusterDataRoutes:
             cyclic = ", ".join(repr(key) for key, deps in dependencies.items() if deps)
             raise ValueError(f"datapath route graph contains a cycle: {cyclic}")
 
-        return tuple(path_by_key[key] for key in ordered)
+        self._ordered_paths_cache = tuple(path_by_key[key] for key in ordered)
+        return self._ordered_paths_cache
 
     def _fanout(self, path: DataPath) -> FanoutDataPath[object]:
         key = datapath_key(path)
-        self._paths.setdefault(key, path)
+        if key not in self._paths:
+            self._paths[key] = path
+            self._ordered_paths_cache = None
         if key not in self._fanouts:
             self._fanouts[key] = FanoutDataPath()
         return self._fanouts[key]
@@ -1100,6 +1108,8 @@ class ClusterRig:
         try:
             for name, node in self._rig_nodes.items():
                 runtime.add_node(name, node, online=self.node_online(name))
+            for node in self._rig_nodes.values():
+                getattr(node, "register_cluster_wakes", lambda _runtime: None)(runtime)
         finally:
             self._building_rust_runtime = None
 

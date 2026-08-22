@@ -6,6 +6,7 @@ import pathlib
 from collections.abc import Callable
 
 from .artifacts import buck_output, load_shared_library, repo_root
+from .dataflow import DataflowWait
 from .scheduler import PythonSchedulerCallbacks, RustSchedulerCallbacks
 
 
@@ -117,6 +118,11 @@ class _RustClusterRuntime:
             [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint32, ctypes.c_void_p],
             ctypes.c_bool,
         )
+        self._register_can_signal_wake = bind_symbol(
+            "rig_cluster_register_can_signal_wake",
+            [ctypes.c_void_p, ctypes.c_size_t],
+            ctypes.c_bool,
+        )
         self._latest_can_bus_event = bind_symbol(
             "rig_cluster_latest_can_bus_event",
             [ctypes.c_uint32, ctypes.c_uint8, ctypes.c_void_p],
@@ -133,63 +139,24 @@ class _RustClusterRuntime:
             ],
             ctypes.c_bool,
         )
-        self._run_until_can_signal_eq = bind_symbol(
-            "rig_cluster_run_until_can_signal_eq",
+        self._begin_can_signal_wait = bind_symbol(
+            "rig_cluster_begin_can_signal_wait",
+            [ctypes.c_uint32, ctypes.c_void_p, ctypes.c_uint32, ctypes.c_size_t],
+            ctypes.c_uint64,
+        )
+        self._run_until_dataflow_wait = bind_symbol(
+            "rig_cluster_run_until_dataflow_wait",
             [
                 ctypes.c_uint64,
                 ctypes.c_uint64,
                 ctypes.c_size_t,
-                ctypes.c_uint32,
-                ctypes.c_uint8,
-                ctypes.c_uint32,
-                ctypes.c_char_p,
-                ctypes.c_double,
-                ctypes.c_double,
+                ctypes.c_uint64,
             ],
             ctypes.c_uint64,
         )
-        self._run_until_can_signal_index_eq = bind_symbol(
-            "rig_cluster_run_until_can_signal_index_eq",
-            [
-                ctypes.c_uint64,
-                ctypes.c_uint64,
-                ctypes.c_size_t,
-                ctypes.c_uint32,
-                ctypes.c_uint8,
-                ctypes.c_uint32,
-                ctypes.c_uint32,
-                ctypes.c_double,
-                ctypes.c_double,
-            ],
-            ctypes.c_uint64,
-        )
-        self._run_until_can_signal_index_cmp = bind_symbol(
-            "rig_cluster_run_until_can_signal_index_cmp",
-            [
-                ctypes.c_uint64,
-                ctypes.c_uint64,
-                ctypes.c_size_t,
-                ctypes.c_uint32,
-                ctypes.c_uint8,
-                ctypes.c_uint32,
-                ctypes.c_uint32,
-                ctypes.c_double,
-                ctypes.c_double,
-                ctypes.c_uint8,
-            ],
-            ctypes.c_uint64,
-        )
-        self._run_until_can_signal_comparisons = bind_symbol(
-            "rig_cluster_run_until_can_signal_comparisons",
-            [
-                ctypes.c_uint64,
-                ctypes.c_uint64,
-                ctypes.c_size_t,
-                ctypes.c_uint32,
-                ctypes.c_void_p,
-                ctypes.c_uint32,
-            ],
-            ctypes.c_uint64,
+        self._cancel_dataflow_wait = bind_symbol(
+            "rig_cluster_cancel_dataflow_wait",
+            [ctypes.c_uint64],
         )
         self._add_timer_route = bind_symbol(
             "rig_cluster_add_timer_route",
@@ -845,6 +812,14 @@ class _RustClusterRuntime:
             )
         )
 
+    def register_can_signal_wake(self, wake, callback: int) -> bool:
+        return bool(
+            self._register_can_signal_wake(
+                ctypes.byref(wake),
+                ctypes.c_size_t(callback),
+            )
+        )
+
     def latest_can_bus_event(self, source_node: str, bus: int, event) -> bool:
         index = self._node_indices.get(source_node)
         if index is None:
@@ -878,145 +853,54 @@ class _RustClusterRuntime:
             return None
         return float(value.value)
 
-    def run_until_can_signal_eq(
-        self,
-        *,
-        source_node: str,
-        bus: int,
-        message_id: int,
-        signal_name: str,
-        expected: float,
-        tolerance: float,
-        timeout_ns: int,
-        step_ns: int,
-        route: bool = True,
-    ) -> int | None:
-        index = self._node_indices.get(source_node)
-        if index is None:
-            return None
-        route_callback = (
-            ctypes.cast(self._route_callback, ctypes.c_void_p).value
-            if route and self._route is not None
-            else 0
-        )
-        elapsed_ns = int(
-            self._run_until_can_signal_eq(
-                ctypes.c_uint64(timeout_ns),
-                ctypes.c_uint64(step_ns),
-                ctypes.c_size_t(route_callback or 0),
-                ctypes.c_uint32(index),
-                ctypes.c_uint8(bus),
-                ctypes.c_uint32(message_id),
-                signal_name.encode(),
-                ctypes.c_double(expected),
-                ctypes.c_double(tolerance),
-            )
-        )
-        return None if elapsed_ns == 0xFFFFFFFFFFFFFFFF else elapsed_ns
-
-    def run_until_can_signal_index_eq(
-        self,
-        *,
-        source_node: str,
-        bus: int,
-        message_id: int,
-        signal_index: int,
-        expected: float,
-        tolerance: float,
-        timeout_ns: int,
-        step_ns: int,
-        route: bool = True,
-    ) -> int | None:
-        index = self._node_indices.get(source_node)
-        if index is None:
-            return None
-        route_callback = (
-            ctypes.cast(self._route_callback, ctypes.c_void_p).value
-            if route and self._route is not None
-            else 0
-        )
-        elapsed_ns = int(
-            self._run_until_can_signal_index_eq(
-                ctypes.c_uint64(timeout_ns),
-                ctypes.c_uint64(step_ns),
-                ctypes.c_size_t(route_callback or 0),
-                ctypes.c_uint32(index),
-                ctypes.c_uint8(bus),
-                ctypes.c_uint32(message_id),
-                ctypes.c_uint32(signal_index),
-                ctypes.c_double(expected),
-                ctypes.c_double(tolerance),
-            )
-        )
-        return None if elapsed_ns == 0xFFFFFFFFFFFFFFFF else elapsed_ns
-
-    def run_until_can_signal_index_cmp(
-        self,
-        *,
-        source_node: str,
-        bus: int,
-        message_id: int,
-        signal_index: int,
-        expected: float,
-        tolerance: float,
-        comparison: int,
-        timeout_ns: int,
-        step_ns: int,
-        route: bool = True,
-    ) -> int | None:
-        index = self._node_indices.get(source_node)
-        if index is None:
-            return None
-        route_callback = (
-            ctypes.cast(self._route_callback, ctypes.c_void_p).value
-            if route and self._route is not None
-            else 0
-        )
-        elapsed_ns = int(
-            self._run_until_can_signal_index_cmp(
-                ctypes.c_uint64(timeout_ns),
-                ctypes.c_uint64(step_ns),
-                ctypes.c_size_t(route_callback or 0),
-                ctypes.c_uint32(index),
-                ctypes.c_uint8(bus),
-                ctypes.c_uint32(message_id),
-                ctypes.c_uint32(signal_index),
-                ctypes.c_double(expected),
-                ctypes.c_double(tolerance),
-                ctypes.c_uint8(comparison),
-            )
-        )
-        return None if elapsed_ns == 0xFFFFFFFFFFFFFFFF else elapsed_ns
-
-    def run_until_can_signal_comparisons(
+    def begin_can_signal_wait(
         self,
         *,
         source_node: str,
         comparisons,
         comparison_count: int,
+        decoder: int,
+    ) -> DataflowWait | None:
+        index = self._node_indices.get(source_node)
+        if index is None:
+            return None
+        handle = int(
+            self._begin_can_signal_wait(
+                ctypes.c_uint32(index),
+                ctypes.cast(comparisons, ctypes.c_void_p),
+                ctypes.c_uint32(comparison_count),
+                ctypes.c_size_t(decoder),
+            )
+        )
+        if handle == 0xFFFFFFFFFFFFFFFF:
+            return None
+        return DataflowWait(self, handle)
+
+    def run_until_dataflow_wait(
+        self,
+        handle: int,
+        *,
         timeout_ns: int,
         step_ns: int,
         route: bool = True,
     ) -> int | None:
-        index = self._node_indices.get(source_node)
-        if index is None:
-            return None
         route_callback = (
             ctypes.cast(self._route_callback, ctypes.c_void_p).value
             if route and self._route is not None
             else 0
         )
         elapsed_ns = int(
-            self._run_until_can_signal_comparisons(
+            self._run_until_dataflow_wait(
                 ctypes.c_uint64(timeout_ns),
                 ctypes.c_uint64(step_ns),
                 ctypes.c_size_t(route_callback or 0),
-                ctypes.c_uint32(index),
-                ctypes.cast(comparisons, ctypes.c_void_p),
-                ctypes.c_uint32(comparison_count),
+                ctypes.c_uint64(handle),
             )
         )
         return None if elapsed_ns == 0xFFFFFFFFFFFFFFFF else elapsed_ns
+
+    def cancel_dataflow_wait(self, handle: int) -> None:
+        self._cancel_dataflow_wait(ctypes.c_uint64(handle))
 
     def latest_timer_event(
         self, source_node: str, interface: int, port: int, channel: int, event

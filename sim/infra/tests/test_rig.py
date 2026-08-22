@@ -8,10 +8,12 @@ from sim.infra.rig import (
     ClusterCanComms,
     ClusterRig,
     DataPath,
+    DataflowWait,
     PeriodicDataPathProducer,
     SpiTransaction,
 )
 from sim.infra.models import SimpleComponent, SimpleNodeRig
+from sim.infra.rig.can import CanSignalComparison, _CanSignalWakeAbi
 from sim.infra.rig.runtime import _RustClusterRuntime, _StandaloneRustRuntimeHost
 from sim.models.test import (
     BatchObservedModel,
@@ -232,6 +234,61 @@ class MockSpiControllerDevice:
 
 def _function_address(function) -> int:
     return _RustClusterRuntime._function_address(function)
+
+
+def test_dataflow_wait_is_single_use_and_cancellable():
+    calls = []
+
+    class FakeRuntime:
+        def run_until_dataflow_wait(self, wait_id, **kwargs):
+            calls.append(("wait", wait_id, kwargs))
+            return 123
+
+        def cancel_dataflow_wait(self, wait_id):
+            calls.append(("cancel", wait_id))
+
+    completed = DataflowWait(FakeRuntime(), 7)
+    assert completed.wait(timeout_ns=1000, step_ns=10, route=False) == 123
+    assert calls == [("wait", 7, {"timeout_ns": 1000, "step_ns": 10, "route": False})]
+    try:
+        completed.wait(timeout_ns=1000, step_ns=10)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("a completed dataflow wait must not be reusable")
+
+    cancelled = DataflowWait(FakeRuntime(), 8)
+    cancelled.cancel()
+    cancelled.cancel()
+    assert calls[-1] == ("cancel", 8)
+
+
+def test_rust_can_predicate_registers_a_generic_dataflow_wait():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    decoder_type = ctypes.CFUNCTYPE(
+        ctypes.c_bool,
+        ctypes.c_uint8,
+        ctypes.POINTER(CanPacket),
+        ctypes.c_char_p,
+        ctypes.POINTER(ctypes.c_double),
+    )
+    decoder = decoder_type(lambda _bus, _packet, _signal, _value: False)
+    comparison = CanSignalComparison()
+    comparison.bus = 0
+    comparison.message_id = 0x123
+    comparison.signal_index = 0
+    comparison.signal_name = b"testSignal"
+    comparisons = (CanSignalComparison * 1)(comparison)
+
+    wait = runtime.begin_can_signal_wait(
+        source_node="source",
+        comparisons=comparisons,
+        comparison_count=1,
+        decoder=ctypes.cast(decoder, ctypes.c_void_p).value,
+    )
+    assert isinstance(wait, DataflowWait)
+    assert wait.wait(timeout_ns=0, step_ns=1, route=False) is None
 
 
 def test_dataflow_graph_rejects_cyclic_algorithms_from_python_abi():
@@ -475,6 +532,43 @@ def test_rust_can_interface_records_source_only_events_without_sink():
     latest = CanEvent()
     assert runtime.latest_can_message("source", 1, 0x456, latest)
     assert latest.packet.payload == b"\xaa"
+
+
+def test_rust_can_signal_wake_is_intrinsic_to_can_edge():
+    runtime = _RustClusterRuntime()
+    runtime.add_node("source", FakeNode())
+    source = NativeCanInterfaceHarness()
+    assert runtime.add_can_route(
+        source_node="source",
+        source_bus=0,
+        source_tx_count=_function_address(source.tx_count),
+        source_recv_events=_function_address(source.recv_events),
+    )
+
+    wake = _CanSignalWakeAbi(0, 0, 0x456, 3)
+    received = []
+    callback_type = ctypes.CFUNCTYPE(None, ctypes.POINTER(CanEvent))
+    callback = callback_type(
+        lambda event: received.append(
+            (int(event.contents.packet.id), int(event.contents.timestamp_ns))
+        )
+    )
+    assert runtime.register_can_signal_wake(
+        wake,
+        ctypes.cast(callback, ctypes.c_void_p).value,
+    )
+
+    source.queue(0, CanPacket.from_payload(0x456, b"\x01"), timestamp_ns=0)
+    runtime.run_for(1, 1)
+    assert received == [(0x456, 0)]
+
+    source.queue(0, CanPacket.from_payload(0x456, b"\x02"), timestamp_ns=0)
+    runtime.run_for(1, 1)
+    assert received == [(0x456, 0)]
+
+    source.queue(0, CanPacket.from_payload(0x456, b"\x03"), timestamp_ns=2)
+    runtime.run_for(1, 1)
+    assert received == [(0x456, 0), (0x456, 2)]
 
 
 def test_rust_can_interface_rejects_invalid_routes_and_gates_offline_sources():
@@ -773,6 +867,21 @@ def test_single_model_cluster_uses_rust_runtime_scheduler():
     assert model.ticks == 5
     assert model.elapsed_ns == 5_000_000
     assert model.run_durations_ns == []
+
+
+def test_cluster_registers_deferred_can_wakes_after_runtime_population():
+    class WakeAwareFakeNode(FakeNode):
+        def __init__(self) -> None:
+            super().__init__()
+            self.registered_runtime = None
+
+        def register_cluster_wakes(self, runtime) -> None:
+            self.registered_runtime = runtime
+
+    node = WakeAwareFakeNode()
+    cluster = ClusterRig(node=node)
+
+    assert node.registered_runtime is cluster._rust_runtime
 
 
 def test_cluster_rejects_duplicate_rust_backed_shared_object_instances(tmp_path):

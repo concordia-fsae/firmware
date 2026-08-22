@@ -1,7 +1,10 @@
 use super::can::{CanEndpoint, CanInterface};
-pub(super) use super::can::{CanEvent, CanPacket, CanSignalComparison};
-pub(super) use super::can::ClusterCanRoute;
-use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey};
+pub(super) use super::can::{
+    CanEvent, CanPacket, CanSignalComparison, CanSignalWake, CanSignalDecoderFn,
+    CanSignalWakeCallback,
+};
+pub(super) use super::can::{CanRouteResult, ClusterCanRoute};
+use super::dataflow::{DataflowAlgorithm, DataflowEdgeKey, DataflowWait};
 use super::interfaces::{InterfaceCaller, InterfaceDataflow};
 use super::scalar::{ScalarEndpoint, ScalarInterface, ScalarRouteResult};
 pub(super) use super::scalar::ScalarEvent;
@@ -121,8 +124,23 @@ impl RuntimeInterfaces {
 
     pub(super) fn can_route_event(
         &mut self, source_node: u32, bus: u8, event: CanEvent,
-    ) -> Vec<u32> {
+    ) -> CanRouteResult {
         self.can.route_event(source_node, bus, event)
+    }
+
+    pub(super) fn begin_can_signal_wait(
+        &mut self,
+        source_node: u32,
+        comparisons: &[CanSignalComparison],
+        decoder: CanSignalDecoderFn,
+        wait: DataflowWait,
+    ) -> bool {
+        self.can
+            .begin_signal_wait(source_node, comparisons, decoder, wait)
+    }
+
+    pub(super) fn cancel_dataflow_wait(&mut self, wait: DataflowWait) {
+        self.can.cancel_signal_wait(wait);
     }
 
     pub(super) fn timer_fanout_pending(
@@ -221,10 +239,6 @@ impl RuntimeInterfaces {
         &self, bus: u8, packet: &CanPacket, signal_name: &str,
     ) -> Option<f64> {
         super::can::decode_signal(bus, packet, signal_name)
-    }
-
-    pub(super) fn tx_signal_name(signal_index: u32) -> Option<&'static str> {
-        super::can::codegen_tx_signal_name(signal_index)
     }
 
     pub(super) fn scalar_edge(node: u32, route_id: u32) -> DataflowEdgeKey {

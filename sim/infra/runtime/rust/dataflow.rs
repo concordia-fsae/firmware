@@ -13,6 +13,24 @@ pub(super) type NodeResetFn = fn(usize, u64);
 pub(super) type NativeScalarTakeFn = fn(usize, u64) -> Vec<ScalarEvent>;
 pub(super) type NativeScalarReceiveFn = fn(usize, ScalarEvent) -> bool;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum DataflowSchedule {
+    Polling,
+    Event,
+    Periodic { period_ns: u64, next_due_ns: u64 },
+}
+
+fn periodic_schedule(period_ns: u64, next_due_ns: u64) -> DataflowSchedule {
+    assert!(
+        period_ns != 0,
+        "periodic dataflow schedule requires a positive period"
+    );
+    DataflowSchedule::Periodic {
+        period_ns,
+        next_due_ns,
+    }
+}
+
 #[derive(Clone, Default)]
 pub(super) struct DataflowAlgorithmLifecycle {
     pub(super) runtime_reset: Option<RuntimeResetFn>,
@@ -34,6 +52,13 @@ pub(super) struct DataflowEdgeKey {
     data_type: TypeId,
     pub(super) channel: DataflowChannel,
 }
+
+/// A scheduler-owned subscription to an ingress edge or event queue.
+///
+/// Producers such as CAN, SPI, and timers may create the subscription, but the
+/// scheduler owns its completion state and the operation that waits on it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(super) struct DataflowWait(pub(super) u64);
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct DataflowEdge<T: 'static> {
@@ -59,10 +84,6 @@ impl<T: 'static> DataflowEdge<T> {
 }
 
 pub(super) trait DataflowAlgorithmExecutor: Send + Sync {
-    fn polls_pending(&self) -> bool {
-        false
-    }
-
     fn pending(&self, _runtime: &ClusterRuntime) -> bool {
         false
     }
@@ -81,8 +102,7 @@ pub(super) struct DataflowAlgorithm {
     pub(super) inputs: Vec<DataflowEdgeKey>,
     pub(super) outputs: Vec<DataflowEdgeKey>,
     pub(super) executor: Arc<dyn DataflowAlgorithmExecutor>,
-    pub(super) period_ns: u64,
-    pub(super) next_due_ns: u64,
+    pub(super) schedule: DataflowSchedule,
     pub(super) lifecycle: DataflowAlgorithmLifecycle,
 }
 
@@ -99,8 +119,7 @@ impl DataflowAlgorithm {
             inputs: Vec::new(),
             outputs,
             executor,
-            period_ns: 0,
-            next_due_ns: 0,
+            schedule: DataflowSchedule::Polling,
             lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
@@ -119,13 +138,12 @@ impl DataflowAlgorithm {
             inputs: Vec::new(),
             outputs,
             executor,
-            period_ns,
-            next_due_ns,
+            schedule: periodic_schedule(period_ns, next_due_ns),
             lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
 
-    pub(super) fn transform(
+    pub(super) fn event_transform(
         owner_node: u32,
         sort_key: (u32, u32, usize),
         inputs: Vec<DataflowEdgeKey>,
@@ -138,10 +156,18 @@ impl DataflowAlgorithm {
             inputs,
             outputs,
             executor,
-            period_ns: 0,
-            next_due_ns: 0,
+            schedule: DataflowSchedule::Event,
             lifecycle: DataflowAlgorithmLifecycle::default(),
         }
+    }
+
+    pub(super) fn event_sink(
+        owner_node: u32,
+        sort_key: (u32, u32, usize),
+        inputs: Vec<DataflowEdgeKey>,
+        executor: Arc<dyn DataflowAlgorithmExecutor>,
+    ) -> Self {
+        Self::event_transform(owner_node, sort_key, inputs, Vec::new(), executor)
     }
 
     pub(super) fn periodic_transform(
@@ -159,8 +185,7 @@ impl DataflowAlgorithm {
             inputs,
             outputs,
             executor,
-            period_ns,
-            next_due_ns,
+            schedule: periodic_schedule(period_ns, next_due_ns),
             lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
@@ -180,8 +205,7 @@ impl DataflowAlgorithm {
                 node: owner_node,
                 input_triggered: false,
             }),
-            period_ns,
-            next_due_ns,
+            schedule: periodic_schedule(period_ns, next_due_ns),
             lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
@@ -196,8 +220,7 @@ impl DataflowAlgorithm {
                 node: owner_node,
                 input_triggered: true,
             }),
-            period_ns: 0,
-            next_due_ns: 0,
+            schedule: DataflowSchedule::Event,
             lifecycle: DataflowAlgorithmLifecycle::default(),
         }
     }
@@ -243,13 +266,31 @@ impl DataflowAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+    };
 
     struct TestExecutor;
 
     impl DataflowAlgorithmExecutor for TestExecutor {
         fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
             true
+        }
+    }
+
+    struct PendingTransformExecutor {
+        runs: Arc<AtomicUsize>,
+    }
+
+    impl DataflowAlgorithmExecutor for PendingTransformExecutor {
+        fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+            true
+        }
+
+        fn run(&self, _runtime: &mut ClusterRuntime) -> bool {
+            self.runs.fetch_add(1, Ordering::Relaxed);
+            false
         }
     }
 
@@ -302,9 +343,85 @@ mod tests {
         assert_eq!(algorithm.sort_key, (1, 2, 3));
         assert_eq!(algorithm.inputs, vec![input]);
         assert_eq!(algorithm.outputs, vec![output]);
-        assert_eq!(algorithm.period_ns, 100);
-        assert_eq!(algorithm.next_due_ns, 200);
-        assert!(!algorithm.executor.polls_pending());
+        assert_eq!(
+            algorithm.schedule,
+            DataflowSchedule::Periodic {
+                period_ns: 100,
+                next_due_ns: 200,
+            }
+        );
+
+        let event_algorithm = DataflowAlgorithm::event_transform(
+            1,
+            (1, 2, 4),
+            vec![input],
+            vec![output],
+            Arc::new(TestExecutor),
+        );
+        assert_eq!(event_algorithm.outputs, vec![output]);
+        assert_eq!(event_algorithm.schedule, DataflowSchedule::Event);
+    }
+
+    #[test]
+    #[should_panic(expected = "periodic dataflow schedule requires a positive period")]
+    fn periodic_source_rejects_zero_period() {
+        DataflowAlgorithm::periodic_source(
+            u32::MAX,
+            (0, 0, 0),
+            Vec::new(),
+            Arc::new(TestExecutor),
+            0,
+            0,
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "periodic dataflow schedule requires a positive period")]
+    fn periodic_transform_rejects_zero_period() {
+        DataflowAlgorithm::periodic_transform(
+            u32::MAX,
+            (0, 0, 0),
+            Vec::new(),
+            Vec::new(),
+            Arc::new(TestExecutor),
+            0,
+            0,
+        );
+    }
+
+    #[test]
+    fn pending_event_transform_runs_from_an_input_edge_without_a_period() {
+        let input = DataflowEdge::<ScalarEvent>::new(
+            u32::MAX,
+            DataflowChannel {
+                interface: 1,
+                port: 0,
+                channel: 0,
+            },
+        )
+        .key();
+        let runs = Arc::new(AtomicUsize::new(0));
+        let mut graph = DataflowGraph {
+            algorithm_specs: vec![DataflowAlgorithm::event_sink(
+                u32::MAX,
+                (0, 0, 0),
+                vec![input],
+                Arc::new(PendingTransformExecutor {
+                    runs: Arc::clone(&runs),
+                }),
+            )],
+            ready_edges: std::collections::HashSet::from([input]),
+            ..Default::default()
+        };
+        let runtime = ClusterRuntime::default();
+        graph.rebuild(1, &runtime);
+        let mut runtime = runtime;
+        let mut ran_algorithms = vec![0; graph.algorithms.len()];
+
+        graph.run_ready_algorithms(&mut runtime, &mut ran_algorithms, 1);
+
+        assert_eq!(runs.load(Ordering::Relaxed), 1);
+        assert_eq!(graph.algorithms[0].schedule, DataflowSchedule::Event);
     }
 
     struct OrderedExecutor {
@@ -345,18 +462,17 @@ mod tests {
         let mut graph = DataflowGraph {
             algorithm_specs: vec![
                 DataflowAlgorithm::source(u32::MAX, (0, 0, 0), vec![source_output], executor("source")),
-                DataflowAlgorithm::transform(
+                DataflowAlgorithm::event_transform(
                     u32::MAX,
                     (0, 0, 1),
                     vec![source_output],
                     vec![transform_output],
                     executor("transform"),
                 ),
-                DataflowAlgorithm::transform(
+                DataflowAlgorithm::event_sink(
                     u32::MAX,
                     (0, 0, 2),
                     vec![transform_output],
-                    Vec::new(),
                     executor("sink"),
                 ),
             ],
@@ -383,10 +499,6 @@ struct PythonNodeAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for PythonNodeAlgorithm {
-    fn polls_pending(&self) -> bool {
-        self.input_triggered
-    }
-
     fn pending(&self, runtime: &ClusterRuntime) -> bool {
         self.input_triggered && runtime.python_node_input_pending(self.node)
     }
@@ -505,13 +617,10 @@ impl DataflowGraph {
         self.available_inputs = vec![HashSet::new(); self.algorithms.len()];
 
         for index in 0..self.algorithms.len() {
-            if self.algorithms[index].executor.polls_pending()
-                && (self.algorithms[index].inputs.is_empty()
-                    || self.algorithms[index].outputs.is_empty())
-            {
+            if self.algorithms[index].schedule == DataflowSchedule::Polling {
                 self.polled_algorithms.push(index);
             }
-            if self.algorithms[index].period_ns != 0 {
+            if matches!(self.algorithms[index].schedule, DataflowSchedule::Periodic { .. }) {
                 let owner_node = self.algorithms[index].owner_node as usize;
                 if let Some(schedules) = self.schedules_by_owner.get_mut(owner_node) {
                     schedules.push(index);
@@ -538,7 +647,15 @@ impl DataflowGraph {
             indexes.dedup();
         }
         for index in 0..self.algorithms.len() {
-            if self.pending_state(runtime, index) {
+            if self.algorithms[index].schedule == DataflowSchedule::Polling
+                && self.pending_state(runtime, index)
+            {
+                self.enqueue_if_ready(index);
+            }
+            if self.algorithms[index].schedule == DataflowSchedule::Event
+                && !self.algorithms[index].inputs.is_empty()
+                && self.algorithm_inputs_ready(index)
+            {
                 self.enqueue_if_ready(index);
             }
         }
@@ -550,7 +667,7 @@ impl DataflowGraph {
         ran_algorithms: &mut [u64],
         generation: u64,
     ) {
-        self.enqueue_pending_algorithms(runtime);
+        self.enqueue_pending_algorithms(runtime, ran_algorithms, generation);
         self.run_due_algorithms(runtime);
         self.run_queue(runtime, ran_algorithms, generation);
     }
@@ -622,13 +739,21 @@ impl DataflowGraph {
             return false;
         };
         algorithm.executor.is_python_node()
-            && algorithm.executor.polls_pending()
-            && algorithm.period_ns == 0
+            && algorithm.schedule == DataflowSchedule::Event
+            && algorithm.inputs.is_empty()
     }
 
-    fn enqueue_pending_algorithms(&mut self, runtime: &ClusterRuntime) {
+    pub(super) fn enqueue_pending_algorithms(
+        &mut self,
+        runtime: &ClusterRuntime,
+        ran_algorithms: &[u64],
+        generation: u64,
+    ) {
         for position in 0..self.polled_algorithms.len() {
             let index = self.polled_algorithms[position];
+            if ran_algorithms.get(index).copied() == Some(generation) {
+                continue;
+            }
             if self.pending_state(runtime, index) {
                 self.enqueue_if_ready(index);
             }
@@ -663,14 +788,27 @@ impl DataflowGraph {
                 let Some(algorithm) = self.algorithms.get(index) else {
                     continue;
                 };
-                if algorithm.period_ns == 0 || algorithm.next_due_ns > runtime.elapsed_ns {
+                let DataflowSchedule::Periodic {
+                    period_ns,
+                    next_due_ns,
+                } = algorithm.schedule else {
+                    continue;
+                };
+                assert!(
+                    period_ns != 0,
+                    "periodic dataflow algorithms require a positive period"
+                );
+                if next_due_ns > runtime.elapsed_ns {
                     continue;
                 }
-                let period_ns = algorithm.period_ns;
                 self.enqueue_if_ready(index);
                 if let Some(algorithm) = self.algorithms.get_mut(index) {
-                    while algorithm.next_due_ns <= runtime.elapsed_ns {
-                        algorithm.next_due_ns = algorithm.next_due_ns.saturating_add(period_ns);
+                    if let DataflowSchedule::Periodic { next_due_ns, .. } =
+                        &mut algorithm.schedule
+                    {
+                        while *next_due_ns <= runtime.elapsed_ns {
+                            *next_due_ns = next_due_ns.saturating_add(period_ns);
+                        }
                     }
                 }
             }
@@ -683,7 +821,15 @@ impl DataflowGraph {
         ran_algorithms: &mut [u64],
         generation: u64,
     ) {
+        let mut queue_pops = 0usize;
         while let Some(index) = self.queue.pop_front() {
+            queue_pops += 1;
+            assert!(
+                queue_pops <= self.algorithms.len().saturating_add(1),
+                "dataflow algorithm queue did not converge ({} algorithms, repeating index {})",
+                self.algorithms.len(),
+                index,
+            );
             let Some(pending) = self.pending.get_mut(index) else {
                 continue;
             };
@@ -691,12 +837,12 @@ impl DataflowGraph {
                 continue;
             }
             *pending = false;
-            if ran_algorithms.get(index).copied() == Some(generation) {
-                continue;
-            }
             let Some(algorithm) = self.algorithms.get(index) else {
                 continue;
             };
+            if ran_algorithms.get(index).copied() == Some(generation) {
+                continue;
+            }
             ran_algorithms[index] = generation;
             let owner_node = algorithm.owner_node;
             if owner_node != u32::MAX && !runtime.node_online(owner_node) {

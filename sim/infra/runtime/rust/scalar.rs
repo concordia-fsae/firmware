@@ -403,7 +403,7 @@ pub(super) fn test_scalar_transform_algorithm(
     input_route_id: u32,
     output_route_id: u32,
 ) -> DataflowAlgorithm {
-    DataflowAlgorithm::transform(
+    DataflowAlgorithm::event_transform(
         owner_node,
         (owner_node, 100, sort_index as usize),
         vec![<ScalarInterface as InterfaceDataflow<ScalarEvent>>::edge(
@@ -423,10 +423,6 @@ struct ScalarFanoutAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for ScalarFanoutAlgorithm {
-    fn polls_pending(&self) -> bool {
-        true
-    }
-
     fn pending(&self, runtime: &ClusterRuntime) -> bool {
         let native_scalar_sources = runtime.algorithms.native_scalar_source_keys();
         runtime.interfaces.scalar_fanout_pending(
