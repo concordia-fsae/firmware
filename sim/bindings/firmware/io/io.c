@@ -2,13 +2,22 @@
 
 #include "runtime_state.h"
 
-#include "drv_inputAD_private.h"
 #include "HW.h"
 
+static float32_t rig_runtime_analog_inputs[DRV_INPUTAD_ANALOG_COUNT];
+
 void drv_vn9008_run(void) __attribute__((weak));
+void drv_inputAD_private_setAnalogVoltage(
+    drv_inputAD_channelAnalog_E channel,
+    float32_t                   voltage) __attribute__((weak));
 
 void rig_runtime_set_analog_input(drv_inputAD_channelAnalog_E channel, float32_t voltage)
 {
+    if (channel < DRV_INPUTAD_ANALOG_COUNT)
+    {
+        rig_runtime_analog_inputs[channel] = voltage;
+    }
+
     if (channel < ADC_BANK1_CHANNEL_COUNT)
     {
         rig_runtime.bank1[channel] = voltage;
@@ -22,7 +31,10 @@ void rig_runtime_set_analog_input(drv_inputAD_channelAnalog_E channel, float32_t
         }
     }
 
-    drv_inputAD_private_setAnalogVoltage(channel, voltage);
+    if (drv_inputAD_private_setAnalogVoltage != NULL)
+    {
+        drv_inputAD_private_setAnalogVoltage(channel, voltage);
+    }
     if (drv_vn9008_run != NULL)
     {
         drv_vn9008_run();
@@ -31,13 +43,7 @@ void rig_runtime_set_analog_input(drv_inputAD_channelAnalog_E channel, float32_t
 
 float32_t rig_runtime_get_analog_input(drv_inputAD_channelAnalog_E channel)
 {
-    if (channel < ADC_BANK1_CHANNEL_COUNT)
-    {
-        return rig_runtime.bank1[channel];
-    }
-
-    const uint8_t bank2_channel = (uint8_t)channel - ADC_BANK1_CHANNEL_COUNT;
-    return (bank2_channel < ADC_BANK2_CHANNEL_COUNT) ? rig_runtime.bank2[bank2_channel] : 0.0f;
+    return (channel < DRV_INPUTAD_ANALOG_COUNT) ? rig_runtime_analog_inputs[channel] : 0.0f;
 }
 
 void rig_runtime_set_digital_io(HW_GPIO_pinmux_E channel, bool state)

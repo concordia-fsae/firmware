@@ -15,9 +15,9 @@ typedef struct
 
 typedef struct
 {
-    int32_t  channel;
+    int32_t   channel;
     float32_t value;
-    uint64_t timestamp_ns;
+    uint64_t  timestamp_ns;
 } rig_timer_capture_event_S;
 
 bool     rig_runtime_timer_push_duty_input(const rig_timer_channel_event_S* event);

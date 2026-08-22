@@ -1,5 +1,5 @@
-#include "swi.h"
 #include "runtime_state.h"
+#include "swi.h"
 
 RTOS_swiHandle_T* SWI_create(RTOS_swiPri_E priority, RTOS_swiFn_t handler)
 {

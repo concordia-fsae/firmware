@@ -1,7 +1,7 @@
 #include "HW_spi.h"
 
-#include "spi.h"
 #include "runtime_state.h"
+#include "spi.h"
 
 #include "string.h"
 

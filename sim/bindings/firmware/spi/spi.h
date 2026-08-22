@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define RIG_SPI_TRANSACTION_MAX_BYTES 256U
+#define RIG_SPI_TRANSACTION_MAX_BYTES    256U
 
 typedef struct
 {
