@@ -6,11 +6,11 @@
  * drv_inputAD API without instantiating the private inputAD storage layer.
  */
 
-#include "io.h"
-#include "drv_inputAD.h"
 #include "BatteryMonitoring.h"
+#include "drv_inputAD.h"
 #include "HW_gpio.h"
 #include "HW_MAX14921.h"
+#include "io.h"
 #include "ModuleDesc.h"
 
 float32_t drv_inputAD_getAnalogVoltage(drv_inputAD_channelAnalog_E channel)
@@ -67,6 +67,6 @@ static void drv_inputAD_1kHz_PRD(void)
 }
 
 const ModuleDesc_S drv_inputAD_desc = {
-    .moduleInit = &drv_inputAD_init_componentSpecific,
+    .moduleInit       = &drv_inputAD_init_componentSpecific,
     .periodic1kHz_CLK = &drv_inputAD_1kHz_PRD,
 };
