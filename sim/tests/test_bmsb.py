@@ -70,9 +70,9 @@ def test_bmsb_hvdc_load_reports_voltage_sag_and_current(bmsb_cluster):
         current_output_channel=current_path,
         load_spec=DcLoadSpec(resistance_ohms=3.45),
     )
-    DcLoadModel.current_output.bind_to(
-        bmsb.__class__.pack_current_input()
-    ).bind(bmsb, load)
+    DcLoadModel.current_output.bind_to(bmsb.__class__.pack_current_input()).bind(
+        bmsb, load
+    )
     bmsb_cluster.add_component(load)
     load_node = load._cluster_node_name
     assert load_node is not None
@@ -86,7 +86,9 @@ def test_bmsb_hvdc_load_reports_voltage_sag_and_current(bmsb_cluster):
 
     bmsb_cluster.disable_node(load_node)
     bmsb_cluster.run_for(10000)
-    assert bmsb.get_analog_input(bmsb.AnalogInput.VPACK) == pytest.approx(350.0, abs=0.2)
+    assert bmsb.get_analog_input(bmsb.AnalogInput.VPACK) == pytest.approx(
+        350.0, abs=0.2
+    )
     voltage, current = latest_measurements()
     assert voltage == pytest.approx(350.0, abs=0.2)
     assert current == pytest.approx(0.0, abs=0.1)
@@ -101,9 +103,7 @@ def test_bmsb_hvdc_load_reports_voltage_sag_and_current(bmsb_cluster):
     assert bmsb.get_analog_input(bmsb.AnalogInput.VPACK) == pytest.approx(
         loaded_voltage, abs=0.2
     )
-    assert bmsb.get_analog_input(bmsb.AnalogInput.CS) == pytest.approx(
-        -0.25, abs=0.001
-    )
+    assert bmsb.get_analog_input(bmsb.AnalogInput.CS) == pytest.approx(-0.25, abs=0.001)
 
     bmsb_cluster.reset_to_initial_topology()
     bmsb_cluster.run_for(10000)
