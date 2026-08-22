@@ -1,4 +1,31 @@
-load("//sim/infra:defs.bzl", "rig_model_python")
+load("//tools/rig:defs.bzl", "rig_model_python")
+load("//sim/bindings:defs.bzl", "RIG_RUNTIME_RUST_ENV")
+
+MODEL_RUNTIME_RUST_ENV = RIG_RUNTIME_RUST_ENV | {
+    "RIG_RUNTIME_RUST_LIB_RS": "//sim/bindings/firmware/runtime:lib.rs",
+    "RIG_MODEL_ASM330_RS": "//sim/models/components/asm330:rust.rs",
+    "RIG_MODEL_BATTERY_SOURCE_RS": "//sim/models/components/battery_source:rust.rs",
+    "RIG_MODEL_DC_LOAD_RS": "//sim/models/components/dc_load:rust.rs",
+    "RIG_MODEL_DRIVETRAIN_RS": "//sim/models/components/drivetrain:rust.rs",
+}
+
+export_file(
+    name = "model-runtime-src",
+    src = "model_runtime.rs",
+    visibility = ["PUBLIC"],
+)
+
+genrule(
+    name = "model-runtime-so",
+    out = "libmodel_runtime.so",
+    cmd = " ".join([
+        "{}=$PWD/$(location {})".format(name, target)
+        for name, target in MODEL_RUNTIME_RUST_ENV.items()
+    ]) +
+    " rustc --edition=2024 --crate-name model_runtime --crate-type cdylib " +
+    "$(location :model-runtime-src) -o $OUT -C link-arg=-lm",
+    visibility = ["PUBLIC"],
+)
 
 rig_model_python(
     srcs = [

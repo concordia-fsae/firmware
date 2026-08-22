@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.infra.rig import ClusterCatalog, ClusterSpec
+from sim.models.catalog import ClusterCatalog, ClusterSpec
 from sim.models.controllers.bmsb.variants import bmsb_node
 from sim.models.controllers.vcfront.variants import vcfront_node
 from sim.models.controllers.vcpdu import Tps2hb16abIc, Tps2hb16abOutput, VcpduModel

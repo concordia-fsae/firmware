@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from sim.infra.models import SimpleCanComponent, SimpleNodeRig
-from sim.infra.rig import CanInterface
+from sim.bindings.firmware.can import CanInterface, CanNodeRig, SimpleCanComponent
 
 
-class VcrearSimpleModel(SimpleNodeRig):
+class VcrearSimpleModel(CanNodeRig):
     """Python-only VCREAR CAN source for tests that do not need VCREAR firmware."""
 
     def __init__(self, can: CanInterface, *, buses: tuple[str, ...] = ("veh",)):

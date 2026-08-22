@@ -1,5 +1,6 @@
 mod rig_runtime {
     include!(env!("RIG_RUNTIME_RS"));
+    include!(env!("BMSB_MODEL_MODULES_RS"));
 }
 
 mod bindings {
@@ -41,6 +42,7 @@ use bindings::drv_inputAD_channelDigital_E::{
 };
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
 use rig_runtime::nvm::ControllerNvm;
+use rig_runtime::node_abi::ModelDataPathProvider;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -91,7 +93,7 @@ impl Bmsb {
     }
 }
 
-impl NodeTarget for Bmsb {
+impl NodeTarget<RTController> for Bmsb {
     unsafe fn reset_node(&mut self, controller: &mut RTController) {
         self.nvm.reset();
         rig_runtime::can::configure_network(BMSB_CAN_NETWORK);
@@ -105,12 +107,14 @@ impl NodeTarget for Bmsb {
     }
 }
 
-static BMSB: Mutex<NodeModel<Bmsb>> = Mutex::new(NodeModel::new(
+impl ModelDataPathProvider for Bmsb {}
+
+static BMSB: Mutex<NodeModel<Bmsb, RTController>> = Mutex::new(NodeModel::new(
     RTController::new_embedded_module(),
     Bmsb::new(),
 ));
 
-rig_model_abi!(BMSB);
+rig_model_abi!(BMSB, rig_runtime::node_abi);
 rig_model_fault_abi!();
 
 rig_yamcan_network!(

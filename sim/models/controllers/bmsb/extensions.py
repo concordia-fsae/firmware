@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.infra.rig import ModelDataPathInputConnector
+from rig import ModelDataPathInputConnector
 
 
 class BmsbModelExtensions:

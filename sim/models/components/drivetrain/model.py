@@ -5,11 +5,12 @@ import math
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from sim.infra.rig import ComponentDataPathOutput, ComponentSpec, ComponentRig, DataPath
-from sim.infra.rig.datapath import datapath_key
-from sim.infra.rig.dataflow import NativeRouteEndpoint
-from sim.infra.rig.model import datapath_route_id
-from sim.infra.rig.scalar import ScalarInputRouteEndpoint, ScalarRouteEndpoint
+from sim.models.catalog import ComponentSpec
+from rig import ComponentDataPathOutput, ComponentRig, DataPath
+from rig.datapath import datapath_key
+from rig.dataflow import NativeRouteEndpoint
+from rig.model import datapath_route_id
+from rig.scalar import ScalarInputRouteEndpoint, ScalarRouteEndpoint
 
 
 class DrivetrainPort(Enum):
@@ -73,12 +74,8 @@ class DrivetrainCanCommand(ComponentRig):
                     ctypes.c_uint64,
                 ],
             )
-            output_node = self._cluster_rig._rust_runtime.node_index(
-                self._cluster_node_name
-            )
-            can_node = self._cluster_rig._rust_runtime.node_index(
-                owner._cluster_node_name
-            )
+            output_node = self._cluster_rig.runtime.node_index(self._cluster_node_name)
+            can_node = self._cluster_rig.runtime.node_index(owner._cluster_node_name)
             period_ns = round(self.scheduler_period_ms * 1_000_000)
             if (
                 output_node is None
@@ -96,7 +93,7 @@ class DrivetrainCanCommand(ComponentRig):
             ):
                 raise RuntimeError("failed to register drivetrain CAN command")
             self._native_registered = True
-        count, recv, send = self._cluster_rig._rust_runtime.noop_scalar_route_abi
+        count, recv, send = self._cluster_rig.runtime.noop_scalar_route_abi
         return ScalarRouteEndpoint(
             datapath_route_id(datapath_key(path)), count, recv, send
         )
@@ -254,7 +251,7 @@ class DrivetrainModel(ComponentRig):
             self.current_draw_output_channel,
             self.bus_voltage_output_channel,
         ):
-            count, recv, send = self._cluster_rig._rust_runtime.noop_scalar_route_abi
+            count, recv, send = self._cluster_rig.runtime.noop_scalar_route_abi
             return ScalarRouteEndpoint(
                 datapath_route_id(datapath_key(path)), count, recv, send
             )
@@ -282,7 +279,7 @@ class DrivetrainModel(ComponentRig):
                 ctypes.c_uint64,
             ],
         )
-        node = self._cluster_rig._rust_runtime.node_index(self._cluster_node_name)
+        node = self._cluster_rig.runtime.node_index(self._cluster_node_name)
         if node is None or not register(
             ctypes.c_uint32(node),
             ctypes.c_uint32(

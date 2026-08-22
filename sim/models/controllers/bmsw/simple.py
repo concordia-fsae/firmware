@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from sim.infra.models import SimpleCanComponent, SimpleNodeRig
-from sim.infra.rig import CanInterface
+from sim.bindings.firmware.can import CanInterface, CanNodeRig, SimpleCanComponent
 
 
 BMSW_WORKER_COUNT_BY_PLATFORM = {
@@ -10,7 +9,7 @@ BMSW_WORKER_COUNT_BY_PLATFORM = {
 }
 
 
-class BmswSimpleModel(SimpleNodeRig):
+class BmswSimpleModel(CanNodeRig):
     """Healthy BMS worker CAN source for BMSB SIL tests."""
 
     def __init__(

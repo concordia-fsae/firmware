@@ -1,4 +1,4 @@
-from sim.infra.rig import DataPath
+from rig import DataPath
 from sim.models.controllers.bmsb import BmsbSimpleModel
 from sim.models.controllers.bmsb.fixtures import bmsb_cluster
 from sim.models.controllers.sws.fixtures import sws_cluster

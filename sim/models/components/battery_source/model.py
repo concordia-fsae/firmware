@@ -5,17 +5,17 @@ import ctypes
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from sim.infra.rig import (
+from sim.models.catalog import ComponentSpec
+from rig import (
     ComponentDataPathBinding,
     ComponentDataPathOutput,
-    ComponentSpec,
     ComponentRig,
     DataPath,
 )
-from sim.infra.rig.datapath import datapath_key
-from sim.infra.rig.dataflow import NativeRouteEndpoint
-from sim.infra.rig.model import datapath_route_id
-from sim.infra.rig.scalar import (
+from rig.datapath import datapath_key
+from rig.dataflow import NativeRouteEndpoint
+from rig.model import datapath_route_id
+from rig.scalar import (
     ScalarRouteEndpoint,
     ScalarStateSinkRouteEndpoint,
 )
@@ -173,7 +173,7 @@ class BatterySourceModel(ComponentRig):
 
     def _scalar_source_route_abi(self, path: DataPath) -> tuple[int, int, int, int]:
         count_callback, recv_callback, send_callback = (
-            self._cluster_rig._rust_runtime.noop_scalar_route_abi
+            self._cluster_rig.runtime.noop_scalar_route_abi
             if self._cluster_rig is not None
             else (0, 0, 0)
         )
@@ -201,7 +201,7 @@ class BatterySourceModel(ComponentRig):
                 ctypes.c_float,
             ],
         )
-        node_index = self._cluster_rig._rust_runtime.node_index(self._cluster_node_name)
+        node_index = self._cluster_rig.runtime.node_index(self._cluster_node_name)
         if node_index is None or not register(
             ctypes.c_uint32(node_index),
             ctypes.c_uint32(

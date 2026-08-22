@@ -1,0 +1,59 @@
+load(":defs.bzl", "rig_pytest")
+
+export_file(
+    name = "pyproject",
+    src = "pyproject.toml",
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "uv-lock",
+    src = "uv.lock",
+    visibility = ["PUBLIC"],
+)
+
+genrule(
+    name = "uv-project",
+    out = "uv-project",
+    cmd = "mkdir -p $OUT/python && " +
+        "cp $(location :pyproject) $OUT/pyproject.toml && " +
+        "cp $(location :uv-lock) $OUT/uv.lock && " +
+        "cp -R $(location :python)/python/. $OUT/python/",
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "python",
+    srcs = glob(["python/*.py"]),
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "gen-python-enums",
+    src = "python/gen_python_enums.py",
+    visibility = ["PUBLIC"],
+)
+
+rig_pytest(
+    name = "python_unit",
+    test_file = "tools/rig/python/tests",
+    visibility = ["PUBLIC"],
+)
+
+rust_test(
+    name = "core_unit",
+    crate = "rig_core",
+    crate_root = "rust/lib.rs",
+    edition = "2024",
+    srcs = glob(["rust/*.rs"]),
+    visibility = ["PUBLIC"],
+)
+
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["PUBLIC"],
+    )
+    for file in glob(["rust/*.rs"])
+]

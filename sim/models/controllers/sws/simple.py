@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from enum import IntEnum
 
-from sim.infra.rig import (
+from sim.bindings.firmware.can import (
     CanInterface,
+    CanNodeRig,
     PeriodicCanMessage,
+    SimpleCanComponent,
 )
-from sim.infra.models import SimpleCanComponent, SimpleNodeRig
 
 
-class SwsSimpleModel(SimpleNodeRig):
+class SwsSimpleModel(CanNodeRig):
     """Python-only SWS CAN source for tests that do not need steering wheel firmware."""
 
     def __init__(self, can: CanInterface, *, buses: tuple[str, ...] = ("veh",)):

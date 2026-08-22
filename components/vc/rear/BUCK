@@ -164,7 +164,8 @@ add_platform_sil_bundle_targets(
     yamcan_deps = [
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
-        "//sim/infra/runtime:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/spi:headers",
     ],
     app_srcs =
         glob(["src/*.c"], exclude = ["src/SystemManager.c"]) + [
@@ -221,7 +222,8 @@ add_platform_sil_bundle_targets(
         "//components/shared/code:headers",
         "//components/shared/code/RTOS:headers",
         "//components/vc/shared:headers",
-        "//sim/infra/runtime:headers",
+        "//sim/bindings/firmware/runtime:headers",
+        "//sim/bindings/firmware/spi:headers",
     ],
 )
 

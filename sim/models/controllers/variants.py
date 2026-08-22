@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.infra.rig import ClusterCatalog
+from sim.models.catalog import ClusterCatalog
 from sim.models.controllers.bmsb.variants import BMSB_CLUSTERS
 from sim.models.controllers.sws.variants import SWS_CLUSTERS
 from sim.models.controllers.vcfront.variants import VCFRONT_CLUSTERS

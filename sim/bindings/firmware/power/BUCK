@@ -1,0 +1,14 @@
+filegroup(
+    name = "binding",
+    srcs = glob(["*.py"]),
+    visibility = ["PUBLIC"],
+)
+
+[
+    export_file(
+        name = file,
+        src = file,
+        visibility = ["PUBLIC"],
+    )
+    for file in glob(["*.py"])
+]

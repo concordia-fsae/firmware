@@ -1,5 +1,6 @@
 mod rig_runtime {
     include!(env!("RIG_RUNTIME_RS"));
+    include!(env!("VCREAR_MODEL_MODULES_RS"));
 }
 
 mod bindings {
@@ -36,6 +37,7 @@ mod rust_decode_generated {
 
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
 use rig_runtime::nvm::ControllerNvm;
+use rig_runtime::node_abi::ModelDataPathProvider;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -86,7 +88,7 @@ impl Vcrear {
     }
 }
 
-impl NodeTarget for Vcrear {
+impl NodeTarget<RTController> for Vcrear {
     unsafe fn reset_node(&mut self, _controller: &mut RTController) {
         self.nvm.reset();
         rig_runtime::can::configure_network(VCREAR_CAN_NETWORK);
@@ -94,12 +96,14 @@ impl NodeTarget for Vcrear {
     }
 }
 
-static VCREAR: Mutex<NodeModel<Vcrear>> = Mutex::new(NodeModel::new(
+impl ModelDataPathProvider for Vcrear {}
+
+static VCREAR: Mutex<NodeModel<Vcrear, RTController>> = Mutex::new(NodeModel::new(
     RTController::new_embedded_module(),
     Vcrear::new(),
 ));
 
-rig_model_abi!(VCREAR);
+rig_model_abi!(VCREAR, rig_runtime::node_abi);
 rig_model_fault_abi!();
 
 rig_yamcan_network!(

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from sim.infra.rig import (
+from sim.models.catalog import (
     ClusterCatalog,
     ClusterSpec,
     NodeSpec,
-    PowerControlPath,
 )
+from sim.bindings.firmware.power import PowerControlPath
 from sim.models.components.drivetrain import DrivetrainModel
 from sim.models.platforms import PLATFORM_VARIANTS
 

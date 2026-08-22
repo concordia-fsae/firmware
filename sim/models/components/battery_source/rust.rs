@@ -2,9 +2,9 @@ use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
 use super::algorithms;
-use super::cluster::{self, ClusterRuntime};
-use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor};
-use super::registry::RuntimeInterfaces;
+use super::cluster::{self, FirmwareBackend};
+use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowRuntime};
+use super::runtime::RigRuntime;
 use super::scalar::{self, ScalarEvent};
 
 const BATTERY_UPDATE_PERIOD_NS: u64 = 10_000_000;
@@ -194,7 +194,7 @@ struct BatterySourceAlgorithm {
 }
 
 impl DataflowAlgorithmExecutor for BatterySourceAlgorithm {
-    fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
         BATTERY_SOURCES
             .lock()
             .unwrap()
@@ -202,12 +202,16 @@ impl DataflowAlgorithmExecutor for BatterySourceAlgorithm {
             .is_some_and(|source| source.pending_voltage)
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("battery source requires the firmware runtime backend");
         run_battery_source(runtime, self.source_index)
     }
 }
 
-fn run_battery_source(runtime: &mut ClusterRuntime, context: usize) -> bool {
+fn run_battery_source(runtime: &mut RigRuntime<FirmwareBackend>, context: usize) -> bool {
     let (current_amps, enabled) = {
         let Some(source) = BATTERY_SOURCES.lock().unwrap().get(context).copied() else {
             return false;
@@ -244,7 +248,7 @@ fn run_battery_source(runtime: &mut ClusterRuntime, context: usize) -> bool {
     false
 }
 
-fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> bool {
+fn register_source(runtime: &mut RigRuntime<FirmwareBackend>, source: BatterySourceModel) -> bool {
     if !runtime.node_exists(source.node()) {
         return false;
     }
@@ -281,7 +285,7 @@ fn register_source(runtime: &mut ClusterRuntime, source: BatterySourceModel) -> 
     let algorithm = DataflowAlgorithm::periodic_source(
         node,
         (node, 5, context),
-        vec![RuntimeInterfaces::scalar_edge(node, route_id)],
+        vec![scalar::edge(node, route_id)],
         Arc::new(BatterySourceAlgorithm {
             source_index: context,
         }),

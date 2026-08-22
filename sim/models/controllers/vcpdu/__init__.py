@@ -1,10 +1,6 @@
-from sim.infra.rig import (
-    SpiInterface,
-    TimerInterface,
-    extend_model_class,
-    load_generated_enums,
-    load_generated_module,
-)
+from sim.bindings.firmware.spi import SpiInterface
+from sim.bindings.firmware.timer import TimerInterface
+from rig import extend_model_class, load_generated_enums, load_generated_module
 
 from .simple import VcpduSimpleModel
 

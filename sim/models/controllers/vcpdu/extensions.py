@@ -4,14 +4,12 @@ import ctypes
 
 from enum import Enum, auto
 
-from sim.infra.rig import (
-    DataPath,
-    ModelDataPathOutputConnector,
-    ModelDataPathInputConnector,
+from sim.bindings.firmware.power import (
     PowerControlEvent,
     PowerControlPath,
     PowerInterface,
 )
+from rig import DataPath, ModelDataPathInputConnector, ModelDataPathOutputConnector
 
 from . import HsdState
 
@@ -46,7 +44,7 @@ class VcpduModelExtensions:
             [ctypes.c_int],
             ctypes.c_float,
         )
-        self._configure_spi_chip_select = self._bind_symbol(
+        self._configure_spi_chip_select = self.bind_symbol(
             "rig_runtime_spi_configure_device_chip_select",
             [ctypes.c_int, ctypes.c_int],
         )

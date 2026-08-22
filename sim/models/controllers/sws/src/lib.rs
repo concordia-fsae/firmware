@@ -36,6 +36,7 @@ mod rust_decode_generated {
 
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
 use rig_runtime::nvm::ControllerNvm;
+use rig_runtime::node_abi::ModelDataPathProvider;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -86,7 +87,7 @@ impl Sws {
     }
 }
 
-impl NodeTarget for Sws {
+impl NodeTarget<RTController> for Sws {
     unsafe fn reset_node(&mut self, _controller: &mut RTController) {
         self.nvm.reset();
         rig_runtime::can::configure_network(SWS_CAN_NETWORK);
@@ -94,11 +95,13 @@ impl NodeTarget for Sws {
     }
 }
 
-static SWS: Mutex<NodeModel<Sws>> = Mutex::new(NodeModel::new(
+impl ModelDataPathProvider for Sws {}
+
+static SWS: Mutex<NodeModel<Sws, RTController>> = Mutex::new(NodeModel::new(
     RTController::new_embedded_module(),
     Sws::new(),
 ));
 
-rig_model_abi!(SWS);
+rig_model_abi!(SWS, rig_runtime::node_abi);
 
 rig_yamcan_network!(SWS_CAN_NETWORK, rust_model_generated, rust_decode_generated, yamcan);

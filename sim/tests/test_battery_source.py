@@ -4,10 +4,11 @@ import multiprocessing as mp
 
 import pytest
 
-from sim.infra.rig import ClusterRig, DataPath, ModelRig
+from sim.bindings.firmware.runtime import FirmwareClusterRig
+from rig import DataPath, ModelRig
 from sim.models.components.battery_source import BatterySourceModel, BatterySourceSpec
 from sim.models.components.dc_load import DcLoadModel, DcLoadSpec
-from sim.models.test import FakeNode
+from rig.model_fixtures import FakeNode
 
 
 class ScalarSink(ModelRig):
@@ -22,9 +23,9 @@ class ScalarSink(ModelRig):
 
 
 def _run_native_feedback_dataflow_once(result_queue) -> None:
-    from sim.infra.rig.runtime import _RustClusterRuntime
+    from rig import RustClusterRuntime
 
-    runtime = _RustClusterRuntime()
+    runtime = RustClusterRuntime()
     runtime.add_node("battery", FakeNode())
     runtime.add_node("load", FakeNode())
     register_battery = runtime.bind_symbol(
@@ -138,7 +139,7 @@ def test_battery_source_routes_nominal_voltage_from_native_model():
         source_spec=BatterySourceSpec(voltage=12.0),
     )
     sink = ScalarSink(path)
-    cluster = ClusterRig(battery=battery, sink=sink)
+    cluster = FirmwareClusterRig(battery=battery, sink=sink)
 
     cluster.run_for(1)
 
@@ -166,7 +167,7 @@ def test_battery_source_voltage_sags_under_resistive_load():
         load_spec=DcLoadSpec(resistance_ohms=2.0),
     )
     sink = ScalarSink(voltage_path)
-    cluster = ClusterRig(battery=battery, load=load, sink=sink)
+    cluster = FirmwareClusterRig(battery=battery, load=load, sink=sink)
 
     cluster.run_for(20)
 
@@ -195,7 +196,7 @@ def test_battery_source_two_rc_branches_settle_at_100_hz():
         current_output_channel=current_path,
         load_spec=DcLoadSpec(resistance_ohms=2.0),
     )
-    cluster = ClusterRig(battery=battery, load=load)
+    cluster = FirmwareClusterRig(battery=battery, load=load)
 
     cluster.run_for(10)
     first_voltage = battery.voltage

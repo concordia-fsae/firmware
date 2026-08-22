@@ -1,5 +1,5 @@
 load("//components/vc/front:platforms.bzl", "VCFRONT_PLATFORM_VARIANTS")
-load("//sim/infra:defs.bzl", "rig_embedded_controller_model")
+load("//sim/bindings:defs.bzl", "rig_embedded_controller_model")
 
 rig_embedded_controller_model(
     controller = "vcfront",
@@ -14,7 +14,7 @@ rig_embedded_controller_model(
         "simple.py",
         "variants.py",
     ],
-    runtime_modules = ["can", "core", "faults", "flash", "io", "swi", "system", "time", "timer_capture", "uart"],
+    runtime_modules = ["can", "runtime", "faults", "flash", "io", "swi", "system", "time", "timer", "timer_capture", "uart"],
     extra_deps = [
         "//components/vc/shared:headers",
     ],

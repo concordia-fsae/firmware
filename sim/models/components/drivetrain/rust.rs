@@ -3,9 +3,9 @@ use std::sync::{LazyLock, Mutex};
 
 use super::algorithms;
 use super::can::CanPacket;
-use super::cluster::{self, ClusterRuntime};
-use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor};
-use super::registry::RuntimeInterfaces;
+use super::cluster::{self, FirmwareBackend};
+use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowRuntime};
+use super::runtime::RigRuntime;
 use super::scalar::{self, ScalarEvent};
 
 static DRIVETRAINS: LazyLock<Mutex<Vec<Drivetrain>>> = LazyLock::new(|| Mutex::new(Vec::new()));
@@ -139,7 +139,10 @@ fn reset_can_scalar_source(context: usize, _elapsed_ns: u64) {
 
 struct CanScalarSourceAlgorithm { index: usize }
 
-fn latest_can_scalar_value(runtime: &ClusterRuntime, source: &CanScalarSource) -> Option<f64> {
+fn latest_can_scalar_value(
+    runtime: &RigRuntime<FirmwareBackend>,
+    source: &CanScalarSource,
+) -> Option<f64> {
     let event = runtime.latest_can_message(source.can_node, source.bus, source.message_id)?;
     let mut value = 0.0;
     if unsafe {
@@ -157,19 +160,27 @@ fn latest_can_scalar_value(runtime: &ClusterRuntime, source: &CanScalarSource) -
 }
 
 impl DataflowAlgorithmExecutor for CanScalarSourceAlgorithm {
-    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, runtime: &dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any()
+            .downcast_ref::<RigRuntime<FirmwareBackend>>()
+            .expect("drivetrain CAN source requires the firmware runtime backend");
         let sources = CAN_SCALAR_SOURCES.lock().unwrap();
         let Some(source) = sources.get(self.index) else { return false };
         latest_can_scalar_value(runtime, source)
             .is_some_and(|value| source.last_value != Some(value))
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("drivetrain CAN source requires the firmware runtime backend");
         let mut sources = CAN_SCALAR_SOURCES.lock().unwrap();
         let Some(source) = sources.get_mut(self.index) else { return false };
         let Some(value) = latest_can_scalar_value(runtime, source) else { return false };
         source.last_value = Some(value);
-        let result = runtime.interfaces.scalar.route_event(
+        runtime.route_scalar_event(
             source.output_node,
             source.output_route_id,
             ScalarEvent {
@@ -177,14 +188,13 @@ impl DataflowAlgorithmExecutor for CanScalarSourceAlgorithm {
                 timestamp_ns: runtime.elapsed_ns,
             },
         );
-        scalar::apply_route_result(runtime, result);
         true
     }
 }
 
 #[allow(clippy::too_many_arguments)]
 fn register_can_scalar_source(
-    runtime: &mut ClusterRuntime,
+    runtime: &mut RigRuntime<FirmwareBackend>,
     output_node: u32,
     can_node: u32,
     output_route_id: u32,
@@ -215,7 +225,7 @@ fn register_can_scalar_source(
     let algorithm = DataflowAlgorithm::periodic_source(
         output_node,
         (output_node, 10, index),
-        vec![RuntimeInterfaces::scalar_edge(output_node, output_route_id)],
+        vec![scalar::edge(output_node, output_route_id)],
         Arc::new(CanScalarSourceAlgorithm { index }),
         period_ns,
         runtime.elapsed_ns.saturating_add(period_ns),
@@ -251,12 +261,16 @@ fn receive_torque_request(context: usize, event: ScalarEvent) -> bool {
 struct DrivetrainAlgorithm { index: usize }
 
 impl DataflowAlgorithmExecutor for DrivetrainAlgorithm {
-    fn pending(&self, _runtime: &ClusterRuntime) -> bool {
+    fn pending(&self, _runtime: &dyn DataflowRuntime) -> bool {
         DRIVETRAINS.lock().unwrap().get(self.index)
             .is_some_and(|drivetrain| drivetrain.voltage_dirty || drivetrain.torque_dirty)
     }
 
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("drivetrain requires the firmware runtime backend");
         let mut drivetrains = DRIVETRAINS.lock().unwrap();
         let Some(drivetrain) = drivetrains.get_mut(self.index) else { return false };
         drivetrain.run(runtime.elapsed_ns);
@@ -267,7 +281,11 @@ impl DataflowAlgorithmExecutor for DrivetrainAlgorithm {
 struct DrivetrainFeedbackAlgorithm { index: usize }
 
 impl DataflowAlgorithmExecutor for DrivetrainFeedbackAlgorithm {
-    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+    fn run(&self, runtime: &mut dyn DataflowRuntime) -> bool {
+        let runtime = runtime
+            .as_any_mut()
+            .downcast_mut::<RigRuntime<FirmwareBackend>>()
+            .expect("drivetrain feedback requires the firmware runtime backend");
         let mut drivetrains = DRIVETRAINS.lock().unwrap();
         let Some(drivetrain) = drivetrains.get_mut(self.index) else { return false };
         drivetrain.publish_feedback();
@@ -293,25 +311,25 @@ impl DataflowAlgorithmExecutor for DrivetrainFeedbackAlgorithm {
     }
 }
 
-fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
+fn register(runtime: &mut RigRuntime<FirmwareBackend>, drivetrain: Drivetrain) -> bool {
     if !runtime.node_exists(drivetrain.node) { return false; }
     let mut drivetrains = DRIVETRAINS.lock().unwrap();
     let index = drivetrains.len();
     drivetrains.push(drivetrain);
     drop(drivetrains);
     let mut output_edges = vec![
-        RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_output_route_id),
-        RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.current_output_route_id),
+        scalar::edge(drivetrain.node, drivetrain.torque_output_route_id),
+        scalar::edge(drivetrain.node, drivetrain.current_output_route_id),
     ];
     if let Some(route_id) = drivetrain.bus_voltage_output_route_id {
-        output_edges.push(RuntimeInterfaces::scalar_edge(drivetrain.node, route_id));
+        output_edges.push(scalar::edge(drivetrain.node, route_id));
     }
     let event_algorithm = DataflowAlgorithm::event_transform(
         drivetrain.node,
         (drivetrain.node, 9, index),
         vec![
-            RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.voltage_route_id),
-            RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_request_route_id),
+            scalar::edge(drivetrain.node, drivetrain.voltage_route_id),
+            scalar::edge(drivetrain.node, drivetrain.torque_request_route_id),
         ],
         Vec::new(),
         Arc::new(DrivetrainAlgorithm { index }),

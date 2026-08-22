@@ -1,0 +1,68 @@
+load("//sim/bindings:defs.bzl", "RIG_RUNTIME_RUST_ENV")
+
+filegroup(
+    name = "c",
+    srcs = glob(["c/*.c"]),
+    visibility = ["PUBLIC"],
+)
+
+prebuilt_cxx_library(
+    name = "headers",
+    header_only = True,
+    header_namespace = "",
+    exported_headers = {
+        file.split("/")[-1]: file
+        for file in glob(["c/*.h"])
+    },
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "rust",
+    srcs = glob(["rust/*.rs"]),
+    visibility = ["PUBLIC"],
+)
+
+filegroup(
+    name = "python",
+    srcs = glob(["__init__.py", "python/*.py"]),
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "gen-python-model",
+    src = "python/gen_python_model.py",
+    visibility = ["PUBLIC"],
+)
+
+rust_test(
+    name = "runtime_unit",
+    crate = "rig_runtime",
+    crate_root = "rust/lib.rs",
+    edition = "2024",
+    srcs = glob(["rust/*.rs"]),
+    env = {
+        name: "$(location {})".format(target)
+        for name, target in RIG_RUNTIME_RUST_ENV.items()
+    },
+    visibility = ["PUBLIC"],
+)
+
+export_file(name = "runtime-src", src = "rust/runtime.rs", visibility = ["PUBLIC"])
+
+[
+    export_file(name = file.split("/")[-1], src = file, visibility = ["PUBLIC"])
+    for file in glob(["rust/*.rs", "c/*.c", "c/*.h", "python/*.py"])
+]
+
+genrule(
+    name = "runtime-so",
+    out = "librig_runtime.so",
+    cmd = " ".join([
+        "{}=$PWD/$(location {})".format(name, target)
+        for name, target in RIG_RUNTIME_RUST_ENV.items()
+    ]) +
+    " rustc --edition=2024 --crate-name rig_runtime --crate-type cdylib " +
+    "$(location :lib.rs) -o $OUT -C link-arg=-lm",
+    visibility = ["PUBLIC"],
+)

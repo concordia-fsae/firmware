@@ -1,0 +1,17 @@
+load("//sim/bindings:defs.bzl", "rig_pytest")
+
+rig_pytest(
+    name = "rig_infra",
+    test_file = "sim/bindings/firmware/runtime/tests/test_firmware_runtime.py",
+    resources = [
+    ],
+    visibility = ["PUBLIC"],
+)
+
+rig_pytest(
+    name = "contracts",
+    test_file = "sim/bindings/firmware/runtime/tests/test_firmware_contracts.py",
+    resources = [
+    ],
+    visibility = ["PUBLIC"],
+)

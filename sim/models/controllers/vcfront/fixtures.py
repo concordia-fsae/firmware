@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sim.infra.rig import cluster_rig_fixture
+from sim.models.pytest import cluster_rig_fixture
 
 from .variants import VCFRONT_CLUSTERS
 

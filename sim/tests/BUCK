@@ -1,5 +1,5 @@
 load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS")
-load("//sim/infra:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
+load("//sim/bindings:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
 
 VCFRONT_MODEL = "//sim/models/controllers/vcfront"
 VCPDU_MODEL = "//sim/models/controllers/vcpdu"
@@ -10,9 +10,13 @@ SWS_MODEL = "//sim/models/controllers/sws"
 rig_pytest(
     name = "dc_load",
     test_file = "sim/tests/test_dc_load.py",
+    env = {
+        "RIG_RUNTIME_LIB": "$(location //sim/models/components:model-runtime-so)",
+    },
     resources = [
         "//sim/models/components:python",
         "//sim/models/components/dc_load:python",
+        "//sim/models/components:model-runtime-so",
     ],
     visibility = ["PUBLIC"],
 )
@@ -20,11 +24,14 @@ rig_pytest(
 rig_pytest(
     name = "drivetrain",
     test_file = "sim/tests/test_drivetrain.py",
+    env = {
+        "RIG_RUNTIME_LIB": "$(location //sim/models/components:model-runtime-so)",
+    },
     resources = [
         "//sim/models/components:python",
         "//sim/models/components/battery_source:python",
         "//sim/models/components/drivetrain:python",
-        "//sim/models/test:python",
+        "//sim/models/components:model-runtime-so",
     ],
     visibility = ["PUBLIC"],
 )
@@ -32,11 +39,14 @@ rig_pytest(
 rig_pytest(
     name = "battery_source",
     test_file = "sim/tests/test_battery_source.py",
+    env = {
+        "RIG_RUNTIME_LIB": "$(location //sim/models/components:model-runtime-so)",
+    },
     resources = [
         "//sim/models/components:python",
         "//sim/models/components/dc_load:python",
         "//sim/models/components/battery_source:python",
-        "//sim/models/test:python",
+        "//sim/models/components:model-runtime-so",
     ],
     visibility = ["PUBLIC"],
 )
@@ -217,7 +227,6 @@ rig_pytest(
         "//sim/models/components/dc_load:python",
         "//sim/models/components/drivetrain:python",
         "//sim/models/controllers/bmsw:python",
-        "//sim/models/test:python",
         "{}:enums-py".format(VCREAR_MODEL),
         "{}:vcrear-py".format(VCREAR_MODEL),
         "{}:sil-so".format(VCREAR_MODEL),
