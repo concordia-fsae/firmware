@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from rig import DataPath
 from sim.models.catalog import ClusterCatalog, ClusterSpec, NodeSpec
 from sim.models.platforms import PLATFORM_VARIANTS
 
@@ -9,7 +10,12 @@ from . import BmsSegmentModel, BmswModel
 from .simple import BMSW_WORKER_COUNT_BY_PLATFORM
 
 
-def bmsw_node(hardware: str, node_id: int = 0) -> NodeSpec:
+def bmsw_node(
+    hardware: str,
+    node_id: int = 0,
+    *,
+    current_input_channel: DataPath | None = None,
+) -> NodeSpec:
     hardware = hardware.lower()
     worker_count = BMSW_WORKER_COUNT_BY_PLATFORM.get(hardware)
     if worker_count is None:
@@ -24,6 +30,7 @@ def bmsw_node(hardware: str, node_id: int = 0) -> NodeSpec:
     segment = BmsSegmentModel.spec(
         platform=hardware,
         node_id=node_id,
+        current_input_channel=current_input_channel,
         bindings=(
             *tuple(
                 BmsSegmentModel.cell_voltage_output(index, node_id=node_id).bind_to(

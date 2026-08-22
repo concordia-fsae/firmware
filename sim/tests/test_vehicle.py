@@ -1,6 +1,7 @@
 import pytest
 
 from sim.models.components.drivetrain import DrivetrainModel
+from sim.models.controllers.bmsw import BmsSegmentModel
 from sim.models.controllers.bmsb import (
     BmsbDrivetrainSimpleModel,
     DigitalIo,
@@ -140,6 +141,22 @@ def test_vehicle_drivetrain_only_outputs_torque_in_ts_run(vehicle_cluster):
     critical = bmsb.can.latest("BMSB_criticalData", bus="veh")
     assert critical is not None
     assert critical.BMSB_packCurrent > 0
+
+
+def test_vehicle_drivetrain_current_reaches_every_bmsw_segment(vehicle_cluster):
+    _, vcfront = _enter_vehicle_ts_run(vehicle_cluster)
+
+    vcfront.set_brake_position(0)
+    vcfront.set_accelerator_position(50.0)
+    vehicle_cluster.run_for(100, step=10)
+
+    segments = tuple(
+        component
+        for component in vehicle_cluster.components
+        if isinstance(component, BmsSegmentModel)
+    )
+    assert segments
+    assert all(segment.current_amps > 0.0 for segment in segments)
 
 
 @pytest.mark.parametrize(

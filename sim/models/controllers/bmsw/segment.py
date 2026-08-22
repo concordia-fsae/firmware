@@ -17,6 +17,7 @@ from sim.models.catalog import ComponentSpec
 
 
 class BmsSegmentPort(Enum):
+    CURRENT_INPUT = auto()
     CELL_VOLTAGE = auto()
     THERMISTOR_VOLTAGE = auto()
     SEGMENT_VOLTAGE = auto()
@@ -38,6 +39,7 @@ class BmsSegmentModel(ComponentRig):
         cell_voltages: tuple[float, ...] | list[float] | None = None,
         temperatures_c: tuple[float, ...] | list[float] | None = None,
         segment_voltage: float | None = None,
+        current_input_channel: DataPath | None = None,
         node_id: int = 0,
         scheduler_period: int | float = 1,
     ) -> None:
@@ -62,6 +64,8 @@ class BmsSegmentModel(ComponentRig):
             if segment_voltage is not None
             else 350.0 / (6 if self.platform == "cfr25" else 8)
         )
+        self.current_input_channel = current_input_channel
+        self._current_amps = 0.0
         self.cell_voltage_outputs = tuple(
             self.cell_voltage_output_channel(index, node_id=node_id)
             for index in range(self.series_cells)
@@ -81,6 +85,11 @@ class BmsSegmentModel(ComponentRig):
             scheduler_period=scheduler_period,
             scheduler_callback=self._sample,
         )
+        if self.current_input_channel is not None:
+            self.add_scalar_input(
+                self.current_input_channel,
+                send=self._receive_current,
+            )
         for path in (*self.cell_voltage_outputs, *self.thermistor_voltage_outputs):
             self._add_output(path)
         self._add_output(self.segment_voltage_output)
@@ -124,6 +133,7 @@ class BmsSegmentModel(ComponentRig):
         cell_voltages: tuple[float, ...] | list[float] | None = None,
         temperatures_c: tuple[float, ...] | list[float] | None = None,
         segment_voltage: float | None = None,
+        current_input_channel: DataPath | None = None,
         node_id: int = 0,
         scheduler_period: int | float = 1,
     ) -> ComponentSpec:
@@ -134,6 +144,7 @@ class BmsSegmentModel(ComponentRig):
                 "cell_voltages": cell_voltages,
                 "temperatures_c": temperatures_c,
                 "segment_voltage": segment_voltage,
+                "current_input_channel": current_input_channel,
                 "node_id": node_id,
                 "scheduler_period": scheduler_period,
             },
@@ -156,6 +167,16 @@ class BmsSegmentModel(ComponentRig):
     def segment_voltage_output_channel(cls, *, node_id: int = 0) -> DataPath:
         return DataPath.component(cls, (node_id, BmsSegmentPort.SEGMENT_VOLTAGE))
 
+    @classmethod
+    def current_input_channel(cls, channel: object) -> DataPath:
+        """Return a generic scalar current-feedback input channel.
+
+        The owning cluster may provide any compatible current source. Firmware
+        composition uses the drivetrain current output, while standalone
+        models can provide their own source path.
+        """
+        return DataPath.component(cls, (BmsSegmentPort.CURRENT_INPUT, channel))
+
     @property
     def cell_voltages(self) -> tuple[float, ...]:
         return self._cell_voltages
@@ -167,6 +188,15 @@ class BmsSegmentModel(ComponentRig):
     @property
     def segment_voltage(self) -> float:
         return self._segment_voltage
+
+    @property
+    def current_amps(self) -> float:
+        """Most recently received drivetrain/load current in amperes."""
+        return self._current_amps
+
+    def reset(self) -> None:
+        super().reset()
+        self._current_amps = 0.0
 
     def set_cell_voltage(self, index: int, voltage: float) -> None:
         values = list(self._cell_voltages)
@@ -192,6 +222,10 @@ class BmsSegmentModel(ComponentRig):
 
     def rust_runtime_model(self) -> bool:
         return False
+
+    def _receive_current(self, current_amps: float) -> bool:
+        self._current_amps = self._finite(current_amps, "current")
+        return True
 
     def _sample(self, context: SchedulerContext) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
@@ -222,6 +256,8 @@ class BmsSegmentModel(ComponentRig):
         )
 
     def rust_datapath_route_abi(self, path: DataPath):
+        if path == self.current_input_channel:
+            return super().rust_datapath_route_abi(path)
         if path not in self._output_values:
             return None
         if self._cluster_rig is None or self._cluster_node_name is None:

@@ -14,6 +14,7 @@ from sim.models.platforms import PLATFORM_VARIANTS
 
 
 def vehicle_cluster_spec(hardware: str) -> ClusterSpec:
+    drivetrain_current = DrivetrainModel.current_draw_output_channel("vehicle")
     vcfront_power = VcpduModel.tps2hb_power_control(
         Tps2hb16abIc.VCU1_VCU2, Tps2hb16abOutput._1
     )
@@ -29,7 +30,11 @@ def vehicle_cluster_spec(hardware: str) -> ClusterSpec:
             # topology. Focused BMSW tests use bmsw_cluster_spec's one-node
             # default instead.
             *(
-                bmsw_node(hardware, node_id)
+                bmsw_node(
+                    hardware,
+                    node_id,
+                    current_input_channel=drivetrain_current,
+                )
                 for node_id in range(BMSW_WORKER_COUNT_BY_PLATFORM[hardware])
             ),
             sws_node(hardware),
