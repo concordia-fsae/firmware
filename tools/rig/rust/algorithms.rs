@@ -33,6 +33,7 @@ struct NativeScalarInput {
 pub struct RuntimeAlgorithms {
     algorithms: Vec<DataflowAlgorithm>,
     native_scalar_sources: Vec<NativeScalarSource>,
+    native_scalar_source_key_set: HashSet<(u32, u32)>,
     native_scalar_inputs: Vec<NativeScalarInput>,
     node_resets: Vec<NodeReset>,
     runtime_resets: Vec<RuntimeResetFn>,
@@ -45,6 +46,7 @@ impl RuntimeAlgorithms {
         }
         self.algorithms.clear();
         self.native_scalar_sources.clear();
+        self.native_scalar_source_key_set.clear();
         self.native_scalar_inputs.clear();
         self.node_resets.clear();
         self.runtime_resets.clear();
@@ -54,11 +56,9 @@ impl RuntimeAlgorithms {
         specs.extend(self.algorithms.iter().cloned());
     }
 
-    pub fn native_scalar_source_keys(&self) -> HashSet<(u32, u32)> {
-        self.native_scalar_sources
-            .iter()
-            .map(|source| (source.node, source.route_id))
-            .collect()
+    pub fn has_native_scalar_source(&self, node: u32, route_id: u32) -> bool {
+        self.native_scalar_source_key_set
+            .contains(&(node, route_id))
     }
 
     pub fn take_native_scalar_events(
@@ -219,15 +219,16 @@ pub(super) fn register_native_scalar_source(
     {
         return true;
     }
-    runtime
-        .runtime_algorithms_mut()
-        .native_scalar_sources
-        .push(NativeScalarSource {
-            node,
-            route_id,
-            context,
-            take,
-        });
+    let algorithms = runtime.runtime_algorithms_mut();
+    algorithms.native_scalar_sources.push(NativeScalarSource {
+        node,
+        route_id,
+        context,
+        take,
+    });
+    algorithms
+        .native_scalar_source_key_set
+        .insert((node, route_id));
     true
 }
 
@@ -306,6 +307,16 @@ mod tests {
         assert!(register_algorithm(&mut runtime, algorithm));
         assert_eq!(runtime.runtime_algorithms().runtime_resets.len(), 1);
         assert_eq!(runtime.runtime_algorithms().native_scalar_sources.len(), 1);
+        assert!(
+            runtime
+                .runtime_algorithms()
+                .has_native_scalar_source(node, 4)
+        );
+        assert!(
+            !runtime
+                .runtime_algorithms()
+                .has_native_scalar_source(node, 99)
+        );
         assert_eq!(runtime.runtime_algorithms().native_scalar_inputs.len(), 1);
         assert_eq!(
             runtime
@@ -319,6 +330,13 @@ mod tests {
                 .runtime_algorithms()
                 .native_scalar_input(node, 5)
                 .is_some()
+        );
+
+        runtime.reset();
+        assert!(
+            !runtime
+                .runtime_algorithms()
+                .has_native_scalar_source(node, 4)
         );
     }
 
