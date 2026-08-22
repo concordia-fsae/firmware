@@ -1,10 +1,12 @@
-load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS")
-load("//sim/bindings:defs.bzl", "rig_platform_sim_lib_env", "rig_platform_sim_lib_resources", "rig_platform_variants_env", "rig_pytest")
+load("//components/vehicle_platform:platforms.bzl", "ALL_PLATFORMS", "platform_output_name")
+load("//sim/bindings:defs.bzl", "rig_pytest")
+load("//sim/tests:defs.bzl", "define_tests")
 
 VCFRONT_MODEL = "//sim/models/controllers/vcfront"
 VCPDU_MODEL = "//sim/models/controllers/vcpdu"
 VCREAR_MODEL = "//sim/models/controllers/vcrear"
 BMSB_MODEL = "//sim/models/controllers/bmsb"
+BMSW_MODEL = "//sim/models/controllers/bmsw"
 SWS_MODEL = "//sim/models/controllers/sws"
 
 rig_pytest(
@@ -51,16 +53,14 @@ rig_pytest(
     visibility = ["PUBLIC"],
 )
 
-rig_pytest(
+define_tests(
     name = "bmsb",
     test_file = "sim/tests/test_bmsb.py",
     env = {
         "BMSB_ENUMS_PY": "$(location {}:enums-py)".format(BMSB_MODEL),
         "BMSB_MODEL_PY": "$(location {}:bmsb-py)".format(BMSB_MODEL),
         "BMSB_SIM_LIB": "$(location {}:sil-so)".format(BMSB_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("BMSB", BMSB_MODEL, ALL_PLATFORMS),
+    },
     resources = [
         "{}:enums-py".format(BMSB_MODEL),
         "{}:bmsb-py".format(BMSB_MODEL),
@@ -69,11 +69,45 @@ rig_pytest(
         "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
         "//sim/models/controllers/bmsw:python",
-    ] + rig_platform_sim_lib_resources(BMSB_MODEL, ALL_PLATFORMS),
+    ],
+    models = (("BMSB", BMSB_MODEL),),
+)
+
+test_suite(
+    name = "bmsb",
+    tests = [":bmsb-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
     visibility = ["PUBLIC"],
 )
 
-rig_pytest(
+define_tests(
+    name = "bmsw",
+    test_file = "sim/tests/test_bmsw.py",
+    env = {
+        "BMSW_ENUMS_PY": "$(location {}:enums-py)".format(BMSW_MODEL),
+        "BMSW_CFR26_ENUMS_PY": "$(location {}:enums-py-cfr26)".format(BMSW_MODEL),
+        "BMSW_MODEL_PY": "$(location {}:bmsw-py)".format(BMSW_MODEL),
+        "BMSW_SIM_LIB": "$(location {}:sil-so)".format(BMSW_MODEL),
+    },
+    resources = [
+        "{}:enums-py".format(BMSW_MODEL),
+        "{}:enums-py-cfr26".format(BMSW_MODEL),
+        "{}:bmsw-py".format(BMSW_MODEL),
+        "{}:sil-so".format(BMSW_MODEL),
+    ],
+    models = (("BMSW", BMSW_MODEL),),
+    node_models = (("BMSW", BMSW_MODEL, {
+        "cfr25": 6,
+        "cfr26": 8,
+    }),),
+)
+
+test_suite(
+    name = "bmsw",
+    tests = [":bmsw-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
+    visibility = ["PUBLIC"],
+)
+
+define_tests(
     name = "component",
     test_file = "sim/tests/test_component.py",
     env = {
@@ -92,13 +126,7 @@ rig_pytest(
         "VCREAR_ENUMS_PY": "$(location {}:enums-py)".format(VCREAR_MODEL),
         "VCREAR_MODEL_PY": "$(location {}:vcrear-py)".format(VCREAR_MODEL),
         "VCREAR_SIM_LIB": "$(location {}:sil-so)".format(VCREAR_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("BMSB", BMSB_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("SWS", SWS_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCFRONT", VCFRONT_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS),
+    },
     resources = [
         "{}:enums-py".format(BMSB_MODEL),
         "{}:bmsb-py".format(BMSB_MODEL),
@@ -119,34 +147,67 @@ rig_pytest(
         "//sim/models/components/asm330:python",
         "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
-    ] +
-    rig_platform_sim_lib_resources(BMSB_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(SWS_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),
+    ],
+    models = (
+        ("BMSB", BMSB_MODEL),
+        ("SWS", SWS_MODEL),
+        ("VCFRONT", VCFRONT_MODEL),
+        ("VCPDU", VCPDU_MODEL),
+        ("VCREAR", VCREAR_MODEL),
+    ),
+)
+
+test_suite(
+    name = "component",
+    tests = [":component-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
     visibility = ["PUBLIC"],
 )
 
-rig_pytest(
+define_tests(
+    name = "sws",
+    test_file = "sim/tests/test_sws.py",
+    env = {
+        "SWS_ENUMS_PY": "$(location {}:enums-py)".format(SWS_MODEL),
+        "SWS_MODEL_PY": "$(location {}:sws-py)".format(SWS_MODEL),
+        "SWS_SIM_LIB": "$(location {}:sil-so)".format(SWS_MODEL),
+    },
+    resources = [
+        "{}:enums-py".format(SWS_MODEL),
+        "{}:sws-py".format(SWS_MODEL),
+        "{}:sil-so".format(SWS_MODEL),
+    ],
+    models = (("SWS", SWS_MODEL),),
+)
+
+test_suite(
+    name = "sws",
+    tests = [":sws-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
+    visibility = ["PUBLIC"],
+)
+
+define_tests(
     name = "vcfront_cluster",
     test_file = "sim/tests/test_vcfront.py",
     env = {
         "VCFRONT_ENUMS_PY": "$(location {}:enums-py)".format(VCFRONT_MODEL),
         "VCFRONT_MODEL_PY": "$(location {}:vcfront-py)".format(VCFRONT_MODEL),
         "VCFRONT_SIM_LIB": "$(location {}:sil-so)".format(VCFRONT_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCFRONT", VCFRONT_MODEL, ALL_PLATFORMS),
+    },
     resources = [
         "{}:enums-py".format(VCFRONT_MODEL),
         "{}:vcfront-py".format(VCFRONT_MODEL),
         "{}:sil-so".format(VCFRONT_MODEL),
-    ] + rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS),
+    ],
+    models = (("VCFRONT", VCFRONT_MODEL),),
+)
+
+test_suite(
+    name = "vcfront_cluster",
+    tests = [":vcfront_cluster-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
     visibility = ["PUBLIC"],
 )
 
-rig_pytest(
+define_tests(
     name = "vcpdu_cluster",
     test_file = "sim/tests/test_vcpdu.py",
     env = {
@@ -154,9 +215,7 @@ rig_pytest(
         "VCPDU_ENUMS_PY": "$(location {}:enums-py)".format(VCPDU_MODEL),
         "VCPDU_MODEL_PY": "$(location {}:vcpdu-py)".format(VCPDU_MODEL),
         "VCPDU_SIM_LIB": "$(location {}:sil-so)".format(VCPDU_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS),
+    },
     resources = [
         "{}:enums-py".format(BMSB_MODEL),
         "{}:enums-py".format(VCPDU_MODEL),
@@ -166,35 +225,52 @@ rig_pytest(
         "//sim/models/components/asm330:python",
         "//sim/models/components/battery_source:python",
         "//sim/models/components/dc_load:python",
-    ] + rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS),
+    ],
+    models = (("VCPDU", VCPDU_MODEL),),
+)
+
+test_suite(
+    name = "vcpdu_cluster",
+    tests = [":vcpdu_cluster-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
     visibility = ["PUBLIC"],
 )
 
-rig_pytest(
+define_tests(
     name = "vcrear_cluster",
     test_file = "sim/tests/test_vcrear.py",
     env = {
         "VCREAR_ENUMS_PY": "$(location {}:enums-py)".format(VCREAR_MODEL),
         "VCREAR_MODEL_PY": "$(location {}:vcrear-py)".format(VCREAR_MODEL),
         "VCREAR_SIM_LIB": "$(location {}:sil-so)".format(VCREAR_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS),
+    },
     resources = [
         "{}:enums-py".format(VCREAR_MODEL),
         "{}:vcrear-py".format(VCREAR_MODEL),
         "{}:sil-so".format(VCREAR_MODEL),
-    ] + rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),
+    ],
+    models = (("VCREAR", VCREAR_MODEL),),
+)
+
+test_suite(
+    name = "vcrear_cluster",
+    tests = [":vcrear_cluster-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
     visibility = ["PUBLIC"],
 )
 
-rig_pytest(
+define_tests(
     name = "vehicle_cluster",
     test_file = "sim/tests/test_vehicle.py",
     env = {
         "BMSB_ENUMS_PY": "$(location {}:enums-py)".format(BMSB_MODEL),
         "BMSB_MODEL_PY": "$(location {}:bmsb-py)".format(BMSB_MODEL),
         "BMSB_SIM_LIB": "$(location {}:sil-so)".format(BMSB_MODEL),
+        "BMSW_ENUMS_PY": "$(location {}:enums-py)".format(BMSW_MODEL),
+        "BMSW_CFR26_ENUMS_PY": "$(location {}:enums-py-cfr26)".format(BMSW_MODEL),
+        "BMSW_MODEL_PY": "$(location {}:bmsw-py)".format(BMSW_MODEL),
+        "BMSW_SIM_LIB": "$(location {}:sil-so)".format(BMSW_MODEL),
+        "SWS_ENUMS_PY": "$(location {}:enums-py)".format(SWS_MODEL),
+        "SWS_MODEL_PY": "$(location {}:sws-py)".format(SWS_MODEL),
+        "SWS_SIM_LIB": "$(location {}:sil-so)".format(SWS_MODEL),
         "VCFRONT_ENUMS_PY": "$(location {}:enums-py)".format(VCFRONT_MODEL),
         "VCFRONT_MODEL_PY": "$(location {}:vcfront-py)".format(VCFRONT_MODEL),
         "VCFRONT_SIM_LIB": "$(location {}:sil-so)".format(VCFRONT_MODEL),
@@ -204,22 +280,23 @@ rig_pytest(
         "VCREAR_ENUMS_PY": "$(location {}:enums-py)".format(VCREAR_MODEL),
         "VCREAR_MODEL_PY": "$(location {}:vcrear-py)".format(VCREAR_MODEL),
         "VCREAR_SIM_LIB": "$(location {}:sil-so)".format(VCREAR_MODEL),
-    } |
-    rig_platform_variants_env(ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("BMSB", BMSB_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCFRONT", VCFRONT_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCPDU", VCPDU_MODEL, ALL_PLATFORMS) |
-    rig_platform_sim_lib_env("VCREAR", VCREAR_MODEL, ALL_PLATFORMS),
+    },
     resources = [
         "{}:enums-py".format(BMSB_MODEL),
         "{}:bmsb-py".format(BMSB_MODEL),
         "{}:sil-so".format(BMSB_MODEL),
+        "{}:enums-py".format(SWS_MODEL),
+        "{}:sws-py".format(SWS_MODEL),
+        "{}:sil-so".format(SWS_MODEL),
         "{}:enums-py".format(VCFRONT_MODEL),
         "{}:vcfront-py".format(VCFRONT_MODEL),
         "{}:sil-so".format(VCFRONT_MODEL),
         "{}:enums-py".format(VCPDU_MODEL),
         "{}:vcpdu-py".format(VCPDU_MODEL),
         "{}:sil-so".format(VCPDU_MODEL),
+        "{}:enums-py".format(BMSW_MODEL),
+        "{}:enums-py-cfr26".format(BMSW_MODEL),
+        "{}:bmsw-py".format(BMSW_MODEL),
         "//sim/models/vehicle:python",
         "//sim/models/components:python",
         "//sim/models/components/asm330:python",
@@ -230,10 +307,23 @@ rig_pytest(
         "{}:enums-py".format(VCREAR_MODEL),
         "{}:vcrear-py".format(VCREAR_MODEL),
         "{}:sil-so".format(VCREAR_MODEL),
-    ] +
-    rig_platform_sim_lib_resources(BMSB_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCFRONT_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCPDU_MODEL, ALL_PLATFORMS) +
-    rig_platform_sim_lib_resources(VCREAR_MODEL, ALL_PLATFORMS),
+    ],
+    models = (
+        ("BMSB", BMSB_MODEL),
+        ("SWS", SWS_MODEL),
+        ("VCFRONT", VCFRONT_MODEL),
+        ("VCPDU", VCPDU_MODEL),
+        ("VCREAR", VCREAR_MODEL),
+        ("BMSW", BMSW_MODEL),
+    ),
+    node_models = (("BMSW", BMSW_MODEL, {
+        "cfr25": 6,
+        "cfr26": 8,
+    }),),
+)
+
+test_suite(
+    name = "vehicle_cluster",
+    tests = [":vehicle_cluster-{}".format(platform_output_name(platform)) for platform in ALL_PLATFORMS],
     visibility = ["PUBLIC"],
 )

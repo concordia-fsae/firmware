@@ -503,20 +503,18 @@ impl<B: RigBackend + 'static> DataflowRuntime for RigRuntime<B> {
     }
 
     fn scalar_source_pending(&self, group_index: usize) -> bool {
-        let native_sources = self.algorithms.native_scalar_source_keys();
         self.backend.scalar_interface().fanout_pending(
             group_index,
             |node| self.node_online(node),
-            |node, route_id| native_sources.contains(&(node, route_id)),
+            |node, route_id| self.algorithms.has_native_scalar_source(node, route_id),
         )
     }
 
     fn run_scalar_fanout(&mut self, group_index: usize) -> bool {
-        let native_sources = self.algorithms.native_scalar_source_keys();
         let online_nodes: Vec<bool> = self.nodes.iter().map(|node| node.online).collect();
         let result = {
             let online = |node| online_nodes.get(node as usize).copied().unwrap_or(false);
-            let skip = |node, route_id| native_sources.contains(&(node, route_id));
+            let skip = |node, route_id| self.algorithms.has_native_scalar_source(node, route_id);
             self.backend
                 .scalar_interface_mut()
                 .route_fanout(group_index, online, skip)

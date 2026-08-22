@@ -5,6 +5,14 @@ load(
     "platform_target_name",
 )
 
+# Every BMS worker on the vehicle has its own firmware image and CAN node.
+# Keep this topology in the component definition so embedded and SIL builds
+# cannot silently diverge.
+BMSW_NODE_COUNT_BY_PLATFORM = {
+    "cfr25": 6,
+    "cfr26": 8,
+}
+
 def configured_platform_name(platform, node):
     return "{}-node-{}".format(platform_target_name(platform), node)
 
@@ -27,6 +35,11 @@ def _node_select(platform, node_count):
     return {
         ":node-{}".format(node): [feature_tree_target(platform, node)]
         for node in range(node_count)
+    } | {
+        # Platform-only consumers (for example the legacy unconfigured SIL
+        # aliases) retain node 0 as their deterministic default. Configured
+        # per-node platforms select the matching feature tree above.
+        "DEFAULT": [feature_tree_target(platform, 0)],
     }
 
 def feature_tree_targets(platform_variants):
@@ -51,6 +64,11 @@ def feature_tree_codegen_srcs(platform_variants, static_srcs):
                 "FeatureDefines_generated.h": feature_tree_target(platform, node) + "-codegen[FeatureDefines_generated.h]",
             }
             for node in range(node_count)
+        } | {
+            "DEFAULT": static_srcs | {
+                "BuildDefines_generated.h": feature_tree_target(platform, 0) + "-codegen[BuildDefines_generated.h]",
+                "FeatureDefines_generated.h": feature_tree_target(platform, 0) + "-codegen[FeatureDefines_generated.h]",
+            },
         })
         for platform, _variant_id, node_count in platform_variants
     }

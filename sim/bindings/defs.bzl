@@ -534,6 +534,35 @@ def rig_platform_sim_lib_resources(
         for platform in platforms
     ]
 
+def rig_platform_node_sim_lib_env(
+        env_prefix: str,
+        model_target: str,
+        platform_nodes) -> dict[str, str]:
+    return {
+        "{}{}_{}_SIM_LIB".format(
+            env_prefix,
+            node,
+            platform_output_name(platform).upper(),
+        ): "$(location {}:sil-so-{}-node-{})".format(
+            model_target,
+            platform_output_name(platform),
+            node,
+        )
+        for platform, node in platform_nodes
+    }
+
+def rig_platform_node_sim_lib_resources(
+        model_target: str,
+        platform_nodes) -> list[str]:
+    return [
+        "{}:sil-so-{}-node-{}".format(
+            model_target,
+            platform_output_name(platform),
+            node,
+        )
+        for platform, node in platform_nodes
+    ]
+
 def rig_platform_variants_env(platforms) -> dict[str, str]:
     return {
         "SIM_PLATFORM_VARIANTS": ",".join([
@@ -554,7 +583,7 @@ def rig_pytest(
     __rules__["genrule"](
         name = uv_runner_name,
         out = "uv-runner",
-        cmd = "printf '%s\n' '#!/usr/bin/env bash' 'project=$1' 'shift' 'exec uv run --frozen --project \"$project\" \"$@\"' > $OUT && chmod +x $OUT",
+        cmd = "printf '%s\n' '#!/usr/bin/env bash' 'project=$1' 'shift' 'platforms=${SIM_PLATFORM_VARIANTS:-}' 'if [[ \"$platforms\" == *,* ]]; then' '  status=0' '  IFS=, read -ra variants <<< \"$platforms\"' '  for variant in \"${variants[@]}\"; do' '    SIM_PLATFORM_VARIANTS=\"$variant\" uv run --frozen --project \"$project\" \"$@\" || status=$?' '  done' '  exit \"$status\"' 'fi' 'exec uv run --frozen --project \"$project\" \"$@\"' > $OUT && chmod +x $OUT",
         executable = True,
     )
 

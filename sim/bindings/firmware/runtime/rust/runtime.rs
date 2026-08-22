@@ -20,7 +20,7 @@ pub mod faults {
     include!(env!("RIG_RUNTIME_RUST_FAULTS_RS"));
 }
 
-mod io {
+pub mod io {
     include!(env!("RIG_RUNTIME_RUST_IO_RS"));
 }
 

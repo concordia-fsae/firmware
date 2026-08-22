@@ -89,6 +89,56 @@ pub fn add_periodic_scalar_source(
     })
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_add_scalar_source_bank_route(
+    node: u32,
+    route_id: u32,
+    period_ns: u64,
+    initial_value: f32,
+) -> bool {
+    with_runtime(|runtime| {
+        super::scalar_source::add_scalar_source_bank_route(
+            &mut *runtime,
+            node,
+            route_id,
+            period_ns,
+            initial_value,
+        )
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rig_cluster_set_scalar_source_bank_value(
+    node: u32,
+    route_id: u32,
+    value: f32,
+) -> bool {
+    super::scalar_source::set_scalar_source_bank_value(node, route_id, value)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_cluster_publish_scalar_source_bank_events(
+    node: u32,
+    period_ns: u64,
+    timestamp_ns: u64,
+    route_ids: *const u32,
+    values: *const f32,
+    count: u32,
+) -> bool {
+    if route_ids.is_null() || values.is_null() || count == 0 {
+        return false;
+    }
+    let route_ids = unsafe { std::slice::from_raw_parts(route_ids, count as usize) };
+    let values = unsafe { std::slice::from_raw_parts(values, count as usize) };
+    super::scalar_source::publish_scalar_source_bank_events(
+        node,
+        period_ns,
+        timestamp_ns,
+        route_ids,
+        values,
+    )
+}
+
 pub(super) unsafe fn function_pointer<T>(address: usize) -> Option<T> {
     if address == 0 {
         return None;
