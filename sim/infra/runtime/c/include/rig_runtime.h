@@ -78,6 +78,8 @@ uint32_t  rig_runtime_timer_frequency_output_count(int32_t port, int32_t channel
 
 bool      rig_runtime_spi_push_input(const rig_spi_transaction_S* transaction);
 bool      rig_runtime_spi_pop_input(int32_t device, rig_spi_transaction_S* transaction);
+bool      rig_runtime_spi_lock_device(int32_t device);
+bool      rig_runtime_spi_release_device(int32_t device);
 bool      rig_runtime_spi_push_output(const rig_spi_transaction_S* transaction);
 bool      rig_runtime_spi_pop_output(int32_t device, rig_spi_transaction_S* transaction);
 uint32_t  rig_runtime_spi_output_count(int32_t device);

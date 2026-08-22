@@ -11,56 +11,65 @@ const ASM330_FIFO_DATA_OUT_TAG: u8 = 0x78;
 const ASM330_GYRO_NC_TAG: u8 = 0x01;
 const ASM330_XL_NC_TAG: u8 = 0x02;
 
-pub fn bind_zero_model(device: i32) {
+pub fn bind_zero_model(device: i32, chip_select_pin: i32) {
+    spi::configure_device_chip_select(device, chip_select_pin);
     spi::configure_responder(device, Some(zero_response));
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rig_runtime_asm330_bind_zero_model(device: i32) {
-    bind_zero_model(device);
+pub extern "C" fn rig_runtime_asm330_bind_zero_model(device: i32, chip_select_pin: i32) {
+    bind_zero_model(device, chip_select_pin);
 }
 
-fn zero_response(transaction: SpiTransaction) -> Option<SpiTransaction> {
+unsafe extern "C" fn zero_response(
+    transaction: *const SpiTransaction,
+    response: *mut SpiTransaction,
+) -> bool {
+    if transaction.is_null() || response.is_null() {
+        return false;
+    }
+    let transaction = unsafe { *transaction };
     if transaction.tx_len == 0 || transaction.rx_len == 0 {
-        return None;
+        return false;
     }
 
     let command = transaction.tx_data[0];
     if command & ASM330_READ_BIT == 0 {
-        return None;
+        return false;
     }
 
-    let mut response = SpiTransaction {
+    let mut next_response = SpiTransaction {
         device: transaction.device,
         rx_len: transaction.rx_len,
         timestamp_ns: transaction.timestamp_ns,
         ..SpiTransaction::default()
     };
     let rx_len = usize::from(
-        response
+        next_response
             .rx_len
             .min(spi::RIG_SPI_TRANSACTION_MAX_BYTES as u16),
     );
     let register = command & ASM330_REGISTER_MASK;
 
     match register {
-        ASM330_WHO_AM_I => response.rx_data[0] = ASM330_ID,
+        ASM330_WHO_AM_I => next_response.rx_data[0] = ASM330_ID,
         ASM330_FSM_STATUS_A_MAINPAGE | ASM330_FSM_STATUS_B_MAINPAGE => {
-            response.rx_data[..rx_len].fill(0x00);
+            next_response.rx_data[..rx_len].fill(0x00);
         }
         ASM330_FIFO_STATUS1 => {
-            response.rx_data[0] = 2;
+            next_response.rx_data[0] = 2;
             if rx_len > 1 {
-                response.rx_data[1] = 0;
+                next_response.rx_data[1] = 0;
             }
         }
-        ASM330_FIFO_DATA_OUT_TAG => fill_zero_fifo_samples(&mut response.rx_data[..rx_len]),
+        ASM330_FIFO_DATA_OUT_TAG => fill_zero_fifo_samples(&mut next_response.rx_data[..rx_len]),
         _ => {
-            response.rx_data[..rx_len].fill(0x00);
+            next_response.rx_data[..rx_len].fill(0x00);
         }
     }
 
-    Some(response)
+    unsafe { *response = next_response };
+    true
 }
 
 fn fill_zero_fifo_samples(data: &mut [u8]) {

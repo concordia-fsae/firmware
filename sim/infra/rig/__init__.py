@@ -7,6 +7,7 @@ from .catalog import (
 )
 from .artifacts import (
     buck_output,
+    load_generated_enums,
     load_generated_module,
     load_shared_library,
     repo_root,
@@ -33,6 +34,17 @@ from .datapath import (
     ModelDataPathOutputConnector,
     ModelDataPaths,
 )
+from .dataflow import DataflowEvent
+from .contracts import (
+    Algorithm,
+    Component,
+    Dataflow,
+    Edge,
+    Interface,
+    Node,
+    Peripheral,
+    Scheduler,
+)
 from .cluster import (
     ClusterCanComms,
     ClusterComms,
@@ -54,14 +66,9 @@ from .scheduler import (
     SchedulerContext,
 )
 from .power import PowerControlEvent, PowerControlPath, PowerInterface
-from .peripherals import (
-    SpiInterface,
-    SpiTransaction,
-    TimerCaptureEvent,
-    TimerChannelEvent,
-    TimerInterface,
-)
-from .simple import SimpleCanComponent, SimpleComponent, SimpleNodeRig
+from .scalar import ScalarEvent
+from .spi import SpiInterface, SpiTransaction
+from .timer import TimerCaptureEvent, TimerChannelEvent, TimerInterface
 from .time import RunUntilTimeout, duration_to_ns, run_until
 
 
@@ -95,10 +102,20 @@ __all__ = [
     "ModelDataPathInputConnector",
     "ModelDataPathOutputConnector",
     "ModelDataPaths",
+    "Algorithm",
+    "Component",
+    "Dataflow",
+    "DataflowEvent",
+    "Edge",
+    "Interface",
+    "Node",
+    "Peripheral",
+    "Scheduler",
     "ModelRig",
     "PeriodicDataPathProducer",
     "PeriodicCanMessage",
     "buck_output",
+    "load_generated_enums",
     "duration_to_ns",
     "extend_model_class",
     "RoutedCanEvent",
@@ -108,9 +125,6 @@ __all__ = [
     "TimerCaptureEvent",
     "TimerChannelEvent",
     "TimerInterface",
-    "SimpleCanComponent",
-    "SimpleComponent",
-    "SimpleNodeRig",
     "load_generated_module",
     "load_shared_library",
     "repo_root",
@@ -120,6 +134,7 @@ __all__ = [
     "PythonSchedulerCallbacks",
     "run_until",
     "RustSchedulerCallbacks",
+    "ScalarEvent",
     "SchedulerContext",
     "shared_library_mode",
     "ClusterCatalog",

@@ -62,14 +62,12 @@ HW_StatusTypeDef_E HW_SPI_deInit(void)
 
 bool HW_SPI_lock(HW_spi_device_E dev)
 {
-    (void)dev;
-    return true;
+    return rig_runtime_spi_lock_device((int32_t)dev);
 }
 
 bool HW_SPI_release(HW_spi_device_E dev)
 {
-    (void)dev;
-    return true;
+    return rig_runtime_spi_release_device((int32_t)dev);
 }
 
 bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint16_t len)
@@ -82,7 +80,10 @@ bool HW_SPI_transmit(HW_spi_device_E dev, uint8_t* data, uint16_t len)
     };
 
     rig_spi_copy_tx(&transaction, data, len);
-    (void)rig_runtime_spi_push_output(&transaction);
+    if (!rig_runtime_spi_push_output(&transaction))
+    {
+        return false;
+    }
     return true;
 }
 
@@ -95,7 +96,10 @@ bool HW_SPI_receive(HW_spi_device_E dev, uint8_t* data, uint16_t len)
         .timestamp_ns = rig_runtime.time_ns,
     };
 
-    (void)rig_runtime_spi_push_output(&transaction);
+    if (!rig_runtime_spi_push_output(&transaction))
+    {
+        return false;
+    }
     rig_spi_fill_rx_from_model(dev, data, len);
     return true;
 }
@@ -110,7 +114,10 @@ bool HW_SPI_transmitReceive(HW_spi_device_E dev, uint8_t* rwData, uint16_t len)
     };
 
     rig_spi_copy_tx(&transaction, rwData, len);
-    (void)rig_runtime_spi_push_output(&transaction);
+    if (!rig_runtime_spi_push_output(&transaction))
+    {
+        return false;
+    }
     rig_spi_fill_rx_from_model(dev, rwData, len);
     return true;
 }
@@ -125,7 +132,10 @@ bool HW_SPI_transmitReceiveAsym(HW_spi_device_E dev, uint8_t* wData, uint16_t wL
     };
 
     rig_spi_copy_tx(&transaction, wData, wLen);
-    (void)rig_runtime_spi_push_output(&transaction);
+    if (!rig_runtime_spi_push_output(&transaction))
+    {
+        return false;
+    }
     rig_spi_fill_rx_from_model(dev, rData, rLen);
     return true;
 }

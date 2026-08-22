@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from sim.infra.rig import CanInterface, SimpleCanComponent, SimpleNodeRig
+from sim.infra.models import SimpleCanComponent, SimpleNodeRig
+from sim.infra.rig import CanInterface
 
 
 class VcrearSimpleModel(SimpleNodeRig):

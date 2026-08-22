@@ -3,10 +3,13 @@ load("//sim/infra:defs.bzl", "rig_model_python")
 rig_model_python(
     srcs = [
         "__init__.py",
-        "fixtures.py",
-        "variants.py",
-        "//sim/models/controllers/bmsb:python",
-        "//sim/models/controllers/sws:python",
+        "model.py",
     ],
+    visibility = ["PUBLIC"],
+)
+
+export_file(
+    name = "rust.rs",
+    src = "rust.rs",
     visibility = ["PUBLIC"],
 )

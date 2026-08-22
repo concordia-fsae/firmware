@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import os
 import pathlib
+from collections.abc import Callable
 from enum import IntEnum
 
 from .artifacts import buck_output, load_shared_library
@@ -25,24 +26,32 @@ from .can import (
     python_enum_member,
 )
 from .cluster import ClusterCanComms
-from .datapath import DataPath
-from .model import ModelRig
-from .peripherals import (
-    SpiInterface,
-    SpiPeripheralInterface,
-    SpiTransaction,
+from .datapath import DataPath, DataPathKey, PeripheralInterface, datapath_key
+from .dataflow import NativeRouteEndpoint
+from .model import ModelRig, datapath_route_id
+from .scalar import (
+    ScalarRouteEndpoint,
+    ScalarSinkRouteEndpoint,
+    ScalarStateSinkRouteEndpoint,
+)
+from .scheduler import RustSchedulerCallbacks
+from .spi import SpiInterface, SpiPeripheralInterface, SpiTransaction, SpiRouteEndpoint
+from .timer import (
     TimerCaptureEvent,
     TimerChannelEvent,
     TimerInterface,
     TimerPeripheralInterface,
+    TimerRouteEndpoint,
 )
-from .scheduler import RustSchedulerCallbacks
 from .time import duration_to_ns
 
 
 RIG_MODEL_DATAPATH_TIMER_DUTY = 1
 RIG_MODEL_DATAPATH_TIMER_FREQUENCY = 2
 RIG_MODEL_DATAPATH_SPI_TRANSACTION = 3
+
+_CAN_METADATA_CACHE: dict[str, dict[str, object]] = {}
+_CAN_INDEX_CACHE: dict[str, dict[str, object]] = {}
 
 
 class _ModelDataPathDescriptorAbi(ctypes.Structure):
@@ -69,8 +78,15 @@ class NodeRig(ModelRig):
         self._root = pathlib.Path(__file__).resolve().parents[3]
         self.library_path = self._resolve_library_path(library_path)
         self._lib = load_shared_library(self.library_path)
-        self._can_metadata: dict[str, tuple[object, ...]] | None = None
+        self._can_metadata: dict[str, object] | None = None
         self._can_indexes: dict[str, object] | None = None
+        self._scalar_sink_abis: dict[DataPathKey, tuple[int, int, float, int]] = {}
+        self._scalar_state_sink_abis: dict[
+            DataPathKey, tuple[int, float, int | None, float, int | None]
+        ] = {}
+        self._timer_scaled_scalar_outputs: dict[
+            DataPathKey, tuple[DataPath, int, int, int, int, float, float]
+        ] = {}
         self.can = CanInterface(self) if self.has_can else None
         self._timer_peripherals = TimerPeripheralInterface(self)
         self._spi_peripherals = SpiPeripheralInterface(self)
@@ -88,16 +104,9 @@ class NodeRig(ModelRig):
         self.elapsed_ns += duration_ns
         self._run_for(ctypes.c_uint64(duration_ns))
 
-    def fast_forward_for(self, duration: int | float, *, unit: str = "ms") -> None:
-        duration_ns = duration_to_ns(duration, unit=unit)
-        self.elapsed_ns += duration_ns
-        self._fast_forward_for(ctypes.c_uint64(duration_ns))
-
     def scheduler_callbacks(self) -> RustSchedulerCallbacks:
         return RustSchedulerCallbacks(
             run_for=self._function_address(self._run_for),
-            fast_forward_for=self._function_address(self._fast_forward_for),
-            next_step=self._function_address(self._next_scheduler_step),
             reset=self._function_address(self._new),
         )
 
@@ -115,23 +124,163 @@ class NodeRig(ModelRig):
             self._function_address(self._can_send_many),
         )
 
-    def rust_datapath_route_abi(
-        self, path: DataPath
-    ) -> tuple[str, tuple[int, ...]] | None:
+    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         model_abi = super().rust_datapath_route_abi(path)
         if model_abi is not None:
             return model_abi
+        scalar_sink_abi = self._scalar_sink_abis.get(datapath_key(path))
+        if scalar_sink_abi is not None:
+            return ScalarSinkRouteEndpoint(*scalar_sink_abi)
+        scalar_state_sink_abi = self._scalar_state_sink_abis.get(datapath_key(path))
+        if scalar_state_sink_abi is not None:
+            if self._cluster_rig is not None and self._cluster_node_name is not None:
+                route_id, initial_value, sink_id, value_scale, set_value = (
+                    scalar_state_sink_abi
+                )
+                if not self._cluster_rig._rust_runtime.add_scalar_state_sink(
+                    node=self._cluster_node_name,
+                    route_id=route_id,
+                    initial_value=initial_value,
+                ):
+                    raise RuntimeError("failed to register native scalar state sink")
+            return ScalarStateSinkRouteEndpoint(*scalar_state_sink_abi)
+        native_scalar_output = self._timer_scaled_scalar_outputs.get(datapath_key(path))
+        if native_scalar_output is not None:
+            (
+                timer_path,
+                route_id,
+                timer_interface,
+                timer_port,
+                timer_channel,
+                scale_route_id,
+                scale,
+                offset,
+            ) = native_scalar_output
+            timer_abi = self._timer_peripherals.rust_route_abi(timer_path)
+            if self._cluster_rig is not None and self._cluster_node_name is not None:
+                if not self._cluster_rig._rust_runtime.add_timer_source(
+                    source_node=self._cluster_node_name,
+                    interface=timer_interface,
+                    port=timer_port,
+                    channel=timer_channel,
+                    source_count=timer_abi.count,
+                    source_recv_many=timer_abi.recv_many,
+                ):
+                    raise RuntimeError("failed to register native timer source")
+                if not self._cluster_rig._rust_runtime.add_timer_scaled_scalar_source(
+                    node=self._cluster_node_name,
+                    route_id=route_id,
+                    timer_interface=timer_interface,
+                    timer_port=timer_port,
+                    timer_channel=timer_channel,
+                    scale_route_id=scale_route_id,
+                    scale=scale,
+                    offset=offset,
+                ):
+                    raise RuntimeError(
+                        "failed to register native timer-scaled scalar source"
+                    )
+            count_callback, recv_callback, send_callback = (
+                self._cluster_rig._rust_runtime.noop_scalar_route_abi
+                if self._cluster_rig is not None
+                else (0, 0, 0)
+            )
+            return ScalarRouteEndpoint(
+                route_id,
+                count_callback,
+                recv_callback,
+                send_callback,
+            )
         try:
             if self._timer_peripherals.supports(path):
-                return ("timer", self._timer_peripherals.rust_route_abi(path))
+                return self._timer_peripherals.rust_route_abi(path)
             if self._spi_peripherals.supports(path):
-                return ("spi", self._spi_peripherals.rust_route_abi(path))
+                return self._spi_peripherals.rust_route_abi(path)
         except ValueError:
             return None
         return None
 
     def set_analog_input(self, channel: int, voltage: float) -> None:
         self._set_analog_input(ctypes.c_int(channel), ctypes.c_float(voltage))
+
+    def add_scalar_sink(
+        self,
+        path: DataPath,
+        *,
+        sink_id: int,
+        value_scale: float,
+        set_value,
+    ) -> None:
+        key = datapath_key(path)
+        self._scalar_sink_abis[key] = (
+            datapath_route_id(key),
+            int(sink_id),
+            float(value_scale),
+            self._function_address(set_value),
+        )
+
+        def send(value: float | int) -> bool:
+            set_value(sink_id, float(value) * float(value_scale))
+            return True
+
+        self.datapaths.add_input(path, send=send)
+
+    def add_scalar_state_sink(
+        self,
+        path: DataPath,
+        *,
+        initial_value: float = 0.0,
+        sink_id: int | None = None,
+        value_scale: float = 1.0,
+        set_value: Callable[[int, float], None] | None = None,
+    ) -> None:
+        key = datapath_key(path)
+        self._scalar_state_sink_abis[key] = (
+            datapath_route_id(key),
+            float(initial_value),
+            None if sink_id is None else int(sink_id),
+            float(value_scale),
+            None if set_value is None else self._function_address(set_value),
+        )
+        self.datapaths.add_input(path, send=lambda _value: True)
+
+    def add_timer_scaled_scalar_output(
+        self,
+        path: DataPath,
+        *,
+        timer_path: DataPath,
+        scale_path: DataPath | None = None,
+        scale: float,
+        offset: float = 0.0,
+    ) -> None:
+        binding = timer_path.peripheral_binding
+        if binding is None or binding.interface not in (
+            PeripheralInterface.TIMER_DUTY,
+            PeripheralInterface.TIMER_FREQUENCY,
+        ):
+            raise ValueError(f"datapath {timer_path!r} is not a timer channel")
+        route_id = datapath_route_id(datapath_key(path))
+        timer_interface = int(binding.interface)
+        timer_port = int(binding.port if binding.port is not None else 0)
+        timer_channel = int(binding.channel if binding.channel is not None else 0)
+        scale_route_id = (
+            0 if scale_path is None else datapath_route_id(datapath_key(scale_path))
+        )
+        self._timer_scaled_scalar_outputs[datapath_key(path)] = (
+            timer_path,
+            route_id,
+            timer_interface,
+            timer_port,
+            timer_channel,
+            scale_route_id,
+            float(scale),
+            float(offset),
+        )
+        self.datapaths.add_output(
+            path,
+            pending=lambda: 0,
+            recv=lambda: None,
+        )
 
     def get_analog_input(self, channel: int) -> float:
         return float(self._get_analog_input(ctypes.c_int(channel)))
@@ -207,6 +356,12 @@ class NodeRig(ModelRig):
     @property
     def _signals_by_message(self) -> dict[tuple[int, int, str], tuple[str, ...]]:
         return self._load_can_indexes()["signals_by_message"]  # type: ignore[return-value]
+
+    @property
+    def _can_tx_signals_by_key(
+        self,
+    ) -> dict[tuple[int, int, str, str], CanSignalDescriptor]:
+        return self._load_can_indexes()["tx_signals_by_key"]  # type: ignore[return-value]
 
     def _can_enum(self, enum_name: str) -> type[IntEnum]:
         try:
@@ -578,14 +733,6 @@ class NodeRig(ModelRig):
     def _configure_model_abi(self) -> None:
         self._new = self._bind_symbol("rig_model_new")
         self._run_for = self._bind_symbol("rig_model_run_for", [ctypes.c_uint64])
-        self._fast_forward_for = self._bind_symbol(
-            "rig_model_fast_forward_for", [ctypes.c_uint64]
-        )
-        self._next_scheduler_step = self._bind_symbol(
-            "rig_model_next_scheduler_step",
-            [ctypes.c_uint64],
-            ctypes.c_uint64,
-        )
         self._datapath_count = self._bind_symbol(
             "rig_model_datapath_count",
             restype=ctypes.c_uint32,
@@ -961,9 +1108,14 @@ class NodeRig(ModelRig):
             ctypes.c_bool,
         )
 
-    def _load_can_metadata(self) -> dict[str, tuple[object, ...]]:
+    def _load_can_metadata(self) -> dict[str, object]:
         if self._can_metadata is not None:
             return self._can_metadata
+        cache_key = str(self.library_path)
+        cached = _CAN_METADATA_CACHE.get(cache_key)
+        if cached is not None:
+            self._can_metadata = cached
+            return cached
 
         buses = tuple(
             CanBusDescriptor(
@@ -1007,12 +1159,18 @@ class NodeRig(ModelRig):
         enum_values = self._read_can_enum_values()
         metadata["enum_values"] = enum_values
         metadata["enums"] = self._build_can_enums(enum_values)
+        _CAN_METADATA_CACHE[cache_key] = metadata
         self._can_metadata = metadata
         return metadata
 
     def _load_can_indexes(self) -> dict[str, object]:
         if self._can_indexes is not None:
             return self._can_indexes
+        cache_key = str(self.library_path)
+        cached = _CAN_INDEX_CACHE.get(cache_key)
+        if cached is not None:
+            self._can_indexes = cached
+            return cached
 
         def message_index(
             messages: tuple[CanMessageDescriptor, ...],
@@ -1054,7 +1212,17 @@ class NodeRig(ModelRig):
                 key: tuple(signal_names)
                 for key, signal_names in signals_by_message.items()
             },
+            "tx_signals_by_key": {
+                (
+                    signal.bus,
+                    signal.message_id,
+                    signal.message_name,
+                    signal.signal_name,
+                ): signal
+                for signal in self._can_tx_signals
+            },
         }
+        _CAN_INDEX_CACHE[cache_key] = self._can_indexes
         return self._can_indexes
 
     def _read_can_messages(
@@ -1099,6 +1267,7 @@ class NodeRig(ModelRig):
             enum_name = self._read_codegen_string(enum_name_fn, index)
             signals.append(
                 CanSignalDescriptor(
+                    index=int(index),
                     bus=int(descriptor.bus),
                     bus_name=buses[int(descriptor.bus)].name,
                     message_name=self._read_codegen_string(message_name_fn, index),
@@ -1159,6 +1328,21 @@ class NodeRig(ModelRig):
                 f"CAN message {message.name!r} has no generated signal metadata"
             )
         return signals
+
+    def _can_tx_signal_descriptor(
+        self,
+        message: CanMessageDescriptor,
+        signal_name: str,
+    ) -> CanSignalDescriptor:
+        try:
+            return self._can_tx_signals_by_key[
+                (message.bus, message.id, message.name, signal_name)
+            ]
+        except KeyError as exc:
+            raise KeyError(
+                f"CAN TX signal {signal_name!r} was not found on message "
+                f"{message.name!r} ({message.id:#x}) bus {message.bus_name!r}"
+            ) from exc
 
     def _coerce_decoded_can_value(self, signal_name: str, value: float) -> object:
         enum_name = self._signal_enum_names.get(signal_name)

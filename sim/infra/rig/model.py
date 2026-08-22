@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import ctypes
-import zlib
 from collections.abc import Callable
 from typing import TypeVar
 
-from .datapath import DataPath, ModelDataPaths, ScalarEvent, datapath_key
+from .datapath import DataPath, DataPathKey, ModelDataPaths, datapath_key
+from .dataflow import NativeRouteEndpoint
 from .runtime import _RustClusterRuntime
+from .scalar import ScalarEvent, ScalarRouteEndpoint
 from .scheduler import (
     PythonSchedulerCallbacks,
     SchedulerContext,
@@ -50,7 +51,7 @@ class ModelRig:
         self._cluster_rig: ClusterRig | None = None
         self._cluster_node_name: str | None = None
         self.elapsed_ns = 0
-        self._scalar_route_abis: dict[str, tuple[int, int, int, int]] = {}
+        self._scalar_route_abis: dict[DataPathKey, tuple[int, int, int, int]] = {}
         self._scalar_callbacks = []
         self._scheduler_period_ns = (
             None
@@ -159,12 +160,10 @@ class ModelRig:
             send=send,
         )
 
-    def rust_datapath_route_abi(
-        self, path: DataPath
-    ) -> tuple[str, tuple[int, ...]] | None:
+    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         scalar_abi = self._scalar_route_abis.get(datapath_key(path))
         if scalar_abi is not None:
-            return ("scalar", scalar_abi)
+            return ScalarRouteEndpoint(*scalar_abi)
         return None
 
     def set_online(self, online: bool) -> None:
@@ -225,7 +224,30 @@ class ComponentRig(ModelRig):
     """Pure Python model that can run standalone or inside a cluster."""
 
     def configure_owner(self, owner: object) -> None:
-        pass
+        if not isinstance(owner, ModelRig):
+            raise TypeError(
+                f"component owner must implement ModelRig, got {type(owner).__name__}"
+            )
+        self._owner = owner
+
+    def _bind_native_model_symbol(
+        self,
+        name: str,
+        argtypes: list[object],
+        restype: object = ctypes.c_bool,
+    ):
+        binder = None
+        if (
+            self._cluster_rig is not None
+            and self._cluster_rig._rust_runtime is not None
+        ):
+            binder = self._cluster_rig._rust_runtime.bind_symbol
+        if binder is None:
+            owner = getattr(self, "_owner", None)
+            binder = getattr(owner, "_bind_symbol", None)
+        if binder is None:
+            raise RuntimeError("native model symbols require a Rust-backed owner")
+        return binder(name, argtypes, restype)
 
 
 class PeriodicDataPathProducer(ComponentRig):
@@ -296,5 +318,15 @@ def extend_model_class(
     return extended  # type: ignore[return-value]
 
 
-def datapath_route_id(key: str) -> int:
-    return zlib.crc32(key.encode("utf-8"))
+_DATAPATH_ROUTE_IDS: dict[DataPathKey, int] = {}
+
+
+def datapath_route_id(key: DataPathKey) -> int:
+    route_id = _DATAPATH_ROUTE_IDS.get(key)
+    if route_id is not None:
+        return route_id
+    route_id = len(_DATAPATH_ROUTE_IDS) + 1
+    if route_id > 0xFFFF_FFFF:
+        raise RuntimeError("exhausted native datapath route ids")
+    _DATAPATH_ROUTE_IDS[key] = route_id
+    return route_id

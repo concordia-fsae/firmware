@@ -2,6 +2,7 @@ from sim.infra.rig import (
     SpiInterface,
     TimerInterface,
     extend_model_class,
+    load_generated_enums,
     load_generated_module,
 )
 
@@ -18,11 +19,7 @@ def _load_generated() -> None:
         "//sim/models/controllers/vcpdu:vcpdu-py",
         "vcpdu_generated_model",
     )
-    enums = load_generated_module(
-        "VCPDU_ENUMS_PY",
-        "//sim/models/controllers/vcpdu:enums-py",
-        "vcpdu_generated_enums",
-    )
+    enums = _load_generated_enums()
 
     globals()["AnalogInput"] = enums.AnalogInput
     globals()["DigitalIo"] = enums.DigitalIo
@@ -35,6 +32,8 @@ def _load_generated() -> None:
     globals()["Tps2hb16abOutput"] = enums.Tps2hb16abOutput
     globals()["Vn9008Channel"] = enums.Vn9008Channel
     VcpduModelExtensions.AnalogInput = enums.AnalogInput
+    VcpduModelExtensions.DigitalIo = enums.DigitalIo
+    VcpduModelExtensions.SpiDevice = enums.SpiDevice
     VcpduModelExtensions.Tps2hb16abIc = enums.Tps2hb16abIc
     VcpduModelExtensions.Tps2hb16abOutput = enums.Tps2hb16abOutput
     VcpduModelExtensions.Vn9008Channel = enums.Vn9008Channel
@@ -44,6 +43,15 @@ def _load_generated() -> None:
         spi = SpiInterface(enums.SpiDevice)
 
     globals()["VcpduModel"] = VcpduModel
+
+
+def _load_generated_enums():
+    return load_generated_enums(
+        "VCPDU_ENUMS_PY",
+        "//sim/models/controllers/vcpdu:enums-py",
+        "vcpdu_generated_enums",
+        globals(),
+    )
 
 
 def __getattr__(name: str):
@@ -57,6 +65,9 @@ def __getattr__(name: str):
 
         globals()["VCPDU_CLUSTERS"] = VCPDU_CLUSTERS
         return VCPDU_CLUSTERS
+    _load_generated_enums()
+    if name in globals():
+        return globals()[name]
     if name in _GENERATED_EXPORTS:
         _load_generated()
         return globals()[name]

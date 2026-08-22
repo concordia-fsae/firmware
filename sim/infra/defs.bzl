@@ -6,19 +6,27 @@ RIG_RUNTIME_SRC = "//sim/infra/runtime:runtime-src"
 RIG_RUNTIME_RUST_ENV = {
     "RIG_RUNTIME_RUST_APP_RS": "//sim/infra/runtime:rust/app.rs",
     "RIG_RUNTIME_RUST_ASM330_RS": "//sim/models/components/asm330:rust.rs",
+    "RIG_RUNTIME_RUST_BATTERY_SOURCE_RS": "//sim/models/components/battery_source:rust.rs",
     "RIG_RUNTIME_RUST_CAN_RS": "//sim/infra/runtime:rust/can.rs",
     "RIG_RUNTIME_RUST_CLUSTER_RS": "//sim/infra/runtime:rust/cluster.rs",
+    "RIG_RUNTIME_RUST_ALGORITHMS_RS": "//sim/infra/runtime:rust/algorithms.rs",
     "RIG_RUNTIME_RUST_CORE_RS": "//sim/infra/runtime:rust/core.rs",
     "RIG_RUNTIME_RUST_DATAPATH_RS": "//sim/infra/runtime:rust/datapath.rs",
+    "RIG_RUNTIME_RUST_DATAFLOW_RS": "//sim/infra/runtime:rust/dataflow.rs",
     "RIG_RUNTIME_RUST_DC_LOAD_RS": "//sim/models/components/dc_load:rust.rs",
     "RIG_RUNTIME_RUST_FAULTS_RS": "//sim/infra/runtime:rust/faults.rs",
     "RIG_RUNTIME_RUST_FFI_RS": "//sim/infra/runtime:rust/ffi.rs",
     "RIG_RUNTIME_RUST_IO_RS": "//sim/infra/runtime:rust/io.rs",
     "RIG_RUNTIME_RUST_MODEL_RS": "//sim/infra/runtime:rust/model.rs",
     "RIG_RUNTIME_RUST_MODULE_DESC_RS": "//sim/infra/runtime:rust/module_desc.rs",
+    "RIG_RUNTIME_RUST_INTERFACES_RS": "//sim/infra/runtime:rust/interfaces.rs",
+    "RIG_RUNTIME_RUST_REGISTRY_RS": "//sim/infra/runtime:rust/registry.rs",
+    "RIG_RUNTIME_RUST_NODE_RS": "//sim/infra/runtime:rust/node.rs",
     "RIG_RUNTIME_RUST_NVM_RS": "//sim/infra/runtime:rust/nvm.rs",
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/infra/runtime:rust/rt_controller.rs",
-    "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/rig:rust/simple.rs",
+    "RIG_RUNTIME_RUST_SCALAR_RS": "//sim/infra/runtime:rust/scalar.rs",
+    "RIG_RUNTIME_RUST_SCHEDULER_RS": "//sim/infra/runtime:rust/scheduler.rs",
+    "RIG_RUNTIME_RUST_SIMPLE_RS": "//sim/infra/models:rust/simple.rs",
     "RIG_RUNTIME_RUST_SPI_RS": "//sim/infra/runtime:rust/spi.rs",
     "RIG_RUNTIME_RUST_TIMER_RS": "//sim/infra/runtime:rust/timer.rs",
 }
@@ -235,6 +243,7 @@ def rig_python_enums(
         deps: list[str] = [],
         headers: dict[str, str] = {},
         c_enums: list[str] = [],
+        c_enums_auto: bool = False,
         rust_sources: list[str] = [],
         rust_enums: list[str] = [],
         clang_flags: list[str] = [],
@@ -262,6 +271,7 @@ def rig_python_enums(
               "uv run --locked --project $PROJECT python $(location //sim/infra/rig:gen-python-enums) " +
               "--c-wrapper $WRAPPER " +
               " ".join(["--c-enum '{}'".format(item) for item in c_enums]) +
+              (" --c-enums-auto" if c_enums_auto else "") +
               " " +
               " ".join(["--rust-source $(location {})".format(item) for item in rust_sources]) +
               " " +
@@ -324,6 +334,7 @@ def rig_embedded_rust_model(
               " " +
               "rustc --edition=2024 --crate-name {} --crate-type cdylib ".format(crate) +
               "$(location :{}) ".format(src_target_name) +
+              "-C opt-level=3 " +
               "-o $OUT " +
               _rust_link_args(link_deps, extra_link_args if extra_link_args else ["-lm"]),
         visibility = visibility,
@@ -460,6 +471,7 @@ def rig_embedded_controller_model(
             ":model-c-support",
         ] + common_deps,
         c_enums = c_enums,
+        c_enums_auto = True,
         rust_sources = [_controller_codegen_artifact(component, "rust_faults_generated.rs")] if enum_rust_enums else [],
         rust_enums = enum_rust_enums,
         clang_flags = clang_flags,

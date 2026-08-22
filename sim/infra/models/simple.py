@@ -4,16 +4,16 @@ import ctypes
 from collections.abc import Callable
 from enum import IntEnum
 
-from .can import (
+from ..rig.can import (
     CanEvent,
     CanInterface,
     CanMessageDescriptor,
     CanPacket,
     PeriodicCanMessage,
 )
-from .datapath import DataPath, datapath_key
-from .model import ComponentRig, ModelRig
-from .time import duration_to_ns
+from ..rig.datapath import DataPath, DataPathKey, datapath_key
+from ..rig.model import ComponentRig, ModelRig
+from ..rig.time import duration_to_ns
 
 
 SimpleDataPathHandler = Callable[[object], None]
@@ -32,10 +32,10 @@ class SimpleComponent(ComponentRig):
             scheduler_period=scheduler_period,
             scheduler_unit=scheduler_unit,
         )
-        self._ingress_events: dict[str, list[object]] = {}
-        self._ingress_paths: dict[str, DataPath] = {}
-        self._egress_events: dict[str, list[object]] = {}
-        self._egress_paths: dict[str, DataPath] = {}
+        self._ingress_events: dict[DataPathKey, list[object]] = {}
+        self._ingress_paths: dict[DataPathKey, DataPath] = {}
+        self._egress_events: dict[DataPathKey, list[object]] = {}
+        self._egress_paths: dict[DataPathKey, DataPath] = {}
 
     @property
     def ingress_datapaths(self) -> tuple[DataPath, ...]:
@@ -145,7 +145,7 @@ class SimpleComponent(ComponentRig):
 
     @staticmethod
     def _events_for(
-        events_by_path: dict[str, list[object]],
+        events_by_path: dict[DataPathKey, list[object]],
         path: DataPath,
         direction: str,
     ) -> list[object]:
@@ -264,7 +264,7 @@ class SimpleCanComponent(SimpleComponent):
         super().__init__()
         self._encoder = encoder
         self._buses = tuple(encoder.bus(bus) for bus in buses)
-        self._bus_paths = {bus.name: DataPath.can_bus(bus.name) for bus in self._buses}
+        self._bus_paths = {bus.name: DataPath.can_bus(bus) for bus in self._buses}
         self.can = _SimpleCanInterface(self)
         self._periodic_messages: list[PeriodicCanMessage] = []
         self._native_periodic_handles: dict[int, int] = {}
@@ -297,7 +297,10 @@ class SimpleCanComponent(SimpleComponent):
         **signals: float | int | IntEnum,
     ) -> PeriodicCanMessage:
         descriptor = self._message_descriptor(message, bus=bus)
-        if DataPath.can_bus(descriptor.bus_name) not in self.egress_datapaths:
+        if (
+            DataPath.can_bus(self._encoder.bus(descriptor.bus))
+            not in self.egress_datapaths
+        ):
             raise ValueError(
                 f"simple CAN model is not configured for bus {descriptor.bus_name!r}"
             )
@@ -382,6 +385,16 @@ class SimpleCanComponent(SimpleComponent):
         message: CanMessageDescriptor,
         packet,
     ) -> None:
+        if (
+            self._cluster_rig is not None
+            and self._cluster_node_name is not None
+            and self._cluster_rig._rust_runtime.send_native_can_source_event(
+                node=self._cluster_node_name,
+                bus=message.bus,
+                packet=packet,
+            )
+        ):
+            return
         self.emit_egress(
             self._bus_paths[message.bus_name],
             CanEvent.from_packet(message.bus, packet, timestamp_ns=self.elapsed_ns),
@@ -395,10 +408,17 @@ class SimpleCanComponent(SimpleComponent):
         if bus_descriptor.name not in self._bus_paths:
             return None
         self._register_native_periodic_messages(bus_descriptor)
+        if self._cluster_rig is not None:
+            source_tx_count, source_recv_events = (
+                self._cluster_rig._rust_runtime.noop_can_source_route_abi
+            )
+        else:
+            source_tx_count = self._callback_address(self._can_tx_count_callback)
+            source_recv_events = self._callback_address(self._can_recv_events_callback)
         return (
             bus_descriptor.index,
-            self._callback_address(self._can_tx_count_callback),
-            self._callback_address(self._can_recv_events_callback),
+            source_tx_count,
+            source_recv_events,
             self._callback_address(self._can_send_many_callback),
         )
 

@@ -1,5 +1,14 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
+use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
+
+use super::cluster::{ClusterCanRecvEventsFn, ClusterCanSendManyFn, ClusterCanTxCountFn, ClusterRuntime};
+use super::dataflow::{
+    DataflowAlgorithm, DataflowAlgorithmExecutor, DataflowChannel,
+    DataflowEvent,
+};
+use super::interfaces::{InterfaceCaller, InterfaceDataflow, InterfaceEndpoint, InterfaceImplementation};
+use super::scheduler;
 
 unsafe extern "C" {
     fn rig_runtime_can_notify_rx(bus: u8);
@@ -25,6 +34,388 @@ pub struct CanEvent {
     pub bus: u8,
     pub timestamp_ns: u64,
     pub packet: CanPacket,
+}
+
+impl DataflowEvent for CanEvent {}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct CanSignalComparison {
+    pub bus: u8,
+    pub message_id: u32,
+    pub signal_index: u32,
+    pub expected: f64,
+    pub tolerance: f64,
+    pub comparison: u8,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ClusterCanRoute {
+    pub(super) source_node: u32,
+    pub(super) source_bus: u8,
+    pub(super) source_tx_count: ClusterCanTxCountFn,
+    pub(super) source_recv_events: ClusterCanRecvEventsFn,
+    pub(super) sink_node: Option<u32>,
+    pub(super) sink_bus: u8,
+    pub(super) sink_send_many: Option<ClusterCanSendManyFn>,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ClusterCanSink {
+    pub(super) sink_node: u32,
+    pub(super) sink_bus: u8,
+    pub(super) sink_send_many: ClusterCanSendManyFn,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ClusterCanRecord {
+    pub(super) source_node: u32,
+    pub(super) bus: u8,
+    pub(super) event: CanEvent,
+}
+
+pub(super) struct CanInterfaceFanout {
+    pub(super) source_node: u32,
+    pub(super) endpoint: CanEndpoint,
+    pub(super) record_index: usize,
+    pub(super) source_tx_count: ClusterCanTxCountFn,
+    pub(super) source_recv_events: ClusterCanRecvEventsFn,
+    pub(super) sinks: Vec<ClusterCanSink>,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub(super) struct CanEndpoint {
+    bus: u8,
+}
+
+impl CanEndpoint {
+    pub(super) fn new(bus: u8) -> Self {
+        Self { bus }
+    }
+
+    pub(super) fn bus(self) -> u8 {
+        self.bus
+    }
+}
+
+impl InterfaceEndpoint for CanEndpoint {
+    fn dataflow_channel(self) -> DataflowChannel {
+        DataflowChannel {
+            interface: self.bus as i32,
+            ..Default::default()
+        }
+    }
+}
+
+struct CanRecordStream {
+    records: VecDeque<CanEvent>,
+}
+
+/// CAN packet runtime interface: bus fanout, source-only records, and latest-message lookup.
+#[derive(Default)]
+pub(super) struct CanInterface {
+    pub(super) fanout_indexes: HashMap<(u32, CanEndpoint), usize>,
+    pub(super) fanouts: Vec<CanInterfaceFanout>,
+    pub(super) native_source_events: VecDeque<ClusterCanRecord>,
+    record_indexes: HashMap<(u32, CanEndpoint), usize>,
+    records: Vec<CanRecordStream>,
+}
+
+impl InterfaceImplementation for CanInterface {
+    fn reset_interface(&mut self) {
+        self.fanout_indexes.clear();
+        self.fanouts.clear();
+        self.native_source_events.clear();
+        self.record_indexes.clear();
+        self.records.clear();
+    }
+}
+
+impl InterfaceCaller for CanInterface {
+    fn append_algorithm_specs(&self, specs: &mut Vec<DataflowAlgorithm>) {
+        specs.push(DataflowAlgorithm::source(
+            u32::MAX,
+            (u32::MAX, 0, 0),
+            Vec::new(),
+            Arc::new(NativeCanSourceAlgorithm),
+        ));
+        for (index, group) in self.fanouts.iter().enumerate() {
+            specs.push(DataflowAlgorithm::source(
+                group.source_node,
+                (group.source_node, 1, index),
+                vec![<Self as InterfaceDataflow<CanEvent>>::edge(group.source_node, group.endpoint)],
+                Arc::new(CanFanoutAlgorithm { group_index: index }),
+            ));
+        }
+}
+}
+
+impl InterfaceDataflow<CanEvent> for CanInterface {
+    type Endpoint = CanEndpoint;
+}
+
+impl CanInterface {
+    pub(super) fn upsert_fanout(&mut self, route: ClusterCanRoute) {
+        let endpoint = CanEndpoint::new(route.source_bus);
+        let key = (route.source_node, endpoint);
+        let record_index = self.ensure_record_stream(route.source_node, endpoint);
+        let group_index = *self.fanout_indexes.entry(key).or_insert_with(|| {
+            self.fanouts.push(CanInterfaceFanout {
+                source_node: route.source_node,
+                endpoint,
+                record_index,
+                source_tx_count: route.source_tx_count,
+                source_recv_events: route.source_recv_events,
+                sinks: Vec::new(),
+            });
+            self.fanouts.len() - 1
+        });
+        if let (Some(sink_node), Some(sink_send_many)) = (route.sink_node, route.sink_send_many) {
+            if self.fanouts[group_index]
+                .sinks
+                .iter()
+                .any(|sink| sink.sink_node == sink_node && sink.sink_bus == route.sink_bus)
+            {
+                return;
+            }
+            self.fanouts[group_index].sinks.push(ClusterCanSink {
+                sink_node,
+                sink_bus: route.sink_bus,
+                sink_send_many,
+            });
+        }
+    }
+
+    fn ensure_record_stream(&mut self, source_node: u32, endpoint: CanEndpoint) -> usize {
+        let key = (source_node, endpoint);
+        *self.record_indexes.entry(key).or_insert_with(|| {
+            self.records.push(CanRecordStream {
+                records: VecDeque::new(),
+            });
+            self.records.len() - 1
+        })
+    }
+
+    pub(super) fn record(&mut self, source_node: u32, bus: u8, event: CanEvent) {
+        let endpoint = CanEndpoint::new(bus);
+        let stream_index = self.ensure_record_stream(source_node, endpoint);
+        self.record_at(stream_index, event);
+    }
+
+    pub(super) fn record_at(&mut self, stream_index: usize, event: CanEvent) {
+        self.records[stream_index].records.push_back(event);
+    }
+
+    pub(super) fn push_native_source_event(&mut self, record: ClusterCanRecord) {
+        self.native_source_events.push_back(record);
+    }
+
+    pub(super) fn pop_native_source_event(&mut self) -> Option<ClusterCanRecord> {
+        self.native_source_events.pop_front()
+    }
+
+    pub(super) fn native_source_pending(&self, mut source_online: impl FnMut(u32) -> bool) -> bool {
+        self.native_source_events
+            .iter()
+            .any(|record| source_online(record.source_node))
+    }
+
+    pub(super) fn route_event(
+        &mut self,
+        source_node: u32,
+        bus: u8,
+        event: CanEvent,
+    ) -> Vec<u32> {
+        let Some(group_index) = self
+            .fanout_indexes
+            .get(&(source_node, CanEndpoint::new(bus)))
+            .copied()
+        else {
+            self.record(source_node, bus, event);
+            return Vec::new();
+        };
+
+        let mut input_pending_nodes = Vec::new();
+        let record_index = self.fanouts[group_index].record_index;
+        for sink in &self.fanouts[group_index].sinks {
+            let accepted = unsafe { (sink.sink_send_many)(sink.sink_bus, &event.packet, 1) };
+            if accepted > 0 {
+                input_pending_nodes.push(sink.sink_node);
+            }
+        }
+        self.record_at(record_index, event);
+        input_pending_nodes
+    }
+
+    pub(super) fn fanout_pending(
+        &self,
+        group_index: usize,
+        mut source_online: impl FnMut(u32) -> bool,
+    ) -> bool {
+        let Some(group) = self.fanouts.get(group_index) else {
+            return false;
+        };
+        source_online(group.source_node)
+            && unsafe { (group.source_tx_count)(group.endpoint.bus()) } != 0
+    }
+
+    pub(super) fn route_fanout(
+        &mut self,
+        group_index: usize,
+        mut source_online: impl FnMut(u32) -> bool,
+    ) -> Option<Vec<u32>> {
+        let Some(group) = self.fanouts.get(group_index) else {
+            return None;
+        };
+        let source_node = group.source_node;
+        let source_bus = group.endpoint.bus();
+        let record_index = group.record_index;
+        let source_tx_count = group.source_tx_count;
+        let source_recv_events = group.source_recv_events;
+        let sink_count = group.sinks.len();
+
+        if !source_online(source_node) {
+            return None;
+        }
+
+        let pending = unsafe { source_tx_count(source_bus) };
+        if pending == 0 {
+            return None;
+        }
+
+        let mut events = vec![CanEvent::default(); pending as usize];
+        let count = unsafe { source_recv_events(source_bus, events.as_mut_ptr(), pending) };
+        let count = count.min(pending) as usize;
+        if count == 0 {
+            return None;
+        }
+        events.truncate(count);
+
+        let packets: Vec<_> = events.iter().map(|event| event.packet).collect();
+        let mut input_pending_nodes = Vec::new();
+        if !packets.is_empty() {
+            for sink_index in 0..sink_count {
+                let sink = self.fanouts[group_index].sinks[sink_index];
+                let accepted = unsafe {
+                    (sink.sink_send_many)(
+                        sink.sink_bus,
+                        packets.as_ptr(),
+                        packets.len().min(u32::MAX as usize) as u32,
+                    )
+                };
+                if accepted > 0 {
+                    input_pending_nodes.push(sink.sink_node);
+                }
+            }
+        }
+
+        for event in events {
+            self.record_at(record_index, event);
+        }
+        Some(input_pending_nodes)
+    }
+
+    pub(super) fn latest_message(
+        &self,
+        source_node: u32,
+        bus: u8,
+        message_id: u32,
+    ) -> Option<CanEvent> {
+        let stream_index = self
+            .record_indexes
+            .get(&(source_node, CanEndpoint::new(bus)))
+            .copied()?;
+        self.records[stream_index]
+            .records
+            .iter()
+            .rev()
+            .find(|event| event.packet.id == message_id)
+            .copied()
+    }
+
+    pub(super) fn latest_bus_event(&self, source_node: u32, bus: u8) -> Option<CanEvent> {
+        let stream_index = self
+            .record_indexes
+            .get(&(source_node, CanEndpoint::new(bus)))
+            .copied()?;
+        self.records[stream_index].records.back().copied()
+    }
+}
+
+struct CanFanoutAlgorithm {
+    group_index: usize,
+}
+
+impl DataflowAlgorithmExecutor for CanFanoutAlgorithm {
+    fn polls_pending(&self) -> bool {
+        true
+    }
+
+    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+        runtime
+            .interfaces
+            .can
+            .fanout_pending(self.group_index, |source_node| {
+                runtime.node_online(source_node)
+            })
+    }
+
+    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+        run_can_fanout(runtime, self.group_index)
+    }
+}
+
+fn run_can_fanout(runtime: &mut ClusterRuntime, group_index: usize) -> bool {
+    let online_nodes = runtime.online_nodes();
+    let Some(input_pending_nodes) = runtime
+        .interfaces
+        .can
+        .route_fanout(group_index, |node| online_node(&online_nodes, node))
+    else {
+        return false;
+    };
+    for sink_node in input_pending_nodes {
+        scheduler::mark_input_pending(runtime, sink_node);
+    }
+    true
+}
+
+struct NativeCanSourceAlgorithm;
+
+impl DataflowAlgorithmExecutor for NativeCanSourceAlgorithm {
+    fn polls_pending(&self) -> bool {
+        true
+    }
+
+    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+        runtime
+            .interfaces
+            .can_native_source_pending(|source_node| runtime.node_online(source_node))
+    }
+
+    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+        let mut routed = false;
+        let mut input_pending_nodes = Vec::new();
+        while let Some(record) = runtime.interfaces.can_pop_native_source_event() {
+            if !runtime.node_online(record.source_node) {
+                continue;
+            }
+            routed = true;
+            input_pending_nodes.extend(runtime.interfaces.can_route_event(
+                record.source_node,
+                record.bus,
+                record.event,
+            ));
+        }
+        for sink_node in input_pending_nodes {
+            scheduler::mark_input_pending(runtime, sink_node);
+        }
+        routed
+    }
+}
+
+fn online_node(online_nodes: &[bool], node: u32) -> bool {
+    online_nodes.get(node as usize).copied().unwrap_or(false)
 }
 
 #[derive(Default)]
@@ -663,9 +1054,13 @@ macro_rules! rig_yamcan_network {
                 return false;
             };
 
-            let Some(message) =
-                $model::encode_transmitted_signal(bus, message_name, &mut packet.data, signal_name, value)
-            else {
+            let Some(message) = $model::encode_transmitted_signal(
+                bus,
+                message_name,
+                &mut packet.data,
+                signal_name,
+                value,
+            ) else {
                 return false;
             };
             packet.id = message.id;

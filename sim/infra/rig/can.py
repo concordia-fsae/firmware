@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ctypes
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import IntEnum
 
 from .time import RunUntilTimeout, duration_to_ns
@@ -13,6 +13,12 @@ SIGNAL_KIND_NAMES = {
     1: "Boolean",
     2: "Enum",
 }
+
+_COMPARE_EQ = 0
+_COMPARE_GT = 1
+_COMPARE_GE = 2
+_COMPARE_LT = 3
+_COMPARE_LE = 4
 
 
 class CanPacket(ctypes.Structure):
@@ -73,10 +79,20 @@ class CanMessageDescriptor:
     name: str
     id: int
     len: int
+    signals: tuple[CanSignalDescriptor, ...] = field(
+        default_factory=tuple, compare=False, repr=False
+    )
+
+    def signal(self, name: str) -> CanSignalDescriptor:
+        for signal in self.signals:
+            if signal.signal_name == name:
+                return signal
+        raise KeyError(f"CAN signal {name!r} is not part of message {self.name!r}")
 
 
 @dataclass(frozen=True)
 class CanSignalDescriptor:
+    index: int
     bus: int
     bus_name: str
     message_name: str
@@ -119,6 +135,17 @@ class _CanEnumValueDescriptorAbi(ctypes.Structure):
 class CanSignalValue(ctypes.Structure):
     _fields_ = [
         ("value", ctypes.c_double),
+    ]
+
+
+class CanSignalComparison(ctypes.Structure):
+    _fields_ = [
+        ("bus", ctypes.c_uint8),
+        ("message_id", ctypes.c_uint32),
+        ("signal_index", ctypes.c_uint32),
+        ("expected", ctypes.c_double),
+        ("tolerance", ctypes.c_double),
+        ("comparison", ctypes.c_uint8),
     ]
 
 
@@ -213,7 +240,9 @@ class CanInterface:
         bus: int | str | CanBusDescriptor | None = None,
         tx: bool = False,
     ) -> CanMessageDescriptor:
-        return self._model._can_message_descriptor(name, bus=bus, tx=tx)
+        return self._with_signals(
+            self._model._can_message_descriptor(name, bus=bus, tx=tx)
+        )
 
     def tx_message(
         self,
@@ -221,7 +250,17 @@ class CanInterface:
         *,
         bus: int | str | CanBusDescriptor | None = None,
     ) -> CanMessageDescriptor:
-        return self._model._can_tx_message_descriptor(name, bus=bus)
+        return self._with_signals(self._model._can_tx_message_descriptor(name, bus=bus))
+
+    def _with_signals(self, message: CanMessageDescriptor) -> CanMessageDescriptor:
+        signals = tuple(
+            signal
+            for signal in (*self.rx_signals, *self.tx_signals)
+            if signal.bus == message.bus
+            and signal.message_id == message.id
+            and signal.message_name == message.name
+        )
+        return replace(message, signals=signals)
 
     def send(
         self,
@@ -333,7 +372,6 @@ class CanInterface:
         step: int | float = 1,
         step_unit: str | None = None,
         tolerance: float = 0.0,
-        fast_forward: bool = False,
         message_on_timeout: str | None = None,
     ) -> int:
         descriptor = self._tx_message_descriptor(message, bus=bus)
@@ -343,21 +381,211 @@ class CanInterface:
             raise RuntimeError("native CAN signal predicates require a clustered model")
         timeout_ns = duration_to_ns(timeout, unit=unit)
         step_ns = duration_to_ns(step, unit=step_unit or unit)
-        elapsed_ns = cluster._rust_runtime.run_until_can_signal_eq(
+        signal_descriptor = self._model._can_tx_signal_descriptor(
+            descriptor,
+            signal,
+        )
+        elapsed_ns = cluster._rust_runtime.run_until_can_signal_index_eq(
             source_node=node_name,
             bus=descriptor.bus,
             message_id=descriptor.id,
-            signal_name=signal,
+            signal_index=signal_descriptor.index,
             expected=float(
                 int(expected) if isinstance(expected, IntEnum) else expected
             ),
             tolerance=float(tolerance),
             timeout_ns=timeout_ns,
             step_ns=step_ns,
-            fast_forward=fast_forward,
             route=cluster.comm.has_python_routes(),
         )
-        cluster._sync_elapsed_from_runtime()
+        cluster._sync_elapsed_from_runtime(nodes=False)
+        if elapsed_ns is None:
+            detail = "" if message_on_timeout is None else f": {message_on_timeout}"
+            raise RunUntilTimeout(
+                f"condition did not become true within {timeout_ns} ns{detail}"
+            )
+        return elapsed_ns
+
+    def run_until_signal_gt(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        **kwargs,
+    ) -> int:
+        return self._run_until_signal_cmp(
+            message, signal, expected, comparison=_COMPARE_GT, **kwargs
+        )
+
+    def run_until_signal_ge(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        **kwargs,
+    ) -> int:
+        return self._run_until_signal_cmp(
+            message, signal, expected, comparison=_COMPARE_GE, **kwargs
+        )
+
+    def run_until_signal_lt(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        **kwargs,
+    ) -> int:
+        return self._run_until_signal_cmp(
+            message, signal, expected, comparison=_COMPARE_LT, **kwargs
+        )
+
+    def run_until_signal_le(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        **kwargs,
+    ) -> int:
+        return self._run_until_signal_cmp(
+            message, signal, expected, comparison=_COMPARE_LE, **kwargs
+        )
+
+    def run_until_signals_eq(self, comparisons, **kwargs) -> int:
+        return self._run_until_signals_with_comparison(
+            comparisons, comparison=_COMPARE_EQ, **kwargs
+        )
+
+    def run_until_signals_gt(self, comparisons, **kwargs) -> int:
+        return self._run_until_signals_with_comparison(
+            comparisons, comparison=_COMPARE_GT, **kwargs
+        )
+
+    def run_until_signals_ge(self, comparisons, **kwargs) -> int:
+        return self._run_until_signals_with_comparison(
+            comparisons, comparison=_COMPARE_GE, **kwargs
+        )
+
+    def run_until_signals_lt(self, comparisons, **kwargs) -> int:
+        return self._run_until_signals_with_comparison(
+            comparisons, comparison=_COMPARE_LT, **kwargs
+        )
+
+    def run_until_signals_le(self, comparisons, **kwargs) -> int:
+        return self._run_until_signals_with_comparison(
+            comparisons, comparison=_COMPARE_LE, **kwargs
+        )
+
+    def _run_until_signals_with_comparison(
+        self,
+        comparisons,
+        *,
+        comparison: int,
+        **kwargs,
+    ) -> int:
+        return self.run_until_signals_cmp(
+            tuple(
+                (*signal_comparison, comparison) for signal_comparison in comparisons
+            ),
+            **kwargs,
+        )
+
+    def _run_until_signal_cmp(
+        self,
+        message: str | CanMessageDescriptor,
+        signal: str,
+        expected: float | int | IntEnum,
+        *,
+        comparison: int,
+        bus: int | str | CanBusDescriptor | None = None,
+        timeout: int | float,
+        unit: str = "ms",
+        step: int | float = 1,
+        step_unit: str | None = None,
+        tolerance: float = 0.0,
+        message_on_timeout: str | None = None,
+    ) -> int:
+        descriptor = self._tx_message_descriptor(message, bus=bus)
+        cluster = self._model._cluster_rig
+        node_name = self._model._cluster_node_name
+        if cluster is None or node_name is None:
+            raise RuntimeError("native CAN signal predicates require a clustered model")
+        timeout_ns = duration_to_ns(timeout, unit=unit)
+        step_ns = duration_to_ns(step, unit=step_unit or unit)
+        signal_descriptor = self._model._can_tx_signal_descriptor(
+            descriptor,
+            signal,
+        )
+        elapsed_ns = cluster._rust_runtime.run_until_can_signal_index_cmp(
+            source_node=node_name,
+            bus=descriptor.bus,
+            message_id=descriptor.id,
+            signal_index=signal_descriptor.index,
+            expected=float(
+                int(expected) if isinstance(expected, IntEnum) else expected
+            ),
+            tolerance=float(tolerance),
+            comparison=int(comparison),
+            timeout_ns=timeout_ns,
+            step_ns=step_ns,
+            route=cluster.comm.has_python_routes(),
+        )
+        cluster._sync_elapsed_from_runtime(nodes=False)
+        if elapsed_ns is None:
+            detail = "" if message_on_timeout is None else f": {message_on_timeout}"
+            raise RunUntilTimeout(
+                f"condition did not become true within {timeout_ns} ns{detail}"
+            )
+        return elapsed_ns
+
+    def run_until_signals_cmp(
+        self,
+        comparisons: tuple[
+            tuple[str | CanMessageDescriptor, str, float | int | IntEnum, int], ...
+        ]
+        | list[tuple[str | CanMessageDescriptor, str, float | int | IntEnum, int]],
+        *,
+        bus: int | str | CanBusDescriptor | None = None,
+        timeout: int | float,
+        unit: str = "ms",
+        step: int | float = 1,
+        step_unit: str | None = None,
+        tolerance: float = 0.0,
+        message_on_timeout: str | None = None,
+    ) -> int:
+        cluster = self._model._cluster_rig
+        node_name = self._model._cluster_node_name
+        if cluster is None or node_name is None:
+            raise RuntimeError("native CAN signal predicates require a clustered model")
+        if not comparisons:
+            raise ValueError("at least one CAN signal comparison is required")
+
+        comparison_array = (CanSignalComparison * len(comparisons))()
+        for index, (message, signal, expected, comparison) in enumerate(comparisons):
+            descriptor = self._tx_message_descriptor(message, bus=bus)
+            signal_descriptor = self._model._can_tx_signal_descriptor(
+                descriptor,
+                signal,
+            )
+            comparison_array[index].bus = descriptor.bus
+            comparison_array[index].message_id = descriptor.id
+            comparison_array[index].signal_index = signal_descriptor.index
+            comparison_array[index].expected = float(
+                int(expected) if isinstance(expected, IntEnum) else expected
+            )
+            comparison_array[index].tolerance = float(tolerance)
+            comparison_array[index].comparison = int(comparison)
+
+        timeout_ns = duration_to_ns(timeout, unit=unit)
+        step_ns = duration_to_ns(step, unit=step_unit or unit)
+        elapsed_ns = cluster._rust_runtime.run_until_can_signal_comparisons(
+            source_node=node_name,
+            comparisons=comparison_array,
+            comparison_count=len(comparison_array),
+            timeout_ns=timeout_ns,
+            step_ns=step_ns,
+            route=cluster.comm.has_python_routes(),
+        )
+        cluster._sync_elapsed_from_runtime(nodes=False)
         if elapsed_ns is None:
             detail = "" if message_on_timeout is None else f": {message_on_timeout}"
             raise RunUntilTimeout(
@@ -413,7 +641,7 @@ class CanInterface:
         if isinstance(message, CanMessageDescriptor):
             if bus is not None and self._model._coerce_can_bus(bus) != message.bus:
                 raise ValueError(f"message {message.name!r} is not on bus {bus!r}")
-            return message
+            return self._with_signals(message)
         return self.tx_message(message, bus=bus)
 
 

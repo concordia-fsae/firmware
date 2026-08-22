@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import ctypes
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -11,13 +12,18 @@ from sim.infra.rig import (
     ComponentRig,
     DataPath,
     SchedulerContext,
-    TimerChannelEvent,
 )
 from sim.infra.rig.datapath import datapath_key
+from sim.infra.rig.dataflow import NativeRouteEndpoint
 from sim.infra.rig.model import datapath_route_id
+from sim.infra.rig.scalar import (
+    ScalarInputRouteEndpoint,
+    ScalarRouteEndpoint,
+)
 
 
 class DcLoadPort(Enum):
+    VOLTAGE_INPUT = auto()
     CURRENT_OUTPUT = auto()
 
 
@@ -54,10 +60,19 @@ class DcLoadModel(ComponentRig):
     )
 
     @classmethod
+    def voltage_input_channel(cls, channel: object) -> DataPath:
+        return DataPath.component(cls, (DcLoadPort.VOLTAGE_INPUT, channel))
+
+    @classmethod
+    def current_output_channel(cls, channel: object) -> DataPath:
+        return DataPath.component(cls, (DcLoadPort.CURRENT_OUTPUT, channel))
+
+    @classmethod
     def spec(
         cls,
         *,
         voltage_input_channel: DataPath,
+        current_output_channel: DataPath | None = None,
         load_spec: DcLoadSpec,
         scheduler_period: int | float | None = None,
         scheduler_unit: str = "ms",
@@ -67,6 +82,7 @@ class DcLoadModel(ComponentRig):
             cls,
             parameters={
                 "voltage_input_channel": voltage_input_channel,
+                "current_output_channel": current_output_channel,
                 "load_spec": load_spec,
                 "scheduler_period": scheduler_period,
                 "scheduler_unit": scheduler_unit,
@@ -101,7 +117,7 @@ class DcLoadModel(ComponentRig):
         self._last_update_ns = 0
         self.datapaths.add_input(
             self.voltage_input_channel,
-            send=self._set_voltage_from_timer,
+            send=self._set_voltage,
         )
         self.datapaths.add_output(
             self.current_output_channel,
@@ -162,8 +178,8 @@ class DcLoadModel(ComponentRig):
     def rust_runtime_model(self) -> bool:
         return self._cluster_rig is not None
 
-    def _set_voltage_from_timer(self, event: TimerChannelEvent) -> bool:
-        self._input_voltage = max(0.0, float(event.value))
+    def _set_voltage(self, voltage: float | int) -> bool:
+        self._input_voltage = max(0.0, float(voltage))
         if self._scheduler_period_ns is None and self._is_static_resistive_load:
             self._output_current = self._current_for_step(0.0)
             self._previous_voltage = self._input_voltage
@@ -178,39 +194,16 @@ class DcLoadModel(ComponentRig):
             and not _component_present(self.load_spec.capacitance_farads)
         )
 
-    def rust_datapath_route_abi(
-        self, path: DataPath
-    ) -> tuple[str, tuple[int, ...]] | None:
+    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         self._register_native_dc_load()
         if path == self.voltage_input_channel:
-            return ("timer", self._timer_sink_route_abi(path))
+            return ScalarInputRouteEndpoint(*self._voltage_sink_route_abi(path))
         if path == self.current_output_channel:
-            return ("scalar", self._scalar_source_route_abi(path))
+            return ScalarRouteEndpoint(*self._scalar_source_route_abi(path))
         return None
 
-    def _timer_sink_route_abi(
-        self, path: DataPath
-    ) -> tuple[int, int, int, int, int, int]:
-        binding = path.peripheral_binding
-        if binding is None or binding.interface not in (
-            "timer.duty",
-            "timer.frequency",
-        ):
-            raise ValueError(f"datapath {path!r} is not a timer channel")
-
-        count_callback, recv_callback, send_callback = (
-            self._cluster_rig._rust_runtime.noop_timer_route_abi
-            if self._cluster_rig is not None
-            else (0, 0, 0)
-        )
-        return (
-            1 if binding.interface == "timer.duty" else 2,
-            int(binding.port if binding.port is not None else 0),
-            int(binding.channel if binding.channel is not None else 0),
-            count_callback,
-            recv_callback,
-            send_callback,
-        )
+    def _voltage_sink_route_abi(self, path: DataPath) -> tuple[int]:
+        return (datapath_route_id(datapath_key(path)),)
 
     def _scalar_source_route_abi(self, path: DataPath) -> tuple[int, int, int, int]:
         count_callback, recv_callback, send_callback = (
@@ -224,30 +217,33 @@ class DcLoadModel(ComponentRig):
     def _register_native_dc_load(self) -> None:
         if self._cluster_rig is None or self._cluster_node_name is None:
             return
-        binding = self.voltage_input_channel.peripheral_binding
-        if binding is None or binding.interface not in (
-            "timer.duty",
-            "timer.frequency",
-        ):
-            raise ValueError(
-                f"datapath {self.voltage_input_channel!r} is not a timer channel"
-            )
-        if not self._cluster_rig._rust_runtime.add_dc_load(
-            node=self._cluster_node_name,
-            current_route_id=datapath_route_id(
-                datapath_key(self.current_output_channel)
+        register = self._bind_native_model_symbol(
+            "rig_model_register_dc_load",
+            [
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_uint32,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_float,
+                ctypes.c_uint64,
+            ],
+        )
+        node_index = self._cluster_rig._rust_runtime.node_index(self._cluster_node_name)
+        if node_index is None or not register(
+            ctypes.c_uint32(node_index),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.voltage_input_channel))
             ),
-            timer_interface=1 if binding.interface == "timer.duty" else 2,
-            timer_port=int(binding.port if binding.port is not None else 0),
-            timer_channel=int(binding.channel if binding.channel is not None else 0),
-            resistance_ohms=_native_component_value(self.load_spec.resistance_ohms),
-            inductance_henrys=_native_component_value(self.load_spec.inductance_henrys),
-            capacitance_farads=_native_component_value(
-                self.load_spec.capacitance_farads
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.current_output_channel))
             ),
-            scheduler_period_ns=0
-            if self._scheduler_period_ns is None
-            else self._scheduler_period_ns,
+            ctypes.c_float(_native_component_value(self.load_spec.resistance_ohms)),
+            ctypes.c_float(_native_component_value(self.load_spec.inductance_henrys)),
+            ctypes.c_float(_native_component_value(self.load_spec.capacitance_farads)),
+            ctypes.c_uint64(
+                0 if self._scheduler_period_ns is None else self._scheduler_period_ns
+            ),
         ):
             raise RuntimeError("failed to register native DC load")
 

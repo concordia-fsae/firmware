@@ -43,6 +43,7 @@ rig_embedded_controller_model(
         "drv_vn9008_channels",
     ],
     enum_headers = [
+        "CANTypes_generated.h",
         "HW_gpio_componentSpecific.h",
         "HW_spi.h",
         "HW_tim.h",

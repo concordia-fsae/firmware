@@ -1,11 +1,13 @@
 from sim.models.controllers.sws import SwsSimpleModel
 from sim.models.controllers.vcfront import VcfrontSimpleModel
+from sim.models.controllers.vcpdu import (
+    SleepFollowerState,
+    VehicleState,
+)
 from sim.models.vehicle.fixtures import vehicle_cluster
 
 
 def test_vcpdu_hsd_power_controls_vehicle_controller_online_state(vehicle_cluster):
-    VehicleState = vehicle_cluster.vcpdu.can.enums.VehicleState
-    SleepFollowerState = vehicle_cluster.vcpdu.can.enums.SleepFollowerState
     vcpdu = vehicle_cluster.vcpdu
     sws = SwsSimpleModel(vcpdu.can)
     vcfront = VcfrontSimpleModel(vcpdu.can)

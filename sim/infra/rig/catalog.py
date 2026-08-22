@@ -94,6 +94,7 @@ class ClusterSpec:
             hardware=self.hardware,
             features=self.features,
             components=tuple(component_rig for _, _, component_rig in components),
+            connect=False,
             **nodes,
         )
         for owner_node, component, component_rig in components:
@@ -102,14 +103,13 @@ class ClusterSpec:
             component_rig.configure_owner(owner)
             for binding in component.bindings:
                 binding.bind(owner, component_rig)
-        rig.comm.connect_node_interfaces()
+        rig.reset()
         for link in self.datapath_links:
             rig.dataroutes.connect(
                 link.path,
                 source_node=link.source_node,
                 sink_node=link.sink_node,
             )
-        rig.reset()
         return rig
 
     def has_feature(self, feature: str) -> bool:

@@ -1,6 +1,7 @@
 import pytest
 
 from sim.models.controllers.vcfront import VcfrontSimpleModel
+from sim.models.controllers.vcrear import BrakeLightState
 from sim.models.controllers.vcrear.fixtures import vcrear_cluster
 
 
@@ -27,7 +28,6 @@ def test_brake_light_follows_vcfront_brake_position_can(
     brake_light_on,
 ):
     vcrear = vcrear_cluster.vcrear
-    BrakeLightState = vcrear.can.enums.BrakeLightState
     expected_state = BrakeLightState.ON if brake_light_on else BrakeLightState.OFF
     vcfront = VcfrontSimpleModel(vcrear.can)
     vcfront_pedal_position = vcfront.periodic_pedal_position(
@@ -46,7 +46,6 @@ def test_brake_light_follows_vcfront_brake_position_can(
 
 def test_brake_light_faults_when_vcfront_pedal_position_goes_mia(vcrear_cluster):
     vcrear = vcrear_cluster.vcrear
-    BrakeLightState = vcrear.can.enums.BrakeLightState
     vcfront = VcfrontSimpleModel(vcrear.can)
     vcrear_cluster.add_component(vcfront)
 

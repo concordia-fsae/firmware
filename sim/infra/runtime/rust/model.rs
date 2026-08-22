@@ -1,5 +1,6 @@
 use super::rt_controller::RTController;
 use super::rt_controller::Scheduler;
+use super::interfaces::ModelPeripheralRuntime;
 
 pub const RIG_MODEL_DATAPATH_TIMER_DUTY: u16 = 1;
 pub const RIG_MODEL_DATAPATH_TIMER_FREQUENCY: u16 = 2;
@@ -66,8 +67,7 @@ impl<Target: NodeTarget> NodeModel<Target> {
     }
 
     pub unsafe fn reset(&mut self) {
-        super::spi::reset();
-        super::timer::reset();
+        unsafe { self.controller.reset_peripherals() };
         self.configure_runtime_datapaths();
         self.controller.reset_runtime();
         unsafe { self.target.reset_node(&mut self.controller) };
@@ -76,14 +76,6 @@ impl<Target: NodeTarget> NodeModel<Target> {
 
     pub unsafe fn run_for_ns(&mut self, elapsed_ns: u64) {
         unsafe { self.controller.run_for_ns(elapsed_ns) };
-    }
-
-    pub unsafe fn fast_forward_for_ns(&mut self, elapsed_ns: u64) {
-        unsafe { self.controller.fast_forward_for_ns(elapsed_ns) };
-    }
-
-    pub fn next_scheduler_step_ns(&self, max_step_ns: u64) -> u64 {
-        self.controller.next_scheduler_step_ns(max_step_ns)
     }
 
     pub fn controller(&mut self) -> &mut RTController {
@@ -102,23 +94,17 @@ impl<Target: NodeTarget> NodeModel<Target> {
         self.target.datapath_descriptor(index)
     }
 
-    fn configure_runtime_datapaths(&self) {
+    fn configure_runtime_datapaths(&mut self) {
         for index in 0..self.target.datapath_count() {
             let Some(descriptor) = self.target.datapath_descriptor(index) else {
                 continue;
             };
-            match descriptor.interface {
-                RIG_MODEL_DATAPATH_TIMER_DUTY => {
-                    super::timer::configure_channel(descriptor.port, descriptor.channel);
-                }
-                RIG_MODEL_DATAPATH_TIMER_FREQUENCY => {
-                    super::timer::configure_channel(descriptor.port, descriptor.channel);
-                }
-                RIG_MODEL_DATAPATH_SPI_TRANSACTION => {
-                    super::spi::configure_device(descriptor.device);
-                }
-                _ => {}
-            }
+            self.controller.configure_datapath(
+                descriptor.interface,
+                descriptor.port,
+                descriptor.channel,
+                descriptor.device,
+            );
         }
     }
 }
@@ -138,18 +124,6 @@ macro_rules! rig_model_abi {
             unsafe {
                 $model.lock().unwrap().run_for_ns(elapsed_ns);
             }
-        }
-
-        #[unsafe(no_mangle)]
-        pub extern "C" fn rig_model_fast_forward_for(elapsed_ns: u64) {
-            unsafe {
-                $model.lock().unwrap().fast_forward_for_ns(elapsed_ns);
-            }
-        }
-
-        #[unsafe(no_mangle)]
-        pub extern "C" fn rig_model_next_scheduler_step(max_step_ns: u64) -> u64 {
-            $model.lock().unwrap().next_scheduler_step_ns(max_step_ns)
         }
 
         #[unsafe(no_mangle)]

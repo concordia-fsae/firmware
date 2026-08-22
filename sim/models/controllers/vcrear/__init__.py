@@ -1,4 +1,9 @@
-from sim.infra.rig import TimerInterface, extend_model_class, load_generated_module
+from sim.infra.rig import (
+    TimerInterface,
+    extend_model_class,
+    load_generated_enums,
+    load_generated_module,
+)
 from .simple import VcrearSimpleModel
 
 
@@ -11,11 +16,7 @@ def _load_generated() -> None:
         "//sim/models/controllers/vcrear:vcrear-py",
         "vcrear_generated_model",
     )
-    enums = load_generated_module(
-        "VCREAR_ENUMS_PY",
-        "//sim/models/controllers/vcrear:enums-py",
-        "vcrear_generated_enums",
-    )
+    enums = _load_generated_enums()
 
     globals()["AnalogInput"] = enums.AnalogInput
     globals()["DigitalIo"] = enums.DigitalIo
@@ -30,6 +31,15 @@ def _load_generated() -> None:
     globals()["VcrearModel"] = VcrearModel
 
 
+def _load_generated_enums():
+    return load_generated_enums(
+        "VCREAR_ENUMS_PY",
+        "//sim/models/controllers/vcrear:enums-py",
+        "vcrear_generated_enums",
+        globals(),
+    )
+
+
 def __getattr__(name: str):
     if name == "PLATFORM_VARIANTS":
         from sim.models.platforms import PLATFORM_VARIANTS
@@ -41,6 +51,9 @@ def __getattr__(name: str):
 
         globals()["VCREAR_CLUSTERS"] = VCREAR_CLUSTERS
         return VCREAR_CLUSTERS
+    _load_generated_enums()
+    if name in globals():
+        return globals()[name]
     if name in _GENERATED_EXPORTS:
         _load_generated()
         return globals()[name]

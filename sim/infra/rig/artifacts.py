@@ -7,6 +7,7 @@ import pathlib
 import subprocess
 import sys
 import types
+from collections.abc import MutableMapping
 
 
 def repo_root() -> pathlib.Path:
@@ -57,4 +58,21 @@ def load_generated_module(
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
+    return module
+
+
+def load_generated_enums(
+    env_var: str,
+    target: str,
+    module_name: str,
+    namespace: MutableMapping[str, object],
+) -> types.ModuleType:
+    cached = namespace.get("_CAN_ENUMS")
+    if isinstance(cached, types.ModuleType):
+        return cached
+    module = load_generated_module(env_var, target, module_name)
+    for name, value in vars(module).items():
+        if isinstance(value, type) and hasattr(value, "__members__"):
+            namespace[name] = value
+    namespace["_CAN_ENUMS"] = module
     return module

@@ -1,4 +1,9 @@
-from sim.infra.rig import TimerInterface, extend_model_class, load_generated_module
+from sim.infra.rig import (
+    TimerInterface,
+    extend_model_class,
+    load_generated_enums,
+    load_generated_module,
+)
 
 from .simple import BmsbSimpleModel
 
@@ -12,11 +17,7 @@ def _load_generated() -> None:
         "//sim/models/controllers/bmsb:bmsb-py",
         "bmsb_generated_model",
     )
-    enums = load_generated_module(
-        "BMSB_ENUMS_PY",
-        "//sim/models/controllers/bmsb:enums-py",
-        "bmsb_generated_enums",
-    )
+    enums = _load_generated_enums()
 
     globals()["AnalogInput"] = enums.AnalogInput
     globals()["DigitalInput"] = enums.DigitalInput
@@ -32,6 +33,15 @@ def _load_generated() -> None:
     globals()["BmsbModel"] = BmsbModel
 
 
+def _load_generated_enums():
+    return load_generated_enums(
+        "BMSB_ENUMS_PY",
+        "//sim/models/controllers/bmsb:enums-py",
+        "bmsb_generated_enums",
+        globals(),
+    )
+
+
 def __getattr__(name: str):
     if name == "PLATFORM_VARIANTS":
         from sim.models.platforms import PLATFORM_VARIANTS
@@ -43,6 +53,9 @@ def __getattr__(name: str):
 
         globals()["BMSB_CLUSTERS"] = BMSB_CLUSTERS
         return BMSB_CLUSTERS
+    _load_generated_enums()
+    if name in globals():
+        return globals()[name]
     if name in _GENERATED_EXPORTS:
         _load_generated()
         return globals()[name]
