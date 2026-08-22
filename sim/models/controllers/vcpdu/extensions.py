@@ -120,7 +120,11 @@ class VcpduModelExtensions:
         return self.can.run_until_signals_eq(
             (
                 ("VCPDU_hsdDuty", self._hsd_duty_signal_name(hsd_channel), duty_cycle),
-                ("VCPDU_hsdCurrent1", self._hsd_current_signal_name(hsd_channel), current),
+                (
+                    "VCPDU_hsdCurrent1",
+                    self._hsd_current_signal_name(hsd_channel),
+                    current,
+                ),
             ),
             bus="veh",
             **kwargs,
@@ -138,7 +142,11 @@ class VcpduModelExtensions:
         return self.can.run_until_signals_gt(
             (
                 ("VCPDU_hsdDuty", self._hsd_duty_signal_name(hsd_channel), duty_cycle),
-                ("VCPDU_hsdCurrent1", self._hsd_current_signal_name(hsd_channel), current),
+                (
+                    "VCPDU_hsdCurrent1",
+                    self._hsd_current_signal_name(hsd_channel),
+                    current,
+                ),
             ),
             bus="veh",
             **kwargs,
@@ -237,10 +245,7 @@ class VcpduModelExtensions:
                 from . import HsdState, VehicleState
 
                 vehicle_state = node.latest_vehicle_state()
-                if (
-                    vehicle_state is None
-                    or vehicle_state == VehicleState.INIT
-                ):
+                if vehicle_state is None or vehicle_state == VehicleState.INIT:
                     return 0
 
                 state = node.can.latest_signal(

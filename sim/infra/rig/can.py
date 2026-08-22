@@ -483,7 +483,9 @@ class CanInterface:
         **kwargs,
     ) -> int:
         return self.run_until_signals_cmp(
-            tuple((*signal_comparison, comparison) for signal_comparison in comparisons),
+            tuple(
+                (*signal_comparison, comparison) for signal_comparison in comparisons
+            ),
             **kwargs,
         )
 
@@ -538,8 +540,7 @@ class CanInterface:
     def run_until_signals_cmp(
         self,
         comparisons: tuple[
-            tuple[str | CanMessageDescriptor, str, float | int | IntEnum, int],
-            ...
+            tuple[str | CanMessageDescriptor, str, float | int | IntEnum, int], ...
         ]
         | list[tuple[str | CanMessageDescriptor, str, float | int | IntEnum, int]],
         *,

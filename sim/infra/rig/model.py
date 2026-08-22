@@ -160,9 +160,7 @@ class ModelRig:
             send=send,
         )
 
-    def rust_datapath_route_abi(
-        self, path: DataPath
-    ) -> NativeRouteEndpoint | None:
+    def rust_datapath_route_abi(self, path: DataPath) -> NativeRouteEndpoint | None:
         scalar_abi = self._scalar_route_abis.get(datapath_key(path))
         if scalar_abi is not None:
             return ScalarRouteEndpoint(*scalar_abi)
@@ -239,7 +237,10 @@ class ComponentRig(ModelRig):
         restype: object = ctypes.c_bool,
     ):
         binder = None
-        if self._cluster_rig is not None and self._cluster_rig._rust_runtime is not None:
+        if (
+            self._cluster_rig is not None
+            and self._cluster_rig._rust_runtime is not None
+        ):
             binder = self._cluster_rig._rust_runtime.bind_symbol
         if binder is None:
             owner = getattr(self, "_owner", None)

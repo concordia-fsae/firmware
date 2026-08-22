@@ -120,12 +120,15 @@ def test_time_conversion_and_run_until_cover_success_and_timeout():
         duration_to_ns(1, unit="minutes")
 
     elapsed = []
-    assert run_until(
-        lambda delta: elapsed.append(delta),
-        lambda: sum(elapsed) >= 5,
-        timeout_ns=10,
-        step_ns=3,
-    ) == 6
+    assert (
+        run_until(
+            lambda delta: elapsed.append(delta),
+            lambda: sum(elapsed) >= 5,
+            timeout_ns=10,
+            step_ns=3,
+        )
+        == 6
+    )
     with pytest.raises(RunUntilTimeout, match="deadline"):
         run_until(lambda _delta: None, lambda: False, timeout_ns=2, message="deadline")
 
@@ -350,7 +353,9 @@ def test_spi_interface_coerces_devices_and_exercises_batch_io():
     path = interface.transactions(3)
     peripheral = SpiPeripheralInterface(model)
     assert peripheral.supports(path)
-    transaction = SpiTransaction.from_payload(3, tx_payload=[1, 2], rx_payload=b"r", timestamp_ns=9)
+    transaction = SpiTransaction.from_payload(
+        3, tx_payload=[1, 2], rx_payload=b"r", timestamp_ns=9
+    )
     assert transaction.tx_payload == b"\x01\x02"
     assert transaction.rx_payload == b"r"
     assert peripheral.send_payload(path, transaction)
@@ -379,7 +384,10 @@ def test_timer_interface_coerces_channels_and_exercises_batch_io():
     assert peripheral.recv_many(path, 2)[0].value == pytest.approx(0.5)
     assert peripheral.recv_many(path, 0) == ()
     assert peripheral.output_count(path) == 3
-    assert interface.frequency_events(1, 2).peripheral_binding.interface == PeripheralInterface.TIMER_FREQUENCY
+    assert (
+        interface.frequency_events(1, 2).peripheral_binding.interface
+        == PeripheralInterface.TIMER_FREQUENCY
+    )
     with pytest.raises(ValueError, match="valid timer channel"):
         interface.duty_events(1, 99)
     with pytest.raises(TypeError, match="TimerChannelEvent"):

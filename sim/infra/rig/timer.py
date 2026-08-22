@@ -26,12 +26,27 @@ class TimerRouteEndpoint:
         return None
 
     def compatible_with(self, sink: object) -> bool:
-        return isinstance(sink, TimerRouteEndpoint) and (self.interface, self.port, self.channel) == (sink.interface, sink.port, sink.channel)
+        return isinstance(sink, TimerRouteEndpoint) and (
+            self.interface,
+            self.port,
+            self.channel,
+        ) == (sink.interface, sink.port, sink.channel)
 
-    def connect(self, runtime: object, *, source_node: str, sink_node: str, sink: object) -> bool:
+    def connect(
+        self, runtime: object, *, source_node: str, sink_node: str, sink: object
+    ) -> bool:
         if not isinstance(sink, TimerRouteEndpoint) or not self.compatible_with(sink):
             return False
-        return runtime.add_timer_route(source_node=source_node, interface=self.interface, port=self.port, channel=self.channel, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_send_many=sink.send_many)
+        return runtime.add_timer_route(
+            source_node=source_node,
+            interface=self.interface,
+            port=self.port,
+            channel=self.channel,
+            source_count=self.count,
+            source_recv_many=self.recv_many,
+            sink_node=sink_node,
+            sink_send_many=sink.send_many,
+        )
 
 
 class TimerChannelEvent(ctypes.Structure):

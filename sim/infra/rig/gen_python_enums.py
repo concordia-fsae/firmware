@@ -13,7 +13,6 @@ RUST_ENUM_RE = re.compile(r"pub\s+enum\s+(\w+)\s*\{(?P<body>.*?)\n\}", re.DOTALL
 RUST_MEMBER_RE = re.compile(r"^\s*(\w+)(?:\s*=\s*(-?\d+))?,", re.MULTILINE)
 
 
-
 def camel_to_screaming(name: str) -> str:
     words = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     words = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", words)

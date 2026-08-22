@@ -4,7 +4,6 @@ import ctypes
 from dataclasses import dataclass
 
 
-
 class ScalarEvent(ctypes.Structure):
     """Canonical scalar event ABI shared by model callbacks and the runtime."""
 
@@ -26,17 +25,60 @@ class ScalarRouteEndpoint:
         return self.route_id
 
     def compatible_with(self, sink: object) -> bool:
-        return isinstance(sink, (ScalarRouteEndpoint, ScalarSinkRouteEndpoint, ScalarStateSinkRouteEndpoint, ScalarInputRouteEndpoint))
+        return isinstance(
+            sink,
+            (
+                ScalarRouteEndpoint,
+                ScalarSinkRouteEndpoint,
+                ScalarStateSinkRouteEndpoint,
+                ScalarInputRouteEndpoint,
+            ),
+        )
 
-    def connect(self, runtime: object, *, source_node: str, sink_node: str, sink: object) -> bool:
+    def connect(
+        self, runtime: object, *, source_node: str, sink_node: str, sink: object
+    ) -> bool:
         if isinstance(sink, ScalarInputRouteEndpoint):
-            return runtime.add_scalar_input_route(source_node=source_node, source_route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_route_id=sink.route_id)
+            return runtime.add_scalar_input_route(
+                source_node=source_node,
+                source_route_id=self.route_id,
+                source_count=self.count,
+                source_recv_many=self.recv_many,
+                sink_node=sink_node,
+                sink_route_id=sink.route_id,
+            )
         if isinstance(sink, ScalarStateSinkRouteEndpoint):
-            return runtime.add_scalar_state_route(source_node=source_node, route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_route_id=sink.route_id, sink_id=sink.sink_id, value_scale=sink.value_scale, set_value=sink.set_value)
+            return runtime.add_scalar_state_route(
+                source_node=source_node,
+                route_id=self.route_id,
+                source_count=self.count,
+                source_recv_many=self.recv_many,
+                sink_node=sink_node,
+                sink_route_id=sink.route_id,
+                sink_id=sink.sink_id,
+                value_scale=sink.value_scale,
+                set_value=sink.set_value,
+            )
         if isinstance(sink, ScalarSinkRouteEndpoint):
-            return self.route_id == sink.route_id and runtime.add_scalar_sink_route(source_node=source_node, route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_id=sink.sink_id, value_scale=sink.value_scale, set_value=sink.set_value)
+            return self.route_id == sink.route_id and runtime.add_scalar_sink_route(
+                source_node=source_node,
+                route_id=self.route_id,
+                source_count=self.count,
+                source_recv_many=self.recv_many,
+                sink_node=sink_node,
+                sink_id=sink.sink_id,
+                value_scale=sink.value_scale,
+                set_value=sink.set_value,
+            )
         if isinstance(sink, ScalarRouteEndpoint):
-            return self.route_id == sink.route_id and runtime.add_scalar_route(source_node=source_node, route_id=self.route_id, source_count=self.count, source_recv_many=self.recv_many, sink_node=sink_node, sink_send_many=sink.send_many)
+            return self.route_id == sink.route_id and runtime.add_scalar_route(
+                source_node=source_node,
+                route_id=self.route_id,
+                source_count=self.count,
+                source_recv_many=self.recv_many,
+                sink_node=sink_node,
+                sink_send_many=sink.send_many,
+            )
         return False
 
 

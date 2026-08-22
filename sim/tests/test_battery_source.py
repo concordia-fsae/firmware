@@ -200,8 +200,7 @@ def test_battery_source_two_rc_branches_settle_at_100_hz():
     cluster.run_for(10)
     first_voltage = battery.voltage
     expected_first_voltage = 12.0 - 6.0 * (
-        0.1 * (1.0 - math.exp(-0.009 / 0.1))
-        + 0.2 * (1.0 - math.exp(-0.009 / 0.4))
+        0.1 * (1.0 - math.exp(-0.009 / 0.1)) + 0.2 * (1.0 - math.exp(-0.009 / 0.4))
     )
     assert first_voltage == pytest.approx(expected_first_voltage, abs=0.002)
 

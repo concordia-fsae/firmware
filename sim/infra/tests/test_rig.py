@@ -420,12 +420,10 @@ def test_can_node_connections_use_generated_common_bus_names_only():
 
     assert received_payloads == [("veh", "veh-packet")]
     assert [
-        record.path
-        for record in cluster.dataroutes.records(ClusterCanComms.path(veh))
+        record.path for record in cluster.dataroutes.records(ClusterCanComms.path(veh))
     ] == [ClusterCanComms.path(veh)]
     assert [
-        record.path
-        for record in cluster.dataroutes.records(ClusterCanComms.path(nose))
+        record.path for record in cluster.dataroutes.records(ClusterCanComms.path(nose))
     ] == [ClusterCanComms.path(nose)]
 
 

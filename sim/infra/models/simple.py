@@ -297,7 +297,10 @@ class SimpleCanComponent(SimpleComponent):
         **signals: float | int | IntEnum,
     ) -> PeriodicCanMessage:
         descriptor = self._message_descriptor(message, bus=bus)
-        if DataPath.can_bus(self._encoder.bus(descriptor.bus)) not in self.egress_datapaths:
+        if (
+            DataPath.can_bus(self._encoder.bus(descriptor.bus))
+            not in self.egress_datapaths
+        ):
             raise ValueError(
                 f"simple CAN model is not configured for bus {descriptor.bus_name!r}"
             )

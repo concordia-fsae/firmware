@@ -46,9 +46,7 @@ class ClusterDataRoutes:
         self._paths: dict[DataPathKey, DataPath] = {}
         self._links: list[DataPathLink] = []
         self._route_cache: dict[DataPathKey, tuple[_DataPathRoute, ...]] = {}
-        self._latest_records: dict[
-            tuple[str, DataPathKey], DataPathRecord[object]
-        ] = {}
+        self._latest_records: dict[tuple[str, DataPathKey], DataPathRecord[object]] = {}
         self._native_routes: set[tuple[DataPathKey, str, str]] = set()
         self._native_route_abi_cache: dict[
             tuple[str, DataPathKey], NativeRouteEndpoint | None
@@ -220,11 +218,7 @@ class ClusterDataRoutes:
                 dependencies[after_key].add(before_key)
                 dependents[before_key].add(after_key)
 
-        ready = [
-            key
-            for key in path_by_key
-            if not dependencies[key]
-        ]
+        ready = [key for key in path_by_key if not dependencies[key]]
         queued = set(ready)
         ordered: list[DataPathKey] = []
         while ready:
@@ -244,9 +238,7 @@ class ClusterDataRoutes:
                     queued.add(dependent)
 
         if len(ordered) != len(path_by_key):
-            cyclic = ", ".join(
-                repr(key) for key, deps in dependencies.items() if deps
-            )
+            cyclic = ", ".join(repr(key) for key, deps in dependencies.items() if deps)
             raise ValueError(f"datapath route graph contains a cycle: {cyclic}")
 
         return tuple(path_by_key[key] for key in ordered)
