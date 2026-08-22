@@ -204,7 +204,9 @@ class BatterySourceModel(ComponentRig):
         node_index = self._cluster_rig._rust_runtime.node_index(self._cluster_node_name)
         if node_index is None or not register(
             ctypes.c_uint32(node_index),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.terminal_voltage_output_channel))),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.terminal_voltage_output_channel))
+            ),
             ctypes.c_uint32(
                 0
                 if self.contactor_state_input_channel is None
