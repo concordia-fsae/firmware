@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from sim.infra.rig import ClusterCatalog, ClusterSpec
+from sim.models.controllers.bmsb.variants import bmsb_node
 from sim.models.controllers.vcfront.variants import vcfront_node
 from sim.models.controllers.vcpdu import Tps2hb16abIc, Tps2hb16abOutput, VcpduModel
 from sim.models.controllers.vcpdu.variants import vcpdu_node
 from sim.models.controllers.vcrear.variants import vcrear_node
+from sim.models.components.drivetrain import DrivetrainModel
 from sim.models.platforms import PLATFORM_VARIANTS
 
 
@@ -19,6 +21,7 @@ def vehicle_cluster_spec(hardware: str) -> ClusterSpec:
         name=f"{hardware}-vc-cluster",
         hardware=hardware,
         nodes=(
+            bmsb_node(hardware, include_drivetrain=True),
             vcfront_node(hardware, power_input=vcfront_power),
             vcpdu_node(
                 hardware,
@@ -27,7 +30,13 @@ def vehicle_cluster_spec(hardware: str) -> ClusterSpec:
                     vcrear_power,
                 ),
             ),
-            vcrear_node(hardware, power_input=vcrear_power),
+            vcrear_node(
+                hardware,
+                power_input=vcrear_power,
+                drivetrain_output=DrivetrainModel.torque_request_input_channel(
+                    "vehicle"
+                ),
+            ),
         ),
     )
 

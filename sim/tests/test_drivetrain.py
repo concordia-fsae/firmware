@@ -13,6 +13,7 @@ def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):
     torque_path = DataPath.component(object(), "torque_request")
     mechanical_torque_path = DataPath.component(object(), "mechanical_torque")
     current_path = DataPath.component(object(), "current_draw")
+    voltage_feedback_path = DataPath.component(object(), "bus_voltage")
 
     torque_source = ScalarSourceModel(torque_path)
     torque_source.values.append(torque)
@@ -26,6 +27,7 @@ def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):
     )
     drivetrain = DrivetrainModel(
         terminal_voltage_input_channel=voltage_path,
+        bus_voltage_output_channel=voltage_feedback_path,
         torque_request_input_channel=torque_path,
         mechanical_torque_output_channel=mechanical_torque_path,
         current_draw_output_channel=current_path,
@@ -33,19 +35,26 @@ def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):
     )
     torque_sink = InputTriggeredScalarSink(mechanical_torque_path)
     current_sink = InputTriggeredScalarSink(current_path)
+    voltage_feedback_sink = InputTriggeredScalarSink(voltage_feedback_path)
     cluster = ClusterRig(
         battery=battery,
         request=torque_source,
         drivetrain=drivetrain,
         torque=torque_sink,
         current=current_sink,
+        voltage_feedback=voltage_feedback_sink,
     )
     cluster.run_for(20)
-    return battery, torque_sink.values, current_sink.values
+    return (
+        battery,
+        torque_sink.values,
+        current_sink.values,
+        voltage_feedback_sink.values,
+    )
 
 
 def test_drivetrain_converts_terminal_voltage_and_torque_to_current_and_mechanical_torque():
-    battery, torque, current = _run_drivetrain(
+    battery, torque, current, voltage_feedback = _run_drivetrain(
         voltage=350.0,
         torque=100.0,
         spec=DrivetrainSpec(
@@ -57,10 +66,11 @@ def test_drivetrain_converts_terminal_voltage_and_torque_to_current_and_mechanic
     assert torque[-1] == pytest.approx(100.0)
     assert current[-1] == pytest.approx(100.0)
     assert battery.voltage == pytest.approx(340.0, abs=0.1)
+    assert voltage_feedback[-1] == pytest.approx(340.0, abs=0.1)
 
 
 def test_drivetrain_preserves_torque_direction_and_limits_power():
-    battery, torque, current = _run_drivetrain(
+    battery, torque, current, _ = _run_drivetrain(
         voltage=100.0,
         torque=-100.0,
         spec=DrivetrainSpec(

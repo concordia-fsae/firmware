@@ -95,3 +95,22 @@ class BmsbSimpleModel(SimpleNodeRig):
             enum_defaults={"digitalStatus": "OFF"},
             **signals,
         )
+
+
+class BmsbDrivetrainSimpleModel(SimpleNodeRig):
+    """PM100 CAN feedback source driven by the simulated drivetrain voltage."""
+
+    def __init__(
+        self,
+        can: CanInterface,
+        *,
+        terminal_voltage: float = 350.0,
+        period: int | float = 10,
+    ) -> None:
+        self.can_component = SimpleCanComponent(can)
+        self.pm_critical_data = self.can_component.periodic_send(
+            "PM100DX_criticalData",
+            period=period,
+            PM100DX_tractiveSystemVoltage=terminal_voltage,
+        )
+        super().__init__(self.can_component)

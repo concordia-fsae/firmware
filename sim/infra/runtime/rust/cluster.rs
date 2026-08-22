@@ -298,7 +298,12 @@ impl ClusterRuntime {
         count as u32
     }
 
-    fn latest_can_message(&self, source_node: u32, bus: u8, message_id: u32) -> Option<CanEvent> {
+    pub(crate) fn latest_can_message(
+        &self,
+        source_node: u32,
+        bus: u8,
+        message_id: u32,
+    ) -> Option<CanEvent> {
         self.interfaces
             .latest_can_message(source_node, bus, message_id)
     }
@@ -307,7 +312,7 @@ impl ClusterRuntime {
         self.interfaces.latest_can_event(source_node, bus)
     }
 
-    fn latest_can_signal(
+    pub(crate) fn latest_can_signal(
         &self,
         source_node: u32,
         bus: u8,

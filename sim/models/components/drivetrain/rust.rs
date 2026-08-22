@@ -2,18 +2,40 @@ use std::sync::Arc;
 use std::sync::{LazyLock, Mutex};
 
 use super::algorithms;
+use super::can::CanPacket;
 use super::cluster::{self, ClusterRuntime};
 use super::dataflow::{DataflowAlgorithm, DataflowAlgorithmExecutor};
 use super::registry::RuntimeInterfaces;
 use super::scalar::{self, ScalarEvent};
 
 static DRIVETRAINS: LazyLock<Mutex<Vec<Drivetrain>>> = LazyLock::new(|| Mutex::new(Vec::new()));
+static CAN_SCALAR_SOURCES: LazyLock<Mutex<Vec<CanScalarSource>>> =
+    LazyLock::new(|| Mutex::new(Vec::new()));
+
+type CanDecodeSignal = unsafe extern "C" fn(
+    u8,
+    *const CanPacket,
+    *const std::ffi::c_char,
+    *mut f64,
+) -> bool;
+
+struct CanScalarSource {
+    output_node: u32,
+    can_node: u32,
+    output_route_id: u32,
+    bus: u8,
+    message_id: u32,
+    signal_name: std::ffi::CString,
+    decode_signal: CanDecodeSignal,
+    last_value: Option<f64>,
+}
 
 #[derive(Clone, Copy)]
 struct Drivetrain {
     node: u32,
     voltage_route_id: u32,
     torque_request_route_id: u32,
+    bus_voltage_output_route_id: Option<u32>,
     torque_output_route_id: u32,
     current_output_route_id: u32,
     max_torque_nm: f32,
@@ -29,6 +51,7 @@ struct Drivetrain {
     torque_dirty: bool,
     pending_torque: bool,
     pending_current: bool,
+    pending_voltage: bool,
 }
 
 impl Drivetrain {
@@ -41,11 +64,13 @@ impl Drivetrain {
         self.torque_dirty = false;
         self.pending_torque = false;
         self.pending_current = false;
+        self.pending_voltage = false;
     }
 
     fn update_voltage(&mut self, event: ScalarEvent) {
         self.voltage = event.value.max(0.0);
         self.voltage_dirty = true;
+        self.pending_voltage = true;
     }
 
     fn update_torque_request(&mut self, event: ScalarEvent) {
@@ -84,10 +109,123 @@ impl Drivetrain {
             timestamp_ns: elapsed_ns,
         })
     }
+
+    fn take_voltage_output(&mut self, elapsed_ns: u64) -> Option<ScalarEvent> {
+        if !self.pending_voltage {
+            return None;
+        }
+        self.pending_voltage = false;
+        Some(ScalarEvent {
+            value: self.voltage,
+            timestamp_ns: elapsed_ns,
+        })
+    }
 }
 
 fn reset_runtime() {
     DRIVETRAINS.lock().unwrap().clear();
+    CAN_SCALAR_SOURCES.lock().unwrap().clear();
+}
+
+fn reset_can_scalar_source(context: usize, _elapsed_ns: u64) {
+    if let Some(source) = CAN_SCALAR_SOURCES.lock().unwrap().get_mut(context) {
+        source.last_value = None;
+    }
+}
+
+struct CanScalarSourceAlgorithm { index: usize }
+
+fn latest_can_scalar_value(runtime: &ClusterRuntime, source: &CanScalarSource) -> Option<f64> {
+    let event = runtime.latest_can_message(source.can_node, source.bus, source.message_id)?;
+    let mut value = 0.0;
+    if unsafe {
+        (source.decode_signal)(
+            source.bus,
+            &event.packet,
+            source.signal_name.as_ptr(),
+            &mut value,
+        )
+    } {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+impl DataflowAlgorithmExecutor for CanScalarSourceAlgorithm {
+    fn polls_pending(&self) -> bool { true }
+
+    fn pending(&self, runtime: &ClusterRuntime) -> bool {
+        let sources = CAN_SCALAR_SOURCES.lock().unwrap();
+        let Some(source) = sources.get(self.index) else { return false };
+        latest_can_scalar_value(runtime, source)
+            .is_some_and(|value| source.last_value != Some(value))
+    }
+
+    fn run(&self, runtime: &mut ClusterRuntime) -> bool {
+        let mut sources = CAN_SCALAR_SOURCES.lock().unwrap();
+        let Some(source) = sources.get_mut(self.index) else { return false };
+        let Some(value) = latest_can_scalar_value(runtime, source) else { return false };
+        source.last_value = Some(value);
+        let result = runtime.interfaces.scalar.route_event(
+            source.output_node,
+            source.output_route_id,
+            ScalarEvent {
+                value: value as f32,
+                timestamp_ns: runtime.elapsed_ns,
+            },
+        );
+        scalar::apply_route_result(runtime, result);
+        true
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn register_can_scalar_source(
+    runtime: &mut ClusterRuntime,
+    output_node: u32,
+    can_node: u32,
+    output_route_id: u32,
+    bus: u8,
+    message_id: u32,
+    signal_name: String,
+    decode_signal: CanDecodeSignal,
+    period_ns: u64,
+) -> bool {
+    if !runtime.node_exists(output_node) || !runtime.node_exists(can_node) || period_ns == 0 {
+        return false;
+    }
+    let Ok(signal_name) = std::ffi::CString::new(signal_name) else {
+        return false;
+    };
+    let mut sources = CAN_SCALAR_SOURCES.lock().unwrap();
+    let index = sources.len();
+    sources.push(CanScalarSource {
+        output_node,
+        can_node,
+        output_route_id,
+        bus,
+        message_id,
+        signal_name,
+        decode_signal,
+        last_value: None,
+    });
+    let algorithm = DataflowAlgorithm::periodic_source(
+        output_node,
+        (output_node, 10, index),
+        vec![RuntimeInterfaces::scalar_edge(output_node, output_route_id)],
+        Arc::new(CanScalarSourceAlgorithm { index }),
+        period_ns,
+        runtime.elapsed_ns.saturating_add(period_ns),
+    )
+    .with_runtime_reset(reset_runtime)
+    .with_node_reset(output_node, index, reset_can_scalar_source);
+    if algorithms::register_algorithm(runtime, algorithm) {
+        true
+    } else {
+        sources.pop();
+        false
+    }
 }
 
 fn reset_drivetrain(context: usize, elapsed_ns: u64) {
@@ -133,12 +271,18 @@ impl DataflowAlgorithmExecutor for DrivetrainAlgorithm {
         let node = drivetrain.node;
         let torque_route = drivetrain.torque_output_route_id;
         let current_route = drivetrain.current_output_route_id;
+        let voltage_route = drivetrain.bus_voltage_output_route_id;
         let torque = drivetrain.take_output(true, runtime.elapsed_ns);
         let current = drivetrain.take_output(false, runtime.elapsed_ns);
+        let voltage = voltage_route
+            .and_then(|_| drivetrain.take_voltage_output(runtime.elapsed_ns));
         drop(drivetrains);
         if let Some(event) = torque { scalar::route_native_event(runtime, node, torque_route, event); }
         if let Some(event) = current { scalar::route_native_event(runtime, node, current_route, event); }
-        torque.is_some() || current.is_some()
+        if let (Some(route), Some(event)) = (voltage_route, voltage) {
+            scalar::route_native_event(runtime, node, route, event);
+        }
+        torque.is_some() || current.is_some() || voltage.is_some()
     }
 }
 
@@ -148,6 +292,13 @@ fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
     let index = drivetrains.len();
     drivetrains.push(drivetrain);
     drop(drivetrains);
+    let mut output_edges = vec![
+        RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_output_route_id),
+        RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.current_output_route_id),
+    ];
+    if let Some(route_id) = drivetrain.bus_voltage_output_route_id {
+        output_edges.push(RuntimeInterfaces::scalar_edge(drivetrain.node, route_id));
+    }
     let algorithm = DataflowAlgorithm::periodic_transform(
         drivetrain.node,
         (drivetrain.node, 9, index),
@@ -155,10 +306,7 @@ fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
             RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.voltage_route_id),
             RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_request_route_id),
         ],
-        vec![
-            RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.torque_output_route_id),
-            RuntimeInterfaces::scalar_edge(drivetrain.node, drivetrain.current_output_route_id),
-        ],
+        output_edges,
         Arc::new(DrivetrainAlgorithm { index }),
         drivetrain.period_ns,
         runtime.elapsed_ns.saturating_add(drivetrain.period_ns),
@@ -179,6 +327,7 @@ fn register(runtime: &mut ClusterRuntime, drivetrain: Drivetrain) -> bool {
 pub extern "C" fn rig_model_register_drivetrain(
     node: u32, voltage_route_id: u32, torque_request_route_id: u32,
     torque_output_route_id: u32, current_output_route_id: u32,
+    bus_voltage_output_route_id: u32, has_bus_voltage_output: u8,
     max_torque_nm: f32, torque_constant_nm_per_amp: f32, efficiency: f32,
     max_power_w: f32, period_ns: u64,
 ) -> bool {
@@ -188,9 +337,45 @@ pub extern "C" fn rig_model_register_drivetrain(
         || max_power_w.is_nan() || max_power_w <= 0.0 || period_ns == 0 { return false; }
     cluster::with_runtime(|runtime| register(runtime, Drivetrain {
         node, voltage_route_id, torque_request_route_id, torque_output_route_id,
+        bus_voltage_output_route_id: (has_bus_voltage_output != 0)
+            .then_some(bus_voltage_output_route_id),
         current_output_route_id, max_torque_nm, torque_constant_nm_per_amp,
         efficiency, max_power_w, period_ns, voltage: 0.0, torque_request: 0.0,
         mechanical_torque: 0.0, current_draw: 0.0, voltage_dirty: false,
         torque_dirty: false, pending_torque: false, pending_current: false,
+        pending_voltage: false,
     }))
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_model_register_can_scalar_source(
+    output_node: u32,
+    can_node: u32,
+    output_route_id: u32,
+    bus: u8,
+    message_id: u32,
+    signal_name: *const std::ffi::c_char,
+    decode_signal: usize,
+    period_ns: u64,
+) -> bool {
+    if signal_name.is_null() || decode_signal == 0 {
+        return false;
+    }
+    let Ok(signal_name) = unsafe { std::ffi::CStr::from_ptr(signal_name) }.to_str() else {
+        return false;
+    };
+    cluster::with_runtime(|runtime| {
+        let decode_signal = unsafe { std::mem::transmute::<usize, CanDecodeSignal>(decode_signal) };
+        register_can_scalar_source(
+            runtime,
+            output_node,
+            can_node,
+            output_route_id,
+            bus,
+            message_id,
+            signal_name.to_owned(),
+            decode_signal,
+            period_ns,
+        )
+    })
 }
