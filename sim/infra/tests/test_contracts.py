@@ -394,7 +394,9 @@ def test_timer_interface_coerces_channels_and_exercises_batch_io():
         == PeripheralInterface.TIMER_FREQUENCY
     )
     capture_path = interface.capture_events(2)
-    assert capture_path.peripheral_binding.interface == PeripheralInterface.TIMER_CAPTURE
+    assert (
+        capture_path.peripheral_binding.interface == PeripheralInterface.TIMER_CAPTURE
+    )
     assert peripheral.send(capture_path, value=0.0, timestamp_ns=7)
     capture = TimerCaptureEvent(channel=2, value=0.0, timestamp_ns=8)
     assert peripheral.send_payload(capture_path, capture)

@@ -24,9 +24,7 @@ def bmsb_node(
         "vehicle"
     )
     current_drains = (
-        (load_current, drivetrain_current)
-        if include_drivetrain
-        else (load_current,)
+        (load_current, drivetrain_current) if include_drivetrain else (load_current,)
     )
     components = [
         BatterySourceModel.spec(
@@ -37,11 +35,15 @@ def bmsb_node(
             ),
             current_drain_channels=current_drains,
             bindings=(
-                *(() if include_drivetrain else (
-                    BatterySourceModel.terminal_voltage_output.bind_to(
-                        BmsbModelExtensions.pack_voltage_input()
-                    ),
-                )),
+                *(
+                    ()
+                    if include_drivetrain
+                    else (
+                        BatterySourceModel.terminal_voltage_output.bind_to(
+                            BmsbModelExtensions.pack_voltage_input()
+                        ),
+                    )
+                ),
             ),
         ),
     ]

@@ -142,7 +142,9 @@ class TimerPeripheralInterface:
         binding = require_peripheral_binding(path)
         if binding.interface == self._TIMER_CAPTURE:
             event = TimerCaptureEvent()
-            event.channel = int(binding.channel if binding.channel is not None else channel)
+            event.channel = int(
+                binding.channel if binding.channel is not None else channel
+            )
             event.value = float(value)
             event.timestamp_ns = int(timestamp_ns)
             return bool(self._model._timer_send_capture(event))

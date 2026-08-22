@@ -80,15 +80,19 @@ class DrivetrainCanCommand(ComponentRig):
                 owner._cluster_node_name
             )
             period_ns = round(self.scheduler_period_ms * 1_000_000)
-            if output_node is None or can_node is None or not register(
-                output_node,
-                can_node,
-                datapath_route_id(datapath_key(path)),
-                message.bus,
-                message.id,
-                self.signal_name.encode(),
-                ctypes.c_size_t(owner._function_address(owner._decode_can_signal)),
-                ctypes.c_uint64(period_ns),
+            if (
+                output_node is None
+                or can_node is None
+                or not register(
+                    output_node,
+                    can_node,
+                    datapath_route_id(datapath_key(path)),
+                    message.bus,
+                    message.id,
+                    self.signal_name.encode(),
+                    ctypes.c_size_t(owner._function_address(owner._decode_can_signal)),
+                    ctypes.c_uint64(period_ns),
+                )
             ):
                 raise RuntimeError("failed to register drivetrain CAN command")
             self._native_registered = True
@@ -281,10 +285,18 @@ class DrivetrainModel(ComponentRig):
         node = self._cluster_rig._rust_runtime.node_index(self._cluster_node_name)
         if node is None or not register(
             ctypes.c_uint32(node),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.terminal_voltage_input_channel))),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.torque_request_input_channel))),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.mechanical_torque_output_channel))),
-            ctypes.c_uint32(datapath_route_id(datapath_key(self.current_draw_output_channel))),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.terminal_voltage_input_channel))
+            ),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.torque_request_input_channel))
+            ),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.mechanical_torque_output_channel))
+            ),
+            ctypes.c_uint32(
+                datapath_route_id(datapath_key(self.current_draw_output_channel))
+            ),
             ctypes.c_uint32(
                 datapath_route_id(datapath_key(self.bus_voltage_output_channel))
                 if self.bus_voltage_output_channel is not None

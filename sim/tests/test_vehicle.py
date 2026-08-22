@@ -93,9 +93,7 @@ def test_vehicle_drivetrain_only_outputs_torque_in_ts_run(vehicle_cluster):
     vcfront = vehicle_cluster.vcfront
 
     _configure_vehicle_bmsb(bmsb)
-    run_request, torque_sink = (
-        _add_vehicle_test_inputs(vehicle_cluster)
-    )
+    run_request, torque_sink = _add_vehicle_test_inputs(vehicle_cluster)
     vehicle_cluster.run_for(750)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
     _assert_no_torque(vehicle_cluster, torque_sink)

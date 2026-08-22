@@ -206,6 +206,7 @@ def test_zero_vehicle_and_wheel_speed_preserves_torque_request_in_ts_run(
     assert debug.VCFRONT_torqueDriverInput > 0
     assert vcfront.latest_torque_request() > 0
 
+
 @pytest.mark.parametrize(
     "apps1_position,apps2_position",
     [

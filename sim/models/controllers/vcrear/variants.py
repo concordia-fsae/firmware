@@ -19,12 +19,16 @@ def vcrear_node(
     drivetrain_output: object | None = None,
 ) -> NodeSpec:
     components = (
-        DrivetrainModel.can_command_spec(
-            output_channel=drivetrain_output,
-            message_name="VCREAR_mcCommand",
-            signal_name="VCREAR_torqueCommand",
-        ),
-    ) if drivetrain_output is not None else ()
+        (
+            DrivetrainModel.can_command_spec(
+                output_channel=drivetrain_output,
+                message_name="VCREAR_mcCommand",
+                signal_name="VCREAR_torqueCommand",
+            ),
+        )
+        if drivetrain_output is not None
+        else ()
+    )
     return NodeSpec(
         "vcrear",
         VcrearModel,

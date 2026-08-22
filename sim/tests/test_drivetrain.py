@@ -45,7 +45,12 @@ def _run_drivetrain(*, voltage: float, torque: float, spec: DrivetrainSpec):
         voltage_feedback=voltage_feedback_sink,
     )
     cluster.run_for(20)
-    return battery, torque_sink.values, current_sink.values, voltage_feedback_sink.values
+    return (
+        battery,
+        torque_sink.values,
+        current_sink.values,
+        voltage_feedback_sink.values,
+    )
 
 
 def test_drivetrain_converts_terminal_voltage_and_torque_to_current_and_mechanical_torque():
