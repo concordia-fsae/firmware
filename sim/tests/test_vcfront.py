@@ -25,7 +25,7 @@ def test_brake_pedal_faults(vcfront_cluster, brake_pressure_voltage):
     vcfront = vcfront_cluster.vcfront
     message = vcfront.can.tx_message("VCFRONT_pedalPosition", bus="veh")
     vcfront.set_analog_input(AnalogInput.BR_PR, brake_pressure_voltage)
-    vcfront_cluster.run_for(20)
+    vcfront_cluster.run_for(20, step=10)
 
     faulted = vcfront.get_fault(Fault.BRAKE_SENSOR)
     assert faulted, (
@@ -60,7 +60,7 @@ def test_apps_pedal_faults(vcfront_cluster, channel, fault, voltage):
     vcfront = vcfront_cluster.vcfront
     message = vcfront.can.tx_message("VCFRONT_pedalPosition", bus="veh")
     vcfront.set_analog_input(channel, voltage)
-    vcfront_cluster.run_for(20)
+    vcfront_cluster.run_for(20, step=10)
 
     faulted = vcfront.get_fault(fault)
     assert faulted, f"expected {fault.name} for {channel.name} voltage={voltage:.3f}"
@@ -89,7 +89,7 @@ def test_pedal_position_sensors_report_on_can(
     vcfront = vcfront_cluster.vcfront
     vcfront.set_accelerator_position(accelerator_position)
     vcfront.set_brake_position(brake_position)
-    vcfront_cluster.run_for(20)
+    vcfront_cluster.run_for(20, step=10)
 
     signals = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert signals is not None
@@ -119,11 +119,11 @@ def test_torque_request_stays_zero_when_accelerator_is_pressed_outside_ts_run(
 
     vcfront.set_brake_position(0)
     vcfront.set_accelerator_position(0)
-    vcfront_cluster.run_for(30)
+    vcfront_cluster.run_for(30, step=10)
 
     vcfront.set_accelerator_position(50)
     vehicle_state_periodic.set(VCPDU_vehicleState=state)
-    vcfront_cluster.run_for(100)
+    vcfront_cluster.run_for(100, step=10)
 
     torque = vcfront.can.latest("VCFRONT_torqueManager", bus="veh")
     debug = vcfront.can.latest("VCFRONT_tractionControlDebug", bus="veh")
@@ -144,7 +144,7 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
     vcfront_cluster.run_until(
         lambda: vcfront.latest_torque_request() == 0,
         timeout=500,
-        step=20,
+        step=10,
         message="VCFRONT torque request should start at zero in TS_RUN",
     )
 
@@ -152,7 +152,7 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
     vcfront_cluster.run_until(
         lambda: _positive(vcfront.latest_torque_request()),
         timeout=500,
-        step=20,
+        step=10,
         message="VCFRONT torque request should become non-zero when accelerator is pressed in TS_RUN",
     )
 
@@ -160,7 +160,7 @@ def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
     vcfront_cluster.run_until(
         lambda: vcfront.latest_torque_request() == 0,
         timeout=500,
-        step=20,
+        step=10,
         message="VCFRONT torque request should return to zero when accelerator is released",
     )
 
@@ -185,13 +185,13 @@ def test_zero_vehicle_and_wheel_speed_preserves_torque_request_in_ts_run(
     vcfront_cluster.run_until(
         lambda: vcfront.latest_torque_request() == 0,
         timeout=500,
-        step=20,
+        step=10,
         message="VCFRONT torque request should start at zero in TS_RUN",
     )
     vcfront.set_brake_position(100)
-    vcfront_cluster.run_for(100)
+    vcfront_cluster.run_for(100, step=10)
     driver_request.set(SWS_requestRaceMode=DigitalStatus.ON)
-    vcfront_cluster.run_for(100)
+    vcfront_cluster.run_for(100, step=10)
     vcfront.set_brake_position(0)
     for channel in (TimerChannel._1, TimerChannel._2):
         vcfront._timer_peripherals.send(
@@ -199,7 +199,7 @@ def test_zero_vehicle_and_wheel_speed_preserves_torque_request_in_ts_run(
             value=0.0,
         )
     vcfront.set_accelerator_position(50)
-    vcfront_cluster.run_for(200)
+    vcfront_cluster.run_for(200, step=10)
 
     debug = vcfront.can.latest("VCFRONT_tractionControlDebug", bus="veh")
     assert debug is not None
@@ -221,7 +221,7 @@ def test_apps_disagreement_reports_error_and_recovers(
 
     vcfront.set_accelerator_position(50)
     vcfront.set_brake_position(0)
-    vcfront_cluster.run_for(60)
+    vcfront_cluster.run_for(60, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -230,7 +230,7 @@ def test_apps_disagreement_reports_error_and_recovers(
 
     vcfront.set_apps1_position(apps1_position)
     vcfront.set_apps2_position(apps2_position)
-    vcfront_cluster.run_for(50)
+    vcfront_cluster.run_for(50, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -238,7 +238,7 @@ def test_apps_disagreement_reports_error_and_recovers(
     assert status.VCFRONT_acceleratorPosition == 0
 
     vcfront.set_accelerator_position(50)
-    vcfront_cluster.run_for(30)
+    vcfront_cluster.run_for(30, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -251,7 +251,7 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
 
     vcfront.set_accelerator_position(0)
     vcfront.set_brake_position(0)
-    vcfront_cluster.run_for(20)
+    vcfront_cluster.run_for(20, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -260,7 +260,7 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     assert status.VCFRONT_bppcState == BppcState.OK
 
     vcfront.set_accelerator_position(50)
-    vcfront_cluster.run_for(40)
+    vcfront_cluster.run_for(40, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -269,7 +269,7 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     assert status.VCFRONT_bppcState == BppcState.OK
 
     vcfront.set_brake_position(50)
-    vcfront_cluster.run_for(30)
+    vcfront_cluster.run_for(30, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -279,13 +279,13 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     assert status.VCFRONT_bppcState == BppcState.FAULT
 
     vcfront.set_brake_position(0)
-    vcfront_cluster.run_for(20)
+    vcfront_cluster.run_for(20, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
     assert status.VCFRONT_bppcState == BppcState.FAULT_LATCHED
 
-    vcfront_cluster.run_for(10)
+    vcfront_cluster.run_for(10, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None
@@ -293,7 +293,7 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     assert status.VCFRONT_acceleratorPosition == 50
 
     vcfront.set_accelerator_position(0)
-    vcfront_cluster.run_for(30)
+    vcfront_cluster.run_for(30, step=10)
 
     status = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert status is not None

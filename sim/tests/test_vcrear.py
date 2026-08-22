@@ -40,6 +40,7 @@ def test_brake_light_follows_vcfront_brake_position_can(
     vcrear_cluster.run_until(
         lambda: brake_light_state(vcrear) == expected_state,
         timeout=250,
+        step=10,
         message=f"vcrear brake light should become {expected_state.name}",
     )
 
@@ -55,6 +56,7 @@ def test_brake_light_faults_when_vcfront_pedal_position_goes_mia(vcrear_cluster)
     vcrear_cluster.run_until(
         lambda: brake_light_state(vcrear) == BrakeLightState.ON,
         timeout=250,
+        step=10,
         message="vcrear brake light should turn on while vcfront pedal position is present",
     )
 

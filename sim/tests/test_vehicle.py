@@ -53,7 +53,7 @@ def _add_vehicle_test_inputs(vehicle_cluster):
 
 
 def _assert_no_torque(vehicle_cluster, torque_sink) -> None:
-    vehicle_cluster.run_for(50)
+    vehicle_cluster.run_for(50, step=10)
     assert not torque_sink.values or torque_sink.values[-1] == pytest.approx(0.0)
 
 
@@ -94,12 +94,12 @@ def test_vehicle_drivetrain_only_outputs_torque_in_ts_run(vehicle_cluster):
 
     _configure_vehicle_bmsb(bmsb)
     run_request, torque_sink = _add_vehicle_test_inputs(vehicle_cluster)
-    vehicle_cluster.run_for(750)
+    vehicle_cluster.run_for(750, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
     _assert_no_torque(vehicle_cluster, torque_sink)
 
     bmsb.set_digital_io(DigitalIo.TSMS_CHG, True)
-    vehicle_cluster.run_for(3000)
+    vehicle_cluster.run_for(3000, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
     information = bmsb.can.latest("BMSB_information", bus="veh")
     assert information is not None
@@ -110,16 +110,16 @@ def test_vehicle_drivetrain_only_outputs_torque_in_ts_run(vehicle_cluster):
     # brake applied, run request asserted, then accelerator applied.
     vcfront.set_brake_position(12)
     run_request.set(SWS_requestRun=DigitalStatus.ON)
-    vehicle_cluster.run_for(750)
+    vehicle_cluster.run_for(750, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
 
     vcfront.set_brake_position(0)
     vcfront.set_accelerator_position(0.0)
-    vehicle_cluster.run_for(100)
+    vehicle_cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
 
     vcfront.set_accelerator_position(50.0)
-    vehicle_cluster.run_for(100)
+    vehicle_cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
     torque_request = vcfront.latest_torque_request()
     assert torque_request is not None
@@ -127,7 +127,7 @@ def test_vehicle_drivetrain_only_outputs_torque_in_ts_run(vehicle_cluster):
     motor_command = vehicle_cluster.vcrear.can.latest("VCREAR_mcCommand", bus="veh")
     assert motor_command is not None
     assert motor_command.VCREAR_torqueCommand > 0
-    vehicle_cluster.run_for(50)
+    vehicle_cluster.run_for(50, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
     assert torque_sink.values[-1] > 0
 

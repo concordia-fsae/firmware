@@ -92,7 +92,7 @@ def vcpdu_hv_on(vcpdu_hv_on_inputs):
     vcpdu.run_until_vehicle_state(
         VehicleState.ON_HV,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should enter ON_HV when TSMS closes",
     )
     return vcpdu_hv_on_inputs
@@ -107,7 +107,7 @@ def test_vcpdu_enters_hv_on_after_tsms_is_set(vcpdu_hv_on_inputs):
     setup.vcpdu.run_until_vehicle_state(
         VehicleState.ON_HV,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should enter ON_HV after TSMS is set",
     )
 
@@ -126,7 +126,7 @@ def test_vcpdu_exits_hv_when_tsms_opens(vcpdu_hv_on):
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
     tsms_status.set(BMSB_tsmsChg=DigitalStatus.OFF)
-    vcpdu_cluster.run_for(100)
+    vcpdu_cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
 
 
@@ -168,7 +168,7 @@ def vcpdu_ts_run_inputs(vcpdu_cluster):
     vcpdu.run_until_vehicle_state(
         VehicleState.ON_HV,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should enter ON_HV before TS_RUN inputs are applied",
     )
 
@@ -206,16 +206,16 @@ def test_vcpdu_enters_ts_run_only_when_driver_requests_run_with_brake_applied(
         vcpdu.run_until_vehicle_state(
             VehicleState.TS_RUN,
             timeout=500,
-            step=20,
+            step=10,
             message="vcpdu should enter TS_RUN with run request and brake applied",
         )
     else:
-        setup.cluster.run_for(250)
+        setup.cluster.run_for(250, step=10)
         assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
     setup.run_request.set(SWS_requestRun=DigitalStatus.OFF)
     setup.brake_position.set(VCFRONT_brakePosition=0)
-    setup.cluster.run_for(250)
+    setup.cluster.run_for(250, step=10)
     expected_state = VehicleState.TS_RUN if expected_ts_run else VehicleState.ON_HV
     assert vcpdu.latest_vehicle_state() == expected_state
 
@@ -229,7 +229,7 @@ def test_vcpdu_exits_ts_run_when_tsms_opens(vcpdu_ts_run_inputs):
     vcpdu.run_until_vehicle_state(
         VehicleState.TS_RUN,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should enter TS_RUN before testing TSMS exit",
     )
 
@@ -237,7 +237,7 @@ def test_vcpdu_exits_ts_run_when_tsms_opens(vcpdu_ts_run_inputs):
     vcpdu.run_until_vehicle_state(
         VehicleState.ON_GLV,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should exit TS_RUN when TSMS opens",
     )
 
@@ -254,7 +254,7 @@ def test_vcpdu_enters_ts_run_only_after_contactors_close(vcpdu_ts_run_inputs):
     setup.brake_position.set(VCFRONT_brakePosition=12)
     setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
 
-    setup.cluster.run_for(250)
+    setup.cluster.run_for(250, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_HV
 
     setup.contactor_state.set(
@@ -263,7 +263,7 @@ def test_vcpdu_enters_ts_run_only_after_contactors_close(vcpdu_ts_run_inputs):
     vcpdu.run_until_vehicle_state(
         VehicleState.TS_RUN,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should enter TS_RUN once contactors close",
     )
 
@@ -297,7 +297,7 @@ def test_vcpdu_does_not_cycle_from_hv_on_to_ts_run_without_hvp_contactors_closed
     setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
 
     for _ in range(50):
-        setup.cluster.run_for(10)
+        setup.cluster.run_for(10, step=10)
         vcpdu.record_latest_vehicle_state(observed)
 
     assert VehicleState.TS_RUN not in observed
@@ -323,19 +323,19 @@ def test_vcpdu_stays_in_ts_run_after_additional_driver_run_request(
     vcpdu.run_until_vehicle_state(
         VehicleState.TS_RUN,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should enter TS_RUN before additional driver run request",
     )
-    setup.cluster.run_for(100)
+    setup.cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
 
     setup.run_request.set(SWS_requestRun=DigitalStatus.OFF)
     setup.brake_position.set(VCFRONT_brakePosition=brake_position)
-    setup.cluster.run_for(100)
+    setup.cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
 
     setup.run_request.set(SWS_requestRun=DigitalStatus.ON)
-    setup.cluster.run_for(100)
+    setup.cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.TS_RUN
 
 
@@ -399,12 +399,12 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
     vcpdu.run_until_vehicle_state(
         VehicleState.ON_GLV,
         timeout=500,
-        step=20,
+        step=10,
         message="vcpdu should boot to ON_GLV before it can sleep",
     )
     vcpdu.record_latest_vehicle_state(observed)
 
-    vcpdu_cluster.run_for(100)
+    vcpdu_cluster.run_for(100, step=10)
     assert vcpdu.latest_vehicle_state() == VehicleState.ON_GLV
 
     vcpdu.run_until_vehicle_state(
@@ -420,14 +420,14 @@ def test_vcpdu_sleeps_then_wakes_from_waking_controller_sleepable_state(
     vcpdu.run_until_vehicle_state(
         VehicleState.INIT,
         timeout=1000,
-        step=20,
+        step=10,
         message=f"vcpdu should wake to INIT from {controller} {wake_state.name}",
     )
     vcpdu.record_latest_vehicle_state(observed)
     vcpdu.run_until_vehicle_state(
         VehicleState.ON_GLV,
         timeout=1000,
-        step=20,
+        step=10,
         message=f"vcpdu should wake from {controller} {wake_state.name}",
     )
     vcpdu.record_latest_vehicle_state(observed)
@@ -463,7 +463,7 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         duty_cycle=0,
         current=0,
         timeout=500,
-        step=20,
+        step=10,
         message="VCPDU HSD load should report off before a driver request",
     )
 
@@ -473,12 +473,12 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         duty_cycle=0,
         current=0,
         timeout=1000,
-        step=20,
+        step=10,
         message="VCPDU HSD load should report non-zero duty and current when requested on",
     )
 
     driver_request.set(**{request_signal: DigitalStatus.OFF})
-    vcpdu_cluster.run_for(250)
+    vcpdu_cluster.run_for(250, step=10)
     assert _positive(vcpdu.latest_hsd_duty_cycle(hsd_channel))
     assert _positive(vcpdu.latest_hsd_current(hsd_channel))
 
@@ -488,7 +488,7 @@ def test_driver_cooling_request_toggles_and_latches_load_current(
         duty_cycle=0,
         current=0,
         timeout=1000,
-        step=20,
+        step=10,
         message="VCPDU HSD load should report zero duty and current after a second driver request toggles it off",
     )
 
@@ -531,7 +531,7 @@ def test_bmsb_faults_sets_safety_fault(
         expected_status[bms_safety_enabled],
         bus="veh",
         timeout=1000,
-        step=20,
+        step=10,
         message_on_timeout="vcpdu should report BMSB safety status from BMSB_ioStatus",
     )
     vcpdu.can.run_until_signal_eq(
@@ -540,7 +540,7 @@ def test_bmsb_faults_sets_safety_fault(
         expected_status[imd_safety_enabled],
         bus="veh",
         timeout=1000,
-        step=20,
+        step=10,
         message_on_timeout="vcpdu should report IMD safety status from BMSB_ioStatus",
     )
 
@@ -579,7 +579,7 @@ def _add_vcpdu_simple_sources(
 
 
 def test_runtime_timer_streams_are_timestamped_after_scheduler_runs(vcpdu_cluster):
-    vcpdu_cluster.run_for(20)
+    vcpdu_cluster.run_for(20, step=10)
 
     for timer_stream in (
         VcpduModel.timer.duty_events(TimerPort.PWM, TimerChannel._1),
@@ -593,7 +593,7 @@ def test_runtime_timer_streams_are_timestamped_after_scheduler_runs(vcpdu_cluste
 
 
 def test_dc_loads_auto_bind_voltage_and_current_paths(vcpdu_cluster):
-    vcpdu_cluster.run_for(20)
+    vcpdu_cluster.run_for(20, step=10)
 
     for load in dc_loads(vcpdu_cluster):
         assert vcpdu_cluster.vcpdu.datapaths.inputs(load.current_output_channel)
@@ -609,7 +609,7 @@ def test_dc_loads_auto_bind_voltage_and_current_paths(vcpdu_cluster):
 
 
 def test_battery_voltage_drives_vcpdu_bus_sense_pin(vcpdu_cluster):
-    vcpdu_cluster.run_for(20)
+    vcpdu_cluster.run_for(20, step=10)
 
     bus_records = vcpdu_cluster.dataroutes.records(VcpduModel.bus_voltage_path())
     assert bus_records
