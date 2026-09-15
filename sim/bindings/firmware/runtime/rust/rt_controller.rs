@@ -251,6 +251,17 @@ impl RTController {
 #[macro_export]
 macro_rules! rig_rt_controller_nvm_storage {
     ($controller_nvm:ty) => {
+        #[cfg(target_os = "macos")]
+        core::arch::global_asm!(
+            ".zerofill __DATA,__bss,___FLASH_NVM_ORIGIN,{storage_bytes},1",
+            ".globl ___FLASH_NVM_ORIGIN",
+            ".globl ___FLASH_NVM_END",
+            ".set ___FLASH_NVM_END, ___FLASH_NVM_ORIGIN + {nvm_end_offset_bytes}",
+            nvm_end_offset_bytes = const <$controller_nvm>::END_OFFSET_BYTES,
+            storage_bytes = const <$controller_nvm>::STORAGE_BYTES,
+        );
+
+        #[cfg(not(target_os = "macos"))]
         core::arch::global_asm!(
             ".pushsection .bss.rig_nvm,\"aw\",@nobits",
             ".balign 2",

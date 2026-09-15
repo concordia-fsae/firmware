@@ -84,7 +84,7 @@ system_cxx_toolchain(
     compiler = "clang",
     cxx_compiler = "clang++",
     linker = "clang++",
-    archiver = "ar",
+    archiver = "llvm-ar" if host_info().os.is_macos else "ar",
     visibility = ["PUBLIC"],
 )
 
