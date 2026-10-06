@@ -25,6 +25,7 @@ From those inputs Yamcan can generate:
 - C headers and sources for message types, packing, unpacking, signal RX/TX,
   network constants, and temporary stubs.
 - Optional Rust wrappers and generated decode, model, and fault modules.
+- Allocation-free `no_std` Rust wrappers for embedded CAN encode/decode.
 - DBC files and per-bus load statistics.
 - Filtered node manifests, including the UDS manifest used by this repository.
 - A validated serialized network cache used to avoid reparsing the YAML for
@@ -44,6 +45,9 @@ directly:
 - `generate_code` creates node-specific C artifacts and libraries.
 - `generate_resources` creates the generated artifact set, with optional Rust
   wrappers.
+- `generate_embedded_rust` emits standalone per-node `no_std` Rust wrappers,
+  sharing the wire codec with the host Rust wrappers. Applications supply CAN
+  transport, receive freshness and scheduling.
 - `generate_c_library` and `generate_rust_library` expose generated artifacts
   to downstream targets.
 - `generate_dbcs`, `generate_stats`, and `generate_manifest` create analysis
