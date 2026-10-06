@@ -1,0 +1,17 @@
+[package]
+name = "firmware-shared"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[features]
+default = []
+stm32f1 = ["dep:cortex-m", "dep:stm32f1xx-hal", "dep:bxcan", "dep:nb"]
+
+[dependencies]
+heapless = "=0.8.0"
+cortex-m = { version = "=0.7.7", optional = true }
+stm32f1xx-hal = { version = "=0.10.0", features = ["stm32f103", "medium", "rt"], optional = true }
+bxcan = { version = "=0.7.0", optional = true }
+nb = { version = "=1.1.0", optional = true }
