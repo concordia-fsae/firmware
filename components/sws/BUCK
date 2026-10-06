@@ -1,20 +1,14 @@
+load("//components/shared/rust/build_tools:defs.bzl", "rust_firmware_targets")
 load("@toolchains//gcc/defs.bzl", "generate_asms", "generate_stripped_asms")
 load("//components/shared/code/defs.bzl", "remap_headers", "shared_code_library")
-load("//drive-stack/conUDS/defs.bzl", "conUDS_download")
-load("//drive-stack/defs.bzl", "deployable_target")
-load("//embedded/openocd/defs.bzl", "openocd_run")
 load("//embedded/platforms/stm32/f1:defs.bzl", "stm32f1_hal")
 load("//tools/yamcan/defs.bzl", "generate_code")
-load("//tools/hextools/defs.bzl", "inject_crc")
-load("//drive-stack/ota-agent/defs.bzl", "ota_agent")
 load(
     "//components/vehicle_platform:defs.bzl",
-    "add_platform_deploy_targets",
     "add_platform_sil_bundle_targets",
     "platform_selected_codegen_srcs",
     "platform_selected_targets",
 )
-load("//components/vehicle_platform:platforms.bzl", "platform_output_name")
 load("//components/sws:platforms.bzl", "SWS_PLATFORM_VARIANTS")
 
 TOOLCHAIN = "@toolchains//:gcc-14.2.rel1-arm-none-eabi"
@@ -312,7 +306,7 @@ cxx_library(
 component_headers = remap_headers(["include/", "HW/include/"])
 
 cxx_binary(
-    name = "elf",
+    name = "legacy-elf",
     _cxx_toolchain = TOOLCHAIN,
     compiler_flags = compiler_flags,
     linker_flags = compiler_flags + linker_flags + ["-T", "$(location :linkscript-f103)"] + [
@@ -372,13 +366,13 @@ cxx_binary(
 
 generate_asms(
     name = "asm",
-    binary = ":elf",
+    binary = ":legacy-elf",
 )
 
 generate_stripped_asms(
     name = "asms",
     targets = [
-        ":elf",
+        ":legacy-elf",
         ":FreeRTOS",
         ":udsServer",
         ":hal-f103",
@@ -387,38 +381,14 @@ generate_stripped_asms(
     toolchain = TOOLCHAIN,
 )
 
-cxx_genrule(
-    name = "bin",
-    _cxx_toolchain = TOOLCHAIN,
-    srcs = [":elf"],
-    out = APP_NAME + ".bin",
-    cmd = "$(objcopy) -O binary ${SRCS} ${OUT}",
-)
-
-inject_crc(
-    name = "bin_crc",
-    src = ":bin",
-    out = APP_NAME + "_crc.bin",
-    start_address = APP_START_ADDR,
-    visibility = ["PUBLIC"],
-)
-alias(
-    name = APP_NAME,
-    actual = ":bin",
-)
-
-add_platform_deploy_targets(
-    platform_variants = platform_variants,
+rust_firmware_targets(
     app_name = APP_NAME,
+    package_path = "components/sws/rust",
+    srcs = {path[len("rust/"):]: path for path in glob([
+        "rust/src/**/*.rs", "rust/*.rs", "rust/*.toml", "rust/Cargo.lock", "rust/*.x",
+    ])},
+    app_start_address = APP_START_ADDR,
+    gcc_toolchain = TOOLCHAIN,
+    platform_variants = platform_variants,
+    debug_mcu = "stm32f103c8",
 )
-
-[
-    openocd_run(
-        name = "gdb-{}".format(platform_output_name(platform)),
-        toolchain = TOOLCHAIN,
-        src = ":elf",
-        interface = "stlink",
-        mcu = "stm32f103c8",
-    )
-    for platform, _variant in platform_variants
-]

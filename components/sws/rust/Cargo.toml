@@ -1,0 +1,31 @@
+[package]
+name = "sws"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[features]
+default = []
+firmware = ["dep:cortex-m", "dep:cortex-m-rt", "dep:rtic", "firmware-shared/stm32f1"]
+
+[dependencies]
+firmware-shared = { path = "../../shared/rust" }
+cortex-m = { version = "=0.7.7", optional = true }
+cortex-m-rt = { version = "=0.7.5", optional = true }
+rtic = { version = "=2.2.0", features = ["thumbv7-backend"], optional = true }
+
+[build-dependencies]
+firmware-build = { path = "../../shared/rust/build_tools" }
+
+[[bin]]
+name = "sws"
+path = "src/main.rs"
+required-features = ["firmware"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+debug = 2
+panic = "abort"
