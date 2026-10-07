@@ -104,7 +104,42 @@ impl<const N: usize> Scheduler<N> {
 
 #[cfg(test)]
 mod tests {
-    use super::Scheduler;
+    use super::{Frame, RxQueue, Scheduler, TxQueue};
+
+    fn frame(id: u32, value: u8) -> Frame {
+        Frame {
+            id,
+            len: 1,
+            data: [value; 8],
+        }
+    }
+
+    #[test]
+    fn receive_overflow_keeps_the_oldest_frames() {
+        let mut queue = RxQueue::<2>::default();
+        queue.push(frame(1, 1));
+        queue.push(frame(2, 2));
+        queue.push(frame(3, 3));
+        assert_eq!(queue.dropped, 1);
+        assert_eq!(queue.pop(), Some(frame(1, 1)));
+        assert_eq!(queue.pop(), Some(frame(2, 2)));
+        assert_eq!(queue.pop(), None);
+    }
+
+    #[test]
+    fn transmit_coalesces_state_and_preserves_diagnostic_order() {
+        let mut queue = TxQueue::<3>::new(0x691);
+        queue.enqueue(frame(1, 1));
+        queue.enqueue(frame(0x691, 2));
+        queue.enqueue(frame(1, 3));
+        queue.enqueue(frame(0x691, 4));
+        assert_eq!(queue.pop(), Some(frame(1, 3)));
+        queue.requeue(frame(2, 5));
+        assert_eq!(queue.pop(), Some(frame(2, 5)));
+        assert_eq!(queue.pop(), Some(frame(0x691, 2)));
+        assert_eq!(queue.pop(), Some(frame(0x691, 4)));
+        assert_eq!(queue.pop(), None);
+    }
     #[test]
     fn schedule_preserves_deadlines_and_counters_across_wrap() {
         let mut schedule = Scheduler::<2>::default();
@@ -117,5 +152,69 @@ mod tests {
             assert_eq!(schedule.due(0, 10, i * 10), Some((i + 2) as u8));
         }
         assert_eq!(schedule.due(0, 10, 2541), None);
+    }
+}
+
+/// Bounded receive buffering used by a higher-priority CAN task.
+pub struct RxQueue<const N: usize> {
+    frames: heapless::Deque<Frame, N>,
+    pub dropped: u32,
+}
+impl<const N: usize> Default for RxQueue<N> {
+    fn default() -> Self {
+        Self {
+            frames: heapless::Deque::new(),
+            dropped: 0,
+        }
+    }
+}
+impl<const N: usize> RxQueue<N> {
+    pub fn push(&mut self, frame: Frame) {
+        if self.frames.push_back(frame).is_err() {
+            self.dropped = self.dropped.wrapping_add(1);
+        }
+    }
+    pub fn pop(&mut self) -> Option<Frame> {
+        self.frames.pop_front()
+    }
+}
+
+/// Coalesce periodic state while keeping diagnostics ordered, on every backend.
+pub struct TxQueue<const N: usize> {
+    frames: heapless::Deque<Frame, N>,
+    ordered_id: u32,
+}
+impl<const N: usize> TxQueue<N> {
+    pub fn new(ordered_id: u32) -> Self {
+        Self {
+            frames: heapless::Deque::new(),
+            ordered_id,
+        }
+    }
+    pub fn enqueue(&mut self, frame: Frame) {
+        assert!(
+            frame.id <= 0x7ff && frame.len <= 8,
+            "invalid standard CAN frame"
+        );
+        if frame.id != self.ordered_id {
+            if let Some(pending) = self.frames.iter_mut().find(|p| p.id == frame.id) {
+                *pending = frame;
+                return;
+            }
+        }
+        if self.frames.push_back(frame).is_err() {
+            panic!("CAN transmit queue exhausted");
+        }
+    }
+    pub fn front(&self) -> Option<&Frame> {
+        self.frames.front()
+    }
+    pub fn pop(&mut self) -> Option<Frame> {
+        self.frames.pop_front()
+    }
+    pub fn requeue(&mut self, frame: Frame) {
+        if self.frames.push_front(frame).is_err() {
+            panic!("CAN transmit queue exhausted");
+        }
     }
 }

@@ -7,8 +7,9 @@ application into the isolated Cargo build directory.
 
 The hardware-independent modules are:
 
-- `can`: frame type, receive validation and freshness, plus periodic transmit
-  deadlines and rolling counters. Applications adapt their Yamcan-generated
+- `can`: frame type, bounded receive queues, transmit queues that coalesce
+  periodic state and preserve diagnostics, receive validation and freshness,
+  plus periodic transmit deadlines and rolling counters. Applications adapt their Yamcan-generated
   message and signal types to the `Message` and `Signal` traits. Yamcan supplies
   the wire encoding, decoding and checksum implementation.
 - `uds`: ISO-TP request assembly, diagnostic sessions, reset timing, bootloader
@@ -34,6 +35,6 @@ examples, see `components/sws/rust/src/can.rs`, `input.rs`, `app.rs` and `main.r
 
 `buckle build //components/sws:rust-tests` runs both SWS and shared library tests.
 
-Shared Cargo/Buckle build rules, build-script support and image validation are
+Shared Cargo/Buckle build rules and build-script support are
 in [`build_tools`](build_tools/README.md). Consumers use `rust_firmware_targets`
 in their Buckle file and retain their own source layout and linker configuration.
