@@ -1,5 +1,6 @@
 """Run a locked Cargo build/test using only declared sources in an isolated layout."""
 import argparse
+import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
@@ -27,6 +28,8 @@ def main():
     parser.add_argument("--feature", required=True)
     parser.add_argument("--test-package", action="append", default=[])
     parser.add_argument("--test", action="store_true")
+    parser.add_argument("--host-library", action="store_true")
+    parser.add_argument("--rust-env", nargs=2, action="append", default=[])
     args = parser.parse_args()
     package_path = relative_path(args.package_path)
     dependencies = [(relative_path(path), Path(source).resolve()) for path, source in args.dependency]
@@ -48,12 +51,29 @@ def main():
         env["TMPDIR"] = str(compiler_tmp)
         env.pop("RUSTFLAGS", None)
         env.pop("CARGO_ENCODED_RUSTFLAGS", None)
+        for name, source in args.rust_env:
+            env[name] = str(Path(source).resolve())
         command = ["rustup", "run", args.rust_toolchain, "cargo"]
-        if args.test:
+        if args.test and args.host_library:
+            result = subprocess.run(command + ["test", "--locked", "--lib", "--no-run", "--message-format=json"],
+                                    cwd=package, env=env, check=True, stdout=subprocess.PIPE, text=True)
+            executables = [message["executable"] for line in result.stdout.splitlines()
+                           if (message := json.loads(line)).get("reason") == "compiler-artifact"
+                           and message.get("executable") and message.get("profile", {}).get("test")]
+            if len(executables) != 1:
+                raise RuntimeError(f"expected one library test executable, got {executables}")
+            shutil.copy2(executables[0], output / "test")
+        elif args.test:
             subprocess.run(command + ["test", "--locked", "--lib"], cwd=package, env=env, check=True)
             for name in args.test_package:
                 subprocess.run(command + ["test", "--locked", "-p", name, "--lib"], cwd=package, env=env, check=True)
             (output / "passed").write_text("Application and shared Rust host tests passed\n")
+        elif args.host_library:
+            build = command + ["build", "--locked", "--release", "--lib"]
+            if args.feature:
+                build += ["--features", args.feature]
+            subprocess.run(build, cwd=package, env=env, check=True)
+            shutil.copyfile(package / "target/release" / f"lib{args.binary}.so", output / f"lib{args.binary}.so")
         else:
             subprocess.run(command + ["build", "--locked", "--release", "--bin", args.binary,
                                      "--features", args.feature, "--target", args.target], cwd=package, env=env, check=True)

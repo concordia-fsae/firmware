@@ -23,6 +23,10 @@ def _cargo_impl(ctx):
                        "--package-path", ctx.attrs.package_path, "--output", output.as_output(),
                        "--binary", ctx.attrs.binary, "--rust-toolchain", ctx.attrs.rust_toolchain,
                        "--target", ctx.attrs.target, "--feature", ctx.attrs.feature)
+    for name, source in ctx.attrs.rust_env.items():
+        command.add("--rust-env", name, source)
+    if ctx.attrs.host_library:
+        command.add("--host-library")
     for index, dependency in enumerate(ctx.attrs.dependencies):
         inputs = dependency[CargoSources]
         folder = ctx.actions.symlinked_dir("dependency-{}".format(index), inputs.srcs)
@@ -35,7 +39,16 @@ def _cargo_impl(ctx):
         command.add("--test")
     ctx.actions.run(command, category = "firmware_cargo_test" if ctx.attrs.test else "firmware_cargo_build", local_only = True)
     if ctx.attrs.test:
+        if ctx.attrs.host_library:
+            test = output.project("test")
+            return [
+                DefaultInfo(default_output = test),
+                RunInfo(args = cmd_args(test)),
+                ExternalRunnerTestInfo(type = "rust", command = [test], env = {}, labels = [], contacts = []),
+            ]
         return [DefaultInfo(default_output = output)]
+    if ctx.attrs.host_library:
+        return [DefaultInfo(default_output = output.project("lib" + ctx.attrs.binary + ".so"))]
     elf = output.project(ctx.attrs.binary + ".elf")
     return [DefaultInfo(default_output = elf, sub_targets = {
         "elf": [DefaultInfo(default_output = elf)],
@@ -55,6 +68,8 @@ firmware_cargo = rule(
         "feature": attrs.string(default = "firmware"),
         "test_packages": attrs.list(attrs.string(), default = []),
         "test": attrs.bool(default = False),
+        "host_library": attrs.bool(default = False),
+        "rust_env": attrs.dict(attrs.string(), attrs.source(), default = {}),
         "_runner": attrs.source(default = "//components/shared/rust/build_tools:build_firmware.py"),
     },
 )
@@ -66,7 +81,8 @@ def rust_firmware_targets(app_name, srcs, package_path, app_start_address,
                           target = "thumbv7m-none-eabi", feature = "firmware",
                           platform_variants = [], debug_mcu = None, debug_interface = "stlink"):
     """Create the standard firmware/test/ELF/bin/CRC targets in this package."""
-    generate_embedded_rust(name = "rust-protocol", network_dep = network_dep, node = node if node else app_name)
+    cargo_sources(name = "rust-sources", path = package_path, srcs = srcs, visibility = ["PUBLIC"])
+    generate_embedded_rust(name = "rust-protocol", network_dep = network_dep, node = node if node else app_name, visibility = ["PUBLIC"])
     for name, test in [("rust-firmware", False), ("rust-tests", True)]:
         firmware_cargo(name = name, srcs = srcs, package_path = package_path, binary = app_name,
                        dependencies = dependencies, protocol = ":rust-protocol", test = test,

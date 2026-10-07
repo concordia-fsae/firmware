@@ -32,9 +32,17 @@ default. Additional local Cargo dependencies must also be declared this way.
 
 `build_firmware.py` stages only declared sources, preserves local dependency
 paths, runs the selected Rust toolchain with `--locked`, and exposes the binary's
-ELF/map or a passing host-test marker. `FIRMWARE_BUILD_TMPDIR` selects the scratch
+ELF/map, a host shared library or a passing host-test marker. Set `host_library = True`
+to build a Cargo `cdylib` for simulation. `rust_env` declares source artifacts
+used by Rust `include!`/`include_bytes!`, including generated bindings and firmware
+images. The same source providers let a simulator depend on the production
+application crate. `FIRMWARE_BUILD_TMPDIR` selects the scratch
 volume; set it before starting the Buckle daemon. The runner clears ambient
 Rust flags, target selection and output-directory overrides.
+
+With `host_library = True` and `test = True`, the rule builds a native Rust test
+executable and exposes it to `buckle test`; firmware host checks retain their
+build-time test marker.
 
 This directory also contains the `firmware-build` Cargo build dependency. A
 consumer's `build.rs` calls:

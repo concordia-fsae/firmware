@@ -1,11 +1,13 @@
 """Integration checks for shared Cargo staging and configuration."""
 import argparse
+import json
 import os
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).parent.resolve()))
 
@@ -53,6 +55,59 @@ class StagingTests(unittest.TestCase):
                 build_firmware.main()
             self.assertEqual((output / "other-controller.elf").read_bytes(), b"fixture ELF")
             self.assertEqual((output / "other-controller.map").read_text(), "fixture map")
+
+    def test_host_library_uses_declared_rust_artifacts_without_embedded_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source"
+            source.mkdir()
+            (source / "Cargo.toml").write_text("host library fixture")
+            bindings = base / "bindings.rs"
+            bindings.write_text("generated bindings")
+            output = base / "out"
+            command = ["build_firmware.py", "--source", str(source),
+                       "--package-path", "sim/controller", "--output", str(output),
+                       "--binary", "controller_sim", "--target", "embedded-target",
+                       "--feature", "", "--rust-toolchain", "test-version",
+                       "--host-library", "--rust-env", "SIM_BINDINGS_RS", str(bindings)]
+
+            def compile_fixture(args, cwd, env, check):
+                self.assertEqual(args, ["rustup", "run", "test-version", "cargo",
+                                        "build", "--locked", "--release", "--lib"])
+                self.assertEqual(env["SIM_BINDINGS_RS"], str(bindings.resolve()))
+                self.assertTrue(check)
+                library = cwd / "target/release/libcontroller_sim.so"
+                library.parent.mkdir(parents=True)
+                library.write_bytes(b"fixture shared library")
+
+            with patch.object(sys, "argv", command), patch.object(build_firmware.subprocess, "run", compile_fixture):
+                build_firmware.main()
+            self.assertEqual((output / "libcontroller_sim.so").read_bytes(), b"fixture shared library")
+
+    def test_host_tests_export_an_executable_for_buck_test(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source"
+            source.mkdir()
+            output = base / "out"
+            command = ["build_firmware.py", "--source", str(source),
+                       "--package-path", "sim/controller", "--output", str(output),
+                       "--binary", "controller_sim", "--target", "embedded-target",
+                       "--feature", "", "--rust-toolchain", "test-version", "--host-library", "--test"]
+
+            def compile_fixture(args, cwd, env, check, stdout, text):
+                self.assertEqual(args[4:], ["test", "--locked", "--lib", "--no-run", "--message-format=json"])
+                self.assertTrue(check and text)
+                executable = cwd / "test-executable"
+                executable.write_bytes(b"fixture native tests")
+                executable.chmod(0o755)
+                return SimpleNamespace(stdout=json.dumps({"reason": "compiler-artifact",
+                                       "executable": str(executable), "profile": {"test": True}}))
+
+            with patch.object(sys, "argv", command), patch.object(build_firmware.subprocess, "run", compile_fixture):
+                build_firmware.main()
+            self.assertEqual((output / "test").read_bytes(), b"fixture native tests")
+            self.assertTrue(os.access(output / "test", os.X_OK))
 
 
 if __name__ == "__main__":
