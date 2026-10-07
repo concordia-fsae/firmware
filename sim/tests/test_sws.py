@@ -1,6 +1,7 @@
 import pytest
 
 from rig import RustSchedulerCallbacks
+from sim.bindings.firmware.can import CanPacket
 from sim.models.controllers.sws import DigitalStatus, SwsButton, SwsRequest
 from sim.models.controllers.sws.fixtures import sws_cluster
 
@@ -165,3 +166,83 @@ def test_sws_reverse_combination_does_not_emit_intermediary_race_or_launch(
     assert request.SWS_requestRaceMode == DigitalStatus.OFF
     assert request.SWS_requestLaunchControl == DigitalStatus.OFF
     assert request.SWS_requestReverse == DigitalStatus.ON
+
+
+def _drain_can(sws):
+    frames = []
+    while (event := sws.can.recv("veh")) is not None:
+        frames.append((event.timestamp_ns, event.packet.id, event.packet.payload))
+    return frames
+
+
+def test_rtic_preserves_fractional_timer_steps(sws_cluster):
+    sws = sws_cluster.sws
+    sws.run_for(750, unit="us")
+    assert sws.tick_count == 0
+    sws.run_for(250, unit="us")
+    assert sws.tick_count == 1
+    sws.run_for(1500, unit="us")
+    assert sws.tick_count == 2
+    sws.run_for(500, unit="us")
+    assert sws.tick_count == 3
+
+
+def test_rtic_coarse_steps_match_every_timer_interrupt(sws_cluster):
+    sws = sws_cluster.sws
+    sws.press_button(SwsButton.LEFT_TOP)
+    sws.run_for(750)
+    assert sws.tick_count == 750
+    coarse = _drain_can(sws)
+    assert [at for at, frame_id, _ in coarse if frame_id == 0x8F] == [
+        ms * 1_000_000 for ms in range(50, 751, 50)
+    ]
+
+    sws.reset()
+    sws.press_button(SwsButton.LEFT_TOP)
+    for _ in range(750):
+        sws.run_for(1)
+    assert _drain_can(sws) == coarse
+
+
+def test_rtic_can_interrupt_queues_before_timer_and_counts_overflow(sws_cluster):
+    sws = sws_cluster.sws
+    for _ in range(40):
+        assert sws.can.send("veh", 0x651, bytes([2, 0x3E, 0, 0, 0, 0, 0, 0]))
+    sws.run_for(0)
+    assert sws.tick_count == 0
+    assert sws.rx_dropped == 8
+    assert _drain_can(sws) == []
+
+    # Each timer invocation services at most three transmit mailboxes; the
+    # diagnostic FIFO must retain all 32 accepted responses in order.
+    sws.run_for(11)
+    replies = _drain_can(sws)
+    assert len(replies) == 32
+    assert all(frame_id == 0x691 and data[:3] == bytes([2, 0x7E, 0])
+               for _, frame_id, data in replies)
+    assert [at for at, _, _ in replies] == [
+        (index // 3 + 1) * 1_000_000 for index in range(32)
+    ]
+
+
+def test_rtic_uds_reset_keeps_reply_and_external_input(sws_cluster):
+    sws = sws_cluster.sws
+    sws.press_button(SwsButton.LEFT_TOP)
+    assert sws.can.send("veh", 0x651, bytes([2, 0x11, 1, 0, 0, 0, 0, 0]))
+    sws.run_for(9)
+    assert sws.tick_count == 9
+    assert sws.reset_count == 0
+    sws.run_for(1)
+    assert sws.tick_count == 0
+    assert sws.reset_count == 1
+    assert _drain_can(sws) == [(1_000_000, 0x691, bytes([2, 0x51, 1, 0, 0, 0, 0, 0]))]
+
+    sws.run_for(200)
+    debug_id = sws.can.tx_message("SWS_inputDebugStatus", bus="veh").id
+    debug_frames = [data for _, frame_id, data in _drain_can(sws) if frame_id == debug_id]
+    assert debug_frames
+    debug = sws.can.decode(
+        sws.can.tx_message("SWS_inputDebugStatus", bus="veh"),
+        CanPacket.from_payload(debug_id, debug_frames[-1]),
+    )
+    assert debug.SWS_leftTop == DigitalStatus.ON
