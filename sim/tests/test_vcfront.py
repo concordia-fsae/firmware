@@ -338,8 +338,8 @@ def test_bppc_fault_latches_until_accelerator_is_released(vcfront_cluster):
     assert status.VCFRONT_bppcState == BppcState.OK
 
 
-# EV.4.7.2 a) BPPC entry condition
-def test_bppc_shuts_down_torque_when_braking_above_25_percent_apps(vcfront_cluster):
+# 2027 EV.4.7.2 a) BPPC torque disable
+def test_bppc_disables_torque(vcfront_cluster):
     vcfront = vcfront_cluster.vcfront
     vcpdu = VcpduSimpleModel(vcfront.can)
     vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
@@ -391,9 +391,10 @@ def test_bppc_shuts_down_torque_when_braking_above_25_percent_apps(vcfront_clust
     assert pedal.VCFRONT_brakePosition == 50
     assert pedal.VCFRONT_bppcState == BppcState.FAULT
     assert debug.VCFRONT_torqueDriverInput == 0
-    assert vcfront.latest_torque_request() == 0
+    assert valid_torque_output(vcfront, pedal)
 
 
+# 2027 EV.4.7.2 a) BPPC entry condition
 @pytest.mark.parametrize(
     "brake_position,accelerator_position,expected_bppc_state",
     [
@@ -433,7 +434,7 @@ def test_bppc_entry_depends_on_brake_and_accelerator_positions(
     assert abs(pedal.VCFRONT_brakePosition - brake_position) <= 1
 
 
-# EV.4.7.2 b) BPPC exit condition
+# 2027 EV.4.7.2 b) BPPC exit condition
 @pytest.mark.parametrize(
     "brake_position,accelerator_position,expected_bppc_state",
     [
@@ -490,49 +491,17 @@ def test_bppc_fault_remains_until_accelerator_is_below_5_percent(
     assert pedal.VCFRONT_acceleratorState == AppsState.OK
     assert abs(pedal.VCFRONT_brakePosition - brake_position) <= 1
     assert pedal.VCFRONT_bppcState == expected_bppc_state
-    if expected_bppc_state != BppcState.OK:
-        assert vcfront.latest_torque_request() == 0
+    assert valid_torque_output(vcfront, pedal)
 
 
-def test_bppc_fault_latched_inhibits_torque_when_brake_is_released(vcfront_cluster):
+# 2027 EV.4.7.2 b) BPPC exit condition and torque recovery
+def test_bppc_exit(vcfront_cluster):
     vcfront = vcfront_cluster.vcfront
     vcpdu = VcpduSimpleModel(vcfront.can)
     vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
     vcfront_cluster.add_component(vcpdu)
 
-    vcfront.set_brake_position(50)
-    vcfront.set_accelerator_position(50)
-    vcfront_cluster.run_until(
-        lambda: _bppc_state_is_inhibiting_torque(vcfront, BppcState.FAULT),
-        timeout=160,
-        step=10,
-        message="BPPC should fault before brake release",
-    )
-
-    pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
-    assert pedal is not None
-    assert pedal.VCFRONT_bppcState == BppcState.FAULT
-    assert pedal.VCFRONT_acceleratorPosition == 50
-    assert pedal.VCFRONT_brakePosition == 50
-
-    vcfront.set_brake_position(0)
-    vcfront_cluster.run_for(20, step=10)
-
-    pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
-    assert pedal is not None
-    assert pedal.VCFRONT_bppcState == BppcState.FAULT_LATCHED
-    assert pedal.VCFRONT_acceleratorState == AppsState.OK
-    assert pedal.VCFRONT_acceleratorPosition == 50
-    assert pedal.VCFRONT_brakePosition == 0
-    assert vcfront.latest_torque_request() == 0
-
-
-def test_bppc_error_recovers_when_accelerator_drops_below_5_percent(vcfront_cluster):
-    vcfront = vcfront_cluster.vcfront
-    vcpdu = VcpduSimpleModel(vcfront.can)
-    vcpdu.periodic_vehicle_state(VehicleState.TS_RUN, period=20)
-    vcfront_cluster.add_component(vcpdu)
-
+    # Trigger BPPC fault
     vcfront.set_brake_position(50)
     vcfront.set_accelerator_position(50)
 
@@ -543,36 +512,67 @@ def test_bppc_error_recovers_when_accelerator_drops_below_5_percent(vcfront_clus
         message="BPPC should fault and inhibit torque in TS_RUN",
     )
 
+    pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
+    assert pedal is not None
+    assert pedal.VCFRONT_acceleratorPosition == 50
+    assert pedal.VCFRONT_brakePosition == 50
+    assert pedal.VCFRONT_bppcState == BppcState.FAULT
+    assert valid_torque_output(vcfront, pedal)
+
+    # Release brake while keeping accelerator pressed
     vcfront.set_brake_position(0)
+    vcfront_cluster.run_for(20, step=10)
+
+    pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
+    assert pedal is not None
+    assert pedal.VCFRONT_bppcState == BppcState.FAULT_LATCHED
+    assert valid_torque_output(vcfront, pedal)
+    assert pedal.VCFRONT_acceleratorPosition == 50
+    assert pedal.VCFRONT_brakePosition == 0
+
+    # Accelerator remains above 5%: BPPC must inhibit torque
     vcfront.set_accelerator_position(6)
 
     vcfront_cluster.run_until(
         lambda: _bppc_state_is_inhibiting_torque(vcfront, BppcState.ERROR),
         timeout=160,
         step=10,
-        message="BPPC ERROR should continue inhibiting torque in TS_RUN",
+        message="BPPC ERROR should continue inhibiting torque",
     )
 
     pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
-    torque_manager = vcfront.can.latest("VCFRONT_torqueManager", bus="veh")
     assert pedal is not None
-    assert torque_manager is not None
-    assert torque_manager.VCFRONT_torqueManagerState == TorqueManagerState.ACTIVE
     assert pedal.VCFRONT_bppcState == BppcState.ERROR
-    assert vcfront.latest_torque_request() == 0
+    assert valid_torque_output(vcfront, pedal)
 
+    # Accelerator drops below 5%: BPPC clears
     vcfront.set_accelerator_position(4)
 
     vcfront_cluster.run_until(
         lambda: _latest_bppc_state(vcfront) == BppcState.OK,
         timeout=160,
         step=10,
-        message="BPPC should recover from ERROR when APPS drops below 5%",
+        message="BPPC should recover below 5% APPS",
     )
 
     pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
     assert pedal is not None
     assert pedal.VCFRONT_bppcState == BppcState.OK
+
+    # Verify driver can request non-zero torque again
+    vcfront.set_accelerator_position(50)
+
+    vcfront_cluster.run_until(
+        lambda: vcfront.latest_torque_request() > 0,
+        timeout=500,
+        step=10,
+        message="Torque request should recover after BPPC clears",
+    )
+
+    pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
+    assert pedal is not None
+    assert pedal.VCFRONT_bppcState == BppcState.OK
+    assert vcfront.latest_torque_request() > 0
 
 
 def _latest_bppc_state(vcfront):
@@ -595,3 +595,13 @@ def _bppc_state_is_inhibiting_torque(vcfront, expected_state):
         and torque_manager.VCFRONT_torqueManagerState == TorqueManagerState.ACTIVE
         and vcfront.latest_torque_request() == 0
     )
+
+
+def valid_torque_output(vcfront, pedal):
+    if pedal is None:
+        return False
+
+    if pedal.VCFRONT_bppcState != BppcState.OK:
+        return vcfront.latest_torque_request() == 0
+
+    return True
