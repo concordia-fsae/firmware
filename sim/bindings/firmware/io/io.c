@@ -6,7 +6,12 @@
 
 static float32_t rig_runtime_analog_inputs[DRV_INPUTAD_ANALOG_COUNT];
 
-void drv_vn9008_run(void) __attribute__((weak));
+void                       drv_vn9008_run(void) __attribute__((weak));
+#if defined(__APPLE__)
+__attribute__((weak)) void drv_vn9008_run(void)
+{
+}
+#endif
 void drv_inputAD_private_setAnalogVoltage(
     drv_inputAD_channelAnalog_E channel,
     float32_t                   voltage) __attribute__((weak));

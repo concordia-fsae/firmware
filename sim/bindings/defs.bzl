@@ -124,12 +124,15 @@ def rig_model_c_support(
     )
 
 def _rust_link_args(link_deps: list[str], extra_link_args: list[str]):
-    link_args = ["-C link-arg=-Wl,--start-group"]
+    link_args = []
+    if not host_info().os.is_macos:
+        link_args += ["-C link-arg=-Wl,--start-group"]
     link_args += [
         "-C link-arg=$(location {})".format(dep)
         for dep in link_deps
     ]
-    link_args += ["-C link-arg=-Wl,--end-group"]
+    if not host_info().os.is_macos:
+        link_args += ["-C link-arg=-Wl,--end-group"]
     link_args += [
         "-C link-arg={}".format(arg)
         for arg in extra_link_args

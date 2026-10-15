@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from clang.cindex import Config, CursorKind, Index
@@ -33,6 +36,22 @@ def python_member_name(
 
 
 def find_libclang() -> str | None:
+    configured_path = os.environ.get("LIBCLANG_PATH")
+    if configured_path is not None:
+        path = Path(configured_path)
+        if configured_path and path.is_file():
+            return str(path)
+        if configured_path and path.is_dir():
+            for filename in ("libclang.dylib", "libclang.so.1", "libclang.so"):
+                library = path / filename
+                if library.is_file():
+                    return str(library)
+        raise RuntimeError(
+            f"Invalid LIBCLANG_PATH={configured_path!r}: set it to a libclang "
+            "library file or a directory containing libclang.dylib, "
+            "libclang.so.1, or libclang.so; unset it to use default discovery."
+        )
+
     for path in (
         "/usr/lib/llvm-18/lib/libclang.so.1",
         "/usr/lib/llvm-18/lib/libclang.so",
@@ -50,6 +69,35 @@ def parse_c_enums(
     libclang = find_libclang()
     if libclang:
         Config.set_library_file(libclang)
+
+    if (
+        sys.platform == "darwin"
+        and libclang
+        and not any(
+            arg == "-resource-dir" or arg.startswith("-resource-dir=")
+            for arg in clang_args
+        )
+    ):
+        clang = Path(libclang).resolve().parent.parent / "bin" / "clang"
+        hint = (
+            f"Cannot discover Clang resource directory for libclang {libclang!r}. "
+            f"Expected matching compiler at {clang}. Install the matching Clang "
+            "distribution or pass -resource-dir explicitly."
+        )
+        try:
+            result = subprocess.run(
+                [str(clang), "-print-resource-dir"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise RuntimeError(hint) from exc
+        resource_dir = result.stdout.strip()
+        if not resource_dir or not Path(resource_dir).is_dir():
+            raise RuntimeError(f"{hint} Reported directory: {resource_dir!r}.")
+        clang_args = [*clang_args, "-resource-dir", resource_dir]
 
     translation_unit = Index.create().parse(str(wrapper), args=clang_args)
     errors = [

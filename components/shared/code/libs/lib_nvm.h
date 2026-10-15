@@ -24,13 +24,20 @@
  ******************************************************************************/
 
 // Helper functions for flash memory alignment and for tracking NVM usage
-# define LIB_NVM_STORAGE(x)                      __attribute__((aligned(sizeof(storage_t)))) \
+# define LIB_NVM_STORAGE(x)                       __attribute__((aligned(sizeof(storage_t)))) \
         (x)
-# define LIB_NVM_MEMORY_REGION(x)                __attribute__((section(".nvm"))) x ## _nvm = { 0U }; \
+# if defined(__APPLE__)
+#  define LIB_NVM_MEMORY_REGION(x)                x ## _nvm                                        = { 0U }; \
         x
-# define LIB_NVM_MEMORY_REGION_ARRAY(x, size)    __attribute__((section(".nvm"))) x ## _nvm[size] = { 0U }; \
+#  define LIB_NVM_MEMORY_REGION_ARRAY(x, size)    x ## _nvm[size]                                  = { 0U }; \
         x[size]
-# define NVM_SIZE_ASSERT(entry, size)            _Static_assert(sizeof(entry) == (size), "NVM deterministic size")
+# else
+#  define LIB_NVM_MEMORY_REGION(x)                __attribute__((section(".nvm"))) x ## _nvm       = { 0U }; \
+        x
+#  define LIB_NVM_MEMORY_REGION_ARRAY(x, size)    __attribute__((section(".nvm"))) x ## _nvm[size] = { 0U }; \
+        x[size]
+# endif
+# define NVM_SIZE_ASSERT(entry, size)             _Static_assert(sizeof(entry) == (size), "NVM deterministic size")
 
 /******************************************************************************
  *                              E X T E R N S
