@@ -1,0 +1,27 @@
+# Standalone crate: its own workspace, not a member of the firmware root Cargo
+# workspace (which is for the embedded/drive-stack crates).
+[workspace]
+
+[package]
+name = "influx-export"
+version = "0.1.0"
+edition = "2024"
+description = "Carputer InfluxDB -> local CSV export (CLI), with mDNS auto-discovery via net-detec"
+
+[[bin]]
+name = "influx-export"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+serde_json = "1"
+# Async reqwest driven by a per-call tokio runtime. Only http:// is used, so the
+# TLS backend is moot; the minimal feature set keeps the dependency lean.
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls-webpki-roots",
+] }
+tokio = { version = "1", features = ["rt", "net", "time"] }
+# Reuse the firmware's mDNS-SD discovery crate so this tool can find the carputer
+# (it advertises _carputer._tcp.local. via net-detec-carputer.service) without an IP.
+net_detec = { package = "net-detec", path = "../../../drive-stack/net-detec" }
