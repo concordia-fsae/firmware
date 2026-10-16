@@ -1,4 +1,5 @@
 load("@prelude//:rules.bzl", __rules__ = "rules")
+load("//components/shared/rust/build_tools:defs.bzl", "firmware_cargo")
 load("//components/vehicle_platform:platforms.bzl", "platform_output_name", "platform_target_label")
 load("//tools/rig:defs.bzl", "RIG_RUST_RUNTIME_ENV", "rig_model_python")
 
@@ -14,6 +15,7 @@ RIG_RUNTIME_RUST_ENV = RIG_RUST_RUNTIME_ENV | {
     "RIG_RUNTIME_RUST_IO_HOST_RS": "//sim/bindings/firmware/io:host.rs",
     "RIG_RUNTIME_RUST_NVM_RS": "//sim/bindings/firmware/nvm:nvm.rs",
     "RIG_RUNTIME_RUST_REGISTRY_RS": "//sim/bindings/firmware/runtime:registry.rs",
+    "RIG_RUNTIME_RUST_RTIC_CONTROLLER_RS": "//sim/bindings/firmware/runtime:rtic_controller.rs",
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/bindings/firmware/runtime:rt_controller.rs",
     "RIG_RUNTIME_RUST_SPI_RS": "//sim/bindings/firmware/spi:spi.rs",
     "RIG_RUNTIME_RUST_TIMER_RS": "//sim/bindings/firmware/timer:timer.rs",
@@ -398,6 +400,7 @@ def rig_embedded_controller_model(
         model_rust_modules: dict[str, str] = {},
         short_enums: bool = False,
         rust_env_prefix: str | None = None,
+        rust_application: str | None = None,
         visibility: list[str] | None = ["PUBLIC"]):
     controller_upper = rust_env_prefix if rust_env_prefix else controller.upper()
     controller_lower = controller.lower()
@@ -494,24 +497,43 @@ def rig_embedded_controller_model(
         visibility = visibility,
     )
 
-    rig_embedded_rust_model(
-        name = "sil-so",
-        crate = "{}_sim".format(controller_lower),
-        out = "lib{}_sim.so".format(controller_lower),
-        link_deps = [
-            _controller_component_target(component, "sil-application"),
-            ":model-c-support",
-            _controller_component_target(component, "sil-yamcan-c"),
-        ],
-        rust_env = {
-            "{}_BINDINGS_RS".format(controller_upper): ":bindings-rs",
-            "{}_FEATURES_RS".format(controller_upper): ":features-rs",
-            "{}_YAMCAN_DECODE_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_decode_generated.rs"),
-            "{}_YAMCAN_MODEL_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_model_generated.rs"),
-            "{}_YAMCAN_RS".format(controller_upper): _controller_codegen_artifact(component, "yamcan.rs"),
-        } | model_rust_env,
-        visibility = visibility,
-    )
+    rust_env = {
+        "{}_BINDINGS_RS".format(controller_upper): ":bindings-rs",
+        "{}_FEATURES_RS".format(controller_upper): ":features-rs",
+        "{}_YAMCAN_DECODE_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_decode_generated.rs"),
+        "{}_YAMCAN_MODEL_RS".format(controller_upper): _controller_codegen_artifact(component, "rust_model_generated.rs"),
+        "{}_YAMCAN_RS".format(controller_upper): _controller_codegen_artifact(component, "yamcan.rs"),
+    } | model_rust_env
+    if rust_application:
+        __rules__["export_file"](name = "rust-wrapper-src", src = "src/lib.rs")
+        for name, test in [("sil-so", False), ("test", True)]:
+            firmware_cargo(
+                name = name,
+                srcs = {path: path for path in glob(["src/**/*.rs", "Cargo.toml", "Cargo.lock"])},
+                package_path = "sim/models/controllers/" + controller_lower,
+                binary = controller_lower + "_sim",
+                dependencies = [rust_application, "//components/shared/rust:sources", "//components/shared/rust/build_tools:sources"],
+                protocol = component + ":rust-protocol",
+                host_library = True,
+                test = test,
+                feature = "",
+                rust_env = {RIG_RUNTIME_ENV: "//sim/bindings/firmware/runtime:lib.rs"} | RIG_RUNTIME_RUST_ENV | rust_env |
+                           {"FIRMWARE_SIM_IMAGE": component + ":bin_crc"},
+                visibility = visibility,
+            )
+    else:
+        rig_embedded_rust_model(
+            name = "sil-so",
+            crate = "{}_sim".format(controller_lower),
+            out = "lib{}_sim.so".format(controller_lower),
+            link_deps = [
+                _controller_component_target(component, "sil-application"),
+                ":model-c-support",
+                _controller_component_target(component, "sil-yamcan-c"),
+            ],
+            rust_env = rust_env,
+            visibility = visibility,
+        )
 
     rig_embedded_rust_model_platform_aliases(
         name = "sil-so",

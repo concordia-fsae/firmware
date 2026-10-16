@@ -1,0 +1,10 @@
+load(":defs.bzl", "cargo_sources")
+
+cargo_sources(
+    name = "sources",
+    path = "components/shared/rust/build_tools",
+    srcs = {path: path for path in glob(["src/**/*.rs", "Cargo.toml"])},
+    visibility = ["PUBLIC"],
+)
+
+[export_file(name = tool, src = tool, visibility = ["PUBLIC"]) for tool in ["build_firmware.py", "test_tools.py"]]

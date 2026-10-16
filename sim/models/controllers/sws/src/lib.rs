@@ -34,99 +34,126 @@ mod rust_decode_generated {
     include!(env!("SWS_YAMCAN_DECODE_RS"));
 }
 
-use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
-use bindings::HW_GPIO_pinmux_E::{
-    HW_GPIO_DIN1, HW_GPIO_DIN2, HW_GPIO_DIN3, HW_GPIO_DIN4, HW_GPIO_DIN5, HW_GPIO_DIN6,
-    HW_GPIO_DIN7, HW_GPIO_DIN8,
-};
-use rig_runtime::nvm::ControllerNvm;
+use bindings::HW_GPIO_pinmux_E::*;
+use firmware_shared::can::{Frame, RxQueue, TxQueue};
+use rig_runtime::model::{NodeModel, NodeTarget};
 use rig_runtime::node_abi::ModelDataPathProvider;
-use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
-use std::sync::Mutex;
+use rig_runtime::rtic_controller::{RticApplication, RticController};
+use std::sync::{LazyLock, Mutex};
+use sws::{app::App, protocol::*, uds::Descriptor};
 
-const SWS_APP_START: u32 = 0x0800_2000;
-const SWS_APP_END: u32 = 0x0801_0000;
-const SWS_APP_CRC_LOCATION: u32 = 0x0800_FFF0;
+const PINS: [i32; 8] = [
+    HW_GPIO_DIN1 as i32,
+    HW_GPIO_DIN2 as i32,
+    HW_GPIO_DIN3 as i32,
+    HW_GPIO_DIN4 as i32,
+    HW_GPIO_DIN5 as i32,
+    HW_GPIO_DIN6 as i32,
+    HW_GPIO_DIN7 as i32,
+    HW_GPIO_DIN8 as i32,
+];
+const IMAGE: &[u8] = include_bytes!(env!("FIRMWARE_SIM_IMAGE"));
 
-// The firmware's SWS inputs are active-low GPIOs. Resetting them here keeps
-// the Rust-hosted model deterministic and makes the physical driver-input
-// boundary explicit: Python tests set logical buttons through the generic IO
-// ABI, while the embedded firmware remains responsible for debounce and CAN
-// request generation.
-fn release_driver_inputs(controller: &RTController) {
-    for pin in [
-        HW_GPIO_DIN1,
-        HW_GPIO_DIN2,
-        HW_GPIO_DIN3,
-        HW_GPIO_DIN4,
-        HW_GPIO_DIN5,
-        HW_GPIO_DIN6,
-        HW_GPIO_DIN7,
-        HW_GPIO_DIN8,
-    ] {
-        controller.set_digital(pin as i32, true);
+fn descriptor() -> Descriptor {
+    let word = |offset| u32::from_le_bytes(IMAGE[offset..offset + 4].try_into().unwrap());
+    Descriptor {
+        start: word(0),
+        end: word(4),
+        crc_location: word(8),
+        crc: word(IMAGE.len() - 4),
+        component: u16::from_le_bytes(IMAGE[12..14].try_into().unwrap()),
+        variant: u16::from_le_bytes(IMAGE[14..16].try_into().unwrap()),
     }
 }
 
-rig_rt_controller_nvm_storage!(ControllerNvm<
-    { features::NVM_BLOCK_SIZE as usize },
-    { features::NVM_LIB_ENABLED },
-    { features::NVM_FLASH_BACKED },
->);
-
-#[allow(non_upper_case_globals)]
-#[unsafe(no_mangle)]
-pub static appDesc: AppDesc = AppDesc::new(
-    SWS_APP_START,
-    SWS_APP_END,
-    SWS_APP_CRC_LOCATION,
-    features::APP_COMPONENT_ID as u16,
-    features::APP_VARIANT_ID as u16,
-);
-
-unsafe extern "C" fn sws_sys_1hz() {
-    unsafe { bindings::drv_outputAD_toggleDigitalState(DRV_OUTPUTAD_DIGITAL_LED) };
+struct SwsRtic {
+    app: App,
+    rx: RxQueue<32>,
+    tx: TxQueue<32>,
 }
-
-#[unsafe(no_mangle)]
-pub static sys_desc: ModuleDesc = ModuleDesc::new(None, None, None, None, Some(sws_sys_1hz));
-
-struct Sws {
-    nvm: ControllerNvm<
-        { features::NVM_BLOCK_SIZE as usize },
-        { features::NVM_LIB_ENABLED },
-        { features::NVM_FLASH_BACKED },
-    >,
-}
-
-impl Sws {
-    const fn new() -> Self {
+impl SwsRtic {
+    fn new() -> Self {
         Self {
-            nvm: ControllerNvm::<
-                { features::NVM_BLOCK_SIZE as usize },
-                { features::NVM_LIB_ENABLED },
-                { features::NVM_FLASH_BACKED },
-            >::new(),
+            app: App::default(),
+            rx: RxQueue::default(),
+            tx: TxQueue::new(MESSAGES[MSG_SWS_UDS_RESPONSE].id),
         }
     }
 }
-
-impl NodeTarget<RTController> for Sws {
-    unsafe fn reset_node(&mut self, controller: &mut RTController) {
-        self.nvm.reset();
-        release_driver_inputs(controller);
-        rig_runtime::can::configure_network(SWS_CAN_NETWORK);
-        unsafe { bindings::YAMCAN_shared_init_static() };
+impl RticApplication for SwsRtic {
+    fn reset(&mut self) {
+        *self = Self::new();
+        rig_runtime::io::set_digital(HW_GPIO_LED as i32, false);
+        rig_runtime::io::set_digital(HW_GPIO_CAN_SLEEP as i32, false);
+    }
+    fn can_interrupt(&mut self, bus: u8, packet: rig_runtime::CanPacket) {
+        if bus == 0
+            && packet.len <= 8
+            && MESSAGES[..MSG_SWS_FAULTS].iter().any(|m| m.id == packet.id)
+        {
+            self.rx.push(Frame {
+                id: packet.id,
+                len: packet.len,
+                data: packet.data,
+            });
+        }
+    }
+    fn timer_interrupt(&mut self) {
+        self.app.timer_task(
+            descriptor(),
+            || self.rx.pop(),
+            || PINS.map(|pin| !rig_runtime::io::get_digital(pin)),
+            |frame| self.tx.enqueue(frame),
+            || {
+                let pin = HW_GPIO_LED as i32;
+                rig_runtime::io::set_digital(pin, !rig_runtime::io::get_digital(pin));
+            },
+        );
+        // Match the firmware's bounded three-mailbox transmit service per tick.
+        for _ in 0..3 {
+            let Some(frame) = self.tx.front() else {
+                break;
+            };
+            let packet = rig_runtime::CanPacket::new(frame.id, frame.data, frame.len);
+            if !rig_runtime::can::rig_runtime_can_push_tx(0, &packet) {
+                break;
+            }
+            self.tx.pop();
+        }
+    }
+    fn reset_requested(&self) -> bool {
+        self.app.diagnostics.reset_due(self.app.now)
     }
 }
-
+struct Sws;
+impl NodeTarget<RticController<SwsRtic>> for Sws {
+    unsafe fn reset_node(&mut self, controller: &mut RticController<SwsRtic>) {
+        for pin in PINS {
+            controller.set_digital(pin, true);
+        }
+        rig_runtime::can::configure_network(SWS_CAN_NETWORK);
+    }
+}
 impl ModelDataPathProvider for Sws {}
-
-static SWS: Mutex<NodeModel<Sws, RTController>> = Mutex::new(NodeModel::new(
-    RTController::new_embedded_module(),
-    Sws::new(),
-));
-
+static SWS: LazyLock<Mutex<NodeModel<Sws, RticController<SwsRtic>>>> =
+    LazyLock::new(|| Mutex::new(NodeModel::new(RticController::new(SwsRtic::new()), Sws)));
 rig_model_abi!(SWS, rig_runtime::node_abi);
+rig_yamcan_network!(
+    SWS_CAN_NETWORK,
+    rust_model_generated,
+    rust_decode_generated,
+    yamcan
+);
 
-rig_yamcan_network!(SWS_CAN_NETWORK, rust_model_generated, rust_decode_generated, yamcan);
+#[unsafe(no_mangle)]
+pub extern "C" fn sws_sim_get_tick_count() -> u32 {
+    SWS.lock().unwrap().controller().application.app.now
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sws_sim_get_reset_count() -> u32 {
+    SWS.lock().unwrap().controller().resets
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sws_sim_get_rx_dropped() -> u32 {
+    SWS.lock().unwrap().controller().application.rx.dropped
+}

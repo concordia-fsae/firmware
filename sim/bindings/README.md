@@ -45,6 +45,19 @@ cancellation, ordering, and scheduler progress.
 
 ## Build and test
 
+RTIC applications use `runtime/rust/rtic_controller.rs` with the pure Rust host
+runtime. `RticApplication` supplies CAN and timer task entry points and reset
+handling. `RticController` dispatches CAN before each millisecond timer interrupt,
+catches up every tick during coarse steps and preserves fractional nanoseconds.
+The SWS adapter invokes the same timer-task body and bounded CAN queues as the
+STM32 RTIC application. This models task behavior and ordering; Cortex-M cycles,
+NVIC preemption and physical CAN timing require hardware or a CPU emulator.
+
+`rig_embedded_controller_model(rust_application = "//components/sws:rust-sources", ...)`
+selects the Cargo host build path. Existing Python/model ABI and platform aliases
+are retained. Controllers without `rust_application` continue using their C
+runtime. SWS integration checks run with `buckle test //sim/tests:sws-cfr26`.
+
 The binding graph is normally exercised through the complete simulation test
 graph:
 

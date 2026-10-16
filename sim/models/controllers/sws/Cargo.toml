@@ -1,0 +1,17 @@
+[package]
+name = "sws-sim"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+sws = { path = "../../../../components/sws/rust" }
+firmware-shared = { path = "../../../../components/shared/rust" }
+
+[lib]
+name = "sws_sim"
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = 3

@@ -378,6 +378,10 @@ for node in nodes:
 %>\
 use core::ffi::c_int;
 
+mod codec {
+${wire_codec}
+}
+
 use crate::SignalMeasurement;
 use crate::yamcan::{
     CanData,
@@ -835,58 +839,20 @@ pub fn enum_value_descriptors() -> &'static [EnumValueDescriptor] {
     YAMCAN_ENUM_VALUES
 }
 
-fn raw_mask(width: u8) -> u64 {
-    if width >= 64 { u64::MAX } else { (1u64 << width) - 1u64 }
-}
-
-fn raw_signal_value(desc: &TxSignalDescriptor, data: [u8; 8]) -> u64 {
-    (u64::from_le_bytes(data) >> desc.start_bit) & raw_mask(desc.bit_width)
-}
-
 fn decode_signal_value(desc: &TxSignalDescriptor, data: [u8; 8]) -> f64 {
-    let raw = raw_signal_value(desc, data);
-    if desc.signed && desc.bit_width > 0 {
-        let sign_bit = 1u64 << (desc.bit_width - 1);
-        let signed = if (raw & sign_bit) != 0 {
-            (raw | !raw_mask(desc.bit_width)) as i64
-        } else {
-            raw as i64
-        };
-        signed as f64 * desc.scale + desc.offset
-    } else {
-        raw as f64 * desc.scale + desc.offset
-    }
+    let raw = codec::get_bits(&data, desc.start_bit, desc.bit_width);
+    codec::decode_raw(raw, desc.bit_width, desc.signed, desc.scale, desc.offset)
 }
 
 fn encode_signal_value(desc: &TxSignalDescriptor, data: &mut [u8; 8], value: f64) {
-    let clamped = value.max(desc.min).min(desc.max);
-    let raw = ((clamped - desc.offset) / desc.scale) as i64;
-    write_raw_signal_value(desc.start_bit, desc.bit_width, data, raw as u64);
-}
-
-fn write_raw_signal_value(start_bit: u8, bit_width: u8, data: &mut [u8; 8], raw: u64) {
-    let raw = raw & raw_mask(bit_width);
-    let mask = raw_mask(bit_width) << start_bit;
-    let current = u64::from_le_bytes(*data) & !mask;
-    *data = (current | (raw << start_bit)).to_le_bytes();
+    let raw = codec::encode_raw(value, desc.scale, desc.offset, desc.min, desc.max);
+    codec::set_bits(data, desc.start_bit, desc.bit_width, raw);
 }
 
 fn apply_message_checksum(message: &MessageCodecDescriptor, data: &mut [u8; 8]) {
-    let Some(checksum) = message.checksum else {
-        return;
-    };
-
-    write_raw_signal_value(checksum.start_bit, checksum.bit_width, data, 0);
-    let mut calculated = checksum.crc;
-    for byte in data.iter().take(message.len as usize) {
-        calculated = calculated.wrapping_add(*byte as u32);
+    if let Some(checksum) = message.checksum {
+        codec::apply_checksum(data, message.len, checksum.start_bit, checksum.bit_width, checksum.crc);
     }
-    write_raw_signal_value(
-        checksum.start_bit,
-        checksum.bit_width,
-        data,
-        calculated as u64,
-    );
 }
 
 pub fn decode_transmitted_signal(
