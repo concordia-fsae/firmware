@@ -44,6 +44,12 @@ def _uv_tool_impl(ctx: AnalysisContext) -> list[Provider]:
             hidden = [venv_artifact.as_output(), srcs],
         ),
         category = "uv",
+        # Tool lockfiles use PyPI, including isolated build dependencies.
+        # Do not inherit a developer's private registry from the Buck daemon.
+        env = {
+            "UV_DEFAULT_INDEX": "https://pypi.org/simple",
+            "UV_INDEX_URL": "https://pypi.org/simple",
+        },
     )
 
     # write a wrapper script which will activate the venv and then
