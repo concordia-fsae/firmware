@@ -116,7 +116,13 @@ pub extern "C" fn vcpdu_sim_get_vn9008_cs_amps_per_volt(channel: i32) -> f32 {
     if channel < 0 || channel >= bindings::drv_vn9008_E::DRV_VN9008_CHANNEL_COUNT as i32 {
         return 0.0;
     }
-    unsafe { bindings::drv_vn9008_channels[channel as usize].cs_amp_per_volt }
+
+    unsafe {
+        let sense_channel =
+            bindings::drv_vn9008_channels[channel as usize].current_sense_channel;
+
+        bindings::drv_currentSense_spec[sense_channel as usize].amp_per_volt
+    }
 }
 
 rig_yamcan_network!(

@@ -13,6 +13,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_currentSense.h"
 #include "drv_hsd.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
@@ -41,8 +42,7 @@ typedef struct
             drv_outputAD_channelDigital_E en;
         } pwm_en;
     }                             enable;
-    float32_t                     cs_amp_per_volt;
-    drv_inputAD_channelAnalog_E   cs_channel;
+    drv_currentSense_channel_E    current_sense_channel;
     drv_outputAD_channelDigital_E fault_reset;
     drv_outputAD_channelDigital_E enable_cs;
     float32_t                     current_limit_amp;

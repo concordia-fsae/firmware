@@ -13,6 +13,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_currentSense.h"
 #include "drv_hsd.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
@@ -33,8 +34,7 @@ typedef enum
 
 typedef struct
 {
-    float32_t                     cs_amp_per_volt;
-    drv_inputAD_channelAnalog_E   cs_channel;
+    drv_currentSense_channel_E    current_sense_channel;
     drv_outputAD_channelDigital_E diag_en;
     drv_outputAD_channelDigital_E sel1;
     drv_outputAD_channelDigital_E sel2;

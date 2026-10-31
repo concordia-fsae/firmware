@@ -11,6 +11,7 @@
  *                             I N C L U D E S
  ******************************************************************************/
 
+#include "drv_currentSense.h"
 #include "drv_io.h"
 #include "drv_vn9008.h"
 #include "HW_adc.h"
@@ -72,8 +73,7 @@ void drv_vn9008_run(void)
 {
     for (uint8_t i = 0U; i < DRV_VN9008_CHANNEL_COUNT; i++)
     {
-        const float32_t cs_voltage     = drv_inputAD_getAnalogVoltage(drv_vn9008_channels[i].cs_channel);
-        const float32_t current        = cs_voltage * drv_vn9008_channels[i].cs_amp_per_volt;
+        const float32_t current        = drv_currentSense_getCurrent(drv_vn9008_channels[i].current_sense_channel);
         const bool      diagnostic     = drv_outputAD_getDigitalActiveState(drv_vn9008_channels[i].enable_cs) == DRV_IO_ACTIVE;
         const float32_t currentCurrent = diagnostic ? current : drv_vn9008_data.current[i];
         drv_vn9008_data.current[i] = (drv_vn9008_data.state[i] == DRV_HSD_STATE_ON) ? currentCurrent : 0.0f;

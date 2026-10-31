@@ -1,6 +1,6 @@
 /**
- * @file IO.c
- * @brief  Source code for IO Module
+ * @file drv_inputAD_componentSpecific.c
+ * @brief  Source code for inputAD_componentSpecific
  */
 
 /******************************************************************************

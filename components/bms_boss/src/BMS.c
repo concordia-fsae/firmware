@@ -13,6 +13,7 @@
 
 #include "app_faultManager.h"
 #include "batteryModel.h"
+#include "drv_currentSense.h"
 #include "drv_inputAD.h"
 #include "drv_outputAD.h"
 #include "drv_timer.h"
@@ -33,11 +34,8 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define CURRENT_SENSE_V_per_A                          -0.0025f
 // Precharge is complete at ~3x the precharge time constant
 #define PRECHARGE_MIN_TIME_MS                          (BMS_PRECHARGE_RESISTANCE * BMS_DC_LINK_CAPACITANCE * 3 * 1000)
-
-#define PACK_CS_0_OFFSET                               0.0f
 
 #define LOAD_CURRENT_THRESHOLD                         5
 #define BMS_CONFIGURED_DERATING_DELAY                  1000 // [ms]
@@ -588,7 +586,7 @@ static void BMS1kHz_PRD(void)
     const uint64_t this_step  = HW_TIM_getBaseTick();
     const uint32_t delta_t    = (uint32_t)(this_step - BMS.counted_coulombs.last_step_us);
 
-    float32_t      tmpCurrent = (drv_inputAD_getAnalogVoltage(DRV_INPUTAD_ANALOG_CS) - PACK_CS_0_OFFSET) / CURRENT_SENSE_V_per_A;
+    float32_t      tmpCurrent = drv_currentSense_getCurrent(DRV_CURRENTSENSE_CHANNEL_PACK);
 
     BMS.packCurrentRaw           = tmpCurrent;
     tmpCurrent                   = lib_simpleFilter_lpf_step(&BMS.lpfCurrent, tmpCurrent);
