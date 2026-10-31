@@ -1,0 +1,35 @@
+# Opt-in host test dependencies. Production targets must not depend on these.
+cxx_library(
+    name = "freertos",
+    srcs = ["freertos.c"],
+    header_namespace = "",
+    exported_headers = {name: "include/" + name for name in [
+        "FreeRTOS.h", "queue.h", "task.h", "semphr.h", "test_freertos.h",
+    ]},
+    deps = ["//embedded/libs:unity"],
+    compiler_flags = ["-std=c11", "-Wall", "-Wextra", "-Werror"],
+    visibility = ["PUBLIC"],
+)
+
+cxx_library(
+    name = "flash",
+    srcs = ["flash.c"],
+    header_namespace = "",
+    exported_headers = {"test_flash.h": "include/test_flash.h"},
+    deps = ["//embedded/libs:unity"],
+    compiler_flags = ["-std=c11", "-Wall", "-Wextra", "-Werror"],
+    visibility = ["PUBLIC"],
+)
+
+# Use the production CRC implementation, with a shared host CRC8 configuration.
+cxx_library(
+    name = "crc8",
+    srcs = ["//embedded/libs:libcrc.c"],
+    header_namespace = "",
+    exported_headers = {
+        "libcrc.h": "//embedded/libs:libcrc.h",
+        "libcrc_componentSpecific.h": "include/libcrc_componentSpecific.h",
+    },
+    compiler_flags = ["-std=c11", "-Wall", "-Wextra", "-Werror"],
+    visibility = ["PUBLIC"],
+)

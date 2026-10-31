@@ -1,1 +1,2 @@
-# C unit-test infrastructure lives in defs.bzl.
+# C unit-test rules live in defs.bzl.
+# Reusable, opt-in host dependencies live in //tools/c_unit/support.
