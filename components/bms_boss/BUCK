@@ -183,6 +183,7 @@ add_platform_sil_bundle_targets(
         "//sim/bindings/firmware/spi:headers",
     ],
     app_srcs = [
+        "//components/shared/code:DRV/drv_currentSense.c",
         "//components/shared/code:DRV/drv_hih.c",
         "//components/shared/code:DRV/drv_inputAD.c",
         "//components/shared/code:DRV/drv_io.c",
@@ -203,6 +204,7 @@ add_platform_sil_bundle_targets(
         "//embedded/libs/cells:P42A.c",
         "//embedded/libs:isotp-src[isotp.c]",
         "//embedded/libs/uds:lib_udsServer.c",
+        "HW/drv_currentSense_componentSpecific.c",
         "HW/drv_inputAD_componentSpecific.c",
         "HW/drv_outputAD_componentSpecific.c",
         "HW/drv_userInput_componentSpecific.c",
@@ -364,6 +366,7 @@ cxx_binary(
             "//components/shared/code:DRV/drv_io.c",
             "//components/shared/code:DRV/drv_outputAD.c",
             "//components/shared/code:DRV/drv_userInput.c",
+            "//components/shared/code:DRV/drv_currentSense.c",
             "//components/shared/code:DRV/drv_timer.c",
             "//components/shared/code:HW/HW.c",
             "//components/shared/code:HW/HW_adc.c",
