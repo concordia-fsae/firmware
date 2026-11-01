@@ -69,3 +69,7 @@ mod scheduler {
 pub mod cluster {
     include!(env!("RIG_RUNTIME_RUST_CLUSTER_RS"));
 }
+
+pub mod uart {
+    include!(env!("RIG_RUNTIME_RUST_UART_RS"));
+}

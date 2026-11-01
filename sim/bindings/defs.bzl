@@ -16,6 +16,7 @@ RIG_RUNTIME_RUST_ENV = RIG_RUST_RUNTIME_ENV | {
     "RIG_RUNTIME_RUST_REGISTRY_RS": "//sim/bindings/firmware/runtime:registry.rs",
     "RIG_RUNTIME_RUST_RT_CONTROLLER_RS": "//sim/bindings/firmware/runtime:rt_controller.rs",
     "RIG_RUNTIME_RUST_SPI_RS": "//sim/bindings/firmware/spi:spi.rs",
+    "RIG_RUNTIME_RUST_UART_RS": "//sim/bindings/firmware/uart:uart.rs",
     "RIG_RUNTIME_RUST_TIMER_RS": "//sim/bindings/firmware/timer:timer.rs",
 }
 
