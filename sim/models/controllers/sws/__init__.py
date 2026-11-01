@@ -50,7 +50,7 @@ _BUTTON_PINS = {
     SwsButton.RIGHT_TOGGLE: "DIN8",
 }
 
-# These combinations mirror driverInput.c. Keeping the mapping here makes
+# These combinations mirror the Rust driver inputs. Keeping the mapping here makes
 # test intent readable without replacing the firmware's debounce/combo logic.
 _REQUEST_BUTTONS = {
     SwsRequest.RUN: (SwsButton.LEFT_TOP, SwsButton.RIGHT_TOP),

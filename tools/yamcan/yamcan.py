@@ -1063,8 +1063,12 @@ def codegen(
     mako_lookup: TemplateLookup,
     nodes: Iterator[Tuple[str, Path]],
     rust_codegen: bool = False,
+    rust_embedded_codegen: bool = False,
 ):
     global ERROR
+    wire_codec = (Path(__file__).parent / "srcs/rust/codec.rs").read_text() if (
+        rust_codegen or rust_embedded_codegen
+    ) else ""
     for node, output_dir in nodes:
         if node not in can_nodes:
             raise Exception(f"Error: Node not defined for node '{node}'")
@@ -1094,8 +1098,12 @@ def codegen(
                     {"nodes": [can_nodes[node]], "can_bus_defs": can_bus_defs},
                 ],
             ]
+        if rust_embedded_codegen:
+            makos = [["rust_embedded_generated.rs.mako", {"nodes": [can_nodes[node]]}]]
         for template in makos:
-            rendered = mako_lookup.get_template(template[0]).render(**template[1])
+            rendered = mako_lookup.get_template(template[0]).render(
+                **template[1], wire_codec=wire_codec
+            )
             if not isinstance(rendered, str):
                 print(
                     f"Error when trying to render '{template[0]}': Result of rendering was not a string"
@@ -1170,6 +1178,12 @@ def parse_args() -> Namespace:
         dest="cache_dir",
         action="store",
         help="Directory where generated network files will be placed",
+    )
+
+    parser.add_argument(
+        "--rust-embedded-codegen",
+        action="store_true",
+        help="Generate allocation-free no_std Rust CAN wrappers.",
     )
 
     parser.add_argument(
@@ -1483,7 +1497,10 @@ def main():
         raise Exception("Build failed. See previous errors in output")
 
     if args.node:
-        codegen(lookup, zip(args.node, args.codegen_dir), args.rust_codegen)
+        codegen(
+            lookup, zip(args.node, args.codegen_dir),
+            args.rust_codegen, args.rust_embedded_codegen,
+        )
 
 
 if __name__ == "__main__":

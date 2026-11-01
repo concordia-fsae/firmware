@@ -17,6 +17,17 @@ pub extern "C" fn rig_runtime_can_notify_rx(_bus: u8) {}
 
 include!(env!("RIG_RUNTIME_RUST_MODULES_RS"));
 
-mod io {
+pub mod io {
     include!(env!("RIG_RUNTIME_RUST_IO_HOST_RS"));
+}
+
+pub use can::{
+    CanEnumValueDescriptor, CanMessageDescriptor, CanNetwork, CanPacket, CanSignalDescriptor,
+};
+pub mod rtic_controller {
+    include!(env!("RIG_RUNTIME_RUST_RTIC_CONTROLLER_RS"));
+}
+
+pub fn reset_host_time() {
+    RUNTIME_TIME_NS.store(0, Ordering::Relaxed);
 }

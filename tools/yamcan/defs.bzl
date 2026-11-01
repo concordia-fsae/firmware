@@ -220,3 +220,16 @@ def build_network(
         platform = configured_platform,
         visibility = visibility,
     )
+
+
+def generate_embedded_rust(name: str, network_dep: str, node: str, **kwargs):
+    """Generate standalone no_std wrappers using the shared Yamcan Rust codec."""
+    uv_genrule(
+        name = name,
+        tool = "//tools/yamcan:yamcan",
+        srcs = [network_dep],
+        out = "generated",
+        cmd = "$(python) ${TOOLDIR}/yamcan.py --cache-dir ${SRCS} --node " + node +
+              " --codegen-dir ${OUT} --rust-embedded-codegen",
+        **kwargs
+    )

@@ -1,0 +1,6 @@
+/* 8 KiB bootloader; descriptor at 0x08002000; 256-byte aligned vectors. */
+MEMORY {
+  DESCRIPTOR : ORIGIN = 0x08002000, LENGTH = 0x100
+  FLASH : ORIGIN = 0x08002100, LENGTH = 0xDF00
+  RAM : ORIGIN = 0x20000000, LENGTH = 20K
+}
