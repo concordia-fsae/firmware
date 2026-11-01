@@ -5,7 +5,9 @@ These tests adapt the three GPS scenarios from `jl/c-unit-test` commit
 infrastructure and FreeRTOS helpers, the real LwGPS parser with VCFront's
 configuration, and the real timer implementation. Bytes enter the captured DMA
 buffer and are processed through the application's public module callbacks;
-there are no parser-only test hooks.
+there are no parser-only test hooks. YIC formatting and decoding live in
+`libs/lib_yicGnss`; these application tests exercise that library through the DMA
+consumer. Direct, RTOS-free library tests live in `libs/tests/yicGnss`.
 
 Run from the repository root:
 
@@ -104,11 +106,11 @@ the updated network definition together. The clock manager checks both fields.
 - Time/date flags require valid navigation and validated calendar/UTC fields.
   GGA and RMC UTC must agree to whole seconds before time/date are marked valid;
   this avoids combining a new time with an earlier date across midnight.
-- Before LwGPS updates navigation, the application validates field counts,
+- Before LwGPS updates decoded data, `lib_yicGnss` validates field counts,
   supported states, coordinate ranges/hemispheres, UTC/calendar ranges, speed,
   course, satellite count and altitude. Overlong fields that LwGPS would truncate
-  are rejected. Malformed navigation messages invalidate their own source and do
-  not refresh liveness. Proper no-fix messages are accepted but not marked valid.
+  are rejected. The application uses malformed-source results to invalidate its
+  source timer. Malformed navigation messages do not refresh liveness. Proper no-fix messages are accepted but not marked valid.
 - CRC mismatch handling still follows `LWGPS_CFG_CRC`; checksum/frame failures
   are dropped and existing source data expire normally.
 

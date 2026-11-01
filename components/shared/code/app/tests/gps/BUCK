@@ -3,6 +3,7 @@ load("//tools/c_unit:defs.bzl", "c_unit_test")
 GPS_SOURCES = [
     "test_gps.c",
     "//components/shared/code:app/app_gps.c",
+    "//components/shared/code:libs/lib_yicGnss.c",
     "//components/shared/code:DRV/drv_timer.c",
     "//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]",
 ]
