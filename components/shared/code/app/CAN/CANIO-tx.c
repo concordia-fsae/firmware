@@ -156,6 +156,14 @@ static void CANIO_tx_init(void)
 {
     for (CAN_bus_E bus = 0U; bus < CAN_BUS_COUNT; bus++)
     {
+        // Reinitialization must not retain deadlines from the previous clock
+        // epoch, such as when the simulated controller restarts.
+        for (uint8_t table = 0U; table < CAN_table[bus].busTableLength; table++)
+        {
+            CAN_table[bus].busTable[table].index         = 0U;
+            CAN_table[bus].busTable[table].counter       = 0U;
+            CAN_table[bus].busTable[table].lastTimestamp = CANIO_getTimeMs();
+        }
         HW_CAN_start(bus);    // start CAN peripheral
     }
 }
