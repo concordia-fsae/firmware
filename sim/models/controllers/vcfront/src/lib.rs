@@ -34,12 +34,13 @@ mod rust_decode_generated {
     include!(env!("VCFRONT_YAMCAN_DECODE_RS"));
 }
 
+use bindings::HW_UART_port_E::HW_UART_PORT_GPS;
 use bindings::drv_inputAD_channelAnalog_E::{
     DRV_INPUTAD_ANALOG_APPS_P1, DRV_INPUTAD_ANALOG_APPS_P2, DRV_INPUTAD_ANALOG_BR_PR,
 };
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
-use rig_runtime::nvm::ControllerNvm;
 use rig_runtime::node_abi::ModelDataPathProvider;
+use rig_runtime::nvm::ControllerNvm;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -93,6 +94,12 @@ impl Vcfront {
 impl NodeTarget<RTController> for Vcfront {
     unsafe fn reset_node(&mut self, controller: &mut RTController) {
         self.nvm.reset();
+        // Match the GPS UART's circular RX DMA configuration before Module_Init
+        // lets app_gps register its receive buffer.
+        assert!(rig_runtime::uart::configure(
+            HW_UART_PORT_GPS as i32,
+            rig_runtime::uart::RxMode::CircularDma,
+        ));
         rig_runtime::can::configure_network(VCFRONT_CAN_NETWORK);
         unsafe { bindings::YAMCAN_shared_init_static() };
         controller.set_analog_input(DRV_INPUTAD_ANALOG_BR_PR as i32, 0.3);

@@ -1,4 +1,5 @@
 from sim.bindings.firmware.timer import TimerInterface
+from sim.bindings.firmware.uart import UartInterface
 from rig import extend_model_class, load_generated_enums, load_generated_module
 from .extensions import VcfrontPytestHelpers
 from .simple import VcfrontSimpleModel
@@ -21,10 +22,12 @@ def _load_generated() -> None:
     globals()["Fault"] = enums.Fault
     globals()["TimerChannel"] = enums.TimerChannel
     globals()["TimerPort"] = enums.TimerPort
+    globals()["UartPort"] = enums.UartPort
     VcfrontPytestHelpers.AnalogInput = enums.AnalogInput
 
     class VcfrontModel(extend_model_class(model.VcfrontModel, VcfrontPytestHelpers)):
         timer = TimerInterface(enums.TimerPort, enums.TimerChannel)
+        uart = UartInterface()
 
     globals()["VcfrontModel"] = VcfrontModel
 
@@ -65,6 +68,7 @@ _GENERATED_EXPORTS = {
     "Fault",
     "TimerChannel",
     "TimerPort",
+    "UartPort",
     "VcfrontModel",
     "VCFRONT_CLUSTERS",
     "PLATFORM_VARIANTS",
@@ -77,6 +81,7 @@ __all__ = [
     "Fault",
     "TimerChannel",
     "TimerPort",
+    "UartPort",
     "VCFRONT_CLUSTERS",
     "VcfrontSimpleModel",
     "VcfrontModel",
