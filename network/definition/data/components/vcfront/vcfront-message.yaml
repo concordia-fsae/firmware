@@ -22,6 +22,7 @@ messages:
       wheelSpeedSensorDegraded:
       wheelSpeedSensorLocked:
       brakePressureSensorFault:
+      gnssTransceiverBroken:
 
   udsResponse:
     description: UDS response message from the VCFRONT

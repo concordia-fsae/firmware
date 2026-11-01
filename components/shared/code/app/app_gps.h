@@ -91,3 +91,7 @@ uint16_t                  app_gps_getUartErrorFeCount(void);
 uint16_t                  app_gps_getUartErrorNeCount(void);
 uint16_t                  app_gps_getUartErrorPeCount(void);
 void                      app_gps_recordUartError(uint32_t errorCode);
+
+// Shared HAL_UART_ErrorCallback recovery path; zero means no error.
+// Return whether the port remains available after handling the error.
+bool app_gps_handleUartError(uint32_t errorCode);

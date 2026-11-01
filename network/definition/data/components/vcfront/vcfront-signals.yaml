@@ -6,6 +6,9 @@ signals:
   gearChangeRejected:
     description: Driver reverse request rejected
     discreteValues: faultStatus
+  gnssTransceiverBroken:
+    description: GNSS transceiver disabled until reset after excessive UART errors
+    discreteValues: faultStatus
   gpsDeviceError:
     description: Device is in an error state
     discreteValues: faultStatus

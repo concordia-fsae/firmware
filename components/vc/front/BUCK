@@ -189,6 +189,7 @@ add_platform_sil_bundle_targets(
         "//sim/bindings/firmware/spi:headers",
     ],
     app_srcs = [
+        ("src/HW/HW_uart_componentSpecific.c", ["-DRIG_UART_CALLBACKS_ONLY"]),
         "//components/shared/code:DRV/drv_inputAD.c",
         "//components/shared/code:DRV/drv_io.c",
         "//components/shared/code:DRV/drv_outputAD.c",

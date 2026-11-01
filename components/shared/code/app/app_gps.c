@@ -164,6 +164,19 @@ static void processByte(uint8_t byte)
  *                       P U B L I C  F U N C T I O N S
  ******************************************************************************/
 
+bool app_gps_handleUartError(uint32_t errorCode)
+{
+    if (errorCode == 0U)
+    {
+        return true;
+    }
+    app_gps_recordUartError(errorCode);
+    (void)HW_UART_stopDMA(HW_UART_PORT_GPS);
+    app_gps_resetBuffers();
+    (void)HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
+    return true;
+}
+
 void app_gps_resetBuffers(void)
 {
     LIB_BUFFER_CIRC_CLEAR(&gps.dmaBuffer);

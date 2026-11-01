@@ -124,3 +124,26 @@ rig_yamcan_network!(
     rust_decode_generated,
     yamcan
 );
+
+unsafe extern "C" {
+    fn HAL_UART_ErrorCallback(handle: *mut bindings::UART_HandleTypeDef);
+}
+
+// Invoke the production HAL callback with the GPS UART identity and error bits.
+// HAL register dispatch and ISR CPU timing are not modeled.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_vcfront_gps_uart_error(error_code: u32) -> bool {
+    let mut status = rig_runtime::uart::RxStatus::default();
+    let port = HW_UART_PORT_GPS as i32;
+    if !unsafe { rig_runtime::uart::rig_uart_rx_status(port, &mut status) }
+        || status.active == 0
+    {
+        return false;
+    }
+    let mut handle = bindings::UART_HandleTypeDef {
+        Instance: bindings::USART3_BASE as usize as *mut _,
+        ErrorCode: error_code,
+    };
+    unsafe { HAL_UART_ErrorCallback(&mut handle) };
+    (unsafe { rig_runtime::uart::rig_uart_rx_status(port, &mut status) }) && status.active != 0
+}

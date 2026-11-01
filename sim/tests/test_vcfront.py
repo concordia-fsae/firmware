@@ -615,6 +615,7 @@ def test_gps_diagnostics_report_unavailable_without_receiver_data(vcfront_cluste
     assert signals.VCFRONT_gpsFixDimension == 0
     assert signals.VCFRONT_gpsInvalidTime == 1
     assert signals.VCFRONT_gpsInvalidDate == 1
+    assert not vcfront_cluster.vcfront.get_fault(Fault.GNSS_TRANSCEIVER_BROKEN)
 
 
 def _nmea_burst(*payloads):
@@ -801,3 +802,106 @@ def test_gps_uart_partial_sentence_survives_polls(vcfront_cluster, partial_wait_
     assert date.event.timestamp_ns == 3_000_000_000
     assert date.VCFRONT_numberSamples == 1
     assert date.VCFRONT_invalidTransactions == 0
+
+
+@pytest.mark.parametrize("irq_rate", [20, 50, 100, 500])
+@pytest.mark.parametrize("error_code", [1, 2, 4, 8, 15])
+def test_gps_uart_error_irq_burst_disables_port(vcfront_cluster, irq_rate, error_code):
+    from sim.models.controllers.vcfront import DigitalIo, UartPort
+
+    vcfront = vcfront_cluster.vcfront
+    navigation = _nmea_burst(
+        "GNGGA,125958.000,2447.0000,N,12100.0000,E,1,08,0.7,95.0,M,19.6,M,,0000",
+        "GNRMC,125958.000,A,2447.0000,N,12100.0000,E,10.0,120.0,011126,,,A",
+        "GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1",
+    )
+    assert vcfront.uart.receive(UartPort.GPS, navigation) == len(navigation)
+    vcfront_cluster.run_for(100, step=10)
+    diagnostics = vcfront.can.latest("VCFRONT_gpsDiagnostics", bus="veh")
+    assert diagnostics.VCFRONT_gpsInvalidTime == 0
+
+    # Start near a wall-second boundary: the limit uses a rolling window.
+    vcfront_cluster.run_for(800, step=10)
+    interval_ms = 1000 // irq_rate
+    handled = 0
+    for _ in range(irq_rate * 2):
+        handled += vcfront.inject_gps_uart_error(error_code)
+        vcfront_cluster.run_for(interval_ms, step=min(interval_ms, 10))
+    assert handled == 19  # The twentieth error callback disables instead of recovering.
+    assert not vcfront.uart.status(UartPort.GPS).active
+    assert vcfront.get_fault(Fault.GNSS_TRANSCEIVER_BROKEN)
+    assert not vcfront.get_digital_io(DigitalIo.MCU_UART_EN)
+    assert vcfront.uart.receive(UartPort.GPS, navigation) == 0
+
+    # A quiet period must not automatically rearm a noisy port.
+    vcfront_cluster.run_for(2100, step=10)
+    assert not vcfront.inject_gps_uart_error(error_code)
+    assert not vcfront.uart.status(UartPort.GPS).active
+    errors = vcfront.can.latest("VCFRONT_gpsUartDiag", bus="veh")
+    for bit, signal in [(1, "Pe"), (2, "Ne"), (4, "Fe"), (8, "Ore")]:
+        expected_count = 20 if error_code & bit else 0
+        assert getattr(errors, f"VCFRONT_gpsUart{signal}Count") == expected_count
+    diagnostics = vcfront.can.latest("VCFRONT_gpsDiagnostics", bus="veh")
+    assert diagnostics.VCFRONT_gpsInvalidTime == 1
+    assert diagnostics.VCFRONT_gpsQualityIndicator == 0
+    faults = vcfront.can.latest("VCFRONT_faults", bus="veh")
+    assert faults.VCFRONT_gpsDeviceError == 1
+    assert faults.VCFRONT_gpsDataNotValid == 1
+    assert faults.VCFRONT_gnssTransceiverBroken == 1
+    assert vcfront.get_fault(Fault.GNSS_TRANSCEIVER_BROKEN)
+
+    # Pedal processing and CAN scheduling continue after the UART is masked.
+    vcfront.set_accelerator_position(50)
+    vcfront_cluster.run_for(100, step=10)
+    pedal = vcfront.can.latest("VCFRONT_pedalPosition", bus="veh")
+    assert pedal.VCFRONT_acceleratorPosition == 50
+    assert pedal.event.timestamp_ns >= 5_000_000_000
+
+
+def test_gps_uart_sparse_errors_recover_without_accumulating_to_shutdown(
+    vcfront_cluster,
+):
+    from sim.models.controllers.vcfront import UartPort
+
+    vcfront = vcfront_cluster.vcfront
+    sentence = _nmea_burst(
+        "GNGGA,125958.000,2447.0000,N,12100.0000,E,1,08,0.7,95.0,M,19.6,M,,0000"
+    )
+    # Ten IRQs/s for three seconds exceeds the lifetime threshold, but never
+    # reaches twenty in a rolling second. Each error must recover reception.
+    for _ in range(30):
+        assert vcfront.inject_gps_uart_error(15)
+        assert vcfront.uart.status(UartPort.GPS).active
+        assert vcfront.uart.receive(UartPort.GPS, sentence) == len(sentence)
+        vcfront_cluster.run_for(100, step=10)
+    counts = vcfront.can.latest("VCFRONT_gpsSentenceCounts", bus="veh")
+    assert counts.VCFRONT_gpsSentenceGgaCount == 30
+    assert not vcfront.get_fault(Fault.GNSS_TRANSCEIVER_BROKEN)
+    faults = vcfront.can.latest("VCFRONT_faults", bus="veh")
+    assert faults.VCFRONT_gnssTransceiverBroken == 0
+    errors = vcfront.can.latest("VCFRONT_gpsUartDiag", bus="veh")
+    assert errors.VCFRONT_gpsUartOreCount == 30
+    assert errors.VCFRONT_gpsUartFeCount == 30
+    assert errors.VCFRONT_gpsUartNeCount == 30
+    assert errors.VCFRONT_gpsUartPeCount == 30
+
+
+def test_gps_uart_zero_error_callbacks_do_not_disable_port(vcfront_cluster):
+    from sim.models.controllers.vcfront import UartPort
+
+    vcfront = vcfront_cluster.vcfront
+    sentence = _nmea_burst(
+        "GNGGA,125958.000,2447.0000,N,12100.0000,E,1,08,0.7,95.0,M,19.6,M,,0000"
+    )
+    assert vcfront.uart.receive(UartPort.GPS, sentence) == len(sentence)
+    for _ in range(500):
+        assert vcfront.inject_gps_uart_error(0)
+        vcfront_cluster.run_for(2, step=2)
+    assert vcfront.uart.status(UartPort.GPS).active
+    counts = vcfront.can.latest("VCFRONT_gpsSentenceCounts", bus="veh")
+    assert counts.VCFRONT_gpsSentenceGgaCount == 1
+    errors = vcfront.can.latest("VCFRONT_gpsUartDiag", bus="veh")
+    assert errors.VCFRONT_gpsUartOreCount == 0
+    assert errors.VCFRONT_gpsUartFeCount == 0
+    assert errors.VCFRONT_gpsUartNeCount == 0
+    assert errors.VCFRONT_gpsUartPeCount == 0

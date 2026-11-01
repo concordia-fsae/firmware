@@ -86,3 +86,17 @@ counters, and stored DMA pointers.
 buckle test //sim/bindings/firmware/uart:unit
 buckle test //sim/bindings/firmware/uart/tests:python_unit
 ```
+
+## VCFRONT UART error bursts
+
+`vcfront.inject_gps_uart_error(error_code)` invokes the production
+`HAL_UART_ErrorCallback` with a GPS UART handle, between scheduler steps. Error flags
+use STM32 HAL values: parity=1, noise=2, framing=4, overrun=8; combine flags
+with OR. Zero is ignored. The return value indicates whether the port remains
+available. HAL registers, NVIC preemption, and ISR CPU cost are not simulated.
+
+The regression tests in `//sim/tests:vcfront_cluster` require shutdown at the
+twentieth error callback in a rolling second, latched until reset, with
+`GNSS_TRANSCEIVER_BROKEN` reported on CAN. They exercise 20–500 errors/s,
+continued CAN/pedal operation, sparse-error recovery, and zero error codes.
+The shutdown tests intentionally fail until the firmware mitigation is added.
