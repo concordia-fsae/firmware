@@ -615,3 +615,189 @@ def test_gps_diagnostics_report_unavailable_without_receiver_data(vcfront_cluste
     assert signals.VCFRONT_gpsFixDimension == 0
     assert signals.VCFRONT_gpsInvalidTime == 1
     assert signals.VCFRONT_gpsInvalidDate == 1
+
+
+def _nmea_burst(*payloads):
+    frames = []
+    for payload in payloads:
+        checksum = 0
+        for byte in payload.encode("ascii"):
+            checksum ^= byte
+        frames.append(f"${payload}*{checksum:02X}\r\n")
+    return "".join(frames).encode("ascii")
+
+
+def test_gps_uart_stream_acquires_fix_and_updates_can_at_10hz(vcfront_cluster):
+    from sim.models.controllers.vcfront import UartPort
+
+    vcfront = vcfront_cluster.vcfront
+
+    def latest(message):
+        signals = vcfront.can.latest(f"VCFRONT_{message}", bus="veh")
+        assert signals is not None, message
+        return signals
+
+    # Receiver startup: well-formed NMEA with empty navigation fields and no fix.
+    empty = _nmea_burst(
+        "GNGGA,125958.000,,,,,0,00,,,,,,,",
+        "GNRMC,125958.000,V,,,,,,,011126,,,N",
+        "GNGSA,A,1,,,,,,,,,,,,,1.2,0.7,1.0,1",
+    )
+    received_bytes = 0
+    for sample in range(10):
+        assert vcfront.uart.receive(UartPort.GPS, empty) == len(empty)
+        received_bytes += len(empty)
+        vcfront_cluster.run_for(100, step=10)
+        diagnostics = latest("gpsDiagnostics")
+        assert diagnostics.event.timestamp_ns == (sample + 1) * 100_000_000
+        assert diagnostics.VCFRONT_gpsQualityIndicator == 0
+        assert diagnostics.VCFRONT_gpsFixDimension == 1
+        assert diagnostics.VCFRONT_gpsInvalidTime == 1
+        assert diagnostics.VCFRONT_gpsInvalidDate == 1
+        position = latest("gpsPosition")
+        assert position.VCFRONT_lat == pytest.approx(0, abs=0.00001)
+        assert position.VCFRONT_lon == pytest.approx(0, abs=0.00001)
+
+    assert latest("faults").VCFRONT_gpsDataNotValid == 1
+    assert latest("gpsSentenceCounts").VCFRONT_gpsSentenceGgaCount == 10
+
+    # Exercise SPS, differential, PPS, and receiver DR=6 -> CAN DR=4. DR is
+    # valid with GSA no-fix; the other methods require a 2D/3D satellite fix.
+    for sample in range(50):
+        quality, can_quality, dimension, mode = (
+            (1, 1, 3, "A"),
+            (2, 2, 2, "D"),
+            (3, 3, 3, "D"),
+            (6, 4, 1, "E"),
+        )[sample % 4]
+        seconds = 12 * 3600 + 59 * 60 + 58 + sample // 10
+        hour, remainder = divmod(seconds, 3600)
+        minute, second = divmod(remainder, 60)
+        utc = f"{hour:02}{minute:02}{second:02}.{sample % 10}00"
+        lat_minutes = 47 + sample / 100
+        lon_minutes = sample / 100
+        altitude = 95 + sample
+        knots = 10 + sample / 10
+        course = 120 + sample
+        satellites = 8 + sample % 5
+        burst = _nmea_burst(
+            f"GNGGA,{utc},24{lat_minutes:07.4f},S,121{lon_minutes:07.4f},W,"
+            f"{quality},{satellites:02},0.7,{altitude}.0,M,19.6,M,,0000",
+            f"GNRMC,{utc},A,24{lat_minutes:07.4f},S,121{lon_minutes:07.4f},W,"
+            f"{knots:.1f},{course}.0,011126,,,{mode}",
+            f"GNGSA,A,{dimension},21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1",
+        )
+        # Poll once with an incomplete sentence, then complete this 100 ms burst.
+        assert vcfront.uart.receive(UartPort.GPS, burst[:23]) == 23
+        vcfront_cluster.run_for(10, step=10)
+        assert vcfront.uart.receive(UartPort.GPS, burst[23:]) == len(burst) - 23
+        received_bytes += len(burst)
+        vcfront_cluster.run_for(90, step=10)
+
+        position = latest("gpsPosition")
+        expected_timestamp = (11 + sample) * 100_000_000
+        assert position.event.timestamp_ns == expected_timestamp
+        assert position.VCFRONT_lat == pytest.approx(
+            -(24 + lat_minutes / 60), abs=0.00002
+        )
+        assert position.VCFRONT_lon == pytest.approx(
+            -(121 + lon_minutes / 60), abs=0.00002
+        )
+        assert position.VCFRONT_alt == altitude
+        heading = latest("gpsHeading")
+        assert heading.event.timestamp_ns == expected_timestamp
+        assert heading.VCFRONT_course == pytest.approx(course, abs=0.1)
+        # lwgps uses 0.5144 m/s per knot; CAN truncates to 0.01 m/s.
+        assert heading.VCFRONT_speed == pytest.approx(knots * 0.5144, abs=0.01)
+        diagnostics = latest("gpsDiagnostics")
+        assert diagnostics.event.timestamp_ns == expected_timestamp
+        assert diagnostics.VCFRONT_gpsQualityIndicator == can_quality
+        assert diagnostics.VCFRONT_gpsFixDimension == dimension
+        assert diagnostics.VCFRONT_gpsSatellites == satellites
+        assert diagnostics.VCFRONT_gpsInvalidTime == 0
+        assert diagnostics.VCFRONT_gpsInvalidDate == 0
+
+        # Date, sentence counters, UART diagnostics and faults publish at 1 Hz.
+        if sample % 10 == 9:
+            date = latest("gpsDate")
+            assert date.event.timestamp_ns == expected_timestamp
+            assert (date.VCFRONT_year, date.VCFRONT_month, date.VCFRONT_day) == (
+                2026,
+                11,
+                1,
+            )
+            assert (date.VCFRONT_hour, date.VCFRONT_minute, date.VCFRONT_second) == (
+                hour,
+                minute,
+                second,
+            )
+            assert date.VCFRONT_crcFailures == 0
+            assert date.VCFRONT_invalidTransactions == 0
+            assert date.VCFRONT_numberSamples == 3 * (10 + sample + 1)
+            counts = latest("gpsSentenceCounts")
+            assert counts.event.timestamp_ns == expected_timestamp
+            assert counts.VCFRONT_gpsSentenceGgaCount == 10 + sample + 1
+            assert counts.VCFRONT_gpsSentenceRmcCount == 10 + sample + 1
+            assert counts.VCFRONT_gpsSentenceGsaCount == 10 + sample + 1
+            errors = latest("gpsUartDiag")
+            assert errors.VCFRONT_gpsUartOreCount == 0
+            assert errors.VCFRONT_gpsUartFeCount == 0
+            assert errors.VCFRONT_gpsUartNeCount == 0
+            assert errors.VCFRONT_gpsUartPeCount == 0
+            faults = latest("faults")
+            assert faults.VCFRONT_gpsDeviceError == 0
+            assert faults.VCFRONT_gpsOverrun == 0
+            # Fault CAN latches any occurrence since its previous publication.
+            # The first valid second includes the no-fix -> fix transition.
+            assert faults.VCFRONT_gpsDataNotValid == (1 if sample == 9 else 0)
+
+    # This stream also crosses the application's 10 kB circular DMA boundary.
+    assert received_bytes > 10000
+
+
+@pytest.mark.parametrize("partial_wait_ms", [10, 1000])
+def test_gps_uart_partial_sentence_survives_polls(vcfront_cluster, partial_wait_ms):
+    from sim.models.controllers.vcfront import UartPort
+
+    vcfront = vcfront_cluster.vcfront
+    sentence = _nmea_burst(
+        "GNGGA,125958.000,2447.0000,N,12100.0000,E,1,08,0.7,95.0,M,19.6,M,,0000"
+    )
+
+    vcfront_cluster.run_for(1000 - partial_wait_ms, step=10)
+    assert vcfront.uart.receive(UartPort.GPS, sentence[:23]) == 23
+    vcfront_cluster.run_for(partial_wait_ms, step=10)
+    date = vcfront.can.latest("VCFRONT_gpsDate", bus="veh")
+    assert date is not None
+    assert date.event.timestamp_ns == 1_000_000_000
+    assert date.VCFRONT_numberSamples == 0
+    assert date.VCFRONT_invalidTransactions == 0
+    position = vcfront.can.latest("VCFRONT_gpsPosition", bus="veh")
+    assert position.VCFRONT_lat == pytest.approx(0, abs=0.00001)
+    assert position.VCFRONT_alt == 0
+
+    assert vcfront.uart.receive(UartPort.GPS, sentence[23:]) == len(sentence) - 23
+    vcfront_cluster.run_for(10, step=10)
+    vcfront_cluster.run_for(90, step=10)
+    position = vcfront.can.latest("VCFRONT_gpsPosition", bus="veh")
+    assert position.event.timestamp_ns == 1_100_000_000
+    assert position.VCFRONT_alt == 95
+    vcfront_cluster.run_for(900, step=10)
+    date = vcfront.can.latest("VCFRONT_gpsDate", bus="veh")
+    assert date.event.timestamp_ns == 2_000_000_000
+    assert date.VCFRONT_numberSamples == 1
+    assert date.VCFRONT_invalidTransactions == 0
+    counts = vcfront.can.latest("VCFRONT_gpsSentenceCounts", bus="veh")
+    assert counts.VCFRONT_gpsSentenceGgaCount == 1
+    assert counts.VCFRONT_gpsSentenceRmcCount == 0
+    position = vcfront.can.latest("VCFRONT_gpsPosition", bus="veh")
+    assert position.VCFRONT_lat == pytest.approx(24 + 47 / 60, abs=0.00002)
+    assert position.VCFRONT_lon == pytest.approx(121, abs=0.00002)
+    assert position.VCFRONT_alt == 95
+
+    # Further polls cannot consume the completed sentence a second time.
+    vcfront_cluster.run_for(1000, step=10)
+    date = vcfront.can.latest("VCFRONT_gpsDate", bus="veh")
+    assert date.event.timestamp_ns == 3_000_000_000
+    assert date.VCFRONT_numberSamples == 1
+    assert date.VCFRONT_invalidTransactions == 0
