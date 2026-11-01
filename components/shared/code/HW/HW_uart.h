@@ -31,3 +31,6 @@ HW_StatusTypeDef_E HW_UART_stopDMA(HW_UART_port_E port);
 
 // Remaining transfers in the currently active circular RX DMA buffer.
 uint32_t           HW_UART_getDmaRxRemaining(HW_UART_port_E port);
+
+// Stop DMA and mask the UART interrupt source.
+void               HW_UART_disable(HW_UART_port_E port);

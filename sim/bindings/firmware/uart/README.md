@@ -90,13 +90,24 @@ buckle test //sim/bindings/firmware/uart/tests:python_unit
 ## VCFRONT UART error bursts
 
 `vcfront.inject_gps_uart_error(error_code)` invokes the production
-`HAL_UART_ErrorCallback` with a GPS UART handle, between scheduler steps. Error flags
-use STM32 HAL values: parity=1, noise=2, framing=4, overrun=8; combine flags
-with OR. Zero is ignored. The return value indicates whether the port remains
-available. HAL registers, NVIC preemption, and ISR CPU cost are not simulated.
+`HAL_UART_ErrorCallback` with a GPS UART handle between scheduler steps. Error flags use STM32 HAL values: parity=1,
+noise=2, framing=4, overrun=8; combine flags with OR. Zero is ignored. The return
+value is false when the port is latched off. This bridge does not emulate HAL
+registers, interrupt handling, NVIC preemption, or ISR CPU cost.
 
-The regression tests in `//sim/tests:vcfront_cluster` require shutdown at the
-twentieth error callback in a rolling second, latched until reset, with
-`GNSS_TRANSCEIVER_BROKEN` reported on CAN. They exercise 20–500 errors/s,
-continued CAN/pedal operation, sparse-error recovery, and zero error codes.
-The shutdown tests intentionally fail until the firmware mitigation is added.
+VCFRONT leaves `USART3_IRQHandler` unchanged and lets HAL handle each interrupt.
+`HAL_UART_ErrorCallback` invokes the guard, which latches the GPS UART off on the
+twentieth error callback in a rolling 1000 ms window, instead of restarting DMA.
+Normal UART interrupts and DMA byte arrivals do not count. Hardware shutdown
+masks USART3, stops DMA, and disables the UART peripheral. The next 100 Hz task
+tick turns off the transceiver enable, discards parser state, and reports GPS
+device and invalid-data faults, plus the dedicated `GNSS_TRANSCEIVER_BROKEN`
+fault (`VCFRONT_gnssTransceiverBroken` on CAN). This fault stays asserted while
+the port is disabled; missing GPS data or sparse errors alone do not set it.
+Shutdown persists until controller reset;
+sparse errors retain DMA recovery. Diagnostics include the triggering error.
+
+`//sim/tests:vcfront_cluster` covers 20, 50, 100, and 500 error callbacks/s,
+sparse 10 Hz errors, zero error codes, continued CAN/pedal operation, and data
+rejection after shutdown. The GPS C tests cover the exact window boundary and
+clock wrap. IRQ storms that never invoke the error callback are not detected.

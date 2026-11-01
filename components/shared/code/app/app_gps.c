@@ -13,6 +13,7 @@
 #include "drv_timer.h"
 #include "FreeRTOS.h"
 #include "HW_gpio.h"
+#include "HW_tim.h"
 #include "HW_uart.h"
 #include "lib_buffer.h"
 #include "lib_yicGnss.h"
@@ -23,12 +24,16 @@
  *                              D E F I N E S
  ******************************************************************************/
 
-#define BUFFER_SIZE           10000U
-#define GPS_TIMEOUT_MS        2000U
+#define BUFFER_SIZE                 10000U
+#define GPS_TIMEOUT_MS              2000U
+// Count error callbacks, not normal UART interrupts or DMA byte arrivals.
+#define GPS_UART_ERROR_LIMIT        20U
+#define GPS_UART_ERROR_WINDOW_MS    1000U
 
-#define GPS_DEVICE_ERROR      FM_FAULT_VCFRONT_GPSDEVICEERROR
-#define GPS_DEVICE_OVERRUN    FM_FAULT_VCFRONT_GPSOVERRUN
-#define GPS_DEVICE_INVALID    FM_FAULT_VCFRONT_GPSDATANOTVALID
+#define GPS_DEVICE_ERROR            FM_FAULT_VCFRONT_GPSDEVICEERROR
+#define GPS_DEVICE_OVERRUN          FM_FAULT_VCFRONT_GPSOVERRUN
+#define GPS_DEVICE_INVALID          FM_FAULT_VCFRONT_GPSDATANOTVALID
+#define GNSS_TRANSCEIVER_BROKEN     FM_FAULT_VCFRONT_GNSSTRANSCEIVERBROKEN
 
 /******************************************************************************
  *                         P R I V A T E  V A R S
@@ -61,6 +66,11 @@ static struct
     uint16_t          sentenceCountGsv;
     uint16_t          sentenceCountRmc;
     uint16_t          sentenceCountPairMsg;
+    uint32_t          uartErrorTimes[GPS_UART_ERROR_LIMIT];
+    uint8_t           uartErrorNext;
+    uint8_t           uartErrorCount;
+    volatile bool     uartDisabled;
+    bool              uartShutdownHandled;
     volatile uint16_t uartErrorOreCount;
     volatile uint16_t uartErrorFeCount;
     volatile uint16_t uartErrorNeCount;
@@ -166,11 +176,30 @@ static void processByte(uint8_t byte)
 
 bool app_gps_handleUartError(uint32_t errorCode)
 {
+    if (gps.uartDisabled)
+    {
+        return false;
+    }
     if (errorCode == 0U)
     {
         return true;
     }
     app_gps_recordUartError(errorCode);
+    const uint32_t now = HW_TIM_getTimeMS();
+    gps.uartErrorTimes[gps.uartErrorNext] = now;
+    gps.uartErrorNext                     = (uint8_t)((gps.uartErrorNext + 1U) % GPS_UART_ERROR_LIMIT);
+    if (gps.uartErrorCount < GPS_UART_ERROR_LIMIT)
+    {
+        gps.uartErrorCount++;
+    }
+    if ((gps.uartErrorCount == GPS_UART_ERROR_LIMIT) &&
+        ((uint32_t)(now - gps.uartErrorTimes[gps.uartErrorNext]) < GPS_UART_ERROR_WINDOW_MS)
+        )
+    {
+        gps.uartDisabled = true;
+        HW_UART_disable(HW_UART_PORT_GPS);
+        return false;
+    }
     (void)HW_UART_stopDMA(HW_UART_PORT_GPS);
     app_gps_resetBuffers();
     (void)HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
@@ -245,7 +274,7 @@ bool app_gps_isValid(void)
                                 ((drv_timer_getState(&gps.gsaTimeout) == DRV_TIMER_RUNNING) &&
                                  ((gps.receiver.data.dimension == LIB_YICGNSS_DIMENSION_2D) || (gps.receiver.data.dimension == LIB_YICGNSS_DIMENSION_3D)));
 
-    return sourcesFresh && gps.gpsValidData && dimensionValid;
+    return !gps.uartDisabled && sourcesFresh && gps.gpsValidData && dimensionValid;
 }
 
 uint16_t app_gps_getCrcFailures(void)
@@ -397,6 +426,22 @@ static void app_gps_init(void)
 static void app_gps_periodic_100Hz(void)
 {
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
+    // Publish from task context; uartDisabled remains latched until reset.
+    app_faultManager_setFaultState(GNSS_TRANSCEIVER_BROKEN, gps.uartDisabled);
+    if (gps.uartDisabled)
+    {
+        // Do parser/output work in task context; the IRQ only masks hardware.
+        if (!gps.uartShutdownHandled)
+        {
+            app_gps_resetBuffers();
+            drv_timer_stop(&gps.timeout);
+            drv_outputAD_setDigitalActiveState(DRV_OUTPUTAD_DIGITAL_MCU_UART_EN, DRV_IO_INACTIVE);
+            gps.uartShutdownHandled = true;
+        }
+        app_faultManager_setFaultState(GPS_DEVICE_ERROR,   true);
+        app_faultManager_setFaultState(GPS_DEVICE_INVALID, true);
+        return;
+    }
     bool overrun = false;
 
     // DMA's producer position, unlike a zero-byte sentinel, also lets us
@@ -409,9 +454,16 @@ static void app_gps_periodic_100Hz(void)
         // Nonzero data in a consumed slot means the DMA producer has lapped us.
         if (LIB_BUFFER_CIRC_PEEKN(&gps.dmaBuffer, -1))
         {
-            HW_UART_stopDMA(HW_UART_PORT_GPS);
-            app_gps_resetBuffers();
-            HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
+            // Serialize recovery with the UART error callback so a shutdown
+            // cannot be followed by a task-side DMA restart.
+            taskENTER_CRITICAL();
+            if (!gps.uartDisabled)
+            {
+                HW_UART_stopDMA(HW_UART_PORT_GPS);
+                app_gps_resetBuffers();
+                HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
+            }
+            taskEXIT_CRITICAL();
             overrun = true;
             break;
         }

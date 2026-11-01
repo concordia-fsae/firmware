@@ -10,3 +10,6 @@ HW_StatusTypeDef_E HW_UART_startDMARX(HW_UART_port_E port, uint32_t *buffer, uin
 HW_StatusTypeDef_E HW_UART_stopDMA(HW_UART_port_E port);
 
 uint32_t           HW_UART_getDmaRxRemaining(HW_UART_port_E port);
+
+// Stop DMA and mask the UART interrupt source.
+void               HW_UART_disable(HW_UART_port_E port);

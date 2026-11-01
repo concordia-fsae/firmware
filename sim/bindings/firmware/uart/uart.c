@@ -17,3 +17,8 @@ uint32_t HW_UART_getDmaRxRemaining(HW_UART_port_E port)
 {
     return rig_runtime_uart_rx_remaining((int32_t)port);
 }
+
+void HW_UART_disable(HW_UART_port_E port)
+{
+    rig_runtime_uart_stop_rx((int32_t)port);
+}

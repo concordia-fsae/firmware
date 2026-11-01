@@ -56,7 +56,8 @@ uint32_t HW_UART_getDmaRxRemaining(HW_UART_port_E port)
     TEST_ASSERT_EQUAL_INT(HW_UART_PORT_GPS, port);
     return dma_size - dma_write;
 }
-static void poll(void) { app_gps_desc.periodic100Hz_CLK(); }
+void        HW_UART_disable(HW_UART_port_E port) { (void)HW_UART_stopDMA(port); }
+static void poll(void)                           { app_gps_desc.periodic100Hz_CLK(); }
 static void inject(const void *bytes, size_t length)
 {
     TEST_ASSERT_TRUE(dma_running);
@@ -1065,6 +1066,54 @@ static void clock_validity_requires_matching_gga_and_rmc_seconds(void)
     TEST_ASSERT_FALSE(app_gps_getValidDate());
 }
 
+static void uart_error_window_boundary_and_reset(void)
+{
+    // Events exactly one second old fall outside the rolling window.
+    test_freertos.ticks = 0U;
+    for (unsigned i = 0U; i < 19U; i++)
+    {
+        TEST_ASSERT_TRUE(app_gps_handleUartError(HAL_UART_ERROR_ORE));
+    }
+    test_freertos.ticks = 1000U;
+    for (unsigned i = 0U; i < 19U; i++)
+    {
+        TEST_ASSERT_TRUE(app_gps_handleUartError(HAL_UART_ERROR_ORE));
+    }
+    poll();
+    TEST_ASSERT_FALSE(faults[FM_FAULT_VCFRONT_GNSSTRANSCEIVERBROKEN]);
+    TEST_ASSERT_FALSE(app_gps_handleUartError(HAL_UART_ERROR_ORE));
+    TEST_ASSERT_FALSE(dma_running);
+    unsigned starts = dma_starts;
+    app_gps_handleUartError(15U);
+    poll();
+    TEST_ASSERT_EQUAL_UINT(starts, dma_starts);
+    TEST_ASSERT_FALSE(uart_enabled);
+    TEST_ASSERT_TRUE(faults[FM_FAULT_VCFRONT_GNSSTRANSCEIVERBROKEN]);
+    test_freertos.ticks += 2000U;
+    poll();
+    TEST_ASSERT_TRUE(faults[FM_FAULT_VCFRONT_GNSSTRANSCEIVERBROKEN]);
+    TEST_ASSERT_TRUE(faults[FM_FAULT_VCFRONT_GPSDEVICEERROR]);
+
+    app_gps_desc.moduleInit();
+    poll();
+    TEST_ASSERT_FALSE(faults[FM_FAULT_VCFRONT_GNSSTRANSCEIVERBROKEN]);
+    TEST_ASSERT_TRUE(dma_running);
+    TEST_ASSERT_TRUE(uart_enabled);
+    TEST_ASSERT_TRUE(app_gps_handleUartError(HAL_UART_ERROR_ORE));
+}
+
+static void uart_error_window_handles_clock_wraparound(void)
+{
+    test_freertos.ticks = UINT32_MAX - 50U;
+    for (unsigned i = 0U; i < 19U; i++)
+    {
+        TEST_ASSERT_TRUE(app_gps_handleUartError(HAL_UART_ERROR_ORE));
+    }
+    test_freertos.ticks = 49U;
+    TEST_ASSERT_FALSE(app_gps_handleUartError(HAL_UART_ERROR_ORE));
+    TEST_ASSERT_FALSE(dma_running);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -1118,5 +1167,7 @@ int main(void)
     RUN_TEST(timeout_handles_clock_wraparound);
     RUN_TEST(uart_error_bits_are_counted_independently);
     RUN_TEST(new_init_clears_state_and_diagnostics);
+    RUN_TEST(uart_error_window_boundary_and_reset);
+    RUN_TEST(uart_error_window_handles_clock_wraparound);
     return UNITY_END();
 }

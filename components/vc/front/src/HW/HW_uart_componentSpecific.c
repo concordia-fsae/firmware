@@ -79,6 +79,17 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 }
 
+void HW_UART_disable(HW_UART_port_E port)
+{
+    if (port == HW_UART_PORT_GPS)
+    {
+        HAL_NVIC_DisableIRQ(USART3_IRQn);
+        (void)HAL_UART_DMAStop(&huart[port]);
+        __HAL_UART_DISABLE(&huart[port]);
+        HAL_NVIC_ClearPendingIRQ(USART3_IRQn);
+    }
+}
+
 #endif // RIG_UART_CALLBACKS_ONLY
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart)
