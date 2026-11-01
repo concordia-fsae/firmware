@@ -117,6 +117,7 @@
 #define set_gpsInvalidDate(m, b, n, s)                     set(m, b, n, s, app_gps_getValidDate() ? CAN_FAULTSTATUS_OK : CAN_FAULTSTATUS_FAULT)
 #define set_gpsSatellites(m, b, n, s)                      set(m, b, n, s, app_gps_getNumSatellites())
 #define set_gpsQualityIndicator(m, b, n, s)                set(m, b, n, s, app_gps_getQualityCAN())
+#define set_gpsFixDimension(m, b, n, s)                    set(m, b, n, s, app_gps_getFixDimension())
 #define set_crcFailures(m, b, n, s)                        set(m, b, n, s, app_gps_getCrcFailures())
 #define set_invalidTransactions(m, b, n, s)                set(m, b, n, s, app_gps_getInvalidTransactions())
 #define set_numberSamples(m, b, n, s)                      set(m, b, n, s, app_gps_getNumberSamples())

@@ -226,6 +226,7 @@ messages:
       gpsInvalidTime:
       gpsSatellites:
       gpsQualityIndicator:
+      gpsFixDimension:
 
   gpsSentenceCounts:
     description: GPS sentence counters by type

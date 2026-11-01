@@ -49,14 +49,6 @@ typedef struct
     uint8_t  alarmStatus;
 } app_gps_pairmsg_S;
 
-typedef enum
-{
-    GPS_POSITION_UNAVAILABLE = 0x00U,
-    GPS_FIX_2D               = 0x01U,
-    GPS_FIX_3D               = 0x02U,
-    GPS_DEAD_RECKONING       = 0x06U,
-} app_gps_qualityIndicator_E;
-
 /******************************************************************************
  *                              E X T E R N S
  ******************************************************************************/
@@ -76,6 +68,7 @@ void                      app_gps_getPairmsg(app_gps_pairmsg_S* pairmsg);
 bool                      app_gps_getValidTime(void);
 bool                      app_gps_getValidDate(void);
 uint8_t                   app_gps_getNumSatellites(void);
+uint8_t                   app_gps_getFixDimension(void);
 CAN_gpsQualityIndicator_E app_gps_getQualityCAN(void);
 
 // Not thread safe

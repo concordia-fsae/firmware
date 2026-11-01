@@ -15,7 +15,7 @@ buckle test //components/shared/code/app/tests/gps:gps_crc_test
 buckle test //components/shared/code/app/tests/gps:gps_sanitized
 ```
 
-The 35 tests cover:
+The 47 tests cover:
 
 - GGA/GSA/GSV/RMC and PAIRMSG 90/91 decoding, counters, getters, signed position,
   heading/speed conversion, quality mapping, and fix/time/date validity.
@@ -73,16 +73,54 @@ Every sentence in the original reference stream is also split at every byte
 boundary while crossing the DMA wrap boundary. Expected acceptance/rejection is
 checked under both checksum configurations.
 
-GGA quality is a positioning method, not a dimension: 0 is unavailable, 1 is SPS,
-2 is differential, 3 is PPS, and 6 is dead reckoning. The quality regression matrix
-crosses these methods (plus an unsupported value) with missing/no-fix/2D/3D/invalid
-GSA modes. Navigation validity remains based on GGA/RMC; a missing GSA does not
-invalidate an otherwise usable position, but cannot justify reporting 2D or 3D.
+GGA quality is a positioning method, not a dimension. The conversion to the
+existing CAN `gpsQualityIndicator` is explicit:
+
+| YIC GGA | Meaning | CAN quality |
+| --- | --- | --- |
+| 0 | No fix | 0 (`FIX_NONE`) |
+| 1 | SPS/autonomous | 1 (`SPS`) |
+| 2 | Differential | 2 (`DIFFERENTIAL`) |
+| 3 | PPS | 3 (`PPS`) |
+| 6 | Dead reckoning | 4 (`DEAD_RECKONING`) |
+
+The separate `gpsFixDimension` reports GSA's 1 (no fix), 2 (2D), or 3 (3D).
+It reports 0 (unknown) before receiving GSA or after its timeout. A stale GGA
+reports CAN quality 0. A fresh GSA never modifies the GGA method, and vice versa.
+There is no additional `gpsGgaQuality` CAN signal. These changes revise the
+meaning/width of the existing quality enum; firmware and CAN decoders must use
+the updated network definition together. The clock manager checks both fields.
+
+## Validity rules and audit
+
+- Navigation requires individually fresh GGA and RMC reports (less than 2000 ms
+  old), an accepted GGA method, RMC status A, and RMC mode other than N.
+- GNSS methods (GGA 1/2/3) also require a fresh GSA reporting 2D or 3D. Missing,
+  stale, malformed, or no-fix GSA invalidates a satellite fix.
+- GGA 6 is dead reckoning: it still requires valid, fresh GGA/RMC, but permits
+  unknown/no-fix GSA because satellite positioning may be unavailable.
+- PAIRMSG/GSV traffic can keep receiver-liveness healthy but cannot refresh
+  navigation. UART/DMA reset invalidates the previous navigation snapshot.
+- Time/date flags require valid navigation and validated calendar/UTC fields.
+  GGA and RMC UTC must agree to whole seconds before time/date are marked valid;
+  this avoids combining a new time with an earlier date across midnight.
+- Before LwGPS updates navigation, the application validates field counts,
+  supported states, coordinate ranges/hemispheres, UTC/calendar ranges, speed,
+  course, satellite count and altitude. Overlong fields that LwGPS would truncate
+  are rejected. Malformed navigation messages invalidate their own source and do
+  not refresh liveness. Proper no-fix messages are accepted but not marked valid.
+- CRC mismatch handling still follows `LWGPS_CFG_CRC`; checksum/frame failures
+  are dropped and existing source data expire normally.
+
+Tests cover source-specific freshness and recovery, unknown/no-fix states,
+all GGA/GSA/RMC arrival orders, malformed fields, leap days, midnight epoch
+mismatch, DMA reset, and LF-only parser commits. The VCFront sim additionally
+checks the encoded/decoded CAN diagnostics without receiver data.
 
 These checks cover the documented sentence families and the application's
-current acceptance/rejection behavior. They do not claim exhaustive NMEA grammar
-validation or support for the unsupported messages above. The pinned LwGPS
-parser is permissive about standard sentence fields; the application does not
-yet validate every numeric range, field count, or contradictory cross-sentence
-status. Satellite details, GSA system ID and GSV signal ID are not exposed by the
-application. Their presence must not disturb the fields we consume.
+current acceptance/rejection behavior, not exhaustive NMEA grammar validation.
+GLL/VTG/ZDA and non-GP/GN GSV remain unsupported. Satellite details and unused
+DOP/geoidal/differential-correction fields are not fully validated or exposed.
+Navigation freshness does not imply physical position accuracy. Repeated,
+well-formed reports of the same epoch cannot establish whether the receiver's
+underlying solution is frozen; the freshness checks track reception.

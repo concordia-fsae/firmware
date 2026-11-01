@@ -132,7 +132,7 @@ static void provided_gnss_and_pairmsg_stream_updates_state(void)
     TEST_ASSERT_TRUE(app_gps_getValidTime());
     TEST_ASSERT_TRUE(app_gps_getValidDate());
     TEST_ASSERT_EQUAL_UINT8(15U, app_gps_getNumSatellites());
-    TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_FIX_3D, app_gps_getQualityCAN());
+    TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_DIFFERENTIAL, app_gps_getQualityCAN());
 
     TEST_ASSERT_FLOAT_WITHIN(0.00002f, 24.784784f,  pos.lat);
     TEST_ASSERT_FLOAT_WITHIN(0.00002f, 121.008705f, pos.lon);
@@ -272,6 +272,7 @@ static void seed_fix(void)
 {
     receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000");
     receive_payload("GNRMC,175258.000,A,2447.0870,N,12100.5220,E,10.0,123.4,220617,,,D");
+    receive_payload("GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1");
 }
 static void invalid_pairmsg_fields_are_rejected_without_refreshing_health(void)
 {
@@ -473,8 +474,8 @@ static void quality_validity_and_signed_navigation(void)
     receive_payload("GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1");
     const unsigned                  qualities[] = { 0, 1, 2, 6, 7 };
     const CAN_gpsQualityIndicator_E expected[]  = {
-        CAN_GPSQUALITYINDICATOR_FIX_NONE, CAN_GPSQUALITYINDICATOR_FIX_3D,
-        CAN_GPSQUALITYINDICATOR_FIX_3D,   CAN_GPSQUALITYINDICATOR_DEAD_RECKONING,
+        CAN_GPSQUALITYINDICATOR_FIX_NONE,     CAN_GPSQUALITYINDICATOR_SPS,
+        CAN_GPSQUALITYINDICATOR_DIFFERENTIAL, CAN_GPSQUALITYINDICATOR_DEAD_RECKONING,
         CAN_GPSQUALITYINDICATOR_FIX_NONE,
     };
     for (size_t i = 0; i < ARRAY_LEN(qualities); i++)
@@ -484,7 +485,7 @@ static void quality_validity_and_signed_navigation(void)
         receive_payload(payload);
         receive_payload("GNRMC,175258.000,A,2447.0870,S,12100.5220,W,10.0,123.4,220617,,,D");
         TEST_ASSERT_EQUAL_INT(expected[i], app_gps_getQualityCAN());
-        TEST_ASSERT_EQUAL(qualities[i] != 0, app_gps_isValid());
+        TEST_ASSERT_EQUAL(qualities[i] == 1 || qualities[i] == 2 || qualities[i] == 6, app_gps_isValid());
     }
     TEST_ASSERT_FLOAT_WITHIN(0.00002f, -24.784784f,  app_gps_getPosRef()->lat);
     TEST_ASSERT_FLOAT_WITHIN(0.00002f, -121.008705f, app_gps_getPosRef()->lon);
@@ -611,43 +612,33 @@ static void gga_quality_and_gsa_dimension_are_independent(void)
             receive_payload(payload);
             snprintf(payload, sizeof(payload), "GNGSA,A,%u,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1", dimensions[d]);
             receive_payload(payload);
-            CAN_gpsQualityIndicator_E expected = CAN_GPSQUALITYINDICATOR_FIX_NONE;
-            if (qualities[q] == 6U)
-            {
-                expected = CAN_GPSQUALITYINDICATOR_DEAD_RECKONING;
-            }
-            else if ((qualities[q] >= 1U) && (qualities[q] <= 3U))
-            {
-                if (dimensions[d] == 2U)
-                {
-                    expected = CAN_GPSQUALITYINDICATOR_FIX_2D;
-                }
-                if (dimensions[d] == 3U)
-                {
-                    expected = CAN_GPSQUALITYINDICATOR_FIX_3D;
-                }
-            }
+            const CAN_gpsQualityIndicator_E methods[] = {
+                CAN_GPSQUALITYINDICATOR_FIX_NONE,       CAN_GPSQUALITYINDICATOR_SPS,
+                CAN_GPSQUALITYINDICATOR_DIFFERENTIAL,   CAN_GPSQUALITYINDICATOR_PPS,
+                CAN_GPSQUALITYINDICATOR_DEAD_RECKONING, CAN_GPSQUALITYINDICATOR_FIX_NONE,
+            };
+            const CAN_gpsQualityIndicator_E expected = methods[q];
+            TEST_ASSERT_EQUAL_UINT8(dimensions[d] <= 3U ? dimensions[d] : 0U, app_gps_getFixDimension());
             TEST_ASSERT_EQUAL_INT(expected, app_gps_getQualityCAN());
         }
     }
 }
 static void fix_dimension_transitions_without_new_gga(void)
 {
-    seed_fix();
-    // GGA/RMC are sufficient for navigation, but do not specify 2D versus 3D.
-    TEST_ASSERT_TRUE(app_gps_isValid());
-    TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_FIX_NONE, app_gps_getQualityCAN());
-    const unsigned                  dimensions[] = { 3, 2, 1, 3 };
-    const CAN_gpsQualityIndicator_E expected[]   = {
-        CAN_GPSQUALITYINDICATOR_FIX_3D,   CAN_GPSQUALITYINDICATOR_FIX_2D,
-        CAN_GPSQUALITYINDICATOR_FIX_NONE, CAN_GPSQUALITYINDICATOR_FIX_3D,
-    };
+    receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000");
+    receive_payload("GNRMC,175258.000,A,2447.0870,N,12100.5220,E,10.0,123.4,220617,,,D");
+    // GGA/RMC without a GSA dimension cannot establish a complete GNSS fix.
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getFixDimension());
+    const unsigned dimensions[] = { 3, 2, 1, 3 };
+    const uint8_t  expected[]   = { 3U, 2U, 1U, 3U };
     for (size_t i = 0U; i < ARRAY_LEN(dimensions); i++)
     {
         char payload[100];
         snprintf(payload, sizeof(payload), "GNGSA,A,%u,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1", dimensions[i]);
         receive_payload(payload);
-        TEST_ASSERT_EQUAL_INT(expected[i], app_gps_getQualityCAN());
+        TEST_ASSERT_EQUAL_UINT8(expected[i], app_gps_getFixDimension());
+        TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_DIFFERENTIAL, app_gps_getQualityCAN());
     }
     receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,0,00,0.7,95.2,M,19.6,M,,0000");
     TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_FIX_NONE, app_gps_getQualityCAN());
@@ -678,7 +669,7 @@ static void supported_navigation_sentences_accept_gp_and_gn_talkers(void)
         TEST_ASSERT_EQUAL_UINT16(1U, app_gps_getSentenceCountGsa());
         TEST_ASSERT_EQUAL_UINT16(1U, app_gps_getSentenceCountGsv());
         TEST_ASSERT_EQUAL_UINT16(1U, app_gps_getSentenceCountRmc());
-        TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_FIX_3D, app_gps_getQualityCAN());
+        TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_SPS, app_gps_getQualityCAN());
         TEST_ASSERT_TRUE(app_gps_isValid());
         TEST_ASSERT_FLOAT_WITHIN(0.001f, 5.144f, app_gps_getHeadingRef()->speedMps);
         TEST_ASSERT_FLOAT_WITHIN(0.001f, 123.4f, app_gps_getHeadingRef()->course);
@@ -707,7 +698,7 @@ static void unsupported_documented_sentences_do_not_mutate_or_refresh_navigation
         test_freertos.ticks = 1999U;
         receive_payload(payloads[i]);
         TEST_ASSERT_EQUAL_UINT16_MESSAGE(1U, app_gps_getInvalidTransactions(), payloads[i]);
-        TEST_ASSERT_EQUAL_UINT16(2U, app_gps_getNumberSamples());
+        TEST_ASSERT_EQUAL_UINT16(3U, app_gps_getNumberSamples());
         TEST_ASSERT_FLOAT_WITHIN(0.00001f, before.lat, app_gps_getPosRef()->lat);
         TEST_ASSERT_FLOAT_WITHIN(0.00001f, before.lon, app_gps_getPosRef()->lon);
         TEST_ASSERT_FLOAT_WITHIN(0.001f,   95.2f,      app_gps_getPosRef()->alt);
@@ -798,17 +789,299 @@ static void multi_sentence_gsv_and_gsa_system_ids_preserve_navigation(void)
             receive_payload(payload);
         }
     }
-    TEST_ASSERT_EQUAL_UINT16(4U, app_gps_getSentenceCountGsa());
+    TEST_ASSERT_EQUAL_UINT16(5U, app_gps_getSentenceCountGsa());
     TEST_ASSERT_EQUAL_UINT16(8U, app_gps_getSentenceCountGsv());
     TEST_ASSERT_EQUAL_UINT16(0U, app_gps_getInvalidTransactions());
     TEST_ASSERT_EQUAL_UINT8(15U, app_gps_getNumSatellites());
     TEST_ASSERT_FLOAT_WITHIN(0.00002f, 24.784784f, app_gps_getPosRef()->lat);
-    TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_FIX_3D, app_gps_getQualityCAN());
+    TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_DIFFERENTIAL, app_gps_getQualityCAN());
+}
+
+static void gga_and_gsa_metrics_are_independent(void)
+{
+    TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getQualityCAN());
+    TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getFixDimension());
+    receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000");
+    TEST_ASSERT_EQUAL_UINT8(2U, app_gps_getQualityCAN());
+    TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getFixDimension());
+    receive_payload("GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1");
+    TEST_ASSERT_EQUAL_UINT8(2U, app_gps_getQualityCAN());
+    TEST_ASSERT_EQUAL_UINT8(3U, app_gps_getFixDimension());
+    receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,3,15,0.7,95.2,M,19.6,M,,0000");
+    TEST_ASSERT_EQUAL_UINT8(3U, app_gps_getQualityCAN());
+    receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,6,00,0.7,95.2,M,19.6,M,,0000");
+    TEST_ASSERT_EQUAL_UINT8(4U, app_gps_getQualityCAN());
+    TEST_ASSERT_EQUAL_UINT8(3U, app_gps_getFixDimension());
+}
+
+
+static void auxiliary_traffic_cannot_keep_stale_navigation_valid(void)
+{
+    const char* auxiliary[] = {
+        "PAIRMSG,90,072520.000,3",                                 "PAIRMSG,91,072520.000,1,0",
+        "GPGSV,1,1,01,02,72,109,43,1",
+        "GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1",
+    };
+
+    for (size_t i = 0U; i < ARRAY_LEN(auxiliary); i++)
+    {
+        setUp();
+        seed_fix();
+        test_freertos.ticks = 1999U;
+        receive_payload(auxiliary[i]);
+        test_freertos.ticks = 2000U;
+        poll();
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        TEST_ASSERT_FALSE(app_gps_getValidTime());
+        TEST_ASSERT_FALSE(app_gps_getValidDate());
+        TEST_ASSERT_TRUE(faults[FM_FAULT_VCFRONT_GPSDATANOTVALID]);
+        TEST_ASSERT_FALSE(faults[FM_FAULT_VCFRONT_GPSDEVICEERROR]);
+        TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getQualityCAN());
+        seed_fix();
+        TEST_ASSERT_TRUE(app_gps_isValid());
+    }
+}
+static void gga_and_rmc_must_each_be_fresh(void)
+{
+    const char* oneSource[] = {
+        "GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000",
+        "GNRMC,175258.000,A,2447.0870,N,12100.5220,E,10.0,123.4,220617,,,D",
+    };
+
+    for (size_t i = 0U; i < ARRAY_LEN(oneSource); i++)
+    {
+        setUp();
+        seed_fix();
+        test_freertos.ticks = 1999U;
+        receive_payload(oneSource[i]);
+        receive_payload("GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1");
+        TEST_ASSERT_TRUE(app_gps_isValid());
+        test_freertos.ticks = 2000U;
+        poll();
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        TEST_ASSERT_FALSE(faults[FM_FAULT_VCFRONT_GPSDEVICEERROR]);
+        receive_payload(oneSource[1U - i]);
+        TEST_ASSERT_TRUE(app_gps_isValid());
+    }
+}
+static void gsa_no_fix_and_expiration_invalidate_gnss_but_allow_dead_reckoning(void)
+{
+    seed_fix();
+    receive_payload("GNGSA,A,1,,,,,,,,,,,,,1.2,0.7,1.0,1");
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT8(1U, app_gps_getFixDimension());
+    receive_payload("GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    test_freertos.ticks = 2000U;
+    receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000");
+    receive_payload("GNRMC,175258.000,A,2447.0870,N,12100.5220,E,10.0,123.4,220617,,,D");
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getFixDimension());
+    TEST_ASSERT_EQUAL_INT(CAN_GPSQUALITYINDICATOR_DIFFERENTIAL, app_gps_getQualityCAN());
+    receive_payload("GNGGA,175258.000,2447.0870,N,12100.5221,E,6,00,0.7,95.2,M,19.6,M,,0000");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT8(4U, app_gps_getQualityCAN());
+    receive_payload("GNGSA,A,1,,,,,,,,,,,,,1.2,0.7,1.0,1");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT8(1U, app_gps_getFixDimension());
+}
+static void buffer_recovery_invalidates_cached_fix_until_navigation_returns(void)
+{
+    seed_fix();
+    HW_UART_stopDMA(HW_UART_PORT_GPS);
+    app_gps_resetBuffers();
+    HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)dma_buffer, dma_size);
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    receive_payload("PAIRMSG,90,072520.000,3");
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    seed_fix();
+    TEST_ASSERT_TRUE(app_gps_isValid());
+}
+
+static void receive_with_field(const char* payload, unsigned index, const char* replacement)
+{
+    const char* start = payload;
+
+    for (unsigned i = 0U; i < index; i++)
+    {
+        start = strchr(start, ',');
+        TEST_ASSERT_NOT_NULL(start);
+        start++;
+    }
+    const char* end = strchr(start, ',');
+    if (end == NULL)
+    {
+        end = payload + strlen(payload);
+    }
+    char      changed[200];
+    const int length = snprintf(changed, sizeof(changed), "%.*s%s%s", (int)(start - payload), payload, replacement, end);
+    TEST_ASSERT_TRUE(length > 0 && (size_t)length < sizeof(changed));
+    receive_payload(changed);
+}
+static const char* const valid_navigation[] = {
+    "GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000",
+    "GNRMC,175258.000,A,2447.0870,N,12100.5220,E,10.0,123.4,220617,,,D",
+    "GNGSA,A,3,21,12,15,18,20,24,10,32,25,13,,,1.2,0.7,1.0,1",
+};
+static void malformed_navigation_fields_invalidate_their_source(void)
+{
+    const struct { unsigned source; unsigned field; const char* value; } cases[] = {
+        { 0, 1, "240000"        }, { 0, 1, "126000"    }, { 0,  1, "120060"    }, { 0, 1, "abcdef"     },
+        { 0, 1, "123456.x"      }, { 0, 2, "2460.0000" }, { 0,  2, "9100.0000" },
+        { 0, 2, "9000.0001"     }, { 0, 2, ""          }, { 0,  3, "X"         }, { 0, 4, "18100.0000" },
+        { 0, 4, "18000.0001"    }, { 0, 5, "N"         }, { 0,  6, "7"         }, { 0, 6, "255"        },
+        { 0, 6, "-1"            }, { 0, 6, "1x"        }, { 0,  7, "57"        }, { 0, 7, "abc"        },
+        { 0, 8, "NaN"           }, { 0, 9, "nan"       }, { 0,  9, "inf"       }, { 0, 9, "18000"      }, { 0, 10, "F" },
+        { 1, 1, "240000"        }, { 1, 2, "X"         }, { 1,  3, ""          }, { 1, 4, "X"          },
+        { 1, 7, "-1"            }, { 1, 7, "nan"       }, { 1,  7, ""          }, { 1, 8, "360"        },
+        { 1, 9, "310221"        }, { 1, 9, "290223"    }, { 1,  9, "001224"    },
+        { 1, 9, "011324"        }, { 1, 9, "abcdef"    }, { 1, 12, "X"         },
+        { 2, 1, "X"             }, { 2, 2, "0"         }, { 2,  2, "4"         }, { 2, 2, ""           }, { 2, 18, "5" },
+        { 1, 7, "0000000000001" },
+    };
+    for (size_t i = 0U; i < ARRAY_LEN(cases); i++)
+    {
+        setUp();
+        seed_fix();
+        test_freertos.ticks = 1999U;
+        receive_with_field(valid_navigation[cases[i].source], cases[i].field, cases[i].value);
+        TEST_ASSERT_FALSE_MESSAGE(app_gps_isValid(), cases[i].value);
+        TEST_ASSERT_EQUAL_UINT16_MESSAGE(1U, app_gps_getInvalidTransactions(), cases[i].value);
+        TEST_ASSERT_EQUAL_UINT16(3U, app_gps_getNumberSamples());
+        TEST_ASSERT_FALSE(app_gps_getValidTime());
+        TEST_ASSERT_FALSE(app_gps_getValidDate());
+        test_freertos.ticks = 2000U;
+        poll();
+        TEST_ASSERT_TRUE(faults[FM_FAULT_VCFRONT_GPSDEVICEERROR]);
+        receive_payload(valid_navigation[2]);
+        seed_fix();
+        TEST_ASSERT_TRUE(app_gps_isValid());
+    }
+}
+static void truncated_or_spoofed_navigation_cannot_reuse_previous_fix(void)
+{
+    const char* frames[] = { "GNGGA", "GNGGAjunk,1", "GNRMC,123456,A", "GNGSA,A" };
+
+    for (size_t i = 0U; i < ARRAY_LEN(frames); i++)
+    {
+        setUp();
+        seed_fix();
+        receive_payload(frames[i]);
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        TEST_ASSERT_EQUAL_UINT16(1U, app_gps_getInvalidTransactions());
+    }
+}
+static void explicit_no_fix_states_clear_validity_in_any_sentence_order(void)
+{
+    const unsigned orders[][3] = { { 0, 1, 2 }, { 0, 2, 1 }, { 1, 0, 2 }, { 1, 2, 0 }, { 2, 0, 1 }, { 2, 1, 0 } };
+
+    for (size_t i = 0U; i < ARRAY_LEN(orders); i++)
+    {
+        setUp();
+        for (size_t j = 0U; j < 3U; j++)
+        {
+            receive_payload(valid_navigation[orders[i][j]]);
+        }
+        TEST_ASSERT_TRUE(app_gps_isValid());
+        TEST_ASSERT_EQUAL_UINT8(2U, app_gps_getQualityCAN());
+        TEST_ASSERT_EQUAL_UINT8(3U, app_gps_getFixDimension());
+        receive_with_field(valid_navigation[0], 6, "0");
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getQualityCAN());
+        TEST_ASSERT_EQUAL_UINT8(3U, app_gps_getFixDimension());
+        receive_payload(valid_navigation[0]);
+        TEST_ASSERT_TRUE(app_gps_isValid());
+        receive_with_field(valid_navigation[1], 2, "V");
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        receive_payload(valid_navigation[1]);
+        TEST_ASSERT_TRUE(app_gps_isValid());
+        receive_with_field(valid_navigation[1], 12, "N");
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        receive_payload(valid_navigation[1]);
+        TEST_ASSERT_TRUE(app_gps_isValid());
+        receive_with_field(valid_navigation[2], 2, "1");
+        TEST_ASSERT_FALSE(app_gps_isValid());
+        TEST_ASSERT_EQUAL_UINT8(2U, app_gps_getQualityCAN());
+        TEST_ASSERT_EQUAL_UINT8(1U, app_gps_getFixDimension());
+    }
+}
+static void valid_empty_time_and_date_do_not_claim_clock_validity(void)
+{
+    seed_fix();
+    receive_with_field(valid_navigation[0], 1, "");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_FALSE(app_gps_getValidTime());
+    receive_payload(valid_navigation[0]);
+    TEST_ASSERT_TRUE(app_gps_getValidTime());
+    receive_with_field(valid_navigation[1], 9, "");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_FALSE(app_gps_getValidDate());
+    receive_with_field(valid_navigation[1], 9, "290224");
+    TEST_ASSERT_TRUE(app_gps_getValidDate());
+    TEST_ASSERT_EQUAL_UINT8(29U, app_gps_getTimeRef()->date);
+    TEST_ASSERT_EQUAL_UINT16(2024U, app_gps_getTimeRef()->year);
+}
+static void no_fix_reports_with_empty_coordinates_are_accepted_as_no_fix(void)
+{
+    seed_fix();
+    receive_payload("GNGGA,175258.000,,,,,0,00,,,,,,,");
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT8(0U, app_gps_getQualityCAN());
+    receive_payload("GNRMC,175258.000,V,,,,,,,220617,,,N");
+    TEST_ASSERT_FALSE(app_gps_isValid());
+    TEST_ASSERT_EQUAL_UINT16(0U, app_gps_getInvalidTransactions());
+    TEST_ASSERT_FALSE(faults[FM_FAULT_VCFRONT_GPSDEVICEERROR]);
+    seed_fix();
+    TEST_ASSERT_TRUE(app_gps_isValid());
+}
+static void standard_lf_only_sentences_commit_parser_state(void)
+{
+    receive_text("$GNGGA,175258.000,2447.0870,N,12100.5221,E,2,15,0.7,95.2,M,19.6,M,,0000*72\n");
+    receive_text("$GNRMC,175258.000,A,2447.0870,N,12100.5220,E,000.0,000.0,220617,,,D*74\n");
+    receive_payload(valid_navigation[2]);
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_TRUE(app_gps_getValidTime());
+    TEST_ASSERT_TRUE(app_gps_getValidDate());
+    TEST_ASSERT_FLOAT_WITHIN(0.00002f, 24.784784f, app_gps_getPosRef()->lat);
+    TEST_ASSERT_EQUAL_UINT16(2017U, app_gps_getTimeRef()->year);
+}
+
+
+static void clock_validity_requires_matching_gga_and_rmc_seconds(void)
+{
+    seed_fix();
+    receive_with_field(valid_navigation[0], 1, "000000.000");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_FALSE(app_gps_getValidTime());
+    TEST_ASSERT_FALSE(app_gps_getValidDate());
+    receive_payload("GNRMC,000000.000,A,2447.0870,N,12100.5220,E,10.0,123.4,230617,,,D");
+    TEST_ASSERT_TRUE(app_gps_getValidTime());
+    TEST_ASSERT_TRUE(app_gps_getValidDate());
+    TEST_ASSERT_EQUAL_UINT8(0U,  app_gps_getTimeRef()->hours);
+    TEST_ASSERT_EQUAL_UINT8(23U, app_gps_getTimeRef()->date);
+    receive_with_field(valid_navigation[1], 1, "");
+    TEST_ASSERT_TRUE(app_gps_isValid());
+    TEST_ASSERT_FALSE(app_gps_getValidTime());
+    TEST_ASSERT_FALSE(app_gps_getValidDate());
 }
 
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(clock_validity_requires_matching_gga_and_rmc_seconds);
+    RUN_TEST(malformed_navigation_fields_invalidate_their_source);
+    RUN_TEST(truncated_or_spoofed_navigation_cannot_reuse_previous_fix);
+    RUN_TEST(explicit_no_fix_states_clear_validity_in_any_sentence_order);
+    RUN_TEST(valid_empty_time_and_date_do_not_claim_clock_validity);
+    RUN_TEST(no_fix_reports_with_empty_coordinates_are_accepted_as_no_fix);
+    RUN_TEST(standard_lf_only_sentences_commit_parser_state);
+
+    RUN_TEST(auxiliary_traffic_cannot_keep_stale_navigation_valid);
+    RUN_TEST(gga_and_rmc_must_each_be_fresh);
+    RUN_TEST(gsa_no_fix_and_expiration_invalidate_gnss_but_allow_dead_reckoning);
+    RUN_TEST(buffer_recovery_invalidates_cached_fix_until_navigation_returns);
+
+    RUN_TEST(gga_and_gsa_metrics_are_independent);
     RUN_TEST(gga_quality_and_gsa_dimension_are_independent);
     RUN_TEST(fix_dimension_transitions_without_new_gga);
     RUN_TEST(supported_navigation_sentences_accept_gp_and_gn_talkers);

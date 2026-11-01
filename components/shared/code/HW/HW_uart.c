@@ -36,3 +36,7 @@ HW_StatusTypeDef_E HW_UART_init(void)
     return status;
 }
 
+uint32_t HW_UART_getDmaRxRemaining(HW_UART_port_E port)
+{
+    return __HAL_DMA_GET_COUNTER(huart[port].hdmarx);
+}

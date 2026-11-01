@@ -13,7 +13,8 @@ use std::mem::{size_of, zeroed};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::process::Command;
 use yamcan_clock::rust_model_generated::{
-    FaultStatus, GpsQualityIndicator, VEH_VCFRONT_GPSDATE_MESSAGE as GpsDateMessage,
+    FaultStatus, GpsFixDimension, GpsQualityIndicator,
+    VEH_VCFRONT_GPSDATE_MESSAGE as GpsDateMessage,
     VEH_VCFRONT_GPSDIAGNOSTICS_MESSAGE as GpsDiagnosticsMessage,
 };
 use yamcan_clock::yamcan::NetworkDecoder;
@@ -64,7 +65,14 @@ impl ClockGate {
     fn update_diagnostics(&mut self, message: &GpsDiagnosticsMessage) {
         let fix_ok = matches!(
             message.VCFRONT_gpsQualityIndicator,
-            Some(GpsQualityIndicator::FIX2D | GpsQualityIndicator::FIX3D)
+            Some(
+                GpsQualityIndicator::SPS
+                    | GpsQualityIndicator::DIFFERENTIAL
+                    | GpsQualityIndicator::PPS
+            )
+        ) && matches!(
+            message.VCFRONT_gpsFixDimension,
+            Some(GpsFixDimension::FIX2D | GpsFixDimension::FIX3D)
         );
         let date_ok = message.VCFRONT_gpsInvalidDate == Some(FaultStatus::OK);
         let time_ok = message.VCFRONT_gpsInvalidTime == Some(FaultStatus::OK);

@@ -95,7 +95,7 @@ signals:
     discreteValues: gpsDynamicStatus
 
   gpsSatellites:
-    description: Number of satellites in view
+    description: Number of satellites used in the GGA solution
     nativeRepresentation:
       bitWidth: 6
       range:
@@ -104,8 +104,12 @@ signals:
       resolution: 1
 
   gpsQualityIndicator:
-    description: GPS quality indicator
+    description: GGA positioning method; unavailable when GGA is stale
     discreteValues: gpsQualityIndicator
+
+  gpsFixDimension:
+    description: GSA fix dimension; unknown until received or when stale
+    discreteValues: gpsFixDimension
 
   gpsInvalidTime:
     description: GPS time invalid

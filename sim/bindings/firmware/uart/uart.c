@@ -13,3 +13,10 @@ HW_StatusTypeDef_E HW_UART_stopDMA(HW_UART_port_E port)
     (void)port;
     return HW_OK;
 }
+
+// This binding has no incoming UART source yet; the producer stays at index zero.
+uint32_t HW_UART_getDmaRxRemaining(HW_UART_port_E port)
+{
+    (void)port;
+    return 0U;
+}

@@ -605,3 +605,13 @@ def valid_torque_output(vcfront, pedal):
         return vcfront.latest_torque_request() == 0
 
     return True
+
+
+def test_gps_diagnostics_report_unavailable_without_receiver_data(vcfront_cluster):
+    vcfront_cluster.run_for(200, step=10)
+    signals = vcfront_cluster.vcfront.can.latest("VCFRONT_gpsDiagnostics", bus="veh")
+    assert signals is not None
+    assert signals.VCFRONT_gpsQualityIndicator == 0
+    assert signals.VCFRONT_gpsFixDimension == 0
+    assert signals.VCFRONT_gpsInvalidTime == 1
+    assert signals.VCFRONT_gpsInvalidDate == 1

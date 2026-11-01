@@ -40,21 +40,28 @@
 
 static struct
 {
-    bool                       gpsValidData;
-    bool                       gpsValidTime;
-    bool                       gpsValidDate;
-    uint8_t                    numSatellites;
-    app_gps_qualityIndicator_E gpsQuality;
-    app_gps_pos_S              pos;
-    app_gps_heading_S          heading;
-    app_gps_time_S             time;
-    app_gps_pairmsg_S          pairmsg;
+    bool              gpsValidData;
+    bool              gpsValidTime;
+    bool              gpsValidDate;
+    uint8_t           numSatellites;
+    app_gps_pos_S     pos;
+    app_gps_heading_S heading;
+    app_gps_time_S    time;
+    app_gps_pairmsg_S pairmsg;
 
-    drv_timer_S                timeout;
+    drv_timer_S       timeout;
+    drv_timer_S       ggaTimeout;
+    drv_timer_S       rmcTimeout;
+    drv_timer_S       gsaTimeout;
+    bool              rmcModeValid;
+    bool              rmcTimeValid;
+    uint32_t          ggaUtcMs;
+    uint32_t          rmcUtcMs;
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
     LIB_BUFFER_CIRC_CREATE(dmaBuffer, volatile uint8_t, BUFFER_SIZE);
-    LIB_BUFFER_FIFO_CREATE(sentence, uint8_t, MAX_NMEA_SENTENCE);
+    uint8_t           sentence[MAX_NMEA_SENTENCE];
+    size_t            sentenceLength;
     lwgps_t           currentGPS;
     uint16_t          crcFailures;
     uint16_t          invalidTransactions;
@@ -76,7 +83,7 @@ static struct
  ******************************************************************************/
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
-static void recordNonPairmsgCount(lwgps_statement_t statement)
+static bool recordNonPairmsgCount(lwgps_statement_t statement)
 {
     switch (statement)
     {
@@ -97,8 +104,9 @@ static void recordNonPairmsgCount(lwgps_statement_t statement)
             break;
 
         default:
-            break;
+            return false;
     }
+    return true;
 }
 
 static void updateGPS(void)
@@ -118,316 +126,522 @@ static void updateGPS(void)
     gps.time.minutes     = gps.currentGPS.minutes;
     gps.time.seconds     = gps.currentGPS.seconds;
 
-    gps.gpsQuality       = gps.currentGPS.fix;
     gps.numSatellites    = gps.currentGPS.sats_in_use;
-    gps.gpsValidData     = gps.currentGPS.is_valid && (gps.gpsQuality != GPS_POSITION_UNAVAILABLE);
+    // Source freshness and GSA dimension are checked by app_gps_isValid().
+    gps.gpsValidData     = gps.currentGPS.is_valid && gps.rmcModeValid &&
+                           (((gps.currentGPS.fix >= 1U) && (gps.currentGPS.fix <= 3U)) || (gps.currentGPS.fix == 6U));
     gps.gpsValidTime     = gps.currentGPS.time_valid && gps.gpsValidData;
     gps.gpsValidDate     = gps.currentGPS.date_valid && gps.gpsValidData;
     taskEXIT_CRITICAL();
 }
 
+static bool parseUint8(const char* field, uint8_t* result)
+{
+    uint32_t value = 0U;
+
+    if (*field == '\0')
+    {
+        return false;
+    }
+    for (const char* p = field; *p != '\0'; p++)
+    {
+        if (!isdigit((unsigned char)*p))
+        {
+            return false;
+        }
+        value = value * 10U + (uint32_t)(*p - '0');
+        if (value > UINT8_MAX)
+        {
+            return false;
+        }
+    }
+    *result = (uint8_t)value;
+    return true;
+}
+
 static bool parsePairmsgUtcMs(const char* field, uint32_t* utcMs)
 {
-    uint32_t hour        = 0U;
-    uint32_t minute      = 0U;
-    uint32_t second      = 0U;
-    uint32_t millisecond = 0U;
+    const size_t length = strlen(field);
 
-    if ((field == NULL) || (field[0] == '\0'))
+    // HHMMSS, optionally followed by one to three fractional-second digits.
+    if ((length < 6U) || (length > 10U) || (length == 7U))
     {
         return false;
     }
-
-    if (!(isdigit((unsigned char)field[0]) && isdigit((unsigned char)field[1]) &&
-          isdigit((unsigned char)field[2]) && isdigit((unsigned char)field[3]) &&
-          isdigit((unsigned char)field[4]) && isdigit((unsigned char)field[5]))
-        )
+    for (size_t i = 0U; i < length; i++)
     {
-        return false;
+        if (i == 6U)
+        {
+            if (field[i] != '.')
+            {
+                return false;
+            }
+        }
+        else if (!isdigit((unsigned char)field[i]))
+        {
+            return false;
+        }
     }
-
-    hour   = (uint32_t)((field[0] - '0') * 10 + (field[1] - '0'));
-    minute = (uint32_t)((field[2] - '0') * 10 + (field[3] - '0'));
-    second = (uint32_t)((field[4] - '0') * 10 + (field[5] - '0'));
-
+    const uint32_t hour   = (uint32_t)((field[0] - '0') * 10 + field[1] - '0');
+    const uint32_t minute = (uint32_t)((field[2] - '0') * 10 + field[3] - '0');
+    const uint32_t second = (uint32_t)((field[4] - '0') * 10 + field[5] - '0');
     if ((hour > 23U) || (minute > 59U) || (second > 59U))
     {
         return false;
     }
-
-    const char* dot = strchr(field, '.');
-    if (dot != NULL)
+    uint32_t milliseconds = 0U;
+    uint32_t scale        = 100U;
+    for (size_t i = 7U; i < length; i++)
     {
-        uint32_t  scale = 100U;
-        const char* p   = dot + 1;
-        while ((*p != '\0') && isdigit((unsigned char)*p) && (scale > 0U))
-        {
-            millisecond += (uint32_t)(*p - '0') * scale;
-            scale       /= 10U;
-            p++;
-        }
+        milliseconds += (uint32_t)(field[i] - '0') * scale;
+        scale        /= 10U;
     }
-
-    *utcMs = ((hour * 3600U) + (minute * 60U) + second) * 1000U + millisecond;
+    *utcMs = ((hour * 3600U) + minute * 60U + second) * 1000U + milliseconds;
     return true;
 }
 
-static bool parsePairmsgChecksum(const char* payload, const char* checksum)
+static bool parseChecksum(const char* payload, const char* checksum)
 {
-    uint8_t   calc = 0U;
-    const char* p  = payload;
-
-    while ((p != NULL) && (*p != '\0'))
-    {
-        calc ^= (uint8_t)(*p);
-        p++;
-    }
-
-    if ((checksum == NULL) || !isxdigit((unsigned char)checksum[0]) || !isxdigit((unsigned char)checksum[1]))
+    if (!isxdigit((unsigned char)checksum[0]) || !isxdigit((unsigned char)checksum[1]))
     {
         return false;
     }
-
+# if LWGPS_CFG_CRC
+    uint8_t calculated = 0U;
+    for (const char* p = payload; *p != '\0'; p++)
+    {
+        calculated ^= (uint8_t)*p;
+    }
     uint8_t expected = 0U;
     for (uint8_t i = 0U; i < 2U; i++)
     {
-        char c = (char)toupper((unsigned char)checksum[i]);
-        expected = (uint8_t)(expected << 4);
-        if (c >= 'A')
-        {
-            expected = (uint8_t)(expected | (uint8_t)(c - 'A' + 10));
-        }
-        else
-        {
-            expected = (uint8_t)(expected | (uint8_t)(c - '0'));
-        }
+        const char    c     = (char)toupper((unsigned char)checksum[i]);
+        const uint8_t digit = (uint8_t)((c >= 'A') ? (c - 'A' + 10) : (c - '0'));
+        expected = (uint8_t)((expected << 4U) | digit);
     }
-
-    return calc == expected;
+    return calculated == expected;
+# else // if LWGPS_CFG_CRC
+    (void)payload;
+    return true;
+# endif // if LWGPS_CFG_CRC
 }
 
-static bool parsePairmsg(const uint8_t* sentence, size_t len)
+static bool parsePairmsg(char* payload)
 {
-    char   buffer[MAX_NMEA_SENTENCE + 1U];
-    size_t copyLen  = len;
-    char   * cursor = NULL;
+    // Retain empty fields so missing values cannot shift later fields left.
+    char   * fields[5U];
+    size_t count    = 0U;
+    char   * cursor = payload;
 
-    if (copyLen > MAX_NMEA_SENTENCE)
+    for (;;)
     {
-        copyLen = MAX_NMEA_SENTENCE;
-    }
-
-    memcpy(buffer, sentence, copyLen);
-    buffer[copyLen] = '\0';
-
-    while (copyLen > 0U)
-    {
-        char tail = buffer[copyLen - 1U];
-        if ((tail != '\r') && (tail != '\n'))
+        if (count == COUNTOF(fields))
+        {
+            return false;
+        }
+        fields[count++] = cursor;
+        char* comma = strchr(cursor, ',');
+        if (comma == NULL)
         {
             break;
         }
-        buffer[copyLen - 1U] = '\0';
-        copyLen--;
-    }
-
-    if (strncmp(buffer, "$PAIRMSG,", 9U) != 0)
-    {
-        return false;
-    }
-
-    char* star = strchr(buffer, '*');
-    if (star == NULL)
-    {
-        gps.invalidTransactions++;
-        return true;
-    }
-
-    *star = '\0';
-    const char* checksum = star + 1;
-
-    if (!parsePairmsgChecksum(buffer + 1, checksum))
-    {
-        gps.crcFailures++;
-        return true;
-    }
-
-    cursor = buffer;
-    char* token = cursor;
-    char* comma = strchr(cursor, ',');
-    if (comma != NULL)
-    {
         *comma = '\0';
         cursor = comma + 1;
     }
-    else
+    if (count < 4U)
     {
-        cursor = NULL;
+        return false;
     }
-    if (token == NULL)
+    uint8_t  messageId;
+    uint32_t utcMs;
+    uint8_t  first;
+    uint8_t  second;
+    if (!parseUint8(fields[1], &messageId) || !parsePairmsgUtcMs(fields[2], &utcMs) ||
+        !parseUint8(fields[3], &first)
+        )
     {
-        gps.invalidTransactions++;
-        return true;
+        return false;
     }
-
-    token = cursor;
-    if (token != NULL)
+    if ((messageId == 90U) && (count == 4U))
     {
-        comma = strchr(token, ',');
-        if (comma != NULL)
-        {
-            *comma = '\0';
-            cursor = comma + 1;
-        }
-        else
-        {
-            cursor = NULL;
-        }
-    }
-    if (token == NULL)
-    {
-        gps.invalidTransactions++;
-        return true;
-    }
-
-    const long messageId     = strtol(token, NULL, 10);
-    uint32_t   utcMs         = 0U;
-    uint8_t    drStage       = gps.pairmsg.drStage;
-    uint8_t    dynamicStatus = gps.pairmsg.dynamicStatus;
-    uint8_t    alarmStatus   = gps.pairmsg.alarmStatus;
-
-    token = cursor;
-    if (token != NULL)
-    {
-        comma = strchr(token, ',');
-        if (comma != NULL)
-        {
-            *comma = '\0';
-            cursor = comma + 1;
-        }
-        else
-        {
-            cursor = NULL;
-        }
-    }
-    if (!parsePairmsgUtcMs(token, &utcMs))
-    {
-        gps.invalidTransactions++;
-        return true;
-    }
-
-    if (messageId == 90L)
-    {
-        token = cursor;
-        if (token != NULL)
-        {
-            comma = strchr(token, ',');
-            if (comma != NULL)
-            {
-                *comma = '\0';
-                cursor = comma + 1;
-            }
-            else
-            {
-                cursor = NULL;
-            }
-        }
-        if (token == NULL)
-        {
-            gps.invalidTransactions++;
-            return true;
-        }
-
-        drStage             = (uint8_t)strtoul(token, NULL, 10);
         taskENTER_CRITICAL();
         gps.pairmsg.utcMs   = utcMs;
-        gps.pairmsg.drStage = drStage;
+        gps.pairmsg.drStage = first;
         taskEXIT_CRITICAL();
-        return true;
     }
-    else if (messageId == 91L)
+    else if ((messageId == 91U) && (count == 5U) && parseUint8(fields[4], &second))
     {
-        token = cursor;
-        if (token != NULL)
-        {
-            comma = strchr(token, ',');
-            if (comma != NULL)
-            {
-                *comma = '\0';
-                cursor = comma + 1;
-            }
-            else
-            {
-                cursor = NULL;
-            }
-        }
-        if (token == NULL)
-        {
-            gps.invalidTransactions++;
-            return true;
-        }
-        dynamicStatus = (uint8_t)strtoul(token, NULL, 10);
-
-        token         = cursor;
-        if (token != NULL)
-        {
-            comma = strchr(token, ',');
-            if (comma != NULL)
-            {
-                *comma = '\0';
-                cursor = comma + 1;
-            }
-            else
-            {
-                cursor = NULL;
-            }
-        }
-        if (token == NULL)
-        {
-            gps.invalidTransactions++;
-            return true;
-        }
-        alarmStatus               = (uint8_t)strtoul(token, NULL, 10);
-
         taskENTER_CRITICAL();
         gps.pairmsg.utcMs         = utcMs;
-        gps.pairmsg.dynamicStatus = dynamicStatus;
-        gps.pairmsg.alarmStatus   = alarmStatus;
+        gps.pairmsg.dynamicStatus = first;
+        gps.pairmsg.alarmStatus   = second;
         taskEXIT_CRITICAL();
-        return true;
     }
-
-    gps.invalidTransactions++;
+    else
+    {
+        return false;
+    }
     return true;
 }
 
-static void parse(uint8_t* sentence, size_t len)
+// Validate fields that feed navigation/validity before the permissive LwGPS parser.
+static bool parseDecimal(const char* field, double* result)
 {
-    lwgps_process(&gps.currentGPS, sentence, len);
+    const char * p      = field;
+    const bool negative = *p == '-';
 
-    if (gps.currentGPS.p.stat == STAT_UNKNOWN)
+    if (negative)
     {
-        if (parsePairmsg(sentence, len))
+        p++;
+    }
+    bool   digit = false;
+    bool   dot   = false;
+    double value = 0.0;
+    double scale = 0.1;
+    for (; *p != '\0'; p++)
+    {
+        if ((*p == '.') && !dot && digit)
         {
-            drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
-            gps.samples++;
-            gps.sentenceCountPairMsg++;
+            dot   = true;
+            digit = false;
+        }
+        else if (isdigit((unsigned char)*p))
+        {
+            digit = true;
+            if (dot)
+            {
+                value += (double)(*p - '0') * scale;
+                scale *= 0.1;
+            }
+            else
+            {
+                value = value * 10.0 + (double)(*p - '0');
+            }
         }
         else
         {
-            gps.invalidTransactions++;
+            return false;
         }
     }
-    else if (gps.currentGPS.p.stat == STAT_CHECKSUM_FAIL)
+    if (!digit)
     {
-        gps.crcFailures++;
+        return false;
+    }
+    *result = negative ? -value : value;
+    return true;
+}
+
+static bool decimalInRange(const char* field, double minimum, double maximum)
+{
+    double value;
+
+    return parseDecimal(field, &value) && (value >= minimum) && (value <= maximum);
+}
+
+static bool coordinateValid(const char* field, const char* hemisphere, bool latitude)
+{
+    const size_t degreesLength  = latitude ? 4U : 5U;
+    const char   * dot          = strchr(field, '.');
+    const size_t integralLength = (dot == NULL) ? strlen(field) : (size_t)(dot - field);
+
+    if ((integralLength != degreesLength) || (strlen(hemisphere) != 1U))
+    {
+        return false;
+    }
+    if (latitude ? ((hemisphere[0] != 'N') && (hemisphere[0] != 'S')) :
+        ((hemisphere[0] != 'E') && (hemisphere[0] != 'W'))
+        )
+    {
+        return false;
+    }
+    double value;
+    if (!parseDecimal(field, &value) || (value < 0.0) || (value > (latitude ? 9000.0 : 18000.0)))
+    {
+        return false;
+    }
+    const unsigned degrees = (unsigned)value / 100U;
+    return value - (double)degrees * 100.0 < 60.0;
+}
+
+static bool dateValid(const char* field)
+{
+    if (strlen(field) != 6U)
+    {
+        return false;
+    }
+    for (size_t i = 0U; i < 6U; i++)
+    {
+        if (!isdigit((unsigned char)field[i]))
+        {
+            return false;
+        }
+    }
+    const unsigned        day    = (unsigned)((field[0] - '0') * 10 + field[1] - '0');
+    const unsigned        month  = (unsigned)((field[2] - '0') * 10 + field[3] - '0');
+    const unsigned        year   = (unsigned)((field[4] - '0') * 10 + field[5] - '0');
+    static const unsigned days[] = { 31U, 28U, 31U, 30U, 31U, 30U, 31U, 31U, 30U, 31U, 30U, 31U };
+    if ((month == 0U) || (month > 12U) || (day == 0U))
+    {
+        return false;
+    }
+    // The application interprets NMEA years as 2000..2099.
+    const unsigned limit = days[month - 1U] + (((month == 2U) && (year % 4U == 0U)) ? 1U : 0U);
+    return day <= limit;
+}
+
+static bool validateNavigation(char* payload)
+{
+    if ((strncmp(payload, "$GP", 3U) != 0) && (strncmp(payload, "$GN", 3U) != 0))
+    {
+        return true;
+    }
+    const bool gga = strncmp(payload + 3, "GGA", 3U) == 0;
+    const bool rmc = strncmp(payload + 3, "RMC", 3U) == 0;
+    const bool gsa = strncmp(payload + 3, "GSA", 3U) == 0;
+    if (!gga && !rmc && !gsa)
+    {
+        return true;
+    }
+    // A malformed navigation report must not leave a previous fix marked valid.
+    if (gga)
+    {
+        drv_timer_stop(&gps.ggaTimeout);
+    }
+    if (rmc)
+    {
+        drv_timer_stop(&gps.rmcTimeout);
+    }
+    if (gsa)
+    {
+        drv_timer_stop(&gps.gsaTimeout);
+    }
+    char   * fields[20U];
+    size_t count    = 0U;
+    char   * cursor = payload;
+    for (;;)
+    {
+        if (count == COUNTOF(fields))
+        {
+            return false;
+        }
+        fields[count++] = cursor;
+        char* comma = strchr(cursor, ',');
+        if (comma == NULL)
+        {
+            break;
+        }
+        *comma = '\0';
+        cursor = comma + 1;
+    }
+    for (size_t i = 0U; i < count; i++)
+    {
+        // LwGPS truncates longer terms; do not validate a value it cannot retain.
+        if (strlen(fields[i]) >= sizeof(gps.currentGPS.p.term_str))
+        {
+            return false;
+        }
+    }
+    if (strlen(fields[0]) != 6U)
+    {
+        return false;
+    }
+    uint8_t  value;
+    uint32_t utcMs = 0U;
+    if (gga)
+    {
+        if ((count != 15U) || !parseUint8(fields[6], &value) ||
+            ((value != 0U) && (value != 1U) && (value != 2U) && (value != 3U) && (value != 6U))
+            )
+        {
+            return false;
+        }
+        const bool hasFix = value != 0U;
+        if ((*fields[1] != '\0') && !parsePairmsgUtcMs(fields[1], &utcMs))
+        {
+            return false;
+        }
+        if (hasFix || (*fields[2] != '\0') || (*fields[3] != '\0') || (*fields[4] != '\0') || (*fields[5] != '\0'))
+        {
+            if (!coordinateValid(fields[2], fields[3], true) || !coordinateValid(fields[4], fields[5], false))
+            {
+                return false;
+            }
+        }
+        if (!parseUint8(fields[7], &value) || (value > 56U))
+        {
+            return false;
+        }
+        if ((*fields[8] != '\0') && !decimalInRange(fields[8], 0.0, 99.9))
+        {
+            return false;
+        }
+        if (hasFix || (*fields[9] != '\0'))
+        {
+            if (!decimalInRange(fields[9], -9999.9, 17999.9) || (strcmp(fields[10], "M") != 0))
+            {
+                return false;
+            }
+        }
+        gps.ggaUtcMs = utcMs;
+    }
+    else if (rmc)
+    {
+        if ((count != 13U) || ((strcmp(fields[2], "A") != 0) && (strcmp(fields[2], "V") != 0)) ||
+            ((strcmp(fields[12], "A") != 0) && (strcmp(fields[12], "D") != 0) &&
+             (strcmp(fields[12], "E") != 0) && (strcmp(fields[12], "N") != 0))
+            )
+        {
+            return false;
+        }
+        const bool hasFix = (fields[2][0] == 'A') && (fields[12][0] != 'N');
+        if ((*fields[1] != '\0') && !parsePairmsgUtcMs(fields[1], &utcMs))
+        {
+            return false;
+        }
+        if (hasFix || (*fields[3] != '\0') || (*fields[4] != '\0') || (*fields[5] != '\0') || (*fields[6] != '\0'))
+        {
+            if (!coordinateValid(fields[3], fields[4], true) || !coordinateValid(fields[5], fields[6], false))
+            {
+                return false;
+            }
+        }
+        if ((hasFix || (*fields[7] != '\0')) && !decimalInRange(fields[7], 0.0, 999.9))
+        {
+            return false;
+        }
+        if ((*fields[8] != '\0') && !decimalInRange(fields[8], 0.0, 359.9))
+        {
+            return false;
+        }
+        if ((*fields[9] != '\0') && !dateValid(fields[9]))
+        {
+            return false;
+        }
+        gps.rmcModeValid = fields[12][0] != 'N';
+        gps.rmcTimeValid = *fields[1] != '\0';
+        gps.rmcUtcMs     = utcMs;
     }
     else
     {
+        if (((count != 18U) && (count != 19U)) || ((strcmp(fields[1], "A") != 0) && (strcmp(fields[1], "M") != 0)) ||
+            !parseUint8(fields[2], &value) || (value < 1U) || (value > 3U)
+            )
+        {
+            return false;
+        }
+        if ((count == 19U) && (!parseUint8(fields[18], &value) || (value < 1U) || (value > 4U)))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void parse(const uint8_t* sentence, size_t len)
+{
+    char buffer[MAX_NMEA_SENTENCE + 1U];
+
+    memcpy(buffer, sentence, len);
+    buffer[len]   = '\0';
+    // Extraction supplies a complete newline-terminated sentence.
+    buffer[--len] = '\0';
+    // Every extracted frame starts with '$', so len is still at least one.
+    if (buffer[len - 1U] == '\r')
+    {
+        buffer[--len] = '\0';
+    }
+    char* star = strchr(buffer, '*');
+    if ((star == NULL) || (strlen(star + 1) != 2U))
+    {
+        gps.invalidTransactions++;
+        return;
+    }
+    *star = '\0';
+    // Respect the receiver configuration for both NMEA and PAIRMSG checksums.
+    // With CRC enabled, reject mismatches before LwGPS can update state.
+    if (!parseChecksum(buffer + 1, star + 1))
+    {
+        gps.crcFailures++;
+        return;
+    }
+    if (strncmp(buffer, "$PAIRMSG,", 9U) == 0)
+    {
+        if (!parsePairmsg(buffer))
+        {
+            gps.invalidTransactions++;
+            return;
+        }
+        gps.sentenceCountPairMsg++;
+    }
+    else
+    {
+        if (!validateNavigation(buffer))
+        {
+            gps.invalidTransactions++;
+            return;
+        }
+        // LwGPS commits on CR, even when the source frame was LF-only.
+        memcpy(buffer, sentence, len);
+        buffer[len] = '\r';
+        lwgps_process(&gps.currentGPS, buffer, len + 1U);
+        if (!recordNonPairmsgCount(gps.currentGPS.p.stat))
+        {
+            gps.invalidTransactions++;
+            return;
+        }
+        switch (gps.currentGPS.p.stat)
+        {
+            case STAT_GGA:
+                drv_timer_start(&gps.ggaTimeout, GPS_TIMEOUT_MS);
+                break;
+
+            case STAT_RMC:
+                drv_timer_start(&gps.rmcTimeout, GPS_TIMEOUT_MS);
+                break;
+
+            case STAT_GSA:
+                drv_timer_start(&gps.gsaTimeout, GPS_TIMEOUT_MS);
+                break;
+
+            default:
+                break;
+        }
         updateGPS();
-        drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
-        recordNonPairmsgCount(gps.currentGPS.p.stat);
-        gps.samples++;
+    }
+    drv_timer_start(&gps.timeout, GPS_TIMEOUT_MS);
+    gps.samples++;
+}
+
+// Sentence storage is linear and bounded. A new '$' is a resynchronization
+// point even if the preceding sentence was truncated or had no newline.
+static void extractSentence(uint8_t ch)
+{
+    if (ch == '$')
+    {
+        if (gps.sentenceLength != 0U)
+        {
+            gps.invalidTransactions++;
+        }
+        gps.sentenceLength = 0U;
+    }
+    else if (gps.sentenceLength == 0U)
+    {
+        return;
+    }
+
+    if ((gps.sentenceLength == MAX_NMEA_SENTENCE) ||
+        ((ch < 0x20U) && (ch != '\r') && (ch != '\n')) || (ch > 0x7eU)
+        )
+    {
+        gps.invalidTransactions++;
+        gps.sentenceLength = 0U;
+        return;
+    }
+    gps.sentence[gps.sentenceLength++] = ch;
+    if (ch == '\n')
+    {
+        parse(gps.sentence, gps.sentenceLength);
+        gps.sentenceLength = 0U;
     }
 }
 #endif // if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
@@ -439,7 +653,11 @@ static void parse(uint8_t* sentence, size_t len)
 void app_gps_resetBuffers(void)
 {
     LIB_BUFFER_CIRC_CLEAR(&gps.dmaBuffer);
-    LIB_BUFFER_FIFO_CLEAR(&gps.sentence);
+    gps.sentenceLength = 0U;
+    // UART/DMA recovery invalidates the previous navigation snapshot.
+    drv_timer_stop(&gps.ggaTimeout);
+    drv_timer_stop(&gps.rmcTimeout);
+    drv_timer_stop(&gps.gsaTimeout);
 }
 
 void app_gps_getPos(app_gps_pos_S* pos)
@@ -492,10 +710,15 @@ app_gps_pairmsg_S* app_gps_getPairmsgRef(void)
 
 bool app_gps_isValid(void)
 {
-    const bool ret = (drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING) &&
-                     gps.gpsValidData;
+    const bool sourcesFresh = (drv_timer_getState(&gps.ggaTimeout) == DRV_TIMER_RUNNING) &&
+                              (drv_timer_getState(&gps.rmcTimeout) == DRV_TIMER_RUNNING);
+    // GNSS requires a fresh GSA dimension as well as GGA/RMC.
+    // Dead reckoning does not require a satellite fix.
+    const bool dimensionValid = (gps.currentGPS.fix == 6U) ||
+                                ((drv_timer_getState(&gps.gsaTimeout) == DRV_TIMER_RUNNING) &&
+                                 ((gps.currentGPS.fix_mode == 2U) || (gps.currentGPS.fix_mode == 3U)));
 
-    return ret;
+    return sourcesFresh && gps.gpsValidData && dimensionValid;
 }
 
 uint16_t app_gps_getCrcFailures(void)
@@ -580,12 +803,14 @@ void app_gps_recordUartError(uint32_t errorCode)
 
 bool app_gps_getValidTime(void)
 {
-    return gps.gpsValidTime;
+    // Do not pair a new GGA time with a date from a different RMC epoch.
+    return gps.gpsValidTime && gps.rmcTimeValid &&
+           (gps.ggaUtcMs / 1000U == gps.rmcUtcMs / 1000U) && app_gps_isValid();
 }
 
 bool app_gps_getValidDate(void)
 {
-    return gps.gpsValidDate;
+    return gps.gpsValidDate && app_gps_getValidTime();
 }
 
 uint8_t app_gps_getNumSatellites(void)
@@ -593,29 +818,34 @@ uint8_t app_gps_getNumSatellites(void)
     return gps.numSatellites;
 }
 
+uint8_t app_gps_getFixDimension(void)
+{
+    if ((drv_timer_getState(&gps.gsaTimeout) != DRV_TIMER_RUNNING) || (gps.currentGPS.fix_mode > 3U))
+    {
+        return 0U;
+    }
+    return gps.currentGPS.fix_mode;
+}
+
 CAN_gpsQualityIndicator_E app_gps_getQualityCAN(void)
 {
-    CAN_gpsQualityIndicator_E ret = CAN_GPSQUALITYINDICATOR_FIX_NONE;
-
-    switch (gps.gpsQuality)
+    if (drv_timer_getState(&gps.ggaTimeout) != DRV_TIMER_RUNNING)
     {
-        case GPS_FIX_2D:
-            ret = CAN_GPSQUALITYINDICATOR_FIX_2D;
-            break;
-
-        case GPS_FIX_3D:
-            ret = CAN_GPSQUALITYINDICATOR_FIX_3D;
-            break;
-
-        case GPS_DEAD_RECKONING:
-            ret = CAN_GPSQUALITYINDICATOR_DEAD_RECKONING;
-            break;
-
-        default:
-            break;
+        return CAN_GPSQUALITYINDICATOR_FIX_NONE;
     }
+    // Explicitly map YIC GGA method codes, without deriving them from GSA.
+    switch (gps.currentGPS.fix)
+    {
+        case 1U: return CAN_GPSQUALITYINDICATOR_SPS;
 
-    return ret;
+        case 2U: return CAN_GPSQUALITYINDICATOR_DIFFERENTIAL;
+
+        case 3U: return CAN_GPSQUALITYINDICATOR_PPS;
+
+        case 6U: return CAN_GPSQUALITYINDICATOR_DEAD_RECKONING;
+
+        default: return CAN_GPSQUALITYINDICATOR_FIX_NONE;
+    }
 }
 
 static void app_gps_init(void)
@@ -623,6 +853,9 @@ static void app_gps_init(void)
     memset(&gps, 0x00U, sizeof(gps));
 
     drv_timer_init(&gps.timeout);
+    drv_timer_init(&gps.ggaTimeout);
+    drv_timer_init(&gps.rmcTimeout);
+    drv_timer_init(&gps.gsaTimeout);
 
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
     LIB_BUFFER_CIRC_CLEAR(&gps.dmaBuffer);
@@ -636,26 +869,28 @@ static void app_gps_periodic_100Hz(void)
 #if FEATURE_IS_ENABLED(FEATURE_GPSTRANSCEIVER)
     bool overrun = false;
 
-    while (LIB_BUFFER_CIRC_PEEK(&gps.dmaBuffer))
+    // DMA's producer position, unlike a zero-byte sentinel, also lets us
+    // consume binary noise/NULs and resynchronize at the next sentence.
+    uint32_t remaining = HW_UART_getDmaRxRemaining(HW_UART_PORT_GPS);
+    size_t   writePos  = (BUFFER_SIZE - remaining) % BUFFER_SIZE;
+    while ((gps.dmaBuffer.currentPos != writePos) || LIB_BUFFER_CIRC_PEEK(&gps.dmaBuffer))
     {
-        uint8_t ch = LIB_BUFFER_CIRC_GETSET(&gps.dmaBuffer, 0U);
-
+        // Inspect the predecessor BEFORE clearing/advancing the consumer.
+        // Nonzero data in a consumed slot means the DMA producer has lapped us.
         if (LIB_BUFFER_CIRC_PEEKN(&gps.dmaBuffer, -1))
         {
             HW_UART_stopDMA(HW_UART_PORT_GPS);
             app_gps_resetBuffers();
             HW_UART_startDMARX(HW_UART_PORT_GPS, (uint32_t*)&gps.dmaBuffer, BUFFER_SIZE);
             overrun = true;
+            break;
         }
-        else
-        {
-            LIB_BUFFER_FIFO_INSERT(&gps.sentence, ch);
-            if (ch == '\n')
-            {
-                parse((uint8_t*)&gps.sentence.buffer, LIB_BUFFER_FIFO_GETLENGTH(&gps.sentence));
-                LIB_BUFFER_FIFO_CLEAR(&gps.sentence);
-            }
-        }
+        taskENTER_CRITICAL();
+        uint8_t ch = LIB_BUFFER_CIRC_GETSET(&gps.dmaBuffer, 0U);
+        extractSentence(ch);
+        taskEXIT_CRITICAL();
+        remaining = HW_UART_getDmaRxRemaining(HW_UART_PORT_GPS);
+        writePos  = (BUFFER_SIZE - remaining) % BUFFER_SIZE;
     }
 
     const bool gpsValid     = drv_timer_getState(&gps.timeout) == DRV_TIMER_RUNNING;
