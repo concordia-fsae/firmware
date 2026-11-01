@@ -488,3 +488,10 @@ add_platform_deploy_targets(
     )
     for platform, _variant in platform_variants
 ]
+
+# Use the same parser configuration in application tests and firmware.
+export_file(
+    name = "lwgps_opts.h",
+    src = "include/lwgps_opts.h",
+    visibility = ["PUBLIC"],
+)
