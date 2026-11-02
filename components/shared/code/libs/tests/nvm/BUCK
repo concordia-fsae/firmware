@@ -1,0 +1,25 @@
+load("//tools/c_unit:defs.bzl", "c_unit_test")
+
+c_unit_test(
+    name = "nvm_test",
+    srcs = ["test_nvm.c"],
+    headers = {
+        "BuildDefines.h": "include/BuildDefines.h",
+        "lib_nvm_componentSpecific.h": "include/lib_nvm_componentSpecific.h",
+        "nvm_under_test.c": "//components/shared/code:libs/lib_nvm.c",
+    },
+    deps = [
+        "//components/shared/code:headers",
+        "//tools/c_unit/support:freertos",
+        "//tools/c_unit/support:flash",
+        "//tools/c_unit/support:crc8",
+    ],
+    # Firmware uses 32-bit flash addresses. Keep the fixture below 4 GiB.
+    compiler_flags = [
+        "-fno-pie",
+        "-Wno-pointer-to-int-cast",
+        "-Wno-int-to-pointer-cast",
+    ],
+    linker_flags = ["-no-pie"],
+    run_name = "nvm_test_run",
+)

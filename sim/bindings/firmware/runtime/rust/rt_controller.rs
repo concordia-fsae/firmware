@@ -135,6 +135,7 @@ impl super::model::ModelRuntime for RTController {
     unsafe fn reset_backend(&mut self) {
         super::spi::reset();
         super::timer::reset();
+        super::uart::reset();
         super::spi::reset_chip_selects();
     }
 

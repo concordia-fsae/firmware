@@ -27,9 +27,14 @@ typedef struct
     uint32_t unused;
 } I2C_HandleTypeDef;
 
+// Only fields observed by production UART callbacks are modeled. Instance is
+// an identity token; the simulator never dereferences peripheral addresses.
+#define USART3_BASE    0x40004800U
+#define USART3         ((void*)USART3_BASE)
 typedef struct
 {
-    uint32_t unused;
+    void     *    Instance;
+    uint32_t ErrorCode;
 } UART_HandleTypeDef;
 
 typedef struct

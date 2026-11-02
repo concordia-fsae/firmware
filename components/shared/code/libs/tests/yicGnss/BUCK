@@ -1,0 +1,28 @@
+load("//tools/c_unit:defs.bzl", "c_unit_test")
+
+# No RTOS/peripheral/application stubs: the decoder operates on caller-owned bytes.
+[
+    c_unit_test(
+        name = name,
+        srcs = [
+            "test_yicGnss.c",
+            "//components/shared/code:libs/lib_yicGnss.c",
+            "//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]",
+        ],
+        headers = {
+            "lwgps/lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+            "lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+            "lwgps/lwgps_opt.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps_opt.h]",
+            "lwgps_opts.h": "//components/vc/front:lwgps_opts.h",
+            "test_lwgps_crc.h": "include/test_lwgps_crc.h",
+        },
+        deps = ["//components/shared/code:headers"],
+        compiler_flags = flags,
+        linker_flags = ["-lm"] + flags,
+    )
+    for name, flags in [
+        ("yicGnss_test", []),
+        ("yicGnss_crc_test", ["-include", "test_lwgps_crc.h"]),
+        ("yicGnss_sanitized", ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]),
+    ]
+]

@@ -2,6 +2,21 @@ from __future__ import annotations
 
 
 class VcfrontPytestHelpers:
+    def inject_gps_uart_error(self, error_code: int) -> bool:
+        """Invoke HAL_UART_ErrorCallback; return false when the port is disabled.
+
+        Error bits match STM32 HAL: parity=1, noise=2, framing=4, overrun=8.
+        Zero is ignored. HAL IRQ handling and CPU timing are not modeled.
+        """
+        import ctypes
+
+        callback = self._bind_symbol(
+            "rig_vcfront_gps_uart_error",
+            argtypes=[ctypes.c_uint32],
+            restype=ctypes.c_bool,
+        )
+        return bool(callback(error_code))
+
     AnalogInput = None
     _APPS1_POINTS = (
         (0, 0.720),

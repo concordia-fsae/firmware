@@ -12,3 +12,14 @@ prebuilt_cxx_library(
 )
 
 export_file(name = "uart.c", src = "uart.c", visibility = ["PUBLIC"])
+
+export_file(name = "uart.rs", src = "uart.rs", visibility = ["PUBLIC"])
+
+rust_test(
+    name = "unit",
+    crate = "uart",
+    crate_root = "uart.rs",
+    edition = "2024",
+    srcs = ["uart.rs"],
+    visibility = ["PUBLIC"],
+)

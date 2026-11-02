@@ -1,0 +1,39 @@
+load("//tools/c_unit:defs.bzl", "c_unit_test")
+
+GPS_SOURCES = [
+    "test_gps.c",
+    "//components/shared/code:app/app_gps.c",
+    "//components/shared/code:libs/lib_yicGnss.c",
+    "//components/shared/code:DRV/drv_timer.c",
+    "//embedded/libs:lwgps[lwgps/src/lwgps/lwgps.c]",
+]
+GPS_HEADERS = {name: "include/" + name for name in [
+    "BuildDefines.h", "test_lwgps_crc.h", "HW_uart.h", "HW_tim.h", "HW_gpio.h",
+    "drv_outputAD.h", "app_faultManager.h", "Yamcan.h",
+]} | {
+    "lwgps/lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+    "lwgps.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps.h]",
+    "lwgps/lwgps_opt.h": "//embedded/libs:lwgps[lwgps/src/include/lwgps/lwgps_opt.h]",
+    "lwgps_opts.h": "//components/vc/front:lwgps_opts.h",
+}
+
+# All targets execute the same application-level scenarios with real parser/timer code.
+[
+    c_unit_test(
+        name = name,
+        srcs = GPS_SOURCES,
+        headers = GPS_HEADERS,
+        deps = [
+            "//components/shared/code:headers",
+            "//components/shared/code/RTOS:headers",
+            "//tools/c_unit/support:freertos",
+        ],
+        compiler_flags = ["-include", "BuildDefines.h"] + flags,
+        linker_flags = ["-lm"] + flags,
+    )
+    for name, flags in [
+        ("gps_test", []),
+        ("gps_crc_test", ["-include", "test_lwgps_crc.h"]),
+        ("gps_sanitized", ["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]),
+    ]
+]

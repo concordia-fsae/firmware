@@ -1,0 +1,7 @@
+load("//sim/bindings:defs.bzl", "rig_pytest")
+
+rig_pytest(
+    name = "python_unit",
+    test_file = "sim/bindings/firmware/uart/tests/test_uart.py",
+    visibility = ["PUBLIC"],
+)

@@ -104,9 +104,16 @@ gpsDrStage:
 
 gpsQualityIndicator:
   "FIX_NONE": 0
-  "FIX_2D": 1
-  "FIX_3D": 2
-  "DEAD_RECKONING": 3
+  "SPS": 1
+  "DIFFERENTIAL": 2
+  "PPS": 3
+  "DEAD_RECKONING": 4
+
+gpsFixDimension:
+  "UNKNOWN": 0
+  "NO_FIX": 1
+  "FIX_2D": 2
+  "FIX_3D": 3
 
 gpsDynamicStatus:
   "UNKNOWN": 0

@@ -189,6 +189,7 @@ add_platform_sil_bundle_targets(
         "//sim/bindings/firmware/spi:headers",
     ],
     app_srcs = [
+        ("src/HW/HW_uart_componentSpecific.c", ["-DRIG_UART_CALLBACKS_ONLY"]),
         "//components/shared/code:DRV/drv_inputAD.c",
         "//components/shared/code:DRV/drv_io.c",
         "//components/shared/code:DRV/drv_outputAD.c",
@@ -199,6 +200,7 @@ add_platform_sil_bundle_targets(
         "//components/shared/code:app/CAN/CANIO-tx.c",
         "//components/shared/code:app/app_faultManager.c",
         "//components/shared/code:app/app_gps.c",
+        "//components/shared/code:libs/lib_yicGnss.c",
         "//components/shared/code:app/app_vehicleSpeed.c",
         "//components/shared/code:app/app_vehicleState.c",
         "//components/shared/code:libs/LIB_app.c",
@@ -389,6 +391,7 @@ cxx_binary(
             "//components/shared/code:app/CAN/CANIO-rx.c",
             "//components/shared/code:app/CAN/CANIO-tx.c",
             "//components/shared/code:app/app_gps.c",
+            "//components/shared/code:libs/lib_yicGnss.c",
             "//components/shared/code:app/app_vehicleState.c",
             "//components/shared/code:app/app_vehicleSpeed.c",
             "//components/shared/code:app/app_faultManager.c",
@@ -488,3 +491,10 @@ add_platform_deploy_targets(
     )
     for platform, _variant in platform_variants
 ]
+
+# Use the same parser configuration in application tests and firmware.
+export_file(
+    name = "lwgps_opts.h",
+    src = "include/lwgps_opts.h",
+    visibility = ["PUBLIC"],
+)

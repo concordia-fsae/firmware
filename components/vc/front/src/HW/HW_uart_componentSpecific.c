@@ -9,7 +9,9 @@
 
 #include "app_gps.h"
 #include "HW_uart.h"
-#include "SystemConfig.h"
+// The SIL build compiles this file for the real HAL error callback only.
+#ifndef RIG_UART_CALLBACKS_ONLY
+# include "SystemConfig.h"
 
 /******************************************************************************
  *                           P U B L I C  V A R S
@@ -77,20 +79,23 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 }
 
+void HW_UART_disable(HW_UART_port_E port)
+{
+    if (port == HW_UART_PORT_GPS)
+    {
+        HAL_NVIC_DisableIRQ(USART3_IRQn);
+        (void)HAL_UART_DMAStop(&huart[port]);
+        __HAL_UART_DISABLE(&huart[port]);
+        HAL_NVIC_ClearPendingIRQ(USART3_IRQn);
+    }
+}
+
+#endif // RIG_UART_CALLBACKS_ONLY
+
 void HAL_UART_ErrorCallback(UART_HandleTypeDef* huart)
 {
     if (huart->Instance == USART3)
     {
-        app_gps_recordUartError(huart->ErrorCode);
-        uint8_t  * rxBuf = huart->pRxBuffPtr;
-        uint16_t rxLen   = huart->RxXferSize;
-
-        (void)HAL_UART_DMAStop(huart);
-        app_gps_resetBuffers();
-
-        if ((rxBuf != NULL) && (rxLen > 0U))
-        {
-            (void)HAL_UART_Receive_DMA(huart, rxBuf, rxLen);
-        }
+        (void)app_gps_handleUartError(huart->ErrorCode);
     }
 }

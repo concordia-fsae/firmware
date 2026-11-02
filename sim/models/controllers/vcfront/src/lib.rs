@@ -34,12 +34,13 @@ mod rust_decode_generated {
     include!(env!("VCFRONT_YAMCAN_DECODE_RS"));
 }
 
+use bindings::HW_UART_port_E::HW_UART_PORT_GPS;
 use bindings::drv_inputAD_channelAnalog_E::{
     DRV_INPUTAD_ANALOG_APPS_P1, DRV_INPUTAD_ANALOG_APPS_P2, DRV_INPUTAD_ANALOG_BR_PR,
 };
 use bindings::drv_outputAD_channelDigital_E::DRV_OUTPUTAD_DIGITAL_LED;
-use rig_runtime::nvm::ControllerNvm;
 use rig_runtime::node_abi::ModelDataPathProvider;
+use rig_runtime::nvm::ControllerNvm;
 use rig_runtime::{AppDesc, ModuleDesc, NodeModel, NodeTarget, RTController};
 use std::sync::Mutex;
 
@@ -93,6 +94,12 @@ impl Vcfront {
 impl NodeTarget<RTController> for Vcfront {
     unsafe fn reset_node(&mut self, controller: &mut RTController) {
         self.nvm.reset();
+        // Match the GPS UART's circular RX DMA configuration before Module_Init
+        // lets app_gps register its receive buffer.
+        assert!(rig_runtime::uart::configure(
+            HW_UART_PORT_GPS as i32,
+            rig_runtime::uart::RxMode::CircularDma,
+        ));
         rig_runtime::can::configure_network(VCFRONT_CAN_NETWORK);
         unsafe { bindings::YAMCAN_shared_init_static() };
         controller.set_analog_input(DRV_INPUTAD_ANALOG_BR_PR as i32, 0.3);
@@ -117,3 +124,26 @@ rig_yamcan_network!(
     rust_decode_generated,
     yamcan
 );
+
+unsafe extern "C" {
+    fn HAL_UART_ErrorCallback(handle: *mut bindings::UART_HandleTypeDef);
+}
+
+// Invoke the production HAL callback with the GPS UART identity and error bits.
+// HAL register dispatch and ISR CPU timing are not modeled.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rig_vcfront_gps_uart_error(error_code: u32) -> bool {
+    let mut status = rig_runtime::uart::RxStatus::default();
+    let port = HW_UART_PORT_GPS as i32;
+    if !unsafe { rig_runtime::uart::rig_uart_rx_status(port, &mut status) }
+        || status.active == 0
+    {
+        return false;
+    }
+    let mut handle = bindings::UART_HandleTypeDef {
+        Instance: bindings::USART3_BASE as usize as *mut _,
+        ErrorCode: error_code,
+    };
+    unsafe { HAL_UART_ErrorCallback(&mut handle) };
+    (unsafe { rig_runtime::uart::rig_uart_rx_status(port, &mut status) }) && status.active != 0
+}

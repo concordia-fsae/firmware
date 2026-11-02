@@ -226,10 +226,19 @@ void lib_nvm_init(void)
     {
         // While the current record in NVM is initialized and we remain in the same block
         // bounds, continue iterating and updating the current record of each entry
-        while ((getBlockBaseAddress((uint32_t)block_hdr) == getBlockBaseAddress((uint32_t)(hdr) + sizeof(*hdr))) &&
+        const uint32_t block_end = (uint32_t)block_hdr + NVM_BLOCK_SIZE;
+        while (((uint32_t)hdr + sizeof(*hdr) <= block_end) &&
                (hdr->initialized == SET_STATE)
                )
         {
+            // A torn/corrupt length must never drive a read outside this block.
+            if ((hdr->entrySize == 0U) ||
+                (align_up_bytes(hdr->entrySize) > block_end - (uint32_t)(hdr + 1))
+                )
+            {
+                total_failed_init++;
+                break;
+            }
             storage_t* record = (storage_t*)(hdr + 1);
 
             if (hdr->discarded != SET_STATE)
@@ -238,7 +247,10 @@ void lib_nvm_init(void)
 
                 crc = crc8_calculate(crc, (uint8_t*)record, hdr->entrySize);
 
-                if (hdr->entryId >= NVM_ENTRYID_COUNT)
+                if ((hdr->entryId >= NVM_ENTRYID_COUNT) ||
+                    ((hdr->entry_version == lib_nvm_entries[hdr->entryId].version) &&
+                     (hdr->entrySize != lib_nvm_entries[hdr->entryId].entrySize))
+                    )
                 {
                     total_failed_init++;
                 }
@@ -260,6 +272,25 @@ void lib_nvm_init(void)
             // has entrySize size
             hdr  = (lib_nvm_recordHeader_S*)((uint32_t)hdr + align_up_bytes(hdr->entrySize));
             hdr += 1;
+        }
+
+        // A power loss can leave payload/header bits programmed without a
+        // committed record. Never append over that tail: recover the records
+        // scanned so far into the other block after restoring their RAM values.
+        // A full block also needs migration before the cursor can be used.
+        rebuild_block = (uint32_t)hdr == block_end;
+        for (uint32_t tail = (uint32_t)hdr; tail < block_end; tail++)
+        {
+            if (*(const uint8_t*)tail != UINT8_MAX)
+            {
+                rebuild_block = true;
+                break;
+            }
+        }
+        if (rebuild_block)
+        {
+            rebuild_addr      = getNextBlockStart((uint32_t)block_hdr);
+            rebuild_old_block = block_hdr;
         }
     }
 
@@ -675,6 +706,14 @@ static void rebuildBlockFromRam(uint32_t addr, lib_nvm_blockHeader_S * const old
     }
     data.deferRecordDiscard = false;
 
+    // Publish the destination only once every entry has been copied. Until
+    // this commit, a reboot must continue to use the previous complete block.
+    storage_t            initialized = SET_STATE;
+    lib_nvm_blockHeader_S* newBlock  = (lib_nvm_blockHeader_S*)addr;
+    LIB_NVM_WRITE_TO_FLASH((uint32_t)&newBlock->initialized,
+                           &initialized,
+                           sizeof(initialized));
+
     if (oldBlock != NULL)
     {
         invalidateBlock(oldBlock);
@@ -694,7 +733,7 @@ static void initializeNVMBlock(uint32_t addr)
     lib_nvm_blockHeader_S blockHeader_tmp = { 0U };
 
     blockHeader_tmp.discarded   = (storage_t) ~SET_STATE;
-    blockHeader_tmp.initialized = SET_STATE;
+    blockHeader_tmp.initialized = (storage_t) ~SET_STATE;
     blockHeader_tmp.nvm_version = LIB_NVM_VERSION;
 
 # if FEATURE_IS_ENABLED(NVM_TASK)
