@@ -30,3 +30,16 @@ class VcpduSimpleModel(CanNodeRig):
             period=period,
             VCPDU_vehicleState=state,
         )
+
+    def send_vehicle_state(
+        self,
+        *,
+        bus: str = "veh",
+        **signals: float | int | IntEnum,
+    ) -> bool:
+        return self.can_component.send(
+            "VCPDU_vehicleState",
+            bus=bus,
+            enum_defaults={"digitalStatus": "OFF"},
+            **signals,
+        )
