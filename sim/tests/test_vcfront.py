@@ -10,9 +10,14 @@ from sim.models.controllers.vcfront import (
     TimerChannel,
     VehicleState,
 )
+
+# from sim.models.controllers.bmsb import (
+#    DigitalStatus as bms_DigitalStatus
+# )
 from sim.models.controllers.vcfront.fixtures import vcfront_cluster
 from sim.models.controllers.vcpdu import VcpduSimpleModel
 from sim.models.controllers.sws import SwsSimpleModel
+from sim.models.controllers.bmsb import BmsbSimpleModel
 
 
 @pytest.mark.parametrize(
@@ -132,6 +137,56 @@ def test_torque_request_stays_zero_when_accelerator_is_pressed_outside_ts_run(
     assert debug is not None
     assert debug.VCFRONT_torqueDriverInput > 0
     assert vcfront.latest_torque_request() == 0
+
+
+@pytest.mark.parametrize(
+    "bms_state, imd_state",
+    [
+        pytest.param(DigitalStatus.OFF, DigitalStatus.OFF, id="bms-off-imd-off"),
+        pytest.param(DigitalStatus.OFF, DigitalStatus.ON, id="bms-off-imd-on"),
+        pytest.param(DigitalStatus.ON, DigitalStatus.OFF, id="bms-on-imd-off"),
+        pytest.param(DigitalStatus.ON, DigitalStatus.ON, id="bms-on-imd-on"),
+    ],
+)
+@pytest.mark.parametrize(
+    "vehicle_state",
+    [
+        pytest.param(VehicleState.SLEEP, id="vehicle-sleep-state"),
+        pytest.param(VehicleState.TS_RUN, id="vehicle-on-glv-state"),
+    ],
+)
+def test_cockpitlights_on_imd_bms_on(
+    vcfront_cluster, bms_state, imd_state, vehicle_state
+):
+    vcfront = vcfront_cluster.vcfront
+    vcpdu = VcpduSimpleModel(vcfront.can)
+    bmsb = BmsbSimpleModel(vcfront.can)
+
+    bmsb.periodic_io_status(BMSB_imdStatusMem=imd_state, BMSB_bmsStatusMem=bms_state)
+    vcpdu.periodic_vehicle_state(vehicle_state)
+
+    vcfront_cluster.add_component(vcpdu)
+    vcfront_cluster.add_component(bmsb)
+
+    vcfront_cluster.run_for(200)
+
+    cockpitlights_status = vcfront.can.latest("VCFRONT_cockpitLightStatus", bus="veh")
+    assert cockpitlights_status is not None
+
+    vcfront_cluster.run_for(400)
+    cockpitlights_status = vcfront.can.latest("VCFRONT_cockpitLightStatus", bus="veh")
+    expected_imd_light_state = (
+        DigitalStatus.OFF
+        if imd_state == DigitalStatus.ON or vehicle_state == VehicleState.SLEEP
+        else DigitalStatus.ON
+    )  # Light OFF if IMD/BMS is working
+    expected_bms_light_state = (
+        DigitalStatus.OFF
+        if bms_state == DigitalStatus.ON or vehicle_state == VehicleState.SLEEP
+        else DigitalStatus.ON
+    )
+    assert cockpitlights_status.VCFRONT_imdLightState == expected_imd_light_state
+    assert cockpitlights_status.VCFRONT_bmsLightState == expected_bms_light_state
 
 
 def test_torque_request_follows_accelerator_in_ts_run(vcfront_cluster):
